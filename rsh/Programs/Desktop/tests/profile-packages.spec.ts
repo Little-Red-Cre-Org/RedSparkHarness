@@ -35,7 +35,7 @@ it('keeps profile build approvals explicit while allowing esbuild', () => {
     'node-pty': true,
     koffi: true,
     'fs-ext': true,
-    '@deepseek-ai/dsh-subprocess-local': true,
+    '@redspark/rsh-subprocess-local': true,
     '@google/genai': false,
     protobufjs: false,
     'node-addon-require-builtin': false,
@@ -45,34 +45,34 @@ it('keeps profile build approvals explicit while allowing esbuild', () => {
 it('loads one shared ESM instance from both host and external plugin while keeping ordinary dependencies private', () => {
   const { dsh, runtime, profile } = fixture()
   writePackage(join(dsh, 'node_modules'), 'ordinary', {}, 'export default "host"')
-  writePackage(join(dsh, 'node_modules'), '@deepseek-ai/dsh-client-connection', {}, 'export const identity = {}')
+  writePackage(join(dsh, 'node_modules'), '@redspark/rsh-client-connection', {}, 'export const identity = {}')
   writePackage(join(profile, 'node_modules'), 'ordinary', {}, 'export default "plugin"')
   const plugin = writePackage(join(profile, 'node_modules'), 'plugin', {
-    peerDependencies: { '@deepseek-ai/dsh-client-connection': '^1.0.0' }, dependencies: { ordinary: '1.0.0' },
-  }, 'export { identity } from "@deepseek-ai/dsh-client-connection"; export { default as ordinary } from "ordinary"')
+    peerDependencies: { '@redspark/rsh-client-connection': '^1.0.0' }, dependencies: { ordinary: '1.0.0' },
+  }, 'export { identity } from "@redspark/rsh-client-connection"; export { default as ordinary } from "ordinary"')
   validateDesktopPluginGraph(profile, dsh, runtime, ['plugin'])
   expect(() => createRequire(join(dsh, 'package.json')).resolve('ordinary')).not.toThrow()
   expect(createRequire(join(dsh, 'package.json')).resolve('ordinary')).not.toBe(createRequire(join(plugin, 'index.js')).resolve('ordinary'))
   const entry = join(dsh, 'check.mjs')
-  writeFileSync(entry, `import {identity} from '@deepseek-ai/dsh-client-connection'; import ordinary from 'ordinary'; import * as plugin from ${JSON.stringify(pathToFileURL(join(plugin, 'index.js')).href)}; console.log(JSON.stringify({same:identity===plugin.identity, host:ordinary, plugin:plugin.ordinary}))`)
+  writeFileSync(entry, `import {identity} from '@redspark/rsh-client-connection'; import ordinary from 'ordinary'; import * as plugin from ${JSON.stringify(pathToFileURL(join(plugin, 'index.js')).href)}; console.log(JSON.stringify({same:identity===plugin.identity, host:ordinary, plugin:plugin.ordinary}))`)
   const output = execFileSync(process.execPath, [entry], { encoding: 'utf8', env: { ...process.env, NODE_OPTIONS: '', NODE_PATH: '' } })
   expect(JSON.parse(output)).toEqual({ same: true, host: 'host', plugin: 'plugin' })
 })
 it.each(['nested', 'alias'])('rejects a %s second copy of a host package', (placement) => {
   const { dsh, runtime, profile } = fixture()
   const plugin = writePackage(join(profile, 'node_modules'), 'plugin')
-  if (placement === 'nested') writePackage(join(plugin, 'node_modules'), '@deepseek-ai/dsh-client-connection')
-  else writePackage(join(profile, 'node_modules'), 'alias', { name: '@deepseek-ai/dsh-client-connection' })
+  if (placement === 'nested') writePackage(join(plugin, 'node_modules'), '@redspark/rsh-client-connection')
+  else writePackage(join(profile, 'node_modules'), 'alias', { name: '@redspark/rsh-client-connection' })
   expect(() =>{  validateDesktopPluginGraph(profile, dsh, runtime, ['plugin']) }).toThrow(/duplicate or aliased/u)
 })
 it('rejects a host package declared as an ordinary dependency', () => {
   const { dsh, runtime, profile } = fixture()
-  writePackage(join(profile, 'node_modules'), 'plugin', { dependencies: { '@deepseek-ai/dsh-client-connection': '^1.0.0' } })
+  writePackage(join(profile, 'node_modules'), 'plugin', { dependencies: { '@redspark/rsh-client-connection': '^1.0.0' } })
   expect(() =>{  validateDesktopPluginGraph(profile, dsh, runtime, ['plugin']) }).toThrow(/peer dependency/u)
 })
 it('rejects incompatible peers only when the plugin is enabled', () => {
   const { dsh, runtime, profile } = fixture()
-  writePackage(join(profile, 'node_modules'), 'plugin', { peerDependencies: { '@deepseek-ai/dsh-client-connection': '^2.0.0' } })
+  writePackage(join(profile, 'node_modules'), 'plugin', { peerDependencies: { '@redspark/rsh-client-connection': '^2.0.0' } })
   expect(() =>{  validateDesktopPluginGraph(profile, dsh, runtime, ['plugin']) }).toThrow(/found 1.0.0/u)
   expect(() =>{  validateDesktopPluginGraph(profile, dsh, runtime, []) }).not.toThrow()
 })
@@ -90,8 +90,8 @@ it('removes broken owned links without following them', () => {
 })
 it('refuses to replace an unowned package at a managed name', () => {
   const { profile } = fixture()
-  unlinkSync(join(profile, 'node_modules/@deepseek-ai/cordis'))
-  writePackage(join(profile, 'node_modules'), '@deepseek-ai/cordis')
+  unlinkSync(join(profile, 'node_modules/@redspark/cordis'))
+  writePackage(join(profile, 'node_modules'), '@redspark/cordis')
   expect(() =>{  unlinkDesktopHostPackages(profile) }).toThrow(/unowned package/u)
 })
 it('rejects private package links instead of following cycles or old transaction paths', () => {

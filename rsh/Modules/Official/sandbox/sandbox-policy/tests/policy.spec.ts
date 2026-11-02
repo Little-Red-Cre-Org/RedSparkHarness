@@ -8,12 +8,12 @@ import { mkdirSync, mkdtempSync, realpathSync, rmSync, symlinkSync } from 'node:
 import { tmpdir } from 'node:os'
 import { join, resolve, sep } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { Context } from '@deepseek-ai/cordis'
-import type { Agent } from '@deepseek-ai/dsh-agent'
-import { SESSION_FORMAT_VERSION, Session, SessionId } from '@deepseek-ai/dsh-session'
-import SandboxPolicyService, { SANDBOX_MODES, setSandboxMode } from '@deepseek-ai/dsh-sandbox-policy'
-import SessionProjectionRegistry from '@deepseek-ai/dsh-session-projection'
-import SystemPrompt, { renderContextSnapshot, renderPrompt } from '@deepseek-ai/dsh-system-prompt'
+import { Context } from '@redspark/cordis'
+import type { Agent } from '@redspark/rsh-agent'
+import { SESSION_FORMAT_VERSION, Session, SessionId } from '@redspark/rsh-session'
+import SandboxPolicyService, { SANDBOX_MODES, setSandboxMode } from '@redspark/rsh-sandbox-policy'
+import SessionProjectionRegistry from '@redspark/rsh-session-projection'
+import SystemPrompt, { renderContextSnapshot, renderPrompt } from '@redspark/rsh-system-prompt'
 
 async function mounted(config: { mode?: 'read-only' | 'workspace-write' | 'danger-full-access'; workspaceRoot?: string } = {}) {
   const ctx = new Context()

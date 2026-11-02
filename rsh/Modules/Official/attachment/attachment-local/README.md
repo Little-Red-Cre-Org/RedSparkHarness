@@ -1,15 +1,15 @@
 ---
-description: "Local storage for your attached images below DSH_HOME, for users and maintainers choosing or debugging where image attachments are kept."
+description: "Local storage for your attached images below RSH_HOME, for users and maintainers choosing or debugging where image attachments are kept."
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-attachment-local
+# @redspark/rsh-attachment-local
 
 English | [中文](README.zh.md)
 
 ## Summary
 
-Store images and generic file attachments durably below `DSH_HOME` on the machine running DSH. Images are validated, normalized for model requests, and cached per route; generic files are preserved byte-for-byte without admission limits. Identical bytes are stored once even when uploads use different display names, reads verify file length and content, and admitted images remain readable if limits later tighten. The shipped `dsh` composition uses this package without configuration. Objects remain local to one machine and are never deleted automatically.
+Store images and generic file attachments durably below `RSH_HOME` on the machine running DSH. Images are validated, normalized for model requests, and cached per route; generic files are preserved byte-for-byte without admission limits. Identical bytes are stored once even when uploads use different display names, reads verify file length and content, and admitted images remain readable if limits later tighten. The shipped `dsh` composition uses this package without configuration. Objects remain local to one machine and are never deleted automatically.
 
 ## Table of Contents
 
@@ -32,12 +32,12 @@ In the default composition, images and generic files attached to prompts or comm
 Mount the plugin with no required configuration. The defaults below define what you can attach; the generated configuration catalog is the exhaustive source for every field.
 
 ```yaml
-- name: '@deepseek-ai/dsh-attachment-local'
+- name: '@redspark/rsh-attachment-local'
 ```
 
 | Field | Default | Meaning |
 |---|---|---|
-| `dshHome` | resolved | Explicit harness home; omitted follows `$DSH_HOME`, then `~/.dsh` |
+| `dshHome` | resolved | Explicit harness home; omitted follows `$RSH_HOME`, then `~/.dsh` |
 | `maxImageBytes` | `20 MiB` | Maximum encoded source bytes accepted for one image |
 | `maxImagesPerMessage` | `20` | Maximum image count accepted in one submitted message |
 | `maxMessageImageBytes` | `200 MiB` | Maximum aggregate encoded source bytes in one submitted message |
@@ -52,7 +52,7 @@ The generated [configuration catalog](../../../../Docs/config-catalog.md#deepsee
 
 ### Where your images are stored and how long they last
 
-Attached images are kept below `<DSH_HOME>/attachments/v1` on this machine. Stored images are never deleted automatically, identical images are stored only once, and a later tightening of the limits never makes already-saved images unreadable. If your images must be readable from another machine, this package is not the right fit.
+Attached images are kept below `<RSH_HOME>/attachments/v1` on this machine. Stored images are never deleted automatically, identical images are stored only once, and a later tightening of the limits never makes already-saved images unreadable. If your images must be readable from another machine, this package is not the right fit.
 
 ### What happens when you attach an image
 
@@ -82,17 +82,17 @@ This section explains the durability and verification design behind the storage,
 
 ### Write and read paths
 
-Objects land at `<DSH_HOME>/attachments/v1/objects/<sha256-prefix>/<sha256>`; equal bytes deduplicate to one object and one `sha256:` id. Before the first write, the process syncs every ancestor directory of the home down to the filesystem root once, so a directory another process created but has not yet synced is never mistaken for a safe boundary. Writes then stage bytes in `v1/tmp`, sync the temporary file, publish with an atomic exclusive hard link, and sync the publication directories — on Windows, filesystem metadata journaling owns entry durability. Once the save resolves, the reported reference is durable.
+Objects land at `<RSH_HOME>/attachments/v1/objects/<sha256-prefix>/<sha256>`; equal bytes deduplicate to one object and one `sha256:` id. Before the first write, the process syncs every ancestor directory of the home down to the filesystem root once, so a directory another process created but has not yet synced is never mistaken for a safe boundary. Writes then stage bytes in `v1/tmp`, sync the temporary file, publish with an atomic exclusive hard link, and sync the publication directories — on Windows, filesystem metadata journaling owns entry durability. Once the save resolves, the reported reference is durable.
 
 Admission accepts up to 20 images and 200 MiB of source bytes per message; one source may use up to 20 MiB, 64 million pixels, and 8192 pixels per side. It applies orientation, removes metadata and color profiles, and normalizes under a 2048×2048 total-pixel budget, an 8192-pixel long edge, and a 4 MiB encoded-byte target. Extreme aspect ratios therefore retain their short-edge resolution. Clean single-frame 8-bit sRGB/sRGBA PNG, JPEG, or WebP input already within those limits passes through byte-identically; GIF, animation, metadata, orientation, 16-bit PNG, and incompatible color spaces force conversion.
 
-Request versions live below `<DSH_HOME>/cache/attachments/request-images/`, resolved by `dshCachePath`; an explicit `dshHome` setting applies to both cache and durable storage. Clearing this cache between requests preserves durable attachments, and later reads regenerate the variants. `readImageRequest` scales without enlargement to a route pixel budget, then applies a separate encoded-byte target through the same alpha routing and quality ladder. Its cache identity includes the attachment id, transform version, budgets, and fixed encoder settings; cached bytes are header-probed for format, 8-bit sRGB/sRGBA, dimensions, and alpha facts, and a mismatch regenerates the entry. Concurrent callers share one transform and cache write, while cancellation stops shared work only when no waiter remains. `imageHostPath` derives the normalized object's host path, and the mounted filesystem may map that path into its execution world without writing it to durable history.
+Request versions live below `<RSH_HOME>/cache/attachments/request-images/`, resolved by `dshCachePath`; an explicit `dshHome` setting applies to both cache and durable storage. Clearing this cache between requests preserves durable attachments, and later reads regenerate the variants. `readImageRequest` scales without enlargement to a route pixel budget, then applies a separate encoded-byte target through the same alpha routing and quality ladder. Its cache identity includes the attachment id, transform version, budgets, and fixed encoder settings; cached bytes are header-probed for format, 8-bit sRGB/sRGBA, dimensions, and alpha facts, and a mismatch regenerates the entry. Concurrent callers share one transform and cache write, while cancellation stops shared work only when no waiter remains. `imageHostPath` derives the normalized object's host path, and the mounted filesystem may map that path into its execution world without writing it to durable history.
 
 The published `./backend` entry admits images and verbatim files, reads durable objects, and derives request variants without loading Cordis. The `./native` entry installs that backend as a scoped Host attachment Provider and drains accepted operations when removed; the legacy Cordis service delegates storage to the same backend. The smaller `./request-store` entry reads existing durable images and derives request variants, accepting a positive concurrency or a shared queue. The backend shares source-batch limits and ordered prompt promotion with the Attachment Definition through its pure `./admission` entry.
 
 The native Provider rejects new work during removal and waits for accepted operations and open-stream cleanup. Cancelled image callers settle promptly, while Provider removal waits for their underlying transforms and cache writes, including predecessors replaced under the same variant key. Image batches wait for every accepted preparation before reporting one original error or aggregating multiple failures, and publish nothing if preparation fails. Operation failures remain with their callers; a stream cleanup failure rejects the shared close promise, preserving a single failure or aggregating multiple failures.
 
-Generic-file bytes have one canonical object at `<DSH_HOME>/attachments/v1/file-objects/<digest-prefix>/<digest>`. Each reference path at `<DSH_HOME>/attachments/v1/files/<digest-prefix>/<digest>/<name>` is a read-only hard link, so different names for equal bytes do not duplicate disk content. `readFileStream` reads the reference path in bounded chunks and verifies the complete digest and recorded byte count before a consumer can finish successfully. A missing, changed, or truncated object fails its consumer instead of producing a complete export with different bytes.
+Generic-file bytes have one canonical object at `<RSH_HOME>/attachments/v1/file-objects/<digest-prefix>/<digest>`. Each reference path at `<RSH_HOME>/attachments/v1/files/<digest-prefix>/<digest>/<name>` is a read-only hard link, so different names for equal bytes do not duplicate disk content. `readFileStream` reads the reference path in bounded chunks and verifies the complete digest and recorded byte count before a consumer can finish successfully. A missing, changed, or truncated object fails its consumer instead of producing a complete export with different bytes.
 
 ### Source map
 
@@ -123,7 +123,7 @@ For the full service contract and payload types, read the subsystem reference; f
 - [Attachment subsystem reference](../../../../Docs/subsystems/attachment.md) — service contract, payload types, and the `ctx.attachments` Cordis surface.
 - [Attachment seam package](../attachment/README.md) — the image attachment capability this storage backs.
 - [Generated configuration catalog](../../../../Docs/config-catalog.md#deepseek-aidsh-attachment-local) — every accepted config field and its source declaration.
-- [Home paths resolution](../../../../Core/util/home-paths/README.md) — how `DSH_HOME` resolves from explicit config, environment, and the user home.
+- [Home paths resolution](../../../../Core/util/home-paths/README.md) — how `RSH_HOME` resolves from explicit config, environment, and the user home.
 
 -----
 
@@ -158,6 +158,6 @@ This Dev Note is working context for maintainers: undecided directions and open 
 
 #### Future: retention and remote storage
 
-Retention and garbage collection are deferred because resumed and forked sessions may share immutable objects, and a backend serving remote runtimes or shared storage would need its own durability proof. Both directions are undecided; the local storage currently retains every object under `DSH_HOME`.
+Retention and garbage collection are deferred because resumed and forked sessions may share immutable objects, and a backend serving remote runtimes or shared storage would need its own durability proof. Both directions are undecided; the local storage currently retains every object under `RSH_HOME`.
 
 </details>

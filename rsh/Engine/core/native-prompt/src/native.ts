@@ -1,14 +1,14 @@
 /** Native system-prompt registry Provider. */
-import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
+import type { NativePlugin } from '@redspark/rsh-native-runtime'
 import { NativePromptRegistry } from './index.ts'
 
-declare module '@deepseek-ai/dsh-native-runtime' {
+declare module '@redspark/rsh-native-runtime' {
   interface NativeServices { promptSections: NativePromptRegistry }
 }
 
 /** Selected prompt registry for one native scope. */
 export const plugin: NativePlugin = {
-  apiVersion: 1, name: '@deepseek-ai/dsh-native-prompt', targets: ['host'],
+  apiVersion: 1, name: '@redspark/rsh-native-prompt', targets: ['host'],
   requires: [], provides: ['promptSections'],
   resolve(input) {
     if (input !== undefined && (typeof input !== 'object' || input === null || Array.isArray(input) || Object.keys(input).length > 0)) {

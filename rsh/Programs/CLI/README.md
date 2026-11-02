@@ -1,4 +1,4 @@
-# `@deepseek-ai/dsh`
+# `@redspark/dsh`
 
 English | [中文](README.zh.md)
 
@@ -8,7 +8,7 @@ The `dsh` command is the sole supported Node application launcher: profiles are 
 
 | Command | Purpose |
 |---|---|
-| `dsh --profile <name>` | Boot the named profile under `$DSH_HOME/profiles/<name>`. |
+| `dsh --profile <name>` | Boot the named profile under `$RSH_HOME/profiles/<name>`. |
 | `dsh --profile <name> --from-default-profile <template>` | Create a new custom profile from a shipped template, then boot it. |
 | `dsh --profile acp` | Serve automation clients over ACP stdio until disconnect. |
 | `dsh --profile headless "job"` | Run one fresh persisted session, print the final answer, and exit. |
@@ -27,7 +27,7 @@ The native-headless, native-headless-query, native-tui, and native-web session d
 
 The native-sdk profile also composes native-tools, native-prompt, native-subagent, native-jobs and their tool Consumers. Its child execution uses the same selected Program executor, Session storage and model Provider. The profile installs continuable Subagent support: `subagent` starts a persistent child, `send_message` sends follow-up work, and `interrupt_agent` stops its current turn. One-shot background children use `job_output`/`job_kill`.
 
-The `native-sdk`, `native-sdk-dsh-child`, `native-acp`, and `native-acp-dsh-child` compositions install workspace instructions through each process's selected filesystem Provider. The `native-sdk-dsh-child` profile uses a CLI-private fixed launcher to start the same-version `native-sdk` profile; the opt-in `dsh-sdk` child resolves project instructions from its requested cwd and uses its own private DSH_HOME.
+The `native-sdk`, `native-sdk-dsh-child`, `native-acp`, and `native-acp-dsh-child` compositions install workspace instructions through each process's selected filesystem Provider. The `native-sdk-dsh-child` profile uses a CLI-private fixed launcher to start the same-version `native-sdk` profile; the opt-in `dsh-sdk` child resolves project instructions from its requested cwd and uses its own private RSH_HOME.
 
 Native profiles may opt in to the `dsh-sdk` or `dsh-acp-child` external driver. The CLI supplies each driver's fixed same-version launcher and resolves its route catalog from the nearest visible pi-ai Provider; the ACP launcher accepts no caller-selected executable or arbitrary argv and its child profile cannot launch another child. These adapters remain explicit profile installations, and the shipped `native-sdk` and `native-acp` profiles do not select them.
 
@@ -57,7 +57,7 @@ Selecting a shipped `native-*` or standard profile name creates its Native profi
 
 The shipped `native-web` profile installs the `standard` and `minimal` agent modes, the plan-mode Provider, and the standing permission presets `workspace-write` and `danger-full-access` for its Native Session API.
 
-The ordinary `native-headless` template also records the invoking directory as the application's workspace root on first initialization. Select `native-headless-query` explicitly to install the combined SQLite session-query provider and the five Native workspace-authorized tools. On first initialization, that profile records the invoking directory as the application's workspace root. It stores its index at `$DSH_HOME/sessions/query.sqlite` and opens it on the first search; edit its `session-query` installation to change the path or set `openAt: "never"` while keeping exact reads available.
+The ordinary `native-headless` template also records the invoking directory as the application's workspace root on first initialization. Select `native-headless-query` explicitly to install the combined SQLite session-query provider and the five Native workspace-authorized tools. On first initialization, that profile records the invoking directory as the application's workspace root. It stores its index at `$RSH_HOME/sessions/query.sqlite` and opens it on the first search; edit its `session-query` installation to change the path or set `openAt: "never"` while keeping exact reads available.
 
 Both shipped headless templates include a disabled `tmux-context` installation. Enable it with a profile overlay and compose a `shell` Provider to add the current pane location as durable model context; the [Native tmux-context README](../../Modules/Official/terminal/native-tmux-context/README.md) documents its requirements and message.
 
@@ -73,10 +73,10 @@ Host profiles capture inherited, invoking-directory and Harness-home environment
 
 The tree composes over an empty root:
 - each bundle's patch in `dsh.profile.bundles` order
-- then the profile's `cordis.patch.yml`, then the home-level `$DSH_HOME/cordis.patch.yml`
+- then the profile's `cordis.patch.yml`, then the home-level `$RSH_HOME/cordis.patch.yml`
 - then `--patch` overlays
 
-Bundles named in `dsh.profile.bundles` resolve from the dsh installation first (`@deepseek-ai/dsh-base`, `@deepseek-ai/dsh-web-app`, `@deepseek-ai/dsh-rsh`, `@deepseek-ai/dsh-headless`, `@deepseek-ai/dsh-sdk-app`, `@deepseek-ai/dsh-sdk-minimal`, `@deepseek-ai/dsh-acp-app`), then from the profile's own `node_modules`, where pnpm installs out-of-tree plugins.
+Bundles named in `dsh.profile.bundles` resolve from the dsh installation first (`@redspark/rsh-base`, `@redspark/rsh-web-app`, `@redspark/rsh-rsh`, `@redspark/rsh-headless`, `@redspark/rsh-sdk-app`, `@redspark/rsh-sdk-minimal`, `@redspark/rsh-acp-app`), then from the profile's own `node_modules`, where pnpm installs out-of-tree plugins.
 
 Use `--dump-default-config` to inspect bundle defaults for a legacy profile; it is rejected when the selected profile resolves to Native, so an existing legacy manifest under a standard name remains eligible. `--from-default-profile` requires a non-shipped target name. Native `--dump-config` prints the resolved Native JSON profile without booting it.
 
@@ -88,6 +88,6 @@ The [CLI behavior reference](reference/README.md) owns exact layer precedence, f
 
 ## Development
 
-The [built-entry tests](tests/built-bin.e2e.ts) require `lib/bin.js` when `DSH_EXAMPLE_MODE=lib`; a missing entry fails instead of skipping the suite. The shipped native-headless loader check also requires built native plugin entries. Run it after `pnpm run build`; an unbuilt checkout may skip these tests outside explicit built mode.
+The [built-entry tests](tests/built-bin.e2e.ts) require `lib/bin.js` when `RSH_EXAMPLE_MODE=lib`; a missing entry fails instead of skipping the suite. The shipped native-headless loader check also requires built native plugin entries. Run it after `pnpm run build`; an unbuilt checkout may skip these tests outside explicit built mode.
 
 Production runs require built package and frontend artifacts. From the repository root, run `pnpm run build` separately, then use `pnpm dsh <args...>` to run the TypeScript entry and forward every argument; the [source-execution reference](reference/README.md#source-execution) owns the module-resolution contract.

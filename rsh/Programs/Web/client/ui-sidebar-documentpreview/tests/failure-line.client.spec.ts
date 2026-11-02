@@ -2,8 +2,8 @@
  * One sentence per endpoint code, and the transport's own words for anything else.
  */
 import { describe, expect, it } from 'vitest'
-import type { RemoteFailure } from '@deepseek-ai/dsh-api-remotes/client'
-import type { TranslateNS } from '@deepseek-ai/dsh-client-ui-slots'
+import type { RemoteFailure } from '@redspark/rsh-api-remotes/client'
+import type { TranslateNS } from '@redspark/rsh-client-ui-slots'
 // The namespace declaration `TranslateNS<'sidebarDocumentPreview'>` resolves against.
 import type {} from '../src/client/index.ts'
 import { failureLine } from '../src/client/failure-line.ts'

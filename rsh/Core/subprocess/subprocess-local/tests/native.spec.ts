@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { NativeHost, NativeScope, resolveInstallation, type NativePlugin } from '@deepseek-ai/dsh-native-runtime'
-import type { SubprocessOperations, SubprocessHandle } from '@deepseek-ai/dsh-subprocess/native'
+import { NativeHost, NativeScope, resolveInstallation, type NativePlugin } from '@redspark/rsh-native-runtime'
+import type { SubprocessOperations, SubprocessHandle } from '@redspark/rsh-subprocess/native'
 import { plugin } from '../src/native.ts'
 
 describe('native local subprocess Provider', () => {

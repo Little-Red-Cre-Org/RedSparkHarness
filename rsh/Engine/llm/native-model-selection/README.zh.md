@@ -3,7 +3,7 @@ description: "持久化 Session 模型选择，并让后续请求使用准确选
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-native-model-selection
+# @redspark/rsh-native-model-selection
 
 [English](README.md) | 中文
 

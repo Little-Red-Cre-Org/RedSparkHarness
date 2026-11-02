@@ -48,10 +48,10 @@ const repoRoot = fileURLToPath(new URL('../..', import.meta.url))
 const CLIENT_TYPE_PROGRAM = 'tsconfig.client.json'
 
 /** Cordis-free Native application workspace. */
-const SHELL_PACKAGE = '@deepseek-ai/dsh-web-frontend'
+const SHELL_PACKAGE = '@redspark/rsh-web-frontend'
 
 /** Explicit Cordis compatibility shell workspace. */
-const COMPATIBILITY_PACKAGE = '@deepseek-ai/dsh-web-compatibility'
+const COMPATIBILITY_PACKAGE = '@redspark/rsh-web-compatibility'
 
 /**
  * Test infrastructure builds through the client preset but never enters the
@@ -214,12 +214,12 @@ const isMain = invokedPath !== undefined && import.meta.url === pathToFileURL(re
 if (isMain) {
   const buildEnvironment = devWebBuildEnvironment(repoRoot, process.env)
   for (const name of Object.keys(process.env)) {
-    if (name === CLIENT_BUILD_PROFILE_SELECTOR || name.startsWith('DSH_CLIENT_')) {
+    if (name === CLIENT_BUILD_PROFILE_SELECTOR || name.startsWith('RSH_CLIENT_')) {
       Reflect.deleteProperty(process.env, name)
     }
   }
   for (const [name, value] of Object.entries(buildEnvironment)) {
-    if (name.startsWith('DSH_CLIENT_') && value !== undefined) process.env[name] = value
+    if (name.startsWith('RSH_CLIENT_') && value !== undefined) process.env[name] = value
   }
 
   const pluginDirs = discoverPluginDirs()

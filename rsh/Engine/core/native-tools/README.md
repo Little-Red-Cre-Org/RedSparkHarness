@@ -3,7 +3,7 @@ description: "Native profiles can accept reversible tool contributions while the
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-native-tools
+# @redspark/rsh-native-tools
 
 English | [中文](README.zh.md)
 

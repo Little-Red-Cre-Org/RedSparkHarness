@@ -8,4 +8,4 @@ export type {
   CodeRunRequest,
   CodeRunResult,
   NativeCodeRunRequest,
-} from '@deepseek-ai/dsh-code-runtime-definition'
+} from '@redspark/rsh-code-runtime-definition'

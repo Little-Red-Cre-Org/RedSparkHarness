@@ -1,5 +1,5 @@
 import { expect, it, vi } from 'vitest'
-import type { NativeHttpHost } from '@deepseek-ai/dsh-native-web-assets'
+import type { NativeHttpHost } from '@redspark/rsh-native-web-assets'
 import { NativeWebApplication, resolveNativeWebHostConfig } from '../src/native.ts'
 
 it('validates explicit native Web Host configuration', () => {

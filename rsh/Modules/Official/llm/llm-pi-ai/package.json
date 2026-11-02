@@ -1,5 +1,5 @@
 {
-  "name": "@deepseek-ai/dsh-llm-pi-ai",
+  "name": "@redspark/rsh-llm-pi-ai",
   "description": "pi-ai-backed DeepSeek adapter for the RedSpark Harness LLM seam (design-verification twin of dsh-llm-deepseek)",
   "version": "1.0.0",
   "publishConfig": {
@@ -33,42 +33,42 @@
   ],
   "license": "MIT",
   "peerDependencies": {
-    "@deepseek-ai/cordis": "workspace:^",
-    "@deepseek-ai/dsh-attachment": "workspace:^",
-    "@deepseek-ai/dsh-authorization": "workspace:^",
-    "@deepseek-ai/dsh-deepseek-account": "workspace:^",
-    "@deepseek-ai/dsh-compat-settings-definition": "workspace:^",
-    "@deepseek-ai/dsh-credentials": "workspace:^",
-    "@deepseek-ai/dsh-fs": "workspace:^",
-    "@deepseek-ai/dsh-launch-environment": "workspace:^",
-    "@deepseek-ai/dsh-llm": "workspace:^",
-    "@deepseek-ai/dsh-settings-definition": "workspace:^",
-    "@deepseek-ai/dsh-timeout": "workspace:^"
+    "@redspark/cordis": "workspace:^",
+    "@redspark/rsh-attachment": "workspace:^",
+    "@redspark/rsh-authorization": "workspace:^",
+    "@redspark/rsh-deepseek-account": "workspace:^",
+    "@redspark/rsh-compat-settings-definition": "workspace:^",
+    "@redspark/rsh-credentials": "workspace:^",
+    "@redspark/rsh-fs": "workspace:^",
+    "@redspark/rsh-launch-environment": "workspace:^",
+    "@redspark/rsh-llm": "workspace:^",
+    "@redspark/rsh-settings-definition": "workspace:^",
+    "@redspark/rsh-timeout": "workspace:^"
   },
   "dependencies": {
-    "@deepseek-ai/dsh-brand": "workspace:^",
-    "@deepseek-ai/dsh-util-values": "workspace:^",
-    "@deepseek-ai/schemastery": "workspace:^",
+    "@redspark/rsh-brand": "workspace:^",
+    "@redspark/rsh-util-values": "workspace:^",
+    "@redspark/schemastery": "workspace:^",
     "@earendil-works/pi-ai": "^1.0.0",
-    "@deepseek-ai/dsh-native-model-execution": "workspace:^",
-    "@deepseek-ai/dsh-native-runtime": "workspace:^",
+    "@redspark/rsh-native-model-execution": "workspace:^",
+    "@redspark/rsh-native-runtime": "workspace:^",
     "jose": "6.2.3"
   },
   "devDependencies": {
-    "@deepseek-ai/cordis": "workspace:^",
-    "@deepseek-ai/dsh-attachment": "workspace:^",
-    "@deepseek-ai/dsh-authorization": "workspace:^",
-    "@deepseek-ai/dsh-deepseek-account": "workspace:^",
-    "@deepseek-ai/dsh-compat-settings-definition": "workspace:^",
-    "@deepseek-ai/dsh-credentials": "workspace:^",
-    "@deepseek-ai/dsh-fs": "workspace:^",
-    "@deepseek-ai/dsh-launch-environment": "workspace:^",
-    "@deepseek-ai/dsh-llm": "workspace:^",
-    "@deepseek-ai/dsh-llm-deepseek": "workspace:^",
-    "@deepseek-ai/dsh-settings": "workspace:^",
-    "@deepseek-ai/dsh-settings-definition": "workspace:^",
-    "@deepseek-ai/dsh-timeout": "workspace:^",
-    "@deepseek-ai/dsh-http-proxy": "workspace:^"
+    "@redspark/cordis": "workspace:^",
+    "@redspark/rsh-attachment": "workspace:^",
+    "@redspark/rsh-authorization": "workspace:^",
+    "@redspark/rsh-deepseek-account": "workspace:^",
+    "@redspark/rsh-compat-settings-definition": "workspace:^",
+    "@redspark/rsh-credentials": "workspace:^",
+    "@redspark/rsh-fs": "workspace:^",
+    "@redspark/rsh-launch-environment": "workspace:^",
+    "@redspark/rsh-llm": "workspace:^",
+    "@redspark/rsh-llm-deepseek": "workspace:^",
+    "@redspark/rsh-settings": "workspace:^",
+    "@redspark/rsh-settings-definition": "workspace:^",
+    "@redspark/rsh-timeout": "workspace:^",
+    "@redspark/rsh-http-proxy": "workspace:^"
   },
   "dsh": {
     "native": {
@@ -97,19 +97,19 @@
     }
   },
   "peerDependenciesMeta": {
-    "@deepseek-ai/cordis": {
+    "@redspark/cordis": {
       "optional": true
     },
-    "@deepseek-ai/dsh-authorization": {
+    "@redspark/rsh-authorization": {
       "optional": true
     },
-    "@deepseek-ai/dsh-deepseek-account": {
+    "@redspark/rsh-deepseek-account": {
       "optional": true
     },
-    "@deepseek-ai/dsh-compat-settings-definition": {
+    "@redspark/rsh-compat-settings-definition": {
       "optional": true
     },
-    "@deepseek-ai/dsh-settings-definition": {
+    "@redspark/rsh-settings-definition": {
       "optional": true
     }
   }

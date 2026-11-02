@@ -3,7 +3,7 @@ description: "原生 profile 只能在显式原生逐 Session 策略下使用旧
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-compat-fs-sandbox
+# @redspark/rsh-compat-fs-sandbox
 
 [English](README.md) | 中文
 

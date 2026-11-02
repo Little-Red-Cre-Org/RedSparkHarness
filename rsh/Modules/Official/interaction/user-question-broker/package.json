@@ -1,5 +1,5 @@
 {
-  "name": "@deepseek-ai/dsh-user-question-broker",
+  "name": "@redspark/rsh-user-question-broker",
   "description": "Native pending human-question presentation and answer Provider",
   "version": "1.0.0",
   "publishConfig": {
@@ -47,6 +47,6 @@
   ],
   "license": "MIT",
   "dependencies": {
-    "@deepseek-ai/dsh-user-questions": "workspace:^"
+    "@redspark/rsh-user-questions": "workspace:^"
   }
 }

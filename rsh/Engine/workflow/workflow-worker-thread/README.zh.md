@@ -3,7 +3,7 @@ description: "worker-thread 工作流引擎：在宿主事件循环之外执行�
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-workflow-worker-thread
+# @redspark/rsh-workflow-worker-thread
 
 [English](README.md) | 中文
 
@@ -32,8 +32,8 @@ kind: "package-reference"
 加载本引擎即注册 `ctx.workflowEngine`；在其上添加 `dsh-tool-workflow` 会把 `workflow` 工具交给模型。每个配置字段都是可选的：
 
 ```yaml
-- name: '@deepseek-ai/dsh-workflow-worker-thread'
-- name: '@deepseek-ai/dsh-tool-workflow'
+- name: '@redspark/rsh-workflow-worker-thread'
+- name: '@redspark/rsh-tool-workflow'
 ```
 
 | 字段 | 默认值 | 含义 |
@@ -49,7 +49,7 @@ kind: "package-reference"
 
 ### Native profile 配置
 
-Native profile 会把 `@deepseek-ai/dsh-workflow-worker-thread/native` 安装为选定的 `workflow` Provider。worker 经由 NativeSubagent Definition 委派，并要求配置的 provider 名称与已安装 Provider 一致。Native 配置会在安装 Provider 前完成解析：
+Native profile 会把 `@redspark/rsh-workflow-worker-thread/native` 安装为选定的 `workflow` Provider。worker 经由 NativeSubagent Definition 委派，并要求配置的 provider 名称与已安装 Provider 一致。Native 配置会在安装 Provider 前完成解析：
 
 | 字段 | 默认值 | 含义 |
 |---|---|---|

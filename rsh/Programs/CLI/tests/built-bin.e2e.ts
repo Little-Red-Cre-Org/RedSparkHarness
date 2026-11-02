@@ -11,9 +11,9 @@ import {
   PROTOCOL_VERSION,
   type SessionNotification,
 } from '@agentclientprotocol/sdk'
-import { initProfile, PROFILE_TEMPLATES } from '@deepseek-ai/dsh-app-boot'
-import { startMockLlmServer } from '@deepseek-ai/dsh-llm-mock-server'
-import { entryListSchema } from '@deepseek-ai/cordis-plugin-include'
+import { initProfile, PROFILE_TEMPLATES } from '@redspark/rsh-app-boot'
+import { startMockLlmServer } from '@redspark/rsh-llm-mock-server'
+import { entryListSchema } from '@redspark/cordis-plugin-include'
 import { execa } from 'execa'
 import * as yaml from 'js-yaml'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
@@ -163,7 +163,7 @@ function createProfileLifecycleFixture(): ProfileLifecycleFixture {
     '  }, 20)',
     '  // Echo the mounted generation so the hot-reload e2e can assert both an',
     '  // applied override and its removal reverting to this bundle default.',
-    "  writeFileSync(join(process.env.DSH_HOME, 'config-echo'), String(config.generation ?? 'bundle-default'))",
+    "  writeFileSync(join(process.env.RSH_HOME, 'config-echo'), String(config.generation ?? 'bundle-default'))",
     "  writeFileSync(process.env.RAW_READY_FILE, 'ready')",
     '  void ctx.loader.await().then(() => {',
     "    if (active) writeFileSync(process.env.RAW_SETTLED_FILE, 'settled')",
@@ -296,7 +296,7 @@ function installChildConnectionObserver(profileDirectory: string): void {
     '      childConnection.connect = function (spec) {',
     '        const handle = originalConnect.call(childConnection, spec)',
     "        if (!spec.argv.includes('--profile') || !spec.argv.includes('native-acp-dsh-child')) return handle",
-    '        const home = spec.env?.DSH_HOME ?? null',
+    '        const home = spec.env?.RSH_HOME ?? null',
     '        const record = { argv: spec.argv, cwd: spec.cwd, home, homeExistedAtConnect: home !== null && existsSync(home),',
     '          nodeOptions: spec.env?.NODE_OPTIONS ?? null, stdin: "", stdout: "", stderr: "", outcome: null, rangeEmpty: null }',
     '        connections.push(record)',
@@ -469,7 +469,7 @@ function startNativeProfileReload(fixture: ReturnType<typeof createNativeProfile
     env: {
       ...process.env,
       NODE_OPTIONS: nodeOptions,
-      DSH_HOME: fixture.home,
+      RSH_HOME: fixture.home,
       NATIVE_RELOAD_EVENTS: fixture.events,
       NATIVE_RELOAD_READY: fixture.ready,
       NATIVE_RELOAD_PREFLIGHT_START: fixture.preflightStart,
@@ -489,7 +489,7 @@ function startProfileLifecycle(fixture: ProfileLifecycleFixture, args: readonly 
     killSignal: 'SIGKILL',
     reject: false,
     env: {
-      DSH_HOME: fixture.home,
+      RSH_HOME: fixture.home,
       RAW_READY_FILE: fixture.ready,
       RAW_SETTLED_FILE: fixture.settled,
       RAW_DISPOSED_FILE: fixture.disposed,
@@ -538,7 +538,7 @@ function createEnvironmentProbeProfile(home: string, project: string): void {
     name: 'dsh-profile-environment-probe',
     private: true,
     dependencies: {},
-    dsh: { profile: { bundles: ['@deepseek-ai/dsh-base'] } },
+    dsh: { profile: { bundles: ['@redspark/rsh-base'] } },
   }, undefined, 2))
   writeFileSync(join(profileDir, 'cordis.patch.yml'), [
     '- insert:',
@@ -561,7 +561,7 @@ interface StartupFixture {
  * A custom profile whose ordinary provider plugin injects `cmdlineArgs`, plus
  * a row that reads its app-owned service through a `!!js` config expression.
  * Both plugin modules resolve
- * `@deepseek-ai/dsh-cmdline` and `commander` through the profile module
+ * `@redspark/rsh-cmdline` and `commander` through the profile module
  * fallback, exactly as an installed out-of-tree bundle does.
  */
 function createStartupFixture(): StartupFixture {
@@ -574,7 +574,7 @@ function createStartupFixture(): StartupFixture {
   mkdirSync(bundleDir, { recursive: true })
   writeFileSync(join(bundleDir, 'startup.mjs'), [
     "import { Command } from 'commander'",
-    "import { parseCmdline } from '@deepseek-ai/dsh-cmdline'",
+    "import { parseCmdline } from '@redspark/rsh-cmdline'",
     "export const name = 'fixture-startup'",
     "export const inject = ['cmdlineArgs']",
     'export function apply(ctx) {',
@@ -595,7 +595,7 @@ function createStartupFixture(): StartupFixture {
     '    interrupted = true',
     "    process.emit('SIGTERM')",
     '  }, 20)',
-    "  writeFileSync(join(process.env.DSH_HOME, 'config-echo'), String(config.generation ?? 'bundle-default'))",
+    "  writeFileSync(join(process.env.RSH_HOME, 'config-echo'), String(config.generation ?? 'bundle-default'))",
     "  writeFileSync(process.env.RAW_READY_FILE, 'ready')",
     '  ctx.effect(() => () => { clearInterval(heartbeat) })',
     '}',
@@ -606,7 +606,7 @@ function createStartupFixture(): StartupFixture {
     "import { join } from 'node:path'",
     "export const name = 'reload-witness'",
     'export function apply(ctx, config = {}) {',
-    "  writeFileSync(join(process.env.DSH_HOME, 'witness'), String(config.generation ?? 'bundle-default'))",
+    "  writeFileSync(join(process.env.RSH_HOME, 'witness'), String(config.generation ?? 'bundle-default'))",
     '}',
     '',
   ].join('\n'))
@@ -654,14 +654,14 @@ function startStartupProfile(fixture: StartupFixture, args: readonly string[]) {
     timeout: SPAWN_TIMEOUT_MS,
     killSignal: 'SIGKILL',
     env: {
-      DSH_HOME: fixture.home,
+      RSH_HOME: fixture.home,
       RAW_READY_FILE: fixture.ready,
       RAW_INTERRUPT_FILE: fixture.interrupt,
     },
   })
 }
 
-describe.skipIf(process.env.DSH_EXAMPLE_MODE !== 'lib' && !existsSync(dshBin))('dsh BUILT bin (node lib/bin.js, no tsx)', () => {
+describe.skipIf(process.env.RSH_EXAMPLE_MODE !== 'lib' && !existsSync(dshBin))('dsh BUILT bin (node lib/bin.js, no tsx)', () => {
   it('resolves the shipped native-headless profile through the public loader', async () => {
     const home = mkdtempSync(join(tmpdir(), 'rsh-native-headless-profile-'))
     try {
@@ -694,7 +694,7 @@ describe.skipIf(process.env.DSH_EXAMPLE_MODE !== 'lib' && !existsSync(dshBin))('
     const noCordisHook = pathToFileURL(fileURLToPath(new URL('./fixtures/deny-cordis-import.mjs', import.meta.url))).href
     try {
       const result = await runBuiltBin(['--profile', 'native-smoke', 'native', 'launch'], {
-        DSH_HOME: fixture.home,
+        RSH_HOME: fixture.home,
         NATIVE_PROFILE_MARKER: fixture.marker,
         NODE_OPTIONS: `--import=${noCordisHook}`,
       })
@@ -762,13 +762,13 @@ describe.skipIf(process.env.DSH_EXAMPLE_MODE !== 'lib' && !existsSync(dshBin))('
       } } }
       profile.installations.push({
         id: 'subagent-tool',
-        plugin: '@deepseek-ai/dsh-tool-subagent',
+        plugin: '@redspark/rsh-tool-subagent',
         scope: 'root',
         config: { toolName: 'subagent', maxDepth: 2, maxSteps: 2 },
       })
       profile.installations.push({
         id: 'claude-code-driver',
-        plugin: '@deepseek-ai/dsh-subagent-claude-code',
+        plugin: '@redspark/rsh-subagent-claude-code',
         scope: 'root',
         config: { name: 'claude-code', model: 'native-claude-child-fixture', apiKeyEnv: 'ANTHROPIC_API_KEY', baseUrl: messages.baseUrl },
       })
@@ -827,14 +827,14 @@ describe.skipIf(process.env.DSH_EXAMPLE_MODE !== 'lib' && !existsSync(dshBin))('
       writeFileSync(profilePath, `${JSON.stringify(profile, null, 2)}\n`)
 
       profileRun = runBuiltBin(['--profile', 'headless', 'complete', 'the', 'requested', 'work'], {
-        DSH_HOME: home,
-        DSH_TELEMETRY_DISABLED: '1',
+        RSH_HOME: home,
+        RSH_TELEMETRY_DISABLED: '1',
         DEEPSEEK_API_KEY: parentKey,
         ANTHROPIC_API_KEY: 'built-native-claude-child-key',
         TMP: sandboxTempRoot,
         TEMP: sandboxTempRoot,
         TMPDIR: sandboxTempRoot,
-        DSH_NATIVE_PROFILE_OBSERVATION_PATH: undefined,
+        RSH_NATIVE_PROFILE_OBSERVATION_PATH: undefined,
         NODE_OPTIONS: `--import=${noCordisHook}`,
       }, workspace, 25_000, (pid) => { cliPid = pid }).finally(() => { cliSettled = true })
       try {
@@ -905,7 +905,7 @@ describe.skipIf(process.env.DSH_EXAMPLE_MODE !== 'lib' && !existsSync(dshBin))('
         outcome: { exitCode: 0, signal: null },
         rangeEmpty: true,
       })
-      const evidencePath = process.env.DSH_NATIVE_PROFILE_OBSERVATION_PATH
+      const evidencePath = process.env.RSH_NATIVE_PROFILE_OBSERVATION_PATH
       if (evidencePath !== undefined) {
         writeFileSync(evidencePath, `${JSON.stringify({
           formatVersion: 1,
@@ -978,10 +978,10 @@ describe.skipIf(process.env.DSH_EXAMPLE_MODE !== 'lib' && !existsSync(dshBin))('
         models: [{ id: parentModel }, { id: childModel }],
       } } }
       profile.installations.push(
-        { id: 'subagent-tool', plugin: '@deepseek-ai/dsh-tool-subagent', scope: 'root',
+        { id: 'subagent-tool', plugin: '@redspark/rsh-tool-subagent', scope: 'root',
           config: { toolName: 'subagent', maxDepth: 2, maxSteps: 2, maxTokens: 48,
             provider: 'deepseek', model: childModel, toolFilter: { allow: ['read_file'] } } },
-        { id: 'acp-child', plugin: '@deepseek-ai/dsh-acp-child', scope: 'root',
+        { id: 'acp-child', plugin: '@redspark/rsh-acp-child', scope: 'root',
           config: { providerName, providers: {} } },
         { id: 'child-connection-observer', plugin: '@fixture/child-connection-observer', scope: 'root',
           config: { observationPath } },
@@ -990,8 +990,8 @@ describe.skipIf(process.env.DSH_EXAMPLE_MODE !== 'lib' && !existsSync(dshBin))('
       writeFileSync(profilePath, JSON.stringify(profile, null, 2) + '\n')
 
       profileRun = runBuiltBin(['--profile', 'native-headless', 'complete', 'the', 'requested', 'work'], {
-        DSH_HOME: home,
-        DSH_TELEMETRY_DISABLED: '1',
+        RSH_HOME: home,
+        RSH_TELEMETRY_DISABLED: '1',
         DEEPSEEK_API_KEY: apiKey,
         TMP: sandboxTempRoot,
         TEMP: sandboxTempRoot,
@@ -1069,7 +1069,7 @@ describe.skipIf(process.env.DSH_EXAMPLE_MODE !== 'lib' && !existsSync(dshBin))('
       expect(operationFacts).toHaveLength(0)
     } finally {
       await profileRun?.catch(() => undefined)
-      const evidencePath = process.env.DSH_NATIVE_PROFILE_OBSERVATION_PATH
+      const evidencePath = process.env.RSH_NATIVE_PROFILE_OBSERVATION_PATH
       if (evidencePath !== undefined) {
         const sessionsPath = join(home, 'sessions')
         writeFileSync(evidencePath, `${JSON.stringify({
@@ -1227,8 +1227,8 @@ describe.skipIf(process.env.DSH_EXAMPLE_MODE !== 'lib' && !existsSync(dshBin))('
     const home = mkdtempSync(join(tmpdir(), 'dsh-app-help-'))
     try {
       const web = await runBuiltBin(['--profile', 'legacy-web', '--from-default-profile', 'web', '--help'], {
-        DSH_HOME: home,
-        DSH_TELEMETRY_DISABLED: '1',
+        RSH_HOME: home,
+        RSH_TELEMETRY_DISABLED: '1',
       })
       expect(web.code).toBe(0)
       expect(web.stderr).toBe('')
@@ -1237,8 +1237,8 @@ describe.skipIf(process.env.DSH_EXAMPLE_MODE !== 'lib' && !existsSync(dshBin))('
       expect(web.stdout).not.toContain('dsh web: http://')
 
       const wildcardHost = await runBuiltBin(['--profile', 'legacy-web', '--host', '0.0.0.0'], {
-        DSH_HOME: home,
-        DSH_TELEMETRY_DISABLED: '1',
+        RSH_HOME: home,
+        RSH_TELEMETRY_DISABLED: '1',
       })
       expect(wildcardHost.code).toBe(1)
       expect(wildcardHost.stdout).toBe('')
@@ -1246,32 +1246,32 @@ describe.skipIf(process.env.DSH_EXAMPLE_MODE !== 'lib' && !existsSync(dshBin))('
       expect(wildcardHost.stderr).not.toContain('dsh web: http://')
 
       const headlessHelp = await runBuiltBin(['--profile', 'legacy-headless', '--from-default-profile', 'headless', '--help'], {
-        DSH_HOME: home,
-        DSH_TELEMETRY_DISABLED: '1',
+        RSH_HOME: home,
+        RSH_TELEMETRY_DISABLED: '1',
       })
       expect(headlessHelp.code).toBe(0)
       expect(headlessHelp.stderr).toBe('')
       expect(headlessHelp.stdout).toContain('Usage: dsh --profile headless')
 
       const sdkHelp = await runBuiltBin(['--profile', 'legacy-sdk', '--from-default-profile', 'sdk', '--help'], {
-        DSH_HOME: home,
-        DSH_TELEMETRY_DISABLED: '1',
+        RSH_HOME: home,
+        RSH_TELEMETRY_DISABLED: '1',
       })
       expect(sdkHelp.code).toBe(0)
       expect(sdkHelp.stderr).toBe('')
       expect(sdkHelp.stdout).toContain('Usage: dsh --profile sdk')
 
       const acpHelp = await runBuiltBin(['--profile', 'legacy-acp', '--from-default-profile', 'acp', '--help'], {
-        DSH_HOME: home,
-        DSH_TELEMETRY_DISABLED: '1',
+        RSH_HOME: home,
+        RSH_TELEMETRY_DISABLED: '1',
       })
       expect(acpHelp.code).toBe(0)
       expect(acpHelp.stderr).toBe('')
       expect(acpHelp.stdout).toContain('Usage: dsh --profile acp')
 
       const missingTask = await runBuiltBin(['--profile', 'legacy-headless'], {
-        DSH_HOME: home,
-        DSH_TELEMETRY_DISABLED: '1',
+        RSH_HOME: home,
+        RSH_TELEMETRY_DISABLED: '1',
       })
       expect(missingTask.code).toBe(1)
       expect(missingTask.stderr).toContain('a task is required')
@@ -1286,19 +1286,19 @@ describe.skipIf(process.env.DSH_EXAMPLE_MODE !== 'lib' && !existsSync(dshBin))('
     writeFileSync(patch, [
       '- insert:',
       '    - id: missing-sdk-startup-plugin',
-      '      name: "@deepseek-ai/dsh-missing-sdk-startup-plugin"',
+      '      name: "@redspark/rsh-missing-sdk-startup-plugin"',
       '',
     ].join('\n'))
     try {
       const result = await runBuiltBin(['--profile', 'legacy-sdk', '--from-default-profile', 'sdk', '--patch', patch], {
-        DSH_HOME: home,
-        DSH_TELEMETRY_DISABLED: '1',
+        RSH_HOME: home,
+        RSH_TELEMETRY_DISABLED: '1',
         DEEPSEEK_API_KEY: 'built-sdk-startup-failure-no-call',
       }, home)
       expect(result.code).toBe(1)
       expect(result.stdout).toBe('')
       expect(result.stderr).toContain('plugin tree failed to load')
-      expect(result.stderr).toContain('@deepseek-ai/dsh-missing-sdk-startup-plugin')
+      expect(result.stderr).toContain('@redspark/rsh-missing-sdk-startup-plugin')
     } finally {
       rmSync(home, { recursive: true, force: true })
     }
@@ -1324,8 +1324,8 @@ describe.skipIf(process.env.DSH_EXAMPLE_MODE !== 'lib' && !existsSync(dshBin))('
       killSignal: 'SIGKILL',
       env: {
         ...process.env,
-        DSH_HOME: home,
-        DSH_TELEMETRY_DISABLED: '1',
+        RSH_HOME: home,
+        RSH_TELEMETRY_DISABLED: '1',
         DEEPSEEK_API_KEY: 'built-sdk-profile-no-call',
       },
       extendEnv: false,
@@ -1357,7 +1357,7 @@ describe.skipIf(process.env.DSH_EXAMPLE_MODE !== 'lib' && !existsSync(dshBin))('
       expect(initialized, `${JSON.stringify(initialized)}\n${stderr}`).toMatchObject({
         jsonrpc: '2.0',
         id: 1,
-        result: { serverInfo: { name: 'deepseek-harness-sdk-runtime' } },
+        result: { serverInfo: { name: 'redspark-harness-sdk-runtime' } },
       })
       child.stdin.write(`${JSON.stringify({ jsonrpc: '2.0', id: 2, method: 'shutdown' })}\n`)
       expect(await response(2)).toEqual({ jsonrpc: '2.0', id: 2, result: {} })
@@ -1389,11 +1389,11 @@ describe.skipIf(process.env.DSH_EXAMPLE_MODE !== 'lib' && !existsSync(dshBin))('
       killSignal: 'SIGKILL',
       env: {
         ...process.env,
-        DSH_HOME: home,
-        DSH_TELEMETRY_DISABLED: '1',
+        RSH_HOME: home,
+        RSH_TELEMETRY_DISABLED: '1',
         DEEPSEEK_API_KEY: apiKey,
         DEEPSEEK_BASE_URL: server.baseURL,
-        DSH_PERMISSION_MODE: 'danger-full-access',
+        RSH_PERMISSION_MODE: 'danger-full-access',
       },
       extendEnv: false,
     })
@@ -1423,7 +1423,7 @@ describe.skipIf(process.env.DSH_EXAMPLE_MODE !== 'lib' && !existsSync(dshBin))('
         protocolVersion: PROTOCOL_VERSION,
         clientCapabilities: {},
       })
-      expect(initialized.agentInfo).toMatchObject({ name: 'deepseek-harness-acp' })
+      expect(initialized.agentInfo).toMatchObject({ name: 'redspark-harness-acp' })
       expect(initialized.agentCapabilities).toEqual({
         mcpCapabilities: { http: true },
         promptCapabilities: { image: false, audio: false, embeddedContext: false },
@@ -1469,8 +1469,8 @@ describe.skipIf(process.env.DSH_EXAMPLE_MODE !== 'lib' && !existsSync(dshBin))('
     const home = mkdtempSync(join(tmpdir(), 'dsh-built-headless-'))
     try {
       const result = await runBuiltBin(['--profile', 'headless', 'answer', 'from', 'the', 'published', 'entry'], {
-        DSH_HOME: home,
-        DSH_TELEMETRY_DISABLED: '1',
+        RSH_HOME: home,
+        RSH_TELEMETRY_DISABLED: '1',
         DEEPSEEK_API_KEY: apiKey,
         DEEPSEEK_BASE_URL: server.baseURL,
       })
@@ -1523,10 +1523,10 @@ describe.skipIf(process.env.DSH_EXAMPLE_MODE !== 'lib' && !existsSync(dshBin))('
       writeFileSync(profilePath, `${JSON.stringify(profile, null, 2)}\n`)
       const options = { profile: 'native-headless-query', patchFiles: [], target: 'host' as const, installAnchor, home }
       const loaded = await loadNativeProfile(options)
-      expect(loaded.requests.get('session-query')?.plugin.name).toBe('@deepseek-ai/dsh-session-query-sqlite')
-      expect(loaded.requests.get('tool-session-query')?.plugin.name).toBe('@deepseek-ai/dsh-tool-session-query')
+      expect(loaded.requests.get('session-query')?.plugin.name).toBe('@redspark/rsh-session-query-sqlite')
+      expect(loaded.requests.get('tool-session-query')?.plugin.name).toBe('@redspark/rsh-tool-session-query')
 
-      profile.installations.push({ id: 'session-query-exact', plugin: '@deepseek-ai/dsh-session-query', scope: 'root' })
+      profile.installations.push({ id: 'session-query-exact', plugin: '@redspark/rsh-session-query', scope: 'root' })
       writeFileSync(profilePath, `${JSON.stringify(profile, null, 2)}\n`)
       await expect(loadNativeProfile(options)).rejects.toThrow(/duplicate provider for sessionQuery/)
       profile.installations.pop()
@@ -1535,8 +1535,8 @@ describe.skipIf(process.env.DSH_EXAMPLE_MODE !== 'lib' && !existsSync(dshBin))('
       const result = await runBuiltBin(
         ['--profile', 'native-headless-query', 'search', 'prior', 'session', 'history'],
         {
-          DSH_HOME: home,
-          DSH_TELEMETRY_DISABLED: '1',
+          RSH_HOME: home,
+          RSH_TELEMETRY_DISABLED: '1',
           DEEPSEEK_API_KEY: apiKey,
           DEEPSEEK_BASE_URL: server.baseURL,
         },
@@ -1586,7 +1586,7 @@ describe.skipIf(process.env.DSH_EXAMPLE_MODE !== 'lib' && !existsSync(dshBin))('
   it('fails loud on a nonexistent profile with the plugin-command hint', async () => {
     const home = mkdtempSync(join(tmpdir(), 'dsh-missing-profile-'))
     try {
-      const result = await runBuiltBin(['--profile', 'nope'], { DSH_HOME: home })
+      const result = await runBuiltBin(['--profile', 'nope'], { RSH_HOME: home })
       expect(result.code).toBe(1)
       expect(result.stderr).toContain('profile "nope" does not exist')
       expect(result.stderr).toContain('dsh plugin --profile nope add')
@@ -1600,7 +1600,7 @@ describe.skipIf(process.env.DSH_EXAMPLE_MODE !== 'lib' && !existsSync(dshBin))('
     try {
       const created = await runBuiltBin(
         ['--profile', 'rescue', '--from-default-profile', 'web', '--help'],
-        { DSH_HOME: home, DSH_TELEMETRY_DISABLED: '1' },
+        { RSH_HOME: home, RSH_TELEMETRY_DISABLED: '1' },
       )
       expect(created.code).toBe(0)
       expect(created.stderr).toBe('')
@@ -1614,7 +1614,7 @@ describe.skipIf(process.env.DSH_EXAMPLE_MODE !== 'lib' && !existsSync(dshBin))('
       expect(manifest.dependencies).toEqual({})
       expect(manifest.dsh.profile).toEqual({
         runtime: 'legacy',
-        bundles: ['@deepseek-ai/dsh-base', '@deepseek-ai/dsh-web-app'],
+        bundles: ['@redspark/rsh-base', '@redspark/rsh-web-app'],
         patchReload: 'live',
       })
       expect(readFileSync(join(dir, 'cordis.patch.yml'), 'utf8')).toContain('[]')
@@ -1622,7 +1622,7 @@ describe.skipIf(process.env.DSH_EXAMPLE_MODE !== 'lib' && !existsSync(dshBin))('
 
       const repeated = await runBuiltBin(
         ['--profile', 'rescue', '--from-default-profile', 'web', '--help'],
-        { DSH_HOME: home, DSH_TELEMETRY_DISABLED: '1' },
+        { RSH_HOME: home, RSH_TELEMETRY_DISABLED: '1' },
       )
       expect(repeated.code).toBe(1)
       expect(repeated.stdout).toBe('')
@@ -1631,7 +1631,7 @@ describe.skipIf(process.env.DSH_EXAMPLE_MODE !== 'lib' && !existsSync(dshBin))('
 
       const reopened = await runBuiltBin(
         ['--profile', 'rescue', '--help'],
-        { DSH_HOME: home, DSH_TELEMETRY_DISABLED: '1' },
+        { RSH_HOME: home, RSH_TELEMETRY_DISABLED: '1' },
       )
       expect(reopened.code).toBe(0)
       expect(reopened.stderr).toBe('')
@@ -1646,7 +1646,7 @@ describe.skipIf(process.env.DSH_EXAMPLE_MODE !== 'lib' && !existsSync(dshBin))('
     try {
       const failed = await runBuiltBin(
         ['--profile', 'rescue', '--from-default-profile', 'web', '--port', 'not-a-number'],
-        { DSH_HOME: home, DSH_TELEMETRY_DISABLED: '1' },
+        { RSH_HOME: home, RSH_TELEMETRY_DISABLED: '1' },
       )
       expect(failed.code).toBe(1)
       expect(failed.stderr).toContain('--port must be a number')
@@ -1654,7 +1654,7 @@ describe.skipIf(process.env.DSH_EXAMPLE_MODE !== 'lib' && !existsSync(dshBin))('
 
       const retried = await runBuiltBin(
         ['--profile', 'rescue', '--help'],
-        { DSH_HOME: home, DSH_TELEMETRY_DISABLED: '1' },
+        { RSH_HOME: home, RSH_TELEMETRY_DISABLED: '1' },
       )
       expect(retried.code).toBe(0)
       expect(retried.stderr).toBe('')
@@ -1679,8 +1679,8 @@ describe.skipIf(process.env.DSH_EXAMPLE_MODE !== 'lib' && !existsSync(dshBin))('
       const result = await runBuiltBin(
         ['--profile', 'environment-probe'],
         {
-          DSH_HOME: home,
-          DSH_TELEMETRY_DISABLED: '1',
+          RSH_HOME: home,
+          RSH_TELEMETRY_DISABLED: '1',
           DEEPSEEK_API_KEY: undefined,
           DEEPSEEK_BASE_URL: server.baseURL,
         },
@@ -1712,9 +1712,9 @@ describe.skipIf(process.env.DSH_EXAMPLE_MODE !== 'lib' && !existsSync(dshBin))('
     const home = mkdtempSync(join(tmpdir(), 'dsh-invalid-patch-'))
     try {
       const result = await runBuiltBin(['--profile', 'web', '--patch', invalidProvider], {
-        DSH_HOME: home,
+        RSH_HOME: home,
         DEEPSEEK_API_KEY: 'keyless-invalid-config',
-        DSH_TELEMETRY_DISABLED: '1',
+        RSH_TELEMETRY_DISABLED: '1',
       })
       expect(result.code).toBe(1)
       expect(result.stdout).toBe('')
@@ -1769,7 +1769,7 @@ describe.skipIf(process.env.DSH_EXAMPLE_MODE !== 'lib' && !existsSync(dshBin))('
       await waitForFile(fixture.ready)
       expect(existsSync(profilePatch)).toBe(false)
       expect(readFileSync(configFile, 'utf8')).toBe('bundle-default')
-      // The home-level user layer ($DSH_HOME/cordis.patch.yml) is live too
+      // The home-level user layer ($RSH_HOME/cordis.patch.yml) is live too
       // and outranks the per-profile layer.
       rmSync(fixture.ready)
       writeFileSync(join(fixture.home, 'cordis.patch.yml'), [
@@ -1888,7 +1888,7 @@ describe.skipIf(process.env.DSH_EXAMPLE_MODE !== 'lib' && !existsSync(dshBin))('
         timeout: SPAWN_TIMEOUT_MS,
         killSignal: 'SIGKILL',
         reject: false,
-        env: { DSH_HOME: home },
+        env: { RSH_HOME: home },
       })
       expect(result.exitCode).toBe(0)
       const manifest = JSON.parse(readFileSync(join(home, 'profiles', 'anchor', 'package.json'), 'utf8')) as {
@@ -1900,7 +1900,7 @@ describe.skipIf(process.env.DSH_EXAMPLE_MODE !== 'lib' && !existsSync(dshBin))('
 
       const removed = await runBuiltBin(
         ['plugin', '--profile', 'anchor', 'remove', 'anchored-bundle'],
-        { DSH_HOME: home },
+        { RSH_HOME: home },
         checkout,
       )
       expect(removed.code).toBe(0)
@@ -1932,24 +1932,24 @@ describe.skipIf(process.env.DSH_EXAMPLE_MODE !== 'lib' && !existsSync(dshBin))('
         name: 'dsh-profile-up',
         private: true,
         dependencies: { 'late-bundle': 'file:./late-bundle' },
-        dsh: { profile: { bundles: ['@deepseek-ai/dsh-base'] } },
+        dsh: { profile: { bundles: ['@redspark/rsh-base'] } },
       }))
       writeFileSync(join(profileDir, 'cordis.patch.yml'), '[]\n')
       // v1: no dsh manifest — a plain dependency.
       writeFileSync(join(installed, 'package.json'), JSON.stringify({ name: 'late-bundle', version: '1.0.0' }))
-      const first = await runBuiltBin(['plugin', '--profile', 'up', 'root'], { DSH_HOME: home })
+      const first = await runBuiltBin(['plugin', '--profile', 'up', 'root'], { RSH_HOME: home })
       expect(first.code).toBe(0)
       let manifest = JSON.parse(readFileSync(join(profileDir, 'package.json'), 'utf8')) as { dsh: { profile: { bundles: string[] } } }
-      expect(manifest.dsh.profile.bundles).toEqual(['@deepseek-ai/dsh-base'])
+      expect(manifest.dsh.profile.bundles).toEqual(['@redspark/rsh-base'])
       // v2: the installed package now declares dsh.bundle (an update landed).
       writeFileSync(join(installed, 'package.json'), JSON.stringify({
         name: 'late-bundle', version: '2.0.0', dsh: { bundle: { patch: './cordis.patch.yml' } },
       }))
       writeFileSync(join(installed, 'cordis.patch.yml'), '[]\n')
-      const second = await runBuiltBin(['plugin', '--profile', 'up', 'root'], { DSH_HOME: home })
+      const second = await runBuiltBin(['plugin', '--profile', 'up', 'root'], { RSH_HOME: home })
       expect(second.code).toBe(0)
       manifest = JSON.parse(readFileSync(join(profileDir, 'package.json'), 'utf8')) as { dsh: { profile: { bundles: string[] } } }
-      expect(manifest.dsh.profile.bundles).toEqual(['@deepseek-ai/dsh-base', 'late-bundle'])
+      expect(manifest.dsh.profile.bundles).toEqual(['@redspark/rsh-base', 'late-bundle'])
     } finally {
       rmSync(home, { recursive: true, force: true })
     }
@@ -1961,7 +1961,7 @@ describe.skipIf(process.env.DSH_EXAMPLE_MODE !== 'lib' && !existsSync(dshBin))('
     afterEach(() => { rmSync(home, { recursive: true, force: true }) })
 
     it('rejects bundle-default dumps for a native standard profile', async () => {
-      const { stdout, code, stderr } = await runBuiltBin(['--profile', 'web', '--dump-default-config'], { DSH_HOME: home })
+      const { stdout, code, stderr } = await runBuiltBin(['--profile', 'web', '--dump-default-config'], { RSH_HOME: home })
       expect(code).toBe(1)
       expect(stdout).toBe('')
       expect(stderr).toContain('native profile has no bundle default to dump')
@@ -1970,7 +1970,7 @@ describe.skipIf(process.env.DSH_EXAMPLE_MODE !== 'lib' && !existsSync(dshBin))('
       expect(existsSync(join(home, 'profiles', 'node_modules'))).toBe(false)
       const noCordisHook = pathToFileURL(fileURLToPath(new URL('./fixtures/deny-cordis-import.mjs', import.meta.url))).href
       const plugin = await runBuiltBin(['plugin', '--profile', 'web', 'add', 'unused'], {
-        DSH_HOME: home, NODE_OPTIONS: `--import=${noCordisHook}`,
+        RSH_HOME: home, NODE_OPTIONS: `--import=${noCordisHook}`,
       })
       expect(plugin.code).toBe(1)
       expect(plugin.stderr).toContain('dsh plugin does not manage native profile web')
@@ -1984,27 +1984,27 @@ describe.skipIf(process.env.DSH_EXAMPLE_MODE !== 'lib' && !existsSync(dshBin))('
       const template = PROFILE_TEMPLATES.web!
       initProfile(profileDir, template.bundles, template.patchReload)
 
-      const { stdout, code, stderr } = await runBuiltBin(['--profile', 'web', '--dump-default-config'], { DSH_HOME: home })
+      const { stdout, code, stderr } = await runBuiltBin(['--profile', 'web', '--dump-default-config'], { RSH_HOME: home })
       expect(code).toBe(0)
       expect(stderr).toBe('')
-      expect(stdout).toContain('# == @deepseek-ai/dsh-web-app')
+      expect(stdout).toContain('# == @redspark/rsh-web-app')
     }, SPAWN_TIMEOUT_MS + 30_000)
 
     it('creates a custom profile from a shipped template before printing it', async () => {
       const { stdout, code, stderr } = await runBuiltBin(
         ['--profile', 'rescue', '--from-default-profile', 'web', '--dump-default-config'],
-        { DSH_HOME: home },
+        { RSH_HOME: home },
       )
       expect(code).toBe(0)
       expect(stderr).toBe('')
-      expect(stdout).toContain('# == @deepseek-ai/dsh-web-app')
+      expect(stdout).toContain('# == @redspark/rsh-web-app')
       expect(existsSync(join(home, 'profiles', 'rescue', 'package.json'))).toBe(true)
     }, SPAWN_TIMEOUT_MS + 30_000)
 
     it('rejects an unknown source before creating the target profile', async () => {
       const { stdout, code, stderr } = await runBuiltBin(
         ['--profile', 'rescue', '--from-default-profile', 'unknown', '--dump-default-config'],
-        { DSH_HOME: home },
+        { RSH_HOME: home },
       )
       expect(code).toBe(1)
       expect(stdout).toBe('')
@@ -2016,65 +2016,65 @@ describe.skipIf(process.env.DSH_EXAMPLE_MODE !== 'lib' && !existsSync(dshBin))('
     it('prints the headless profile without Host or browser layers', async () => {
       const { stdout, code, stderr } = await runBuiltBin(
         ['--profile', 'legacy-headless', '--from-default-profile', 'headless', '--dump-default-config'],
-        { DSH_HOME: home },
+        { RSH_HOME: home },
       )
       expect(code).toBe(0)
       expect(stderr).toBe('')
-      expect(stdout).toContain("name: '@deepseek-ai/dsh-headless'")
-      expect(stdout).not.toMatch(/name: '@deepseek-ai\/dsh-host-/)
-      expect(stdout).not.toContain("name: '@deepseek-ai/dsh-web-app'")
-      expect(stdout).not.toMatch(/name: '@deepseek-ai\/dsh-client-/)
+      expect(stdout).toContain("name: '@redspark/rsh-headless'")
+      expect(stdout).not.toMatch(/name: '@redspark\/dsh-host-/)
+      expect(stdout).not.toContain("name: '@redspark/rsh-web-app'")
+      expect(stdout).not.toMatch(/name: '@redspark\/dsh-client-/)
     }, SPAWN_TIMEOUT_MS + 30_000)
 
     it('prints the exact standalone sdk-minimal tree without dsh-base', async () => {
       const { stdout, code, stderr } = await runBuiltBin(
         ['--profile', 'sdk-minimal', '--dump-default-config'],
-        { DSH_HOME: home },
+        { RSH_HOME: home },
       )
       expect(code).toBe(0)
       expect(stderr).toBe('')
       const rows = yaml.load(stdout, { schema: entryListSchema }) as Array<{ id?: string; name?: string }>
       expect(rows.map(row => [row.id, row.name])).toEqual([
-        ['sdk-app-startup', '@deepseek-ai/dsh-sdk-app'],
-        ['sdk-jsonrpc-server', '@deepseek-ai/dsh-sdk-jsonrpc-server'],
-        ['deepseek-llm-api-extensions', '@deepseek-ai/dsh-deepseek-llm-api-extensions'],
-        ['session-log-deepseek', '@deepseek-ai/dsh-session-log-deepseek'],
-        ['plugin-package-inventory-deepseek', '@deepseek-ai/dsh-plugin-package-inventory-deepseek'],
-        ['llm-deepseek', '@deepseek-ai/dsh-llm-deepseek'],
-        ['sandbox', '@deepseek-ai/dsh-sandbox-local'],
-        ['session-projection', '@deepseek-ai/dsh-session-projection'],
-        ['sandbox-policy', '@deepseek-ai/dsh-sandbox-policy'],
-        ['subprocess', '@deepseek-ai/dsh-subprocess-local'],
-        ['pty', '@deepseek-ai/dsh-terminal'],
-        ['terminal-bash', '@deepseek-ai/dsh-terminal-bash'],
-        ['terminal-pwsh', '@deepseek-ai/dsh-terminal-bash'],
-        ['timer', '@deepseek-ai/cordis-plugin-timer'],
-        ['llm', '@deepseek-ai/dsh-llm'],
-        ['session', '@deepseek-ai/dsh-session'],
-        ['session-title', '@deepseek-ai/dsh-session-title'],
-        ['system-prompt', '@deepseek-ai/dsh-system-prompt'],
-        ['tools', '@deepseek-ai/dsh-tools'],
-        ['agent', '@deepseek-ai/dsh-agent'],
-        ['llm-retry', '@deepseek-ai/dsh-llm-retry'],
-        ['jobs', '@deepseek-ai/dsh-jobs-local'],
-        ['invariants', '@deepseek-ai/dsh-invariants'],
-        ['session-invariant', '@deepseek-ai/dsh-session/invariant'],
-        ['agent-invariant', '@deepseek-ai/dsh-agent/invariant'],
-        ['scope-invariant', '@deepseek-ai/dsh-scope/invariant'],
-        ['agent-loop-invariant', '@deepseek-ai/dsh-agent-loop/invariant'],
-        ['agent-loop', '@deepseek-ai/dsh-agent-loop'],
-        ['persistent-bash', '@deepseek-ai/dsh-tool-bash-persistent'],
-        ['persistent-pwsh', '@deepseek-ai/dsh-tool-pwsh-persistent'],
-        ['sessions', '@deepseek-ai/dsh-session-persistence-jsonl'],
+        ['sdk-app-startup', '@redspark/rsh-sdk-app'],
+        ['sdk-jsonrpc-server', '@redspark/rsh-sdk-jsonrpc-server'],
+        ['deepseek-llm-api-extensions', '@redspark/rsh-deepseek-llm-api-extensions'],
+        ['session-log-deepseek', '@redspark/rsh-session-log-deepseek'],
+        ['plugin-package-inventory-deepseek', '@redspark/rsh-plugin-package-inventory-deepseek'],
+        ['llm-deepseek', '@redspark/rsh-llm-deepseek'],
+        ['sandbox', '@redspark/rsh-sandbox-local'],
+        ['session-projection', '@redspark/rsh-session-projection'],
+        ['sandbox-policy', '@redspark/rsh-sandbox-policy'],
+        ['subprocess', '@redspark/rsh-subprocess-local'],
+        ['pty', '@redspark/rsh-terminal'],
+        ['terminal-bash', '@redspark/rsh-terminal-bash'],
+        ['terminal-pwsh', '@redspark/rsh-terminal-bash'],
+        ['timer', '@redspark/cordis-plugin-timer'],
+        ['llm', '@redspark/rsh-llm'],
+        ['session', '@redspark/rsh-session'],
+        ['session-title', '@redspark/rsh-session-title'],
+        ['system-prompt', '@redspark/rsh-system-prompt'],
+        ['tools', '@redspark/rsh-tools'],
+        ['agent', '@redspark/rsh-agent'],
+        ['llm-retry', '@redspark/rsh-llm-retry'],
+        ['jobs', '@redspark/rsh-jobs-local'],
+        ['invariants', '@redspark/rsh-invariants'],
+        ['session-invariant', '@redspark/rsh-session/invariant'],
+        ['agent-invariant', '@redspark/rsh-agent/invariant'],
+        ['scope-invariant', '@redspark/rsh-scope/invariant'],
+        ['agent-loop-invariant', '@redspark/rsh-agent-loop/invariant'],
+        ['agent-loop', '@redspark/rsh-agent-loop'],
+        ['persistent-bash', '@redspark/rsh-tool-bash-persistent'],
+        ['persistent-pwsh', '@redspark/rsh-tool-pwsh-persistent'],
+        ['sessions', '@redspark/rsh-session-persistence-jsonl'],
       ])
-      expect(stdout).toContain('# == @deepseek-ai/dsh-sdk-minimal')
-      expect(stdout).not.toContain('@deepseek-ai/dsh-base')
-      expect(stdout).not.toContain('@deepseek-ai/dsh-web-app')
+      expect(stdout).toContain('# == @redspark/rsh-sdk-minimal')
+      expect(stdout).not.toContain('@redspark/rsh-base')
+      expect(stdout).not.toContain('@redspark/rsh-web-app')
     }, SPAWN_TIMEOUT_MS * 2 + 30_000)
 
     it('composes the profile user layer and a --patch overlay in order', async () => {
       // Create a legacy custom profile first, then write its user layer.
-      const init = await runBuiltBin(['--profile', 'legacy-web', '--from-default-profile', 'web', '--dump-default-config'], { DSH_HOME: home })
+      const init = await runBuiltBin(['--profile', 'legacy-web', '--from-default-profile', 'web', '--dump-default-config'], { RSH_HOME: home })
       expect(init.code).toBe(0)
       const profilePatch = join(home, 'profiles', 'legacy-web', 'cordis.patch.yml')
       writeFileSync(profilePatch, [
@@ -2101,7 +2101,7 @@ describe.skipIf(process.env.DSH_EXAMPLE_MODE !== 'lib' && !existsSync(dshBin))('
       ].join('\n'))
       const { stdout, code, stderr } = await runBuiltBin(
         ['--profile', 'legacy-web', '--patch', overlay, '--dump-config'],
-        { DSH_HOME: home },
+        { RSH_HOME: home },
       )
       expect(code).toBe(0)
       expect(stdout).toContain('provider: configured-provider')

@@ -7,7 +7,7 @@ export interface ArchifyAutoInvocationSource {
   readonly reason: 'diagram-delivery-request'
 }
 
-declare module '@deepseek-ai/dsh-llm/message' {
+declare module '@redspark/rsh-llm/message' {
   interface MessageSourceMap {
     'archify-auto-invocation': ArchifyAutoInvocationSource
   }

@@ -1,14 +1,14 @@
 /** Native Session details, projected from the selected roster row and durable history. */
 import { useEffect, useState, type ReactNode } from 'react'
-import type { SessionEvent, SessionId } from '@deepseek-ai/dsh-session/types'
-import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
-import type { NativeSessionClient, NativeWorkspaceFilesClient } from '@deepseek-ai/dsh-client-native-session/native'
-import { Button, Pill, SidebarPathBar } from '@deepseek-ai/dsh-client-ui-primitives'
-import type { SnapshotSelectorHook, TranslateNS } from '@deepseek-ai/dsh-client-ui-slots'
-import type { NativeConversationSnapshot } from '@deepseek-ai/dsh-client-ui-session/native'
-import type {} from '@deepseek-ai/dsh-client-locale/native'
-import type { LayoutInfo } from '@deepseek-ai/dsh-client-ui-layout/native'
-import type {} from '@deepseek-ai/dsh-client-ui-renderer/native'
+import type { SessionEvent, SessionId } from '@redspark/rsh-session/types'
+import type { NativePlugin } from '@redspark/rsh-native-runtime'
+import type { NativeSessionClient, NativeWorkspaceFilesClient } from '@redspark/rsh-client-native-session/native'
+import { Button, Pill, SidebarPathBar } from '@redspark/rsh-client-ui-primitives'
+import type { SnapshotSelectorHook, TranslateNS } from '@redspark/rsh-client-ui-slots'
+import type { NativeConversationSnapshot } from '@redspark/rsh-client-ui-session/native'
+import type {} from '@redspark/rsh-client-locale/native'
+import type { LayoutInfo } from '@redspark/rsh-client-ui-layout/native'
+import type {} from '@redspark/rsh-client-ui-renderer/native'
 import { NativeFilesPanel } from './native-files.tsx'
 import css from './native-ui.module.css'
 import { en as rightbarEn, zh as rightbarZh, type NativeRightbarKey } from './locales.ts'
@@ -19,7 +19,7 @@ type HistoryState =
   | { readonly sessionId: SessionId; readonly kind: 'failed' }
   | { readonly sessionId: SessionId; readonly kind: 'ready'; readonly events: readonly SessionEvent[] }
 
-declare module '@deepseek-ai/dsh-client-ui-slots' {
+declare module '@redspark/rsh-client-ui-slots' {
   interface LocaleNamespaceMap {
     nativeSidebarRight: NativeRightbarKey
   }
@@ -222,7 +222,7 @@ function DetailsAction({ useLayoutInfo, toggle, t }: {
 /** Native right surface over the selected Session's roster and history facts. */
 export const plugin: NativePlugin = {
   apiVersion: 1,
-  name: '@deepseek-ai/dsh-client-ui-sidebar-right',
+  name: '@redspark/rsh-client-ui-sidebar-right',
   targets: ['client'],
   requires: ['clientSlots', 'clientNativeLayout', 'clientNativeConversation', 'clientNativeSession', 'clientLocale'],
   optional: ['clientNativeWorkspaceFiles'],

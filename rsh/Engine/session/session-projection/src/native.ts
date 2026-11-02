@@ -1,14 +1,14 @@
 /** Native projection Provider backed by the shared state-fold and checkpoint core. */
 
-import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
-import type { NativeActiveSessionOwner } from '@deepseek-ai/dsh-native-session-execution/active-session-protocol'
-import type { Session, SessionEvent, SessionHeader, SessionLogOffset, SessionSeqCursor } from '@deepseek-ai/dsh-session/native'
+import type { NativePlugin } from '@redspark/rsh-native-runtime'
+import type { NativeActiveSessionOwner } from '@redspark/rsh-native-session-execution/active-session-protocol'
+import type { Session, SessionEvent, SessionHeader, SessionLogOffset, SessionSeqCursor } from '@redspark/rsh-session/native'
 import { ProjectionRegistryCore } from './registry-core.ts'
 import type { ProjectionCheckpoint, ProjectionChangeListener, ProjectionSnapshot } from './registry-core.ts'
-import type { ProjectionDefinition } from '@deepseek-ai/dsh-session-projection/definition'
-import type { SessionProjectionMap, SessionProjectionStateMap } from '@deepseek-ai/dsh-session-projection/types'
+import type { ProjectionDefinition } from '@redspark/rsh-session-projection/definition'
+import type { SessionProjectionMap, SessionProjectionStateMap } from '@redspark/rsh-session-projection/types'
 
-export type { ProjectionDefinition } from '@deepseek-ai/dsh-session-projection/definition'
+export type { ProjectionDefinition } from '@redspark/rsh-session-projection/definition'
 export type { ProjectionCheckpoint, ProjectionSnapshot } from './registry-core.ts'
 
 function runOwnerObserver(operation: () => void): Promise<void> {
@@ -56,7 +56,7 @@ export type NativeProjectionDefinition<
   S extends SessionProjectionStateMap[K] = SessionProjectionStateMap[K],
 > = ProjectionDefinition<K, S>
 
-declare module '@deepseek-ai/dsh-native-runtime' {
+declare module '@redspark/rsh-native-runtime' {
   interface NativeServices { sessionProjections: NativeSessionProjectionOperations }
 }
 
@@ -210,7 +210,7 @@ export class NativeSessionProjectionRegistry extends ProjectionRegistryCore impl
 /** Selected Native projection Provider. */
 export const plugin: NativePlugin = {
   apiVersion: 1,
-  name: '@deepseek-ai/dsh-session-projection',
+  name: '@redspark/rsh-session-projection',
   targets: ['host'],
   requires: ['activeSessions'],
   provides: ['sessionProjections'],

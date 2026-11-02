@@ -4,11 +4,11 @@
  */
 // Bring the base `ResourceProtocolMap` declaration into this program so the
 // augmentation below merges into it instead of declaring a second interface.
-import type {} from '@deepseek-ai/dsh-client-resources/client'
-import type {} from '@deepseek-ai/dsh-typert-protocol/types'
+import type {} from '@redspark/rsh-client-resources/client'
+import type {} from '@redspark/rsh-typert-protocol/types'
 import type { WorkspaceFileStat } from '../types.ts'
 
-declare module '@deepseek-ai/dsh-client-ui-slots' {
+declare module '@redspark/rsh-client-ui-slots' {
   interface ResourceProtocolMap {
     /**
      * One workspace file's metadata, addressed as
@@ -24,7 +24,7 @@ export interface WorkspaceFileParams {
   readonly line?: number
 }
 
-declare module '@deepseek-ai/dsh-typert-protocol/types' {
+declare module '@redspark/rsh-typert-protocol/types' {
   interface RemoteErrorDetailsMap {
     /**
      * The address is not a `dsh-resource://file/` address in a scope the

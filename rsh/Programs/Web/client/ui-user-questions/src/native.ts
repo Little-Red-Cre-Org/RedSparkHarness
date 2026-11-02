@@ -1,7 +1,7 @@
 /** Cordis-free question cards for Native Client consumers. */
 import { createElement, useMemo, useState, type ReactElement } from 'react'
-import { en as commonEn, formatLocaleTemplate, zh as commonZh } from '@deepseek-ai/dsh-client-locale/dictionary'
-import type { TranslateNS } from '@deepseek-ai/dsh-client-ui-slots'
+import { en as commonEn, formatLocaleTemplate, zh as commonZh } from '@redspark/rsh-client-locale/dictionary'
+import type { TranslateNS } from '@redspark/rsh-client-ui-slots'
 import { QuestionFlow } from './QuestionFlow.tsx'
 import { PlanReviewPanel } from './client/PlanReviewPanel.tsx'
 import { en, zh } from './client/locales.ts'

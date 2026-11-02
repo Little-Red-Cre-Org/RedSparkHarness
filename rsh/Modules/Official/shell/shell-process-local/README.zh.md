@@ -3,7 +3,7 @@ description: "Bash 和 PowerShell shell Provider 共用的原生进程生命周�
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-shell-process-local
+# @redspark/rsh-shell-process-local
 
 [English](README.md) | 中文
 

@@ -1,25 +1,25 @@
 /** Selected legacy filesystem tools contributing to native registries. */
 import { createRequire } from 'node:module'
-import type { Context } from '@deepseek-ai/cordis'
-import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
+import type { Context } from '@redspark/cordis'
+import type { NativePlugin } from '@redspark/rsh-native-runtime'
 import {
   validateSupportManifest,
   type CompatDshLifecycleParticipant,
   type CompatPackageManifest,
-} from '@deepseek-ai/dsh-compat-dsh-runtime/native'
-import type {} from '@deepseek-ai/dsh-fs'
-import type {} from '@deepseek-ai/dsh-fs/native'
-import type {} from '@deepseek-ai/dsh-native-tools/native'
-import type {} from '@deepseek-ai/dsh-native-prompt/native'
-import type {} from '@deepseek-ai/dsh-native-sandbox-policy/native'
-import type {} from '@deepseek-ai/dsh-approval-definition'
-import type {} from '@deepseek-ai/dsh-sandbox-policy'
-import type { Agent } from '@deepseek-ai/dsh-agent'
-import SystemPrompt from '@deepseek-ai/dsh-system-prompt'
-import ToolRuntime from '@deepseek-ai/dsh-tools'
-import * as LegacyToolFs from '@deepseek-ai/dsh-tool-fs'
+} from '@redspark/rsh-compat-dsh-runtime/native'
+import type {} from '@redspark/rsh-fs'
+import type {} from '@redspark/rsh-fs/native'
+import type {} from '@redspark/rsh-native-tools/native'
+import type {} from '@redspark/rsh-native-prompt/native'
+import type {} from '@redspark/rsh-native-sandbox-policy/native'
+import type {} from '@redspark/rsh-approval-definition'
+import type {} from '@redspark/rsh-sandbox-policy'
+import type { Agent } from '@redspark/rsh-agent'
+import SystemPrompt from '@redspark/rsh-system-prompt'
+import ToolRuntime from '@redspark/rsh-tools'
+import * as LegacyToolFs from '@redspark/rsh-tool-fs'
 
-declare module '@deepseek-ai/dsh-native-runtime' {
+declare module '@redspark/rsh-native-runtime' {
   interface NativeServices { compatToolFs: { readonly kind: 'legacy-tool-fs' } }
 }
 
@@ -28,7 +28,7 @@ declare module '@deepseek-ai/dsh-native-runtime' {
  * @param manifest - selected package metadata.
  */
 export function validateLegacyToolManifest(manifest: CompatPackageManifest): void {
-  validateSupportManifest('@deepseek-ai/dsh-tool-fs', manifest)
+  validateSupportManifest('@redspark/rsh-tool-fs', manifest)
 }
 
 /** Explicit supported config fields for the first filesystem tool adapter. */
@@ -53,18 +53,18 @@ function resolveConfig(input: unknown): Config {
 
 /** Bridge native filesystem, tool, prompt and observation slots to the supported legacy plugin. */
 export const plugin: NativePlugin = {
-  apiVersion: 1, name: '@deepseek-ai/dsh-compat-tool-fs', targets: ['host'],
+  apiVersion: 1, name: '@redspark/rsh-compat-tool-fs', targets: ['host'],
   requires: ['fs', 'tools', 'promptSections', 'compatDshRuntime'], optional: ['sandboxPolicy', 'fsObservationPolicy', 'approval'], provides: ['compatToolFs'],
   resolve(input) {
     const config = resolveConfig(input)
     const require = createRequire(import.meta.url)
-    validateLegacyToolManifest(require('@deepseek-ai/dsh-tool-fs/package.json') as CompatPackageManifest)
-    validateSupportManifest('@deepseek-ai/dsh-system-prompt', require('@deepseek-ai/dsh-system-prompt/package.json') as CompatPackageManifest)
-    validateSupportManifest('@deepseek-ai/dsh-tools', require('@deepseek-ai/dsh-tools/package.json') as CompatPackageManifest)
+    validateLegacyToolManifest(require('@redspark/rsh-tool-fs/package.json') as CompatPackageManifest)
+    validateSupportManifest('@redspark/rsh-system-prompt', require('@redspark/rsh-system-prompt/package.json') as CompatPackageManifest)
+    validateSupportManifest('@redspark/rsh-tools', require('@redspark/rsh-tools/package.json') as CompatPackageManifest)
     return async (native) => {
       const runtime = native.require('compatDshRuntime')
       const legacy = runtime.context
-      const policyEntrySelected = runtime.hasEntry('@deepseek-ai/dsh-fs-observation-policy')
+      const policyEntrySelected = runtime.hasEntry('@redspark/rsh-fs-observation-policy')
       const active = new Set<Promise<unknown>>()
       // Keep expected admission cancellation out of Loader drain failures while returning the original rejection.
       const trackActive = <T>(work: Promise<T>, cancellation?: AbortSignal): Promise<T> => {
@@ -79,10 +79,10 @@ export const plugin: NativePlugin = {
         )
         return work
       }
-      const nativeFs = native.require('fs') as import('@deepseek-ai/dsh-fs').FileSystem
+      const nativeFs = native.require('fs') as import('@redspark/rsh-fs').FileSystem
       const legacyFs = legacy.get('fs')
       if (legacyFs === undefined) {
-        const fsMount = runtime.mount('@deepseek-ai/dsh-compat-dsh-runtime/fs-adapter', (context) => {
+        const fsMount = runtime.mount('@redspark/rsh-compat-dsh-runtime/fs-adapter', (context) => {
           context.provide('fs', nativeFs)
         })
         native.own(() => fsMount.dispose())
@@ -94,14 +94,14 @@ export const plugin: NativePlugin = {
         const legacyPolicy = {
           defaultMode: sandboxPolicy.defaultMode,
           resolve: sandboxPolicy.resolve.bind(sandboxPolicy),
-        } as unknown as import('@deepseek-ai/dsh-sandbox-policy').SandboxPolicyService
-        const policyMount = runtime.mount('@deepseek-ai/dsh-compat-dsh-runtime/sandbox-policy-adapter', (context) => {
+        } as unknown as import('@redspark/rsh-sandbox-policy').SandboxPolicyService
+        const policyMount = runtime.mount('@redspark/rsh-compat-dsh-runtime/sandbox-policy-adapter', (context) => {
           context.provide('sandboxPolicy', legacyPolicy)
         })
         native.own(() => policyMount.dispose())
         await policyMount.ready
       }
-      const eventMount = runtime.mount('@deepseek-ai/dsh-compat-dsh-runtime/fs-event-bridge', (context: Context) => {
+      const eventMount = runtime.mount('@redspark/rsh-compat-dsh-runtime/fs-event-bridge', (context: Context) => {
         context.on('fs/write-intent', (target, actor, next) => native.events.waterfall(native.scope, 'fs/write-intent', next, target, actor))
         context.on('fs/edit-intent', (target, actor, next) => native.events.waterfall(native.scope, 'fs/edit-intent', next, target, actor))
         context.on('fs/observed', (target, observation, actor) => {
@@ -111,16 +111,16 @@ export const plugin: NativePlugin = {
       })
       native.own(() => eventMount.dispose())
       await eventMount.ready
-      const promptMount = runtime.mount('@deepseek-ai/dsh-system-prompt', SystemPrompt, { includeHarnessIdentity: false, includeRuntimeContext: false })
+      const promptMount = runtime.mount('@redspark/rsh-system-prompt', SystemPrompt, { includeHarnessIdentity: false, includeRuntimeContext: false })
       native.own(() => promptMount.dispose())
       await promptMount.ready
-      const toolsMount = runtime.mount('@deepseek-ai/dsh-tools', ToolRuntime, { mode: 'native' })
+      const toolsMount = runtime.mount('@redspark/rsh-tools', ToolRuntime, { mode: 'native' })
       native.own(() => toolsMount.dispose())
       await toolsMount.ready
       if (legacy.get('systemPrompt') === undefined || legacy.get('tools') === undefined) {
         throw new Error('compat-tool-fs: supported Cordis plugins did not provide systemPrompt and tools')
       }
-      const toolMount = runtime.mount('@deepseek-ai/dsh-tool-fs', LegacyToolFs, config)
+      const toolMount = runtime.mount('@redspark/rsh-tool-fs', LegacyToolFs, config)
       native.own(() => toolMount.dispose())
       await toolMount.ready
       const registry = native.require('tools')
@@ -144,10 +144,10 @@ export const plugin: NativePlugin = {
       }
       const resume = async (): Promise<void> => {
         if (!suspended) return
-        if (!runtime.isEnabled('@deepseek-ai/dsh-tool-fs')
-          || !runtime.isEnabled('@deepseek-ai/dsh-tools')
-          || !runtime.isEnabled('@deepseek-ai/dsh-system-prompt')
-          || (policyEntrySelected && !runtime.isEnabled('@deepseek-ai/dsh-fs-observation-policy'))
+        if (!runtime.isEnabled('@redspark/rsh-tool-fs')
+          || !runtime.isEnabled('@redspark/rsh-tools')
+          || !runtime.isEnabled('@redspark/rsh-system-prompt')
+          || (policyEntrySelected && !runtime.isEnabled('@redspark/rsh-fs-observation-policy'))
           || legacy.get('fs') === undefined
           || legacy.get('tools') === undefined
           || legacy.get('systemPrompt') === undefined) {

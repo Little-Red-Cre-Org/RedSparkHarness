@@ -11,250 +11,250 @@ const CLIENT_FACE_INCLUDE: readonly string[] = []
 
 /** Packages exempted from automatic Client/Host treatment despite declaring `dsh.client`. */
 const CLIENT_FACE_EXCLUDE: readonly string[] = [
-  '@deepseek-ai/dsh-api-session-controller',
-  '@deepseek-ai/dsh-api-workspace-controller',
+  '@redspark/rsh-api-session-controller',
+  '@redspark/rsh-api-workspace-controller',
 ]
 
 /** Explicit Host packages whose published dependency edges need manual classification. */
 const HOST_DEPENDENCY_PACKAGES: readonly string[] = [
-  '@deepseek-ai/dsh-codex-app-server',
-  '@deepseek-ai/dsh-llm',
-  '@deepseek-ai/dsh-permission-presets',
-  '@deepseek-ai/dsh-session',
-  '@deepseek-ai/dsh-session-telemetry-otel',
-  '@deepseek-ai/dsh-webhook',
+  '@redspark/rsh-codex-app-server',
+  '@redspark/rsh-llm',
+  '@redspark/rsh-permission-presets',
+  '@redspark/rsh-session',
+  '@redspark/rsh-session-telemetry-otel',
+  '@redspark/rsh-webhook',
 ]
 
 /** Type imports retained by public declarations in independently installed packages. */
 const PUBLISHED_TYPE_DEPENDENCIES = {
-  '@deepseek-ai/dsh-codex-app-server': [
-    '@deepseek-ai/dsh-llm',
-    '@deepseek-ai/dsh-native-model-execution',
-    '@deepseek-ai/dsh-native-runtime',
-    '@deepseek-ai/dsh-native-subagent',
-    '@deepseek-ai/dsh-native-tools',
+  '@redspark/rsh-codex-app-server': [
+    '@redspark/rsh-llm',
+    '@redspark/rsh-native-model-execution',
+    '@redspark/rsh-native-runtime',
+    '@redspark/rsh-native-subagent',
+    '@redspark/rsh-native-tools',
   ],
-  '@deepseek-ai/dsh-client-ui-slots': ['@deepseek-ai/dsh-client-store', '@deepseek-ai/dsh-native-runtime', '@types/react'],
-  '@deepseek-ai/dsh-client-modules': ['@deepseek-ai/dsh-http-routes'],
-  '@deepseek-ai/dsh-client-web': ['@deepseek-ai/dsh-client-ui-slots'],
-  '@deepseek-ai/dsh-llm': ['@deepseek-ai/dsh-attachment'],
-  '@deepseek-ai/dsh-client-native-session': [
-    '@deepseek-ai/dsh-native-runtime',
-    '@deepseek-ai/dsh-client-connection',
-    '@deepseek-ai/dsh-native-model-selection',
-    '@deepseek-ai/dsh-agent-presets',
-    '@deepseek-ai/dsh-brand',
-    '@deepseek-ai/dsh-commands',
-    '@deepseek-ai/dsh-authorization',
-    '@deepseek-ai/dsh-api-workspace-files',
-    '@deepseek-ai/dsh-command-feedback',
-    '@deepseek-ai/dsh-message-feedback',
+  '@redspark/rsh-client-ui-slots': ['@redspark/rsh-client-store', '@redspark/rsh-native-runtime', '@types/react'],
+  '@redspark/rsh-client-modules': ['@redspark/rsh-http-routes'],
+  '@redspark/rsh-client-web': ['@redspark/rsh-client-ui-slots'],
+  '@redspark/rsh-llm': ['@redspark/rsh-attachment'],
+  '@redspark/rsh-client-native-session': [
+    '@redspark/rsh-native-runtime',
+    '@redspark/rsh-client-connection',
+    '@redspark/rsh-native-model-selection',
+    '@redspark/rsh-agent-presets',
+    '@redspark/rsh-brand',
+    '@redspark/rsh-commands',
+    '@redspark/rsh-authorization',
+    '@redspark/rsh-api-workspace-files',
+    '@redspark/rsh-command-feedback',
+    '@redspark/rsh-message-feedback',
   ],
-  '@deepseek-ai/dsh-session-telemetry-otel': ['@opentelemetry/otlp-exporter-base'],
-  '@deepseek-ai/dsh-client-native-application': [
-    '@deepseek-ai/dsh-native-runtime',
-    '@deepseek-ai/dsh-client-native-session',
-    '@deepseek-ai/dsh-native-tools',
+  '@redspark/rsh-session-telemetry-otel': ['@opentelemetry/otlp-exporter-base'],
+  '@redspark/rsh-client-native-application': [
+    '@redspark/rsh-native-runtime',
+    '@redspark/rsh-client-native-session',
+    '@redspark/rsh-native-tools',
   ],
-  '@deepseek-ai/dsh-client-ui-conversation': ['@deepseek-ai/dsh-llm', '@deepseek-ai/dsh-attachment', '@deepseek-ai/dsh-client-ui-slots'],
-  '@deepseek-ai/dsh-client-ui-tool': ['@deepseek-ai/dsh-client-ui-conversation', '@deepseek-ai/dsh-client-ui-slots'],
-  '@deepseek-ai/dsh-client-ui-attachment': ['@deepseek-ai/dsh-attachment', '@types/react'],
-  '@deepseek-ai/dsh-client-ui-goal': [
-    '@deepseek-ai/dsh-session',
+  '@redspark/rsh-client-ui-conversation': ['@redspark/rsh-llm', '@redspark/rsh-attachment', '@redspark/rsh-client-ui-slots'],
+  '@redspark/rsh-client-ui-tool': ['@redspark/rsh-client-ui-conversation', '@redspark/rsh-client-ui-slots'],
+  '@redspark/rsh-client-ui-attachment': ['@redspark/rsh-attachment', '@types/react'],
+  '@redspark/rsh-client-ui-goal': [
+    '@redspark/rsh-session',
     '@types/react',
   ],
-  '@deepseek-ai/dsh-client-ui-trajectory': [
-    '@deepseek-ai/dsh-client-ui-conversation',
-    '@deepseek-ai/dsh-client-ui-slots',
-    '@deepseek-ai/dsh-session',
+  '@redspark/rsh-client-ui-trajectory': [
+    '@redspark/rsh-client-ui-conversation',
+    '@redspark/rsh-client-ui-slots',
+    '@redspark/rsh-session',
     '@types/react',
   ],
-  '@deepseek-ai/dsh-client-locale': ['@deepseek-ai/dsh-client-ui-slots', '@deepseek-ai/dsh-native-runtime'],
-  '@deepseek-ai/dsh-client-ui-session': [
-    '@deepseek-ai/dsh-client-native-session',
-    '@deepseek-ai/dsh-client-ui-slots',
-    '@deepseek-ai/dsh-native-runtime',
-    '@deepseek-ai/dsh-session',
+  '@redspark/rsh-client-locale': ['@redspark/rsh-client-ui-slots', '@redspark/rsh-native-runtime'],
+  '@redspark/rsh-client-ui-session': [
+    '@redspark/rsh-client-native-session',
+    '@redspark/rsh-client-ui-slots',
+    '@redspark/rsh-native-runtime',
+    '@redspark/rsh-session',
   ],
-  '@deepseek-ai/dsh-client-ui-layout': [
-    '@deepseek-ai/dsh-brand',
-    '@deepseek-ai/dsh-client-store',
-    '@deepseek-ai/dsh-client-ui-slots',
-    '@deepseek-ai/dsh-native-runtime',
+  '@redspark/rsh-client-ui-layout': [
+    '@redspark/rsh-brand',
+    '@redspark/rsh-client-store',
+    '@redspark/rsh-client-ui-slots',
+    '@redspark/rsh-native-runtime',
   ],
-  '@deepseek-ai/dsh-client-ui-theme': ['@deepseek-ai/dsh-native-runtime'],
-  '@deepseek-ai/dsh-client-ui-sidebar': [
-    '@deepseek-ai/dsh-client-ui-layout',
-    '@deepseek-ai/dsh-native-runtime',
-    '@deepseek-ai/dsh-workspace-definition',
+  '@redspark/rsh-client-ui-theme': ['@redspark/rsh-native-runtime'],
+  '@redspark/rsh-client-ui-sidebar': [
+    '@redspark/rsh-client-ui-layout',
+    '@redspark/rsh-native-runtime',
+    '@redspark/rsh-workspace-definition',
   ],
-  '@deepseek-ai/dsh-task-scheduler': [
-    '@deepseek-ai/dsh-native-agent',
-    '@deepseek-ai/dsh-native-runtime',
-    '@deepseek-ai/dsh-native-session-execution',
-    '@deepseek-ai/dsh-typert-protocol',
+  '@redspark/rsh-task-scheduler': [
+    '@redspark/rsh-native-agent',
+    '@redspark/rsh-native-runtime',
+    '@redspark/rsh-native-session-execution',
+    '@redspark/rsh-typert-protocol',
   ],
 } as const satisfies Readonly<Record<string, readonly string[]>>
 
 /** Published type imports whose provider must be installed by the consumer. */
 const PUBLISHED_TYPE_PEER_DEPENDENCIES = {
-  '@deepseek-ai/dsh-client-ui-user-questions': ['@deepseek-ai/dsh-user-questions'],
-  '@deepseek-ai/dsh-client-ui-goal': ['@deepseek-ai/dsh-goal'],
-  '@deepseek-ai/dsh-session-telemetry-otel': [
-    '@deepseek-ai/dsh-launch-environment',
-    '@deepseek-ai/dsh-native-runtime',
+  '@redspark/rsh-client-ui-user-questions': ['@redspark/rsh-user-questions'],
+  '@redspark/rsh-client-ui-goal': ['@redspark/rsh-goal'],
+  '@redspark/rsh-session-telemetry-otel': [
+    '@redspark/rsh-launch-environment',
+    '@redspark/rsh-native-runtime',
   ],
-  '@deepseek-ai/dsh-session-log-export': [
-    '@deepseek-ai/dsh-attachment',
-    '@deepseek-ai/dsh-native-runtime',
-    '@deepseek-ai/dsh-session',
-    '@deepseek-ai/dsh-session-persistence',
-    '@deepseek-ai/dsh-session-query',
+  '@redspark/rsh-session-log-export': [
+    '@redspark/rsh-attachment',
+    '@redspark/rsh-native-runtime',
+    '@redspark/rsh-session',
+    '@redspark/rsh-session-persistence',
+    '@redspark/rsh-session-query',
   ],
-  '@deepseek-ai/dsh-permission-presets': [
-    '@deepseek-ai/dsh-native-runtime',
-    '@deepseek-ai/dsh-native-session-execution',
-    '@deepseek-ai/dsh-sandbox',
+  '@redspark/rsh-permission-presets': [
+    '@redspark/rsh-native-runtime',
+    '@redspark/rsh-native-session-execution',
+    '@redspark/rsh-sandbox',
   ],
-  '@deepseek-ai/dsh-session': ['@deepseek-ai/dsh-llm'],
-  '@deepseek-ai/dsh-task-scheduler': ['@deepseek-ai/dsh-goal'],
-  '@deepseek-ai/dsh-webhook': [
-    '@deepseek-ai/dsh-agent-presets',
-    '@deepseek-ai/dsh-native-model-execution',
-    '@deepseek-ai/dsh-native-model-selection',
-    '@deepseek-ai/dsh-native-runtime',
-    '@deepseek-ai/dsh-native-session-execution',
-    '@deepseek-ai/dsh-permission-presets',
-    '@deepseek-ai/dsh-workspace',
+  '@redspark/rsh-session': ['@redspark/rsh-llm'],
+  '@redspark/rsh-task-scheduler': ['@redspark/rsh-goal'],
+  '@redspark/rsh-webhook': [
+    '@redspark/rsh-agent-presets',
+    '@redspark/rsh-native-model-execution',
+    '@redspark/rsh-native-model-selection',
+    '@redspark/rsh-native-runtime',
+    '@redspark/rsh-native-session-execution',
+    '@redspark/rsh-permission-presets',
+    '@redspark/rsh-workspace',
   ],
 } as const satisfies Readonly<Record<string, readonly string[]>>
 
 /** Peer packages that own contracts for Native services required by a mixed package's Host entry. */
 const NATIVE_SERVICE_PEER_DEPENDENCIES = {
-  '@deepseek-ai/dsh-session-log-export': {
-    activeSessions: '@deepseek-ai/dsh-native-session-execution',
+  '@redspark/rsh-session-log-export': {
+    activeSessions: '@redspark/rsh-native-session-execution',
   },
-  '@deepseek-ai/dsh-command-feedback': {
-    activeSessions: '@deepseek-ai/dsh-native-session-execution',
+  '@redspark/rsh-command-feedback': {
+    activeSessions: '@redspark/rsh-native-session-execution',
   },
-  '@deepseek-ai/dsh-message-feedback': {
-    activeSessions: '@deepseek-ai/dsh-native-session-execution',
+  '@redspark/rsh-message-feedback': {
+    activeSessions: '@redspark/rsh-native-session-execution',
   },
-  '@deepseek-ai/dsh-permission-presets': {
-    agents: '@deepseek-ai/dsh-native-agent',
-    sandboxPolicy: '@deepseek-ai/dsh-native-sandbox-policy',
+  '@redspark/rsh-permission-presets': {
+    agents: '@redspark/rsh-native-agent',
+    sandboxPolicy: '@redspark/rsh-native-sandbox-policy',
   },
 } as const satisfies Readonly<Record<string, Readonly<Record<string, string>>>>
 
 /** Development-only package relationships not represented by source imports. */
 const CONFIGURATION_ONLY_DEV_DEPENDENCIES = {
-  '@deepseek-ai/dsh-client-locale': ['@deepseek-ai/dsh-api-remotes'],
-  '@deepseek-ai/dsh-client-ui-conversation': [
-    '@deepseek-ai/dsh-api-remotes',
-    '@deepseek-ai/dsh-client-ui-workspace',
+  '@redspark/rsh-client-locale': ['@redspark/rsh-api-remotes'],
+  '@redspark/rsh-client-ui-conversation': [
+    '@redspark/rsh-api-remotes',
+    '@redspark/rsh-client-ui-workspace',
   ],
-  '@deepseek-ai/dsh-client-ui-model-selection': ['@deepseek-ai/dsh-client-ui-input-trigger'],
-  '@deepseek-ai/dsh-client-ui-sidebar': ['@deepseek-ai/dsh-client-ui-workspace'],
-  '@deepseek-ai/dsh-client-ui-subagent': ['@deepseek-ai/dsh-client-ui-input-trigger'],
-  '@deepseek-ai/dsh-client-ui-theme': ['@deepseek-ai/dsh-api-remotes'],
-  '@deepseek-ai/dsh-client-ui-tool': ['@deepseek-ai/dsh-api-remotes'],
+  '@redspark/rsh-client-ui-model-selection': ['@redspark/rsh-client-ui-input-trigger'],
+  '@redspark/rsh-client-ui-sidebar': ['@redspark/rsh-client-ui-workspace'],
+  '@redspark/rsh-client-ui-subagent': ['@redspark/rsh-client-ui-input-trigger'],
+  '@redspark/rsh-client-ui-theme': ['@redspark/rsh-api-remotes'],
+  '@redspark/rsh-client-ui-tool': ['@redspark/rsh-api-remotes'],
 } as const satisfies Readonly<Record<string, readonly string[]>>
 
 /** Runtime dependencies retained by published Client packages. */
 const CLIENT_RUNTIME_DEPENDENCIES = {
-  '@deepseek-ai/dsh-client-ui-primitives': ['@shikijs/langs','anser','clsx','katex','mdast-util-from-markdown','mdast-util-gfm','mdast-util-math','micromark-core-commonmark','micromark-extension-gfm','micromark-extension-math','micromark-factory-space','micromark-util-character','micromark-util-classify-character','micromark-util-sanitize-uri','micromark-util-symbol','shiki'],
-  '@deepseek-ai/dsh-client-store': ['immer', 'zustand'],
-  '@deepseek-ai/dsh-client-web': ['@deepseek-ai/dsh-native-runtime', 'dequal'],
-  '@deepseek-ai/dsh-client-native-session': ['eventsource-parser', 'zod', '@deepseek-ai/dsh-command-feedback'],
-  '@deepseek-ai/dsh-client-ui-session': ['@deepseek-ai/dsh-util-workspace-path'],
-  '@deepseek-ai/dsh-client-ui-renderer': ['use-sync-external-store'],
-  '@deepseek-ai/dsh-client-ui-layout': ['@deepseek-ai/dsh-client-store'],
-  '@deepseek-ai/dsh-client-native-application': ['@deepseek-ai/dsh-client-ui-primitives', '@deepseek-ai/dsh-client-ui-attachment', '@deepseek-ai/dsh-client-ui-goal', '@deepseek-ai/dsh-client-ui-trajectory', '@deepseek-ai/dsh-client-ui-workflow-run'],
-  '@deepseek-ai/dsh-client-ui-attachment': ['clsx', 'react-dom'],
-  '@deepseek-ai/dsh-client-ui-goal': ['@deepseek-ai/dsh-goal'],
-  '@deepseek-ai/dsh-client-ui-trajectory': ['@tanstack/react-virtual', 'diff'],
-  '@deepseek-ai/dsh-client-ui-sidebar': [
-    '@deepseek-ai/dsh-client-store',
-    '@deepseek-ai/dsh-client-ui-primitives',
-    '@deepseek-ai/dsh-client-ui-slots',
+  '@redspark/rsh-client-ui-primitives': ['@shikijs/langs','anser','clsx','katex','mdast-util-from-markdown','mdast-util-gfm','mdast-util-math','micromark-core-commonmark','micromark-extension-gfm','micromark-extension-math','micromark-factory-space','micromark-util-character','micromark-util-classify-character','micromark-util-sanitize-uri','micromark-util-symbol','shiki'],
+  '@redspark/rsh-client-store': ['immer', 'zustand'],
+  '@redspark/rsh-client-web': ['@redspark/rsh-native-runtime', 'dequal'],
+  '@redspark/rsh-client-native-session': ['eventsource-parser', 'zod', '@redspark/rsh-command-feedback'],
+  '@redspark/rsh-client-ui-session': ['@redspark/rsh-util-workspace-path'],
+  '@redspark/rsh-client-ui-renderer': ['use-sync-external-store'],
+  '@redspark/rsh-client-ui-layout': ['@redspark/rsh-client-store'],
+  '@redspark/rsh-client-native-application': ['@redspark/rsh-client-ui-primitives', '@redspark/rsh-client-ui-attachment', '@redspark/rsh-client-ui-goal', '@redspark/rsh-client-ui-trajectory', '@redspark/rsh-client-ui-workflow-run'],
+  '@redspark/rsh-client-ui-attachment': ['clsx', 'react-dom'],
+  '@redspark/rsh-client-ui-goal': ['@redspark/rsh-goal'],
+  '@redspark/rsh-client-ui-trajectory': ['@tanstack/react-virtual', 'diff'],
+  '@redspark/rsh-client-ui-sidebar': [
+    '@redspark/rsh-client-store',
+    '@redspark/rsh-client-ui-primitives',
+    '@redspark/rsh-client-ui-slots',
   ],
 } as const satisfies Readonly<Record<string, readonly string[]>>
 
 /** Legacy Host peers omitted by the separately published native entry. */
 export const OPTIONAL_NATIVE_HOST_PEERS: Readonly<Record<string, readonly string[]>> = {
-  '@deepseek-ai/dsh-tool-pwsh': ['@deepseek-ai/dsh-tools'],
-  '@deepseek-ai/dsh-tool-bash': ['@deepseek-ai/dsh-tools'],
-  '@deepseek-ai/dsh-file-reference': ['@deepseek-ai/dsh-agent'],
-  '@deepseek-ai/dsh-skill': ['@deepseek-ai/dsh-scope'],
-  '@deepseek-ai/dsh-workflow': ['@deepseek-ai/dsh-agent'],
-  '@deepseek-ai/dsh-fs-sandbox': ['@deepseek-ai/cordis', '@deepseek-ai/dsh-plugin-host', '@deepseek-ai/dsh-sandbox-policy'],
-  '@deepseek-ai/dsh-session': ['@deepseek-ai/dsh-scope'],
-  '@deepseek-ai/dsh-permission-presets': [
-    '@deepseek-ai/dsh-compat-settings-definition',
-    '@deepseek-ai/dsh-shell',
-    '@deepseek-ai/dsh-commands',
-    '@deepseek-ai/dsh-invariants',
-    '@deepseek-ai/dsh-sandbox-policy',
-    '@deepseek-ai/dsh-session',
-    '@deepseek-ai/dsh-session-projection',
-    '@deepseek-ai/dsh-user-approval',
+  '@redspark/rsh-tool-pwsh': ['@redspark/rsh-tools'],
+  '@redspark/rsh-tool-bash': ['@redspark/rsh-tools'],
+  '@redspark/rsh-file-reference': ['@redspark/rsh-agent'],
+  '@redspark/rsh-skill': ['@redspark/rsh-scope'],
+  '@redspark/rsh-workflow': ['@redspark/rsh-agent'],
+  '@redspark/rsh-fs-sandbox': ['@redspark/cordis', '@redspark/rsh-plugin-host', '@redspark/rsh-sandbox-policy'],
+  '@redspark/rsh-session': ['@redspark/rsh-scope'],
+  '@redspark/rsh-permission-presets': [
+    '@redspark/rsh-compat-settings-definition',
+    '@redspark/rsh-shell',
+    '@redspark/rsh-commands',
+    '@redspark/rsh-invariants',
+    '@redspark/rsh-sandbox-policy',
+    '@redspark/rsh-session',
+    '@redspark/rsh-session-projection',
+    '@redspark/rsh-user-approval',
   ],
-  '@deepseek-ai/dsh-session-title': ['@deepseek-ai/dsh-agent', '@deepseek-ai/dsh-invariants'],
-  '@deepseek-ai/dsh-compaction': ['@deepseek-ai/dsh-invariants'],
-  '@deepseek-ai/dsh-session-reference': [
-    '@deepseek-ai/dsh-agent',
-    '@deepseek-ai/dsh-system-prompt',
-    '@deepseek-ai/dsh-typert-protocol',
+  '@redspark/rsh-session-title': ['@redspark/rsh-agent', '@redspark/rsh-invariants'],
+  '@redspark/rsh-compaction': ['@redspark/rsh-invariants'],
+  '@redspark/rsh-session-reference': [
+    '@redspark/rsh-agent',
+    '@redspark/rsh-system-prompt',
+    '@redspark/rsh-typert-protocol',
   ],
-  '@deepseek-ai/dsh-command-feedback': ['@deepseek-ai/dsh-typert-protocol'],
-  '@deepseek-ai/dsh-message-feedback': ['@deepseek-ai/dsh-typert-protocol'],
-  '@deepseek-ai/dsh-authorization': ['@deepseek-ai/dsh-invariants'],
-  '@deepseek-ai/dsh-llm': ['@deepseek-ai/dsh-typert-protocol'],
-  '@deepseek-ai/dsh-webhook': [
-    '@deepseek-ai/dsh-agent',
-    '@deepseek-ai/dsh-agent-default-model',
-    '@deepseek-ai/dsh-invariants',
+  '@redspark/rsh-command-feedback': ['@redspark/rsh-typert-protocol'],
+  '@redspark/rsh-message-feedback': ['@redspark/rsh-typert-protocol'],
+  '@redspark/rsh-authorization': ['@redspark/rsh-invariants'],
+  '@redspark/rsh-llm': ['@redspark/rsh-typert-protocol'],
+  '@redspark/rsh-webhook': [
+    '@redspark/rsh-agent',
+    '@redspark/rsh-agent-default-model',
+    '@redspark/rsh-invariants',
   ],
-  '@deepseek-ai/dsh-task-scheduler': ['@deepseek-ai/dsh-tools', '@deepseek-ai/dsh-typert-protocol'],
-  '@deepseek-ai/dsh-tool-session-query': ['@deepseek-ai/dsh-tools'],
-  '@deepseek-ai/dsh-web': ['@deepseek-ai/cordis'],
-  '@deepseek-ai/dsh-web-fetch-http': ['@deepseek-ai/cordis'],
-  '@deepseek-ai/dsh-web-search-deepseek': ['@deepseek-ai/cordis', '@deepseek-ai/dsh-agent', '@deepseek-ai/dsh-compat-settings-definition', '@deepseek-ai/dsh-session', '@deepseek-ai/dsh-native-tools', '@deepseek-ai/dsh-settings-definition'],
-  '@deepseek-ai/dsh-web-search-exa': ['@deepseek-ai/cordis'],
-  '@deepseek-ai/dsh-web-search-perplexity': ['@deepseek-ai/cordis'],
-  '@deepseek-ai/dsh-tool-web': ['@deepseek-ai/cordis', '@deepseek-ai/dsh-system-prompt', '@deepseek-ai/dsh-tools'],
+  '@redspark/rsh-task-scheduler': ['@redspark/rsh-tools', '@redspark/rsh-typert-protocol'],
+  '@redspark/rsh-tool-session-query': ['@redspark/rsh-tools'],
+  '@redspark/rsh-web': ['@redspark/cordis'],
+  '@redspark/rsh-web-fetch-http': ['@redspark/cordis'],
+  '@redspark/rsh-web-search-deepseek': ['@redspark/cordis', '@redspark/rsh-agent', '@redspark/rsh-compat-settings-definition', '@redspark/rsh-session', '@redspark/rsh-native-tools', '@redspark/rsh-settings-definition'],
+  '@redspark/rsh-web-search-exa': ['@redspark/cordis'],
+  '@redspark/rsh-web-search-perplexity': ['@redspark/cordis'],
+  '@redspark/rsh-tool-web': ['@redspark/cordis', '@redspark/rsh-system-prompt', '@redspark/rsh-tools'],
 }
 
 /** Client runtime peers whose values must resolve to the shared application instances. */
 export const SHARED_CLIENT_RUNTIME_PEERS: Readonly<Record<string, readonly string[]>> = {
-  '@deepseek-ai/dsh-client-ui-approval': ['react'],
-  '@deepseek-ai/dsh-client-ui-user-questions': ['react'],
-  '@deepseek-ai/dsh-client-ui-tool': ['react'],
-  '@deepseek-ai/dsh-client-ui-attachment': ['react'],
-  '@deepseek-ai/dsh-client-ui-goal': ['react'],
-  '@deepseek-ai/dsh-client-ui-workflow-run': ['react'],
-  '@deepseek-ai/dsh-client-ui-trajectory': ['react'],
-  '@deepseek-ai/dsh-client-ui-primitives': ['react', 'react-dom'],
-  '@deepseek-ai/dsh-client-ui-renderer': ['react', 'react-dom', '@deepseek-ai/dsh-client-ui-slots'],
-  '@deepseek-ai/dsh-client-native-application': [
+  '@redspark/rsh-client-ui-approval': ['react'],
+  '@redspark/rsh-client-ui-user-questions': ['react'],
+  '@redspark/rsh-client-ui-tool': ['react'],
+  '@redspark/rsh-client-ui-attachment': ['react'],
+  '@redspark/rsh-client-ui-goal': ['react'],
+  '@redspark/rsh-client-ui-workflow-run': ['react'],
+  '@redspark/rsh-client-ui-trajectory': ['react'],
+  '@redspark/rsh-client-ui-primitives': ['react', 'react-dom'],
+  '@redspark/rsh-client-ui-renderer': ['react', 'react-dom', '@redspark/rsh-client-ui-slots'],
+  '@redspark/rsh-client-native-application': [
     'react',
-    '@deepseek-ai/dsh-session',
-    '@deepseek-ai/dsh-native-model-selection',
-    '@deepseek-ai/dsh-client-native-session',
-    '@deepseek-ai/dsh-client-ui-tool',
-    '@deepseek-ai/dsh-client-ui-approval',
-    '@deepseek-ai/dsh-client-ui-user-questions',
-    '@deepseek-ai/dsh-tool-todo',
+    '@redspark/rsh-session',
+    '@redspark/rsh-native-model-selection',
+    '@redspark/rsh-client-native-session',
+    '@redspark/rsh-client-ui-tool',
+    '@redspark/rsh-client-ui-approval',
+    '@redspark/rsh-client-ui-user-questions',
+    '@redspark/rsh-tool-todo',
   ],
-  '@deepseek-ai/dsh-client-native-session': ['@deepseek-ai/dsh-session'],
+  '@redspark/rsh-client-native-session': ['@redspark/rsh-session'],
 }
 
 /** Workspace packages whose complete runtime surface is safe across duplicate installations. */
 const DUPLICATE_SAFE_PACKAGES: readonly string[] = [
-  '@deepseek-ai/dsh-brand',
-  '@deepseek-ai/dsh-typert-protocol',
-  '@deepseek-ai/dsh-util-crypto',
-  '@deepseek-ai/dsh-util-values',
+  '@redspark/rsh-brand',
+  '@redspark/rsh-typert-protocol',
+  '@redspark/rsh-util-crypto',
+  '@redspark/rsh-util-values',
 ]
 
 /**
@@ -264,25 +264,25 @@ const DUPLICATE_SAFE_PACKAGES: readonly string[] = [
  * prominent heading in the pull request description.
  */
 const SAFE_HOST_DEPENDENCY_EXPORTS = {
-  '@deepseek-ai/dsh-deque': ['Deque'],
-  '@deepseek-ai/dsh-approval-definition': ['sessionApprovalPolicy'],
-  '@deepseek-ai/dsh-approval-definition/legacy': ['APPROVAL_POLICIES', 'setApprovalPolicy'],
-  '@deepseek-ai/dsh-commands/brand': ['CommandDefinitionId'],
-  '@deepseek-ai/dsh-llm': ['boundContextSummary', 'errorChain'],
-  '@deepseek-ai/dsh-llm/native': ['boundContextSummary'],
-  '@deepseek-ai/dsh-json-rpc-line': ['JsonRpcLineTransport'],
-  '@deepseek-ai/dsh-sandbox-policy': ['SANDBOX_MODES', 'setSandboxMode'],
-  '@deepseek-ai/dsh-subprocess/native': ['disposeChildConnection'],
-  '@deepseek-ai/dsh-session-format': ['sessionFormatLogFilename'],
-  '@deepseek-ai/dsh-session/surface': ['isAppendSurfaceEvent'],
-  '@deepseek-ai/dsh-timeout': ['MAX_TIMER_DELAY_MS'],
-  '@deepseek-ai/schemastery': ['default'],
+  '@redspark/rsh-deque': ['Deque'],
+  '@redspark/rsh-approval-definition': ['sessionApprovalPolicy'],
+  '@redspark/rsh-approval-definition/legacy': ['APPROVAL_POLICIES', 'setApprovalPolicy'],
+  '@redspark/rsh-commands/brand': ['CommandDefinitionId'],
+  '@redspark/rsh-llm': ['boundContextSummary', 'errorChain'],
+  '@redspark/rsh-llm/native': ['boundContextSummary'],
+  '@redspark/rsh-json-rpc-line': ['JsonRpcLineTransport'],
+  '@redspark/rsh-sandbox-policy': ['SANDBOX_MODES', 'setSandboxMode'],
+  '@redspark/rsh-subprocess/native': ['disposeChildConnection'],
+  '@redspark/rsh-session-format': ['sessionFormatLogFilename'],
+  '@redspark/rsh-session/surface': ['isAppendSurfaceEvent'],
+  '@redspark/rsh-timeout': ['MAX_TIMER_DELAY_MS'],
+  '@redspark/schemastery': ['default'],
 } as const satisfies HostDependencyExports
 
 /** Runtime exports that require every consumer to resolve the provider's shared peer instance. */
 const PEER_REQUIRED_HOST_EXPORTS = {
-  '@deepseek-ai/dsh-goal/projection': ['foldGoal'],
-  '@deepseek-ai/dsh-client-ui-primitives': [
+  '@redspark/rsh-goal/projection': ['foldGoal'],
+  '@redspark/rsh-client-ui-primitives': [
     'Button', 'CodeBlock', 'DiffBlock', 'DisclosureRow', 'FileTypeIcon', 'IconApiOutline14', 'IconBrowseOutline16',
     'IconCheckOutline14', 'IconChevronDownOutline14', 'IconChevronLeftOutline14', 'IconChevronRightOutline14',
     'IconChevronUpOutline14', 'IconCloseFill14', 'IconCloseOutline16',
@@ -292,24 +292,24 @@ const PEER_REQUIRED_HOST_EXPORTS = {
     'Menu', 'Tag', 'LinkIcon', 'classifyLinkPath',
     'IconFolderOpenOutline16', 'IconRightUpOutline16', 'IconSkillOutline16',
   ],
-  '@deepseek-ai/dsh-util-workspace-path': ['abbreviateHomePath','relativizeToCwd','resolveWorkspacePath'],
-  '@deepseek-ai/dsh-spill-policy/notice': ['hasSpillNotice'],
-  '@deepseek-ai/dsh-client-ui-conversation/conversation-copy': ['en','zh'],
-  '@deepseek-ai/dsh-client-locale/dictionary': ['en','formatLocaleTemplate','zh'],
-  '@deepseek-ai/dsh-errors': ['HarnessError', 'errorChain', 'isHarnessError'],
-  '@deepseek-ai/dsh-llm': ['APP_IDENTITY', 'createUserMessage'],
-  '@deepseek-ai/dsh-llm/native': ['APP_IDENTITY', 'createUserMessage', 'ReasoningEffortId', 'ToolCallId', 'fileHandleText'],
-  '@deepseek-ai/dsh-anonymous-user-id': ['getOrCreateAnonymousUserId'],
-  '@deepseek-ai/dsh-native-subagent/native': ['serializeNativeExternalJson'],
-  '@deepseek-ai/dsh-scope': ['carrierKeyOf', 'scopeOf', 'scopeTarget'],
-  '@deepseek-ai/dsh-session': ['Session', 'SessionId'],
-  '@deepseek-ai/dsh-session-telemetry': ['SessionTelemetryBackend', 'SessionTelemetryCoordinator'],
-  '@deepseek-ai/dsh-session-telemetry/records': ['isFeedbackEvent', 'ledgerRecord'],
-  '@deepseek-ai/dsh-session/types': ['SESSION_FORMAT_VERSION'],
-  '@deepseek-ai/dsh-session/native': ['SessionId'],
-  '@deepseek-ai/dsh-session-persistence/native': ['SessionPersistenceNotFoundError'],
-  '@deepseek-ai/dsh-session-title/normalize': ['normalizeSessionTitle'],
-  '@deepseek-ai/dsh-tools': ['defineTool'],
+  '@redspark/rsh-util-workspace-path': ['abbreviateHomePath','relativizeToCwd','resolveWorkspacePath'],
+  '@redspark/rsh-spill-policy/notice': ['hasSpillNotice'],
+  '@redspark/rsh-client-ui-conversation/conversation-copy': ['en','zh'],
+  '@redspark/rsh-client-locale/dictionary': ['en','formatLocaleTemplate','zh'],
+  '@redspark/rsh-errors': ['HarnessError', 'errorChain', 'isHarnessError'],
+  '@redspark/rsh-llm': ['APP_IDENTITY', 'createUserMessage'],
+  '@redspark/rsh-llm/native': ['APP_IDENTITY', 'createUserMessage', 'ReasoningEffortId', 'ToolCallId', 'fileHandleText'],
+  '@redspark/rsh-anonymous-user-id': ['getOrCreateAnonymousUserId'],
+  '@redspark/rsh-native-subagent/native': ['serializeNativeExternalJson'],
+  '@redspark/rsh-scope': ['carrierKeyOf', 'scopeOf', 'scopeTarget'],
+  '@redspark/rsh-session': ['Session', 'SessionId'],
+  '@redspark/rsh-session-telemetry': ['SessionTelemetryBackend', 'SessionTelemetryCoordinator'],
+  '@redspark/rsh-session-telemetry/records': ['isFeedbackEvent', 'ledgerRecord'],
+  '@redspark/rsh-session/types': ['SESSION_FORMAT_VERSION'],
+  '@redspark/rsh-session/native': ['SessionId'],
+  '@redspark/rsh-session-persistence/native': ['SessionPersistenceNotFoundError'],
+  '@redspark/rsh-session-title/normalize': ['normalizeSessionTitle'],
+  '@redspark/rsh-tools': ['defineTool'],
 } as const satisfies HostDependencyExports
 
 /** Exact import specifier to reviewed runtime exports. */

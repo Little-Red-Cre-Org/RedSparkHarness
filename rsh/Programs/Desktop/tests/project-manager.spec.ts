@@ -3,10 +3,10 @@ import { tmpdir } from 'node:os'
 import { basename, dirname, join } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { SessionId, SessionSeq, SESSION_FORMAT_VERSION } from '@deepseek-ai/dsh-session'
-import type { SessionEvent, SessionHeader } from '@deepseek-ai/dsh-session'
-import { inspectSessionRootCompression } from '@deepseek-ai/dsh-session-persistence-jsonl/native-inspection'
-import { JsonlSessionBackend, type JsonlCompression } from '@deepseek-ai/dsh-session-persistence-jsonl/native'
+import { SessionId, SessionSeq, SESSION_FORMAT_VERSION } from '@redspark/rsh-session'
+import type { SessionEvent, SessionHeader } from '@redspark/rsh-session'
+import { inspectSessionRootCompression } from '@redspark/rsh-session-persistence-jsonl/native-inspection'
+import { JsonlSessionBackend, type JsonlCompression } from '@redspark/rsh-session-persistence-jsonl/native'
 import { resolveDesktopPaths } from '../src/paths.ts'
 import { createCompatibilityPluginProfile, DesktopProjectManager, packageNameFromSpec, type DesktopProjectHooks } from '../src/project-manager.ts'
 import { runtimeFixture } from './runtime-fixture.ts'
@@ -43,7 +43,7 @@ if (command !== 'rebuild') {
     const packageRoot = join(project, 'node_modules', name)
     mkdirSync(packageRoot, { recursive: true })
     writeFileSync(join(packageRoot, 'package.json'), JSON.stringify({name, version,
-      peerDependencies: {'@deepseek-ai/cordis': '^1.0.0'}, dsh: {bundle: {patch: './bundle.yml'}}}))
+      peerDependencies: {'@redspark/cordis': '^1.0.0'}, dsh: {bundle: {patch: './bundle.yml'}}}))
     writeFileSync(join(packageRoot, 'bundle.yml'), '[]\\n')
   }
   writeFileSync(join(project, 'pnpm-lock.yaml'), JSON.stringify(manifest.dependencies))
@@ -58,7 +58,7 @@ function setup(): { root: string; manager: DesktopProjectManager } {
   const root = temporaryRoot()
   const dsh = join(root, 'resources', 'dsh')
   runtimeFixture(dsh, '1.0.0', '24.17.0', true)
-  vi.stubEnv('DSH_HOME', join(root, '.dsh'))
+  vi.stubEnv('RSH_HOME', join(root, '.dsh'))
   const manager = new DesktopProjectManager(resolveDesktopPaths(join(root, '.dsh')), { node: process.execPath, pnpm: writeFakePnpm(root), dsh })
   createCompatibilityPluginProfile(manager.paths.profile)
   return { root, manager }
@@ -67,7 +67,7 @@ function setupNative(): { root: string; manager: DesktopProjectManager } {
   const root = temporaryRoot()
   const dsh = join(root, 'resources', 'dsh')
   runtimeFixture(dsh)
-  vi.stubEnv('DSH_HOME', join(root, '.dsh'))
+  vi.stubEnv('RSH_HOME', join(root, '.dsh'))
   return { root, manager: new DesktopProjectManager(resolveDesktopPaths(join(root, '.dsh')),
     { node: process.execPath, pnpm: writeFakePnpm(root), dsh }) }
 }
@@ -115,7 +115,7 @@ function nativeStorageConfig(profile: string): { root: string; compression?: Jso
   const document = JSON.parse(readFileSync(join(profile, 'rsh.profile.json'), 'utf8')) as {
     installations: Array<{ plugin: string; config?: unknown }>
   }
-  const storage = document.installations.find(row => row.plugin === '@deepseek-ai/dsh-session-persistence-jsonl')
+  const storage = document.installations.find(row => row.plugin === '@redspark/rsh-session-persistence-jsonl')
   if (storage === undefined || typeof storage.config !== 'object' || storage.config === null
     || Array.isArray(storage.config) || typeof (storage.config as { root?: unknown }).root !== 'string') {
     throw new Error('Native Desktop profile has no JSONL storage configuration')
@@ -143,8 +143,8 @@ it.each(['fresh', 'old-template', 'custom-profile', 'legacy-without-compat'] as 
     if (scenario !== 'fresh') mkdirSync(profile, { recursive: true })
     if (scenario === 'old-template') {
       writeFileSync(join(profile, 'package.json'), `${JSON.stringify({
-        name: '@deepseek-ai/dsh-desktop-runtime', private: true, version: '0.0.0', dependencies: {},
-        dsh: { profile: { bundles: ['@deepseek-ai/dsh-base', '@deepseek-ai/dsh-web-app'] } },
+        name: '@redspark/rsh-desktop-runtime', private: true, version: '0.0.0', dependencies: {},
+        dsh: { profile: { bundles: ['@redspark/rsh-base', '@redspark/rsh-web-app'] } },
       }, undefined, 2)}\n`)
     }
     if (scenario === 'old-template') {
@@ -158,7 +158,7 @@ it.each(['fresh', 'old-template', 'custom-profile', 'legacy-without-compat'] as 
       writeFileSync(join(profile, '.env'), 'DESKTOP_TEST_SETTING=preserved\n')
       writeFileSync(settingsPath, 'locale:\n  preference: fr\n')
       writeFileSync(join(wrongHome, 'settings.yaml'), 'locale:\n  preference: zh\n')
-      vi.stubEnv('DSH_HOME', wrongHome)
+      vi.stubEnv('RSH_HOME', wrongHome)
       const originalPackage = readFileSync(packagePath)
       const originalEnv = readFileSync(join(profile, '.env'))
       await expect(manager.applyRelease()).rejects.toThrow(/locale.preference="fr" must be en, zh, or system/u)
@@ -178,8 +178,8 @@ it.each(['fresh', 'old-template', 'custom-profile', 'legacy-without-compat'] as 
       expect(readFileSync(patchPath)).toEqual(patchBefore)
       expect(existsSync(packagePath)).toBe(false)
       writeFileSync(packagePath, `${JSON.stringify({
-        name: '@deepseek-ai/dsh-desktop-runtime', private: true, version: '0.0.0', dependencies: {},
-        dsh: { profile: { bundles: ['@deepseek-ai/dsh-base', '@deepseek-ai/dsh-web-app'] } },
+        name: '@redspark/rsh-desktop-runtime', private: true, version: '0.0.0', dependencies: {},
+        dsh: { profile: { bundles: ['@redspark/rsh-base', '@redspark/rsh-web-app'] } },
       }, undefined, 2)}\n`)
       writeFileSync(join(profile, 'pnpm-workspace.yaml'), 'packages:\n  - .\n')
     }
@@ -196,7 +196,7 @@ it.each(['fresh', 'old-template', 'custom-profile', 'legacy-without-compat'] as 
       expect(storage.root).toBe(join(dirname(manager.paths.root), 'sessions'))
       expect(storage.compression).toBe(scenario === 'fresh' ? 'none' : 'zstd')
       expect(readFileSync(join(profile, 'rsh.profile.json'), 'utf8')).not.toContain('"id": "app"')
-      expect(existsSync(join(profile, 'node_modules', '@deepseek-ai', 'cordis'))).toBe(false)
+      expect(existsSync(join(profile, 'node_modules', '@redspark', 'cordis'))).toBe(false)
       if (scenario === 'old-template') {
         if (history === undefined) throw new Error('old-template Session fixture was not created')
         if (storage.compression === undefined) throw new Error('Native Desktop profile omitted Session compression')
@@ -216,7 +216,7 @@ it.each(['fresh', 'old-template', 'custom-profile', 'legacy-without-compat'] as 
         const client = JSON.parse(readFileSync(join(profile, 'rsh.client.json'), 'utf8')) as {
           installations: { plugin: string; config?: unknown }[]
         }
-        expect(client.installations.find(row => row.plugin === '@deepseek-ai/dsh-client-locale')?.config).toBeUndefined()
+        expect(client.installations.find(row => row.plugin === '@redspark/rsh-client-locale')?.config).toBeUndefined()
       }
       expect(calls(root)).toEqual([])
       return
@@ -224,7 +224,7 @@ it.each(['fresh', 'old-template', 'custom-profile', 'legacy-without-compat'] as 
 
     const message = scenario === 'custom-profile'
       ? /custom Cordis profile was not changed/u
-      : /release omits @deepseek-ai\/dsh-desktop-host-compatibility; the legacy profile was preserved/u
+      : /release omits @redspark\/dsh-desktop-host-compatibility; the legacy profile was preserved/u
     await expect(manager.applyRelease()).rejects.toThrow(message)
     expect(readFileSync(packagePath)).toEqual(before?.[0])
     expect(readFileSync(workspacePath)).toEqual(before?.[1])
@@ -331,7 +331,7 @@ describe('desktop external plugin profile', () => {
     const files = ['package.json', 'pnpm-workspace.yaml', 'rsh.profile.json', 'rsh.client.json', 'desktop-runtime-state.json']
     const profileBytes = new Map(files.filter(name => existsSync(join(profile, name)))
       .map(name => [name, readFileSync(join(profile, name))]))
-    const dependencyLinks = join(profile, 'node_modules', '@deepseek-ai')
+    const dependencyLinks = join(profile, 'node_modules', '@redspark')
     const links = readdirSync(dependencyLinks).map(name => [name, realpathSync(join(dependencyLinks, name))])
     const beforeChange = vi.fn(async () => {})
 
@@ -420,14 +420,14 @@ describe('desktop external plugin profile', () => {
     expect(manager.listPlugins()).toEqual([])
     expect(calls(root)).toEqual([])
     expect(existsSync(manager.paths.pnpm.store)).toBe(false)
-    expect(realpathSync(join(manager.paths.profile, 'node_modules/@deepseek-ai/cordis'))).toBe(realpathSync(join(manager.runtime.dsh, 'node_modules/@deepseek-ai/cordis')))
+    expect(realpathSync(join(manager.paths.profile, 'node_modules/@redspark/cordis'))).toBe(realpathSync(join(manager.runtime.dsh, 'node_modules/@redspark/cordis')))
     expect(JSON.parse(readFileSync(join(manager.paths.profile, 'package.json'), 'utf8'))).toMatchObject({ dependencies: {} })
   })
 
   it('repairs a removed managed link without running pnpm', async () => {
     const { root, manager } = setup()
     await manager.applyRelease()
-    unlinkSync(join(manager.paths.profile, 'node_modules/@deepseek-ai/cordis'))
+    unlinkSync(join(manager.paths.profile, 'node_modules/@redspark/cordis'))
     await expect(manager.applyRelease()).resolves.toBe(true)
     expect(calls(root)).toEqual([])
   })
@@ -462,7 +462,7 @@ describe('desktop external plugin profile', () => {
     ])
     expect(calls(root).every(call => call.registry === 'https://registry.npmjs.org/')).toBe(true)
     expect(JSON.parse(readFileSync(join(manager.paths.profile, 'package.json'), 'utf8'))).toMatchObject({ dependencies: { '@scope/plugin': '2.0.0' } })
-    await expect(manager.mutate({ type: 'plugin-add', spec: '@deepseek-ai/cordis' }, hooks())).rejects.toThrow(/host-owned/u)
+    await expect(manager.mutate({ type: 'plugin-add', spec: '@redspark/cordis' }, hooks())).rejects.toThrow(/host-owned/u)
     await expect(manager.applyRelease()).resolves.toBe(false)
     expect(calls(root)).toHaveLength(2)
   })
@@ -495,7 +495,7 @@ describe('desktop external plugin profile', () => {
     expect(next.releaseVersion()).toBe('1.1.0')
     expect(readFileSync(join(manager.paths.profile, 'cordis.patch.yml'), 'utf8')).toBe('[]\n')
     expect(calls(root)).toHaveLength(2)
-    expect(realpathSync(join(manager.paths.profile, 'node_modules/@deepseek-ai/cordis'))).toBe(realpathSync(join(nextRoot, 'node_modules/@deepseek-ai/cordis')))
+    expect(realpathSync(join(manager.paths.profile, 'node_modules/@redspark/cordis'))).toBe(realpathSync(join(nextRoot, 'node_modules/@redspark/cordis')))
     expect(readFileSync(join(manager.paths.profile, 'node_modules/plugin/bundle.yml'), 'utf8')).toBe('[]\n')
   })
 
@@ -520,7 +520,7 @@ describe('desktop external plugin profile', () => {
     const dsh = join(root, 'next-major')
     runtimeFixture(dsh, '2.0.0', '24.17.0', true)
     const next = new DesktopProjectManager(manager.paths, { ...manager.runtime, dsh })
-    await expect(next.applyRelease()).rejects.toThrow(/requires @deepseek-ai\/cordis/u)
+    await expect(next.applyRelease()).rejects.toThrow(/requires @redspark\/cordis/u)
     expect(next.releaseVersion()).toBe('2.0.0')
     await next.mutate({ type: 'plugins-disable-all' }, hooks())
     expect(next.releaseVersion()).toBe('2.0.0')
@@ -559,8 +559,8 @@ describe('desktop external plugin profile', () => {
     expect(worker.listPlugins()).toEqual([{ name: 'plugin', version: '1.0.0', enabled: false }])
     expect(starts).toBe(0)
     expect(existsSync(manager.paths.lock)).toBe(false)
-    expect(realpathSync(join(manager.paths.profile, 'node_modules/@deepseek-ai/cordis')))
-      .toBe(realpathSync(join(manager.runtime.dsh, 'node_modules/@deepseek-ai/cordis')))
+    expect(realpathSync(join(manager.paths.profile, 'node_modules/@redspark/cordis')))
+      .toBe(realpathSync(join(manager.runtime.dsh, 'node_modules/@redspark/cordis')))
     await manager.mutate({ type: 'plugin-remove', name: 'plugin' }, hooks())
     expect(manager.listPlugins()).toEqual([])
   })

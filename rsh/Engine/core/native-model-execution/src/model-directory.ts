@@ -1,6 +1,6 @@
 /** Optional provider-owned model directory; streaming Providers need not advertise catalogs. */
-import type { LlmProviderInfo, LlmResolvedModelInfo } from '@deepseek-ai/dsh-llm/native'
-import type {} from '@deepseek-ai/dsh-native-runtime'
+import type { LlmProviderInfo, LlmResolvedModelInfo } from '@redspark/rsh-llm/native'
+import type {} from '@redspark/rsh-native-runtime'
 import type { ModelCatalog, ModelSelection } from './model-selection.ts'
 
 /** Advisory current catalogs with exact route resolution independent of advertised membership. */
@@ -24,7 +24,7 @@ export interface NativeModelDirectory {
   resolve(provider: string, model: string, signal: AbortSignal): Promise<LlmResolvedModelInfo>
 }
 
-declare module '@deepseek-ai/dsh-native-runtime' {
+declare module '@redspark/rsh-native-runtime' {
   interface NativeServices {
     modelDirectory: NativeModelDirectory
   }

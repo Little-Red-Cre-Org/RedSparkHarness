@@ -1,9 +1,9 @@
 /** Native background-job projection, deltas, and transport safety. */
 import { expect, it } from 'vitest'
-import { NativeHost, NativeScope, resolveInstallation, type NativePlugin } from '@deepseek-ai/dsh-native-runtime'
-import type { NativeAgent } from '@deepseek-ai/dsh-native-agent'
-import type { NativeJobSnapshot } from '@deepseek-ai/dsh-native-jobs'
-import type { NativeSessionJob, NativeSessionJobsFrame } from '@deepseek-ai/dsh-client-native-session/jobs-types'
+import { NativeHost, NativeScope, resolveInstallation, type NativePlugin } from '@redspark/rsh-native-runtime'
+import type { NativeAgent } from '@redspark/rsh-native-agent'
+import type { NativeJobSnapshot } from '@redspark/rsh-native-jobs'
+import type { NativeSessionJob, NativeSessionJobsFrame } from '@redspark/rsh-client-native-session/jobs-types'
 import { MIN_POLL_INTERVAL_MS, NativeJobsController, plugin as jobsController } from '../src/native.ts'
 
 /** One Agent stand-in: the registry only exposes identity and scope to this projection. */

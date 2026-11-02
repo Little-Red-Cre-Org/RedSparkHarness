@@ -3,7 +3,7 @@ description: "原生模型流与 Session 步骤中的持久助手事件。"
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-native-model-execution
+# @redspark/rsh-native-model-execution
 
 [English](README.md) | 中文
 

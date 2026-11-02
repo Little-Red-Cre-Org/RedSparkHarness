@@ -6,7 +6,7 @@
  * come from the composition and request projections, so the command and any future dashboard
  * cannot disagree about the same Session.
  *
- * @module @deepseek-ai/dsh-context-insight/report
+ * @module @redspark/rsh-context-insight/report
  */
 
 import type { CompositionCategory, CompositionState } from './composition.ts'

@@ -1,10 +1,10 @@
 /** Cordis SessionTelemetryBackend Definition and coordinator export. */
-import { Context, Service } from '@deepseek-ai/cordis'
+import { Context, Service } from '@redspark/cordis'
 import type { SessionTelemetryRecord, SessionTelemetrySharingStatus, SessionTelemetrySink } from './types.ts'
 
 export type { SessionTelemetryRecord, SessionTelemetrySeverity, SessionTelemetrySharingStatus, SessionTelemetrySink } from './types.ts'
 
-declare module '@deepseek-ai/cordis' {
+declare module '@redspark/cordis' {
   interface Context {
     sessionTelemetry: SessionTelemetryBackend
   }

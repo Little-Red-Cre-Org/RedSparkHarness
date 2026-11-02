@@ -1,15 +1,15 @@
 /** Native Provider that confines code execution in a managed child process. */
-import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
-export type {} from '@deepseek-ai/dsh-subprocess/native'
-export type {} from '@deepseek-ai/dsh-sandbox/native'
-export type {} from '@deepseek-ai/dsh-native-sandbox-policy/native'
-export type {} from '@deepseek-ai/dsh-native-code-runtime/native'
-import { resolveNativeWorkerThreadConfig } from '@deepseek-ai/dsh-native-code-runtime'
+import type { NativePlugin } from '@redspark/rsh-native-runtime'
+export type {} from '@redspark/rsh-subprocess/native'
+export type {} from '@redspark/rsh-sandbox/native'
+export type {} from '@redspark/rsh-native-sandbox-policy/native'
+export type {} from '@redspark/rsh-native-code-runtime/native'
+import { resolveNativeWorkerThreadConfig } from '@redspark/rsh-native-code-runtime'
 import { ProcessSandboxCodeRuntime } from './index.ts'
 
 /** Install a code runtime only when process, confinement, and policy Providers are selected. */
 export const plugin: NativePlugin = {
-  apiVersion: 1, name: '@deepseek-ai/dsh-code-runtime-process-sandbox', targets: ['host'],
+  apiVersion: 1, name: '@redspark/rsh-code-runtime-process-sandbox', targets: ['host'],
   requires: ['subprocess', 'sandbox', 'sandboxPolicy'], provides: ['codeRuntime'],
   resolve(input) {
     const config = resolveNativeWorkerThreadConfig(input)

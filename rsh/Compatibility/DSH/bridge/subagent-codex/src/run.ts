@@ -1,12 +1,12 @@
 /** Cordis-to-Official adapter. Product process, wire, settlement, and cleanup live in Official. */
 
 import { randomUUID } from 'node:crypto'
-import { brandString } from '@deepseek-ai/dsh-brand'
-import type { ContentBlock } from '@deepseek-ai/dsh-llm'
-import type { SessionId } from '@deepseek-ai/dsh-session'
-import { subprocessRunHandle } from '@deepseek-ai/dsh-subagent'
-import type { SubagentResult, SubagentRun, SubagentStartRequest, SubagentStopReason } from '@deepseek-ai/dsh-subagent'
-import type { ChildConnectionDefinition, ChildConnectionHandle, SubprocessHandle, SubprocessSpawnSpec } from '@deepseek-ai/dsh-subprocess'
+import { brandString } from '@redspark/rsh-brand'
+import type { ContentBlock } from '@redspark/rsh-llm'
+import type { SessionId } from '@redspark/rsh-session'
+import { subprocessRunHandle } from '@redspark/rsh-subagent'
+import type { SubagentResult, SubagentRun, SubagentStartRequest, SubagentStopReason } from '@redspark/rsh-subagent'
+import type { ChildConnectionDefinition, ChildConnectionHandle, SubprocessHandle, SubprocessSpawnSpec } from '@redspark/rsh-subprocess'
 import {
   CODEX_PERMISSION_MODES,
   DEFAULT_CODEX_PERMISSION_MODE,
@@ -14,8 +14,8 @@ import {
   codexAppServerArgv,
   disposeCodexChild as disposeOfficialCodexChild,
   startCodexProductRun,
-} from '@deepseek-ai/dsh-codex-app-server'
-import type { CodexPermissionMode } from '@deepseek-ai/dsh-codex-app-server'
+} from '@redspark/rsh-codex-app-server'
+import type { CodexPermissionMode } from '@redspark/rsh-codex-app-server'
 import type { CodexAppServerWire } from './wire.ts'
 
 export { CODEX_PERMISSION_MODES, DEFAULT_CODEX_PERMISSION_MODE, DEFAULT_DISPOSE_GRACE_MS, codexAppServerArgv }

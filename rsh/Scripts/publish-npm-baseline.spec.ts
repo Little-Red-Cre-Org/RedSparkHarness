@@ -15,12 +15,12 @@ it('discovers migrated harness packages and independently versioned vendor packa
   const root = mkdtempSync(join(tmpdir(), 'rsh-baseline-discovery-'))
   roots.push(root)
   const manifests = [
-    ['package.json', '@deepseek-ai/dsh-root', '1.0.0'],
-    ['rsh/Core/vendor/cordis/package.json', '@deepseek-ai/cordis', '4.0.0'],
-    ['rsh/Engine/core/agent/package.json', '@deepseek-ai/dsh-agent', '1.0.0'],
-    ['rsh/Modules/Official/shell/tool/package.json', '@deepseek-ai/dsh-tool', '1.0.0'],
-    ['rsh/Programs/Web/application/package.json', '@deepseek-ai/dsh-web-frontend', '1.0.0'],
-    ['rsh/Core/native/system/package.json', '@deepseek-ai/node-addon-system-workspace', '0.1.2'],
+    ['package.json', '@redspark/rsh-root', '1.0.0'],
+    ['rsh/Core/vendor/cordis/package.json', '@redspark/cordis', '4.0.0'],
+    ['rsh/Engine/core/agent/package.json', '@redspark/rsh-agent', '1.0.0'],
+    ['rsh/Modules/Official/shell/tool/package.json', '@redspark/rsh-tool', '1.0.0'],
+    ['rsh/Programs/Web/application/package.json', '@redspark/rsh-web-frontend', '1.0.0'],
+    ['rsh/Core/native/system/package.json', '@redspark/node-addon-system-workspace', '0.1.2'],
   ] as const
   for (const [path, name, version] of manifests) {
     const absolute = join(root, path)
@@ -30,9 +30,9 @@ it('discovers migrated harness packages and independently versioned vendor packa
   const discovered = WorkspacePackageSet.discover(root)
   expect(discovered.baseVersion).toBe('1.0.0')
   expect(discovered.packages.map(({ name, origin }) => ({ name, origin }))).toEqual([
-    { name: '@deepseek-ai/cordis', origin: 'vendor' },
-    { name: '@deepseek-ai/dsh-agent', origin: 'harness' },
-    { name: '@deepseek-ai/dsh-tool', origin: 'harness' },
-    { name: '@deepseek-ai/dsh-web-frontend', origin: 'harness' },
+    { name: '@redspark/cordis', origin: 'vendor' },
+    { name: '@redspark/rsh-agent', origin: 'harness' },
+    { name: '@redspark/rsh-tool', origin: 'harness' },
+    { name: '@redspark/rsh-web-frontend', origin: 'harness' },
   ])
 })

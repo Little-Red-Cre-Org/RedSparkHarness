@@ -175,7 +175,7 @@ export function readDesktopRuntime(root: string): DesktopRuntimeDescriptor {
     throw new Error('desktop runtime: duplicate shared package')
   }
   const files = value.files as DesktopRuntimeFile[]
-  const required = ['@deepseek-ai/dsh', DESKTOP_HOST_PACKAGE,
+  const required = ['@redspark/dsh', DESKTOP_HOST_PACKAGE,
     ...(value.assembly === 'compatibility' ? [DESKTOP_COMPATIBILITY_HOST_PACKAGE] : [])]
   for (const name of required) {
     if (sharedPackages.find(entry => entry.name === name)?.version !== release.version) {

@@ -2,13 +2,13 @@ import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { afterEach, describe, expect, it } from 'vitest'
-import { Context } from '@deepseek-ai/cordis'
-import { mountAgentLoopTestDependencies, mountAgentLoopTestHarness } from '@deepseek-ai/dsh-agent-loop-testkit'
-import { SessionId } from '@deepseek-ai/dsh-session'
-import TypertRegistry from '@deepseek-ai/dsh-typert-registry'
-import type { TypertContribution } from '@deepseek-ai/dsh-typert-registry/types'
-import { EVENT_API, queryServiceApi, SERVICE_API, TYPE_API } from '@deepseek-ai/dsh-tool-cordis/src/api-catalog.ts'
-import { hostInspectProviders } from '@deepseek-ai/dsh-tool-cordis/src/providers.ts'
+import { Context } from '@redspark/cordis'
+import { mountAgentLoopTestDependencies, mountAgentLoopTestHarness } from '@redspark/rsh-agent-loop-testkit'
+import { SessionId } from '@redspark/rsh-session'
+import TypertRegistry from '@redspark/rsh-typert-registry'
+import type { TypertContribution } from '@redspark/rsh-typert-registry/types'
+import { EVENT_API, queryServiceApi, SERVICE_API, TYPE_API } from '@redspark/rsh-tool-cordis/src/api-catalog.ts'
+import { hostInspectProviders } from '@redspark/rsh-tool-cordis/src/providers.ts'
 import { CordisCatalogProjector, type CordisCatalogPolicy, type ServiceEntry } from '../src/cordis-catalog.ts'
 import { WorkspaceAnalyzer } from '../src/analyzer.ts'
 import { FaceModelEmitter } from '../src/emitter.ts'
@@ -48,7 +48,7 @@ describe('model-driven dsh-tools generation', () => {
     const face: FaceModel = { face: 'host', packages: [], graph: { declarations: [], nodes: [] } }
     const workerMarker: SourceDeclarationModel = {
       face: 'host',
-      package: '@deepseek-ai/dsh-experimental-webworker-runtime',
+      package: '@redspark/rsh-experimental-webworker-runtime',
       name: 'ServerResponse',
       kind: 'class',
       location: { file: 'rsh/worker/src/http.ts', line: 1, column: 1 },
@@ -56,7 +56,7 @@ describe('model-driven dsh-tools generation', () => {
     }
     const otherOwner: SourceDeclarationModel = {
       ...workerMarker,
-      package: '@deepseek-ai/dsh-http-routes',
+      package: '@redspark/rsh-http-routes',
       kind: 'interface',
       text: 'export interface ServerResponse { statusCode: number }',
     }
@@ -102,7 +102,7 @@ describe('model-driven dsh-tools generation', () => {
     const sourceDeclarations = new WorkspaceAnalyzer({
       root: workspaceRoot,
       faces: ['host'],
-      packages: ['@deepseek-ai/dsh-session-projection'],
+      packages: ['@redspark/rsh-session-projection'],
       checkDiagnostics: false,
     }).indexSourceDeclarations()
     expect(sourceDeclarations.map(declaration => declaration.name)).toEqual(expect.arrayContaining([
@@ -169,11 +169,11 @@ describe('model-driven dsh-tools generation', () => {
     const workspace = new WorkspaceAnalyzer({
       root: workspaceRoot,
       faces: ['host'],
-      packages: ['@deepseek-ai/dsh-tools'],
+      packages: ['@redspark/rsh-tools'],
     }).analyze()
     const host = workspace.faces.find(candidate => candidate.face === 'host')
     if (host === undefined) throw new Error('dsh-tools has no analyzed host face')
-    const artifact = new FaceModelEmitter(host).emit('@deepseek-ai/dsh-tools')
+    const artifact = new FaceModelEmitter(host).emit('@redspark/rsh-tools')
 
     const root = mkdtempSync(join(import.meta.dirname, '.generated-tools-'))
     temporaryRoots.push(root)
@@ -186,7 +186,7 @@ describe('model-driven dsh-tools generation', () => {
     const ctx = new Context()
     await ctx.plugin(TypertRegistry)
     const dispose = ctx.typert.register(generated.TYPERT)
-    const record = ctx.typert.getPackage('@deepseek-ai/dsh-tools', 'host')
+    const record = ctx.typert.getPackage('@redspark/rsh-tools', 'host')
     const service = record?.model.services.find(candidate => candidate.key === 'tools')
     expect(service).toBeDefined()
     expect({
@@ -219,6 +219,6 @@ describe('model-driven dsh-tools generation', () => {
     )
 
     await dispose()
-    expect(ctx.typert.getPackage('@deepseek-ai/dsh-tools', 'host')).toBeUndefined()
+    expect(ctx.typert.getPackage('@redspark/rsh-tools', 'host')).toBeUndefined()
   })
 })

@@ -8,9 +8,9 @@ import { afterEach, expect, it } from 'vitest'
 import { resolveDesktopPaths } from '../src/paths.ts'
 import { DesktopProjectManager, type DesktopProjectHooks } from '../src/project-manager.ts'
 import type { NativeDesktopInstallationId, NativeDesktopScopeId } from '../src/native-module-management.ts'
-import { brandString } from '@deepseek-ai/dsh-brand'
-import { expandNativeProfilePresets, readNativeProfile } from '@deepseek-ai/dsh/native-profile'
-import { parseNativeClientProfile, prepareNativeClientProfileBundle } from '@deepseek-ai/dsh-native-web-assets/native-client'
+import { brandString } from '@redspark/rsh-brand'
+import { expandNativeProfilePresets, readNativeProfile } from '@redspark/dsh/native-profile'
+import { parseNativeClientProfile, prepareNativeClientProfileBundle } from '@redspark/rsh-native-web-assets/native-client'
 import { readDesktopRuntime, writeDesktopRuntime } from '../src/runtime-tree.ts'
 import type { DesktopBackendState } from '../src/backend-controller.ts'
 import { runtimeFixture, writePackage } from './runtime-fixture.ts'
@@ -50,7 +50,7 @@ function writeNativeProfile(profile: string, rows: readonly NativeRow[], clientR
   const packages = [...new Set([...rows, ...clientRows].map(row => row.plugin))]
   const dependencies = Object.fromEntries(packages.map(name => [name, '1.0.0']))
   const lockDependencies = Object.fromEntries(packages.map(name => [name, { specifier: '1.0.0', version: '1.0.0' }]))
-  writeFileSync(join(profile, 'package.json'), JSON.stringify({ name: '@deepseek-ai/dsh-desktop-runtime', private: true,
+  writeFileSync(join(profile, 'package.json'), JSON.stringify({ name: '@redspark/rsh-desktop-runtime', private: true,
     version: '0.0.0', dependencies, dsh: { profile: { runtime: 'native', config: 'rsh.profile.json', configReload: 'startup' } } }))
   writeFileSync(join(profile, 'pnpm-lock.yaml'), JSON.stringify({ lockfileVersion: '9.0', importers: { '.': { dependencies: lockDependencies } } }))
   writeFileSync(join(profile, 'rsh.profile.json'), JSON.stringify({ formatVersion: 1,
@@ -80,7 +80,7 @@ function prepareFixture(root: string): { manager: DesktopProjectManager; profile
   const runtime = join(root, 'resources', 'dsh')
   runtimeFixture(runtime)
   // The runtime's native import bypasses Vitest source aliases.
-  writePackage(join(runtime, 'node_modules'), '@deepseek-ai/dsh-native-web-assets',
+  writePackage(join(runtime, 'node_modules'), '@redspark/rsh-native-web-assets',
     { exports: { './native-client': './index.js' } },
     'export const prepareNativeClientProfileBundle = (...args) => globalThis.__dshDesktopTestPrepareNativeClientProfileBundle(...args)')
   const paths = resolveDesktopPaths(join(root, '.dsh'))
@@ -105,7 +105,7 @@ function writePiAiNativePackage(profile: string): void {
   const packageDir = fileURLToPath(new URL('../../../Modules/Official/llm/llm-pi-ai/', import.meta.url))
   const manifest = JSON.parse(readFileSync(join(packageDir, 'package.json'), 'utf8')) as Record<string, unknown>
   manifest.version = '1.0.0'
-  const directory = join(profile, 'node_modules/@deepseek-ai/dsh-llm-pi-ai')
+  const directory = join(profile, 'node_modules/@redspark/rsh-llm-pi-ai')
   mkdirSync(join(directory, 'lib'), { recursive: true })
   writeFileSync(join(directory, 'package.json'), JSON.stringify(manifest))
   writeFileSync(join(directory, 'lib/native.js'),
@@ -167,13 +167,13 @@ if (command === 'add' || command === 'remove') {
   writeFileSync(join(project, 'pnpm-lock.yaml'), JSON.stringify({ lockfileVersion: '9.0', importers: { '.': { dependencies } } }))
   if (command === 'add' && existsSync(${JSON.stringify(failReservedInstall)})) {
     rmSync(${JSON.stringify(failReservedInstall)})
-    const reserved = join(modules, '@deepseek-ai/dsh')
+    const reserved = join(modules, '@redspark/dsh')
     if (existsSync(reserved)) {
       if (lstatSync(reserved).isSymbolicLink()) unlinkSync(reserved)
       else rmSync(reserved, { recursive: true, force: true })
     }
     mkdirSync(reserved, { recursive: true })
-    writeFileSync(join(reserved, 'package.json'), JSON.stringify({ name: '@deepseek-ai/dsh', version: '1.0.0' }))
+    writeFileSync(join(reserved, 'package.json'), JSON.stringify({ name: '@redspark/dsh', version: '1.0.0' }))
     process.exitCode = 1
   }
 } else if (command === 'install') {
@@ -201,15 +201,15 @@ function writeCurrentProfile(profile: string): void {
 
 function configurePresetFixture(manager: DesktopProjectManager, profile: string, sessionRequiresAgentPresets: boolean): void {
   writeNativeProfile(profile, [...initialHostRows,
-    { id: 'preset-manager', plugin: '@deepseek-ai/dsh-agent-presets' },
+    { id: 'preset-manager', plugin: '@redspark/rsh-agent-presets' },
     { id: 'preset-root-provider', plugin: '@fixture/preset-root-provider' },
   ], initialClientRows)
   prepareNativePackages(profile)
   writeNativePackage(profile, '@fixture/native-session', ['host'], [
     'credentials', 'hostConnection', 'pluginInventory', ...(sessionRequiresAgentPresets ? ['agentPresets'] : []),
   ], ['nativeWebSession'])
-  writeNativePackage(profile, '@deepseek-ai/dsh-agent-presets', ['host'], [], ['agentPresets'])
-  writeNativePackage(profile, '@deepseek-ai/dsh-agent-preset-standing', ['host'], [], [])
+  writeNativePackage(profile, '@redspark/rsh-agent-presets', ['host'], [], ['agentPresets'])
+  writeNativePackage(profile, '@redspark/rsh-agent-preset-standing', ['host'], [], [])
   writeNativePackage(profile, '@fixture/preset-root-provider', ['host'], [], ['presetRequirement'])
   writeNativePackage(profile, '@fixture/preset-consumer', ['host'], ['presetRequirement'], [])
   const consumerManifestPath = join(profile, 'node_modules', '@fixture', 'preset-consumer', 'package.json')
@@ -219,12 +219,12 @@ function configurePresetFixture(manager: DesktopProjectManager, profile: string,
   writeFileSync(consumerManifestPath, JSON.stringify(consumerManifest))
   const presetManifest = readJson(join(profile, 'package.json'))
   const presetDependencies = presetManifest.dependencies as Record<string, string>
-  presetDependencies['@deepseek-ai/dsh-agent-preset-standing'] = '1.0.0'
+  presetDependencies['@redspark/rsh-agent-preset-standing'] = '1.0.0'
   presetDependencies['@fixture/preset-consumer'] = '1.0.0'
   writeFileSync(join(profile, 'package.json'), JSON.stringify(presetManifest))
   const presetLock = readJson(join(profile, 'pnpm-lock.yaml'))
   const lockImporter = (presetLock.importers as { '.': { dependencies: Record<string, unknown> } })['.']
-  lockImporter.dependencies['@deepseek-ai/dsh-agent-preset-standing'] = { specifier: '1.0.0', version: '1.0.0' }
+  lockImporter.dependencies['@redspark/rsh-agent-preset-standing'] = { specifier: '1.0.0', version: '1.0.0' }
   lockImporter.dependencies['@fixture/preset-consumer'] = { specifier: '1.0.0', version: '1.0.0' }
   writeFileSync(join(profile, 'pnpm-lock.yaml'), JSON.stringify(presetLock))
   const presetDir = join(dirname(manager.paths.root), '.agent-presets', 'review-local')
@@ -331,7 +331,7 @@ it('lists all scopes and disables only rows outside the Host and Client boot clo
   const preflightFixture = prepareFixture(fixtureRoot())
   await preflightFixture.manager.applyRelease()
   writeNativeProfile(preflightFixture.profile, [...initialHostRows,
-    { id: 'pi-ai-invalid-header', plugin: '@deepseek-ai/dsh-llm-pi-ai', disabled: true, config: {
+    { id: 'pi-ai-invalid-header', plugin: '@redspark/rsh-llm-pi-ai', disabled: true, config: {
       providers: { gateway: {
         api: 'openai-completions', baseURL: 'https://gateway.invalid/v1',
         models: [{ id: 'test-model', name: 'Test Model' }],
@@ -344,7 +344,7 @@ it('lists all scopes and disables only rows outside the Host and Client boot clo
   const preflightInventory = await preflightFixture.manager.listNativeModules(ready)
   expect(preflightInventory.status).toBe('listed')
   if (preflightInventory.status !== 'listed') return
-  expect(preflightInventory.inventory.packages.find(row => row.packageName === '@deepseek-ai/dsh-llm-pi-ai')
+  expect(preflightInventory.inventory.packages.find(row => row.packageName === '@redspark/rsh-llm-pi-ai')
     ?.installations[0]).toMatchObject({ id: 'pi-ai-invalid-header', canEnable: true })
   const preflightHostBefore = readFileSync(join(preflightFixture.profile, 'rsh.profile.json'), 'utf8')
   const preflightClientBefore = readFileSync(join(preflightFixture.profile, 'rsh.client.json'), 'utf8')
@@ -434,20 +434,20 @@ it('lists all scopes and disables only rows outside the Host and Client boot clo
 
   const childProviders = { route: { baseURL: 'https://child.invalid/v1' } }
   writeNativeProfile(cycleFixture.profile, [...initialHostRows,
-    { id: 'model-provider', plugin: '@deepseek-ai/dsh-llm-pi-ai', config: { providers: childProviders } },
-    { id: 'sdk-child', plugin: '@deepseek-ai/dsh-sdk-child', scope: 'empty', disabled: true,
+    { id: 'model-provider', plugin: '@redspark/rsh-llm-pi-ai', config: { providers: childProviders } },
+    { id: 'sdk-child', plugin: '@redspark/rsh-sdk-child', scope: 'empty', disabled: true,
       config: { providerName: 'dsh-sdk' } },
   ], initialClientRows)
   prepareNativePackages(cycleFixture.profile)
-  writeNativePackage(cycleFixture.profile, '@deepseek-ai/dsh-llm-pi-ai', ['host'], [], ['model'])
-  writeNativePackage(cycleFixture.profile, '@deepseek-ai/dsh-sdk-child', ['host'], ['credentials', 'sdkChildRuntimeLauncher'],
+  writeNativePackage(cycleFixture.profile, '@redspark/rsh-llm-pi-ai', ['host'], [], ['model'])
+  writeNativePackage(cycleFixture.profile, '@redspark/rsh-sdk-child', ['host'], ['credentials', 'sdkChildRuntimeLauncher'],
     ['externalSubagentDriver'])
-  writeNativePackage(cycleFixture.profile, '@deepseek-ai/dsh-subprocess-local', ['host'], [], ['childConnection'])
-  writeNativePackage(cycleFixture.profile, '@deepseek-ai/dsh-sandbox-local', ['host'], [], ['sandbox'])
+  writeNativePackage(cycleFixture.profile, '@redspark/rsh-subprocess-local', ['host'], [], ['childConnection'])
+  writeNativePackage(cycleFixture.profile, '@redspark/rsh-sandbox-local', ['host'], [], ['sandbox'])
   const childInventory = await cycleFixture.manager.listNativeModules(ready)
   expect(childInventory.status).toBe('listed')
   if (childInventory.status !== 'listed') return
-  expect(childInventory.inventory.packages.find(row => row.packageName === '@deepseek-ai/dsh-sdk-child')
+  expect(childInventory.inventory.packages.find(row => row.packageName === '@redspark/rsh-sdk-child')
     ?.installations[0]).toMatchObject({ id: 'sdk-child', canEnable: true })
   const childLifecycle = { stop: 0, start: 0 }
   const enabledChild = await cycleFixture.manager.mutateNativeModules({ type: 'toggle', request: {
@@ -461,22 +461,22 @@ it('lists all scopes and disables only rows outside the Host and Client boot clo
   }
   expect(persistedHost.installations.some(row => row.id.startsWith('native-child-runtime/'))).toBe(false)
   expect(persistedHost.installations.find(row => row.id === 'sdk-child')).toEqual({
-    id: 'sdk-child', plugin: '@deepseek-ai/dsh-sdk-child', scope: 'empty', config: { providerName: 'dsh-sdk' },
+    id: 'sdk-child', plugin: '@redspark/rsh-sdk-child', scope: 'empty', config: { providerName: 'dsh-sdk' },
   })
 
   const noModelRoot = fixtureRoot()
   const noModelFixture = prepareFixture(noModelRoot)
   await noModelFixture.manager.applyRelease()
   writeNativeProfile(noModelFixture.profile, [...initialHostRows.slice(0, 3),
-    { id: 'sdk-child-no-model', plugin: '@deepseek-ai/dsh-sdk-child', scope: 'empty', disabled: true, config: null },
+    { id: 'sdk-child-no-model', plugin: '@redspark/rsh-sdk-child', scope: 'empty', disabled: true, config: null },
   ], initialClientRows)
   prepareNativePackages(noModelFixture.profile)
-  writeNativePackage(noModelFixture.profile, '@deepseek-ai/dsh-sdk-child', ['host'], ['credentials', 'sdkChildRuntimeLauncher'],
+  writeNativePackage(noModelFixture.profile, '@redspark/rsh-sdk-child', ['host'], ['credentials', 'sdkChildRuntimeLauncher'],
     ['externalSubagentDriver'])
   const noModelInventory = await noModelFixture.manager.listNativeModules(ready)
   expect(noModelInventory.status).toBe('listed')
   if (noModelInventory.status !== 'listed') return
-  expect(noModelInventory.inventory.packages.find(row => row.packageName === '@deepseek-ai/dsh-sdk-child')
+  expect(noModelInventory.inventory.packages.find(row => row.packageName === '@redspark/rsh-sdk-child')
     ?.installations[0]).toMatchObject({ id: 'sdk-child-no-model', canEnable: false })
   const profileBeforeEnable = readFileSync(join(noModelFixture.profile, 'rsh.profile.json'), 'utf8')
   const noModelLifecycle = { stop: 0, start: 0 }
@@ -491,20 +491,20 @@ it('lists all scopes and disables only rows outside the Host and Client boot clo
   const invalidOptionalChildFixture = prepareFixture(fixtureRoot())
   await invalidOptionalChildFixture.manager.applyRelease()
   writeNativeProfile(invalidOptionalChildFixture.profile, [...initialHostRows,
-    { id: 'model-provider', plugin: '@deepseek-ai/dsh-llm-pi-ai', config: { providers: childProviders } },
-    { id: 'optional-acp-child', plugin: '@deepseek-ai/dsh-acp-child', scope: 'empty',
+    { id: 'model-provider', plugin: '@redspark/rsh-llm-pi-ai', config: { providers: childProviders } },
+    { id: 'optional-acp-child', plugin: '@redspark/rsh-acp-child', scope: 'empty',
       config: { providerName: '' } },
   ], initialClientRows)
   prepareNativePackages(invalidOptionalChildFixture.profile)
-  writeNativePackage(invalidOptionalChildFixture.profile, '@deepseek-ai/dsh-llm-pi-ai', ['host'], [], ['model'])
-  writeNativePackage(invalidOptionalChildFixture.profile, '@deepseek-ai/dsh-acp-child', ['host'],
+  writeNativePackage(invalidOptionalChildFixture.profile, '@redspark/rsh-llm-pi-ai', ['host'], [], ['model'])
+  writeNativePackage(invalidOptionalChildFixture.profile, '@redspark/rsh-acp-child', ['host'],
     ['credentials', 'acpChildRuntimeLauncher'], ['externalSubagentDriver'])
-  writeNativePackage(invalidOptionalChildFixture.profile, '@deepseek-ai/dsh-subprocess-local', ['host'], [], ['childConnection'])
-  writeNativePackage(invalidOptionalChildFixture.profile, '@deepseek-ai/dsh-sandbox-local', ['host'], [], ['sandbox'])
+  writeNativePackage(invalidOptionalChildFixture.profile, '@redspark/rsh-subprocess-local', ['host'], [], ['childConnection'])
+  writeNativePackage(invalidOptionalChildFixture.profile, '@redspark/rsh-sandbox-local', ['host'], [], ['sandbox'])
   const invalidOptionalInventory = await invalidOptionalChildFixture.manager.listNativeModules(ready)
   expect(invalidOptionalInventory.status).toBe('listed')
   if (invalidOptionalInventory.status !== 'listed') return
-  expect(invalidOptionalInventory.inventory.packages.find(row => row.packageName === '@deepseek-ai/dsh-acp-child')
+  expect(invalidOptionalInventory.inventory.packages.find(row => row.packageName === '@redspark/rsh-acp-child')
     ?.installations[0]).toMatchObject({ id: 'optional-acp-child', canDisable: true })
   const invalidOptionalLifecycle = { stop: 0, start: 0 }
   const disableInvalidOptionalChild = await invalidOptionalChildFixture.manager.mutateNativeModules({
@@ -516,7 +516,7 @@ it('lists all scopes and disables only rows outside the Host and Client boot clo
     readonly installations: readonly NativeRow[]
   }
   expect(invalidOptionalProfile.installations.find(row => row.id === 'optional-acp-child'))
-    .toEqual({ id: 'optional-acp-child', plugin: '@deepseek-ai/dsh-acp-child', scope: 'empty',
+    .toEqual({ id: 'optional-acp-child', plugin: '@redspark/rsh-acp-child', scope: 'empty',
       config: { providerName: '' }, disabled: true })
 
   const presetFixture = prepareFixture(fixtureRoot())
@@ -554,7 +554,7 @@ it('lists all scopes and disables only rows outside the Host and Client boot clo
   expect(presetProfile.scopes.some(scope => scope.id === 'preset:review-local')).toBe(false)
   expect(presetProfile.installations.some(row => row.id.startsWith('preset:'))).toBe(false)
   expect(presetProfile.installations.find(row => row.id === 'preset-manager')).toEqual({
-    id: 'preset-manager', plugin: '@deepseek-ai/dsh-agent-presets', scope: 'root',
+    id: 'preset-manager', plugin: '@redspark/rsh-agent-presets', scope: 'root',
   })
   expect(presetProfile.installations.find(row => row.id === 'preset-root-provider')?.disabled).toBeUndefined()
 
@@ -564,7 +564,7 @@ it('lists all scopes and disables only rows outside the Host and Client boot clo
   const optionalPresetInventory = await optionalPresetFixture.manager.listNativeModules(ready)
   expect(optionalPresetInventory.status).toBe('listed')
   if (optionalPresetInventory.status !== 'listed') return
-  expect(optionalPresetInventory.inventory.packages.find(row => row.packageName === '@deepseek-ai/dsh-agent-presets')
+  expect(optionalPresetInventory.inventory.packages.find(row => row.packageName === '@redspark/rsh-agent-presets')
     ?.installations[0]).toMatchObject({ id: 'preset-manager', canDisable: true })
   const optionalPresetLifecycle = { stop: 0, start: 0 }
   const disableOptionalPresets = await optionalPresetFixture.manager.mutateNativeModules({ type: 'disable-all', request: {
@@ -832,8 +832,8 @@ it('installs, updates, and removes exact Native packages without losing row conf
       if (emptyRestartCalls === 1) throw new Error('New Host start failed')
       emptyProfileRestored = !existsSync(emptyLock)
         && !existsSync(join(emptyFixture.profile, 'node_modules/@fixture/new-client'))
-        && existsSync(join(emptyFixture.profile, 'node_modules/@deepseek-ai/dsh'))
-        && !existsSync(join(emptyFixture.profile, 'node_modules/@deepseek-ai/cordis'))
+        && existsSync(join(emptyFixture.profile, 'node_modules/@redspark/dsh'))
+        && !existsSync(join(emptyFixture.profile, 'node_modules/@redspark/cordis'))
         && !existsSync(join(emptyFixture.profile, 'desktop-packages-pending'))
     },
   }, ready)
@@ -888,8 +888,8 @@ it('installs, updates, and removes exact Native packages without losing row conf
   const beforeReservedFailure = { host: readFileSync(hostProfilePath), client: readFileSync(clientProfilePath) }
   const reservedMarker = join(root, 'native-pnpm-fail-reserved-install')
   writeFileSync(reservedMarker, '')
-  const profileDsh = join(profile, 'node_modules', '@deepseek-ai/dsh')
-  const bundledDsh = join(root, 'resources', 'dsh', 'node_modules', '@deepseek-ai/dsh')
+  const profileDsh = join(profile, 'node_modules', '@redspark/dsh')
+  const bundledDsh = join(root, 'resources', 'dsh', 'node_modules', '@redspark/dsh')
   let oldHostRestartedAfterReservedFailure = false
   const callsBeforeReservedFailure = readFileSync(pnpmLog, 'utf8').trim().split('\n').length
   const reservedFailure = await manager.mutateNativeModules({ type: 'install', request: {
@@ -901,7 +901,7 @@ it('installs, updates, and removes exact Native packages without losing row conf
     afterChange: async () => {
       oldHostRestartedAfterReservedFailure = existsSync(profileDsh) && lstatSync(profileDsh).isSymbolicLink()
         && existsSync(join(bundledDsh, 'package.json'))
-        && !existsSync(join(profile, 'node_modules/@deepseek-ai/cordis'))
+        && !existsSync(join(profile, 'node_modules/@redspark/cordis'))
         && !existsSync(join(profile, 'node_modules/@fixture/new-client'))
         && !existsSync(join(profile, 'desktop-packages-pending'))
     },
@@ -976,7 +976,7 @@ it('restores reserved Host peer links before validating package mutations', asyn
   ], initialClientRows)
   prepareNativePackages(profile)
   writeNativePackage(profile, '@fixture/shared-peer-host', ['host'], [], [], '1.0.0', [],
-    "import '@deepseek-ai/dsh-desktop-host'\n", { '@deepseek-ai/dsh-desktop-host': '*' })
+    "import '@redspark/rsh-desktop-host'\n", { '@redspark/rsh-desktop-host': '*' })
 
   const initial = await manager.listNativeModules(ready)
   expect(initial.status).toBe('listed')

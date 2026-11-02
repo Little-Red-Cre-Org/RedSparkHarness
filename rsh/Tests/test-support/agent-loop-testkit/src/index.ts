@@ -2,21 +2,21 @@
  * Shared service mounting, real AgentLoop drivers, and structural Inbox stubs
  * for agent-loop tests. Callers retain ownership of their contexts, adapters,
  * optional plugins, agents, and teardown.
- * @module @deepseek-ai/dsh-agent-loop-testkit
+ * @module @redspark/rsh-agent-loop-testkit
  */
 
-import type { Context } from '@deepseek-ai/cordis'
-import AgentRegistry from '@deepseek-ai/dsh-agent'
-import type { Agent, AgentOptions, Inbox, InboxTarget } from '@deepseek-ai/dsh-agent'
-import AgentLoop from '@deepseek-ai/dsh-agent-loop'
-import LlmRuntime from '@deepseek-ai/dsh-llm'
-import SessionStore from '@deepseek-ai/dsh-session'
-import type { SessionHeader, SessionId, UserMessage } from '@deepseek-ai/dsh-session'
-import SessionProjectionRegistry from '@deepseek-ai/dsh-session-projection'
-import SystemPrompt from '@deepseek-ai/dsh-system-prompt'
-import type { Config as SystemPromptConfig } from '@deepseek-ai/dsh-system-prompt'
-import ToolRuntime from '@deepseek-ai/dsh-tools'
-import type { Config as ToolRuntimeConfig } from '@deepseek-ai/dsh-tools'
+import type { Context } from '@redspark/cordis'
+import AgentRegistry from '@redspark/rsh-agent'
+import type { Agent, AgentOptions, Inbox, InboxTarget } from '@redspark/rsh-agent'
+import AgentLoop from '@redspark/rsh-agent-loop'
+import LlmRuntime from '@redspark/rsh-llm'
+import SessionStore from '@redspark/rsh-session'
+import type { SessionHeader, SessionId, UserMessage } from '@redspark/rsh-session'
+import SessionProjectionRegistry from '@redspark/rsh-session-projection'
+import SystemPrompt from '@redspark/rsh-system-prompt'
+import type { Config as SystemPromptConfig } from '@redspark/rsh-system-prompt'
+import ToolRuntime from '@redspark/rsh-tools'
+import type { Config as ToolRuntimeConfig } from '@redspark/rsh-tools'
 
 export { createInboxStub, unsupportedInbox } from './inbox.ts'
 

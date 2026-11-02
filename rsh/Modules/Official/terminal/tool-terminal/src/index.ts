@@ -1,9 +1,9 @@
 /**
  * Cordis compatibility facade for the persistent terminal tools.
- * @module @deepseek-ai/dsh-tool-terminal
+ * @module @redspark/rsh-tool-terminal
  */
 
-import type { Context } from '@deepseek-ai/cordis'
+import type { Context } from '@redspark/cordis'
 import type { Config } from './config.ts'
 
 export { Config, DEFAULT_MAX_RESULT_BYTES, MIN_MAX_RESULT_BYTES } from './config.ts'
@@ -30,8 +30,8 @@ export async function apply(ctx: Context, config: Config = {}): Promise<void> {
       || cause.code !== 'ERR_MODULE_NOT_FOUND'
     ) throw cause
     throw new Error(
-      '@deepseek-ai/dsh-tool-terminal could not load its Cordis compatibility entry. '
-      + 'Install its optional @deepseek-ai/dsh-tools peer and ensure the package includes its compatibility chunk.',
+      '@redspark/rsh-tool-terminal could not load its Cordis compatibility entry. '
+      + 'Install its optional @redspark/rsh-tools peer and ensure the package includes its compatibility chunk.',
       { cause },
     )
   }

@@ -2,12 +2,12 @@ import { mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { Context } from '@deepseek-ai/cordis'
-import LlmRuntime, { createUserMessage, ReasoningEffortId } from '@deepseek-ai/dsh-llm'
-import type { StreamChunk } from '@deepseek-ai/dsh-llm'
-import FileSettingsProvider from '@deepseek-ai/dsh-settings-file'
-import * as LlmPiAi from '@deepseek-ai/dsh-llm-pi-ai'
-import { PiAiAdapter } from '@deepseek-ai/dsh-llm-pi-ai'
+import { Context } from '@redspark/cordis'
+import LlmRuntime, { createUserMessage, ReasoningEffortId } from '@redspark/rsh-llm'
+import type { StreamChunk } from '@redspark/rsh-llm'
+import FileSettingsProvider from '@redspark/rsh-settings-file'
+import * as LlmPiAi from '@redspark/rsh-llm-pi-ai'
+import { PiAiAdapter } from '@redspark/rsh-llm-pi-ai'
 import { getBuiltinModels } from '@earendil-works/pi-ai/providers/all'
 import { createModels, getSupportedThinkingLevels } from '@earendil-works/pi-ai'
 import { normalizeContext } from '@earendil-works/pi-ai/utils/transcript'
@@ -35,7 +35,7 @@ afterEach(async () => {
   await Promise.all(homes.splice(0).map(dir => rm(dir, { recursive: true, force: true })))
 })
 
-/** A throwaway $DSH_HOME with an empty settings document. */
+/** A throwaway $RSH_HOME with an empty settings document. */
 async function home(): Promise<string> {
   const dir = await mkdtemp(join(tmpdir(), 'dsh-pi-catalog-'))
   homes.push(dir)

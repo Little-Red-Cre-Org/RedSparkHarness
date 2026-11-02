@@ -11,9 +11,9 @@ The two halves live in one package — the Host half under `src/`, the browser h
 The namespace is the join key, so pick it once and spell it in both halves. A consumer that already has a `cordis.yml` entry should register through `ctx.settings.installSection()`, which layers the entry under the user document and keeps working when no settings provider is mounted:
 
 ```ts
-import type { Context } from '@deepseek-ai/cordis'
-import type {} from '@deepseek-ai/dsh-settings'
-import z from '@deepseek-ai/schemastery'
+import type { Context } from '@redspark/cordis'
+import type {} from '@redspark/rsh-settings'
+import z from '@redspark/schemastery'
 
 declare function assertReachable(endpoint: string | undefined): void
 declare function rebuildFromSettings(config: Config): void
@@ -50,10 +50,10 @@ export function apply(ctx: Context, config: Config) {
 The card registers into `settings.plugin.item` under its namespace and owns everything inside it — chrome, controls, and copy. It reads and writes through `ctx.settingsScope`, which fences each write with the revision it read:
 
 ```ts ignore-check
-import type { Context as ClientContext } from '@deepseek-ai/cordis'
+import type { Context as ClientContext } from '@redspark/cordis'
 // Type-only: the keyed slot's declaration. Cross-plugin collaboration goes
 // through cordis services; a value import fails the client bundle-purity gate.
-import type {} from '@deepseek-ai/dsh-client-ui-settings-plugins/client'
+import type {} from '@redspark/rsh-client-ui-settings-plugins/client'
 
 export const inject = ['slots', 'locale', 'connection', 'remote', 'settingsScope']
 
@@ -87,7 +87,7 @@ The browser half is served to the page by the [client module system](../../Progr
     ".": { "types": "./lib/types/index.d.ts", "default": "./lib/index.js" },
     "./client": { "types": "./lib/types/client/index.d.ts", "default": "./lib/client.js" }
   },
-  "dsh": { "client": { "platform": "web", "inject": ["@deepseek-ai/dsh-client-ui-settings-plugins"] } }
+  "dsh": { "client": { "platform": "web", "inject": ["@redspark/rsh-client-ui-settings-plugins"] } }
 }
 ```
 
@@ -96,7 +96,7 @@ The bundle must be the loader's lazy-CJS factory artifact. Inside this repositor
 ```ts ignore-check
 import { clientBundle } from '../tsdown.client.ts'
 
-export default clientBundle('@deepseek-ai/dsh-client-my-plugin', ['lib/types/index.js', 'lib/types/invariant.js'])
+export default clientBundle('@redspark/rsh-client-my-plugin', ['lib/types/index.js', 'lib/types/invariant.js'])
 ```
 
 No published preset exposes this package, so a package outside this repository has to reproduce the same output format itself. The bundle-purity gate also rejects value imports across plugins, so a card cannot import this section's card chrome or its staged-form model — it renders its own, and owns its own staging and revision fencing. Both limits are recorded under [the section's known limitations](../../Programs/Web/client/ui-settings-plugins/README.md#known-limitations-and-deferred-work).

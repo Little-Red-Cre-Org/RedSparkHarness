@@ -3,11 +3,11 @@ import { createRequire } from 'node:module'
 
 const require = createRequire(import.meta.url)
 const compatibilityEntrypoints = [
-  '@deepseek-ai/cordis',
-  '@deepseek-ai/dsh-app-boot',
-  '@deepseek-ai/dsh-cmdline',
-  '@deepseek-ai/dsh-http-proxy',
-  '@deepseek-ai/dsh-launch-environment',
+  '@redspark/cordis',
+  '@redspark/rsh-app-boot',
+  '@redspark/rsh-cmdline',
+  '@redspark/rsh-http-proxy',
+  '@redspark/rsh-launch-environment',
 ] as const
 
 /**
@@ -23,7 +23,7 @@ export function requireCompatibilityRuntime(
       resolveOptional(specifier)
     } catch (cause: unknown) {
       throw new Error(
-        `dsh: compatibility mode requires optional packages; reinstall @deepseek-ai/dsh with optional dependencies enabled (${specifier} is unavailable)`,
+        `dsh: compatibility mode requires optional packages; reinstall @redspark/dsh with optional dependencies enabled (${specifier} is unavailable)`,
         { cause },
       )
     }

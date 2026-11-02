@@ -12,9 +12,9 @@ const STANDALONE_ERROR = 'rsh/Programs/Web/application is not a standalone appli
   + 'For client-plugin HMR, run `pnpm dsh web` together with `pnpm run dev:web`.'
 
 const CORDIS_BROWSER_PACKAGES = new Set([
-  '@deepseek-ai/cordis', '@deepseek-ai/cordis-plugin-group', '@deepseek-ai/cordis-plugin-hmr',
-  '@deepseek-ai/cordis-plugin-include', '@deepseek-ai/cordis-plugin-loader',
-  '@deepseek-ai/cordis-plugin-logger-console', '@deepseek-ai/cordis-plugin-timer',
+  '@redspark/cordis', '@redspark/cordis-plugin-group', '@redspark/cordis-plugin-hmr',
+  '@redspark/cordis-plugin-include', '@redspark/cordis-plugin-loader',
+  '@redspark/cordis-plugin-logger-console', '@redspark/cordis-plugin-timer',
 ])
 const CORDIS_VENDOR_SOURCE = /(?:^|\/)rsh\/Core\/vendor\/(?:cordis|group|hmr|include|loader|logger-console|timer)(?:\/|$)/i
 
@@ -23,7 +23,7 @@ function npmPackageOf(id: string): string | undefined {
   const normalized = id.replaceAll('\\', '/')
   const packagePath = normalized.includes('/node_modules/')
     ? normalized.split('/node_modules/').at(-1)
-    : normalized.startsWith('@deepseek-ai/') ? normalized : undefined
+    : normalized.startsWith('@redspark/') ? normalized : undefined
   if (packagePath === undefined) return undefined
   const [first, second] = packagePath.split('/')
   if (first === undefined) return undefined
@@ -55,7 +55,7 @@ function escapeHtmlText(value: string): string {
 
 /** Project the public build title into the initial HTML document. */
 function clientDocumentTitle(): Plugin {
-  const title = escapeHtmlText(process.env.DSH_CLIENT_TITLE ?? DEFAULT_CLIENT_TITLE)
+  const title = escapeHtmlText(process.env.RSH_CLIENT_TITLE ?? DEFAULT_CLIENT_TITLE)
   return {
     name: 'dsh-client-document-title',
     transformIndexHtml(html) {

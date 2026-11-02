@@ -1,12 +1,12 @@
 /** Native local attachment Provider with installation-owned operation draining. */
-import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
-import type {} from '@deepseek-ai/dsh-attachment/native'
+import type { NativePlugin } from '@redspark/rsh-native-runtime'
+import type {} from '@redspark/rsh-attachment/native'
 import type {
   AdmittedPromptContentPart, AttachmentAdmissionPart, AttachmentOperations,
   EncodedFileAttachment, FileAttachmentRef, ImageAttachmentRef, ImageRequestPolicy,
   RequestImageAttachment, SaveFileAttachment, SaveFileStreamAttachment, SaveImageAttachment,
   StoredImageAttachment,
-} from '@deepseek-ai/dsh-attachment/native'
+} from '@redspark/rsh-attachment/native'
 import { LocalAttachmentBackend } from './backend.ts'
 import { parseConfig } from './config.ts'
 
@@ -136,7 +136,7 @@ export class NativeLocalAttachmentStore implements AttachmentOperations {
 
 /** Install one durable attachment owner in the native Host scope. */
 export const plugin: NativePlugin = {
-  apiVersion: 1, name: '@deepseek-ai/dsh-attachment-local', targets: ['host'],
+  apiVersion: 1, name: '@redspark/rsh-attachment-local', targets: ['host'],
   requires: [], provides: ['attachments'],
   resolve(input) {
     const config = parseConfig(input)

@@ -677,7 +677,7 @@ import type {
   TypertRemoteScopeMap,
   TypertRemoteMap,
   TypertRemoteNamespaceMap,
-} from '@deepseek-ai/dsh-typert-protocol'
+} from '@redspark/rsh-typert-protocol'
 import type { CreateGoalResult, RenameGoalResult } from '@fixture/remote/types'
 
 const contribution: TypertRemoteContribution = remote
@@ -705,7 +705,7 @@ void navigated
       composite: false,
       skipLibCheck: false,
       paths: {
-        '@deepseek-ai/dsh-typert-protocol': ['./typert-protocol.d.ts'],
+        '@redspark/rsh-typert-protocol': ['./typert-protocol.d.ts'],
         '@fixture/domain/types': ['./packages/domain/src/types.ts'],
         '@fixture/remote/types': ['./packages/remote/src/types.ts'],
         '@fixture/remote/remote': ['./packages/remote/lib/typert.remote-client.d.ts'],
@@ -767,7 +767,7 @@ void navigated
 function assertRemoteConsumerWithoutImportHasNoNamespace(consumerRoot: string): void {
   const consumerPath = join(consumerRoot, 'consumer-without-remote.ts')
   writeFileSync(consumerPath, `
-import type { TypertRemoteNamespaceMap } from '@deepseek-ai/dsh-typert-protocol'
+import type { TypertRemoteNamespaceMap } from '@redspark/rsh-typert-protocol'
 declare const ctx: { remote: TypertRemoteNamespaceMap }
 ctx.remote.goals.create('agent-1', { title: 'must not compile' })
 `)
@@ -778,7 +778,7 @@ ctx.remote.goals.create('agent-1', { title: 'must not compile' })
       composite: false,
       skipLibCheck: false,
       paths: {
-        '@deepseek-ai/dsh-typert-protocol': ['./typert-protocol.d.ts'],
+        '@redspark/rsh-typert-protocol': ['./typert-protocol.d.ts'],
       },
     },
     files: ['./consumer-without-remote.ts'],

@@ -2,14 +2,14 @@
  * Native installation of the DeepSeek search provider. It registers into the selected `web`
  * service, projects the same Settings section and credential reference per search, and records the
  * same secret-free Session event before dispatch as the Cordis plugin.
- * @module @deepseek-ai/dsh-web-search-deepseek/native
+ * @module @redspark/rsh-web-search-deepseek/native
  */
 
-import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
-import type {} from '@deepseek-ai/dsh-credentials/native'
-import type {} from '@deepseek-ai/dsh-launch-environment/native'
-import type {} from '@deepseek-ai/dsh-settings-definition/native'
-import type {} from '@deepseek-ai/dsh-web/native'
+import type { NativePlugin } from '@redspark/rsh-native-runtime'
+import type {} from '@redspark/rsh-credentials/native'
+import type {} from '@redspark/rsh-launch-environment/native'
+import type {} from '@redspark/rsh-settings-definition/native'
+import type {} from '@redspark/rsh-web/native'
 import {
   Config,
   recordDeepSeekSearchRequest,
@@ -41,7 +41,7 @@ function resolveConfig(input: unknown): Config {
 
 /** Register the DeepSeek search provider; removal cancels and drains its admitted searches. */
 export const plugin: NativePlugin = {
-  apiVersion: 1, name: '@deepseek-ai/dsh-web-search-deepseek', targets: ['host'],
+  apiVersion: 1, name: '@redspark/rsh-web-search-deepseek', targets: ['host'],
   requires: ['web', 'launchEnvironment'], optional: ['settings', 'credentials'], provides: [],
   resolve(input) {
     const base = resolveConfig(input)

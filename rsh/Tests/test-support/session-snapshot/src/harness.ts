@@ -13,7 +13,7 @@
  *
  * See .agents/notes/implemented/testing/2026-06-19-acp-snapshot-tests.md.
  *
- * @module @deepseek-ai/dsh-session-snapshot/harness
+ * @module @redspark/rsh-session-snapshot/harness
  */
 
 import { cp, mkdtemp, readFile, readdir, rm } from 'node:fs/promises'
@@ -35,7 +35,7 @@ import {
   type AgentUnderTest,
   type LaunchedAcpTestAgent,
 } from './launcher.ts'
-import { clearedProxyEnv } from '@deepseek-ai/dsh-http-proxy'
+import { clearedProxyEnv } from '@redspark/rsh-http-proxy'
 import {
   assertPersistedSessionVersion,
   latestPersistedSessionPaths,
@@ -175,7 +175,7 @@ export interface RunOptions {
   /**
    * Recorded SUBAGENT child-session fixture paths (replay). A nested-agent
    * scenario ships one per child (`session.1.jsonl`, …); the harness forwards
-   * them to `dsh-llm-replay` via `$DSH_SNAPSHOT_CHILD_FILES` so each child
+   * them to `dsh-llm-replay` via `$RSH_SNAPSHOT_CHILD_FILES` so each child
    * session replays from its own recorded script. Empty for single-session
    * scenarios. Ignored in record mode (children are harvested, not replayed).
    */
@@ -267,16 +267,16 @@ export async function runScenario(input: InputScript, opts: RunOptions): Promise
       // host and record that proxy's error page as the expected output. `undefined` removes the
       // name from the child rather than setting it empty.
       ...clearedProxyEnv(),
-      DSH_SNAPSHOT: opts.mode,
-      DSH_SNAPSHOT_FILE: opts.fixtureFile,
-      DSH_SNAPSHOT_SESSIONS_ROOT: sessionsRoot,
-      DSH_SNAPSHOT_SPILL_ROOT: spillRoot,
-      DSH_SNAPSHOT_SPILL_LOCATOR_ROOT: snapshotSpillRoot(opts.fixtureFile),
-      DSH_HOME: join(cwd, '.dsh'),
-      DSH_AGENTS_HOME: join(cwd, '.agents'),
-      ...opts.overrideFile !== undefined ? { DSH_SNAPSHOT_OVERRIDE: opts.overrideFile } : {},
+      RSH_SNAPSHOT: opts.mode,
+      RSH_SNAPSHOT_FILE: opts.fixtureFile,
+      RSH_SNAPSHOT_SESSIONS_ROOT: sessionsRoot,
+      RSH_SNAPSHOT_SPILL_ROOT: spillRoot,
+      RSH_SNAPSHOT_SPILL_LOCATOR_ROOT: snapshotSpillRoot(opts.fixtureFile),
+      RSH_HOME: join(cwd, '.dsh'),
+      RSH_AGENTS_HOME: join(cwd, '.agents'),
+      ...opts.overrideFile !== undefined ? { RSH_SNAPSHOT_OVERRIDE: opts.overrideFile } : {},
       ...opts.childFiles !== undefined && opts.childFiles.length > 0
-        ? { DSH_SNAPSHOT_CHILD_FILES: opts.childFiles.join(delimiter) }
+        ? { RSH_SNAPSHOT_CHILD_FILES: opts.childFiles.join(delimiter) }
         : {},
     }
 

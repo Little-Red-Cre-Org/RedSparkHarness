@@ -2,16 +2,16 @@
  * Register a DeepSeek-backed provider in `ctx.web`. It calls the Anthropic-compatible Messages API
  * with native `web_search_20250305`. The provider reuses `DEEPSEEK_API_KEY` but not
  * `DEEPSEEK_BASE_URL`, because search and chat-completions use different bases.
- * @module @deepseek-ai/dsh-web-search-deepseek
+ * @module @redspark/rsh-web-search-deepseek
  */
 
-import type { Context } from '@deepseek-ai/cordis'
-import type {} from '@deepseek-ai/dsh-agent'
-import type {} from '@deepseek-ai/dsh-compat-settings-definition'
-import type {} from '@deepseek-ai/dsh-credentials'
-import { launchEnvironmentOf } from '@deepseek-ai/dsh-launch-environment'
-import type {} from '@deepseek-ai/dsh-session'
-import type {} from '@deepseek-ai/dsh-web'
+import type { Context } from '@redspark/cordis'
+import type {} from '@redspark/rsh-agent'
+import type {} from '@redspark/rsh-compat-settings-definition'
+import type {} from '@redspark/rsh-credentials'
+import { launchEnvironmentOf } from '@redspark/rsh-launch-environment'
+import type {} from '@redspark/rsh-session'
+import type {} from '@redspark/rsh-web'
 import { DeepSeekSearchProvider } from './provider.ts'
 import { Config, resolveDeepSeekOptions, WEB_SEARCH_DEEPSEEK_SETTINGS_NAMESPACE } from './config.ts'
 

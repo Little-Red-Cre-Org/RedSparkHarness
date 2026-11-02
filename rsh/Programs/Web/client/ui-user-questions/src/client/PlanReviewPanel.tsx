@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
-import { Button, IconEditOutline16, MarkdownText } from '@deepseek-ai/dsh-client-ui-primitives'
-import type { TranslateNS } from '@deepseek-ai/dsh-client-ui-slots'
+import { Button, IconEditOutline16, MarkdownText } from '@redspark/rsh-client-ui-primitives'
+import type { TranslateNS } from '@redspark/rsh-client-ui-slots'
 import type { PlanReview, QuestionPresentation } from '../question-presentation.ts'
 import css from './PlanReviewPanel.module.css'
 

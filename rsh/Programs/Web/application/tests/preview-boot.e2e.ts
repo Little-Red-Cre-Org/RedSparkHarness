@@ -29,11 +29,11 @@ import { expect, it } from 'vitest'
 import {
   composeProfile, configTrees, indexWorkspacePackages, packVfsImage, packVfsOverlay,
   previewFixtures, WRAPPER_CONTRACT,
-} from '@deepseek-ai/dsh-experimental-webworker-packer'
+} from '@redspark/rsh-experimental-webworker-packer'
 import {
   IMAGE_FILE_NAME, PREVIEW_FIXTURE_MANIFEST_FILE, PREVIEW_FIXTURE_MANIFEST_VERSION,
   type PreviewFixtureManifest,
-} from '@deepseek-ai/dsh-experimental-webworker-runtime'
+} from '@redspark/rsh-experimental-webworker-runtime'
 import {
   VFS_EXAMPLE_SESSION_IDS,
   buildVfsExampleFiles,
@@ -324,7 +324,7 @@ async function bootPreview(origin: string, browser: Browser): Promise<void> {
       return graph?.entries?.map(entry => entry.id) ?? null
     })
     if (clientPackages === null) throw new Error('preview client graph is absent after boot')
-    expect(clientPackages).not.toContain('@deepseek-ai/dsh-task-scheduler')
+    expect(clientPackages).not.toContain('@redspark/rsh-task-scheduler')
 
     const exercised = await page.evaluate(async ({ seededSessionId, seededSessionTitle }) => {
       type Result<T> = { result: { ok: true; value: T } | { ok: false; error: { code: string; message: string } } }

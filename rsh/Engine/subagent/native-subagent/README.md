@@ -3,7 +3,7 @@ description: "The native Subagent Definition and selected in-process spawn Provi
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-native-subagent
+# @redspark/rsh-native-subagent
 
 English | [中文](README.zh.md)
 

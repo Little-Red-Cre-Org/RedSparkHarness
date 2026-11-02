@@ -1,7 +1,7 @@
 /** Applies Host-backed locale and appearance preferences to native Client services. */
-import type { NativeLocaleService } from '@deepseek-ai/dsh-client-locale/native'
-import type { NativeSettingsDescription } from '@deepseek-ai/dsh-client-native-session/native'
-import type { NativeThemeService } from '@deepseek-ai/dsh-client-ui-theme/native'
+import type { NativeLocaleService } from '@redspark/rsh-client-locale/native'
+import type { NativeSettingsDescription } from '@redspark/rsh-client-native-session/native'
+import type { NativeThemeService } from '@redspark/rsh-client-ui-theme/native'
 
 /** Apply published language, theme, and font-size preferences.
  * @param description - Host Settings namespaces.

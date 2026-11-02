@@ -1,11 +1,11 @@
 /**
  * Durable Tool event vocabulary shared with type-only consumers.
  *
- * @module @deepseek-ai/dsh-native-tools/types
+ * @module @redspark/rsh-native-tools/types
  */
 
-import type {} from '@deepseek-ai/dsh-session/types'
-import type { ReasoningEffortId, ToolCallId, ContentBlock } from '@deepseek-ai/dsh-llm/native'
+import type {} from '@redspark/rsh-session/types'
+import type { ReasoningEffortId, ToolCallId, ContentBlock } from '@redspark/rsh-llm/native'
 
 /** Intersect inherited tool visibility while preserving contributions registered in the consuming scope. */
 export interface NativeToolRestriction {
@@ -46,7 +46,7 @@ export interface PtcDispatchEventData extends PtcDispatchStartEventData {
   content: ContentBlock[]
 }
 
-declare module '@deepseek-ai/dsh-session/types' {
+declare module '@redspark/rsh-session/types' {
   interface SessionEventMap {
     /**
      * One sub-dispatch STARTING inside a `run_code` program: the parent

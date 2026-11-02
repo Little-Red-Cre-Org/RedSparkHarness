@@ -1,10 +1,10 @@
 /** Framework-free native approval identities and consumer operations. */
-import { brandString, type Branded } from '@deepseek-ai/dsh-brand'
-import { SessionSeq } from '@deepseek-ai/dsh-session/native'
-import type { ToolCallId } from '@deepseek-ai/dsh-llm/native'
-import type { NativeAgent } from '@deepseek-ai/dsh-native-agent'
-import type { Session, SessionId } from '@deepseek-ai/dsh-session/native'
-import type {} from '@deepseek-ai/dsh-session/types'
+import { brandString, type Branded } from '@redspark/rsh-brand'
+import { SessionSeq } from '@redspark/rsh-session/native'
+import type { ToolCallId } from '@redspark/rsh-llm/native'
+import type { NativeAgent } from '@redspark/rsh-native-agent'
+import type { Session, SessionId } from '@redspark/rsh-session/native'
+import type {} from '@redspark/rsh-session/types'
 
 /** Deployment policy applied before native answerers receive a request. */
 export type NativeApprovalPolicy = 'ask' | 'never'
@@ -108,11 +108,11 @@ export interface NativeApprovalServiceDefinition {
   dispose(): Promise<void>
 }
 
-declare module '@deepseek-ai/dsh-native-runtime' {
+declare module '@redspark/rsh-native-runtime' {
   interface NativeServices { approval: NativeApprovalServiceDefinition }
 }
 
-declare module '@deepseek-ai/dsh-session/types' {
+declare module '@redspark/rsh-session/types' {
   interface SessionEventMap {
     /** Durable per-Session approval override shared by Native and compatibility consumers. */
     'approval/policy': { policy: NativeApprovalPolicy; source?: 'delegation' }

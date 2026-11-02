@@ -1,11 +1,11 @@
 /** Complete image bytes rendered at their intrinsic CSS-pixel dimensions. */
 import { useMemo, type ReactNode } from 'react'
-import type { PropsLocale } from '@deepseek-ai/dsh-client-ui-slots'
-import { WorkspaceImagePreview } from '@deepseek-ai/dsh-client-ui-primitives'
+import type { PropsLocale } from '@redspark/rsh-client-ui-slots'
+import { WorkspaceImagePreview } from '@redspark/rsh-client-ui-primitives'
 import type { DocumentPreviewProps } from '../document/contract.ts'
 import { hostFileOf } from '../rpc.ts'
 import type {} from './locales.ts'
-export { workspaceImageMediaType as imageMediaType } from '@deepseek-ai/dsh-client-ui-primitives'
+export { workspaceImageMediaType as imageMediaType } from '@redspark/rsh-client-ui-primitives'
 
 /** Standard document props plus the image renderer's dictionary. */
 export type ImageBodyProps = DocumentPreviewProps & PropsLocale<'sidebarImage'>

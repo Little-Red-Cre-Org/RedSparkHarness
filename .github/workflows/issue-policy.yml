@@ -26,10 +26,10 @@ jobs:
         if: ${{ github.event.pull_request.user.type != 'Bot' && github.event.pull_request.user.type != 'App' }}
         uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1
         with:
-          client-id: ${{ vars.DSH_ISSUE_APP_CLIENT_ID }}
-          private-key: ${{ secrets.DSH_ISSUE_APP_PRIVATE_KEY }}
-          owner: deepseek-harness
-          repositories: deepseek-harness
+          client-id: ${{ vars.RSH_ISSUE_APP_CLIENT_ID }}
+          private-key: ${{ secrets.RSH_ISSUE_APP_PRIVATE_KEY }}
+          owner: redspark-harness
+          repositories: redspark-harness
           permission-issues: read
           permission-organization-projects: read
       - name: Validate pull request

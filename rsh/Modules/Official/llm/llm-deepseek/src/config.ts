@@ -1,10 +1,10 @@
 /** Shared official DeepSeek configuration validation and immutable operation resolution. */
-import z from '@deepseek-ai/schemastery'
-import { resolveRetryPolicy, RetryPolicySchema } from '@deepseek-ai/dsh-llm/native'
-import type { ModelModality, RetryPolicyConfig } from '@deepseek-ai/dsh-llm/native'
-import { credentialRef } from '@deepseek-ai/dsh-credentials/native'
-import type { LaunchEnvironmentSnapshot } from '@deepseek-ai/dsh-launch-environment/native'
-import { MAX_TIMER_DELAY_MS } from '@deepseek-ai/dsh-timeout'
+import z from '@redspark/schemastery'
+import { resolveRetryPolicy, RetryPolicySchema } from '@redspark/rsh-llm/native'
+import type { ModelModality, RetryPolicyConfig } from '@redspark/rsh-llm/native'
+import { credentialRef } from '@redspark/rsh-credentials/native'
+import type { LaunchEnvironmentSnapshot } from '@redspark/rsh-launch-environment/native'
+import { MAX_TIMER_DELAY_MS } from '@redspark/rsh-timeout'
 import {
   DEFAULT_CONTEXT_WINDOW,
   DEFAULT_FILE_EXPIRY_SECONDS,

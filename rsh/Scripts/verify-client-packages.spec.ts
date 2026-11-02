@@ -17,7 +17,7 @@ import {
   type ClientPackageFacts,
 } from './verify-client-packages.ts'
 
-const CORDIS = '@deepseek-ai/cordis'
+const CORDIS = '@redspark/cordis'
 const roots: string[] = []
 
 afterEach(() => {
@@ -29,7 +29,7 @@ function declaration(
   fields: Partial<Omit<ClientDeclaration, 'name' | 'manifest'>> = {},
 ): ClientDeclaration {
   return {
-    name: short.startsWith('@') ? short : '@deepseek-ai/dsh-client-' + short,
+    name: short.startsWith('@') ? short : '@redspark/rsh-client-' + short,
     manifest: 'rsh/Programs/Web/client/' + short.replace(/^.*\//, '') + '/package.json',
     dynamic: true,
     external: [],
@@ -77,34 +77,34 @@ function facts(
 describe('source package uses', () => {
   it('counts type imports, module augmentations, dynamic imports, and JSX', () => {
     const uses = collectSourcePackageUses('feature.tsx', [
-      "import type { A } from '@deepseek-ai/dsh-a/subpath'",
-      "declare module '@deepseek-ai/dsh-client-ui-slots' {}",
-      "const load = () => import('@deepseek-ai/dsh-b/remote')",
+      "import type { A } from '@redspark/rsh-a/subpath'",
+      "declare module '@redspark/rsh-client-ui-slots' {}",
+      "const load = () => import('@redspark/rsh-b/remote')",
       'export const view = <div />',
       "export type { Local } from './local.ts'",
     ].join('\n'))
 
     expect([...uses].sort()).toEqual([
-      '@deepseek-ai/dsh-a',
-      '@deepseek-ai/dsh-b',
-      '@deepseek-ai/dsh-client-ui-slots',
+      '@redspark/rsh-a',
+      '@redspark/rsh-b',
+      '@redspark/rsh-client-ui-slots',
       'react',
     ])
     expect([...collectRuntimeSourcePackageUses('feature.tsx', [
-      "import type { A } from '@deepseek-ai/dsh-a/subpath'",
-      "declare module '@deepseek-ai/dsh-client-ui-slots' {}",
-      "const load = () => import('@deepseek-ai/dsh-b')",
+      "import type { A } from '@redspark/rsh-a/subpath'",
+      "declare module '@redspark/rsh-client-ui-slots' {}",
+      "const load = () => import('@redspark/rsh-b')",
       'export const view = <div />',
     ].join('\n'))].sort()).toEqual([
-      '@deepseek-ai/dsh-b',
+      '@redspark/rsh-b',
       'react',
     ])
     expect([...collectRuntimeSourceSpecifiers('feature.tsx', [
-      "import type { A } from '@deepseek-ai/dsh-a/subpath'",
-      "const load = () => import('@deepseek-ai/dsh-b/remote')",
+      "import type { A } from '@redspark/rsh-a/subpath'",
+      "const load = () => import('@redspark/rsh-b/remote')",
       'export const view = <div />',
     ].join('\n'))].sort()).toEqual([
-      '@deepseek-ai/dsh-b/remote',
+      '@redspark/rsh-b/remote',
       'react',
     ])
     expect([...collectLocalSourceSpecifiers('feature.ts', [
@@ -113,7 +113,7 @@ describe('source package uses', () => {
       "const load = () => import('./lazy.ts')",
       "const legacy = require('./legacy.ts')",
       "declare module './augmentation.ts' {}",
-      "import '@deepseek-ai/dsh-a'",
+      "import '@redspark/rsh-a'",
     ].join('\n'))].sort()).toEqual([
       './lazy.ts',
       './legacy.ts',
@@ -177,7 +177,7 @@ describe('package modes', () => {
       parserPreloadIds: [],
     }))).toEqual([
       'rsh/Compatibility/DSH/web/frontend/src/platform.ts: parser-preloaded external '
-      + '"@deepseek-ai/dsh-client-bootstrap/client" has no matching PARSER_PRELOAD_IDS row in '
+      + '"@redspark/rsh-client-bootstrap/client" has no matching PARSER_PRELOAD_IDS row in '
       + 'rsh/Programs/Web/client/modules/src/index.ts',
     ])
   })
@@ -186,57 +186,57 @@ describe('package modes', () => {
 describe('module requests', () => {
   it('rejects runtime requests from one client feature package to another dynamic row', () => {
     const ui = declaration('ui', {
-      external: ['@deepseek-ai/dsh-client-slots/client'],
+      external: ['@redspark/rsh-client-slots/client'],
       runtimeSourceUses: {
-        '@deepseek-ai/dsh-client-slots': ['rsh/Programs/Web/client/ui/src/client/index.ts'],
+        '@redspark/rsh-client-slots': ['rsh/Programs/Web/client/ui/src/client/index.ts'],
       },
     })
     const slots = declaration('slots')
     expect(collectClientPackageViolations(facts([], { declarations: [ui, slots] }))).toEqual([
       ui.manifest + ': client feature package requests runtime external '
-      + '"@deepseek-ai/dsh-client-slots/client"; import shared types only or call an injected Cordis service',
+      + '"@redspark/rsh-client-slots/client"; import shared types only or call an injected Cordis service',
     ])
   })
 
   it('rejects stale externals and accepts a runtime import outside client feature packages', () => {
     const gateway = {
-      ...declaration('@deepseek-ai/dsh-api-gateway'), manifest: 'rsh/Programs/Web/api/gateway/package.json',
+      ...declaration('@redspark/rsh-api-gateway'), manifest: 'rsh/Programs/Web/api/gateway/package.json',
     }
-    const stale = { ...declaration('@deepseek-ai/dsh-api-stale', {
-      external: ['@deepseek-ai/dsh-api-gateway/client'],
+    const stale = { ...declaration('@redspark/rsh-api-stale', {
+      external: ['@redspark/rsh-api-gateway/client'],
     }), manifest: 'rsh/Programs/Web/api/stale/package.json' }
-    const live = { ...declaration('@deepseek-ai/dsh-api-live', {
-      external: ['@deepseek-ai/dsh-api-gateway/client'],
+    const live = { ...declaration('@redspark/rsh-api-live', {
+      external: ['@redspark/rsh-api-gateway/client'],
       runtimeSourceUses: {
-        '@deepseek-ai/dsh-api-gateway': ['rsh/Programs/Web/api/live/src/client/index.ts'],
+        '@redspark/rsh-api-gateway': ['rsh/Programs/Web/api/live/src/client/index.ts'],
       },
       runtimeSourceSpecifiers: {
-        '@deepseek-ai/dsh-api-gateway/client': ['rsh/Programs/Web/api/live/src/client/index.ts'],
+        '@redspark/rsh-api-gateway/client': ['rsh/Programs/Web/api/live/src/client/index.ts'],
       },
     }), manifest: 'rsh/Programs/Web/api/live/package.json' }
     expect(collectClientPackageViolations(facts([], {
       declarations: [gateway, stale, live],
     }))).toEqual([
-      stale.manifest + ': dsh.client.external "@deepseek-ai/dsh-api-gateway/client"'
+      stale.manifest + ': dsh.client.external "@redspark/rsh-api-gateway/client"'
       + ' has no runtime import or re-export in production source; remove the stale declaration',
     ])
   })
 
   it('requires the exact external subpath to be imported at runtime', () => {
     const gateway = {
-      ...declaration('@deepseek-ai/dsh-api-gateway'), manifest: 'rsh/Programs/Web/api/gateway/package.json',
+      ...declaration('@redspark/rsh-api-gateway'), manifest: 'rsh/Programs/Web/api/gateway/package.json',
     }
-    const subject = { ...declaration('@deepseek-ai/dsh-api-session-controller', {
-      external: ['@deepseek-ai/dsh-api-gateway/client'],
+    const subject = { ...declaration('@redspark/rsh-api-session-controller', {
+      external: ['@redspark/rsh-api-gateway/client'],
       runtimeSourceUses: {
-        '@deepseek-ai/dsh-api-gateway': ['rsh/Programs/Web/api/session-controller/src/client/index.ts'],
+        '@redspark/rsh-api-gateway': ['rsh/Programs/Web/api/session-controller/src/client/index.ts'],
       },
       runtimeSourceSpecifiers: {
-        '@deepseek-ai/dsh-api-gateway/remote': ['rsh/Programs/Web/api/session-controller/src/client/index.ts'],
+        '@redspark/rsh-api-gateway/remote': ['rsh/Programs/Web/api/session-controller/src/client/index.ts'],
       },
     }), manifest: 'rsh/Programs/Web/api/session-controller/package.json' }
     expect(collectClientPackageViolations(facts([], { declarations: [gateway, subject] }))).toEqual([
-      subject.manifest + ': dsh.client.external "@deepseek-ai/dsh-api-gateway/client"'
+      subject.manifest + ': dsh.client.external "@redspark/rsh-api-gateway/client"'
       + ' has no runtime import or re-export in production source; remove the stale declaration',
     ])
   })
@@ -253,8 +253,8 @@ describe('module requests', () => {
 
   it('rejects duplicates, empty values, self-requests, and missing suppliers', () => {
     const ui = declaration('ui', {
-      external: ['', '@deepseek-ai/dsh-client-ui', '@deepseek-ai/dsh-missing', '@deepseek-ai/dsh-missing'],
-      inject: ['', '@deepseek-ai/dsh-a', '@deepseek-ai/dsh-a'],
+      external: ['', '@redspark/rsh-client-ui', '@redspark/rsh-missing', '@redspark/rsh-missing'],
+      inject: ['', '@redspark/rsh-a', '@redspark/rsh-a'],
     })
     const found = collectClientPackageViolations(facts([], { declarations: [ui] }))
     expect(found).toHaveLength(6)
@@ -265,17 +265,17 @@ describe('module requests', () => {
   })
 
   it('rejects synchronous module-request cycles but ignores inject cycles', () => {
-    const a = { ...declaration('@deepseek-ai/dsh-api-a', {
-      external: ['@deepseek-ai/dsh-api-b'],
-      inject: ['@deepseek-ai/dsh-api-b'],
-      runtimeSourceUses: { '@deepseek-ai/dsh-api-b': ['rsh/Programs/Web/api/a/src/client.ts'] },
-      runtimeSourceSpecifiers: { '@deepseek-ai/dsh-api-b': ['rsh/Programs/Web/api/a/src/client.ts'] },
+    const a = { ...declaration('@redspark/rsh-api-a', {
+      external: ['@redspark/rsh-api-b'],
+      inject: ['@redspark/rsh-api-b'],
+      runtimeSourceUses: { '@redspark/rsh-api-b': ['rsh/Programs/Web/api/a/src/client.ts'] },
+      runtimeSourceSpecifiers: { '@redspark/rsh-api-b': ['rsh/Programs/Web/api/a/src/client.ts'] },
     }), manifest: 'rsh/Programs/Web/api/a/package.json' }
-    const b = { ...declaration('@deepseek-ai/dsh-api-b', {
-      external: ['@deepseek-ai/dsh-api-a'],
-      inject: ['@deepseek-ai/dsh-api-a'],
-      runtimeSourceUses: { '@deepseek-ai/dsh-api-a': ['rsh/Programs/Web/client/b/src/client.ts'] },
-      runtimeSourceSpecifiers: { '@deepseek-ai/dsh-api-a': ['rsh/Programs/Web/client/b/src/client.ts'] },
+    const b = { ...declaration('@redspark/rsh-api-b', {
+      external: ['@redspark/rsh-api-a'],
+      inject: ['@redspark/rsh-api-a'],
+      runtimeSourceUses: { '@redspark/rsh-api-a': ['rsh/Programs/Web/client/b/src/client.ts'] },
+      runtimeSourceSpecifiers: { '@redspark/rsh-api-a': ['rsh/Programs/Web/client/b/src/client.ts'] },
     }), manifest: 'rsh/Programs/Web/api/b/package.json' }
     const found = collectClientPackageViolations(facts([], { declarations: [a, b] }))
     expect(found).toHaveLength(1)
@@ -316,19 +316,19 @@ describe('manifest declarations', () => {
     const root = mkdtempSync(join(tmpdir(), 'client-packages-fix-'))
     roots.push(root)
     const subject = pkg('feature', {
-      external: ['', 'react', '@deepseek-ai/dsh-client-feature', '@deepseek-ai/dsh-missing'],
-      inject: ['', '@deepseek-ai/dsh-agent', '@deepseek-ai/dsh-agent'],
+      external: ['', 'react', '@redspark/rsh-client-feature', '@redspark/rsh-missing'],
+      inject: ['', '@redspark/rsh-agent', '@redspark/rsh-agent'],
       sourceUses: {
-        '@deepseek-ai/dsh-agent': ['rsh/Programs/Web/client/feature/src/index.ts'],
-        '@deepseek-ai/dsh-client-ui-slots': ['rsh/Programs/Web/client/feature/src/view.tsx'],
+        '@redspark/rsh-agent': ['rsh/Programs/Web/client/feature/src/index.ts'],
+        '@redspark/rsh-client-ui-slots': ['rsh/Programs/Web/client/feature/src/view.tsx'],
       },
       dependencies: {
         [CORDIS]: 'workspace:^',
-        '@deepseek-ai/dsh-agent': 'workspace:*',
+        '@redspark/rsh-agent': 'workspace:*',
       },
       peerDependencies: {
-        '@deepseek-ai/dsh-client-ui-slots': 'workspace:^',
-        '@deepseek-ai/cordis-plugin-loader': 'workspace:^',
+        '@redspark/rsh-client-ui-slots': 'workspace:^',
+        '@redspark/cordis-plugin-loader': 'workspace:^',
       },
       devDependencies: {},
     })
@@ -357,8 +357,8 @@ describe('manifest declarations', () => {
       devDependencies: Record<string, string>
     }
     expect(fixed.dsh.client).toMatchObject({
-      external: ['@deepseek-ai/dsh-missing'],
-      inject: ['@deepseek-ai/dsh-agent'],
+      external: ['@redspark/rsh-missing'],
+      inject: ['@redspark/rsh-agent'],
     })
     expect(fixed.dependencies).toEqual(subject.dependencies)
     expect(fixed.peerDependencies).toEqual(subject.peerDependencies)

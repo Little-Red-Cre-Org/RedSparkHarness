@@ -40,13 +40,13 @@ function evaluate(expression: string, context: Record<string, unknown>): unknown
 
 function route(options: { mode?: string; author?: string; repository?: string; fork?: boolean; actor?: string } = {}): unknown {
   return evaluate(job['runs-on'], {
-    vars: { DSH_CI_FAILOVER_LINUX: options.mode ?? 'selfhosted' },
+    vars: { RSH_CI_FAILOVER_LINUX: options.mode ?? 'selfhosted' },
     github: {
-      repository: 'deepseek-harness/deepseek-harness',
+      repository: 'redspark-harness/redspark-harness',
       actor: options.actor ?? 'maintainer',
       event: { pull_request: {
         user: { login: options.author ?? 'maintainer' },
-        head: { repo: { full_name: options.repository ?? 'deepseek-harness/deepseek-harness', fork: options.fork ?? false } },
+        head: { repo: { full_name: options.repository ?? 'redspark-harness/redspark-harness', fork: options.fork ?? false } },
       } },
     },
     matrix: { runner: 'ubuntu-latest' },
@@ -75,7 +75,7 @@ describe('Node compatibility self-hosted routing', () => {
       { node: '24.9', name: 'node 24.9', runner: 'ubuntu-latest', gate_concurrency: '1' },
       { node: 26, name: 'node 26', runner: 'ubuntu-latest', gate_concurrency: '1' },
     ])
-    expect(job.env.DSH_GATE_CONCURRENCY).toBe('${{ matrix.gate_concurrency }}')
+    expect(job.env.RSH_GATE_CONCURRENCY).toBe('${{ matrix.gate_concurrency }}')
     expect(job.steps.map(step => step.run)).toContain('pnpm run check:node-compat')
     expect(job.steps.map(step => step.run)).toContain('pnpm exec vitest run rsh/Compatibility/DSH/boot/app-boot/tests/loader-shape.compat.spec.ts')
     expect(workflow.jobs['python-sdk']['runs-on']).toBe('ubuntu-latest')

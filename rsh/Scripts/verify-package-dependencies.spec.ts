@@ -27,7 +27,7 @@ import {
   type WorkspacePackageManifest,
 } from './verify-package-dependencies.ts'
 
-const CORDIS = '@deepseek-ai/cordis'
+const CORDIS = '@redspark/cordis'
 const roots: string[] = []
 
 afterEach(() => {
@@ -71,27 +71,27 @@ function facts(manifest: PackageDependencyManifest): PackageDependencyFacts {
     manifest,
     workspaceNames: new Set([
       CORDIS,
-      '@deepseek-ai/dsh-runtime',
-      '@deepseek-ai/dsh-types',
-      '@deepseek-ai/dsh-stale',
-      '@deepseek-ai/schemastery',
+      '@redspark/rsh-runtime',
+      '@redspark/rsh-types',
+      '@redspark/rsh-stale',
+      '@redspark/schemastery',
     ]),
     allSourceUses: new Map([
-      ['@deepseek-ai/dsh-runtime', ['rsh/Engine/core/probe/src/index.ts']],
-      ['@deepseek-ai/dsh-types', ['rsh/Engine/core/probe/src/types.ts']],
+      ['@redspark/rsh-runtime', ['rsh/Engine/core/probe/src/index.ts']],
+      ['@redspark/rsh-types', ['rsh/Engine/core/probe/src/types.ts']],
     ]),
     hostRuntimeSourceUses: new Map([
-      ['@deepseek-ai/dsh-runtime', ['rsh/Engine/core/probe/src/index.ts']],
+      ['@redspark/rsh-runtime', ['rsh/Engine/core/probe/src/index.ts']],
     ]),
     clientRuntimeSourceUses: new Map(),
     hostRuntimeExportUses: [{
-      packageName: '@deepseek-ai/dsh-runtime',
-      specifier: '@deepseek-ai/dsh-runtime',
+      packageName: '@redspark/rsh-runtime',
+      specifier: '@redspark/rsh-runtime',
       exportName: 'runtimeValue',
       sourcePath: 'rsh/Engine/core/probe/src/index.ts',
       line: 1,
       column: 10,
-      sourceLine: "import { runtimeValue } from '@deepseek-ai/dsh-runtime'",
+      sourceLine: "import { runtimeValue } from '@redspark/rsh-runtime'",
     }],
     peerRequiredHostDependencies: new Set(),
     configurationOnlyDevDependencies: new Set(),
@@ -201,272 +201,272 @@ function hostRuntimeFixture(): {
 describe('package dependency scope', () => {
   it('keeps the measured Host relay roster explicit', () => {
     expect(PACKAGE_DEPENDENCY_POLICY.clientFaceExclude).toEqual([
-      '@deepseek-ai/dsh-api-session-controller',
-      '@deepseek-ai/dsh-api-workspace-controller',
+      '@redspark/rsh-api-session-controller',
+      '@redspark/rsh-api-workspace-controller',
     ])
     expect(PACKAGE_DEPENDENCY_POLICY.hostPackages).toEqual([
-      '@deepseek-ai/dsh-codex-app-server',
-      '@deepseek-ai/dsh-llm',
-      '@deepseek-ai/dsh-permission-presets',
-      '@deepseek-ai/dsh-session',
-      '@deepseek-ai/dsh-session-telemetry-otel',
-      '@deepseek-ai/dsh-webhook',
+      '@redspark/rsh-codex-app-server',
+      '@redspark/rsh-llm',
+      '@redspark/rsh-permission-presets',
+      '@redspark/rsh-session',
+      '@redspark/rsh-session-telemetry-otel',
+      '@redspark/rsh-webhook',
     ])
     expect(PACKAGE_DEPENDENCY_POLICY.configurationOnlyDevDependencies).toEqual({
-      '@deepseek-ai/dsh-client-locale': ['@deepseek-ai/dsh-api-remotes'],
-      '@deepseek-ai/dsh-client-ui-conversation': [
-        '@deepseek-ai/dsh-api-remotes',
-        '@deepseek-ai/dsh-client-ui-workspace',
+      '@redspark/rsh-client-locale': ['@redspark/rsh-api-remotes'],
+      '@redspark/rsh-client-ui-conversation': [
+        '@redspark/rsh-api-remotes',
+        '@redspark/rsh-client-ui-workspace',
       ],
-      '@deepseek-ai/dsh-client-ui-model-selection': ['@deepseek-ai/dsh-client-ui-input-trigger'],
-      '@deepseek-ai/dsh-client-ui-sidebar': ['@deepseek-ai/dsh-client-ui-workspace'],
-      '@deepseek-ai/dsh-client-ui-subagent': ['@deepseek-ai/dsh-client-ui-input-trigger'],
-      '@deepseek-ai/dsh-client-ui-theme': ['@deepseek-ai/dsh-api-remotes'],
-      '@deepseek-ai/dsh-client-ui-tool': ['@deepseek-ai/dsh-api-remotes'],
+      '@redspark/rsh-client-ui-model-selection': ['@redspark/rsh-client-ui-input-trigger'],
+      '@redspark/rsh-client-ui-sidebar': ['@redspark/rsh-client-ui-workspace'],
+      '@redspark/rsh-client-ui-subagent': ['@redspark/rsh-client-ui-input-trigger'],
+      '@redspark/rsh-client-ui-theme': ['@redspark/rsh-api-remotes'],
+      '@redspark/rsh-client-ui-tool': ['@redspark/rsh-api-remotes'],
     })
     expect(PACKAGE_DEPENDENCY_POLICY.clientRuntimeDependencies).toEqual({
-      '@deepseek-ai/dsh-client-ui-primitives': [
+      '@redspark/rsh-client-ui-primitives': [
         '@shikijs/langs', 'anser', 'clsx', 'katex', 'mdast-util-from-markdown', 'mdast-util-gfm', 'mdast-util-math',
         'micromark-core-commonmark', 'micromark-extension-gfm', 'micromark-extension-math', 'micromark-factory-space',
         'micromark-util-character', 'micromark-util-classify-character', 'micromark-util-sanitize-uri',
         'micromark-util-symbol', 'shiki',
       ],
-      '@deepseek-ai/dsh-client-store': ['immer', 'zustand'],
-      '@deepseek-ai/dsh-client-web': ['@deepseek-ai/dsh-native-runtime', 'dequal'],
-      '@deepseek-ai/dsh-client-native-session': ['eventsource-parser', 'zod', '@deepseek-ai/dsh-command-feedback'],
-      '@deepseek-ai/dsh-client-ui-session': ['@deepseek-ai/dsh-util-workspace-path'],
-      '@deepseek-ai/dsh-client-ui-renderer': ['use-sync-external-store'],
-      '@deepseek-ai/dsh-client-ui-layout': ['@deepseek-ai/dsh-client-store'],
-      '@deepseek-ai/dsh-client-native-application': [
-        '@deepseek-ai/dsh-client-ui-primitives', '@deepseek-ai/dsh-client-ui-attachment',
-        '@deepseek-ai/dsh-client-ui-goal', '@deepseek-ai/dsh-client-ui-trajectory',
-        '@deepseek-ai/dsh-client-ui-workflow-run',
+      '@redspark/rsh-client-store': ['immer', 'zustand'],
+      '@redspark/rsh-client-web': ['@redspark/rsh-native-runtime', 'dequal'],
+      '@redspark/rsh-client-native-session': ['eventsource-parser', 'zod', '@redspark/rsh-command-feedback'],
+      '@redspark/rsh-client-ui-session': ['@redspark/rsh-util-workspace-path'],
+      '@redspark/rsh-client-ui-renderer': ['use-sync-external-store'],
+      '@redspark/rsh-client-ui-layout': ['@redspark/rsh-client-store'],
+      '@redspark/rsh-client-native-application': [
+        '@redspark/rsh-client-ui-primitives', '@redspark/rsh-client-ui-attachment',
+        '@redspark/rsh-client-ui-goal', '@redspark/rsh-client-ui-trajectory',
+        '@redspark/rsh-client-ui-workflow-run',
       ],
-      '@deepseek-ai/dsh-client-ui-attachment': ['clsx', 'react-dom'],
-      '@deepseek-ai/dsh-client-ui-goal': ['@deepseek-ai/dsh-goal'],
-      '@deepseek-ai/dsh-client-ui-trajectory': ['@tanstack/react-virtual', 'diff'],
-      '@deepseek-ai/dsh-client-ui-sidebar': [
-        '@deepseek-ai/dsh-client-store',
-        '@deepseek-ai/dsh-client-ui-primitives',
-        '@deepseek-ai/dsh-client-ui-slots',
+      '@redspark/rsh-client-ui-attachment': ['clsx', 'react-dom'],
+      '@redspark/rsh-client-ui-goal': ['@redspark/rsh-goal'],
+      '@redspark/rsh-client-ui-trajectory': ['@tanstack/react-virtual', 'diff'],
+      '@redspark/rsh-client-ui-sidebar': [
+        '@redspark/rsh-client-store',
+        '@redspark/rsh-client-ui-primitives',
+        '@redspark/rsh-client-ui-slots',
       ],
     })
     expect(PACKAGE_DEPENDENCY_POLICY.sharedClientRuntimePeers).toEqual({
-      '@deepseek-ai/dsh-client-ui-primitives': ['react', 'react-dom'],
-      '@deepseek-ai/dsh-client-ui-renderer': ['react', 'react-dom', '@deepseek-ai/dsh-client-ui-slots'],
-      '@deepseek-ai/dsh-client-ui-tool': ['react'],
-      '@deepseek-ai/dsh-client-ui-attachment': ['react'],
-      '@deepseek-ai/dsh-client-ui-goal': ['react'],
-      '@deepseek-ai/dsh-client-ui-approval': ['react'],
-      '@deepseek-ai/dsh-client-ui-trajectory': ['react'],
-      '@deepseek-ai/dsh-client-ui-workflow-run': ['react'],
-      '@deepseek-ai/dsh-client-ui-user-questions': ['react'],
-      '@deepseek-ai/dsh-client-native-application': [
+      '@redspark/rsh-client-ui-primitives': ['react', 'react-dom'],
+      '@redspark/rsh-client-ui-renderer': ['react', 'react-dom', '@redspark/rsh-client-ui-slots'],
+      '@redspark/rsh-client-ui-tool': ['react'],
+      '@redspark/rsh-client-ui-attachment': ['react'],
+      '@redspark/rsh-client-ui-goal': ['react'],
+      '@redspark/rsh-client-ui-approval': ['react'],
+      '@redspark/rsh-client-ui-trajectory': ['react'],
+      '@redspark/rsh-client-ui-workflow-run': ['react'],
+      '@redspark/rsh-client-ui-user-questions': ['react'],
+      '@redspark/rsh-client-native-application': [
         'react',
-        '@deepseek-ai/dsh-session',
-        '@deepseek-ai/dsh-native-model-selection',
-        '@deepseek-ai/dsh-client-native-session',
-        '@deepseek-ai/dsh-client-ui-tool',
-        '@deepseek-ai/dsh-client-ui-approval',
-        '@deepseek-ai/dsh-client-ui-user-questions',
-        '@deepseek-ai/dsh-tool-todo',
+        '@redspark/rsh-session',
+        '@redspark/rsh-native-model-selection',
+        '@redspark/rsh-client-native-session',
+        '@redspark/rsh-client-ui-tool',
+        '@redspark/rsh-client-ui-approval',
+        '@redspark/rsh-client-ui-user-questions',
+        '@redspark/rsh-tool-todo',
       ],
-      '@deepseek-ai/dsh-client-native-session': ['@deepseek-ai/dsh-session'],
+      '@redspark/rsh-client-native-session': ['@redspark/rsh-session'],
     })
     expect(PACKAGE_DEPENDENCY_POLICY.publishedTypeDependencies).toEqual({
-      '@deepseek-ai/dsh-codex-app-server': [
-        '@deepseek-ai/dsh-llm',
-        '@deepseek-ai/dsh-native-model-execution',
-        '@deepseek-ai/dsh-native-runtime',
-        '@deepseek-ai/dsh-native-subagent',
-        '@deepseek-ai/dsh-native-tools',
+      '@redspark/rsh-codex-app-server': [
+        '@redspark/rsh-llm',
+        '@redspark/rsh-native-model-execution',
+        '@redspark/rsh-native-runtime',
+        '@redspark/rsh-native-subagent',
+        '@redspark/rsh-native-tools',
       ],
-      '@deepseek-ai/dsh-client-ui-slots': ['@deepseek-ai/dsh-client-store', '@deepseek-ai/dsh-native-runtime', '@types/react'],
-      '@deepseek-ai/dsh-client-modules': ['@deepseek-ai/dsh-http-routes'],
-      '@deepseek-ai/dsh-client-web': ['@deepseek-ai/dsh-client-ui-slots'],
-      '@deepseek-ai/dsh-llm': ['@deepseek-ai/dsh-attachment'],
-      '@deepseek-ai/dsh-client-ui-attachment': ['@deepseek-ai/dsh-attachment', '@types/react'],
-      '@deepseek-ai/dsh-client-ui-goal': ['@deepseek-ai/dsh-session', '@types/react'],
-      '@deepseek-ai/dsh-client-locale': ['@deepseek-ai/dsh-client-ui-slots', '@deepseek-ai/dsh-native-runtime'],
-      '@deepseek-ai/dsh-client-ui-session': [
-        '@deepseek-ai/dsh-client-native-session',
-        '@deepseek-ai/dsh-client-ui-slots',
-        '@deepseek-ai/dsh-native-runtime',
-        '@deepseek-ai/dsh-session',
+      '@redspark/rsh-client-ui-slots': ['@redspark/rsh-client-store', '@redspark/rsh-native-runtime', '@types/react'],
+      '@redspark/rsh-client-modules': ['@redspark/rsh-http-routes'],
+      '@redspark/rsh-client-web': ['@redspark/rsh-client-ui-slots'],
+      '@redspark/rsh-llm': ['@redspark/rsh-attachment'],
+      '@redspark/rsh-client-ui-attachment': ['@redspark/rsh-attachment', '@types/react'],
+      '@redspark/rsh-client-ui-goal': ['@redspark/rsh-session', '@types/react'],
+      '@redspark/rsh-client-locale': ['@redspark/rsh-client-ui-slots', '@redspark/rsh-native-runtime'],
+      '@redspark/rsh-client-ui-session': [
+        '@redspark/rsh-client-native-session',
+        '@redspark/rsh-client-ui-slots',
+        '@redspark/rsh-native-runtime',
+        '@redspark/rsh-session',
       ],
-      '@deepseek-ai/dsh-client-ui-layout': [
-        '@deepseek-ai/dsh-brand',
-        '@deepseek-ai/dsh-client-store',
-        '@deepseek-ai/dsh-client-ui-slots',
-        '@deepseek-ai/dsh-native-runtime',
+      '@redspark/rsh-client-ui-layout': [
+        '@redspark/rsh-brand',
+        '@redspark/rsh-client-store',
+        '@redspark/rsh-client-ui-slots',
+        '@redspark/rsh-native-runtime',
       ],
-      '@deepseek-ai/dsh-client-ui-theme': ['@deepseek-ai/dsh-native-runtime'],
-      '@deepseek-ai/dsh-client-ui-sidebar': [
-        '@deepseek-ai/dsh-client-ui-layout',
-        '@deepseek-ai/dsh-native-runtime',
-        '@deepseek-ai/dsh-workspace-definition',
+      '@redspark/rsh-client-ui-theme': ['@redspark/rsh-native-runtime'],
+      '@redspark/rsh-client-ui-sidebar': [
+        '@redspark/rsh-client-ui-layout',
+        '@redspark/rsh-native-runtime',
+        '@redspark/rsh-workspace-definition',
       ],
-      '@deepseek-ai/dsh-client-native-session': [
-        '@deepseek-ai/dsh-native-runtime',
-        '@deepseek-ai/dsh-client-connection',
-        '@deepseek-ai/dsh-native-model-selection',
-        '@deepseek-ai/dsh-agent-presets',
-        '@deepseek-ai/dsh-brand',
-        '@deepseek-ai/dsh-commands',
-        '@deepseek-ai/dsh-authorization',
-        '@deepseek-ai/dsh-api-workspace-files',
-        '@deepseek-ai/dsh-command-feedback',
-        '@deepseek-ai/dsh-message-feedback',
+      '@redspark/rsh-client-native-session': [
+        '@redspark/rsh-native-runtime',
+        '@redspark/rsh-client-connection',
+        '@redspark/rsh-native-model-selection',
+        '@redspark/rsh-agent-presets',
+        '@redspark/rsh-brand',
+        '@redspark/rsh-commands',
+        '@redspark/rsh-authorization',
+        '@redspark/rsh-api-workspace-files',
+        '@redspark/rsh-command-feedback',
+        '@redspark/rsh-message-feedback',
       ],
-      '@deepseek-ai/dsh-session-telemetry-otel': ['@opentelemetry/otlp-exporter-base'],
-      '@deepseek-ai/dsh-client-native-application': [
-        '@deepseek-ai/dsh-native-runtime',
-        '@deepseek-ai/dsh-client-native-session',
-        '@deepseek-ai/dsh-native-tools',
+      '@redspark/rsh-session-telemetry-otel': ['@opentelemetry/otlp-exporter-base'],
+      '@redspark/rsh-client-native-application': [
+        '@redspark/rsh-native-runtime',
+        '@redspark/rsh-client-native-session',
+        '@redspark/rsh-native-tools',
       ],
-      '@deepseek-ai/dsh-client-ui-conversation': [
-        '@deepseek-ai/dsh-llm',
-        '@deepseek-ai/dsh-attachment',
-        '@deepseek-ai/dsh-client-ui-slots',
+      '@redspark/rsh-client-ui-conversation': [
+        '@redspark/rsh-llm',
+        '@redspark/rsh-attachment',
+        '@redspark/rsh-client-ui-slots',
       ],
-      '@deepseek-ai/dsh-client-ui-tool': [
-        '@deepseek-ai/dsh-client-ui-conversation',
-        '@deepseek-ai/dsh-client-ui-slots',
+      '@redspark/rsh-client-ui-tool': [
+        '@redspark/rsh-client-ui-conversation',
+        '@redspark/rsh-client-ui-slots',
       ],
-      '@deepseek-ai/dsh-client-ui-trajectory': [
-        '@deepseek-ai/dsh-client-ui-conversation',
-        '@deepseek-ai/dsh-client-ui-slots',
-        '@deepseek-ai/dsh-session',
+      '@redspark/rsh-client-ui-trajectory': [
+        '@redspark/rsh-client-ui-conversation',
+        '@redspark/rsh-client-ui-slots',
+        '@redspark/rsh-session',
         '@types/react',
       ],
-      '@deepseek-ai/dsh-task-scheduler': [
-        '@deepseek-ai/dsh-native-agent',
-        '@deepseek-ai/dsh-native-runtime',
-        '@deepseek-ai/dsh-native-session-execution',
-        '@deepseek-ai/dsh-typert-protocol',
+      '@redspark/rsh-task-scheduler': [
+        '@redspark/rsh-native-agent',
+        '@redspark/rsh-native-runtime',
+        '@redspark/rsh-native-session-execution',
+        '@redspark/rsh-typert-protocol',
       ],
     })
     expect(PACKAGE_DEPENDENCY_POLICY.publishedTypePeerDependencies).toEqual({
-      '@deepseek-ai/dsh-client-ui-goal': ['@deepseek-ai/dsh-goal'],
-      '@deepseek-ai/dsh-client-ui-user-questions': ['@deepseek-ai/dsh-user-questions'],
-      '@deepseek-ai/dsh-session-telemetry-otel': [
-        '@deepseek-ai/dsh-launch-environment', '@deepseek-ai/dsh-native-runtime',
+      '@redspark/rsh-client-ui-goal': ['@redspark/rsh-goal'],
+      '@redspark/rsh-client-ui-user-questions': ['@redspark/rsh-user-questions'],
+      '@redspark/rsh-session-telemetry-otel': [
+        '@redspark/rsh-launch-environment', '@redspark/rsh-native-runtime',
       ],
-      '@deepseek-ai/dsh-session-log-export': [
-        '@deepseek-ai/dsh-attachment',
-        '@deepseek-ai/dsh-native-runtime',
-        '@deepseek-ai/dsh-session',
-        '@deepseek-ai/dsh-session-persistence',
-        '@deepseek-ai/dsh-session-query',
+      '@redspark/rsh-session-log-export': [
+        '@redspark/rsh-attachment',
+        '@redspark/rsh-native-runtime',
+        '@redspark/rsh-session',
+        '@redspark/rsh-session-persistence',
+        '@redspark/rsh-session-query',
       ],
-      '@deepseek-ai/dsh-permission-presets': [
-        '@deepseek-ai/dsh-native-runtime',
-        '@deepseek-ai/dsh-native-session-execution',
-        '@deepseek-ai/dsh-sandbox',
+      '@redspark/rsh-permission-presets': [
+        '@redspark/rsh-native-runtime',
+        '@redspark/rsh-native-session-execution',
+        '@redspark/rsh-sandbox',
       ],
-      '@deepseek-ai/dsh-session': ['@deepseek-ai/dsh-llm'],
-      '@deepseek-ai/dsh-task-scheduler': ['@deepseek-ai/dsh-goal'],
-      '@deepseek-ai/dsh-webhook': [
-        '@deepseek-ai/dsh-agent-presets',
-        '@deepseek-ai/dsh-native-model-execution',
-        '@deepseek-ai/dsh-native-model-selection',
-        '@deepseek-ai/dsh-native-runtime',
-        '@deepseek-ai/dsh-native-session-execution',
-        '@deepseek-ai/dsh-permission-presets',
-        '@deepseek-ai/dsh-workspace',
+      '@redspark/rsh-session': ['@redspark/rsh-llm'],
+      '@redspark/rsh-task-scheduler': ['@redspark/rsh-goal'],
+      '@redspark/rsh-webhook': [
+        '@redspark/rsh-agent-presets',
+        '@redspark/rsh-native-model-execution',
+        '@redspark/rsh-native-model-selection',
+        '@redspark/rsh-native-runtime',
+        '@redspark/rsh-native-session-execution',
+        '@redspark/rsh-permission-presets',
+        '@redspark/rsh-workspace',
       ],
     })
     expect(PACKAGE_DEPENDENCY_POLICY.nativeServicePeerDependencies).toEqual({
-      '@deepseek-ai/dsh-command-feedback': {
-        activeSessions: '@deepseek-ai/dsh-native-session-execution',
+      '@redspark/rsh-command-feedback': {
+        activeSessions: '@redspark/rsh-native-session-execution',
       },
-      '@deepseek-ai/dsh-message-feedback': {
-        activeSessions: '@deepseek-ai/dsh-native-session-execution',
+      '@redspark/rsh-message-feedback': {
+        activeSessions: '@redspark/rsh-native-session-execution',
       },
-      '@deepseek-ai/dsh-session-log-export': {
-        activeSessions: '@deepseek-ai/dsh-native-session-execution',
+      '@redspark/rsh-session-log-export': {
+        activeSessions: '@redspark/rsh-native-session-execution',
       },
-      '@deepseek-ai/dsh-permission-presets': {
-        agents: '@deepseek-ai/dsh-native-agent',
-        sandboxPolicy: '@deepseek-ai/dsh-native-sandbox-policy',
+      '@redspark/rsh-permission-presets': {
+        agents: '@redspark/rsh-native-agent',
+        sandboxPolicy: '@redspark/rsh-native-sandbox-policy',
       },
     })
     expect(PACKAGE_DEPENDENCY_POLICY.duplicateSafePackages).toEqual([
-      '@deepseek-ai/dsh-brand',
-      '@deepseek-ai/dsh-typert-protocol',
-      '@deepseek-ai/dsh-util-crypto',
-      '@deepseek-ai/dsh-util-values',
+      '@redspark/rsh-brand',
+      '@redspark/rsh-typert-protocol',
+      '@redspark/rsh-util-crypto',
+      '@redspark/rsh-util-values',
     ])
-    expect(PACKAGE_DEPENDENCY_POLICY.safeHostDependencyExports['@deepseek-ai/dsh-deque']).toEqual(['Deque'])
-    expect(PACKAGE_DEPENDENCY_POLICY.safeHostDependencyExports['@deepseek-ai/dsh-approval-definition']).toEqual([
+    expect(PACKAGE_DEPENDENCY_POLICY.safeHostDependencyExports['@redspark/rsh-deque']).toEqual(['Deque'])
+    expect(PACKAGE_DEPENDENCY_POLICY.safeHostDependencyExports['@redspark/rsh-approval-definition']).toEqual([
       'sessionApprovalPolicy',
     ])
-    expect(PACKAGE_DEPENDENCY_POLICY.safeHostDependencyExports['@deepseek-ai/dsh-approval-definition/legacy']).toEqual([
+    expect(PACKAGE_DEPENDENCY_POLICY.safeHostDependencyExports['@redspark/rsh-approval-definition/legacy']).toEqual([
       'APPROVAL_POLICIES', 'setApprovalPolicy',
     ])
-    expect(PACKAGE_DEPENDENCY_POLICY.safeHostDependencyExports['@deepseek-ai/dsh-commands/brand']).toEqual([
+    expect(PACKAGE_DEPENDENCY_POLICY.safeHostDependencyExports['@redspark/rsh-commands/brand']).toEqual([
       'CommandDefinitionId',
     ])
-    expect(PACKAGE_DEPENDENCY_POLICY.safeHostDependencyExports['@deepseek-ai/dsh-sandbox-policy']).toEqual([
+    expect(PACKAGE_DEPENDENCY_POLICY.safeHostDependencyExports['@redspark/rsh-sandbox-policy']).toEqual([
       'SANDBOX_MODES', 'setSandboxMode',
     ])
-    expect(PACKAGE_DEPENDENCY_POLICY.safeHostDependencyExports['@deepseek-ai/dsh-llm']).toEqual([
+    expect(PACKAGE_DEPENDENCY_POLICY.safeHostDependencyExports['@redspark/rsh-llm']).toEqual([
       'boundContextSummary', 'errorChain',
     ])
-    expect(PACKAGE_DEPENDENCY_POLICY.safeHostDependencyExports['@deepseek-ai/dsh-llm/native']).toEqual(['boundContextSummary'])
-    expect(PACKAGE_DEPENDENCY_POLICY.safeHostDependencyExports['@deepseek-ai/dsh-json-rpc-line']).toEqual([
+    expect(PACKAGE_DEPENDENCY_POLICY.safeHostDependencyExports['@redspark/rsh-llm/native']).toEqual(['boundContextSummary'])
+    expect(PACKAGE_DEPENDENCY_POLICY.safeHostDependencyExports['@redspark/rsh-json-rpc-line']).toEqual([
       'JsonRpcLineTransport',
     ])
-    expect(PACKAGE_DEPENDENCY_POLICY.safeHostDependencyExports['@deepseek-ai/dsh-json-rpc-line']).not.toContain(
+    expect(PACKAGE_DEPENDENCY_POLICY.safeHostDependencyExports['@redspark/rsh-json-rpc-line']).not.toContain(
       'JsonRpcResponseError',
     )
-    expect(PACKAGE_DEPENDENCY_POLICY.safeHostDependencyExports['@deepseek-ai/dsh-subprocess/native']).toEqual([
+    expect(PACKAGE_DEPENDENCY_POLICY.safeHostDependencyExports['@redspark/rsh-subprocess/native']).toEqual([
       'disposeChildConnection',
     ])
-    expect(PACKAGE_DEPENDENCY_POLICY.safeHostDependencyExports['@deepseek-ai/schemastery']).toEqual(['default'])
-    expect(PACKAGE_DEPENDENCY_POLICY.safeHostDependencyExports['@deepseek-ai/dsh-session/types']).toBeUndefined()
-    expect(PACKAGE_DEPENDENCY_POLICY.safeHostDependencyExports['@deepseek-ai/dsh-typert-protocol']).toBeUndefined()
-    expect(PACKAGE_DEPENDENCY_POLICY.peerRequiredHostExports['@deepseek-ai/dsh-scope']).toEqual([
+    expect(PACKAGE_DEPENDENCY_POLICY.safeHostDependencyExports['@redspark/schemastery']).toEqual(['default'])
+    expect(PACKAGE_DEPENDENCY_POLICY.safeHostDependencyExports['@redspark/rsh-session/types']).toBeUndefined()
+    expect(PACKAGE_DEPENDENCY_POLICY.safeHostDependencyExports['@redspark/rsh-typert-protocol']).toBeUndefined()
+    expect(PACKAGE_DEPENDENCY_POLICY.peerRequiredHostExports['@redspark/rsh-scope']).toEqual([
       'carrierKeyOf', 'scopeOf', 'scopeTarget',
     ])
-    expect(PACKAGE_DEPENDENCY_POLICY.peerRequiredHostExports['@deepseek-ai/dsh-errors']).toEqual([
+    expect(PACKAGE_DEPENDENCY_POLICY.peerRequiredHostExports['@redspark/rsh-errors']).toEqual([
       'HarnessError', 'errorChain', 'isHarnessError',
     ])
-    expect(PACKAGE_DEPENDENCY_POLICY.peerRequiredHostExports['@deepseek-ai/dsh-session-title/normalize']).toEqual([
+    expect(PACKAGE_DEPENDENCY_POLICY.peerRequiredHostExports['@redspark/rsh-session-title/normalize']).toEqual([
       'normalizeSessionTitle',
     ])
-    expect(PACKAGE_DEPENDENCY_POLICY.peerRequiredHostExports['@deepseek-ai/dsh-session/types']).toEqual([
+    expect(PACKAGE_DEPENDENCY_POLICY.peerRequiredHostExports['@redspark/rsh-session/types']).toEqual([
       'SESSION_FORMAT_VERSION',
     ])
-    expect(PACKAGE_DEPENDENCY_POLICY.peerRequiredHostExports['@deepseek-ai/dsh-llm']).toEqual([
+    expect(PACKAGE_DEPENDENCY_POLICY.peerRequiredHostExports['@redspark/rsh-llm']).toEqual([
       'APP_IDENTITY', 'createUserMessage',
     ])
-    expect(PACKAGE_DEPENDENCY_POLICY.peerRequiredHostExports['@deepseek-ai/dsh-llm/native']).toEqual([
+    expect(PACKAGE_DEPENDENCY_POLICY.peerRequiredHostExports['@redspark/rsh-llm/native']).toEqual([
       'APP_IDENTITY', 'createUserMessage', 'ReasoningEffortId', 'ToolCallId', 'fileHandleText',
     ])
-    expect(PACKAGE_DEPENDENCY_POLICY.peerRequiredHostExports['@deepseek-ai/dsh-anonymous-user-id']).toEqual([
+    expect(PACKAGE_DEPENDENCY_POLICY.peerRequiredHostExports['@redspark/rsh-anonymous-user-id']).toEqual([
       'getOrCreateAnonymousUserId',
     ])
-    expect(PACKAGE_DEPENDENCY_POLICY.peerRequiredHostExports['@deepseek-ai/dsh-session']).toEqual(['Session', 'SessionId'])
-    expect(PACKAGE_DEPENDENCY_POLICY.peerRequiredHostExports['@deepseek-ai/dsh-session-telemetry']).toEqual([
+    expect(PACKAGE_DEPENDENCY_POLICY.peerRequiredHostExports['@redspark/rsh-session']).toEqual(['Session', 'SessionId'])
+    expect(PACKAGE_DEPENDENCY_POLICY.peerRequiredHostExports['@redspark/rsh-session-telemetry']).toEqual([
       'SessionTelemetryBackend', 'SessionTelemetryCoordinator',
     ])
-    expect(PACKAGE_DEPENDENCY_POLICY.peerRequiredHostExports['@deepseek-ai/dsh-session-telemetry/records']).toEqual([
+    expect(PACKAGE_DEPENDENCY_POLICY.peerRequiredHostExports['@redspark/rsh-session-telemetry/records']).toEqual([
       'isFeedbackEvent', 'ledgerRecord',
     ])
-    expect(PACKAGE_DEPENDENCY_POLICY.peerRequiredHostExports['@deepseek-ai/dsh-native-subagent/native']).toEqual([
+    expect(PACKAGE_DEPENDENCY_POLICY.peerRequiredHostExports['@redspark/rsh-native-subagent/native']).toEqual([
       'serializeNativeExternalJson',
     ])
     for (const specifier of [
-      '@deepseek-ai/dsh-agent-presets/selection',
-      '@deepseek-ai/dsh-client-ui-tool/tool-renderer',
-      '@deepseek-ai/dsh-native-model-selection/types',
-      '@deepseek-ai/dsh-session/event-validation',
-      '@deepseek-ai/dsh-tool-todo/client-native',
+      '@redspark/rsh-agent-presets/selection',
+      '@redspark/rsh-client-ui-tool/tool-renderer',
+      '@redspark/rsh-native-model-selection/types',
+      '@redspark/rsh-session/event-validation',
+      '@redspark/rsh-tool-todo/client-native',
     ]) {
       expect(PACKAGE_DEPENDENCY_POLICY.peerRequiredHostExports[specifier]).toBeUndefined()
     }
-    expect(PACKAGE_DEPENDENCY_POLICY.peerRequiredHostExports['@deepseek-ai/dsh-typert-protocol']).toBeUndefined()
+    expect(PACKAGE_DEPENDENCY_POLICY.peerRequiredHostExports['@redspark/rsh-typert-protocol']).toBeUndefined()
   })
 
   it('discovers the Client directory, dsh.client declarations, and configured Host packages', () => {
@@ -693,8 +693,8 @@ describe('face-aware source classification', () => {
     const root = mkdtempSync(join(tmpdir(), 'dsh-cordis-free-client-'))
     roots.push(root)
     const packages = [
-      ['@deepseek-ai/dsh-client-store', 'rsh/Programs/Web/client/store'],
-      ['@deepseek-ai/dsh-client-ui-slots', 'rsh/Programs/Web/client/ui-slots'],
+      ['@redspark/rsh-client-store', 'rsh/Programs/Web/client/store'],
+      ['@redspark/rsh-client-ui-slots', 'rsh/Programs/Web/client/ui-slots'],
     ] as const
 
     for (const [name, directory] of packages) {
@@ -757,7 +757,7 @@ describe('face-aware source classification', () => {
 
   it('keeps explicit shared browser runtimes as peers for a pure Client package', () => {
     const subject = sourceFacts({ 'src/index.tsx': "import { useState } from 'react'; export const view = <div />" }, {
-      name: '@deepseek-ai/dsh-client-ui-primitives', devDependencies: { react: '^18.2.0' },
+      name: '@redspark/rsh-client-ui-primitives', devDependencies: { react: '^18.2.0' },
     }, 'client-only')
     expect([...subject.hostRuntimeSourceUses]).toEqual([])
     expect(expectedPackageDependencies(subject).get('react')?.section).toBe('peer-dev')
@@ -985,7 +985,7 @@ describe('dependency sections', () => {
   })
 
   it('retains reviewed published types and rejects stale declaration relationships', () => {
-    const dependency = '@deepseek-ai/dsh-types'
+    const dependency = '@redspark/rsh-types'
     const typePolicy = policy({ publishedTypeDependencies: { '@f/probe': [dependency] } })
     const source = sourceFacts({ 'src/index.ts': `export type { Payload } from '${dependency}'` }, {
       dependencies: { [dependency]: 'workspace:^' },
@@ -1085,7 +1085,7 @@ describe('dependency sections', () => {
   })
 
   it('requires published type peers to have a source use and a required peer declaration', () => {
-    const dependency = '@deepseek-ai/dsh-types'
+    const dependency = '@redspark/rsh-types'
     const peerPolicy = policy({ publishedTypePeerDependencies: { '@f/probe': [dependency] } })
     const subject = sourceFacts({ 'src/index.ts': `export type { Payload } from '${dependency}'` }, {
       devDependencies: { [CORDIS]: 'workspace:^', [dependency]: 'workspace:^' },
@@ -1250,8 +1250,8 @@ describe('dependency sections', () => {
   it('validates every third-party range before writing any manifest in a repair batch', () => {
     const root = mkdtempSync(join(tmpdir(), 'dsh-dependency-batch-'))
     roots.push(root)
-    const valid = { ...facts({ name: '@deepseek-ai/dsh-first' }), manifestPath: 'first.json' }
-    const base = facts({ name: '@deepseek-ai/dsh-second' })
+    const valid = { ...facts({ name: '@redspark/rsh-first' }), manifestPath: 'first.json' }
+    const base = facts({ name: '@redspark/rsh-second' })
     const invalid: PackageDependencyFacts = {
       ...base,
       manifestPath: 'second.json',
@@ -1274,9 +1274,9 @@ describe('dependency sections', () => {
 
   it('moves browser-only third-party imports to development dependencies without changing their ranges', () => {
     const manifest: PackageDependencyManifest = {
-      name: '@deepseek-ai/dsh-probe',
-      dependencies: { '@deepseek-ai/dsh-runtime': 'workspace:^', external: '^1.2.3' },
-      devDependencies: { [CORDIS]: 'workspace:^', '@deepseek-ai/dsh-types': 'workspace:^' },
+      name: '@redspark/rsh-probe',
+      dependencies: { '@redspark/rsh-runtime': 'workspace:^', external: '^1.2.3' },
+      devDependencies: { [CORDIS]: 'workspace:^', '@redspark/rsh-types': 'workspace:^' },
       peerDependencies: { [CORDIS]: 'workspace:^' },
     }
     const base = facts(manifest)
@@ -1301,15 +1301,15 @@ describe('dependency sections', () => {
 
   it('does not leak repository configuration into captured dependency facts', () => {
     const manifest: PackageDependencyManifest = {
-      name: '@deepseek-ai/dsh-client-locale',
-      dependencies: { '@deepseek-ai/dsh-runtime': 'workspace:^' },
-      devDependencies: { [CORDIS]: 'workspace:^', '@deepseek-ai/dsh-types': 'workspace:^' },
+      name: '@redspark/rsh-client-locale',
+      dependencies: { '@redspark/rsh-runtime': 'workspace:^' },
+      devDependencies: { [CORDIS]: 'workspace:^', '@redspark/rsh-types': 'workspace:^' },
       peerDependencies: { [CORDIS]: 'workspace:^' },
     }
     const base = facts(manifest)
     const subject: PackageDependencyFacts = {
       ...base,
-      workspaceNames: new Set([...base.workspaceNames, '@deepseek-ai/dsh-api-remotes']),
+      workspaceNames: new Set([...base.workspaceNames, '@redspark/rsh-api-remotes']),
     }
 
     expect(collectPackageDependencyViolations({
@@ -1319,15 +1319,15 @@ describe('dependency sections', () => {
 
   it('requires non-workspace Host runtime imports in dependencies', () => {
     const manifest: PackageDependencyManifest = {
-      name: '@deepseek-ai/dsh-probe',
-      dependencies: { '@deepseek-ai/dsh-runtime': 'workspace:^' },
-      devDependencies: { [CORDIS]: 'workspace:^', '@deepseek-ai/dsh-types': 'workspace:^', external: '^1.0.0' },
+      name: '@redspark/rsh-probe',
+      dependencies: { '@redspark/rsh-runtime': 'workspace:^' },
+      devDependencies: { [CORDIS]: 'workspace:^', '@redspark/rsh-types': 'workspace:^', external: '^1.0.0' },
       peerDependencies: { [CORDIS]: 'workspace:^' },
     }
     const subject: PackageDependencyFacts = {
       ...facts(manifest),
       hostRuntimeSourceUses: new Map([
-        ['@deepseek-ai/dsh-runtime', ['rsh/Engine/core/probe/src/index.ts']],
+        ['@redspark/rsh-runtime', ['rsh/Engine/core/probe/src/index.ts']],
         ['external', ['rsh/Engine/core/probe/src/index.ts']],
       ]),
       allSourceUses: new Map([
@@ -1359,14 +1359,14 @@ describe('dependency sections', () => {
 
   it('accepts Host dependencies, development-only inputs, and shared Cordis', () => {
     const manifest: PackageDependencyManifest = {
-      name: '@deepseek-ai/dsh-probe',
+      name: '@redspark/rsh-probe',
       dependencies: {
-        '@deepseek-ai/dsh-runtime': 'workspace:^',
-        '@deepseek-ai/schemastery': 'workspace:^',
+        '@redspark/rsh-runtime': 'workspace:^',
+        '@redspark/schemastery': 'workspace:^',
         external: '^1.0.0',
       },
       devDependencies: {
-        '@deepseek-ai/dsh-types': 'workspace:^',
+        '@redspark/rsh-types': 'workspace:^',
         [CORDIS]: 'workspace:^',
       },
       peerDependencies: { [CORDIS]: 'workspace:^' },
@@ -1377,20 +1377,20 @@ describe('dependency sections', () => {
   })
 
   it('lists managed Host runtime dependencies for fix review', () => {
-    const subject = facts({ name: '@deepseek-ai/dsh-probe' })
+    const subject = facts({ name: '@redspark/rsh-probe' })
     expect(formatManagedRuntimeDependencies({
       facts: [subject], packages: [], policyViolations: [], workspaceNames: subject.workspaceNames,
     })).toEqual([
       'verify-package-dependencies: 1 managed Host runtime edge(s) remain in dependencies across 1 package(s):',
-      '  @deepseek-ai/dsh-probe -> @deepseek-ai/dsh-runtime: @deepseek-ai/dsh-runtime#runtimeValue',
+      '  @redspark/rsh-probe -> @redspark/rsh-runtime: @redspark/rsh-runtime#runtimeValue',
     ])
   })
 
   it('reports an unapproved Host runtime export without rewriting its dependency section', () => {
     const manifest: PackageDependencyManifest = {
-      name: '@deepseek-ai/dsh-probe',
-      dependencies: { '@deepseek-ai/dsh-runtime': 'workspace:^' },
-      devDependencies: { [CORDIS]: 'workspace:^', '@deepseek-ai/dsh-types': 'workspace:^' },
+      name: '@redspark/rsh-probe',
+      dependencies: { '@redspark/rsh-runtime': 'workspace:^' },
+      devDependencies: { [CORDIS]: 'workspace:^', '@redspark/rsh-types': 'workspace:^' },
       peerDependencies: { [CORDIS]: 'workspace:^' },
     }
     const subject = facts(manifest)
@@ -1404,23 +1404,23 @@ describe('dependency sections', () => {
     }
 
     expect(safetyViolations).toEqual([
-      'rsh/Engine/core/probe/src/index.ts:1:10: @deepseek-ai/dsh-runtime#runtimeValue is not classified as '
-      + 'safe or peer-required — import { runtimeValue } from \'@deepseek-ai/dsh-runtime\'',
+      'rsh/Engine/core/probe/src/index.ts:1:10: @redspark/rsh-runtime#runtimeValue is not classified as '
+      + 'safe or peer-required — import { runtimeValue } from \'@redspark/rsh-runtime\'',
     ])
     expect(fixPackageDependencies('/unused', state)).toEqual([])
-    expect(manifest.dependencies).toEqual({ '@deepseek-ai/dsh-runtime': 'workspace:^' })
+    expect(manifest.dependencies).toEqual({ '@redspark/rsh-runtime': 'workspace:^' })
   })
 
   it('keeps an edge as a peer when one imported export requires shared identity', () => {
     const manifest: PackageDependencyManifest = {
-      name: '@deepseek-ai/dsh-probe',
-      dependencies: { '@deepseek-ai/dsh-runtime': 'workspace:^' },
-      devDependencies: { [CORDIS]: 'workspace:^', '@deepseek-ai/dsh-types': 'workspace:^' },
+      name: '@redspark/rsh-probe',
+      dependencies: { '@redspark/rsh-runtime': 'workspace:^' },
+      devDependencies: { [CORDIS]: 'workspace:^', '@redspark/rsh-types': 'workspace:^' },
       peerDependencies: { [CORDIS]: 'workspace:^' },
     }
     const subject: PackageDependencyFacts = {
       ...facts(manifest),
-      peerRequiredHostDependencies: new Set(['@deepseek-ai/dsh-runtime']),
+      peerRequiredHostDependencies: new Set(['@redspark/rsh-runtime']),
     }
     expect(collectHostDependencyExportPolicyViolations(
       [subject],
@@ -1428,7 +1428,7 @@ describe('dependency sections', () => {
       {
         safeHostDependencyExports: {},
         peerRequiredHostExports: {
-          '@deepseek-ai/dsh-runtime': ['runtimeValue'],
+          '@redspark/rsh-runtime': ['runtimeValue'],
         },
       },
     )).toEqual([])
@@ -1437,24 +1437,24 @@ describe('dependency sections', () => {
     expect(manifest.dependencies).toBeUndefined()
     expect(manifest.peerDependencies).toMatchObject({
       [CORDIS]: 'workspace:^',
-      '@deepseek-ai/dsh-runtime': 'workspace:^',
+      '@redspark/rsh-runtime': 'workspace:^',
     })
     expect(manifest.devDependencies).toMatchObject({
       [CORDIS]: 'workspace:^',
-      '@deepseek-ai/dsh-runtime': 'workspace:^',
+      '@redspark/rsh-runtime': 'workspace:^',
     })
     expect(formatPeerRequiredRuntimeDependencies({
       facts: [subject], packages: [], policyViolations: [], workspaceNames: subject.workspaceNames,
     })).toEqual([
       'verify-package-dependencies: 1 Host runtime edge(s) remain in peerDependencies because their exports require shared identity across 1 package(s):',
-      '  @deepseek-ai/dsh-probe -> @deepseek-ai/dsh-runtime: @deepseek-ai/dsh-runtime#runtimeValue',
+      '  @redspark/rsh-probe -> @redspark/rsh-runtime: @redspark/rsh-runtime#runtimeValue',
     ])
   })
 
   it('preserves exact native optional peers and matching browser peers', () => {
-    const scope = '@deepseek-ai/dsh-scope'
+    const scope = '@redspark/rsh-scope'
     const sessionManifest: PackageDependencyManifest = {
-      name: '@deepseek-ai/dsh-session',
+      name: '@redspark/rsh-session',
       exports: { './native': './lib/native.js' },
       peerDependencies: { [CORDIS]: 'workspace:^', [scope]: 'workspace:^' },
       devDependencies: { [CORDIS]: 'workspace:^', [scope]: 'workspace:^' },
@@ -1474,10 +1474,10 @@ describe('dependency sections', () => {
     sessionManifest.peerDependenciesMeta = { [scope]: { optional: false } }
     expect(collectPackageDependencyViolations(state(session))).toContainEqual(expect.stringContaining(scope))
 
-    const tools = '@deepseek-ai/dsh-tools'
-    const typertProtocol = '@deepseek-ai/dsh-typert-protocol'
+    const tools = '@redspark/rsh-tools'
+    const typertProtocol = '@redspark/rsh-typert-protocol'
     const schedulerManifest: PackageDependencyManifest = {
-      name: '@deepseek-ai/dsh-task-scheduler',
+      name: '@redspark/rsh-task-scheduler',
       exports: { '.': './lib/index.js', './native': { types: './lib/types/native.d.ts', default: './lib/native.js' } },
       peerDependencies: { [CORDIS]: 'workspace:^', [tools]: 'workspace:^', [typertProtocol]: 'workspace:^' },
       devDependencies: { [CORDIS]: 'workspace:^', [tools]: 'workspace:^', [typertProtocol]: 'workspace:^' },
@@ -1521,7 +1521,7 @@ describe('dependency sections', () => {
     )
 
     const rendererManifest: PackageDependencyManifest = {
-      name: '@deepseek-ai/dsh-client-ui-renderer',
+      name: '@redspark/rsh-client-ui-renderer',
       peerDependencies: { react: '^18.2.0' },
       devDependencies: { react: '^18.2.0' },
     }
@@ -1537,9 +1537,9 @@ describe('dependency sections', () => {
     rendererManifest.devDependencies = { react: '^17.0.0' }
     expect(collectPackageDependencyViolations(state(renderer))).toContainEqual(expect.stringContaining('react must be matching'))
 
-    const pwshTools = '@deepseek-ai/dsh-tools'
+    const pwshTools = '@redspark/rsh-tools'
     const toolManifest: PackageDependencyManifest = {
-      name: '@deepseek-ai/dsh-tool-pwsh',
+      name: '@redspark/rsh-tool-pwsh',
       exports: { '.': './lib/index.js', './native': './lib/native.js' },
       devDependencies: { [pwshTools]: 'workspace:^' },
       peerDependencies: { [pwshTools]: 'workspace:^' },
@@ -1565,28 +1565,28 @@ describe('dependency sections', () => {
   it('preserves optional peer declarations used by a legacy entry only', () => {
     const profiles = [
       {
-        name: '@deepseek-ai/dsh-webhook',
+        name: '@redspark/rsh-webhook',
         manifestPath: 'rsh/Modules/Official/webhook/webhook/package.json',
-        peers: ['@deepseek-ai/dsh-agent', '@deepseek-ai/dsh-agent-default-model', '@deepseek-ai/dsh-invariants'],
+        peers: ['@redspark/rsh-agent', '@redspark/rsh-agent-default-model', '@redspark/rsh-invariants'],
       },
       {
-        name: '@deepseek-ai/dsh-permission-presets',
+        name: '@redspark/rsh-permission-presets',
         manifestPath: 'rsh/Modules/Official/interaction/permission-presets/package.json',
         peers: [
-          '@deepseek-ai/dsh-compat-settings-definition',
-          '@deepseek-ai/dsh-shell',
-          '@deepseek-ai/dsh-commands',
-          '@deepseek-ai/dsh-invariants',
-          '@deepseek-ai/dsh-sandbox-policy',
-          '@deepseek-ai/dsh-session',
-          '@deepseek-ai/dsh-session-projection',
-          '@deepseek-ai/dsh-user-approval',
+          '@redspark/rsh-compat-settings-definition',
+          '@redspark/rsh-shell',
+          '@redspark/rsh-commands',
+          '@redspark/rsh-invariants',
+          '@redspark/rsh-sandbox-policy',
+          '@redspark/rsh-session',
+          '@redspark/rsh-session-projection',
+          '@redspark/rsh-user-approval',
         ],
       },
       {
-        name: '@deepseek-ai/dsh-tool-session-query',
+        name: '@redspark/rsh-tool-session-query',
         manifestPath: 'rsh/Engine/session-query/tool-session-query/package.json',
-        peers: ['@deepseek-ai/dsh-tools'],
+        peers: ['@redspark/rsh-tools'],
       },
     ]
     for (const profile of profiles) {
@@ -1616,31 +1616,31 @@ describe('dependency sections', () => {
 
   it('reports wrong sections, workspace ranges, and stale peer metadata', () => {
     const manifest: PackageDependencyManifest = {
-      name: '@deepseek-ai/dsh-probe',
-      dependencies: { '@deepseek-ai/dsh-types': 'workspace:*' },
-      devDependencies: { [CORDIS]: 'workspace:^', '@deepseek-ai/dsh-runtime': 'workspace:^' },
-      peerDependencies: { [CORDIS]: 'workspace:*', '@deepseek-ai/dsh-runtime': 'workspace:^' },
-      peerDependenciesMeta: { '@deepseek-ai/dsh-missing': { optional: true } },
+      name: '@redspark/rsh-probe',
+      dependencies: { '@redspark/rsh-types': 'workspace:*' },
+      devDependencies: { [CORDIS]: 'workspace:^', '@redspark/rsh-runtime': 'workspace:^' },
+      peerDependencies: { [CORDIS]: 'workspace:*', '@redspark/rsh-runtime': 'workspace:^' },
+      peerDependenciesMeta: { '@redspark/rsh-missing': { optional: true } },
     }
     const state = {
       facts: [facts(manifest)], packages: [], policyViolations: [], workspaceNames: facts(manifest).workspaceNames,
     }
     const violations = collectPackageDependencyViolations(state)
     expect(violations).toEqual(expect.arrayContaining([
-      expect.stringContaining('@deepseek-ai/dsh-runtime'),
-      expect.stringContaining('@deepseek-ai/dsh-types'),
+      expect.stringContaining('@redspark/rsh-runtime'),
+      expect.stringContaining('@redspark/rsh-types'),
       expect.stringContaining(`${CORDIS} must be matching peerDependencies + devDependencies`),
-      expect.stringContaining('dependencies.@deepseek-ai/dsh-types must use workspace:^'),
-      expect.stringContaining('peerDependenciesMeta.@deepseek-ai/dsh-missing has no matching'),
+      expect.stringContaining('dependencies.@redspark/rsh-types must use workspace:^'),
+      expect.stringContaining('peerDependenciesMeta.@redspark/rsh-missing has no matching'),
     ]))
   })
 
   it('allows an optional Cordis peer only for a separate native export', () => {
     const manifest: PackageDependencyManifest = {
-      name: '@deepseek-ai/dsh-probe',
+      name: '@redspark/rsh-probe',
       exports: { '.': './lib/index.js', './native': './lib/native.js' },
-      dependencies: { '@deepseek-ai/dsh-runtime': 'workspace:^' },
-      devDependencies: { [CORDIS]: 'workspace:^', '@deepseek-ai/dsh-types': 'workspace:^' },
+      dependencies: { '@redspark/rsh-runtime': 'workspace:^' },
+      devDependencies: { [CORDIS]: 'workspace:^', '@redspark/rsh-types': 'workspace:^' },
       peerDependencies: { [CORDIS]: 'workspace:^' },
       peerDependenciesMeta: { [CORDIS]: { optional: true } },
     }
@@ -1674,15 +1674,15 @@ describe('dependency sections', () => {
     roots.push(root)
     const manifestPath = 'package.json'
     const manifest: PackageDependencyManifest = {
-      name: '@deepseek-ai/dsh-probe',
-      dependencies: { '@deepseek-ai/schemastery': 'workspace:*', external: '^1.0.0' },
-      devDependencies: { [CORDIS]: 'workspace:^', '@deepseek-ai/dsh-runtime': 'workspace:^' },
+      name: '@redspark/rsh-probe',
+      dependencies: { '@redspark/schemastery': 'workspace:*', external: '^1.0.0' },
+      devDependencies: { [CORDIS]: 'workspace:^', '@redspark/rsh-runtime': 'workspace:^' },
       peerDependencies: {
         [CORDIS]: 'workspace:^',
-        '@deepseek-ai/dsh-runtime': 'workspace:^',
-        '@deepseek-ai/dsh-stale': 'workspace:^',
+        '@redspark/rsh-runtime': 'workspace:^',
+        '@redspark/rsh-stale': 'workspace:^',
       },
-      peerDependenciesMeta: { '@deepseek-ai/dsh-stale': { optional: true } },
+      peerDependenciesMeta: { '@redspark/rsh-stale': { optional: true } },
     }
     writeFileSync(join(root, manifestPath), `${JSON.stringify(manifest, null, 2)}\n`)
     const subject = { ...facts(manifest), manifestPath }
@@ -1691,14 +1691,14 @@ describe('dependency sections', () => {
     expect(fixPackageDependencies(root, state)).toEqual([manifestPath])
     const fixed = JSON.parse(readFileSync(join(root, manifestPath), 'utf8')) as PackageDependencyManifest
     expect(fixed.dependencies).toEqual({
-      '@deepseek-ai/schemastery': 'workspace:^',
+      '@redspark/schemastery': 'workspace:^',
       external: '^1.0.0',
-      '@deepseek-ai/dsh-runtime': 'workspace:^',
+      '@redspark/rsh-runtime': 'workspace:^',
     })
     expect(fixed.devDependencies).toEqual({
       [CORDIS]: 'workspace:^',
-      '@deepseek-ai/dsh-types': 'workspace:^',
-      '@deepseek-ai/dsh-stale': 'workspace:^',
+      '@redspark/rsh-types': 'workspace:^',
+      '@redspark/rsh-stale': 'workspace:^',
     })
     expect(fixed.peerDependencies).toEqual({ [CORDIS]: 'workspace:^' })
     expect(fixed.peerDependenciesMeta).toBeUndefined()
@@ -1706,12 +1706,12 @@ describe('dependency sections', () => {
 
   it('repairs an in-memory manifest for benchmark simulation', () => {
     const manifest: PackageDependencyManifest = {
-      name: '@deepseek-ai/dsh-probe',
-      peerDependencies: { [CORDIS]: 'workspace:^', '@deepseek-ai/dsh-runtime': 'workspace:^' },
-      devDependencies: { [CORDIS]: 'workspace:^', '@deepseek-ai/dsh-runtime': 'workspace:^' },
+      name: '@redspark/rsh-probe',
+      peerDependencies: { [CORDIS]: 'workspace:^', '@redspark/rsh-runtime': 'workspace:^' },
+      devDependencies: { [CORDIS]: 'workspace:^', '@redspark/rsh-runtime': 'workspace:^' },
     }
     repairPackageDependencyManifest(facts(manifest))
-    expect(manifest.dependencies).toEqual({ '@deepseek-ai/dsh-runtime': 'workspace:^' })
+    expect(manifest.dependencies).toEqual({ '@redspark/rsh-runtime': 'workspace:^' })
     expect(manifest.peerDependencies).toEqual({ [CORDIS]: 'workspace:^' })
   })
 })

@@ -2,11 +2,11 @@ import { describe, expect, it } from 'vitest'
 import { requireCompatibilityRuntime } from '../src/compatibility-runtime.ts'
 
 const dependencies = [
-  '@deepseek-ai/cordis',
-  '@deepseek-ai/dsh-app-boot',
-  '@deepseek-ai/dsh-cmdline',
-  '@deepseek-ai/dsh-http-proxy',
-  '@deepseek-ai/dsh-launch-environment',
+  '@redspark/cordis',
+  '@redspark/rsh-app-boot',
+  '@redspark/rsh-cmdline',
+  '@redspark/rsh-http-proxy',
+  '@redspark/rsh-launch-environment',
 ] as const
 
 describe('CLI Cordis compatibility preflight', () => {
@@ -27,7 +27,7 @@ describe('CLI Cordis compatibility preflight', () => {
         if (specifier === missing) throw new Error('missing fixture')
         return specifier
       })
-    }).toThrow(`dsh: compatibility mode requires optional packages; reinstall @deepseek-ai/dsh with optional dependencies enabled (${missing} is unavailable)`)
+    }).toThrow(`dsh: compatibility mode requires optional packages; reinstall @redspark/dsh with optional dependencies enabled (${missing} is unavailable)`)
     expect(resolved).toEqual(dependencies.slice(0, dependencies.indexOf(missing) + 1))
   })
 })

@@ -9,9 +9,9 @@
  * is what makes a reload safe. The seats' components have their own specs.
  */
 import { describe, expect, it, vi } from 'vitest'
-import { Context } from '@deepseek-ai/cordis'
-import type { SlotRegistry } from '@deepseek-ai/dsh-client-ui-renderer/client'
-import type { SessionId } from '@deepseek-ai/dsh-session/types'
+import { Context } from '@redspark/cordis'
+import type { SlotRegistry } from '@redspark/rsh-client-ui-renderer/client'
+import type { SessionId } from '@redspark/rsh-session/types'
 import { apply, inject } from '../src/client/index.ts'
 import type { GuideInjected, SidebarRightInjected } from '../src/client/index.ts'
 import { apply as hostApply } from '../src/index.ts'

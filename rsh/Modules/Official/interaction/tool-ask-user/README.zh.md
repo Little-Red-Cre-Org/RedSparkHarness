@@ -3,7 +3,7 @@ description: "基于 user-questions seam 的模型侧 ask_user_question 工具�
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-tool-ask-user
+# @redspark/rsh-tool-ask-user
 
 [English](README.md) | 中文
 

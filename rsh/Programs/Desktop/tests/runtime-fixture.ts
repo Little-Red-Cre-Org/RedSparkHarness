@@ -35,15 +35,15 @@ export function writePackage(modules: string, name: string, fields: Record<strin
 export function runtimeFixture(
   root: string, version = '1.0.0', nodeVersion = '24.17.0', includeCompatibilityHost = false,
 ): DesktopRuntimeDescriptor {
-  const names = ['@deepseek-ai/dsh', '@deepseek-ai/dsh-desktop-host', '@deepseek-ai/dsh-client-connection',
-    ...(includeCompatibilityHost ? [DESKTOP_COMPATIBILITY_HOST_PACKAGE, '@deepseek-ai/dsh-base', '@deepseek-ai/dsh-web-app', '@deepseek-ai/cordis'] : [])]
+  const names = ['@redspark/dsh', '@redspark/rsh-desktop-host', '@redspark/rsh-client-connection',
+    ...(includeCompatibilityHost ? [DESKTOP_COMPATIBILITY_HOST_PACKAGE, '@redspark/rsh-base', '@redspark/rsh-web-app', '@redspark/cordis'] : [])]
   for (const name of names) writePackage(join(root, 'node_modules'), name, { version })
   if (includeCompatibilityHost) {
     writeFileSync(join(root, 'node_modules', ...DESKTOP_COMPATIBILITY_HOST_PACKAGE.split('/'), 'package.json'),
       JSON.stringify({ name: DESKTOP_COMPATIBILITY_HOST_PACKAGE, version, private: true, type: 'module' }))
   }
   for (const file of DESKTOP_HOST_RUNTIME_FILES) {
-    const path = join(root, 'node_modules', '@deepseek-ai/dsh-desktop-host', file)
+    const path = join(root, 'node_modules', '@redspark/rsh-desktop-host', file)
     mkdirSync(join(path, '..'), { recursive: true })
     writeFileSync(path, '')
   }
@@ -55,8 +55,8 @@ export function runtimeFixture(
     return { name, version, file, bytes: body.byteLength,
       integrity: `sha512-${createHash('sha512').update(body).digest('base64')}` }
   }
-  const packageNames = ['@deepseek-ai/dsh', '@deepseek-ai/dsh-client-connection', '@deepseek-ai/dsh-desktop-host',
-    ...(includeCompatibilityHost ? [DESKTOP_COMPATIBILITY_HOST_PACKAGE, '@deepseek-ai/dsh-base', '@deepseek-ai/dsh-web-app', '@deepseek-ai/cordis'] : [])]
+  const packageNames = ['@redspark/dsh', '@redspark/rsh-client-connection', '@redspark/rsh-desktop-host',
+    ...(includeCompatibilityHost ? [DESKTOP_COMPATIBILITY_HOST_PACKAGE, '@redspark/rsh-base', '@redspark/rsh-web-app', '@redspark/cordis'] : [])]
   const packages = packageNames.map(name => record(name, `${name.split('/').at(-1)}.tgz`))
     .sort((left, right) => left.name.localeCompare(right.name))
   const selectedNames = new Set(packageNames)

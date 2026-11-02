@@ -16,4 +16,4 @@ export type {
   SdkApprovalOutcome,
   SdkApprovalHandler,
   SdkPromptContentBlock,
-} from '@deepseek-ai/dsh-sdk-runtime'
+} from '@redspark/rsh-sdk-runtime'

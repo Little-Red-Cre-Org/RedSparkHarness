@@ -1,13 +1,13 @@
 /** Cordis-free Definition for durable, model-visible request context contributions. */
-import { brandString, type Branded } from '@deepseek-ai/dsh-brand'
-import type { UserMessage } from '@deepseek-ai/dsh-llm/native'
-import type { NativeScope } from '@deepseek-ai/dsh-native-runtime'
-import type { NativeToolRegistration } from '@deepseek-ai/dsh-native-tools'
-import type { NativeActiveSessionOwner } from '@deepseek-ai/dsh-native-session-execution/active-session-protocol'
-import type { SessionEvent } from '@deepseek-ai/dsh-session/native'
-import type {} from '@deepseek-ai/dsh-native-runtime'
+import { brandString, type Branded } from '@redspark/rsh-brand'
+import type { UserMessage } from '@redspark/rsh-llm/native'
+import type { NativeScope } from '@redspark/rsh-native-runtime'
+import type { NativeToolRegistration } from '@redspark/rsh-native-tools'
+import type { NativeActiveSessionOwner } from '@redspark/rsh-native-session-execution/active-session-protocol'
+import type { SessionEvent } from '@redspark/rsh-session/native'
+import type {} from '@redspark/rsh-native-runtime'
 
-declare module '@deepseek-ai/dsh-native-runtime' {
+declare module '@redspark/rsh-native-runtime' {
   interface NativeServices { requestContexts: NativeRequestContexts }
 }
 

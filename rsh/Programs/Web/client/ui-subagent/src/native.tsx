@@ -12,9 +12,9 @@
  * descendant fold below is the same one the Cordis entry uses, so both
  * surfaces agree on what "a child" means.
  */
-import type { TranslateNS } from '@deepseek-ai/dsh-client-ui-slots'
+import type { TranslateNS } from '@redspark/rsh-client-ui-slots'
 import type { ReactElement } from 'react'
-import { en as commonEn, formatLocaleTemplate, zh as commonZh } from '@deepseek-ai/dsh-client-locale/dictionary'
+import { en as commonEn, formatLocaleTemplate, zh as commonZh } from '@redspark/rsh-client-locale/dictionary'
 import {
   indexSubagentDescendants, type SubagentDescendantSummary,
 } from './client/subagent-lineage.ts'

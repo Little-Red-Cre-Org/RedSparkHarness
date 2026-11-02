@@ -1,5 +1,5 @@
 {
-  "name": "@deepseek-ai/dsh-llm-deepseek",
+  "name": "@redspark/rsh-llm-deepseek",
   "description": "DeepSeek chat-completions adapter for the RedSpark Harness LLM seam",
   "version": "1.0.0",
   "publishConfig": {
@@ -33,49 +33,49 @@
   ],
   "license": "MIT",
   "peerDependencies": {
-    "@deepseek-ai/cordis": "workspace:^",
-    "@deepseek-ai/dsh-anonymous-user-id": "workspace:^",
-    "@deepseek-ai/dsh-atomic-write": "workspace:^",
-    "@deepseek-ai/dsh-attachment": "workspace:^",
-    "@deepseek-ai/dsh-compat-settings-definition": "workspace:^",
-    "@deepseek-ai/dsh-credentials": "workspace:^",
-    "@deepseek-ai/dsh-deepseek-llm-api-extensions": "workspace:^",
-    "@deepseek-ai/dsh-fs": "workspace:^",
-    "@deepseek-ai/dsh-home-paths": "workspace:^",
-    "@deepseek-ai/dsh-launch-environment": "workspace:^",
-    "@deepseek-ai/dsh-llm": "workspace:^",
-    "@deepseek-ai/dsh-native-session-execution": "workspace:^",
-    "@deepseek-ai/dsh-timeout": "workspace:^"
+    "@redspark/cordis": "workspace:^",
+    "@redspark/rsh-anonymous-user-id": "workspace:^",
+    "@redspark/rsh-atomic-write": "workspace:^",
+    "@redspark/rsh-attachment": "workspace:^",
+    "@redspark/rsh-compat-settings-definition": "workspace:^",
+    "@redspark/rsh-credentials": "workspace:^",
+    "@redspark/rsh-deepseek-llm-api-extensions": "workspace:^",
+    "@redspark/rsh-fs": "workspace:^",
+    "@redspark/rsh-home-paths": "workspace:^",
+    "@redspark/rsh-launch-environment": "workspace:^",
+    "@redspark/rsh-llm": "workspace:^",
+    "@redspark/rsh-native-session-execution": "workspace:^",
+    "@redspark/rsh-timeout": "workspace:^"
   },
   "dependencies": {
-    "@deepseek-ai/dsh-brand": "workspace:^",
-    "@deepseek-ai/dsh-util-values": "workspace:^",
-    "@deepseek-ai/schemastery": "workspace:^",
+    "@redspark/rsh-brand": "workspace:^",
+    "@redspark/rsh-util-values": "workspace:^",
+    "@redspark/schemastery": "workspace:^",
     "eventsource-parser": "^3.1.0",
-    "@deepseek-ai/dsh-native-model-execution": "workspace:^",
-    "@deepseek-ai/dsh-native-runtime": "workspace:^"
+    "@redspark/rsh-native-model-execution": "workspace:^",
+    "@redspark/rsh-native-runtime": "workspace:^"
   },
   "devDependencies": {
-    "@deepseek-ai/cordis": "workspace:^",
-    "@deepseek-ai/dsh-agent": "workspace:^",
-    "@deepseek-ai/dsh-anonymous-user-id": "workspace:^",
-    "@deepseek-ai/dsh-atomic-write": "workspace:^",
-    "@deepseek-ai/dsh-attachment": "workspace:^",
-    "@deepseek-ai/dsh-attachment-local": "workspace:^",
-    "@deepseek-ai/dsh-compat-settings-definition": "workspace:^",
-    "@deepseek-ai/dsh-credentials": "workspace:^",
-    "@deepseek-ai/dsh-deepseek-llm-api-extensions": "workspace:^",
-    "@deepseek-ai/dsh-fs": "workspace:^",
-    "@deepseek-ai/dsh-home-paths": "workspace:^",
-    "@deepseek-ai/dsh-launch-environment": "workspace:^",
-    "@deepseek-ai/dsh-llm": "workspace:^",
-    "@deepseek-ai/dsh-plugin-package-inventory-deepseek": "workspace:^",
-    "@deepseek-ai/dsh-native-session-execution": "workspace:^",
-    "@deepseek-ai/dsh-session": "workspace:^",
-    "@deepseek-ai/dsh-session-log-deepseek": "workspace:^",
-    "@deepseek-ai/dsh-settings": "workspace:^",
-    "@deepseek-ai/dsh-timeout": "workspace:^",
-    "@deepseek-ai/dsh-http-proxy": "workspace:^"
+    "@redspark/cordis": "workspace:^",
+    "@redspark/rsh-agent": "workspace:^",
+    "@redspark/rsh-anonymous-user-id": "workspace:^",
+    "@redspark/rsh-atomic-write": "workspace:^",
+    "@redspark/rsh-attachment": "workspace:^",
+    "@redspark/rsh-attachment-local": "workspace:^",
+    "@redspark/rsh-compat-settings-definition": "workspace:^",
+    "@redspark/rsh-credentials": "workspace:^",
+    "@redspark/rsh-deepseek-llm-api-extensions": "workspace:^",
+    "@redspark/rsh-fs": "workspace:^",
+    "@redspark/rsh-home-paths": "workspace:^",
+    "@redspark/rsh-launch-environment": "workspace:^",
+    "@redspark/rsh-llm": "workspace:^",
+    "@redspark/rsh-plugin-package-inventory-deepseek": "workspace:^",
+    "@redspark/rsh-native-session-execution": "workspace:^",
+    "@redspark/rsh-session": "workspace:^",
+    "@redspark/rsh-session-log-deepseek": "workspace:^",
+    "@redspark/rsh-settings": "workspace:^",
+    "@redspark/rsh-timeout": "workspace:^",
+    "@redspark/rsh-http-proxy": "workspace:^"
   },
   "dsh": {
     "native": {
@@ -101,10 +101,10 @@
     }
   },
   "peerDependenciesMeta": {
-    "@deepseek-ai/cordis": {
+    "@redspark/cordis": {
       "optional": true
     },
-    "@deepseek-ai/dsh-compat-settings-definition": {
+    "@redspark/rsh-compat-settings-definition": {
       "optional": true
     }
   }

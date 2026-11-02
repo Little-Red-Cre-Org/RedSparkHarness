@@ -3,7 +3,7 @@ description: "Defines versioned Native ACP subagent metadata for execution limit
 kind: "package-library"
 ---
 
-# @deepseek-ai/dsh-acp-protocol
+# @redspark/rsh-acp-protocol
 
 English | [中文](README.zh.md)
 
@@ -34,7 +34,7 @@ Use it in an ACP peer that reads or emits versioned subagent policy or permissio
 Pass the value of an ACP metadata object's `_meta` field to the policy reader. It returns `undefined` when the extension is absent and throws `TypeError` for malformed or unsupported data.
 
 ```ts
-import { readNativeAcpSubagentPolicy } from '@deepseek-ai/dsh-acp-protocol'
+import { readNativeAcpSubagentPolicy } from '@redspark/rsh-acp-protocol'
 
 const policy = readNativeAcpSubagentPolicy({
   'com.deepseek.ai/dsh-native-subagent': {

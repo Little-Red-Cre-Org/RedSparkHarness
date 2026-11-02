@@ -7,10 +7,10 @@ import { existsSync, globSync, readFileSync } from 'node:fs'
 import { dirname, resolve, sep } from 'node:path'
 
 const ROOT = resolve(import.meta.dirname, '..', '..')
-const DSH_PACKAGE_NAME = /^@deepseek-ai\/dsh(?:-|$)/
+const RSH_PACKAGE_NAME = /^@redspark\/dsh(?:-|$)/
 const RESEARCH_LICENSE_PACKAGE = {
   manifestPath: 'rsh/Modules/Official/subagent/acp-child/package.json',
-  name: '@deepseek-ai/dsh-acp-child',
+  name: '@redspark/rsh-acp-child',
   license: 'SEE LICENSE IN LICENSE-REDSPARK-RESEARCH.txt',
   file: 'LICENSE-REDSPARK-RESEARCH.txt',
 }
@@ -77,7 +77,7 @@ export function inspectDshPackageLicenses(root: string): DshPackageLicenseReport
     if (file === 'package.json') continue
     const normalizedFile = file.split(sep).join('/')
     const name = manifest.name
-    const isDshPackage = typeof name === 'string' && DSH_PACKAGE_NAME.test(name)
+    const isDshPackage = typeof name === 'string' && RSH_PACKAGE_NAME.test(name)
     const isResearchLicensePath = normalizedFile === RESEARCH_LICENSE_PACKAGE.manifestPath
 
     if (isResearchLicensePath) {

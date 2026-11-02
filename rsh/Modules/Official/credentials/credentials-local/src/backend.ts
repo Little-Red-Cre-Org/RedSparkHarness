@@ -2,10 +2,10 @@
 import { watch as chokidarWatch } from 'chokidar'
 import { mkdir, readFile } from 'node:fs/promises'
 import { dirname } from 'node:path'
-import { withFileLock, writeFileAtomic } from '@deepseek-ai/dsh-atomic-write'
-import { canonicalizeWatchPath } from '@deepseek-ai/dsh-home-paths'
-import type { LaunchEnvironmentEntry, LaunchEnvironmentSnapshot } from '@deepseek-ai/dsh-launch-environment/native'
-import { credentialRef, parseCredentialKey, type CredentialInfo, type CredentialKey, type CredentialMetadataMigration, type CredentialRecord, type CredentialRef, type NativeCredentialRecordEntry, type NativeCredentialRecordInfo, type NativeCredentials, type NativeCredentialDeleteOptions, type NativeCredentialWriteOptions, type NativeResolvedCredential } from '@deepseek-ai/dsh-credentials/native'
+import { withFileLock, writeFileAtomic } from '@redspark/rsh-atomic-write'
+import { canonicalizeWatchPath } from '@redspark/rsh-home-paths'
+import type { LaunchEnvironmentEntry, LaunchEnvironmentSnapshot } from '@redspark/rsh-launch-environment/native'
+import { credentialRef, parseCredentialKey, type CredentialInfo, type CredentialKey, type CredentialMetadataMigration, type CredentialRecord, type CredentialRef, type NativeCredentialRecordEntry, type NativeCredentialRecordInfo, type NativeCredentials, type NativeCredentialDeleteOptions, type NativeCredentialWriteOptions, type NativeResolvedCredential } from '@redspark/rsh-credentials/native'
 import { assertJsonValue, assertOwnerOnly, assertStorableApiKey, DOCUMENT_LOCK_WAIT_MS, DOCUMENT_VERSION, isENOENT, parseCredentialsDocument, renderFlatLayoutMigration, renderRecord, renderRef, resolveSpec, sameJsonValue, type Config, type ResolvedSpec } from './document.ts'
 
 /** Host resources and notifications supplied by the selected application runtime. */
@@ -32,7 +32,7 @@ function renderMetadataDocument(entries: ReadonlyMap<string, unknown>): string {
   return `${JSON.stringify({ version: 1, entries: Object.fromEntries(entries) }, null, 2)}\n`
 }
 
-/** File-backed credentials provider (`$DSH_HOME/.credentials.yaml`). */
+/** File-backed credentials provider (`$RSH_HOME/.credentials.yaml`). */
 export class NativeLocalCredentialProvider implements NativeCredentials {
   private readonly spec: ResolvedSpec
   /**

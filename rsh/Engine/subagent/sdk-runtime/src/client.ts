@@ -1,7 +1,7 @@
 /**
  * Low-level JSON-RPC client for a RedSpark Harness SDK runtime subprocess.
  * {@link HarnessClient} owns the child process: it spawns the runtime, speaks
- * the `@deepseek-ai/dsh-sdk-protocol` wire over the child's stdio, fans
+ * the `@redspark/rsh-sdk-protocol` wire over the child's stdio, fans
  * server notifications out to subscriptions, and tears the child down through
  * Core's managed connection lifetime. The design
  * twin is the Python SDK's `HarnessClient` (`rsh/Programs/SDK/python/sdk`); both drive the
@@ -9,11 +9,11 @@
  * uses the framework-free local `dsh-subprocess` connection Provider without
  * mounting NativeHost or Cordis.
  *
- * @module @deepseek-ai/dsh-sdk-runtime/client
+ * @module @redspark/rsh-sdk-runtime/client
  */
 
-import { disposeChildConnection, type ChildConnectionDefinition, type ChildConnectionHandle } from '@deepseek-ai/dsh-subprocess/native'
-import { createLocalChildConnectionProvider, type LocalChildConnectionProvider } from '@deepseek-ai/dsh-subprocess-local/child-connection'
+import { disposeChildConnection, type ChildConnectionDefinition, type ChildConnectionHandle } from '@redspark/rsh-subprocess/native'
+import { createLocalChildConnectionProvider, type LocalChildConnectionProvider } from '@redspark/rsh-subprocess-local/child-connection'
 import { isAbsolute } from 'node:path'
 import {
   JsonRpcLineTransport,
@@ -27,7 +27,7 @@ import {
   type SessionUploadFileResult,
   type SessionPromptParams,
   type SdkPromptContentBlock,
-} from '@deepseek-ai/dsh-sdk-protocol'
+} from '@redspark/rsh-sdk-protocol'
 import type { HarnessClientOptions, HarnessNotification, NotificationFilter, RuntimeProcessOptions } from './types.ts'
 import type { NativeSdkChildApprovalOutcome, NativeSdkChildApprovalRelay } from './native.ts'
 

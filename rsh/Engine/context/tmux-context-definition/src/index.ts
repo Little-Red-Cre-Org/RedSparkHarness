@@ -1,9 +1,9 @@
 /** Native request-preparation Definition for durable tmux context. */
-import type { UserMessage } from '@deepseek-ai/dsh-llm/native'
-import type { Session, SessionEvent } from '@deepseek-ai/dsh-session/native'
-import type {} from '@deepseek-ai/dsh-native-runtime'
+import type { UserMessage } from '@redspark/rsh-llm/native'
+import type { Session, SessionEvent } from '@redspark/rsh-session/native'
+import type {} from '@redspark/rsh-native-runtime'
 
-declare module '@deepseek-ai/dsh-native-runtime' {
+declare module '@redspark/rsh-native-runtime' {
   interface NativeServices { tmuxContext: NativeTmuxContext }
 }
 

@@ -1,5 +1,5 @@
 {
-  "name": "@deepseek-ai/dsh-compat-fs-local",
+  "name": "@redspark/rsh-compat-fs-local",
   "description": "Explicit Cordis filesystem Provider for native RedSpark Harness profiles",
   "version": "1.0.0",
   "publishConfig": { "access": "public" },
@@ -28,12 +28,12 @@
   },
   "files": ["lib/index.js", "lib/types/**/*.d.ts"],
   "license": "MIT",
-  "peerDependencies": { "@deepseek-ai/cordis": "workspace:^" },
-  "devDependencies": { "@deepseek-ai/cordis": "workspace:^" },
+  "peerDependencies": { "@redspark/cordis": "workspace:^" },
+  "devDependencies": { "@redspark/cordis": "workspace:^" },
   "dependencies": {
-    "@deepseek-ai/dsh-native-runtime": "workspace:^",
-    "@deepseek-ai/dsh-compat-dsh-runtime": "workspace:^",
-    "@deepseek-ai/dsh-fs": "workspace:^",
-    "@deepseek-ai/dsh-fs-local": "workspace:^"
+    "@redspark/rsh-native-runtime": "workspace:^",
+    "@redspark/rsh-compat-dsh-runtime": "workspace:^",
+    "@redspark/rsh-fs": "workspace:^",
+    "@redspark/rsh-fs-local": "workspace:^"
   }
 }

@@ -4,7 +4,7 @@
  * module so both programs see the same map entries.
  */
 
-import type {} from '@deepseek-ai/dsh-typert-protocol/types'
+import type {} from '@redspark/rsh-typert-protocol/types'
 
 /** Wire details every Gateway infrastructure failure carries. */
 export interface TypertGatewayFaultDetails {
@@ -14,7 +14,7 @@ export interface TypertGatewayFaultDetails {
   readonly field?: string
 }
 
-declare module '@deepseek-ai/dsh-typert-protocol/types' {
+declare module '@redspark/rsh-typert-protocol/types' {
   interface RemoteErrorDetailsMap {
     'gateway/ambiguous-endpoint': TypertGatewayFaultDetails
     'gateway/arguments-invalid': TypertGatewayFaultDetails

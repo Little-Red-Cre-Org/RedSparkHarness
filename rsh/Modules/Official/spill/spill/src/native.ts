@@ -1,5 +1,5 @@
 /** Framework-free spill storage Definition shared by native producers and local storage. */
-import type {} from '@deepseek-ai/dsh-native-runtime'
+import type {} from '@redspark/rsh-native-runtime'
 import type { SaveTextSpill, SpillRef } from './types.ts'
 export { SpillLocator } from './types.ts'
 export type { SaveTextSpill, SpillOwner, SpillRef, SpillSource } from './types.ts'
@@ -15,6 +15,6 @@ export interface SpillOperations {
   saveText(input: SaveTextSpill, signal: AbortSignal): Promise<SpillRef>
 }
 
-declare module '@deepseek-ai/dsh-native-runtime' {
+declare module '@redspark/rsh-native-runtime' {
   interface NativeServices { spillStore: SpillOperations }
 }

@@ -1,8 +1,8 @@
 /** Native request Consumer for exact selected DeepSeek package provenance. */
-import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
-import type {} from '@deepseek-ai/dsh-deepseek-llm-api-extensions/native'
-import type { NativeActiveSessionOperations } from '@deepseek-ai/dsh-native-session-execution/active-session-protocol'
-import type { DeepSeekLlmApiExtensionRequest } from '@deepseek-ai/dsh-deepseek-llm-api-extensions/types'
+import type { NativePlugin } from '@redspark/rsh-native-runtime'
+import type {} from '@redspark/rsh-deepseek-llm-api-extensions/native'
+import type { NativeActiveSessionOperations } from '@redspark/rsh-native-session-execution/active-session-protocol'
+import type { DeepSeekLlmApiExtensionRequest } from '@redspark/rsh-deepseek-llm-api-extensions/types'
 import { resolveConfig } from './config.ts'
 import { createInventoryExtension } from './wire.ts'
 
@@ -11,7 +11,7 @@ export type * from './types.ts'
 /** Publish the selected package inventory to official Native DeepSeek requests. */
 export const plugin: NativePlugin = {
   apiVersion: 1,
-  name: '@deepseek-ai/dsh-plugin-package-inventory-deepseek',
+  name: '@redspark/rsh-plugin-package-inventory-deepseek',
   targets: ['host'],
   requires: ['deepseekLlmApiExtensions', 'pluginInventory', 'activeSessions'],
   provides: [],

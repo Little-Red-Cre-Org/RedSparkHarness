@@ -3,7 +3,7 @@ description: "The sandbox-consuming Bash executor for deployments and maintainer
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-bash-sandbox
+# @redspark/rsh-bash-sandbox
 
 English | [中文](README.zh.md)
 
@@ -47,14 +47,14 @@ The native entry requires native `subprocess`, `sandbox`, and `sandboxPolicy` se
 
 ```yaml
 - id: sandbox
-  name: '@deepseek-ai/dsh-sandbox-local'
+  name: '@redspark/rsh-sandbox-local'
 - id: sandbox-policy
-  name: '@deepseek-ai/dsh-sandbox-policy'
+  name: '@redspark/rsh-sandbox-policy'
   config:
     mode: read-only
     workspaceRoot: !!js process.cwd() # fallback for calls without a session cwd
 - id: bash
-  name: '@deepseek-ai/dsh-bash-sandbox'
+  name: '@redspark/rsh-bash-sandbox'
 ```
 
 ### Denials are result facts

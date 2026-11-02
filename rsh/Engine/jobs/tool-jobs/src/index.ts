@@ -4,18 +4,18 @@
  * producers. It also delivers unreported completions to the owning agent:
  * injected into a busy owner's next step, or opening a turn on an idle one
  * under the default `wakeup` delivery, bounded per owner.
- * @module @deepseek-ai/dsh-tool-jobs
+ * @module @redspark/rsh-tool-jobs
  */
 
-import type { Context } from '@deepseek-ai/cordis'
-import z from '@deepseek-ai/schemastery'
-import { boundContextSummary, createUserMessage, type ContentBlock } from '@deepseek-ai/dsh-llm'
-import { TextRetainer } from '@deepseek-ai/dsh-output-retention'
-import { defineTool } from '@deepseek-ai/dsh-tools'
-import type { GenericCallView, ToolDefinition, ToolExecution } from '@deepseek-ai/dsh-tools'
-import { JobId } from '@deepseek-ai/dsh-jobs'
-import type { JobSnapshot } from '@deepseek-ai/dsh-jobs'
-import type { Agent } from '@deepseek-ai/dsh-agent'
+import type { Context } from '@redspark/cordis'
+import z from '@redspark/schemastery'
+import { boundContextSummary, createUserMessage, type ContentBlock } from '@redspark/rsh-llm'
+import { TextRetainer } from '@redspark/rsh-output-retention'
+import { defineTool } from '@redspark/rsh-tools'
+import type { GenericCallView, ToolDefinition, ToolExecution } from '@redspark/rsh-tools'
+import { JobId } from '@redspark/rsh-jobs'
+import type { JobSnapshot } from '@redspark/rsh-jobs'
+import type { Agent } from '@redspark/rsh-agent'
 
 export const name = 'tool-jobs'
 export const inject = ['tools', 'jobs', 'systemPrompt']

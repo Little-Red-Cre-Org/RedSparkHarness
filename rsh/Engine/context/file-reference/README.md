@@ -3,13 +3,13 @@ description: "File-reference discovery contract and @file mention grammar for Na
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-file-reference
+# @redspark/rsh-file-reference
 
 English | [中文](README.zh.md)
 
 ## Summary
 
-Host-backed user interfaces use `dsh-file-reference` to offer `@file` completion: a UI asks for path candidates for the addressed agent, the model types `@path` or `@"path with spaces"`, and picking a candidate inserts the matching mention as ordinary prompt text. The seam itself owns no filesystem access — a concrete provider such as `@deepseek-ai/dsh-file-reference-local` supplies candidates, ranking, caching, and invalidation. Selecting a candidate never reads or attaches file contents; the model must call a filesystem tool to inspect a file. Session Controller exposes the same discovery to browser consumers through the `fileReferences/list` Remote.
+Host-backed user interfaces use `dsh-file-reference` to offer `@file` completion: a UI asks for path candidates for the addressed agent, the model types `@path` or `@"path with spaces"`, and picking a candidate inserts the matching mention as ordinary prompt text. The seam itself owns no filesystem access — a concrete provider such as `@redspark/rsh-file-reference-local` supplies candidates, ranking, caching, and invalidation. Selecting a candidate never reads or attaches file contents; the model must call a filesystem tool to inspect a file. Session Controller exposes the same discovery to browser consumers through the `fileReferences/list` Remote.
 
 ## Table of Contents
 
@@ -37,7 +37,7 @@ An `@path` token at the start of input or after whitespace triggers completion; 
 
 ### Pairing with a provider
 
-For Native Host profiles, mount `@deepseek-ai/dsh-native-file-reference-local`; for Cordis profiles, mount `@deepseek-ai/dsh-file-reference-local`. Other namespaces (remote or virtual filesystems) need a provider whose discovery matches the effective tool. When the addressed agent can call `read`, a provider may install the stable `FILE_REFERENCE_PROMPT` guidance that tells the model to read a referenced file before claiming to have inspected it.
+For Native Host profiles, mount `@redspark/rsh-native-file-reference-local`; for Cordis profiles, mount `@redspark/rsh-file-reference-local`. Other namespaces (remote or virtual filesystems) need a provider whose discovery matches the effective tool. When the addressed agent can call `read`, a provider may install the stable `FILE_REFERENCE_PROMPT` guidance that tells the model to read a referenced file before claiming to have inspected it.
 
 -----
 

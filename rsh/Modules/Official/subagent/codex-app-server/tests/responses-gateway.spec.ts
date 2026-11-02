@@ -1,5 +1,5 @@
 import { expect, it, vi } from 'vitest'
-import { ToolCallId } from '@deepseek-ai/dsh-llm/native'
+import { ToolCallId } from '@redspark/rsh-llm/native'
 import {
   type NativeExternalModelAttemptLease,
   type NativeExternalJsonValue,
@@ -7,7 +7,7 @@ import {
   type NativeExternalModelRoute,
   type NativeExternalToolCall,
   type NativeExternalToolCallGrant,
-} from '@deepseek-ai/dsh-native-subagent/native'
+} from '@redspark/rsh-native-subagent/native'
 import { createNativeResponsesGateway } from '../src/responses-gateway.ts'
 import { createCodexDynamicToolCatalog } from '../src/dynamic-tools.ts'
 import { NativeCodexToolBridge } from '../src/native-tool-bridge.ts'

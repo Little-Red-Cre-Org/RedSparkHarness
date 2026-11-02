@@ -4,7 +4,7 @@ profile: legacy-sdk
 composition: sdk-upload
 recording: live
 environment:
-  DSH_SNAPSHOT_FEEDBACK: '1'
+  RSH_SNAPSHOT_FEEDBACK: '1'
 header:
   class: sdk-upload
   pin: true

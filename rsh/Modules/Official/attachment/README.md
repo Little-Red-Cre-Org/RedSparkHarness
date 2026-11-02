@@ -27,7 +27,7 @@ These two packages provide durable image attachments; each README describes what
 | Package | Role | ctx key |
 |---|---|---|
 | [`attachment/`](attachment/README.md) | Image attachments for prompts and commands that persist and come back in history | `ctx.attachments` |
-| [`attachment-local/`](attachment-local/README.md) | Stores your attached images on this machine below `DSH_HOME` | registers on `ctx.attachments` |
+| [`attachment-local/`](attachment-local/README.md) | Stores your attached images on this machine below `RSH_HOME` | registers on `ctx.attachments` |
 
 -----
 

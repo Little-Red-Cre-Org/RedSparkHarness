@@ -3,7 +3,7 @@ description: "Model-facing subagent delegation tool for users and maintainers co
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-tool-subagent
+# @redspark/rsh-tool-subagent
 
 English | [中文](README.zh.md)
 
@@ -36,9 +36,9 @@ Mount one instance per delegation target, each with a distinct `toolName`. The t
 Load the subagent service, an in-process or remote backend, and this tool; then name the provider. This composition exposes a `subagent` tool that delegates to the `spawn` backend:
 
 ```yaml
-- name: '@deepseek-ai/dsh-subagent'
-- name: '@deepseek-ai/dsh-subagent-spawn-in-process'
-- name: '@deepseek-ai/dsh-tool-subagent'
+- name: '@redspark/rsh-subagent'
+- name: '@redspark/rsh-subagent-spawn-in-process'
+- name: '@redspark/rsh-tool-subagent'
   config:
     provider: spawn
     toolName: subagent

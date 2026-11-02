@@ -5,7 +5,7 @@
  * `<dshHome>/skills`. `includeUserRoot: false` is how a deployment — or a test
  * pinning an exact roster — opts out.
  *
- * `$DSH_HOME` is repointed per test because the derived root is resolved in the
+ * `$RSH_HOME` is repointed per test because the derived root is resolved in the
  * constructor: the plugin must be mounted while the environment names the
  * temporary home, or it would reach the developer's real one.
  */
@@ -15,12 +15,12 @@ import { existsSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
-import { Context } from '@deepseek-ai/cordis'
-import Loader from '@deepseek-ai/cordis-plugin-loader'
-import Include from '@deepseek-ai/cordis-plugin-include'
-import SessionProjectionRegistry from '@deepseek-ai/dsh-session-projection'
+import { Context } from '@redspark/cordis'
+import Loader from '@redspark/cordis-plugin-loader'
+import Include from '@redspark/cordis-plugin-include'
+import SessionProjectionRegistry from '@redspark/rsh-session-projection'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import AgentPresets, { COMPOSITION_FILE, type Config } from '@deepseek-ai/dsh-agent-presets'
+import AgentPresets, { COMPOSITION_FILE, type Config } from '@redspark/rsh-agent-presets'
 
 const FIXTURES = join(dirname(fileURLToPath(import.meta.url)), 'fixtures')
 const SYSTEM_ROOT = join(FIXTURES, 'system')
@@ -36,13 +36,13 @@ const explicitRoots: string[] = []
 
 beforeEach(async () => {
   home = await mkdtemp(join(tmpdir(), 'dsh-preset-home-'))
-  previousHome = process.env.DSH_HOME
-  process.env.DSH_HOME = home
+  previousHome = process.env.RSH_HOME
+  process.env.RSH_HOME = home
 })
 
 afterEach(async () => {
-  if (previousHome === undefined) delete process.env.DSH_HOME
-  else process.env.DSH_HOME = previousHome
+  if (previousHome === undefined) delete process.env.RSH_HOME
+  else process.env.RSH_HOME = previousHome
   await rm(home, { recursive: true, force: true })
   for (const root of explicitRoots.splice(0)) await rm(root, { recursive: true, force: true })
 })

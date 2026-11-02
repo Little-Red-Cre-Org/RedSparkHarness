@@ -299,7 +299,7 @@ interface SkillViewOptions extends SkillLookupOptions {
 }
 ```
 
-The registry owns only its discovery-cache bound. The local provider owns filesystem roots (`dshHome`, `agentsHome`, `customSkillDirs`, and optional `bundledSkillDir`/`DSH_BUNDLED_SKILL_DIR`) plus watcher enablement, polling, stability, symlink, and project-capacity controls. The consumer owns its catalog description bound. Exact defaults and validation are in the generated [config catalog](../config-catalog.md).
+The registry owns only its discovery-cache bound. The local provider owns filesystem roots (`dshHome`, `agentsHome`, `customSkillDirs`, and optional `bundledSkillDir`/`RSH_BUNDLED_SKILL_DIR`) plus watcher enablement, polling, stability, symlink, and project-capacity controls. The consumer owns its catalog description bound. Exact defaults and validation are in the generated [config catalog](../config-catalog.md).
 
 ```ts type-equiv
 /** Skill registry configuration. */
@@ -321,7 +321,7 @@ The model-facing `skill({ name })` tool validates the kebab-case name, finds the
 
 ## Automatic Archify invocation
 
-The [`@deepseek-ai/dsh-archify` package](../../Modules/Official/skill/archify/README.md) exports this source from both its Cordis and Native entries. It identifies the message that carries Archify instructions selected from a direct-user diagram-delivery request.
+The [`@redspark/rsh-archify` package](../../Modules/Official/skill/archify/README.md) exports this source from both its Cordis and Native entries. It identifies the message that carries Archify instructions selected from a direct-user diagram-delivery request.
 
 ```ts type-equiv
 /** Durable source for one host-selected Archify instruction injection. */

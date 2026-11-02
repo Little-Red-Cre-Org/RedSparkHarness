@@ -3,7 +3,7 @@ description: "为 detached external subagent 提供 Native Codex app-server 产�
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-codex-app-server
+# @redspark/rsh-codex-app-server
 
 [English](README.md) | 中文
 
@@ -35,10 +35,10 @@ kind: "package-reference"
 
 在提供 `childConnection` 的 Native Host composition 中挂载此模块。选中的 Native Subagent provider 为实例命名；本模块会把此名称注册为 external child driver。
 
-Host composition 必须以兼容版本提供 `@deepseek-ai/dsh-llm` 和 `@deepseek-ai/dsh-native-subagent` 必需 peer 依赖，并让它们位于同一 Host 依赖图中。
+Host composition 必须以兼容版本提供 `@redspark/rsh-llm` 和 `@redspark/rsh-native-subagent` 必需 peer 依赖，并让它们位于同一 Host 依赖图中。
 
 ```yaml
-- name: '@deepseek-ai/dsh-codex-app-server'
+- name: '@redspark/rsh-codex-app-server'
   config:
     name: codex
     permissionMode: never

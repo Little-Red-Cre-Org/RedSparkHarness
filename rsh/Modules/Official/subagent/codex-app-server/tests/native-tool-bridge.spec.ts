@@ -1,12 +1,12 @@
 import { PassThrough, Writable } from 'node:stream'
 import { expect, it, vi } from 'vitest'
-import { ToolCallId } from '@deepseek-ai/dsh-llm/native'
-import { AttachmentId } from '@deepseek-ai/dsh-attachment/brand'
+import { ToolCallId } from '@redspark/rsh-llm/native'
+import { AttachmentId } from '@redspark/rsh-attachment/brand'
 import type {
   NativeExternalSubagentModelOperations,
   NativeExternalToolCall,
   NativeExternalToolCallGrant,
-} from '@deepseek-ai/dsh-native-subagent/native'
+} from '@redspark/rsh-native-subagent/native'
 import { createCodexDynamicToolCatalog } from '../src/dynamic-tools.ts'
 import { NativeCodexToolBridge } from '../src/native-tool-bridge.ts'
 import { CodexAppServerWire } from '../src/wire.ts'

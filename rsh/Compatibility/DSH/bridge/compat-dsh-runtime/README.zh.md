@@ -3,7 +3,7 @@ description: "可选原生 Host 持有选定 DSH 兼容 bridge 共用的 Cordis 
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-compat-dsh-runtime
+# @redspark/rsh-compat-dsh-runtime
 
 [English](README.md) | 中文
 
@@ -52,7 +52,7 @@ kind: "package-reference"
 | `compat-fs-sandbox` | `fs-sandbox`、内部 `sandbox-policy-adapter` | `compatDshRuntime`, `sandboxPolicy`；提供 `fs` | 本地后端 `cwd`, `diffBasisMaxBytes` |
 | `compat-tool-fs` | `tool-fs`, `tools`, `system-prompt`、内部 `fs-adapter`, `sandbox-policy-adapter`, `fs-event-bridge` | `compatDshRuntime`, `fs`, `tools`, `promptSections`；可选 `fsObservationPolicy`, `sandboxPolicy` | 正整数 `readLimit`, `readMaxLineLength`, `readMaxBytes`, `readStreamMinSize` |
 
-表内名称使用 `@deepseek-ai/dsh-` 前缀；内部挂载属于该 runtime 的允许列表。Provider 在同一 Cordis Context 中安装 `RshPluginHost` 和 vendor Loader，并为每个选定包创建一个 Loader entry。原生调用方可更新 entry 配置、启用或停用 entry，并移除 entry。entry 变更前，Native participant 会撤销其贡献并等待进行中的工具调用、提示词组装和文件系统策略监听器排空。Loader 完成后，participant 会根据启用的 entry 和当前服务重建贡献。原生 profile 替换是独立操作：`NativeHost.replace` 和 CLI `dsh.profile.configReload: "live"` 会在 profile 或 patch 变更后替换原生安装。不支持模块代码 HMR、任意插件、Cordis 应用 bundle 或 Client 适配器。这些安装器都不创建旧 Agent loop 或 Session writer。
+表内名称使用 `@redspark/rsh-` 前缀；内部挂载属于该 runtime 的允许列表。Provider 在同一 Cordis Context 中安装 `RshPluginHost` 和 vendor Loader，并为每个选定包创建一个 Loader entry。原生调用方可更新 entry 配置、启用或停用 entry，并移除 entry。entry 变更前，Native participant 会撤销其贡献并等待进行中的工具调用、提示词组装和文件系统策略监听器排空。Loader 完成后，participant 会根据启用的 entry 和当前服务重建贡献。原生 profile 替换是独立操作：`NativeHost.replace` 和 CLI `dsh.profile.configReload: "live"` 会在 profile 或 patch 变更后替换原生安装。不支持模块代码 HMR、任意插件、Cordis 应用 bundle 或 Client 适配器。这些安装器都不创建旧 Agent loop 或 Session writer。
 
 -----
 

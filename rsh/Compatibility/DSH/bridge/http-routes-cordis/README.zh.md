@@ -3,13 +3,13 @@ description: "为所选 HTTP WebServer Provider 提供 Cordis Context 与 event 
 kind: "package-library"
 ---
 
-# @deepseek-ai/dsh-http-routes-cordis
+# @redspark/rsh-http-routes-cordis
 
 [English](README.md) | 中文
 
 ## 概述
 
-`@deepseek-ai/dsh-http-routes-cordis` 承载 `ctx.webServer` 与 `webserver/index-inject` 的 Cordis 兼容约定。读取 WebServer service 或其注入事件的 Cordis consumer 应导入它。该 bridge 在框架无关的 `@deepseek-ai/dsh-http-routes` 路由定义之上提供旧 Web 路由名称与 WebServer 配置类型；它不监听也不分发请求。
+`@redspark/rsh-http-routes-cordis` 承载 `ctx.webServer` 与 `webserver/index-inject` 的 Cordis 兼容约定。读取 WebServer service 或其注入事件的 Cordis consumer 应导入它。该 bridge 在框架无关的 `@redspark/rsh-http-routes` 路由定义之上提供旧 Web 路由名称与 WebServer 配置类型；它不监听也不分发请求。
 
 ## 目录
 
@@ -32,8 +32,8 @@ kind: "package-library"
 ### 入口
 
 ```text
-import type {} from '@deepseek-ai/dsh-http-routes-cordis'
-import type { Context } from '@deepseek-ai/cordis'
+import type {} from '@redspark/rsh-http-routes-cordis'
+import type { Context } from '@redspark/cordis'
 
 declare const ctx: Context
 const removeRoute = ctx.webServer.register(route)

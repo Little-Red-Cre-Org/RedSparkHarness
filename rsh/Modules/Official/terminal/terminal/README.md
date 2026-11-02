@@ -3,7 +3,7 @@ description: "Persistent terminal sessions for deployments and consumers choosin
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-terminal
+# @redspark/rsh-terminal
 
 English | [中文](README.zh.md)
 
@@ -27,7 +27,7 @@ English | [中文](README.zh.md)
 
 The native `./native` entry provides owner-scoped allocation, listing, interactive sends, retained reads, foreground signals and awaited cleanup through `terminals`. Its backend retains the shared terminal protocol in `./protocol`; `./error` publishes failures without loading Cordis. Agent release, backend removal and Host shutdown abort admission and await Provider-observed cleanup. Sessions remain process-local. The [native interaction decision](../../../../../.agents/notes/implemented/architecture/2026-10-05-native-terminal-interaction.md) records ownership and implementation reuse.
 
-Mount `@deepseek-ai/dsh-terminal` whenever a composition needs terminal sessions whose state survives across tool calls. The service alone does nothing useful: pair it with a backend such as `@deepseek-ai/dsh-terminal-bash` and a tool package such as `@deepseek-ai/dsh-tool-terminal`, and load all three in one composition.
+Mount `@redspark/rsh-terminal` whenever a composition needs terminal sessions whose state survives across tool calls. The service alone does nothing useful: pair it with a backend such as `@redspark/rsh-terminal-bash` and a tool package such as `@redspark/rsh-tool-terminal`, and load all three in one composition.
 
 ### When to choose it
 
@@ -38,9 +38,9 @@ Choose persistent terminals for work whose state lives in the terminal rather th
 Load the session service together with a backend and a tool package:
 
 ```yaml
-- name: '@deepseek-ai/dsh-terminal'
-- name: '@deepseek-ai/dsh-terminal-bash'
-- name: '@deepseek-ai/dsh-tool-terminal'
+- name: '@redspark/rsh-terminal'
+- name: '@redspark/rsh-terminal-bash'
+- name: '@redspark/rsh-tool-terminal'
 ```
 
 A backend provides one stable type — the shipped shell backend provides `shell` — and the tools open sessions by that type. The shell backend additionally requires the sandbox, sandbox-policy, and subprocess providers; see its [README](../terminal-bash/README.md) for the full composition.
@@ -117,7 +117,7 @@ Read these pages when the package-level contract is not enough. They move from t
 
 #### What the model sees
 
-Nothing directly. This package registers no prompt or tool; `@deepseek-ai/dsh-tool-terminal` owns visible schemas and result text.
+Nothing directly. This package registers no prompt or tool; `@redspark/rsh-tool-terminal` owns visible schemas and result text.
 
 #### Token effect
 
@@ -125,7 +125,7 @@ None directly. Live session state stays process-local until a consumer returns a
 
 #### KV Cache effect
 
-No direct invalidation; `@deepseek-ai/dsh-tool-terminal` owns request-prefix changes.
+No direct invalidation; `@redspark/rsh-tool-terminal` owns request-prefix changes.
 
 ## Known Limitations and Deferred Work
 

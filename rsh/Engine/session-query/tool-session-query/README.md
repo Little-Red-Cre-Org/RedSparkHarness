@@ -3,7 +3,7 @@ description: "Workspace-authorized model-facing session history tools for agent 
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-tool-session-query
+# @redspark/rsh-tool-session-query
 
 English | [中文](README.zh.md)
 
@@ -56,7 +56,7 @@ Workspace authority is conservative: cross-session access requires exact `cwd` e
 
 ### Failures and recovery
 
-Every trusted query-service call crosses one error sanitizer: caller cancellation is preserved exactly, corpus and provider diagnostics go to the internal log, and unsafe or unprintable failures fall back to the fixed `SESSION_QUERY_TOOL_FAILED` code and message. Local argument-validation and authorization errors keep their precise tool-owned messages (`SESSION_QUERY_TOOL_UNAUTHORIZED` for a target outside the caller workspace). The package performs no byte or character truncation and does not import a spill backend; deployments that need bounded inline output mount `@deepseek-ai/dsh-spill-policy`, which can replace oversized rendered text while retaining the complete result.
+Every trusted query-service call crosses one error sanitizer: caller cancellation is preserved exactly, corpus and provider diagnostics go to the internal log, and unsafe or unprintable failures fall back to the fixed `SESSION_QUERY_TOOL_FAILED` code and message. Local argument-validation and authorization errors keep their precise tool-owned messages (`SESSION_QUERY_TOOL_UNAUTHORIZED` for a target outside the caller workspace). The package performs no byte or character truncation and does not import a spill backend; deployments that need bounded inline output mount `@redspark/rsh-spill-policy`, which can replace oversized rendered text while retaining the complete result.
 
 -----
 
@@ -91,7 +91,7 @@ The design history lives in the [model-facing session query tools note](../../..
 | [`src/workspace-access.ts`](src/workspace-access.ts) | Caller identity, workspace authorization, title access, lineage projection |
 | [`src/service-boundary.ts`](src/service-boundary.ts) | Trusted calls and model-safe error translation |
 | [`src/operations.ts`](src/operations.ts) | The five operation workflows |
-| [`src/presentation.ts`](src/presentation.ts) | Text result rendering and tool-call cards using `@deepseek-ai/dsh-native-tools/presentation` types |
+| [`src/presentation.ts`](src/presentation.ts) | Text result rendering and tool-call cards using `@redspark/rsh-native-tools/presentation` types |
 
 ### Operation flow
 

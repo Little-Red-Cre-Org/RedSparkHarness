@@ -1,5 +1,5 @@
 /** Builtin HTML metadata and keyed body registration; assembly belongs to the package entry. */
-import type { Context } from '@deepseek-ai/cordis'
+import type { Context } from '@redspark/cordis'
 import type {} from '../index.ts'
 import type { DocumentPreviewDefinition } from '../document/registry.ts'
 import { hostFileOf } from '../rpc.ts'
@@ -8,7 +8,7 @@ import type { HtmlBodyProps } from './HtmlBody.tsx'
 import { en, zh } from './locales.ts'
 
 /** HTML implementation identity, shared by metadata and the keyed slot. */
-export const HTML_BODY_ID = '@deepseek-ai/dsh-client-ui-sidebar-documentpreview/html'
+export const HTML_BODY_ID = '@redspark/rsh-client-ui-sidebar-documentpreview/html'
 
 /**
  * Describe the builtin HTML renderer's file types and loading mode.

@@ -15,11 +15,11 @@
  * — a cold session's host Agent is already disposed while its client actx
  * stays alive for history viewing.
  */
-import { Context as CordisContext } from '@deepseek-ai/cordis'
-import type { Context, Fiber } from '@deepseek-ai/cordis'
-import type { ClientRemote } from '@deepseek-ai/dsh-api-gateway/client'
-import type { SessionId } from '@deepseek-ai/dsh-session/types'
-import type { TypertRemoteScopeApi } from '@deepseek-ai/dsh-typert-protocol'
+import { Context as CordisContext } from '@redspark/cordis'
+import type { Context, Fiber } from '@redspark/cordis'
+import type { ClientRemote } from '@redspark/rsh-api-gateway/client'
+import type { SessionId } from '@redspark/rsh-session/types'
+import type { TypertRemoteScopeApi } from '@redspark/rsh-typert-protocol'
 
 /** Client Cordis Context carrying one Agent identity and its scoped Remote namespaces. */
 export type AgentContext = Omit<Context, 'remote'> & {

@@ -51,7 +51,7 @@ import {
   LlmAdapter,
   LlmError,
   ReasoningEffortId,
-} from '@deepseek-ai/dsh-llm/native'
+} from '@redspark/rsh-llm/native'
 import type {
   GenerateOptions,
   ImageAttachmentAccess,
@@ -62,10 +62,10 @@ import type {
   ReasoningEffortId as ReasoningEffortIdType,
   ResolvedRetryPolicy,
   StreamChunk,
-} from '@deepseek-ai/dsh-llm/native'
-import type { AttachmentOperations, ImageAttachmentRef } from '@deepseek-ai/dsh-attachment/types'
-import type { NativeResponsesTransport } from '@deepseek-ai/dsh-native-model-execution/responses-transport'
-import { idleWatchdog, timeoutOf } from '@deepseek-ai/dsh-timeout'
+} from '@redspark/rsh-llm/native'
+import type { AttachmentOperations, ImageAttachmentRef } from '@redspark/rsh-attachment/types'
+import type { NativeResponsesTransport } from '@redspark/rsh-native-model-execution/responses-transport'
+import { idleWatchdog, timeoutOf } from '@redspark/rsh-timeout'
 import type { ResolvedPiAiProviderProfile } from './config.ts'
 import { catalogProvider } from './catalog.ts'
 import { toPiContext } from './context.ts'

@@ -1,11 +1,11 @@
-/** Package-owned durable todo-snapshot invariants. @module @deepseek-ai/dsh-tool-todo/invariant */
+/** Package-owned durable todo-snapshot invariants. @module @redspark/rsh-tool-todo/invariant */
 
-import type { Context } from '@deepseek-ai/cordis'
+import type { Context } from '@redspark/cordis'
 import { validateTodos } from './todo-core.ts'
-import type { Session, SessionEvent } from '@deepseek-ai/dsh-session'
-import type { InvariantFailure, InvariantInstaller } from '@deepseek-ai/dsh-invariants'
+import type { Session, SessionEvent } from '@redspark/rsh-session'
+import type { InvariantFailure, InvariantInstaller } from '@redspark/rsh-invariants'
 
-const PACKAGE_NAME = '@deepseek-ai/dsh-tool-todo'
+const PACKAGE_NAME = '@redspark/rsh-tool-todo'
 
 /** Cordis companion plugin name. */
 export const name = 'tool-todo-invariant'

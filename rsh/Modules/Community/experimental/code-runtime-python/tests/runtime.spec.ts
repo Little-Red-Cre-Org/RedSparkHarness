@@ -4,7 +4,7 @@ import { mkdtemp, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { basename, dirname, join, relative, resolve } from 'node:path'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { Context } from '@deepseek-ai/cordis'
+import { Context } from '@redspark/cordis'
 import { PythonCodeRuntime, hostFrameParseCeiling, readProcessStart, resolvePythonBin } from '../src/index.ts'
 import { logTruncationMarker } from '../src/protocol.ts'
 import type { Config } from '../src/index.ts'
@@ -13,7 +13,7 @@ import type { Config } from '../src/index.ts'
 // child only TMPDIR, so a bare `python3` inside a wrapper would resolve against
 // /bin/sh's default PATH rather than the caller's selected interpreter.
 const PYABS = resolvePythonBin('python3') ?? 'python3'
-import type { CodeBindingFunction, CodeJsonValue, CodeRunResult } from '@deepseek-ai/dsh-code-runtime'
+import type { CodeBindingFunction, CodeJsonValue, CodeRunResult } from '@redspark/rsh-code-runtime'
 
 /**
  * Names one `py/` script whose `copyFileSync` must fail, for the partial-staging
@@ -186,7 +186,7 @@ describe('PythonCodeRuntime — seam descriptors and misuse', () => {
     // budget is rejected at load even though the address-space gate alone
     // would admit it (50 MiB * 12 = 600 MiB < 1 GiB - 64 MiB).
     const script = [
-      "import { Context } from '@deepseek-ai/cordis'",
+      "import { Context } from '@redspark/cordis'",
       "import { PythonCodeRuntime } from './packages/experimental/code-runtime-python/src/index.ts'",
       'const ctx = new Context()',
       'try {',
@@ -401,7 +401,7 @@ describe('PythonCodeRuntime — seam descriptors and misuse', () => {
   it('resolves pythonBin once so a later PATH change cannot switch interpreters', async () => {
     const firstDir = await mkdtemp(join(tmpdir(), 'dsh-python-first-'))
     const secondDir = await mkdtemp(join(tmpdir(), 'dsh-python-second-'))
-    const wrapper = (marker: string): string => `#!/bin/sh\nDSH_TEST_PYTHON=${marker}\nexport DSH_TEST_PYTHON\nexec "${PYABS}" "$@"\n`
+    const wrapper = (marker: string): string => `#!/bin/sh\nDSH_TEST_PYTHON=${marker}\nexport RSH_TEST_PYTHON\nexec "${PYABS}" "$@"\n`
     await writeFile(join(firstDir, 'python3'), wrapper('first'), { mode: 0o755 })
     await writeFile(join(secondDir, 'python3'), wrapper('second'), { mode: 0o755 })
     vi.stubEnv('PATH', firstDir)
@@ -411,7 +411,7 @@ describe('PythonCodeRuntime — seam descriptors and misuse', () => {
       fiber = mounted.fiber
       vi.stubEnv('PATH', secondDir)
       const result = await mounted.runtime.run({
-        program: 'import os\nreturn os.environ.get("DSH_TEST_PYTHON")',
+        program: 'import os\nreturn os.environ.get("RSH_TEST_PYTHON")',
         bindings: [],
       })
       expect(result.error).toBeUndefined()

@@ -1,12 +1,12 @@
 /** One-shot session-lineage and event-relationship tracing helpers. */
 
-import { foldSurface, isSurfaceEvent, snapshotSessionEvent } from '@deepseek-ai/dsh-session/native'
+import { foldSurface, isSurfaceEvent, snapshotSessionEvent } from '@redspark/rsh-session/native'
 import type {
   SessionEvent,
   SessionId,
   SessionSeq,
   SurfaceEvent,
-} from '@deepseek-ai/dsh-session/native'
+} from '@redspark/rsh-session/native'
 import { SessionQueryError } from './config.ts'
 import type {
   SessionEventRecord,

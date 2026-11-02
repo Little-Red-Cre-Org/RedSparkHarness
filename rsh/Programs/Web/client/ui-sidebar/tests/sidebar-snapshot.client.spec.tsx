@@ -10,20 +10,20 @@
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { act, cleanup, waitFor } from '@testing-library/react'
-import { SlotTestRuntime, usePinnedBrowserLanguages } from '@deepseek-ai/dsh-client-test-runtime'
-import { LocaleRuntime } from '@deepseek-ai/dsh-client-locale/client'
-import { en as commonEn } from '@deepseek-ai/dsh-client-locale/src/locales/en.ts'
-import { zh as commonZh } from '@deepseek-ai/dsh-client-locale/src/locales/zh.ts'
-import { apply, inject } from '@deepseek-ai/dsh-client-ui-sidebar/client'
+import { SlotTestRuntime, usePinnedBrowserLanguages } from '@redspark/rsh-client-test-runtime'
+import { LocaleRuntime } from '@redspark/rsh-client-locale/client'
+import { en as commonEn } from '@redspark/rsh-client-locale/src/locales/en.ts'
+import { zh as commonZh } from '@redspark/rsh-client-locale/src/locales/zh.ts'
+import { apply, inject } from '@redspark/rsh-client-ui-sidebar/client'
 
 // The service reads its initial locale from the browser; these specs assert
 // the shipped Chinese copy, so they state the browser they assume.
 usePinnedBrowserLanguages('zh-CN')
 
 beforeEach(() => {
-  vi.stubEnv('DSH_CLIENT_COMMIT_HASH', 'abc1234')
-  vi.stubEnv('DSH_CLIENT_GIT_DIRTY', 'true')
-  vi.stubEnv('DSH_CLIENT_VERSION', '1.2.3-rc.4')
+  vi.stubEnv('RSH_CLIENT_COMMIT_HASH', 'abc1234')
+  vi.stubEnv('RSH_CLIENT_GIT_DIRTY', 'true')
+  vi.stubEnv('RSH_CLIENT_VERSION', '1.2.3-rc.4')
 })
 
 afterEach(() => {

@@ -4,18 +4,18 @@
  * projection, and snapshot reference stability.
  */
 import { describe, expect, vi } from 'vitest'
-import { createUserMessage } from '@deepseek-ai/dsh-llm'
-import type { ContentBlock, UserMessage } from '@deepseek-ai/dsh-llm/types'
-import { SessionSeq, type SessionEvent } from '@deepseek-ai/dsh-session/types'
-import type { MessageId, RpcId, SessionId } from '@deepseek-ai/dsh-api-remotes/client'
-import type { SessionControlFrame } from '@deepseek-ai/dsh-api-session-controller/types'
-import { createClientTest, webApp } from '@deepseek-ai/dsh-client-test-runtime/src/assembly/index.ts'
+import { createUserMessage } from '@redspark/rsh-llm'
+import type { ContentBlock, UserMessage } from '@redspark/rsh-llm/types'
+import { SessionSeq, type SessionEvent } from '@redspark/rsh-session/types'
+import type { MessageId, RpcId, SessionId } from '@redspark/rsh-api-remotes/client'
+import type { SessionControlFrame } from '@redspark/rsh-api-session-controller/types'
+import { createClientTest, webApp } from '@redspark/rsh-client-test-runtime/src/assembly/index.ts'
 import { SessionManager } from '../src/client/sessions/manager.ts'
 import { sessionBench } from './remote/bench.client.ts'
 import { pushEvent, sessionWorld } from './remote/session.client.ts'
 
 /** A Session talks through the Gateway client; its dependency cone is the Typert registry and the Connection. */
-const API_ROSTER = webApp.closure(['@deepseek-ai/dsh-api-gateway'])
+const API_ROSTER = webApp.closure(['@redspark/rsh-api-gateway'])
 const it = createClientTest({ roster: API_ROSTER })
 const SID = 'fk-q1' as SessionId
 /** The first client boot pays the cold module transform of the api cone. */

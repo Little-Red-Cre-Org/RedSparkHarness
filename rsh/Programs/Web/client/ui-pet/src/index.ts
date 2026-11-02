@@ -1,6 +1,6 @@
 /** Host registration for durable desktop-pet preferences. */
-import type { Context } from '@deepseek-ai/cordis'
-import type {} from '@deepseek-ai/dsh-compat-settings-definition'
+import type { Context } from '@redspark/cordis'
+import type {} from '@redspark/rsh-compat-settings-definition'
 import { PET_SETTINGS_NAMESPACE, PetSettingsSchema } from './pet-settings.ts'
 
 export {

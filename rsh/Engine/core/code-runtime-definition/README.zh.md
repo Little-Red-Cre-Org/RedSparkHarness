@@ -3,7 +3,7 @@ description: "在代码运行时实现与消费者间共享可移植的运行请
 kind: "package-library"
 ---
 
-# @deepseek-ai/dsh-code-runtime-definition
+# @redspark/rsh-code-runtime-definition
 
 [English](README.md) | 中文
 
@@ -33,7 +33,7 @@ kind: "package-library"
 实现后端或声明 Consumer 依赖时导入可移植类型：
 
 ```ts
-import type { CodeRunRequest, CodeRuntimeDefinition, NativeCodeRunRequest } from '@deepseek-ai/dsh-code-runtime-definition'
+import type { CodeRunRequest, CodeRuntimeDefinition, NativeCodeRunRequest } from '@redspark/rsh-code-runtime-definition'
 ```
 
 <a id="implementation"></a>

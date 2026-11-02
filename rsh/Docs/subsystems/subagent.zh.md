@@ -6,7 +6,7 @@ subagent seam 让一个 agent（智能体）将工作委派给子 agent。与 [b
 
 Service Definition：[dsh-subagent](../../Engine/subagent/subagent)（`ctx.subagents` + 下文词汇）。Engine Service Provider 有两个同级包：`dsh-subagent-spawn-in-process` 和 `dsh-subagent-fork-in-process`；Cordis ACP 进程外提供方是独立的 [Compatibility 包](../../Compatibility/DSH/subagent/subagent-acp)。Claude Code 产品适配器是一个 [Official Module](../../Modules/Official/subagent/subagent-claude-code/README.zh.md)，提供受限的 Native driver 并保留 Cordis compatibility 入口。旧版 DSH SDK 提供方保留为独立的 [Compatibility 包](../../Compatibility/DSH/subagent/subagent-dsh-sdk)，以免 Engine 依赖 Program 客户端。面向模型的 Consumer 包括 [dsh-tool-subagent](../../Engine/subagent/tool-subagent)（按提供方委派）和 [dsh-tool-subagent-control](../../Engine/subagent/tool-subagent-control)（可选的全局 `send_message`、`interrupt_agent` 与 `list_agents` 控制工具）。同一个 `ctx.subagents` 服务通过内部激活管理器负责可继续子 agent 编排，并直接基于会话存储和可选的会话持久化提供只读的 child 与后代发现。产品提供方设计理由见 [Codex 与 Claude Code Agent Note](../../../.agents/notes/implemented/feature/2026-08-04-claude-code-and-codex-subagent-backends.zh.md)；通用 seam 的设计理由见 [subagent Agent Note](../../../.agents/notes/implemented/feature/2026-06-21-subagent-capability-seam.zh.md)、[可继续 subagent Agent Note](../../../.agents/notes/implemented/feature/2026-07-28-continuable-subagent-conversations.zh.md)和[相邻 Agent 消息 Agent Note](../../../.agents/notes/implemented/architecture/2026-08-27-adjacent-agent-steer-messaging.zh.md)；[已归档的列表身份投影记录](../../../.agents/notes/archived/architecture/2026-08-06-subagent-list-identity-projection.md)记录了最初的列表身份决策。
 
-Official Native Codex 模块 [`@deepseek-ai/dsh-codex-app-server`](../../Modules/Official/subagent/codex-app-server/README.zh.md) 的一次性产品路径使用 Engine 捕获的 Responses transport；所选代际缺少该传输或无法执行父级 `maxTokens` 上限时，会在 child 启动前拒绝。显式组合该路由时，SIWC Provider 可提供捕获能力；已交付的 Native profiles 仍未启用 Codex 外部驱动。显式安装的旧版 Cordis 路径仍是 [`@deepseek-ai/dsh-subagent-codex`](../../Compatibility/DSH/bridge/subagent-codex/README.zh.md)。
+Official Native Codex 模块 [`@redspark/rsh-codex-app-server`](../../Modules/Official/subagent/codex-app-server/README.zh.md) 的一次性产品路径使用 Engine 捕获的 Responses transport；所选代际缺少该传输或无法执行父级 `maxTokens` 上限时，会在 child 启动前拒绝。显式组合该路由时，SIWC Provider 可提供捕获能力；已交付的 Native profiles 仍未启用 Codex 外部驱动。显式安装的旧版 Cordis 路径仍是 [`@redspark/rsh-subagent-codex`](../../Compatibility/DSH/bridge/subagent-codex/README.zh.md)。
 
 源码：[`rsh/Engine/subagent/subagent/src/types.ts`](../../Engine/subagent/subagent/src/types.ts)、[`rsh/Engine/subagent/subagent/src/index.ts`](../../Engine/subagent/subagent/src/index.ts)、[`rsh/Engine/subagent/subagent/src/continuation.ts`](../../Engine/subagent/subagent/src/continuation.ts)和 [`rsh/Engine/subagent/native-subagent/src/external-driver.ts`](../../Engine/subagent/native-subagent/src/external-driver.ts)
 
@@ -125,7 +125,7 @@ interface NativeExternalSubagentDriver {
 
 ### ACP policy 元数据
 
-`@deepseek-ai/dsh-acp-protocol` 在 `com.deepseek.ai/dsh-native-subagent` 下定义版本 1 的 `_meta` 值。Client initialize metadata 声明是否支持权限中继；server metadata 报告 `maxSteps`、`maxTokens` 和支持的权限模式。Session policy 必须包含正安全整数 `maxSteps`、可选的正安全整数 `maxTokens`，以及 `permissionMode: 'deny' | 'parent-relay'`。Reader 会拒绝未知扩展字段和不支持的版本。本库只校验并编码 ACP metadata；消费它的 Program 会将已接受的 policy 转换为 Engine 持久化的 `execution/policy` 事件，并负责传输与强制执行。
+`@redspark/rsh-acp-protocol` 在 `com.deepseek.ai/dsh-native-subagent` 下定义版本 1 的 `_meta` 值。Client initialize metadata 声明是否支持权限中继；server metadata 报告 `maxSteps`、`maxTokens` 和支持的权限模式。Session policy 必须包含正安全整数 `maxSteps`、可选的正安全整数 `maxTokens`，以及 `permissionMode: 'deny' | 'parent-relay'`。Reader 会拒绝未知扩展字段和不支持的版本。本库只校验并编码 ACP metadata；消费它的 Program 会将已接受的 policy 转换为 Engine 持久化的 `execution/policy` 事件，并负责传输与强制执行。
 
 ```ts type-equiv
 /** Permission behavior requested for a child Session over ACP. */
@@ -205,7 +205,7 @@ interface NativeAcpChildRuntimeRequest {
 ```
 
 ```ts type-equiv
-/** Started, managed Native ACP process and its private DSH_HOME cleanup. */
+/** Started, managed Native ACP process and its private RSH_HOME cleanup. */
 interface NativeAcpChildRuntime {
   /** Whole-range-owned child and ACP stdio streams. */
   readonly child: ChildConnectionHandle
@@ -213,7 +213,7 @@ interface NativeAcpChildRuntime {
   readonly enforcement: SandboxEnforcement
   /** Close stdin and settle the complete managed process range. */
   shutdown(): Promise<void>
-  /** Confirm shutdown, then remove the launcher's private DSH_HOME. */
+  /** Confirm shutdown, then remove the launcher's private RSH_HOME. */
   dispose(): Promise<void>
 }
 ```
@@ -547,14 +547,14 @@ interface SubagentResult {
 }
 ```
 
-`SubagentStopReason` 是一个[可合并扩展的派生联合类型](core.zh.md#the-map--derived-union-pattern)。Provider 可通过对 `@deepseek-ai/dsh-subagent-protocol` 中的 `SubagentStopReasonMap` 做声明合并来添加变体；消费方应对已知 case 分支处理，并将未知的终态原因视为失败：
+`SubagentStopReason` 是一个[可合并扩展的派生联合类型](core.zh.md#the-map--derived-union-pattern)。Provider 可通过对 `@redspark/rsh-subagent-protocol` 中的 `SubagentStopReasonMap` 做声明合并来添加变体；消费方应对已知 case 分支处理，并将未知的终态原因视为失败：
 
 ```ts type-equiv
 /**
  * Why a subagent run ended. Merge-extensible (a backend may add variants);
  * consumers branch on the known cases and fall through `default`. Providers
  * extend this map through declaration merging on
- * `@deepseek-ai/dsh-subagent-protocol`. The known cases mirror the harness
+ * `@redspark/rsh-subagent-protocol`. The known cases mirror the harness
  * turn-end vocabulary so the tool layer can map a non-`completed` result to an
  * `isError` tool result.
  */

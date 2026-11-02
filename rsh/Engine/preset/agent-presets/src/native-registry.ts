@@ -1,6 +1,6 @@
 /** Exact standing generations with cancellation-before-drain on removal. */
-import { brandString } from '@deepseek-ai/dsh-brand'
-import type { NativeScope } from '@deepseek-ai/dsh-native-runtime'
+import { brandString } from '@redspark/rsh-brand'
+import type { NativeScope } from '@redspark/rsh-native-runtime'
 import type { NativeAgentPresetOperations, NativeAgentPresetLease, NativePresetComposition,
   NativePresetGeneration, NativeResolvedAgentPreset } from './native-definition.ts'
 import type { NativeAgentPresetFacts } from './selection.ts'

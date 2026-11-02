@@ -2,12 +2,12 @@
  * Crash-recovery repair for an interrupted session log. It preserves a fully
  * written final turn and supplies the missing tool, step, and turn boundaries
  * needed to resume with a provider-valid transcript.
- * @module @deepseek-ai/dsh-session/repair
+ * @module @redspark/rsh-session/repair
  */
 
-import { brandString } from '@deepseek-ai/dsh-brand'
-import type { MessageId, ToolCallId, ToolResultMessage } from '@deepseek-ai/dsh-llm/native'
-import { deepFreeze } from '@deepseek-ai/dsh-util-values'
+import { brandString } from '@redspark/rsh-brand'
+import type { MessageId, ToolCallId, ToolResultMessage } from '@redspark/rsh-llm/native'
+import { deepFreeze } from '@redspark/rsh-util-values'
 import { SessionSeq } from './types.ts'
 import type { SessionEvent, SessionSeq as SessionSeqType } from './types.ts'
 

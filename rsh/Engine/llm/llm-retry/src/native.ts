@@ -1,10 +1,10 @@
 /**
  * Native installer of the provider-routed retry policy over the selected model execution.
- * @module @deepseek-ai/dsh-llm-retry/native
+ * @module @redspark/rsh-llm-retry/native
  */
-import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
-import type { Session } from '@deepseek-ai/dsh-session/native'
-import type {} from '@deepseek-ai/dsh-native-model-execution/native'
+import type { NativePlugin } from '@redspark/rsh-native-runtime'
+import type { Session } from '@redspark/rsh-session/native'
+import type {} from '@redspark/rsh-native-model-execution/native'
 import { assertEmptyRetryConfig, recoverWithRetry, retryStateKey, type RetryInternals, type RetryStateEntry } from './core.ts'
 import type {} from './types.ts'
 
@@ -23,7 +23,7 @@ interface StepRetryState {
 export function createNativeRetryPlugin(internals: RetryInternals = {}): NativePlugin {
   const random = internals.random ?? Math.random
   return {
-    apiVersion: 1, name: '@deepseek-ai/dsh-llm-retry', targets: ['host'],
+    apiVersion: 1, name: '@redspark/rsh-llm-retry', targets: ['host'],
     requires: ['modelExecution'], provides: [],
     resolve(input) {
       assertEmptyRetryConfig(input)

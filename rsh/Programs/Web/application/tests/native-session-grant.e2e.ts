@@ -8,9 +8,9 @@ import { expect, it } from 'vitest'
 import { chromium, type Browser } from 'playwright'
 import { ensureShippedNativeProfile, shippedNativeProfileComposition } from '../../../../../rsh/Programs/CLI/src/native-profile-template.ts'
 import { WORKSPACE_MANIFEST_GLOBS } from '../../../../../rsh/Scripts/workspace-manifest-globs.ts'
-import { SESSION_FORMAT_VERSION } from '@deepseek-ai/dsh-session/native'
+import { SESSION_FORMAT_VERSION } from '@redspark/rsh-session/native'
 import { normalizeSessionSnapshot, redactSessionSnapshotIds, normalizedSystemPrompts, normalizedToolSchemas,
-  formatSystemPromptSnapshot, formatToolSchemasSnapshot, sessionFixtureName } from '@deepseek-ai/dsh-session-snapshot'
+  formatSystemPromptSnapshot, formatToolSchemasSnapshot, sessionFixtureName } from '@redspark/rsh-session-snapshot'
 
 const root = fileURLToPath(new URL('../../../../../', import.meta.url))
 const scenario = join(root, 'snapshots/web/native-session-grant')
@@ -23,7 +23,7 @@ it.each([{ content: 'Approved exact operation.' }])('reuses a remembered scope t
   const modelRequests = join(home, 'model-requests.json')
   const name = sessionFixtureName(0, SESSION_FORMAT_VERSION)
   const fixturePath = join(scenario, name)
-  const refresh = process.env.DSH_SNAPSHOT === 'refresh'
+  const refresh = process.env.RSH_SNAPSHOT === 'refresh'
   const recorded = refresh ? [] : readFileSync(fixturePath, 'utf8').trim().split('\n')
     .map(line => JSON.parse(line) as {
       type: string
@@ -109,7 +109,7 @@ export const plugin = {
 };\n`)
   writeFileSync(join(profile, 'rsh.profile.json'), JSON.stringify({ ...shipped,
     installations: [...rows, { id: 'model', plugin: 'session-grant-fixture-model', scope: 'root' }] }))
-  const env: NodeJS.ProcessEnv = Object.fromEntries(Object.entries({ ...process.env, DSH_HOME: home })
+  const env: NodeJS.ProcessEnv = Object.fromEntries(Object.entries({ ...process.env, RSH_HOME: home })
     .filter(([name]) => !/(?:KEY|TOKEN|SECRET|PASSWORD)/iu.test(name)))
   const child = execa(process.execPath, ['--import', pathToFileURL(clock).href,
     join(root, 'rsh/Programs/CLI/lib/bin.js'), '--profile', 'native-web'], { cwd: root, env, reject: false })
@@ -152,7 +152,7 @@ export const plugin = {
     expect(await card.innerText()).toContain('Waiting for approval')
     const id = await card.getAttribute('data-approval-key')
     if (id === null) throw new Error('missing approval presentation id')
-    const evidence = process.env.DSH_SESSION_GRANT_EVIDENCE
+    const evidence = process.env.RSH_SESSION_GRANT_EVIDENCE
     if (evidence !== undefined) {
       mkdirSync(evidence, { recursive: true })
       await page.screenshot({ path: join(evidence, 'native-grant-pending.png'), fullPage: true })

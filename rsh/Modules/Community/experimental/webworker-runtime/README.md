@@ -3,7 +3,7 @@ description: "Browser-worker harness hosting for maintainers building or debuggi
 kind: "package-library"
 ---
 
-# `@deepseek-ai/dsh-experimental-webworker-runtime`
+# `@redspark/rsh-experimental-webworker-runtime`
 
 English | [中文](README.zh.md)
 
@@ -50,10 +50,10 @@ None; this package neither assembles nor sends a provider request.
 <a id="known-limitations-and-deferred-work"></a>
 
 - **The worker composition writes plaintext session logs** (`compression: 'none'` boot patch): it carries no Zstandard codec, so exported logs are `.jsonl`, never `.jsonl.zstd`.
-- **The private Worker host does not run persistent task scheduling**: its boot patch disables only the `@deepseek-ai/dsh-task-scheduler` Loader row because that package opens `node:sqlite`; Loader therefore omits that row's `dsh.client` bundle too. The patch leaves the independent `ui-schedule` row's composition setting intact, and Node Web/Native compositions keep persistent scheduling.
+- **The private Worker host does not run persistent task scheduling**: its boot patch disables only the `@redspark/rsh-task-scheduler` Loader row because that package opens `node:sqlite`; Loader therefore omits that row's `dsh.client` bundle too. The patch leaves the independent `ui-schedule` row's composition setting intact, and Node Web/Native compositions keep persistent scheduling.
 - **`node:dns/promises`, `node:vm`, `node:net`, `node:sqlite`, `node:worker_threads` are structural stubs**: every call reports its refusal on the console and throws. Rows needing native DNS, a real process, or realm isolation cannot run here.
 - **Filesystem watchers observe only the mounted VFS**: image seeding is silent and the VFS has no symlinks or external writers. `persistent`, `ref()`, and `unref()` preserve the Node API but cannot control a dedicated Worker's lifetime because browsers expose no ref-counted event loop.
-- **Worker confinement is a VFS boundary, not kernel Landlock**: `read-only` and `workspace-write` run the unchanged `@deepseek-ai/node-addon-system/landlock-run` JavaScript and launcher argv, but the process layer implements the logical `landlock-run` executable and enforces its grants on every shell filesystem request. `full` therefore covers the Worker command table and mounted VFS only; it does not claim arbitrary native-process execution or Linux kernel isolation.
+- **Worker confinement is a VFS boundary, not kernel Landlock**: `read-only` and `workspace-write` run the unchanged `@redspark/node-addon-system/landlock-run` JavaScript and launcher argv, but the process layer implements the logical `landlock-run` executable and enforces its grants on every shell filesystem request. `full` therefore covers the Worker command table and mounted VFS only; it does not claim arbitrary native-process execution or Linux kernel isolation.
 - **The worker bundle pins a path inside `@yarnpkg/parsers`** — the build resolves the package's own `lib/shell.js` instead of its root, whose barrel also re-exports the Syml parser and so drags js-yaml into a bundle that never parses that format (around 175 kB, plus its module body at worker start). The path is derived from the package manifest, so a layout change fails the build rather than reinstating the barrel; upgrading the dependency means re-checking that the shell parser still lives there.
 - **The shell is not bash**: no loops, functions, `case`, job control, or process substitution — the grammar stops at pipelines, `&&`/`||`, subshells, groups, redirections, and expansion. `&` runs its command to completion in place, `sed` accepts only substitution scripts, patterns are JavaScript regular expressions, and the command table holds coreutils only (no `git`, no network tools).
 - **A shell process has no synchronous filesystem**: it reads and writes the host's VFS by message, because blocking on a reply would need `SharedArrayBuffer`, which requires a cross-origin isolation GitHub Pages cannot grant. Directory-walking commands therefore cost one round trip per entry, and two concurrent commands can interleave their writes.

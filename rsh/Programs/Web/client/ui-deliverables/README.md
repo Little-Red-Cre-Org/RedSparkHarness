@@ -3,7 +3,7 @@ description: "Produced-files and clickable file references for the Web GUI: the 
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-client-ui-deliverables
+# @redspark/rsh-client-ui-deliverables
 
 English | [中文](README.zh.md)
 

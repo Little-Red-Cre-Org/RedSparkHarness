@@ -2,7 +2,7 @@
 
 import { mkdir, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
-import { SESSION_FORMAT_VERSION } from '@deepseek-ai/dsh-session'
+import { SESSION_FORMAT_VERSION } from '@redspark/rsh-session'
 import { generationLogFilename } from '../../../Engine/session/session-persistence-jsonl/src/format.ts'
 import { compressZstdFrame } from '../../../Engine/session/session-persistence-jsonl/src/zstd.ts'
 import {

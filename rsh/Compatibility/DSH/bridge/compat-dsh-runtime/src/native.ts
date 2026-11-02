@@ -1,21 +1,21 @@
 /** Optional Cordis context and owned Loader entries for the DSH compatibility boundary. */
 import { createRequire } from 'node:module'
-import type { Context, Plugin } from '@deepseek-ai/cordis'
-import Loader from '@deepseek-ai/cordis-plugin-loader'
-import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
-import { adaptCordisPlugin, RshPluginHost, RSH_PLUGIN_API_VERSION } from '@deepseek-ai/dsh-plugin-host'
+import type { Context, Plugin } from '@redspark/cordis'
+import Loader from '@redspark/cordis-plugin-loader'
+import type { NativePlugin } from '@redspark/rsh-native-runtime'
+import { adaptCordisPlugin, RshPluginHost, RSH_PLUGIN_API_VERSION } from '@redspark/rsh-plugin-host'
 import { validateSupportManifest, type CompatPackageManifest } from './support.ts'
 
 const LEGACY_PLUGINS = new Set([
-  '@deepseek-ai/dsh-fs-local',
-  '@deepseek-ai/dsh-fs-observation-policy',
-  '@deepseek-ai/dsh-fs-sandbox',
-  '@deepseek-ai/dsh-tool-fs',
-  '@deepseek-ai/dsh-system-prompt',
-  '@deepseek-ai/dsh-tools',
-  '@deepseek-ai/dsh-compat-dsh-runtime/fs-adapter',
-  '@deepseek-ai/dsh-compat-dsh-runtime/sandbox-policy-adapter',
-  '@deepseek-ai/dsh-compat-dsh-runtime/fs-event-bridge',
+  '@redspark/rsh-fs-local',
+  '@redspark/rsh-fs-observation-policy',
+  '@redspark/rsh-fs-sandbox',
+  '@redspark/rsh-tool-fs',
+  '@redspark/rsh-system-prompt',
+  '@redspark/rsh-tools',
+  '@redspark/rsh-compat-dsh-runtime/fs-adapter',
+  '@redspark/rsh-compat-dsh-runtime/sandbox-policy-adapter',
+  '@redspark/rsh-compat-dsh-runtime/fs-event-bridge',
 ])
 
 /** Cordis operations exposed only to Compatibility/DSH adapters. */
@@ -113,7 +113,7 @@ export interface CompatDshMount {
   dispose(): Promise<void>
 }
 
-declare module '@deepseek-ai/dsh-native-runtime' {
+declare module '@redspark/rsh-native-runtime' {
   interface NativeServices { compatDshRuntime: CompatDshRuntime }
 }
 
@@ -121,14 +121,14 @@ declare module '@deepseek-ai/dsh-native-runtime' {
  * @param manifest - manifest read from the installed Cordis package.
  */
 export function validateCordisManifest(manifest: CompatPackageManifest): void {
-  validateSupportManifest('@deepseek-ai/cordis', manifest)
+  validateSupportManifest('@redspark/cordis', manifest)
 }
 
 /** Require the verified vendored Loader release before creating a runtime.
  * @param manifest - manifest read from the installed Loader package.
  */
 export function validateLoaderManifest(manifest: CompatPackageManifest): void {
-  validateSupportManifest('@deepseek-ai/cordis-plugin-loader', manifest)
+  validateSupportManifest('@redspark/cordis-plugin-loader', manifest)
 }
 
 function resolveConfig(input: unknown): void {
@@ -147,17 +147,17 @@ interface MountState {
 /** Start the explicit, optional Cordis host as a native installation. */
 export const plugin: NativePlugin = {
   apiVersion: 1,
-  name: '@deepseek-ai/dsh-compat-dsh-runtime',
+  name: '@redspark/rsh-compat-dsh-runtime',
   targets: ['host'],
   requires: [],
   provides: ['compatDshRuntime'],
   resolve(input) {
     resolveConfig(input)
     const require = createRequire(import.meta.url)
-    validateCordisManifest(require('@deepseek-ai/cordis/package.json') as CompatPackageManifest)
-    validateLoaderManifest(require('@deepseek-ai/cordis-plugin-loader/package.json') as CompatPackageManifest)
+    validateCordisManifest(require('@redspark/cordis/package.json') as CompatPackageManifest)
+    validateLoaderManifest(require('@redspark/cordis-plugin-loader/package.json') as CompatPackageManifest)
     return async (native) => {
-      const { Context } = await import('@deepseek-ai/cordis')
+      const { Context } = await import('@redspark/cordis')
       const context = new Context()
       native.own(async () => {
         await context.fiber.dispose()

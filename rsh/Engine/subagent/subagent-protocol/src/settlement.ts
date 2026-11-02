@@ -1,6 +1,6 @@
 /** Durable runtime-owned notices shared by compatibility and native subagents. */
-import { boundContextSummary, createUserMessage, type ContentBlock, type UserMessage } from '@deepseek-ai/dsh-llm/native'
-import type { SessionEvent, SessionId } from '@deepseek-ai/dsh-session/types'
+import { boundContextSummary, createUserMessage, type ContentBlock, type UserMessage } from '@redspark/rsh-llm/native'
+import type { SessionEvent, SessionId } from '@redspark/rsh-session/types'
 
 /** Terminal facts for one child residency, after actual writer and Agent cleanup. */
 export interface SubagentSettlement {
@@ -27,7 +27,7 @@ export interface SubagentSettledMessageSource {
   readonly senderSessionId: SessionId
 }
 
-declare module '@deepseek-ai/dsh-llm/message' {
+declare module '@redspark/rsh-llm/message' {
   interface MessageSourceMap {
     'subagent-settled': SubagentSettledMessageSource
   }

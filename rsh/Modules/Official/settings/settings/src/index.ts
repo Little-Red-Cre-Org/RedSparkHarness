@@ -3,12 +3,12 @@
  * per-namespace sections; plugins register a namespace schema and read the
  * resolved value, which layers schema defaults, the registrant's composition
  * `base`, and the user document section, in that order.
- * @module @deepseek-ai/dsh-settings
+ * @module @redspark/rsh-settings
  */
 
-import { Context, Service } from '@deepseek-ai/cordis'
-import type z from '@deepseek-ai/schemastery'
-import { deepEqualJson, deepFreeze } from '@deepseek-ai/dsh-util-values'
+import { Context, Service } from '@redspark/cordis'
+import type z from '@redspark/schemastery'
+import { deepEqualJson, deepFreeze } from '@redspark/rsh-util-values'
 import type {
   SettingsApplies,
   SettingsDescribeOptions,
@@ -16,14 +16,14 @@ import type {
   SettingsPathOp,
   SettingsNamespaceInput,
   SettingsScope,
-} from '@deepseek-ai/dsh-settings-definition'
-import type { SettingsNamespace, SettingsUpdateSource } from '@deepseek-ai/dsh-settings-definition/types'
+} from '@redspark/rsh-settings-definition'
+import type { SettingsNamespace, SettingsUpdateSource } from '@redspark/rsh-settings-definition/types'
 import type {
   CordisSettingsService,
   SettingsRegisterOptions,
   SettingsSectionHooks,
-} from '@deepseek-ai/dsh-compat-settings-definition'
-import type {} from '@deepseek-ai/dsh-compat-settings-definition'
+} from '@redspark/rsh-compat-settings-definition'
+import type {} from '@redspark/rsh-compat-settings-definition'
 import { redactSecrets } from './redact.ts'
 
 export type {
@@ -32,9 +32,9 @@ export type {
   SettingsDescriptor,
   SettingsPathOp,
   SettingsScope,
-} from '@deepseek-ai/dsh-settings-definition'
-export type { SettingsNamespace, SettingsUpdateSource } from '@deepseek-ai/dsh-settings-definition/types'
-export type { SettingsRegisterOptions, SettingsSectionHooks } from '@deepseek-ai/dsh-compat-settings-definition'
+} from '@redspark/rsh-settings-definition'
+export type { SettingsNamespace, SettingsUpdateSource } from '@redspark/rsh-settings-definition/types'
+export type { SettingsRegisterOptions, SettingsSectionHooks } from '@redspark/rsh-compat-settings-definition'
 
 export { redactSecrets } from './redact.ts'
 export type { RedactedSecret, RedactedValue } from './redact.ts'

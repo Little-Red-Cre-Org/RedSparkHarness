@@ -209,9 +209,9 @@ describe('translation pairing switchers', () => {
 
   it('accepts only the canonical public URL for an absolute switcher', () => {
     const targets = languageSwitcherTargets('rsh/Programs/SDK/python/sdk/README.zh.md')
-    const canonicalMarkdown = '# README\n\nEnglish | [中文](https://github.com/deepseek-ai/deepseek-harness/blob/master/rsh/Programs/SDK/python/sdk/README.zh.md)\n'
+    const canonicalMarkdown = '# README\n\nEnglish | [中文](https://github.com/deepseek-ai/redspark-harness/blob/master/rsh/Programs/SDK/python/sdk/README.zh.md)\n'
     const canonical = parseTranslationMarkdown(canonicalMarkdown)
-    const wrongMarkdown = '# README\n\nEnglish | [中文](https://github.com/deepseek-ai/deepseek-harness/blob/master/other/README.zh.md)\n'
+    const wrongMarkdown = '# README\n\nEnglish | [中文](https://github.com/deepseek-ai/redspark-harness/blob/master/other/README.zh.md)\n'
     const wrongPath = parseTranslationMarkdown(wrongMarkdown)
 
     expect(translationStructureSignature(canonical, targets, {
@@ -226,7 +226,7 @@ describe('translation pairing switchers', () => {
       isTranslationPairSource: fixturePairSource,
       markdown: wrongMarkdown,
     }).links).toEqual([
-      'https://github.com/deepseek-ai/deepseek-harness/blob/master/other/README.zh.md',
+      'https://github.com/deepseek-ai/redspark-harness/blob/master/other/README.zh.md',
     ])
   })
 
@@ -336,7 +336,7 @@ describe('translation scope discovery', () => {
     'rsh/example/lib/README.md',
     'output/package/README.md',
     'coverage/report/README.md',
-    'rsh/Programs/SDK/python/sdk-runtime/src/deepseek_harness_runtime/runtime/deepseek-harness-sdk-runtime-macos-arm64/README.md',
+    'rsh/Programs/SDK/python/sdk-runtime/src/deepseek_harness_runtime/runtime/redspark-harness-sdk-runtime-macos-arm64/README.md',
     'rsh/Programs/SDK/python/sdk-runtime/src/deepseek_harness_runtime/runtime/node/README.md',
   ])('excludes non-source or non-README path %s', (file) => {
     expect(isTranslationScopeFile(file)).toBe(false)

@@ -3,16 +3,16 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { act, cleanup, fireEvent, waitFor, within } from '@testing-library/react'
 import { useState } from 'react'
-import { LocaleRuntime } from '@deepseek-ai/dsh-client-locale/client'
-import type { ISession } from '@deepseek-ai/dsh-api-session-controller/client'
-import type { PropsRenderSlots } from '@deepseek-ai/dsh-client-ui-slots'
+import { LocaleRuntime } from '@redspark/rsh-client-locale/client'
+import type { ISession } from '@redspark/rsh-api-session-controller/client'
+import type { PropsRenderSlots } from '@redspark/rsh-client-ui-slots'
 import {
   RemoteError, SlotTestRuntime, usePinnedBrowserLanguages, stubSettingsScope,
-} from '@deepseek-ai/dsh-client-test-runtime'
+} from '@redspark/rsh-client-test-runtime'
 import { InputHub } from '../src/client/input/hub.ts'
-import { apply, inject, type EmptyWorkspaceOwnerProps } from '@deepseek-ai/dsh-client-ui-conversation/client'
-import type { SessionId } from '@deepseek-ai/dsh-session/types'
-import type { WorkspaceId } from '@deepseek-ai/dsh-workspace/types'
+import { apply, inject, type EmptyWorkspaceOwnerProps } from '@redspark/rsh-client-ui-conversation/client'
+import type { SessionId } from '@redspark/rsh-session/types'
+import type { WorkspaceId } from '@redspark/rsh-workspace/types'
 
 // jsdom implements no Range geometry (Lexical's scroll-into-view measures the
 // caret with one once the surface is genuinely contenteditable).

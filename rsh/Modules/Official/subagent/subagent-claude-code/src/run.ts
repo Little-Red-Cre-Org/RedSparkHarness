@@ -1,8 +1,8 @@
 /** Compatibility adapter from the shared Claude product controller to ctx.subagents. */
 
 import { randomUUID } from 'node:crypto'
-import { brandString } from '@deepseek-ai/dsh-brand'
-import type { SessionId } from '@deepseek-ai/dsh-session'
+import { brandString } from '@redspark/rsh-brand'
+import type { SessionId } from '@redspark/rsh-session'
 import {
   settleRunResult,
   subprocessRunHandle,
@@ -10,7 +10,7 @@ import {
   type SubagentRun,
   type SubagentStartRequest,
   type SubagentStopReason,
-} from '@deepseek-ai/dsh-subagent'
+} from '@redspark/rsh-subagent'
 import type { SDKMessage } from '@anthropic-ai/claude-agent-sdk'
 import {
   claudeQueryOptions as buildClaudeQueryOptions,

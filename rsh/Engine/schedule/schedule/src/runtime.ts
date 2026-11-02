@@ -1,11 +1,11 @@
 /**
  * Disposable live timer projection for one exact root agent.
- * @module @deepseek-ai/dsh-schedule
+ * @module @redspark/rsh-schedule
  */
 
-import type { Context } from '@deepseek-ai/cordis'
-import type { Agent } from '@deepseek-ai/dsh-agent'
-import { createUserMessage } from '@deepseek-ai/dsh-llm'
+import type { Context } from '@redspark/cordis'
+import type { Agent } from '@redspark/rsh-agent'
+import { createUserMessage } from '@redspark/rsh-llm'
 import {
   decideDueSchedules,
   foldScheduleEvents,

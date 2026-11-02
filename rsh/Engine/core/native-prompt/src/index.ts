@@ -1,6 +1,6 @@
 /** Ordered, reversible prompt-section contributions for native applications. */
-import { NativeContributions, type NativeScope } from '@deepseek-ai/dsh-native-runtime'
-import type { ToolSdkSchema } from '@deepseek-ai/dsh-native-tools/sdk-typescript'
+import { NativeContributions, type NativeScope } from '@redspark/rsh-native-runtime'
+import type { ToolSdkSchema } from '@redspark/rsh-native-tools/sdk-typescript'
 
 /** Session constraints and captured tool declarations used while rendering prompt contributions. */
 export interface NativePromptRenderContext {

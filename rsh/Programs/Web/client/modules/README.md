@@ -3,7 +3,7 @@ description: "Client module system for the web GUI: the host composes the boot g
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-client-modules
+# @redspark/rsh-client-modules
 
 English | [中文](README.zh.md)
 
@@ -29,7 +29,7 @@ Use [`DshClientManifest`](../../../../Core/util/package-manifest/README.md) for 
 
 Use it when you compose or build a browser client plugin: the package turns a package's `dsh.client` declaration into a loadable browser bundle with no per-plugin wiring. It activates with the web composition; the shell boots it before any plugin runs.
 
-The browser-only `@deepseek-ai/dsh-client-modules/native` export provides `ClientModuleSystem`, boot-manifest parsing, and their types without importing Cordis. Its JavaScript and public declarations have no workspace package imports; the Cordis peer is optional for this export. It does not activate a plugin tree or replace the current `./client` bootstrap; a native shell must supply its own plugin installation and renderer handoff.
+The browser-only `@redspark/rsh-client-modules/native` export provides `ClientModuleSystem`, boot-manifest parsing, and their types without importing Cordis. Its JavaScript and public declarations have no workspace package imports; the Cordis peer is optional for this export. It does not activate a plugin tree or replace the current `./client` bootstrap; a native shell must supply its own plugin installation and renderer handoff.
 
 ### Declaring a client plugin
 
@@ -120,7 +120,7 @@ None; this package neither assembles nor sends a provider request.
 These limits define what the module system does not do. They are current package constraints, not a task backlog.
 
 - **Flat module graph by design** — every bundle is one module node whose edges point only at table leaves; the interface (`loadCache`/`edges`/`invalidate`) already supports a general module graph, so the externalization granularity can change without an interface change.
-- **No unload bookkeeping of its own** — style removal and fiber teardown ordering live with the HMR driver (`@deepseek-ai/dsh-client-hmr`); the loader only inventories owned style tag ids per record.
+- **No unload bookkeeping of its own** — style removal and fiber teardown ordering live with the HMR driver (`@redspark/rsh-client-hmr`); the loader only inventories owned style tag ids per record.
 - **Snapshot delivery retains artifact bytes** — the Host holds each bundle, optional source map, generated one-resource response, and current startup combo responses in memory; HMR additionally retains one prior startup generation. Memory scales as several copies of the composed client artifacts in exchange for immutable responses and one-generation race tolerance.
 
 <a id="dev-note"></a>

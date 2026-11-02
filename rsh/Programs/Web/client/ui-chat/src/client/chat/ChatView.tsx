@@ -4,11 +4,11 @@
 import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ComponentProps } from 'react'
 import type {
   ConversationTimelineSnapshot, RenderMessageImages,
-} from '@deepseek-ai/dsh-client-ui-conversation/client'
-import type { SessionSeq } from '@deepseek-ai/dsh-session/types'
+} from '@redspark/rsh-client-ui-conversation/client'
+import type { SessionSeq } from '@redspark/rsh-session/types'
 import {
   Button, ChatTranscript, ChatTurnActivity, IconChevronDownOutline14, Modal,
-} from '@deepseek-ai/dsh-client-ui-primitives'
+} from '@redspark/rsh-client-ui-primitives'
 import type { ChatViewSlotProps, OpenFileOptions } from '../contract/slots.ts'
 import type { ChatSnapshot } from '../contract/snapshot.ts'
 import { PendingSteeringBubble, PendingSubmissionBubble } from './MessageItem.tsx'

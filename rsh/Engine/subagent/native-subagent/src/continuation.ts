@@ -1,14 +1,14 @@
 /** Continuable child admission over the selected Program's existing residency and writer. */
 import { randomUUID } from 'node:crypto'
-import type { NativeAgent } from '@deepseek-ai/dsh-native-agent'
-import { foldConsumedWork } from '@deepseek-ai/dsh-native-agent/consumed-work'
-import type { NativeContext } from '@deepseek-ai/dsh-native-runtime'
-import { createUserMessage, type ContentBlock, type MessageId } from '@deepseek-ai/dsh-llm/native'
-import { SessionId, type Session } from '@deepseek-ai/dsh-session/native'
+import type { NativeAgent } from '@redspark/rsh-native-agent'
+import { foldConsumedWork } from '@redspark/rsh-native-agent/consumed-work'
+import type { NativeContext } from '@redspark/rsh-native-runtime'
+import { createUserMessage, type ContentBlock, type MessageId } from '@redspark/rsh-llm/native'
+import { SessionId, type Session } from '@redspark/rsh-session/native'
 import type { NativeDelegationSetup, NativeSessionContinuation, NativeSessionContinuations, NativeContinuationObservation,
-  NativeSessionConfiguration, NativeSessionDelegationAuthority, NativeSessionTurnResult } from '@deepseek-ai/dsh-native-session-execution'
-import type { NativeToolDelegationContext } from '@deepseek-ai/dsh-native-tools/types'
-import { createAdjacentAgentMessage, createSettlementMessage, finalAssistantOutput, subagentEpochStopReason, foldSubagentDescriptor, snapshotSubagentDescriptor, withContinuableReturnGuidance, type ContinuableSubagentDescriptorData, type SubagentDelegationContext } from '@deepseek-ai/dsh-subagent-protocol'
+  NativeSessionConfiguration, NativeSessionDelegationAuthority, NativeSessionTurnResult } from '@redspark/rsh-native-session-execution'
+import type { NativeToolDelegationContext } from '@redspark/rsh-native-tools/types'
+import { createAdjacentAgentMessage, createSettlementMessage, finalAssistantOutput, subagentEpochStopReason, foldSubagentDescriptor, snapshotSubagentDescriptor, withContinuableReturnGuidance, type ContinuableSubagentDescriptorData, type SubagentDelegationContext } from '@redspark/rsh-subagent-protocol'
 import type { NativeSubagentCatalogEntry, NativeSubagentFinished, NativeSubagentRequest } from './index.ts'
 
 interface OwnedChild { readonly handle: NativeSessionContinuation; readonly parent: NativeAgent }

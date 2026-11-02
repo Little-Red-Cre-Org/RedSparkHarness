@@ -1,9 +1,9 @@
 /** Standard ACP MCP declarations mounted through the existing Cordis installer. */
-import type { Context } from '@deepseek-ai/cordis'
+import type { Context } from '@redspark/cordis'
 import type { McpServer } from '@agentclientprotocol/sdk'
-import * as McpClient from '@deepseek-ai/dsh-mcp-client'
-import { resolveAcpMcpConfigs } from '@deepseek-ai/dsh-mcp-client/acp-config'
-export { AcpMcpConfigError } from '@deepseek-ai/dsh-mcp-client/acp-config'
+import * as McpClient from '@redspark/rsh-mcp-client'
+import { resolveAcpMcpConfigs } from '@redspark/rsh-mcp-client/acp-config'
+export { AcpMcpConfigError } from '@redspark/rsh-mcp-client/acp-config'
 
 /**
  * Validate and mount one Session's complete standard MCP server list before Agent publication.

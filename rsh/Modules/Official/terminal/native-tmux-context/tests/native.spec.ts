@@ -1,9 +1,9 @@
 /** Native tmux-context scheduling from committed Session events. */
 import { describe, expect, it } from 'vitest'
-import { createUserMessage } from '@deepseek-ai/dsh-llm'
-import { Session, SessionId } from '@deepseek-ai/dsh-session'
-import type { SessionEvent } from '@deepseek-ai/dsh-session/native'
-import type { ShellExecRequest, ShellExecSpec, ShellOperations, ShellRunResult } from '@deepseek-ai/dsh-shell/native'
+import { createUserMessage } from '@redspark/rsh-llm'
+import { Session, SessionId } from '@redspark/rsh-session'
+import type { SessionEvent } from '@redspark/rsh-session/native'
+import type { ShellExecRequest, ShellExecSpec, ShellOperations, ShellRunResult } from '@redspark/rsh-shell/native'
 import { NativeTmuxContextProvider, resolveNativeTmuxContextConfig } from '../src/index.ts'
 
 const LOCATION = [

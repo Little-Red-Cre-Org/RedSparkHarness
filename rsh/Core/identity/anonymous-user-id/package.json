@@ -1,5 +1,5 @@
 {
-  "name": "@deepseek-ai/dsh-anonymous-user-id",
+  "name": "@redspark/rsh-anonymous-user-id",
   "description": "Shared anonymous user identity for RedSpark Harness telemetry and feedback correlation",
   "version": "1.0.0",
   "publishConfig": {
@@ -27,11 +27,11 @@
   ],
   "license": "MIT",
   "peerDependencies": {
-    "@deepseek-ai/dsh-brand": "workspace:^",
-    "@deepseek-ai/dsh-home-paths": "workspace:^"
+    "@redspark/rsh-brand": "workspace:^",
+    "@redspark/rsh-home-paths": "workspace:^"
   },
   "devDependencies": {
-    "@deepseek-ai/dsh-brand": "workspace:^",
-    "@deepseek-ai/dsh-home-paths": "workspace:^"
+    "@redspark/rsh-brand": "workspace:^",
+    "@redspark/rsh-home-paths": "workspace:^"
   }
 }

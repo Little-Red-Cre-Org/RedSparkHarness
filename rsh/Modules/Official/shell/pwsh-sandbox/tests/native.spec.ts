@@ -1,11 +1,11 @@
 import { expect, it, vi } from 'vitest'
-import { NativeHost, NativeScope, resolveInstallation, type NativePlugin } from '@deepseek-ai/dsh-native-runtime'
-import type { ShellOperations } from '@deepseek-ai/dsh-shell/native'
-import type { SubprocessOperations, SubprocessSpawnSpec } from '@deepseek-ai/dsh-subprocess/native'
-import type { ProcessSandbox } from '@deepseek-ai/dsh-sandbox/native'
-import { NativeSandboxPolicy } from '@deepseek-ai/dsh-native-sandbox-policy/native'
+import { NativeHost, NativeScope, resolveInstallation, type NativePlugin } from '@redspark/rsh-native-runtime'
+import type { ShellOperations } from '@redspark/rsh-shell/native'
+import type { SubprocessOperations, SubprocessSpawnSpec } from '@redspark/rsh-subprocess/native'
+import type { ProcessSandbox } from '@redspark/rsh-sandbox/native'
+import { NativeSandboxPolicy } from '@redspark/rsh-native-sandbox-policy/native'
 import { plugin } from '../src/native.ts'
-import { ENCODING_PREAMBLE } from '@deepseek-ai/dsh-pwsh-local/src/controller.ts'
+import { ENCODING_PREAMBLE } from '@redspark/rsh-pwsh-local/src/controller.ts'
 
 it('reports a confined denial and never falls back when the runner fails', async () => {
   const spawns: SubprocessSpawnSpec[] = []

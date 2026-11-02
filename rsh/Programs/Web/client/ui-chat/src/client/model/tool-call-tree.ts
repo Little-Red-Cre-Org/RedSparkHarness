@@ -1,8 +1,8 @@
-import type { SessionEvent } from '@deepseek-ai/dsh-session/types'
-import type {} from '@deepseek-ai/dsh-tools/types'
+import type { SessionEvent } from '@redspark/rsh-session/types'
+import type {} from '@redspark/rsh-tools/types'
 import type {
   ConversationNode, RunningToolCall, ToolCallBlock, ToolResultNode,
-} from '@deepseek-ai/dsh-client-ui-conversation/client'
+} from '@redspark/rsh-client-ui-conversation/client'
 
 interface ProjectedBlock {
   source: ToolCallBlock

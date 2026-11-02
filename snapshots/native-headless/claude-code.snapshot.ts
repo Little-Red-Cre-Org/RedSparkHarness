@@ -5,9 +5,9 @@ import { join } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { execa } from 'execa'
 import { expect, it } from 'vitest'
-import { JsonlSessionBackend } from '@deepseek-ai/dsh-session-persistence-jsonl'
-import { SESSION_FORMAT_VERSION } from '@deepseek-ai/dsh-session/native'
-import { deriveReplayScript, parseSessionLog } from '@deepseek-ai/dsh-llm-replay'
+import { JsonlSessionBackend } from '@redspark/rsh-session-persistence-jsonl'
+import { SESSION_FORMAT_VERSION } from '@redspark/rsh-session/native'
+import { deriveReplayScript, parseSessionLog } from '@redspark/rsh-llm-replay'
 import { shippedNativeProfileComposition } from '../../rsh/Programs/CLI/src/native-profile-template.ts'
 import { assertWorkspaceOutsideTemp, outsideTempWorkspaceParent } from '../../rsh/Scripts/snapshot-workspace-parent.ts'
 import {
@@ -33,7 +33,7 @@ const task = 'Ask the bounded Claude Code child for one short answer and report 
 const childAnswer = 'Claude Code fixture answer.'
 const fakeApiKey = 'snapshot-only-anthropic-key'
 
-function currentMode(): string | undefined { return process.env.DSH_SNAPSHOT }
+function currentMode(): string | undefined { return process.env.RSH_SNAPSHOT }
 
 function installFixturePackage(profileModules: string, packageName: string, source: string): void {
   const directory = join(profileModules, packageName)
@@ -79,7 +79,7 @@ it('records and cold-replays a Claude Code child through the Native parent Sessi
     messages = await startMessagesFixture({ kind: 'complete', text: childAnswer })
     mkdirSync(profile, { recursive: true })
     mkdirSync(workspace, { recursive: true })
-    mkdirSync(join(profileModules, '@deepseek-ai'), { recursive: true })
+    mkdirSync(join(profileModules, '@redspark'), { recursive: true })
     writeFileSync(join(profile, 'package.json'), JSON.stringify({ name: 'native-claude-code-profile', private: true,
       dsh: { profile: { runtime: 'native', config: 'rsh.profile.json' } } }))
 
@@ -102,7 +102,7 @@ it('records and cold-replays a Claude Code child through the Native parent Sessi
       ['dsh-tool-fs', 'rsh/Modules/Official/fs/tool-fs'],
       ['dsh-subagent-claude-code', 'rsh/Modules/Official/subagent/subagent-claude-code'],
     ] as const) {
-      const link = join(profileModules, '@deepseek-ai', name)
+      const link = join(profileModules, '@redspark', name)
       symlinkSync(join(root, path), link, 'junction')
       links.push(link)
     }
@@ -120,7 +120,7 @@ it('records and cold-replays a Claude Code child through the Native parent Sessi
       if (row.id === 'session-execution') return row
       if (row.id === 'subagents') return { ...row, config: { providerName: 'claude-code' } }
       if (row.id === 'storage') return { ...row, config: { root: sessions, compression: 'none' } }
-      if (row.id === 'fs') return { ...row, plugin: '@deepseek-ai/dsh-fs-local', config: { cwd: workspace } }
+      if (row.id === 'fs') return { ...row, plugin: '@redspark/rsh-fs-local', config: { cwd: workspace } }
       if (row.id === 'pi-ai') return { ...row, plugin: 'native-claude-parent-model',
         config: { ...(rootScript === undefined ? {} : { script: rootScript }) } }
       return row
@@ -129,18 +129,18 @@ it('records and cold-replays a Claude Code child through the Native parent Sessi
     if (subagentIndex < 0) throw new Error('native-headless template omitted NativeSubagent')
     installations.splice(subagentIndex, 0, {
       id: 'claude-code-driver',
-      plugin: '@deepseek-ai/dsh-subagent-claude-code',
+      plugin: '@redspark/rsh-subagent-claude-code',
       scope: 'root',
       config: { name: 'claude-code', model: 'claude-code-snapshot-fixture', apiKeyEnv: 'ANTHROPIC_API_KEY', baseUrl: messages.baseUrl },
     })
-    installations.push({ id: 'subagent-tool', plugin: '@deepseek-ai/dsh-tool-subagent', scope: 'root',
+    installations.push({ id: 'subagent-tool', plugin: '@redspark/rsh-tool-subagent', scope: 'root',
       config: { toolName: 'subagent', maxDepth: 1 } })
     writeFileSync(join(profile, 'rsh.profile.json'), JSON.stringify({ ...composition, installations }))
 
     assertWorkspaceOutsideTemp(base)
     const child = await execa(process.execPath, [
       '--import', contextProbe, bin, '--profile', 'native-headless', replayTask,
-    ], { env: { ...process.env, DSH_HOME: home, DEEPSEEK_API_KEY: undefined, ANTHROPIC_API_KEY: fakeApiKey,
+    ], { env: { ...process.env, RSH_HOME: home, DEEPSEEK_API_KEY: undefined, ANTHROPIC_API_KEY: fakeApiKey,
       ANTHROPIC_AUTH_TOKEN: undefined, CLAUDE_CODE_OAUTH_TOKEN: undefined }, reject: false, timeout: 45_000 })
     expect(child.exitCode, child.stderr).toBe(0)
     expect(child.stdout).toBe('done')

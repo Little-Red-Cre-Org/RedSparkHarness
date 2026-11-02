@@ -1,12 +1,12 @@
 /** Native local filesystem provider with installation-owned cancellation and draining. */
-import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
-import type {} from '@deepseek-ai/dsh-fs/native'
+import type { NativePlugin } from '@redspark/rsh-native-runtime'
+import type {} from '@redspark/rsh-fs/native'
 import { LocalFileSystemBackend, resolveLocalFilesystemConfig } from './backend.ts'
 
 /** Explicitly selected local host storage; it provides no sandbox confinement. */
 export const localFilesystemPlugin: NativePlugin = {
   apiVersion: 1,
-  name: '@deepseek-ai/dsh-fs-local',
+  name: '@redspark/rsh-fs-local',
   targets: ['host'],
   requires: [],
   provides: ['fs'],

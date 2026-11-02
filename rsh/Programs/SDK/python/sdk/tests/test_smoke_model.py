@@ -92,7 +92,7 @@ def live_smoke(monkeypatch: pytest.MonkeyPatch) -> SimpleNamespace:
 
     monkeypatch.setenv("DEEPSEEK_API_KEY", "unit-test-key")
     monkeypatch.setenv("DEEPSEEK_BASE_URL", "https://api.invalid")
-    monkeypatch.setattr(deepseek_harness, "DeepSeekHarness", ScriptedHarness)
+    monkeypatch.setattr(deepseek_harness, "RedSparkHarness", ScriptedHarness)
     monkeypatch.setattr(globals_["secrets"], "token_hex", fresh_challenge)
     monkeypatch.setitem(globals_, "assert_zstd_session_log", state.checked_logs.append)
     return state

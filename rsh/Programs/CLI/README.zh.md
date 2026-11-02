@@ -1,4 +1,4 @@
-# `@deepseek-ai/dsh`
+# `@redspark/dsh`
 
 [English](README.md) | 中文
 
@@ -8,7 +8,7 @@
 
 | 命令 | 用途 |
 |---|---|
-| `dsh --profile <name>` | 启动位于 `$DSH_HOME/profiles/<name>` 的指定 profile。 |
+| `dsh --profile <name>` | 启动位于 `$RSH_HOME/profiles/<name>` 的指定 profile。 |
 | `dsh --profile <name> --from-default-profile <template>` | 从随附模板创建新的自定义 profile，然后启动它。 |
 | `dsh --profile acp` | 通过 ACP stdio 为自动化客户端提供服务，直至断开连接。 |
 | `dsh --profile headless "job"` | 运行一个全新的持久化会话，打印最终答案并退出。 |
@@ -27,7 +27,7 @@
 
 native-sdk 配置还组合 native-tools、native-prompt、native-subagent、native-jobs 及其工具消费者。子执行使用相同的选定 Program 执行器、Session 存储与模型提供者。该 profile 提供可续接 Subagent 支持：`subagent` 启动持久子任务，`send_message` 发送后续工作，`interrupt_agent` 中断其当前回合。一次性后台子任务通过 `job_output`/`job_kill` 查看或停止。
 
-`native-sdk`、`native-sdk-dsh-child`、`native-acp` 与 `native-acp-dsh-child` 组合会通过各进程选定的 filesystem Provider 安装工作区指令。`native-sdk-dsh-child` profile 使用 CLI 私有的固定 launcher 启动同版本 `native-sdk` profile；显式选择的 `dsh-sdk` child 会根据请求中的 cwd 独立发现项目指令，并使用自己的私有 DSH_HOME。
+`native-sdk`、`native-sdk-dsh-child`、`native-acp` 与 `native-acp-dsh-child` 组合会通过各进程选定的 filesystem Provider 安装工作区指令。`native-sdk-dsh-child` profile 使用 CLI 私有的固定 launcher 启动同版本 `native-sdk` profile；显式选择的 `dsh-sdk` child 会根据请求中的 cwd 独立发现项目指令，并使用自己的私有 RSH_HOME。
 
 Native profile 可选择启用 `dsh-sdk` 或 `dsh-acp-child` 外部驱动。CLI 为各驱动提供同版本固定 launcher，并从最近可见的 pi-ai Provider 解析路由目录；ACP launcher 不接受调用方选择的可执行文件或任意 argv，子 profile 也不能再启动 child。这些适配器仍需在 profile 中显式安装，随附的 `native-sdk` 与 `native-acp` profile 不会选择它们。
 
@@ -57,7 +57,7 @@ legacy profile 目录包含一个 `package.json`，其中记录树外插件依�
 
 随附的 `native-web` profile 会为 Native Session API 安装 `standard` 和 `minimal` agent mode、plan-mode Provider，以及 `workspace-write` 和 `danger-full-access` 常驻权限 preset。
 
-普通 `native-headless` 模板也会在首次初始化时把启动目录记录为应用工作区根目录。显式选择 `native-headless-query` 可安装组合式 SQLite 会话查询 Provider 与五个具备工作区授权的 Native 工具。该 profile 首次初始化时会把启动目录记录为应用工作区根目录。索引存于 `$DSH_HOME/sessions/query.sqlite`，并在首次搜索时打开；编辑 `session-query` 安装项可更改路径，或设置 `openAt: "never"`，同时保留精确读取能力。
+普通 `native-headless` 模板也会在首次初始化时把启动目录记录为应用工作区根目录。显式选择 `native-headless-query` 可安装组合式 SQLite 会话查询 Provider 与五个具备工作区授权的 Native 工具。该 profile 首次初始化时会把启动目录记录为应用工作区根目录。索引存于 `$RSH_HOME/sessions/query.sqlite`，并在首次搜索时打开；编辑 `session-query` 安装项可更改路径，或设置 `openAt: "never"`，同时保留精确读取能力。
 
 随附的两个 headless 模板都含有禁用的 `tmux-context` 安装项。通过 profile overlay 启用它，并组合一个 `shell` Provider，即可将当前 pane 位置作为持久模型上下文；[Native tmux 上下文 README](../../Modules/Official/terminal/native-tmux-context/README.zh.md) 说明所需条件与消息格式。
 
@@ -73,10 +73,10 @@ Host 配置在导入插件前捕获继承环境、调用目录与 Harness 主目
 
 配置树以空根为起点，依次叠加以下配置层：
 - `dsh.profile.bundles` 中各组合包的 patch
-- profile 自身的 `cordis.patch.yml`，然后是 home 级的 `$DSH_HOME/cordis.patch.yml`
+- profile 自身的 `cordis.patch.yml`，然后是 home 级的 `$RSH_HOME/cordis.patch.yml`
 - `--patch` 指定的覆盖层
 
-`dsh.profile.bundles` 中列出的组合包先从 dsh 安装目录解析（`@deepseek-ai/dsh-base`、`@deepseek-ai/dsh-web-app`、`@deepseek-ai/dsh-rsh`、`@deepseek-ai/dsh-headless`、`@deepseek-ai/dsh-sdk-app`、`@deepseek-ai/dsh-sdk-minimal`、`@deepseek-ai/dsh-acp-app`），再从 profile 自身的 `node_modules` 解析；pnpm 会将树外插件安装到该目录。
+`dsh.profile.bundles` 中列出的组合包先从 dsh 安装目录解析（`@redspark/rsh-base`、`@redspark/rsh-web-app`、`@redspark/rsh-rsh`、`@redspark/rsh-headless`、`@redspark/rsh-sdk-app`、`@redspark/rsh-sdk-minimal`、`@redspark/rsh-acp-app`），再从 profile 自身的 `node_modules` 解析；pnpm 会将树外插件安装到该目录。
 
 对 legacy profile 使用 `--dump-default-config` 检查组合包默认值；当所选 profile 实际解析为 Native runtime 时会拒绝该选项，因此标准名称下已有的 legacy manifest 仍可使用。`--from-default-profile` 要求目标名称不是随附 profile 名称。Native `--dump-config` 会在不启动的情况下打印解析后的 Native JSON profile。
 
@@ -88,6 +88,6 @@ Host 配置在导入插件前捕获继承环境、调用目录与 Harness 主目
 
 ## 开发
 
-当 `DSH_EXAMPLE_MODE=lib` 时，[构建入口测试](tests/built-bin.e2e.ts)要求存在 `lib/bin.js`；入口缺失会失败，而不是跳过整组测试。已发布 native-headless profile 的 loader 检查也要求已构建的 native plugin 入口，请在运行该测试前执行 `pnpm run build`。未显式选择构建模式时，尚未构建的工作区可以跳过这些测试。
+当 `RSH_EXAMPLE_MODE=lib` 时，[构建入口测试](tests/built-bin.e2e.ts)要求存在 `lib/bin.js`；入口缺失会失败，而不是跳过整组测试。已发布 native-headless profile 的 loader 检查也要求已构建的 native plugin 入口，请在运行该测试前执行 `pnpm run build`。未显式选择构建模式时，尚未构建的工作区可以跳过这些测试。
 
 生产运行需要已构建的包与前端产物。请在仓库根目录单独运行 `pnpm run build`，然后使用 `pnpm dsh <args...>` 运行 TypeScript 入口并转发所有参数；模块解析约定以[源码执行参考](reference/README.zh.md#source-execution)为准。

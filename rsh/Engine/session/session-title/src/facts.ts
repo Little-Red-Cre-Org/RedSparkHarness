@@ -3,13 +3,13 @@
  * native consumer: the durable event, the provider contract, message
  * extraction, result validation, and the log fold.
  *
- * @module @deepseek-ai/dsh-session-title/facts
+ * @module @redspark/rsh-session-title/facts
  */
 
-import type { Branded } from '@deepseek-ai/dsh-brand'
-import { assertNever, deepFreeze } from '@deepseek-ai/dsh-util-values'
-import type { SessionEvent, SessionSeq } from '@deepseek-ai/dsh-session/types'
-import { SessionSeq as brandSessionSeq } from '@deepseek-ai/dsh-session/types'
+import type { Branded } from '@redspark/rsh-brand'
+import { assertNever, deepFreeze } from '@redspark/rsh-util-values'
+import type { SessionEvent, SessionSeq } from '@redspark/rsh-session/types'
+import { SessionSeq as brandSessionSeq } from '@redspark/rsh-session/types'
 import { normalizeSessionTitle } from './normalize.ts'
 import type {
   SessionTitleEventData,
@@ -21,7 +21,7 @@ import type {
   TitleProjection,
 } from './types.ts'
 
-declare module '@deepseek-ai/dsh-session/types' {
+declare module '@redspark/rsh-session/types' {
   interface SessionEventMap {
     /**
      * Latest-wins session title snapshot. Log-only: it never enters the model

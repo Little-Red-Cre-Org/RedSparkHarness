@@ -2,12 +2,12 @@ import { PassThrough, Writable } from 'node:stream'
 import { resolve } from 'node:path'
 import { describe, expect, it, vi } from 'vitest'
 import { ProcessSandboxCodeRuntime } from '../src/index.ts'
-import type { ProcessSandbox } from '@deepseek-ai/dsh-sandbox/native'
-import { NativeSandboxPolicy } from '@deepseek-ai/dsh-native-sandbox-policy'
-import type { SubprocessHandle, SubprocessOperations, SubprocessOutputRead } from '@deepseek-ai/dsh-subprocess/native'
-import { resolveNativeWorkerThreadConfig } from '@deepseek-ai/dsh-native-code-runtime'
-import type { CodeJsonValue } from '@deepseek-ai/dsh-native-code-runtime'
-import { Session, SessionId, SESSION_FORMAT_VERSION } from '@deepseek-ai/dsh-session/native'
+import type { ProcessSandbox } from '@redspark/rsh-sandbox/native'
+import { NativeSandboxPolicy } from '@redspark/rsh-native-sandbox-policy'
+import type { SubprocessHandle, SubprocessOperations, SubprocessOutputRead } from '@redspark/rsh-subprocess/native'
+import { resolveNativeWorkerThreadConfig } from '@redspark/rsh-native-code-runtime'
+import type { CodeJsonValue } from '@redspark/rsh-native-code-runtime'
+import { Session, SessionId, SESSION_FORMAT_VERSION } from '@redspark/rsh-session/native'
 
 function makeSession(cwd = process.cwd(), mode?: 'read-only' | 'workspace-write' | 'danger-full-access'): Session {
   const id = SessionId('process-sandbox-code-runtime-test')

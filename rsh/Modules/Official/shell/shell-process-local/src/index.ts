@@ -1,8 +1,8 @@
 /** Shared local shell process lifecycle over the managed subprocess capability. */
 import { StringDecoder } from 'node:string_decoder'
-import type { ShellExecRequest, ShellExecSpec, ShellProcess, ShellProcessRead, ShellRunResult, CollectedOutput, ShellOperations } from '@deepseek-ai/dsh-shell/native'
-import type { SubprocessCollect, SubprocessHandle, SubprocessOperations, SubprocessOutputReader, SubprocessSpawnSpec } from '@deepseek-ai/dsh-subprocess/native'
-import { clampTimeout, deadline, MAX_TIMER_DELAY_MS, timeoutOf } from '@deepseek-ai/dsh-timeout'
+import type { ShellExecRequest, ShellExecSpec, ShellProcess, ShellProcessRead, ShellRunResult, CollectedOutput, ShellOperations } from '@redspark/rsh-shell/native'
+import type { SubprocessCollect, SubprocessHandle, SubprocessOperations, SubprocessOutputReader, SubprocessSpawnSpec } from '@redspark/rsh-subprocess/native'
+import { clampTimeout, deadline, MAX_TIMER_DELAY_MS, timeoutOf } from '@redspark/rsh-timeout'
 
 /** Configurable execution budgets. */
 export interface Config {

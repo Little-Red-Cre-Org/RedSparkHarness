@@ -3,7 +3,7 @@ description: "面向部署方与消费方的持久终端会话说明，用于选
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-terminal
+# @redspark/rsh-terminal
 
 [English](README.md) | 中文
 
@@ -27,7 +27,7 @@ kind: "package-reference"
 
 原生 `./native` 入口通过 `terminals` 提供限定所有者的分配、列出、交互发送、保留输出读取、前台信号及等待清理。后端通过 `./protocol` 持有共享终端协议；`./error` 发布错误而不加载 Cordis。Agent 释放、后端卸载与 Host 关闭会中止接纳并等待 Provider 可观察到的清理。会话仍只存在于进程内。[原生交互决策](../../../../../.agents/notes/implemented/architecture/2026-10-05-native-terminal-interaction.zh.md)记录所有权及实现复用。
 
-当组合需要状态跨工具调用存活的终端会话时，挂载 `@deepseek-ai/dsh-terminal`。单独的服务本身没有用处：请与 `@deepseek-ai/dsh-terminal-bash` 之类的后端、`@deepseek-ai/dsh-tool-terminal` 之类的工具包配对，并在同一个组合中一起加载。
+当组合需要状态跨工具调用存活的终端会话时，挂载 `@redspark/rsh-terminal`。单独的服务本身没有用处：请与 `@redspark/rsh-terminal-bash` 之类的后端、`@redspark/rsh-tool-terminal` 之类的工具包配对，并在同一个组合中一起加载。
 
 ### 何时选择
 
@@ -38,9 +38,9 @@ kind: "package-reference"
 将会话服务与后端、工具包一起加载：
 
 ```yaml
-- name: '@deepseek-ai/dsh-terminal'
-- name: '@deepseek-ai/dsh-terminal-bash'
-- name: '@deepseek-ai/dsh-tool-terminal'
+- name: '@redspark/rsh-terminal'
+- name: '@redspark/rsh-terminal-bash'
+- name: '@redspark/rsh-tool-terminal'
 ```
 
 后端提供一个稳定类型——随附的 shell 后端提供 `shell`——工具按该类型打开会话。shell 后端还额外要求沙箱、沙箱策略与子进程提供方；完整组合见其 [README](../terminal-bash/README.zh.md)。
@@ -117,7 +117,7 @@ kind: "package-reference"
 
 #### 模型看到什么
 
-没有直接可见内容。此包不注册提示词或工具；可见 schema 与结果文本由 `@deepseek-ai/dsh-tool-terminal` 负责。
+没有直接可见内容。此包不注册提示词或工具；可见 schema 与结果文本由 `@redspark/rsh-tool-terminal` 负责。
 
 #### Token 影响
 
@@ -125,7 +125,7 @@ kind: "package-reference"
 
 #### KV Cache 影响
 
-不会直接失效；请求前缀变更由 `@deepseek-ai/dsh-tool-terminal` 负责。
+不会直接失效；请求前缀变更由 `@redspark/rsh-tool-terminal` 负责。
 
 ## 已知限制与延期工作
 

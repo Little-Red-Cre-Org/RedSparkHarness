@@ -1,7 +1,7 @@
 /** Backend-neutral source ports consumed by the shared session-query index. */
 
-import type { SessionEvent, SessionHeader, SessionId, SessionLogOffset } from '@deepseek-ai/dsh-session/native'
-import type { SessionPersistenceRevision } from '@deepseek-ai/dsh-session-persistence/native'
+import type { SessionEvent, SessionHeader, SessionId, SessionLogOffset } from '@redspark/rsh-session/native'
+import type { SessionPersistenceRevision } from '@redspark/rsh-session-persistence/native'
 
 /** One detached complete log returned from the selected source. */
 export interface SessionQuerySourceLog {

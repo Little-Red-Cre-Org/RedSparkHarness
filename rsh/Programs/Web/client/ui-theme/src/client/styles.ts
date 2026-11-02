@@ -1,4 +1,4 @@
-import type { Context } from '@deepseek-ai/cordis'
+import type { Context } from '@redspark/cordis'
 import { installThemeStyles as installGlobalThemeStyles } from '../theme-sheets.ts'
 
 /**

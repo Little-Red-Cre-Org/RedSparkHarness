@@ -3,17 +3,17 @@
  * stable wire failure vocabulary over the `ctx.directoryPicker` seam.
  */
 
-import { Context } from '@deepseek-ai/cordis'
+import { Context } from '@redspark/cordis'
 import { z } from 'zod'
-import { DirectoryPickerError } from '@deepseek-ai/dsh-host-directory-picker'
+import { DirectoryPickerError } from '@redspark/rsh-host-directory-picker'
 import type {
   DirectoryPickerCapabilities, DirectoryPickerErrorCode,
-} from '@deepseek-ai/dsh-host-directory-picker'
+} from '@redspark/rsh-host-directory-picker'
 // The seam owns the listing declaration; the generator requires the reference
 // site to name that package rather than this package's re-export of it.
-import type { DirectoryListing } from '@deepseek-ai/dsh-host-directory-picker/types'
-import { Remote, RemoteError, TypertRemoteService } from '@deepseek-ai/dsh-typert-protocol'
-import type { RemoteErrorCode } from '@deepseek-ai/dsh-typert-protocol'
+import type { DirectoryListing } from '@redspark/rsh-host-directory-picker/types'
+import { Remote, RemoteError, TypertRemoteService } from '@redspark/rsh-typert-protocol'
+import type { RemoteErrorCode } from '@redspark/rsh-typert-protocol'
 
 const createDirectoryRequestSchema = z.object({
   path: z.string(),
@@ -24,7 +24,7 @@ const createDirectoryRequestSchema = z.object({
   { message: 'host.createDirectory requires a single non-blank path segment name' },
 )
 
-declare module '@deepseek-ai/cordis' {
+declare module '@redspark/cordis' {
   interface Context {
     /** Host directory-picking Remote namespace owner. */
     directoryPickerController: DirectoryPickerController

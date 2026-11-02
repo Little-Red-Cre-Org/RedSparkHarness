@@ -1,15 +1,15 @@
 /** Native adapter from durable Session events to shared chat presentation. */
 import { Fragment, useMemo } from 'react'
-import { NativeWorkflowRunPanel, workflowRunsFromSessionEvents } from '@deepseek-ai/dsh-client-ui-workflow-run/native'
+import { NativeWorkflowRunPanel, workflowRunsFromSessionEvents } from '@redspark/rsh-client-ui-workflow-run/native'
 import {
   ChatAssistantMessage, ChatContextMessage, ChatMessageActionMeta, ChatMessageActionRow, ChatMessageCopyAction,
   ChatReasoningDisclosure, ChatTranscript, ChatTurnActivity, ChatTurnGroup, ChatUserMessage, JsonBlock, MarkdownText,
-} from '@deepseek-ai/dsh-client-ui-primitives'
-import type { MarkdownLabels } from '@deepseek-ai/dsh-client-ui-primitives'
-import type { PropsRenderSlots, TranslateNS } from '@deepseek-ai/dsh-client-ui-slots'
-import { deriveEventMessage, isAppendSurfaceEvent } from '@deepseek-ai/dsh-session/surface'
-import type { SessionEvent, SessionId } from '@deepseek-ai/dsh-session/types'
-import type { NativeSessionImage } from '@deepseek-ai/dsh-client-native-session/native'
+} from '@redspark/rsh-client-ui-primitives'
+import type { MarkdownLabels } from '@redspark/rsh-client-ui-primitives'
+import type { PropsRenderSlots, TranslateNS } from '@redspark/rsh-client-ui-slots'
+import { deriveEventMessage, isAppendSurfaceEvent } from '@redspark/rsh-session/surface'
+import type { SessionEvent, SessionId } from '@redspark/rsh-session/types'
+import type { NativeSessionImage } from '@redspark/rsh-client-native-session/native'
 import type { ConversationSnapshot } from './controller.ts'
 import { ToolCard, toolCardRecords } from './tool-cards.tsx'
 import { NativeMessageImage } from './attachments.tsx'

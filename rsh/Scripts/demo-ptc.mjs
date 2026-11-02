@@ -13,6 +13,6 @@ const child = spawn(process.execPath, [
   task,
 ], {
   stdio: 'inherit',
-  env: { ...process.env, DSH_TOOLS_MODE: 'ptc' },
+  env: { ...process.env, RSH_TOOLS_MODE: 'ptc' },
 })
 child.on('exit', (code, signal) => { process.exit(signal !== null ? 1 : code ?? 1) })

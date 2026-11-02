@@ -8,7 +8,7 @@
   "installations": [
     {
       "id": "app",
-      "plugin": "@deepseek-ai/dsh-native-headless",
+      "plugin": "@redspark/rsh-native-headless",
       "scope": "root",
       "config": {
         "cwd": "PROFILE_PATCH_REQUIRED",
@@ -20,47 +20,47 @@
     },
     {
       "id": "agents",
-      "plugin": "@deepseek-ai/dsh-native-agent",
+      "plugin": "@redspark/rsh-native-agent",
       "scope": "root"
     },
     {
       "id": "execution",
-      "plugin": "@deepseek-ai/dsh-native-session-execution",
+      "plugin": "@redspark/rsh-native-session-execution",
       "scope": "root"
     },
     {
       "id": "model-execution",
-      "plugin": "@deepseek-ai/dsh-native-model-execution",
+      "plugin": "@redspark/rsh-native-model-execution",
       "scope": "root"
     },
     {
       "id": "selection",
-      "plugin": "@deepseek-ai/dsh-native-model-selection",
+      "plugin": "@redspark/rsh-native-model-selection",
       "scope": "root"
     },
     {
       "id": "credentials",
-      "plugin": "@deepseek-ai/dsh-credentials-local",
+      "plugin": "@redspark/rsh-credentials-local",
       "scope": "root"
     },
     {
       "id": "storage",
-      "plugin": "@deepseek-ai/dsh-session-persistence-jsonl",
+      "plugin": "@redspark/rsh-session-persistence-jsonl",
       "scope": "root"
     },
     {
       "id": "fs",
-      "plugin": "@deepseek-ai/dsh-fs-local",
+      "plugin": "@redspark/rsh-fs-local",
       "scope": "root"
     },
     {
       "id": "policy",
-      "plugin": "@deepseek-ai/dsh-fs-observation-policy",
+      "plugin": "@redspark/rsh-fs-observation-policy",
       "scope": "root"
     },
     {
       "id": "model",
-      "plugin": "@deepseek-ai/dsh-llm-pi-ai",
+      "plugin": "@redspark/rsh-llm-pi-ai",
       "scope": "root"
     },
     {

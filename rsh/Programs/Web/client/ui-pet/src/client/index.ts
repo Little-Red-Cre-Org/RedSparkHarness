@@ -1,12 +1,12 @@
 /** Desktop-pet Client plugin: registry, shared preferences, Conversation view, and settings. */
-import type { Context } from '@deepseek-ai/cordis'
-import z from '@deepseek-ai/schemastery'
-import type { SessionId } from '@deepseek-ai/dsh-session/types'
-import type {} from '@deepseek-ai/dsh-client-locale/client'
-import type {} from '@deepseek-ai/dsh-client-ui-conversation/client'
-import type {} from '@deepseek-ai/dsh-client-ui-renderer/client'
-import type {} from '@deepseek-ai/dsh-client-ui-session/client'
-import type {} from '@deepseek-ai/dsh-client-ui-settings/client'
+import type { Context } from '@redspark/cordis'
+import z from '@redspark/schemastery'
+import type { SessionId } from '@redspark/rsh-session/types'
+import type {} from '@redspark/rsh-client-locale/client'
+import type {} from '@redspark/rsh-client-ui-conversation/client'
+import type {} from '@redspark/rsh-client-ui-renderer/client'
+import type {} from '@redspark/rsh-client-ui-session/client'
+import type {} from '@redspark/rsh-client-ui-settings/client'
 import { DEFAULT_PET_ID, DEFAULT_PET_VARIANT, PET_SETTINGS_NAMESPACE, type PetSettings } from '../pet-settings.ts'
 import { en, zh, type PetKey } from './locales.ts'
 import { PetSettingsRow, type PetSettingsInjected } from './PetSettingsRow.tsx'
@@ -20,7 +20,7 @@ export type { PetViewInjected, PetViewProps } from './PetView.tsx'
 export type { PetRuntime } from './runtime.ts'
 export type { PetActivity, PetDefinition, PetSnapshot, PetVariantDefinition } from './runtime.ts'
 
-declare module '@deepseek-ai/dsh-client-ui-slots' {
+declare module '@redspark/rsh-client-ui-slots' {
   interface LocaleNamespaceMap { pet: PetKey }
 }
 

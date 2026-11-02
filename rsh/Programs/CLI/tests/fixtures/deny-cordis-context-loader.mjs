@@ -3,7 +3,7 @@ export async function load(url, context, nextLoad) {
   const result = await nextLoad(url, context)
   const path = url.replaceAll('\\', '/')
   if (!path.endsWith('/rsh/Core/vendor/cordis/lib/index.js')
-    && !path.endsWith('/node_modules/@deepseek-ai/cordis/lib/index.js')) return result
+    && !path.endsWith('/node_modules/@redspark/cordis/lib/index.js')) return result
   const source = String(result.source)
   const marker = 'var Context = class Context {'
   const start = source.indexOf(marker)

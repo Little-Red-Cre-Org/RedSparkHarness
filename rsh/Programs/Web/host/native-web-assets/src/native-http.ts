@@ -3,8 +3,8 @@ import { createServer } from 'node:http'
 import type { IncomingMessage, Server, ServerResponse } from 'node:http'
 import type { AddressInfo } from 'node:net'
 import type { NativeClientBundle } from './index.ts'
-import { HttpRouteTable } from '@deepseek-ai/dsh-http-routes/native'
-import type { HttpRoute, HttpRouteListener } from '@deepseek-ai/dsh-http-routes/native'
+import { HttpRouteTable } from '@redspark/rsh-http-routes/native'
+import type { HttpRoute, HttpRouteListener } from '@redspark/rsh-http-routes/native'
 
 /** Native HTTP listener configuration. */
 export interface NativeHttpHostConfig {

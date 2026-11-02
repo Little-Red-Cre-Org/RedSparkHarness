@@ -1,8 +1,8 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import type { Context } from '@deepseek-ai/cordis'
-import { AttachmentError, AttachmentId } from '@deepseek-ai/dsh-attachment'
-import type { ImageAttachmentRef, SaveImageAttachment } from '@deepseek-ai/dsh-attachment'
-import type { ModelSelection } from '@deepseek-ai/dsh-agent'
+import type { Context } from '@redspark/cordis'
+import { AttachmentError, AttachmentId } from '@redspark/rsh-attachment'
+import type { ImageAttachmentRef, SaveImageAttachment } from '@redspark/rsh-attachment'
+import type { ModelSelection } from '@redspark/rsh-agent'
 import {
   AcpContentError,
   admitAcpPrompt,

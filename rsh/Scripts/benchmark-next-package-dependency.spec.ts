@@ -43,12 +43,12 @@ describe('next package benchmark graph', () => {
       name: '@f/probe',
       version: '1.0.0',
       peerDependencies: {
-        '@deepseek-ai/cordis': 'workspace:^',
+        '@redspark/cordis': 'workspace:^',
         '@f/runtime': 'workspace:^',
         '@f/types': 'workspace:^',
       },
       devDependencies: {
-        '@deepseek-ai/cordis': 'workspace:^',
+        '@redspark/cordis': 'workspace:^',
         '@f/runtime': 'workspace:^',
         '@f/types': 'workspace:^',
       },
@@ -58,7 +58,7 @@ describe('next package benchmark graph', () => {
       role: 'configured-host',
       cordisPeerRequired: true,
       manifest,
-      workspaceNames: new Set(['@deepseek-ai/cordis', '@f/probe', '@f/runtime', '@f/types']),
+      workspaceNames: new Set(['@redspark/cordis', '@f/probe', '@f/runtime', '@f/types']),
       allSourceUses: new Map([
         ['@f/runtime', ['rsh/g/probe/src/index.ts']],
         ['@f/types', ['rsh/g/probe/src/types.ts']],
@@ -85,7 +85,7 @@ describe('next package benchmark graph', () => {
       ['@f/probe', new Map([['1.0.0', structuredClone(manifest) as MutableRegistryManifest]])],
     ])
     applyFactsToRegistry(index, facts, new Map([
-      ['@deepseek-ai/cordis', '4.0.1'],
+      ['@redspark/cordis', '4.0.1'],
       ['@f/probe', '1.0.0'],
       ['@f/runtime', '2.0.0'],
       ['@f/types', '3.0.0'],
@@ -93,21 +93,21 @@ describe('next package benchmark graph', () => {
 
     expect(index.get('@f/probe')?.get('1.0.0')).toMatchObject({
       dependencies: { '@f/runtime': '^2.0.0' },
-      peerDependencies: { '@deepseek-ai/cordis': '^4.0.1' },
+      peerDependencies: { '@redspark/cordis': '^4.0.1' },
     })
     expect(index.get('@f/probe')?.get('1.0.0')?.dependencies).not.toHaveProperty('@f/types')
   })
 
   it('finds reachable unconfigured packages with non-Cordis peers', () => {
     const index = new Map([
-      ['@deepseek-ai/dsh', new Map([['1.0.0', {
-        name: '@deepseek-ai/dsh', version: '1.0.0', dependencies: { '@f/a': '^1.0.0', '@f/b': '^1.0.0' },
+      ['@redspark/dsh', new Map([['1.0.0', {
+        name: '@redspark/dsh', version: '1.0.0', dependencies: { '@f/a': '^1.0.0', '@f/b': '^1.0.0' },
       }]])],
       ['@f/a', new Map([['1.0.0', {
         name: '@f/a', version: '1.0.0', peerDependencies: { '@f/runtime': '^1.0.0' },
       }]])],
       ['@f/b', new Map([['1.0.0', {
-        name: '@f/b', version: '1.0.0', peerDependencies: { '@deepseek-ai/cordis': '^4.0.0' },
+        name: '@f/b', version: '1.0.0', peerDependencies: { '@redspark/cordis': '^4.0.0' },
       }]])],
       ['@f/runtime', new Map([['1.0.0', { name: '@f/runtime', version: '1.0.0' }]])],
     ]) as RegistryIndex
@@ -122,7 +122,7 @@ describe('next package benchmark graph', () => {
 
     expect(discoverBenchmarkCandidates(
       index,
-      new Map([['@deepseek-ai/dsh', '1.0.0'], ['@f/a', '1.0.0'], ['@f/b', '1.0.0']]),
+      new Map([['@redspark/dsh', '1.0.0'], ['@f/a', '1.0.0'], ['@f/b', '1.0.0']]),
       release,
       new Set(),
     )).toEqual(['@f/a'])

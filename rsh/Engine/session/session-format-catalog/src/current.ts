@@ -5,9 +5,9 @@ import {
   Session,
   SessionId,
   SessionLogOffset,
-} from '@deepseek-ai/dsh-session/native'
-import type { SessionEvent, SessionHeader } from '@deepseek-ai/dsh-session/native'
-import type { SessionFormatArtifact, SessionFormatHeader } from '@deepseek-ai/dsh-session-format'
+} from '@redspark/rsh-session/native'
+import type { SessionEvent, SessionHeader } from '@redspark/rsh-session/native'
+import type { SessionFormatArtifact, SessionFormatHeader } from '@redspark/rsh-session-format'
 
 /**
  * Validate current logical metadata through the installed Session package.

@@ -1,6 +1,6 @@
 /** Exact active Session routing and drained lifecycle notifications without execution ownership. */
-import { NativeAgentId, type NativeAgent, type NativeAgentRegistry } from '@deepseek-ai/dsh-native-agent'
-import type { Session } from '@deepseek-ai/dsh-session/native'
+import { NativeAgentId, type NativeAgent, type NativeAgentRegistry } from '@redspark/rsh-native-agent'
+import type { Session } from '@redspark/rsh-session/native'
 import type { NativeActiveSessionOperations, NativeActiveSessionOwner } from './active-session.ts'
 
 interface Observer {

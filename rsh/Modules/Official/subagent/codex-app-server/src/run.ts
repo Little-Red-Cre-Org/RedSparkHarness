@@ -6,9 +6,9 @@ import type {
   ChildConnectionHandle,
   SubprocessEnvironmentMode,
   SubprocessOutcome,
-} from '@deepseek-ai/dsh-subprocess/native'
-import { disposeChildConnection } from '@deepseek-ai/dsh-subprocess/native'
-import { MAX_TIMER_DELAY_MS } from '@deepseek-ai/dsh-timeout'
+} from '@redspark/rsh-subprocess/native'
+import { disposeChildConnection } from '@redspark/rsh-subprocess/native'
+import { MAX_TIMER_DELAY_MS } from '@redspark/rsh-timeout'
 import { CodexAppServerWire } from './wire.ts'
 import type { CodexWireFailureFacts, CodexWireResult } from './wire.ts'
 import { DEFAULT_DISPOSE_GRACE_MS, type CodexPermissionMode } from './types.ts'

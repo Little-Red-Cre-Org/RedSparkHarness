@@ -4,7 +4,7 @@ $projectRoot = Split-Path (Split-Path $PSScriptRoot -Parent) -Parent
 Set-Location -LiteralPath $projectRoot
 $nodeBinary = (Get-Command node.exe -ErrorAction Stop).Source
 $env:Path = (Split-Path $nodeBinary) + ';' + (Join-Path $projectRoot 'node_modules\.bin') + ';' + $env:Path
-$env:DSH_DESKTOP_OPEN_DEVTOOLS = '0'
+$env:RSH_DESKTOP_OPEN_DEVTOOLS = '0'
 $logRoot = Join-Path $projectRoot '.git\redspark-local'
 New-Item -ItemType Directory -Force -Path $logRoot | Out-Null
 

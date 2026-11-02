@@ -1,9 +1,9 @@
 /** Cordis-free SQLite full-text query core over selected Session sources. */
 
 import { createHash, randomUUID } from 'node:crypto'
-import { SESSION_FORMAT_VERSION, SessionSeq } from '@deepseek-ai/dsh-session/native'
+import { SESSION_FORMAT_VERSION, SessionSeq } from '@redspark/rsh-session/native'
 import type { DatabaseSync } from 'node:sqlite'
-import type { SessionEvent, SessionHeader, SessionId, SessionLogOffset } from '@deepseek-ai/dsh-session/native'
+import type { SessionEvent, SessionHeader, SessionId, SessionLogOffset } from '@redspark/rsh-session/native'
 import {
   SESSION_QUERY_DEFAULT_PERSISTED_INSPECT_CONCURRENCY,
   SESSION_QUERY_DEFAULT_PREPARED_SESSION_CACHE_SIZE,
@@ -12,7 +12,7 @@ import {
   SessionSearchCursor,
   assertSessionHeadersCompatible,
   buildSessionEventSearchDocuments,
-} from '@deepseek-ai/dsh-session-query/native'
+} from '@redspark/rsh-session-query/native'
 import type {
   Config as SessionQueryConfig,
   SessionEventSearchDocument,
@@ -23,12 +23,12 @@ import type {
   SessionSearchCursor as SessionSearchCursorValue,
   SessionSearchPage,
   SessionSearchRequest,
-} from '@deepseek-ai/dsh-session-query/native'
+} from '@redspark/rsh-session-query/native'
 import type {
   SessionQueryPersistenceRecord,
   SessionQuerySource,
   SessionQueryLiveSource,
-} from '@deepseek-ai/dsh-session-query/source'
+} from '@redspark/rsh-session-query/source'
 import {
   type JournalMode,
   openSearchDatabase,

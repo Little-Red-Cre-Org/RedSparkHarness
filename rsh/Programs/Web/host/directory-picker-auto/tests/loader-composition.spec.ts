@@ -13,16 +13,16 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { Context } from '@deepseek-ai/cordis'
-import Loader from '@deepseek-ai/cordis-plugin-loader'
-import Include from '@deepseek-ai/cordis-plugin-include'
-import HttpServer from '@deepseek-ai/dsh-host-webserver'
-import type { DirectoryPicker } from '@deepseek-ai/dsh-host-directory-picker'
-import BrowseDirectoryPicker from '@deepseek-ai/dsh-host-directory-picker-browse'
-import NativeDirectoryPicker from '@deepseek-ai/dsh-host-directory-picker-native'
+import { Context } from '@redspark/cordis'
+import Loader from '@redspark/cordis-plugin-loader'
+import Include from '@redspark/cordis-plugin-include'
+import HttpServer from '@redspark/rsh-host-webserver'
+import type { DirectoryPicker } from '@redspark/rsh-host-directory-picker'
+import BrowseDirectoryPicker from '@redspark/rsh-host-directory-picker-browse'
+import NativeDirectoryPicker from '@redspark/rsh-host-directory-picker-native'
 import {
-  createLaunchEnvironmentSnapshot, DSH_LAUNCH_ENVIRONMENT_KEY, type LaunchEnvironmentSnapshot,
-} from '@deepseek-ai/dsh-launch-environment'
+  createLaunchEnvironmentSnapshot, RSH_LAUNCH_ENVIRONMENT_KEY, type LaunchEnvironmentSnapshot,
+} from '@redspark/rsh-launch-environment'
 import * as DirectoryPickerAuto from '../src/index.ts'
 
 const renameControl = vi.hoisted(() => ({
@@ -48,11 +48,11 @@ vi.mock('node:fs/promises', async (importOriginal) => {
   }
 })
 
-const AUTO = '@deepseek-ai/dsh-host-directory-picker-auto'
-const NATIVE = '@deepseek-ai/dsh-host-directory-picker-native'
-const BROWSE = '@deepseek-ai/dsh-host-directory-picker-browse'
-const NATIVE_SURFACE = '@deepseek-ai/dsh-client-ui-directory-picker-native'
-const BROWSE_SURFACE = '@deepseek-ai/dsh-client-ui-directory-picker-browse'
+const AUTO = '@redspark/rsh-host-directory-picker-auto'
+const NATIVE = '@redspark/rsh-host-directory-picker-native'
+const BROWSE = '@redspark/rsh-host-directory-picker-browse'
+const NATIVE_SURFACE = '@redspark/rsh-client-ui-directory-picker-native'
+const BROWSE_SURFACE = '@redspark/rsh-client-ui-directory-picker-browse'
 
 /**
  * Loader-visible stand-in for a client surface package: the surfaces belong to
@@ -98,7 +98,7 @@ async function loadComposition(
   root = await mkdtemp(join(tmpdir(), 'dsh-directory-picker-auto-'))
   const configPath = join(root, 'cordis.yml')
   await writeFile(configPath, [
-    "- name: '@deepseek-ai/dsh-host-webserver'",
+    "- name: '@redspark/rsh-host-webserver'",
     '  config:',
     `    host: '${bindHost}'`,
     '    port: 0',
@@ -107,12 +107,12 @@ async function loadComposition(
   ].join('\n'))
 
   context = new Context()
-  if (options.launchEnvironment !== undefined) context.provide(DSH_LAUNCH_ENVIRONMENT_KEY, options.launchEnvironment)
+  if (options.launchEnvironment !== undefined) context.provide(RSH_LAUNCH_ENVIRONMENT_KEY, options.launchEnvironment)
   context.baseUrl = pathToFileURL(root).href + '/'
   await context.plugin(Loader)
   context.loader.builtins.include = Include
   const modules = new Map<string, unknown>([
-    ['@deepseek-ai/dsh-host-webserver', HttpServer],
+    ['@redspark/rsh-host-webserver', HttpServer],
     [AUTO, DirectoryPickerAuto],
     [NATIVE, NativeDirectoryPicker],
     [BROWSE, BrowseDirectoryPicker],

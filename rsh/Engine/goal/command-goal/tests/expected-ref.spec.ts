@@ -1,7 +1,7 @@
 /** Guarded human commands reject stale observed Goal revisions before mutation admission. */
 import { expect, it } from 'vitest'
 import { prepareGoalCommand, resolveGoalCommandState } from '../src/common.ts'
-import type { GoalView } from '@deepseek-ai/dsh-goal/types'
+import type { GoalView } from '@redspark/rsh-goal/types'
 
 it('rejects stale and malformed observed references instead of substituting the current revision', () => {
   // The view represents domain-decoded durable JSON, including its branded Goal identity.

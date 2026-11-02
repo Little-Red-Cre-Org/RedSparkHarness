@@ -1,17 +1,17 @@
 /**
  * Durable agent session-event vocabulary shared with type-only consumers.
  *
- * @module @deepseek-ai/dsh-agent/types
+ * @module @redspark/rsh-agent/types
  */
 
-import type {} from '@deepseek-ai/dsh-session-projection/types'
+import type {} from '@redspark/rsh-session-projection/types'
 
-export type { InboxTarget } from '@deepseek-ai/dsh-native-agent/inbox'
-import type { UserMessage } from '@deepseek-ai/dsh-llm/types'
-import type { SessionId } from '@deepseek-ai/dsh-session/types'
-import type { TypertContext, TypertLookup } from '@deepseek-ai/dsh-typert-protocol'
-import type { JsonValue } from '@deepseek-ai/dsh-util-values'
-export type { TurnBoundaryProjection } from '@deepseek-ai/dsh-native-agent/turn-boundary'
+export type { InboxTarget } from '@redspark/rsh-native-agent/inbox'
+import type { UserMessage } from '@redspark/rsh-llm/types'
+import type { SessionId } from '@redspark/rsh-session/types'
+import type { TypertContext, TypertLookup } from '@redspark/rsh-typert-protocol'
+import type { JsonValue } from '@redspark/rsh-util-values'
+export type { TurnBoundaryProjection } from '@redspark/rsh-native-agent/turn-boundary'
 
 /** Public live-agent handle; the runtime face augments its live capabilities. */
 export interface Agent {
@@ -19,7 +19,7 @@ export interface Agent {
   readonly id: SessionId
 }
 
-declare module '@deepseek-ai/dsh-typert-protocol' {
+declare module '@redspark/rsh-typert-protocol' {
   interface TypertLookupMap {
     agent: TypertLookup<Agent, SessionId>
   }
@@ -47,7 +47,7 @@ export interface InboxWireState {
   readonly 'next-step': readonly JsonValue[]
 }
 
-declare module '@deepseek-ai/dsh-session-projection/types' {
+declare module '@redspark/rsh-session-projection/types' {
   interface SessionProjectionStateMap {
     /** Pending agent input reconstructed from durable inbox splices. */
     inbox: InboxState

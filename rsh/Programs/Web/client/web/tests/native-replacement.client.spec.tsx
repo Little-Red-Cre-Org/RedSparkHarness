@@ -2,7 +2,7 @@
 /** Client replacement releases real React roots and slot ownership before successor mount. */
 import { createElement } from 'react'
 import { expect, it } from 'vitest'
-import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
+import type { NativePlugin } from '@redspark/rsh-native-runtime'
 import { plugin as renderer } from '../../ui-renderer/src/native.ts'
 import type { SlotRuntime } from '../../ui-renderer/src/slot-runtime.ts'
 import { bootNativeClient, type NativeClientModuleSource } from '../src/native-boot.ts'

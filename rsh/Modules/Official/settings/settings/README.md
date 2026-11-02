@@ -3,7 +3,7 @@ description: "The user-settings service for plugin authors and maintainers regis
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-settings
+# @redspark/rsh-settings
 
 English | [中文](README.zh.md)
 
@@ -36,7 +36,7 @@ Choose settings when a plugin's configuration should be changeable at runtime �
 The service stores nothing by itself; mount a provider such as the shipped file-backed one:
 
 ```yaml
-- name: '@deepseek-ai/dsh-settings-file'
+- name: '@redspark/rsh-settings-file'
   config:
     path: /absolute/path/to/settings.yaml
 ```

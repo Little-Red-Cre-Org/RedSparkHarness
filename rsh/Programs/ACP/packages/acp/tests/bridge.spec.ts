@@ -4,12 +4,12 @@ import { mkdtemp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { AttachmentError } from '@deepseek-ai/dsh-attachment'
-import { ToolCallId, type StreamChunk } from '@deepseek-ai/dsh-llm'
-import { SESSION_FORMAT_VERSION, SessionId } from '@deepseek-ai/dsh-session'
-import type { SessionHeader } from '@deepseek-ai/dsh-session'
-import { SessionPersistenceRevision, type SessionPersistenceSnapshot } from '@deepseek-ai/dsh-session-persistence'
-import { defineContentToolFixture } from '@deepseek-ai/dsh-tools'
+import { AttachmentError } from '@redspark/rsh-attachment'
+import { ToolCallId, type StreamChunk } from '@redspark/rsh-llm'
+import { SESSION_FORMAT_VERSION, SessionId } from '@redspark/rsh-session'
+import type { SessionHeader } from '@redspark/rsh-session'
+import { SessionPersistenceRevision, type SessionPersistenceSnapshot } from '@redspark/rsh-session-persistence'
+import { defineContentToolFixture } from '@redspark/rsh-tools'
 import { makeBridgeHarness, textResponse, type BridgeHarness } from './harness.ts'
 import { startHttpMcpFixture } from '../../../../../Modules/Official/mcp/mcp-client/tests/http-fixture.ts'
 
@@ -48,7 +48,7 @@ describe('automation-only ACP bridge', () => {
 
     expect(response).toEqual({
       protocolVersion: PROTOCOL_VERSION,
-      agentInfo: { name: 'deepseek-harness-acp', version: '0.0.1' },
+      agentInfo: { name: 'redspark-harness-acp', version: '0.0.1' },
       agentCapabilities: {
         mcpCapabilities: { http: true },
         promptCapabilities: { image: false, audio: false, embeddedContext: false },

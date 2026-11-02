@@ -3,10 +3,10 @@
  * the `feedback/record` event payload, and the `sessionFeedback.record`
  * Remote request and result types. The runtime category tuple is available
  * through this Cordis-free entry for Host and browser consumers.
- * @module @deepseek-ai/dsh-command-feedback/types
+ * @module @redspark/rsh-command-feedback/types
  */
 
-import type { SessionId } from '@deepseek-ai/dsh-session/types'
+import type { SessionId } from '@redspark/rsh-session/types'
 
 /** Durable feedback category ids in the order product surfaces present them. */
 export const FEEDBACK_CATEGORIES = [
@@ -29,7 +29,7 @@ export interface FeedbackRecord {
   readonly category?: FeedbackCategory
 }
 
-declare module '@deepseek-ai/dsh-session/types' {
+declare module '@redspark/rsh-session/types' {
   interface SessionEventMap {
     /**
      * One recorded human remark about this session. Log-only and independent

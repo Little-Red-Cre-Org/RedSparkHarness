@@ -1,5 +1,5 @@
 {
-  "name": "@deepseek-ai/dsh-client-ui-session",
+  "name": "@redspark/rsh-client-ui-session",
   "description": "Session Controller adapter for React and session-scoped slots",
   "version": "1.0.0",
   "publishConfig": {
@@ -32,8 +32,8 @@
   "dsh": {
     "client": {
       "inject": [
-        "@deepseek-ai/dsh-api-session-controller",
-        "@deepseek-ai/dsh-client-ui-renderer"
+        "@redspark/rsh-api-session-controller",
+        "@redspark/rsh-client-ui-renderer"
       ],
       "platform": "web"
     },
@@ -59,28 +59,28 @@
   },
   "license": "MIT",
   "peerDependencies": {
-    "@deepseek-ai/cordis": "workspace:^"
+    "@redspark/cordis": "workspace:^"
   },
   "peerDependenciesMeta": {
-    "@deepseek-ai/cordis": {
+    "@redspark/cordis": {
       "optional": true
     }
   },
   "dependencies": {
-    "@deepseek-ai/dsh-client-native-session": "workspace:^",
-    "@deepseek-ai/dsh-client-ui-slots": "workspace:^",
-    "@deepseek-ai/dsh-native-runtime": "workspace:^",
-    "@deepseek-ai/dsh-session": "workspace:^",
-    "@deepseek-ai/dsh-util-workspace-path": "workspace:^"
+    "@redspark/rsh-client-native-session": "workspace:^",
+    "@redspark/rsh-client-ui-slots": "workspace:^",
+    "@redspark/rsh-native-runtime": "workspace:^",
+    "@redspark/rsh-session": "workspace:^",
+    "@redspark/rsh-util-workspace-path": "workspace:^"
   },
   "devDependencies": {
-    "@deepseek-ai/cordis": "workspace:^",
-    "@deepseek-ai/dsh-api-session-controller": "workspace:^",
-    "@deepseek-ai/dsh-client-store": "workspace:^",
-    "@deepseek-ai/dsh-client-ui-renderer": "workspace:^",
+    "@redspark/cordis": "workspace:^",
+    "@redspark/rsh-api-session-controller": "workspace:^",
+    "@redspark/rsh-client-store": "workspace:^",
+    "@redspark/rsh-client-ui-renderer": "workspace:^",
     "@types/react": "~18.3.1",
     "react": "^18.2.0",
-    "@deepseek-ai/dsh-llm": "workspace:^"
+    "@redspark/rsh-llm": "workspace:^"
   },
   "files": [
     "lib/index.js",

@@ -3,7 +3,7 @@ description: "Session-log ZIP export for Web downloads and Native Host consumers
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-session-log-export
+# @redspark/rsh-session-log-export
 
 English | [中文](README.zh.md)
 
@@ -35,7 +35,7 @@ Choose it for a Web download or a Native Host caller that owns its stream destin
 
 ```yaml
 - id: session-log-download
-  name: '@deepseek-ai/dsh-session-log-export'
+  name: '@redspark/rsh-session-log-export'
 ```
 
 The Web bundle mounts the package with Connection, `dsh-commands`, `dsh-client-ui-commands`, and `dsh-client-ui-conversation`.

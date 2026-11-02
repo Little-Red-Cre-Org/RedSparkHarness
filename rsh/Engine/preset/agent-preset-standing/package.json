@@ -1,5 +1,5 @@
 {
-  "name": "@deepseek-ai/dsh-agent-preset-standing",
+  "name": "@redspark/rsh-agent-preset-standing",
   "description": "Native profile contribution for one standing Agent preset scope",
   "version": "1.0.0",
   "publishConfig": { "access": "public" },
@@ -19,8 +19,8 @@
   "files": ["lib/index.js", "lib/native.js", "lib/shared-*.js", "lib/types/**/*.d.ts"],
   "license": "MIT",
   "dependencies": {
-    "@deepseek-ai/dsh-agent-presets": "workspace:^",
-    "@deepseek-ai/dsh-native-runtime": "workspace:^",
+    "@redspark/rsh-agent-presets": "workspace:^",
+    "@redspark/rsh-native-runtime": "workspace:^",
     "zod": "^4.4.3"
   },
   "dsh": {

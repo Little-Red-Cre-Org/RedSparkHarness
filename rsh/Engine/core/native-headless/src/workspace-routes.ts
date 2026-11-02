@@ -3,11 +3,11 @@ import { realpathSync } from 'node:fs'
 import { realpath, stat } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { isAbsolute, relative, resolve, parse } from 'node:path'
-import { brandString } from '@deepseek-ai/dsh-brand'
-import type { FileSystemOperations } from '@deepseek-ai/dsh-fs/native'
-import type { Workspace, WorkspaceId } from '@deepseek-ai/dsh-workspace/workspace-types'
-import type { NativeSandboxPolicy } from '@deepseek-ai/dsh-native-sandbox-policy'
-import type { NativeRootRoute, NativeRootRouteId } from '@deepseek-ai/dsh-native-session-execution'
+import { brandString } from '@redspark/rsh-brand'
+import type { FileSystemOperations } from '@redspark/rsh-fs/native'
+import type { Workspace, WorkspaceId } from '@redspark/rsh-workspace/workspace-types'
+import type { NativeSandboxPolicy } from '@redspark/rsh-native-sandbox-policy'
+import type { NativeRootRoute, NativeRootRouteId } from '@redspark/rsh-native-session-execution'
 
 /** Explicit deployment admission for dynamic routes, separate from operation permission. */
 export interface NativeWorkspaceRouteConfiguration {

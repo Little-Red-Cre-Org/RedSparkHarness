@@ -8,12 +8,12 @@
  * settles only after `run()` and the credential writes it admitted have
  * finished. The key stays claimed until then.
  *
- * @module @deepseek-ai/dsh-authorization/native
+ * @module @redspark/rsh-authorization/native
  */
 
-import { brandString } from '@deepseek-ai/dsh-brand'
-import type { NativeContext, NativePlugin, NativeScope } from '@deepseek-ai/dsh-native-runtime'
-import type { CredentialKey, NativeCredentials } from '@deepseek-ai/dsh-credentials/native'
+import { brandString } from '@redspark/rsh-brand'
+import type { NativeContext, NativePlugin, NativeScope } from '@redspark/rsh-native-runtime'
+import type { CredentialKey, NativeCredentials } from '@redspark/rsh-credentials/native'
 import { AuthorizationDeclinedError, AuthorizationError, isSafeDiagnostic } from './errors.ts'
 import type {
   AuthorizationAttemptId, AuthorizationEntry, AuthorizationFlow, AuthorizationFrame, AuthorizationOutcome,
@@ -27,7 +27,7 @@ export type {
   AuthorizationPromptView, AuthorizationSession, AuthorizationSettlement, AuthorizationStatus,
 } from './types.ts'
 
-declare module '@deepseek-ai/dsh-native-runtime' {
+declare module '@redspark/rsh-native-runtime' {
   interface NativeServices { authorization: NativeAuthorization }
   interface NativeEvents {
     /**
@@ -442,7 +442,7 @@ export class NativeAuthorizationProvider implements NativeAuthorization {
 /** Native Host provider for authorization flows. */
 export const plugin: NativePlugin = {
   apiVersion: 1,
-  name: '@deepseek-ai/dsh-authorization',
+  name: '@redspark/rsh-authorization',
   targets: ['host'],
   requires: ['credentials'],
   provides: ['authorization'],

@@ -1,8 +1,8 @@
 /** Native human questions authenticated by the selected Agent and active Session authorities. */
-import { NativeContributions, type NativePlugin, type NativeScope } from '@deepseek-ai/dsh-native-runtime'
-import type { NativeAgent, NativeAgentRegistry } from '@deepseek-ai/dsh-native-agent'
-import type { NativeActiveSessionOperations } from '@deepseek-ai/dsh-native-session-execution'
-import type { Session } from '@deepseek-ai/dsh-session/native'
+import { NativeContributions, type NativePlugin, type NativeScope } from '@redspark/rsh-native-runtime'
+import type { NativeAgent, NativeAgentRegistry } from '@redspark/rsh-native-agent'
+import type { NativeActiveSessionOperations } from '@redspark/rsh-native-session-execution'
+import type { Session } from '@redspark/rsh-session/native'
 import type { AskUserQuestionAnswer, AskUserQuestionItem } from './protocol.ts'
 import { UserQuestionError } from './question-error.ts'
 
@@ -40,7 +40,7 @@ interface Registration {
   readonly pending: Set<Promise<AskUserQuestionAnswer>>
 }
 
-declare module '@deepseek-ai/dsh-native-runtime' {
+declare module '@redspark/rsh-native-runtime' {
   interface NativeServices { userQuestions: NativeUserQuestionRegistry }
 }
 

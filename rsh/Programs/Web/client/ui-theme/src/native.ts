@@ -1,6 +1,6 @@
 /** Native theme preference service for independently installed Client modules. */
-import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
-import { notifySubscribers } from '@deepseek-ai/dsh-client-store'
+import type { NativePlugin } from '@redspark/rsh-native-runtime'
+import { notifySubscribers } from '@redspark/rsh-client-store'
 import {
   DEFAULT_FONT_SIZE, DEFAULT_PREFERENCE, isThemePreference,
   type ThemePreference, type ThemeSnapshot,
@@ -25,7 +25,7 @@ export interface NativeThemeService {
   toggle(): void
 }
 
-declare module '@deepseek-ai/dsh-native-runtime' {
+declare module '@redspark/rsh-native-runtime' {
   interface NativeServices {
     /** Resolved theme choice consumed by the native shell presenter. */
     clientNativeTheme: NativeThemeService
@@ -35,7 +35,7 @@ declare module '@deepseek-ai/dsh-native-runtime' {
 /** Native theme Provider for the palette preference and conversation font-size variable. */
 export const plugin: NativePlugin = {
   apiVersion: 1,
-  name: '@deepseek-ai/dsh-client-ui-theme',
+  name: '@redspark/rsh-client-ui-theme',
   targets: ['client'],
   requires: [],
   provides: ['clientNativeTheme'],

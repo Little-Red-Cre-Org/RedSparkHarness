@@ -3,7 +3,7 @@ description: "Selected DSH profiles can connect legacy Cordis Settings to four E
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-compat-settings-adapters
+# @redspark/rsh-compat-settings-adapters
 
 English | [中文](README.zh.md)
 
@@ -37,7 +37,7 @@ The package has no entry configuration fields. A profile selects an adapter as a
 
 ```yaml
 - id: agent-default-model-settings
-  name: '@deepseek-ai/dsh-compat-settings-adapters/agent-default-model'
+  name: '@redspark/rsh-compat-settings-adapters/agent-default-model'
 ```
 
 The other entries are `./agent-loop`, `./agent-presets`, and `./tool-subagent`; each requires its matching Engine service in the same composition.

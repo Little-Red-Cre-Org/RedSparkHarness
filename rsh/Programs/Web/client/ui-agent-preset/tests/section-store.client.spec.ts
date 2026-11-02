@@ -7,8 +7,8 @@
  */
 
 import { describe, expect, it } from 'vitest'
-import type { Context as ClientContext } from '@deepseek-ai/cordis'
-import { RemoteError } from '@deepseek-ai/dsh-client-test-runtime'
+import type { Context as ClientContext } from '@redspark/cordis'
+import { RemoteError } from '@redspark/rsh-client-test-runtime'
 import { AgentPresetSectionController, draftBlocker } from '../src/client/section-store.ts'
 import type { CopyDraft, PresetRow } from '../src/client/section-store.ts'
 

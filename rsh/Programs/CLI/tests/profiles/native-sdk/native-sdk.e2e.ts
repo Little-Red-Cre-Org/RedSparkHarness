@@ -34,7 +34,7 @@ it('serves native SDK prompts with persisted events, status and shutdown', async
       baseURL: `http://127.0.0.1:${address.port}/v1`, models: [{ id: 'sdk-fixture' }] } },
   } }] }))
   const spawn = () => execa(process.execPath, ['--import', 'tsx/esm', bin, '--profile', 'native-sdk', '--patch', patch], {
-    cwd: root, env: { DSH_HOME: home, DEEPSEEK_API_KEY: 'fixture-key', DSH_TELEMETRY_DISABLED: '1' },
+    cwd: root, env: { RSH_HOME: home, DEEPSEEK_API_KEY: 'fixture-key', RSH_TELEMETRY_DISABLED: '1' },
     reject: false, timeout: 30_000, killSignal: 'SIGKILL',
   })
   let child = spawn()
@@ -71,7 +71,7 @@ it('serves native SDK prompts with persisted events, status and shutdown', async
     child.stdin.write(`${JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'initialize',
       params: { cwd: root, provider: 'deepseek-official', model: 'sdk-fixture' } })}\n`)
     expect(await receive(frame => frame.id === 1)).toMatchObject({
-      result: { serverInfo: { name: 'deepseek-harness-sdk-runtime' } },
+      result: { serverInfo: { name: 'redspark-harness-sdk-runtime' } },
     })
     child.stdin.write(`${JSON.stringify({ jsonrpc: '2.0', id: 5, method: 'session/prompt',
       params: { sessionId: 'sdk-test', contentBlocks: [{ type: 'audio' }] } })}\n`)

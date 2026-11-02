@@ -3,17 +3,17 @@
 import { mkdirSync, mkdtempSync, realpathSync, rmSync, statSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, isAbsolute, join, relative, sep } from 'node:path'
-import { credentialRef } from '@deepseek-ai/dsh-credentials/native'
-import type { NativeContext, NativePlugin } from '@deepseek-ai/dsh-native-runtime'
+import { credentialRef } from '@redspark/rsh-credentials/native'
+import type { NativeContext, NativePlugin } from '@redspark/rsh-native-runtime'
 import type {
   NativeExternalSubagentDriver,
   NativeExternalSubagentOutcome,
   NativeExternalSubagentRequest,
   NativeExternalSubagentRun,
-} from '@deepseek-ai/dsh-native-subagent/native'
-import type { ConfinedArgv, ProcessSandbox, SandboxPolicy } from '@deepseek-ai/dsh-sandbox/native'
-import type { SubprocessOperations, SubprocessSpawnSpec } from '@deepseek-ai/dsh-subprocess/native'
-import { MAX_TIMER_DELAY_MS } from '@deepseek-ai/dsh-timeout'
+} from '@redspark/rsh-native-subagent/native'
+import type { ConfinedArgv, ProcessSandbox, SandboxPolicy } from '@redspark/rsh-sandbox/native'
+import type { SubprocessOperations, SubprocessSpawnSpec } from '@redspark/rsh-subprocess/native'
+import { MAX_TIMER_DELAY_MS } from '@redspark/rsh-timeout'
 import { startClaudeCodeProductRun, textTask } from './controller.ts'
 import type { ClaudeCodeProductRun, ClaudeCodeRunSpec } from './controller.ts'
 
@@ -328,7 +328,7 @@ function createDriver(context: NativeContext, config: Config): NativeExternalSub
 /** Install the bounded Native Claude adapter over the one shared product controller. */
 export const plugin: NativePlugin = {
   apiVersion: 1,
-  name: '@deepseek-ai/dsh-subagent-claude-code',
+  name: '@redspark/rsh-subagent-claude-code',
   targets: ['host'],
   requires: ['credentials', 'sandbox', 'subprocess'],
   provides: ['externalSubagentDriver'],

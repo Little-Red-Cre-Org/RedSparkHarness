@@ -1,5 +1,5 @@
 {
-  "name": "@deepseek-ai/dsh-settings-definition",
+  "name": "@redspark/rsh-settings-definition",
   "description": "Framework-neutral Settings service and Native interfaces",
   "version": "1.0.0",
   "publishConfig": { "access": "public" },
@@ -20,16 +20,16 @@
   "files": ["lib/index.js", "lib/native.js", "lib/types/**/*.js", "lib/types/**/*.d.ts"],
   "license": "MIT",
   "peerDependencies": {
-    "@deepseek-ai/dsh-brand": "workspace:^",
-    "@deepseek-ai/dsh-util-values": "workspace:^",
-    "@deepseek-ai/dsh-native-runtime": "workspace:^"
+    "@redspark/rsh-brand": "workspace:^",
+    "@redspark/rsh-util-values": "workspace:^",
+    "@redspark/rsh-native-runtime": "workspace:^"
   },
   "peerDependenciesMeta": {
-    "@deepseek-ai/dsh-native-runtime": { "optional": true }
+    "@redspark/rsh-native-runtime": { "optional": true }
   },
   "devDependencies": {
-    "@deepseek-ai/dsh-brand": "workspace:^",
-    "@deepseek-ai/dsh-util-values": "workspace:^",
-    "@deepseek-ai/dsh-native-runtime": "workspace:^"
+    "@redspark/rsh-brand": "workspace:^",
+    "@redspark/rsh-util-values": "workspace:^",
+    "@redspark/rsh-native-runtime": "workspace:^"
   }
 }

@@ -4,9 +4,9 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { readFileSync } from 'node:fs'
 import { expect, it } from 'vitest'
-import { NativeHost, NativeScope, parseNativeEntryManifest, resolveInstallation, validateNativePluginEntry } from '@deepseek-ai/dsh-native-runtime'
-import { localFilesystemPlugin } from '@deepseek-ai/dsh-fs-local/native'
-import type { FileSystemOperations } from '@deepseek-ai/dsh-fs/native'
+import { NativeHost, NativeScope, parseNativeEntryManifest, resolveInstallation, validateNativePluginEntry } from '@redspark/rsh-native-runtime'
+import { localFilesystemPlugin } from '@redspark/rsh-fs-local/native'
+import type { FileSystemOperations } from '@redspark/rsh-fs/native'
 import { plugin } from '../src/native.ts'
 
 it('publishes the same native policy declaration as its package manifest', () => {
@@ -24,7 +24,7 @@ it('isolates observations by session and rejects stale edits without changing th
   let fs: FileSystemOperations | undefined
   const consumer = {
     apiVersion: 1, name: 'test-consumer', targets: ['host'] as const, requires: ['fs'] as const, provides: [] as const,
-    resolve: () => (context: import('@deepseek-ai/dsh-native-runtime').NativeContext) => { fs = context.require('fs') },
+    resolve: () => (context: import('@redspark/rsh-native-runtime').NativeContext) => { fs = context.require('fs') },
   }
   const policyRequest = { plugin, scope, config: undefined }
   const host = new NativeHost(resolveInstallation([

@@ -1,5 +1,5 @@
 /** Native storage publishes the existing named BackendRegistry without IO or a second medium. */
-import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
+import type { NativePlugin } from '@redspark/rsh-native-runtime'
 import { BackendRegistry } from './registry.ts'
 
 export { BackendRegistry } from './registry.ts'
@@ -18,12 +18,12 @@ export interface NativeStorageBackendsReady {
   readonly registry: BackendRegistry
 }
 
-declare module '@deepseek-ai/dsh-native-runtime' {
+declare module '@redspark/rsh-native-runtime' {
   interface NativeServices { storage: NativeStorageOperations; storageBackendsReady: NativeStorageBackendsReady }
 }
 
 /** Native Provider of the same backend registry implementation used by compatibility storage. */
 export const plugin: NativePlugin = {
-  apiVersion: 1, name: '@deepseek-ai/dsh-storage', targets: ['host'], requires: [], provides: ['storage'],
+  apiVersion: 1, name: '@redspark/rsh-storage', targets: ['host'], requires: [], provides: ['storage'],
   resolve: () => (context) => { context.provide('storage', { backend: new BackendRegistry() }) },
 }

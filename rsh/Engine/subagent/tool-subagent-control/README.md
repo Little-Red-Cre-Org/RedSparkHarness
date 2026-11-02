@@ -3,7 +3,7 @@ description: "Global send_message, interrupt_agent, and list_agents tools for us
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-tool-subagent-control
+# @redspark/rsh-tool-subagent-control
 
 English | [中文](README.zh.md)
 
@@ -34,14 +34,14 @@ The ./native entry requires tools and subagents, and provides subagentControls i
 Load the subagent service, a backend, the delegation tool, and this package. Adding the separate list plugin exposes all three tools:
 
 ```yaml
-- name: '@deepseek-ai/dsh-subagent'
-- name: '@deepseek-ai/dsh-subagent-spawn-in-process'
-- name: '@deepseek-ai/dsh-tool-subagent'
+- name: '@redspark/rsh-subagent'
+- name: '@redspark/rsh-subagent-spawn-in-process'
+- name: '@redspark/rsh-tool-subagent'
   config:
     provider: spawn
     backgroundMode: continuable
-- name: '@deepseek-ai/dsh-tool-subagent-control'
-- name: '@deepseek-ai/dsh-tool-subagent-control/list-agents'
+- name: '@redspark/rsh-tool-subagent-control'
+- name: '@redspark/rsh-tool-subagent-control/list-agents'
 ```
 
 This package takes no configuration: the root plugin provides `send_message` and `interrupt_agent`, and the list plugin provides `list_agents`.

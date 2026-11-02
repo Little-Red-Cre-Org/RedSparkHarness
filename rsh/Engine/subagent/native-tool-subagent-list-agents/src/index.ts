@@ -1,11 +1,11 @@
 /** Independently selected native continuable subagent discovery tool. */
-import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
-import type {} from '@deepseek-ai/dsh-native-subagent'
-import type {} from '@deepseek-ai/dsh-native-tools'
+import type { NativePlugin } from '@redspark/rsh-native-runtime'
+import type {} from '@redspark/rsh-native-subagent'
+import type {} from '@redspark/rsh-native-tools'
 
 /** Register read-only discovery over the selected Provider and exact Tools registry. */
 export const plugin: NativePlugin = {
-  apiVersion: 1, name: '@deepseek-ai/dsh-native-tool-subagent-list-agents', targets: ['host'],
+  apiVersion: 1, name: '@redspark/rsh-native-tool-subagent-list-agents', targets: ['host'],
   requires: ['tools', 'subagents'], optional: [], provides: [],
   resolve(input) {
     if (input !== undefined && (typeof input !== 'object' || input === null || Array.isArray(input) || Object.keys(input).length !== 0)) {

@@ -1,19 +1,19 @@
 /**
  * Tool operation orchestration over session-query service capabilities.
  *
- * @module @deepseek-ai/dsh-tool-session-query/operations
+ * @module @redspark/rsh-tool-session-query/operations
  */
 
-import { HarnessError } from '@deepseek-ai/dsh-llm/native'
-import { SessionSeq } from '@deepseek-ai/dsh-session/native'
-import type { SessionId } from '@deepseek-ai/dsh-session/native'
+import { HarnessError } from '@redspark/rsh-llm/native'
+import { SessionSeq } from '@redspark/rsh-session/native'
+import type { SessionId } from '@redspark/rsh-session/native'
 import {
   SessionQueryError,
   type SessionEventSearchPage,
   type SessionEventSurface,
   type SessionRecord,
   type SessionSearchCursor,
-} from '@deepseek-ai/dsh-session-query/native'
+} from '@redspark/rsh-session-query/native'
 import { toolInput } from './input.ts'
 import { presentation } from './presentation.ts'
 import { serviceBoundary } from './service-boundary.ts'

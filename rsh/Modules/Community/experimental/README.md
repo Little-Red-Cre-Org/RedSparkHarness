@@ -9,7 +9,7 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-The experimental group contains prototype capabilities whose contracts can change and carry no support promise. Packages are private by default; the five Agent Teams packages are published opt-in exceptions under their existing `@deepseek-ai/dsh-experimental-*` names. The group also holds cross-realm Inspector, CPython subprocess backend, and browser-worker preview packages. Released products outside this group must not depend on experimental packages.
+The experimental group contains prototype capabilities whose contracts can change and carry no support promise. Packages are private by default; the five Agent Teams packages are published opt-in exceptions under their existing `@redspark/rsh-experimental-*` names. The group also holds cross-realm Inspector, CPython subprocess backend, and browser-worker preview packages. Released products outside this group must not depend on experimental packages.
 
 ## Table of Contents
 

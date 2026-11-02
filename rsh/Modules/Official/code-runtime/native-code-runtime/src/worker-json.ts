@@ -1,6 +1,6 @@
 /**
  * Lossless-JSON snapshots for the dependency-free source worker closure.
- * @module @deepseek-ai/dsh-native-code-runtime/worker-json
+ * @module @redspark/rsh-native-code-runtime/worker-json
  */
 
 import type { CodeJsonValue } from './types.ts'

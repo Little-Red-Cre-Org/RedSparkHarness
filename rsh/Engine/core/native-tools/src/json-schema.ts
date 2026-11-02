@@ -8,11 +8,11 @@
  * Unsupported or misplaced keywords reject rather than being accepted without
  * enforcement. Consumers that require an object root apply
  * {@link assertObjectJsonSchema} before accepting input.
- * @module @deepseek-ai/dsh-native-tools/json-schema
+ * @module @redspark/rsh-native-tools/json-schema
  */
 
-import { HarnessError } from '@deepseek-ai/dsh-llm/native'
-import { assertNever, isJsonValue, type JsonValue } from '@deepseek-ai/dsh-util-values'
+import { HarnessError } from '@redspark/rsh-llm/native'
+import { assertNever, isJsonValue, type JsonValue } from '@redspark/rsh-util-values'
 
 /** Scalar JSON values supported by `enum` and `const`. */
 export type JsonSchemaScalar = string | number | boolean | null

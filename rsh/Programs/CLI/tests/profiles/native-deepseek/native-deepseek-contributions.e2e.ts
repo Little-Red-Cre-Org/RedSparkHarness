@@ -21,13 +21,13 @@ function hasBuiltNativeProfileEntries(): boolean {
   const profile = JSON.parse(readFileSync(profilePath, 'utf8')) as NativeProfile
   const packageNames = [
     ...profile.installations.map(row => row.plugin).filter(name => name.startsWith('@')),
-    '@deepseek-ai/dsh-llm-deepseek',
-    '@deepseek-ai/dsh-deepseek-llm-api-extensions',
-    '@deepseek-ai/dsh-plugin-package-inventory-deepseek',
-    '@deepseek-ai/dsh-session-log-deepseek',
-    '@deepseek-ai/dsh-credentials-local',
-    '@deepseek-ai/dsh-native-session-execution',
-    '@deepseek-ai/dsh-native-sandbox-policy',
+    '@redspark/rsh-llm-deepseek',
+    '@redspark/rsh-deepseek-llm-api-extensions',
+    '@redspark/rsh-plugin-package-inventory-deepseek',
+    '@redspark/rsh-session-log-deepseek',
+    '@redspark/rsh-credentials-local',
+    '@redspark/rsh-native-session-execution',
+    '@redspark/rsh-native-sandbox-policy',
   ]
   const require = createRequire(import.meta.url)
   return packageNames.every((name) => {
@@ -138,15 +138,15 @@ it.skipIf(!hasBuiltNativeProfileEntries())('Native headless profile composition 
     profile.scopes.push({ id: 'sibling', parent: 'root' })
     const model = profile.installations.find(row => row.id === 'model')
     if (model === undefined) throw new Error('native-deepseek: headless profile lost its model installation')
-    model.plugin = '@deepseek-ai/dsh-llm-deepseek'
+    model.plugin = '@redspark/rsh-llm-deepseek'
     model.config = { baseURL, models: [{ id: 'deepseek-v4-flash' }], thinking: 'disabled', reasoningEffort: 'off' }
     profile.installations.push(
-      { id: 'credentials', plugin: '@deepseek-ai/dsh-credentials-local', scope: 'root' },
-      { id: 'session-execution', plugin: '@deepseek-ai/dsh-native-session-execution', scope: 'root' },
-      { id: 'deepseek-extensions', plugin: '@deepseek-ai/dsh-deepseek-llm-api-extensions', scope: 'root' },
-      { id: 'package-inventory', plugin: '@deepseek-ai/dsh-plugin-package-inventory-deepseek', scope: 'root' },
-      { id: 'session-log', plugin: '@deepseek-ai/dsh-session-log-deepseek', scope: 'root', config: { enabled: true } },
-      { id: 'sibling-policy', plugin: '@deepseek-ai/dsh-native-sandbox-policy', scope: 'sibling',
+      { id: 'credentials', plugin: '@redspark/rsh-credentials-local', scope: 'root' },
+      { id: 'session-execution', plugin: '@redspark/rsh-native-session-execution', scope: 'root' },
+      { id: 'deepseek-extensions', plugin: '@redspark/rsh-deepseek-llm-api-extensions', scope: 'root' },
+      { id: 'package-inventory', plugin: '@redspark/rsh-plugin-package-inventory-deepseek', scope: 'root' },
+      { id: 'session-log', plugin: '@redspark/rsh-session-log-deepseek', scope: 'root', config: { enabled: true } },
+      { id: 'sibling-policy', plugin: '@redspark/rsh-native-sandbox-policy', scope: 'sibling',
         config: { mode: 'read-only', workspaceRoot: workspace } },
     )
     await writeFile(appManifest, JSON.stringify({ name: 'native-headless-profile', private: true,
@@ -158,7 +158,7 @@ it.skipIf(!hasBuiltNativeProfileEntries())('Native headless profile composition 
       { id: 'storage', config: { root: sessionsRoot, compression: 'none' } },
       { id: 'fs', config: { cwd: workspace } },
     ] }))
-    vi.stubEnv('DSH_HOME', home)
+    vi.stubEnv('RSH_HOME', home)
     vi.stubEnv('DEEPSEEK_API_KEY', 'native-deepseek-fixture-key')
 
     let firstError: unknown
@@ -171,12 +171,12 @@ it.skipIf(!hasBuiltNativeProfileEntries())('Native headless profile composition 
     const sessionId = firstLog.session.id
     expect(firstLog.events.length).toBeGreaterThan(0)
     const selectedPackages = await Promise.all([
-      '@deepseek-ai/dsh-plugin-package-inventory-deepseek',
-      '@deepseek-ai/dsh-session-log-deepseek',
-      '@deepseek-ai/dsh-llm-deepseek',
+      '@redspark/rsh-plugin-package-inventory-deepseek',
+      '@redspark/rsh-session-log-deepseek',
+      '@redspark/rsh-llm-deepseek',
     ].map(async name => ({ name, version: await manifestVersion(name) })))
     expect(firstPackages.packages).toEqual(expect.arrayContaining(selectedPackages))
-    expect(firstPackages.packages.map(item => item.name)).not.toContain('@deepseek-ai/dsh-native-sandbox-policy')
+    expect(firstPackages.packages.map(item => item.name)).not.toContain('@redspark/rsh-native-sandbox-policy')
     const failedSession = (await readSessions(sessionsRoot)).find(item => item.header.id === sessionId)
     expect(failedSession?.events.some(event => event.type === 'session-log-deepseek/delivery-accepted')).toBe(false)
 

@@ -1,6 +1,6 @@
 /** RSH loader adapter for the local filesystem Provider. */
 
-import { adaptFilesystemPlugin } from '@deepseek-ai/dsh-fs'
+import { adaptFilesystemPlugin } from '@redspark/rsh-fs'
 import LocalFileSystem from './index.ts'
 
 /**
@@ -8,7 +8,7 @@ import LocalFileSystem from './index.ts'
  * @returns the adapted Cordis plugin entry.
  */
 export default adaptFilesystemPlugin({
-  packageName: '@deepseek-ai/dsh-fs-local',
+  packageName: '@redspark/rsh-fs-local',
   apiVersion: 1,
   role: 'provider',
   capability: 'filesystem',

@@ -39,9 +39,9 @@ function consumerEnvironment(consumerRoot: string): NodeJS.ProcessEnv {
   delete environment.NPM_CONFIG_USER_AGENT
   delete environment.NODE_OPTIONS
   delete environment.NODE_PATH
-  environment.DSH_HOME = resolve(consumerRoot, '.dsh')
-  environment.DSH_AGENTS_HOME = resolve(consumerRoot, '.agents')
-  environment.DSH_TELEMETRY_DISABLED = '1'
+  environment.RSH_HOME = resolve(consumerRoot, '.dsh')
+  environment.RSH_AGENTS_HOME = resolve(consumerRoot, '.agents')
+  environment.RSH_TELEMETRY_DISABLED = '1'
   return environment
 }
 
@@ -159,8 +159,8 @@ function main(): void {
       execaSync('pnpm', args, {
         cwd: root,
         env: {
-          DSH_PACKED_DSH_BIN: bin,
-          DSH_PACKED_CONSUMER_ROOT: consumerRoot,
+          RSH_PACKED_DSH_BIN: bin,
+          RSH_PACKED_CONSUMER_ROOT: consumerRoot,
         },
         stdio: 'inherit',
       })

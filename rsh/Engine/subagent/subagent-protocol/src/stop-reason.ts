@@ -2,7 +2,7 @@
  * Why a subagent run ended. Merge-extensible (a backend may add variants);
  * consumers branch on the known cases and fall through `default`. Providers
  * extend this map through declaration merging on
- * `@deepseek-ai/dsh-subagent-protocol`. The known cases mirror the harness
+ * `@redspark/rsh-subagent-protocol`. The known cases mirror the harness
  * turn-end vocabulary so the tool layer can map a non-`completed` result to an
  * `isError` tool result.
  */

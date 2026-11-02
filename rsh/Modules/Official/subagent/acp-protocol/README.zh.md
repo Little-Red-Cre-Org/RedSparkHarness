@@ -3,7 +3,7 @@ description: "定义 Native ACP 子代理执行上限与权限模式所用的带
 kind: "package-library"
 ---
 
-# @deepseek-ai/dsh-acp-protocol
+# @redspark/rsh-acp-protocol
 
 [English](README.md) | 中文
 
@@ -34,7 +34,7 @@ kind: "package-library"
 将 ACP 元数据对象 `_meta` 字段的值传给 policy reader。扩展字段不存在时返回 `undefined`；数据格式错误或不受支持时抛出 `TypeError`。
 
 ```ts
-import { readNativeAcpSubagentPolicy } from '@deepseek-ai/dsh-acp-protocol'
+import { readNativeAcpSubagentPolicy } from '@redspark/rsh-acp-protocol'
 
 const policy = readNativeAcpSubagentPolicy({
   'com.deepseek.ai/dsh-native-subagent': {

@@ -18,10 +18,10 @@ it('installs a real pnpm graph, then executes approved scripts with the shared h
   try {
     for (const name of ['fixture-plugin', 'node-pty']) {
       const path = writePackage(join(root, 'packages'), name, name === 'fixture-plugin'
-        ? { dependencies: { 'node-pty': '1.0.0' }, peerDependencies: { '@deepseek-ai/cordis': '^1.0.0' }, dsh: { bundle: { patch: 'bundle.yml' } } }
-        : { scripts: { install: 'node install.cjs' } }, 'export {identity} from "@deepseek-ai/cordis"')
+        ? { dependencies: { 'node-pty': '1.0.0' }, peerDependencies: { '@redspark/cordis': '^1.0.0' }, dsh: { bundle: { patch: 'bundle.yml' } } }
+        : { scripts: { install: 'node install.cjs' } }, 'export {identity} from "@redspark/cordis"')
       writeFileSync(join(path, 'bundle.yml'), '[]\n')
-      writeFileSync(join(path, 'install.cjs'), 'require("node:fs").writeFileSync("built.json", JSON.stringify({node:process.execPath, host:require.resolve("@deepseek-ai/cordis")}))')
+      writeFileSync(join(path, 'install.cjs'), 'require("node:fs").writeFileSync("built.json", JSON.stringify({node:process.execPath, host:require.resolve("@redspark/cordis")}))')
       const tarball = join(root, `${name}.tgz`)
       await c({ file: tarball, cwd: join(path, '..'), gzip: true }, [name])
       archives.set(name, readFileSync(tarball))
@@ -38,7 +38,7 @@ it('installs a real pnpm graph, then executes approved scripts with the shared h
       response.setHeader('content-type', 'application/json')
       response.end(JSON.stringify({ name, 'dist-tags': { latest: '1.0.0' }, versions: { '1.0.0': {
         name, version: '1.0.0', dist: { tarball: `${origin}/${name}.tgz`, integrity: `sha512-${createHash('sha512').update(archive).digest('base64')}` },
-        ...(name === 'fixture-plugin' ? { dependencies: { 'node-pty': '1.0.0' }, peerDependencies: { '@deepseek-ai/cordis': '^1.0.0' } } : {}),
+        ...(name === 'fixture-plugin' ? { dependencies: { 'node-pty': '1.0.0' }, peerDependencies: { '@redspark/cordis': '^1.0.0' } } : {}),
       } }, time: { '1.0.0': '2020-01-01T00:00:00.000Z' } }))
     })
     const dsh = join(root, 'dsh')
@@ -54,9 +54,9 @@ it('installs a real pnpm graph, then executes approved scripts with the shared h
     expect(manager.listPlugins()).toEqual([{ name: 'fixture-plugin', version: '1.0.0', enabled: true }])
     const built = JSON.parse(readFileSync(join(manager.paths.profile, 'node_modules/node-pty/built.json'), 'utf8')) as { node: string; host: string }
     expect(realpathSync(built.node)).toBe(realpathSync(process.execPath))
-    expect(built.host).toBe(join(dsh, 'node_modules/@deepseek-ai/cordis/index.js'))
+    expect(built.host).toBe(join(dsh, 'node_modules/@redspark/cordis/index.js'))
     const entry = join(dsh, 'identity.mjs')
-    writeFileSync(entry, `import {identity} from '@deepseek-ai/cordis'; import {identity as plugin} from ${JSON.stringify(pathToFileURL(join(manager.paths.profile, 'node_modules/fixture-plugin/index.js')).href)}; console.log(identity === plugin)`)
+    writeFileSync(entry, `import {identity} from '@redspark/cordis'; import {identity as plugin} from ${JSON.stringify(pathToFileURL(join(manager.paths.profile, 'node_modules/fixture-plugin/index.js')).href)}; console.log(identity === plugin)`)
     expect(execFileSync(process.execPath, [entry], { encoding: 'utf8' }).trim()).toBe('true')
     await manager.mutate({ type: 'plugin-remove', name: 'fixture-plugin' }, hooks)
     expect(manager.listPlugins()).toEqual([])

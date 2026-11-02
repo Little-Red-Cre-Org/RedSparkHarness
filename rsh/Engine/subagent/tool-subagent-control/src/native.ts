@@ -1,12 +1,12 @@
 /** Native model-facing adjacent messaging and descendant interruption. */
-import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
-import type {} from '@deepseek-ai/dsh-native-subagent'
-import type { NativeValueToolContribution } from '@deepseek-ai/dsh-native-tools'
-import { SessionId } from '@deepseek-ai/dsh-session/native'
+import type { NativePlugin } from '@redspark/rsh-native-runtime'
+import type {} from '@redspark/rsh-native-subagent'
+import type { NativeValueToolContribution } from '@redspark/rsh-native-tools'
+import { SessionId } from '@redspark/rsh-session/native'
 
 /** Register actual controls over the selected native Subagent Provider. */
 export const plugin: NativePlugin = {
-  apiVersion: 1, name: '@deepseek-ai/dsh-tool-subagent-control', targets: ['host'],
+  apiVersion: 1, name: '@redspark/rsh-tool-subagent-control', targets: ['host'],
   requires: ['tools', 'subagents'], optional: [], provides: ['subagentControls'],
   resolve(input) {
     if (input !== undefined && (typeof input !== 'object' || input === null || Array.isArray(input) || Object.keys(input).length !== 0)) {

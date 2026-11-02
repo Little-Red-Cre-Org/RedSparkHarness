@@ -1,5 +1,5 @@
 /** Shared model text for native and compatibility code transports. */
-import type { JsonValue } from '@deepseek-ai/dsh-util-values'
+import type { JsonValue } from '@redspark/rsh-util-values'
 
 /** Two-space JSON presentation, matching the existing shallow `run_code` text contract. */
 const JSON_INDENT = '  '

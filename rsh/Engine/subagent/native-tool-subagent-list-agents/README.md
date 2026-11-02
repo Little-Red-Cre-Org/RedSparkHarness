@@ -3,7 +3,7 @@ description: "Read-only native list_agents tool for continuable subagents in the
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-native-tool-subagent-list-agents
+# @redspark/rsh-native-tool-subagent-list-agents
 
 English | [中文](README.zh.md)
 

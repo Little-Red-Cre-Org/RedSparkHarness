@@ -1,12 +1,12 @@
 /**
  * Native installation of the Perplexity search provider. It registers into the selected `web` service
  * with the same configuration, launch-environment key fallback, and provider id as the Cordis plugin.
- * @module @deepseek-ai/dsh-web-search-perplexity/native
+ * @module @redspark/rsh-web-search-perplexity/native
  */
 
-import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
-import type {} from '@deepseek-ai/dsh-launch-environment/native'
-import type {} from '@deepseek-ai/dsh-web/native'
+import type { NativePlugin } from '@redspark/rsh-native-runtime'
+import type {} from '@redspark/rsh-launch-environment/native'
+import type {} from '@redspark/rsh-web/native'
 import { Config, resolvePerplexityOptions } from './config.ts'
 import { PerplexitySearchProvider } from './provider.ts'
 
@@ -32,7 +32,7 @@ function resolveConfig(input: unknown): Config {
 
 /** Register the Perplexity search provider; removal cancels and drains its admitted searches. */
 export const plugin: NativePlugin = {
-  apiVersion: 1, name: '@deepseek-ai/dsh-web-search-perplexity', targets: ['host'],
+  apiVersion: 1, name: '@redspark/rsh-web-search-perplexity', targets: ['host'],
   requires: ['web', 'launchEnvironment'], optional: [], provides: [],
   resolve(input) {
     const config = resolveConfig(input)

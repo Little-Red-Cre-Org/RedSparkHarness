@@ -3,7 +3,7 @@ description: "Native profiles can select the existing Cordis local filesystem Pr
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-compat-fs-local
+# @redspark/rsh-compat-fs-local
 
 English | [中文](README.zh.md)
 

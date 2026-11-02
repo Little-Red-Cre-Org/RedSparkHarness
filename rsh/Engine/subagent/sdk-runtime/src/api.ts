@@ -1,15 +1,15 @@
 /**
- * High-level run API over {@link HarnessClient}: `DeepSeekHarness` owns one
+ * High-level run API over {@link HarnessClient}: `RedSparkHarness` owns one
  * runtime subprocess across many sessions; `HarnessSession.run` sends a
  * prompt and settles when the whole agent next becomes idle.
  *
- * @module @deepseek-ai/dsh-sdk-runtime/api
+ * @module @redspark/rsh-sdk-runtime/api
  */
 
 import { randomUUID } from 'node:crypto'
 import { resolve } from 'node:path'
-import type { SessionEvent, TurnEndReason } from '@deepseek-ai/dsh-session/native'
-import type { InitializeResult } from '@deepseek-ai/dsh-sdk-protocol'
+import type { SessionEvent, TurnEndReason } from '@redspark/rsh-session/native'
+import type { InitializeResult } from '@redspark/rsh-sdk-protocol'
 import type { NativeSdkChildApprovalRelay, NativeSdkChildRuntime } from './native.ts'
 import { createNativeHarnessClient, createProcessHarnessClient, HarnessClient, isRecord, SdkProtocolError } from './client.ts'
 import type { RuntimeProcessOptions } from './types.ts'
@@ -22,7 +22,7 @@ import type { ContentBlock, DeepSeekHarnessOptions, HarnessNotification, NativeD
  * this instance until {@link close}; always close (or `await using`) so the
  * child is reaped.
  */
-export class DeepSeekHarness implements AsyncDisposable {
+export class RedSparkHarness implements AsyncDisposable {
   private clientInstance: HarnessClient
   private readonly createClient: () => HarnessClient
   private readonly cwd: string
@@ -163,11 +163,11 @@ export class DeepSeekHarness implements AsyncDisposable {
 export function createProcessDeepSeekHarness(
   runtime: RuntimeProcessOptions,
   options: DeepSeekHarnessOptions = {},
-): DeepSeekHarness {
-  const Constructor = DeepSeekHarness as unknown as new (
+): RedSparkHarness {
+  const Constructor = RedSparkHarness as unknown as new (
     publicOptions: DeepSeekHarnessOptions,
     clientFactory: () => HarnessClient,
-  ) => DeepSeekHarness
+  ) => RedSparkHarness
   return new Constructor({
     ...runtime.cwd === undefined ? {} : { processCwd: runtime.cwd },
     ...options,
@@ -185,7 +185,7 @@ export function createNativeSdkChildHarness(
   options: NativeDeepSeekHarnessOptions,
   runtime: NativeSdkChildRuntime,
   approvalRelay?: NativeSdkChildApprovalRelay,
-): DeepSeekHarness {
+): RedSparkHarness {
   const launch: DeepSeekHarnessOptions = {
     profile: 'native-sdk',
     ...options.cwd === undefined ? {} : { cwd: options.cwd },
@@ -205,10 +205,10 @@ export function createNativeSdkChildHarness(
     ...options.allowedTools === undefined ? {} : { allowedTools: options.allowedTools },
     ...options.workspaceWriteRoot === undefined ? {} : { workspaceWriteRoot: options.workspaceWriteRoot },
   }
-  const Constructor = DeepSeekHarness as unknown as new (
+  const Constructor = RedSparkHarness as unknown as new (
     publicOptions: DeepSeekHarnessOptions,
     clientFactory: () => HarnessClient,
-  ) => DeepSeekHarness
+  ) => RedSparkHarness
   return new Constructor(launch, () => createNativeHarnessClient(
     launch, runtime.childConnection, runtime.runtime, () => runtime.dispose(), approvalRelay,
   ))
@@ -230,7 +230,7 @@ export class HarnessSession {
    * @param harness - the owning harness (supplies the client and handshake).
    * @param id - the wire session id this handle runs on.
    */
-  constructor(readonly harness: DeepSeekHarness, readonly id: string) {}
+  constructor(readonly harness: RedSparkHarness, readonly id: string) {}
 
   /**
    * Queue input for this admitted native SDK root's next step and wake a parked root without cancelling dispatch.

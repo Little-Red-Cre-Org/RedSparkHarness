@@ -1,5 +1,5 @@
 {
-  "name": "@deepseek-ai/dsh-api-workspace-controller",
+  "name": "@redspark/rsh-api-workspace-controller",
   "description": "Workspace Remote commands and reconnect-safe state transport",
   "version": "1.0.0",
   "publishConfig": {
@@ -40,11 +40,11 @@
   "dsh": {
     "client": {
       "external": [
-        "@deepseek-ai/dsh-api-gateway/client"
+        "@redspark/rsh-api-gateway/client"
       ],
       "inject": [
-        "@deepseek-ai/dsh-api-gateway",
-        "@deepseek-ai/dsh-client-connection"
+        "@redspark/rsh-api-gateway",
+        "@redspark/rsh-client-connection"
       ],
       "platform": "web"
     }
@@ -65,30 +65,30 @@
   ],
   "license": "MIT",
   "dependencies": {
-    "@deepseek-ai/dsh-deque": "workspace:^",
+    "@redspark/rsh-deque": "workspace:^",
     "zod": "^4.4.3"
   },
   "peerDependencies": {
-    "@deepseek-ai/cordis": "workspace:^",
-    "@deepseek-ai/dsh-api-gateway": "workspace:^",
-    "@deepseek-ai/dsh-client-connection": "workspace:^",
-    "@deepseek-ai/dsh-host-directory-picker": "workspace:^",
-    "@deepseek-ai/dsh-session": "workspace:^",
-    "@deepseek-ai/dsh-storage-domain": "workspace:^",
-    "@deepseek-ai/dsh-typert-protocol": "workspace:^",
-    "@deepseek-ai/dsh-workspace": "workspace:^"
+    "@redspark/cordis": "workspace:^",
+    "@redspark/rsh-api-gateway": "workspace:^",
+    "@redspark/rsh-client-connection": "workspace:^",
+    "@redspark/rsh-host-directory-picker": "workspace:^",
+    "@redspark/rsh-session": "workspace:^",
+    "@redspark/rsh-storage-domain": "workspace:^",
+    "@redspark/rsh-typert-protocol": "workspace:^",
+    "@redspark/rsh-workspace": "workspace:^"
   },
   "devDependencies": {
-    "@deepseek-ai/cordis": "workspace:^",
-    "@deepseek-ai/dsh-api-gateway": "workspace:^",
-    "@deepseek-ai/dsh-client-connection": "workspace:^",
-    "@deepseek-ai/dsh-client-store": "workspace:^",
-    "@deepseek-ai/dsh-client-test-runtime": "workspace:^",
-    "@deepseek-ai/dsh-host-directory-picker": "workspace:^",
-    "@deepseek-ai/dsh-remote-mock": "workspace:^",
-    "@deepseek-ai/dsh-session": "workspace:^",
-    "@deepseek-ai/dsh-storage-domain": "workspace:^",
-    "@deepseek-ai/dsh-typert-protocol": "workspace:^",
-    "@deepseek-ai/dsh-workspace": "workspace:^"
+    "@redspark/cordis": "workspace:^",
+    "@redspark/rsh-api-gateway": "workspace:^",
+    "@redspark/rsh-client-connection": "workspace:^",
+    "@redspark/rsh-client-store": "workspace:^",
+    "@redspark/rsh-client-test-runtime": "workspace:^",
+    "@redspark/rsh-host-directory-picker": "workspace:^",
+    "@redspark/rsh-remote-mock": "workspace:^",
+    "@redspark/rsh-session": "workspace:^",
+    "@redspark/rsh-storage-domain": "workspace:^",
+    "@redspark/rsh-typert-protocol": "workspace:^",
+    "@redspark/rsh-workspace": "workspace:^"
   }
 }

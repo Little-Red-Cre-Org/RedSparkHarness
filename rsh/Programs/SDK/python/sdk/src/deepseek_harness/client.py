@@ -553,7 +553,7 @@ class HarnessClient:
             except ImportError as exc:
                 raise FileNotFoundError(
                     "Unable to locate the bundled RedSpark Harness dsh runtime. "
-                    "Install deepseek-harness-runtime-bin."
+                    "Install redspark-harness-runtime-bin."
                 ) from exc
             base = resolve_bundled_launch_args()
         else:
@@ -562,10 +562,10 @@ class HarnessClient:
         if self.config.dsh_home is not None:
             if not self.config.dsh_home.strip():
                 raise ValueError("HarnessConfig requires a non-empty dsh_home")
-            env["DSH_HOME"] = str(Path(self.config.dsh_home).expanduser().resolve())
-        elif not env.get("DSH_HOME", "").strip():
+            env["RSH_HOME"] = str(Path(self.config.dsh_home).expanduser().resolve())
+        elif not env.get("RSH_HOME", "").strip():
             raise ValueError(
-                "HarnessConfig requires an explicit dsh_home or non-empty DSH_HOME; "
+                "HarnessConfig requires an explicit dsh_home or non-empty RSH_HOME; "
                 "the Python SDK never uses ~/.dsh implicitly"
             )
 

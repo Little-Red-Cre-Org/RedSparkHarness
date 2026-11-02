@@ -1,5 +1,5 @@
 {
-  "name": "@deepseek-ai/dsh-storage-json",
+  "name": "@redspark/rsh-storage-json",
   "description": "JSON file KV storage backend for the RedSpark Harness storage hub",
   "version": "1.0.0",
   "publishConfig": {
@@ -33,17 +33,17 @@
   ],
   "license": "MIT",
   "peerDependencies": {
-    "@deepseek-ai/cordis": "workspace:^",
-    "@deepseek-ai/schemastery": "workspace:^"
+    "@redspark/cordis": "workspace:^",
+    "@redspark/schemastery": "workspace:^"
   },
   "dependencies": {
-    "@deepseek-ai/dsh-native-runtime": "workspace:^",
+    "@redspark/rsh-native-runtime": "workspace:^",
     "zod": "^4.4.3",
-    "@deepseek-ai/dsh-storage": "workspace:^"
+    "@redspark/rsh-storage": "workspace:^"
   },
   "devDependencies": {
-    "@deepseek-ai/cordis": "workspace:^",
-    "@deepseek-ai/schemastery": "workspace:^"
+    "@redspark/cordis": "workspace:^",
+    "@redspark/schemastery": "workspace:^"
   },
   "dsh": {
     "native": {
@@ -62,10 +62,10 @@
     }
   },
   "peerDependenciesMeta": {
-    "@deepseek-ai/cordis": {
+    "@redspark/cordis": {
       "optional": true
     },
-    "@deepseek-ai/schemastery": {
+    "@redspark/schemastery": {
       "optional": true
     }
   }

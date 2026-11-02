@@ -1,18 +1,18 @@
 /** Native pi-ai Provider using the shared catalog, profiles, auth and HTTP adapter. */
-import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
+import type { NativePlugin } from '@redspark/rsh-native-runtime'
 import type { NativeModelSettings } from './model-settings.ts'
-import type { LlmDiscoveredModel, LlmModelDiscoveryRequest } from '@deepseek-ai/dsh-llm/native'
-import type {} from '@deepseek-ai/dsh-authorization/native'
-import type {} from '@deepseek-ai/dsh-deepseek-account/native'
-import { NativeAdapterModel } from '@deepseek-ai/dsh-native-model-execution/native'
-import { NativeAdapterModelDirectory } from '@deepseek-ai/dsh-native-model-execution/adapter-directory'
-import { credentialKey, credentialKeyId, credentialKeyScope } from '@deepseek-ai/dsh-credentials/native'
-import z from '@deepseek-ai/schemastery'
-import type {} from '@deepseek-ai/dsh-launch-environment/native'
-import type {} from '@deepseek-ai/dsh-attachment/native'
-import type {} from '@deepseek-ai/dsh-fs/native'
-import type { NativeSettingsScope } from '@deepseek-ai/dsh-settings-definition/native'
-import { assertUsableApiKey, LlmError, resolveImageAttachmentAccess } from '@deepseek-ai/dsh-llm/native'
+import type { LlmDiscoveredModel, LlmModelDiscoveryRequest } from '@redspark/rsh-llm/native'
+import type {} from '@redspark/rsh-authorization/native'
+import type {} from '@redspark/rsh-deepseek-account/native'
+import { NativeAdapterModel } from '@redspark/rsh-native-model-execution/native'
+import { NativeAdapterModelDirectory } from '@redspark/rsh-native-model-execution/adapter-directory'
+import { credentialKey, credentialKeyId, credentialKeyScope } from '@redspark/rsh-credentials/native'
+import z from '@redspark/schemastery'
+import type {} from '@redspark/rsh-launch-environment/native'
+import type {} from '@redspark/rsh-attachment/native'
+import type {} from '@redspark/rsh-fs/native'
+import type { NativeSettingsScope } from '@redspark/rsh-settings-definition/native'
+import { assertUsableApiKey, LlmError, resolveImageAttachmentAccess } from '@redspark/rsh-llm/native'
 import { PiAiAdapter } from './adapter.ts'
 import { NativeAccountsProvider } from './accounts.ts'
 import { CodexUsageStore } from './rate-limits.ts'
@@ -95,7 +95,7 @@ export type { NativeModelSettings } from './model-settings.ts'
 
 /** Publish the pi-ai adapter with the current native settings profiles. */
 export const plugin: NativePlugin = {
-  apiVersion: 1, name: '@deepseek-ai/dsh-llm-pi-ai', targets: ['host'],
+  apiVersion: 1, name: '@redspark/rsh-llm-pi-ai', targets: ['host'],
   requires: ['credentials', 'launchEnvironment'],
   optional: ['attachments', 'fs', 'settings', 'authorization', 'deepseekAccount'],
   provides: ['model', 'modelDirectory', 'modelSettings', 'accounts'],

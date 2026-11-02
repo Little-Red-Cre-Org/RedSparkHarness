@@ -1,7 +1,7 @@
 /**
  * Model text rendering and generic tool-call presentation.
  *
- * @module @deepseek-ai/dsh-tool-session-query/presentation
+ * @module @redspark/rsh-tool-session-query/presentation
  */
 
 import {
@@ -12,12 +12,12 @@ import {
   type SessionLineageTrace,
   type SessionRecord,
   type SessionSearchHit,
-} from '@deepseek-ai/dsh-session-query/native'
+} from '@redspark/rsh-session-query/native'
 import type {
   SessionEvent,
   SessionId,
-} from '@deepseek-ai/dsh-session/native'
-import type { GenericCallView } from '@deepseek-ai/dsh-native-tools/presentation'
+} from '@redspark/rsh-session/native'
+import type { GenericCallView } from '@redspark/rsh-native-tools/presentation'
 import { workspaceAccess } from './workspace-access.ts'
 
 type TitleView = Awaited<ReturnType<typeof workspaceAccess.readTitle>>

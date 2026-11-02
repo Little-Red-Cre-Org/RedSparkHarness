@@ -1,12 +1,12 @@
 /** Native glob and grep Consumers over selected subprocess and optional formatted-result storage. */
 import { z } from 'zod'
-import type { NativeContext, NativePlugin, NativeScope } from '@deepseek-ai/dsh-native-runtime'
-import type { NativeToolExecution, NativeValueToolContribution } from '@deepseek-ai/dsh-native-tools'
-import type {} from '@deepseek-ai/dsh-native-tools/native'
-import type {} from '@deepseek-ai/dsh-native-prompt/native'
-import type { SpillRef } from '@deepseek-ai/dsh-spill/native'
-import type {} from '@deepseek-ai/dsh-subprocess/native'
-import { MAX_TIMER_DELAY_MS } from '@deepseek-ai/dsh-timeout'
+import type { NativeContext, NativePlugin, NativeScope } from '@redspark/rsh-native-runtime'
+import type { NativeToolExecution, NativeValueToolContribution } from '@redspark/rsh-native-tools'
+import type {} from '@redspark/rsh-native-tools/native'
+import type {} from '@redspark/rsh-native-prompt/native'
+import type { SpillRef } from '@redspark/rsh-spill/native'
+import type {} from '@redspark/rsh-subprocess/native'
+import { MAX_TIMER_DELAY_MS } from '@redspark/rsh-timeout'
 import { GLOB_MAX_RESULTS, globDescription, globGuidance, GLOB_PATTERN_DESCRIPTION, buildGlobCommand, globCardPage, parseGlobArgs, renderGlobPaths } from './glob-core.ts'
 import { GREP_MAX_LINE_BYTES, GREP_MAX_MATCHES, buildGrepCommand, formatGrepMatches, formatRetainedGrep,
   matchNoun, parseGrepArgs, parseGrepMatches } from './grep-core.ts'
@@ -137,7 +137,7 @@ function grepTool(context: NativeContext, caps: Config): NativeValueToolContribu
 
 /** Each tool and its scope-aware prompt guidance drains before the selected process and storage Providers. */
 export const plugin: NativePlugin = {
-  apiVersion: 1, name: '@deepseek-ai/dsh-tool-fs-search', targets: ['host'], requires: ['tools', 'subprocess'],
+  apiVersion: 1, name: '@redspark/rsh-tool-fs-search', targets: ['host'], requires: ['tools', 'subprocess'],
   optional: ['promptSections', 'spillStore'], provides: [],
   resolve(input) {
     const config = configSchema.parse(input)

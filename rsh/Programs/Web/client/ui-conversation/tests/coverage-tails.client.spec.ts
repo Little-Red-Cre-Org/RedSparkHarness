@@ -1,4 +1,4 @@
-import { Context } from '@deepseek-ai/cordis'
+import { Context } from '@redspark/cordis'
 import { describe, expect, it } from 'vitest'
 import { apply as nodeApply } from '../src/index.ts'
 

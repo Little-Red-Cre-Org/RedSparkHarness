@@ -2,27 +2,27 @@
 import { randomUUID } from 'node:crypto'
 import React from 'react'
 import { render, type Instance } from 'ink'
-import type { NativeApplication, NativeContext, NativePlugin } from '@deepseek-ai/dsh-native-runtime'
-import type {} from '@deepseek-ai/dsh-native-session-execution/native'
-import type {} from '@deepseek-ai/dsh-native-model-execution/native'
-import { createNativeHeadlessApplication, type NativeHeadlessApplication } from '@deepseek-ai/dsh-native-headless/native'
-import { readNativeSessionHistory } from '@deepseek-ai/dsh-native-session-execution/read-history'
-import { SessionId } from '@deepseek-ai/dsh-session/native'
+import type { NativeApplication, NativeContext, NativePlugin } from '@redspark/rsh-native-runtime'
+import type {} from '@redspark/rsh-native-session-execution/native'
+import type {} from '@redspark/rsh-native-model-execution/native'
+import { createNativeHeadlessApplication, type NativeHeadlessApplication } from '@redspark/rsh-native-headless/native'
+import { readNativeSessionHistory } from '@redspark/rsh-native-session-execution/read-history'
+import { SessionId } from '@redspark/rsh-session/native'
 import { TerminalView } from './presentation.ts'
 import { TerminalController } from './controller.ts'
 import { resolveNativeTuiConfig, type Config } from './config.ts'
 import { terminalCopy } from './locale.ts'
-import type { NativeModelSelectionOperations } from '@deepseek-ai/dsh-native-model-selection/native'
-import type { NativeModelDirectory } from '@deepseek-ai/dsh-native-model-execution/model-directory'
+import type { NativeModelSelectionOperations } from '@redspark/rsh-native-model-selection/native'
+import type { NativeModelDirectory } from '@redspark/rsh-native-model-execution/model-directory'
 import { terminalModelOperations } from './models.ts'
-import type {} from '@deepseek-ai/dsh-user-questions/native'
+import type {} from '@redspark/rsh-user-questions/native'
 import { bindTerminalHumanAnswerers } from './human.ts'
-import { foldNativeAgentPresetFacts } from '@deepseek-ai/dsh-agent-presets/selection'
-import { brandString } from '@deepseek-ai/dsh-brand'
-import type { NativeRootRouteId } from '@deepseek-ai/dsh-native-session-execution/root-route'
+import { foldNativeAgentPresetFacts } from '@redspark/rsh-agent-presets/selection'
+import { brandString } from '@redspark/rsh-brand'
+import type { NativeRootRouteId } from '@redspark/rsh-native-session-execution/root-route'
 import type { TerminalPresetState } from './presets.ts'
-import type {} from '@deepseek-ai/dsh-commands/native'
-import type {} from '@deepseek-ai/dsh-skill/native'
+import type {} from '@redspark/rsh-commands/native'
+import type {} from '@redspark/rsh-skill/native'
 export { resolveNativeTuiConfig } from './config.ts'
 export type { Config } from './config.ts'
 
@@ -128,7 +128,7 @@ export class NativeTuiApplication extends TerminalController implements NativeAp
 
 /** Native terminal application installer; legacy RSH defaults remain separate. */
 export const plugin: NativePlugin = {
-  apiVersion: 1, name: '@deepseek-ai/dsh-native-tui', targets: ['host'],
+  apiVersion: 1, name: '@redspark/rsh-native-tui', targets: ['host'],
   requires: ['fs', 'sessionPersistence', 'modelExecution', 'agents', 'sessionExecution', 'activeSessions'],
   optional: ['tools', 'promptSections', 'sandboxPolicy', 'approval', 'codeRuntime', 'timeContext', 'tmuxContext', 'agentPresets', 'commands', 'skillInvocations', 'workspaceRegistry', 'agentInstructions', 'modelSelection', 'modelDirectory', 'userQuestions', 'attachments', 'requestContexts'],
   provides: ['application', 'rootExecution'],

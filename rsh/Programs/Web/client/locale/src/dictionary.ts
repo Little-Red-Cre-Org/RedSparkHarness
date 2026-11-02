@@ -1,10 +1,10 @@
 /** Pure common dictionaries and interpolation shared by native and compatibility locale consumers. */
-import type {} from '@deepseek-ai/dsh-client-ui-slots'
+import type {} from '@redspark/rsh-client-ui-slots'
 import type { CommonKey } from './locales/zh.ts'
 export { en, zh } from './locales/index.ts'
 export type { CommonKey } from './locales/zh.ts'
 
-declare module '@deepseek-ai/dsh-client-ui-slots' {
+declare module '@redspark/rsh-client-ui-slots' {
   interface LocaleNamespaceMap {
     /** Shared vocabulary consulted after an entry's own namespace. */
     common: CommonKey

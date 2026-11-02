@@ -1,5 +1,5 @@
 {
-  "name": "@deepseek-ai/dsh-acp-child",
+  "name": "@redspark/rsh-acp-child",
   "description": "Native external-subagent Provider using the fixed Native ACP profile",
   "version": "1.0.0",
   "publishConfig": { "access": "public" },
@@ -30,26 +30,26 @@
   "license": "SEE LICENSE IN LICENSE-REDSPARK-RESEARCH.txt",
   "peerDependencies": {
     "@agentclientprotocol/sdk": "1.4.0",
-    "@deepseek-ai/dsh-acp-protocol": "workspace:^",
-    "@deepseek-ai/dsh-attachment": "workspace:^",
-    "@deepseek-ai/dsh-credentials": "workspace:^",
-    "@deepseek-ai/dsh-llm": "workspace:^",
-    "@deepseek-ai/dsh-native-runtime": "workspace:^",
-    "@deepseek-ai/dsh-native-subagent": "workspace:^",
-    "@deepseek-ai/dsh-sandbox": "workspace:^",
-    "@deepseek-ai/dsh-session": "workspace:^",
-    "@deepseek-ai/dsh-subprocess": "workspace:^"
+    "@redspark/rsh-acp-protocol": "workspace:^",
+    "@redspark/rsh-attachment": "workspace:^",
+    "@redspark/rsh-credentials": "workspace:^",
+    "@redspark/rsh-llm": "workspace:^",
+    "@redspark/rsh-native-runtime": "workspace:^",
+    "@redspark/rsh-native-subagent": "workspace:^",
+    "@redspark/rsh-sandbox": "workspace:^",
+    "@redspark/rsh-session": "workspace:^",
+    "@redspark/rsh-subprocess": "workspace:^"
   },
   "devDependencies": {
     "@agentclientprotocol/sdk": "1.4.0",
-    "@deepseek-ai/dsh-acp-protocol": "workspace:^",
-    "@deepseek-ai/dsh-attachment": "workspace:^",
-    "@deepseek-ai/dsh-credentials": "workspace:^",
-    "@deepseek-ai/dsh-llm": "workspace:^",
-    "@deepseek-ai/dsh-native-runtime": "workspace:^",
-    "@deepseek-ai/dsh-native-subagent": "workspace:^",
-    "@deepseek-ai/dsh-sandbox": "workspace:^",
-    "@deepseek-ai/dsh-session": "workspace:^",
-    "@deepseek-ai/dsh-subprocess": "workspace:^"
+    "@redspark/rsh-acp-protocol": "workspace:^",
+    "@redspark/rsh-attachment": "workspace:^",
+    "@redspark/rsh-credentials": "workspace:^",
+    "@redspark/rsh-llm": "workspace:^",
+    "@redspark/rsh-native-runtime": "workspace:^",
+    "@redspark/rsh-native-subagent": "workspace:^",
+    "@redspark/rsh-sandbox": "workspace:^",
+    "@redspark/rsh-session": "workspace:^",
+    "@redspark/rsh-subprocess": "workspace:^"
   }
 }

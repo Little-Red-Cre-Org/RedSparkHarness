@@ -1,9 +1,9 @@
 /** Standard ACP updates derived from durable Native Session events. */
 import type { ContentBlock as AcpContentBlock, SessionUpdate, ToolCallContent } from '@agentclientprotocol/sdk'
-import { type Session, type SessionEvent } from '@deepseek-ai/dsh-session/native'
-import type { NativeContext } from '@deepseek-ai/dsh-native-runtime'
-import type {} from '@deepseek-ai/dsh-attachment/native'
-import type {} from '@deepseek-ai/dsh-token-meter/native'
+import { type Session, type SessionEvent } from '@redspark/rsh-session/native'
+import type { NativeContext } from '@redspark/rsh-native-runtime'
+import type {} from '@redspark/rsh-attachment/native'
+import type {} from '@redspark/rsh-token-meter/native'
 
 /** Convert durable text or a stored image into one ACP content block. */
 async function acpContent(context: NativeContext, block: SessionEvent<'assistant/message'>['data']['message']['content'][number],

@@ -7,9 +7,9 @@ import { fileURLToPath } from 'node:url'
 import type { Browser, Page } from 'playwright'
 import { chromium } from 'playwright'
 import { afterEach, describe, expect, it, onTestFailed } from 'vitest'
-import { parseSessionLog } from '@deepseek-ai/dsh-llm-replay'
-import type { SessionEvent, SessionId } from '@deepseek-ai/dsh-session'
-import type {} from '@deepseek-ai/dsh-goal'
+import { parseSessionLog } from '@redspark/rsh-llm-replay'
+import type { SessionEvent, SessionId } from '@redspark/rsh-session'
+import type {} from '@redspark/rsh-goal'
 import {
   assertFixtureInventory, captureExpandedTurnProcessAria, captureStableAria, compareOrRefreshGolden,
   launchWebScaffold, recordFixture, watchConsole, webSnapshotMode, type WebScaffold,
@@ -28,20 +28,20 @@ const COMMAND = `/goal ${PROMPT}`
 
 const PACKAGE_FILES: Readonly<Record<string, string>> = {
   'rsh/Programs/Web/client/ui-conversation/README.md': '# UI conversation\n',
-  'rsh/Programs/Web/client/ui-conversation/package.json': '{"name":"@deepseek-ai/dsh-client-ui-conversation"}\n',
+  'rsh/Programs/Web/client/ui-conversation/package.json': '{"name":"@redspark/rsh-client-ui-conversation"}\n',
   'rsh/Programs/Web/client/ui-conversation/src/client.ts': 'export {}\n',
   'rsh/Programs/Web/client/ui-chat/tests/chat-view.client.spec.tsx': 'export {}\n',
   'rsh/Engine/context/session-reference/README.md': '# Session reference\n',
-  'rsh/Engine/context/session-reference/package.json': '{"name":"@deepseek-ai/dsh-session-reference"}\n',
+  'rsh/Engine/context/session-reference/package.json': '{"name":"@redspark/rsh-session-reference"}\n',
   'rsh/Engine/context/session-reference/src/index.ts': 'export {}\n',
   'rsh/Engine/context/session-reference/src/uri.ts': 'export {}\n',
   'rsh/Engine/context/session-reference/tests/session-reference.spec.ts': 'export {}\n',
   'rsh/Engine/llm/token-meter/README.md': '# Token meter\n',
-  'rsh/Engine/llm/token-meter/package.json': '{"name":"@deepseek-ai/dsh-token-meter"}\n',
+  'rsh/Engine/llm/token-meter/package.json': '{"name":"@redspark/rsh-token-meter"}\n',
   'rsh/Engine/llm/token-meter/src/index.ts': 'export {}\n',
   'rsh/Engine/llm/token-meter/tests/token-meter.spec.ts': 'export {}\n',
   'rsh/Modules/Official/skill/skill-filesystem/README.md': '# Local skill provider\n',
-  'rsh/Modules/Official/skill/skill-filesystem/package.json': '{"name":"@deepseek-ai/dsh-skill-filesystem"}\n',
+  'rsh/Modules/Official/skill/skill-filesystem/package.json': '{"name":"@redspark/rsh-skill-filesystem"}\n',
   'rsh/Modules/Official/skill/skill-filesystem/src/index.ts': 'export {}\n',
   'rsh/Modules/Official/skill/skill-filesystem/src/invariant.ts': 'export {}\n',
   'rsh/Modules/Official/skill/skill-filesystem/tests/skill-filesystem.spec.ts': 'export {}\n',

@@ -3,7 +3,7 @@ description: "面向模型的 ralph 工具：固定前台 agent loop（智能体
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-tool-ralph
+# @redspark/rsh-tool-ralph
 
 [English](README.md) | 中文
 
@@ -46,7 +46,7 @@ kind: "package-reference"
 
 生成的[配置目录](../../../Docs/config-catalog.zh.md#deepseek-aidsh-tool-ralph)是所有 Cordis 配置字段的穷尽式真源。在 Cordis 组合中，选定的提供方必须支持结构化输出并报告 `inheritsParentContext: false`；Native profile 则会显式选择 `workflowProvider` 与 `subagentProvider`，并要求 Native Tools registry 承载结构化报告调用。
 
-Native profile 会挂载 `@deepseek-ai/dsh-tool-ralph/native`；已发布组合选择 `worker-thread` workflow Provider 与 `spawn` NativeSubagent Provider。Ralph 仍是共享 Workflow Definition 与 Subagent 执行权威的前台 Consumer。
+Native profile 会挂载 `@redspark/rsh-tool-ralph/native`；已发布组合选择 `worker-thread` workflow Provider 与 `spawn` NativeSubagent Provider。Ralph 仍是共享 Workflow Definition 与 Subagent 执行权威的前台 Consumer。
 
 -----
 

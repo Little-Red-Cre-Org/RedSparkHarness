@@ -3,7 +3,7 @@ description: "面向消费方与后端作者的统一会话历史查询服务：
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-session-query
+# @redspark/rsh-session-query
 
 [English](README.md) | 中文
 
@@ -25,7 +25,7 @@ kind: "package-reference"
 <a id="use-this-package"></a>
 ## 使用本包
 
-当 Cordis 应用代码需要读取或搜索会话历史、而不直接触碰会话服务或存储后端时，使用 `ctx.sessionQuery`。已发布组合挂载 `@deepseek-ai/dsh-session-query-sqlite`（[README](../session-query-sqlite/README.zh.md)）提供排序全文搜索。Native Host 组合可使用本包的 Cordis-free `./native` API；SQLite Native `./native` Provider 则从 `activeSessions` 与可选持久化服务提供组合查询服务。
+当 Cordis 应用代码需要读取或搜索会话历史、而不直接触碰会话服务或存储后端时，使用 `ctx.sessionQuery`。已发布组合挂载 `@redspark/rsh-session-query-sqlite`（[README](../session-query-sqlite/README.zh.md)）提供排序全文搜索。Native Host 组合可使用本包的 Cordis-free `./native` API；SQLite Native `./native` Provider 则从 `activeSessions` 与可选持久化服务提供组合查询服务。
 
 导入 `./native` 需要安装 `dsh-native-agent` peer，以解析其 turn-boundary projection Definition；安装该 peer 不会挂载 Native Provider。
 

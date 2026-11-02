@@ -3,7 +3,7 @@ description: "共享 Native request-context 类型，并由消费它的 Program 
 kind: "package-library"
 ---
 
-# @deepseek-ai/dsh-request-context-definition
+# @redspark/rsh-request-context-definition
 
 [English](README.md) | 中文
 
@@ -38,7 +38,7 @@ import type {
   NativeRequestContextRegistration,
   NativeRequestContexts,
   PreparedNativeRequestContext,
-} from '@deepseek-ai/dsh-request-context-definition'
+} from '@redspark/rsh-request-context-definition'
 ```
 
 request、provider、visibility、prepared-result 和 service 声明逐字记录在 [request-context 子系统页](../../../Docs/subsystems/request-context.zh.md)。

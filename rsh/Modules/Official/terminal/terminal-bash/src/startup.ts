@@ -1,6 +1,6 @@
 /** Shared shell bootstrap and terminal child environment. */
-import { ENCODING_PREAMBLE } from '@deepseek-ai/dsh-pwsh-local/native'
-import type { TerminalSendOperation } from '@deepseek-ai/dsh-terminal/protocol'
+import { ENCODING_PREAMBLE } from '@redspark/rsh-pwsh-local/native'
+import type { TerminalSendOperation } from '@redspark/rsh-terminal/protocol'
 import type { ShellDialect } from './config.ts'
 import { LocalPtySession } from './session.ts'
 import { CONTROLLED_PROMPT } from './sanitize.ts'
@@ -17,9 +17,9 @@ export function childEnvironment(spec: { sessionId: string; terminalId: string }
     TERM: 'dumb',
     PAGER: 'cat',
     GIT_PAGER: 'cat',
-    DSH_SHELL: '1',
-    DSH_SESSION_ID: spec.sessionId,
-    DSH_PTY_SESSION_ID: spec.terminalId,
+    RSH_SHELL: '1',
+    RSH_SESSION_ID: spec.sessionId,
+    RSH_PTY_SESSION_ID: spec.terminalId,
   }
   if (dialect === 'pwsh') {
     // pwsh ignores PS1/PROMPT_COMMAND; its prompt is installed by the startup

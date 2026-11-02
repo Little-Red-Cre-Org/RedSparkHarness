@@ -1,20 +1,20 @@
 /**
  * Caller identity, workspace authorization, and visible lineage projection.
  *
- * @module @deepseek-ai/dsh-tool-session-query/workspace-access
+ * @module @redspark/rsh-tool-session-query/workspace-access
  */
 
-import { brandString } from '@deepseek-ai/dsh-brand'
-import { HarnessError } from '@deepseek-ai/dsh-llm/native'
+import { brandString } from '@redspark/rsh-brand'
+import { HarnessError } from '@redspark/rsh-llm/native'
 import {
   type SessionHeader,
   type SessionId as SessionIdValue,
-} from '@deepseek-ai/dsh-session/native'
-import type { TurnBoundaryProjection } from '@deepseek-ai/dsh-native-agent/turn-boundary'
+} from '@redspark/rsh-session/native'
+import type { TurnBoundaryProjection } from '@redspark/rsh-native-agent/turn-boundary'
 import type {
   SessionLineageNode,
   SessionRecord,
-} from '@deepseek-ai/dsh-session-query/native'
+} from '@redspark/rsh-session-query/native'
 import { serviceBoundary } from './service-boundary.ts'
 import type { SessionQueryToolInvocation, SessionQueryToolServices } from './runtime.ts'
 

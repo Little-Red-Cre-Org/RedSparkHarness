@@ -5,12 +5,12 @@
  * plugin expects. Keeping the translations here — rather than in each plugin — is what lets an
  * unmodified shipped plugin run under either runtime.
  *
- * @module @deepseek-ai/dsh-native-persona/services
+ * @module @redspark/rsh-native-persona/services
  */
 
-import type { NativeContext, NativeScope } from '@deepseek-ai/dsh-native-runtime'
-import type { NativePromptRegistry } from '@deepseek-ai/dsh-native-prompt'
-import { PERSONA_PREFIX_SECTION, PERSONA_SUFFIX_SECTION } from '@deepseek-ai/dsh-system-prompt'
+import type { NativeContext, NativeScope } from '@redspark/rsh-native-runtime'
+import type { NativePromptRegistry } from '@redspark/rsh-native-prompt'
+import { PERSONA_PREFIX_SECTION, PERSONA_SUFFIX_SECTION } from '@redspark/rsh-system-prompt'
 
 /**
  * Order a persona prefix occupies, matching the Cordis system-prompt registry's own order for
@@ -75,6 +75,6 @@ export function personaServices(context: NativeContext): PersonaServices {
   return { systemPrompt: bridgedSystemPrompt(context.require('promptSections'), context.scope) }
 }
 
-declare module '@deepseek-ai/dsh-native-runtime' {
+declare module '@redspark/rsh-native-runtime' {
   interface NativeServices { promptSections: NativePromptRegistry }
 }

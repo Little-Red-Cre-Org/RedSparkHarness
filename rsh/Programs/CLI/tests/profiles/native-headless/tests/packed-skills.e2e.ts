@@ -7,8 +7,8 @@ import { isAbsolute, join, relative, sep } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { expect, it } from 'vitest'
 
-const PACKED_BIN = process.env.DSH_PACKED_DSH_BIN
-const CONSUMER_ROOT = process.env.DSH_PACKED_CONSUMER_ROOT
+const PACKED_BIN = process.env.RSH_PACKED_DSH_BIN
+const CONSUMER_ROOT = process.env.RSH_PACKED_CONSUMER_ROOT
 const SESSION_ID = 'packed-native-skills'
 const FIRST_TASK = '/review Apply the review skill to the requested change, then summarize its instruction.'
 const COLD_TASK = '/review Continue after restart and follow the review skill again.'
@@ -22,7 +22,7 @@ type JsonObject = Record<string, unknown>
 type PersistedSession = { readonly header: JsonObject; readonly events: readonly JsonObject[] }
 type RunResult = { readonly sessionId: string; readonly finalResponse: string; readonly events: JsonObject[] }
 type InstalledSdk = {
-  DeepSeekHarness: new (options: {
+  RedSparkHarness: new (options: {
     readonly dshBin: string
     readonly dshHome: string
     readonly patches: string[]
@@ -118,12 +118,12 @@ it.skipIf(PACKED_BIN === undefined || CONSUMER_ROOT === undefined)(
     const installedBin = await realpath(packedBin)
     const binRelative = relative(installedRoot, installedBin)
     expect(binRelative.startsWith(`..${sep}`) || isAbsolute(binRelative)).toBe(false)
-    expect(binRelative.split(sep)).toEqual(['node_modules', '@deepseek-ai', 'dsh', 'lib', 'bin.js'])
+    expect(binRelative.split(sep)).toEqual(['node_modules', '@redspark', 'dsh', 'lib', 'bin.js'])
     const consumerRequire = createRequire(join(installedRoot, 'package.json'))
-    const sdkClientPath = await realpath(consumerRequire.resolve('@deepseek-ai/dsh-sdk-client'))
+    const sdkClientPath = await realpath(consumerRequire.resolve('@redspark/rsh-sdk-client'))
     await writeFile(join(installedRoot, 'sdk-consumer.ts'), [
-      "import { DeepSeekHarness } from '@deepseek-ai/dsh-sdk-client'",
-      "const client = new DeepSeekHarness({ profile: 'sdk' })",
+      "import { RedSparkHarness } from '@redspark/rsh-sdk-client'",
+      "const client = new RedSparkHarness({ profile: 'sdk' })",
       'void client',
       '',
     ].join('\n'))
@@ -136,11 +136,11 @@ it.skipIf(PACKED_BIN === undefined || CONSUMER_ROOT === undefined)(
     const typecheck = execFileSync(process.execPath, [tsc, '-p', consumerConfig, '--noEmit', '--listFiles'], {
       cwd: installedRoot, encoding: 'utf8', stdio: 'pipe',
     })
-    expect(typecheck).not.toMatch(/node_modules[\\/]@deepseek-ai[\\/]cordis(?:[\\/]|$)/iu)
+    expect(typecheck).not.toMatch(/node_modules[\\/]@redspark[\\/]cordis(?:[\\/]|$)/iu)
     const sdkRelative = relative(installedRoot, sdkClientPath)
     expect(sdkRelative.startsWith(`..${sep}`) || isAbsolute(sdkRelative)).toBe(false)
-    expect(sdkRelative.split(sep).slice(0, 3)).toEqual(['node_modules', '@deepseek-ai', 'dsh-sdk-client'])
-    const { DeepSeekHarness } = await import(pathToFileURL(sdkClientPath).href) as InstalledSdk
+    expect(sdkRelative.split(sep).slice(0, 3)).toEqual(['node_modules', '@redspark', 'dsh-sdk-client'])
+    const { RedSparkHarness } = await import(pathToFileURL(sdkClientPath).href) as InstalledSdk
 
     const root = await mkdtemp(join(installedRoot, '.dsh-p4-skills-'))
     const home = join(root, 'home')
@@ -207,30 +207,30 @@ it.skipIf(PACKED_BIN === undefined || CONSUMER_ROOT === undefined)(
           baseURL, models: [{ id: MODEL }] } } } },
       ] }))
 
-      const childEnv: NodeJS.ProcessEnv = { ...process.env, DSH_TELEMETRY_DISABLED: '1',
+      const childEnv: NodeJS.ProcessEnv = { ...process.env, RSH_TELEMETRY_DISABLED: '1',
         PACKED_SKILLS_FIXTURE_KEY: 'packed-local-fixture-key' }
       delete childEnv.NODE_OPTIONS
       delete childEnv.NODE_PATH
       delete childEnv.DEEPSEEK_BASE_URL
       execFileSync(process.execPath, [installedBin, '--profile', 'sdk', '--dump-config'],
-        { cwd: workspace, env: { ...childEnv, DSH_HOME: home }, stdio: 'ignore' })
+        { cwd: workspace, env: { ...childEnv, RSH_HOME: home }, stdio: 'ignore' })
       const profileConfig = join(home, 'profiles', 'sdk', 'rsh.profile.json')
       const composition = JSON.parse(await readFile(profileConfig, 'utf8')) as { installations: JsonObject[] }
       composition.installations.push(
-        { id: 'request-context', plugin: '@deepseek-ai/dsh-request-context', scope: 'root' },
-        { id: 'skills', plugin: '@deepseek-ai/dsh-skill', scope: 'root' },
-        { id: 'skill-filesystem', plugin: '@deepseek-ai/dsh-skill-filesystem', scope: 'root',
+        { id: 'request-context', plugin: '@redspark/rsh-request-context', scope: 'root' },
+        { id: 'skills', plugin: '@redspark/rsh-skill', scope: 'root' },
+        { id: 'skill-filesystem', plugin: '@redspark/rsh-skill-filesystem', scope: 'root',
           config: { agentsHome: home, dshHome: home, watch: false } },
-        { id: 'tool-skill', plugin: '@deepseek-ai/dsh-tool-skill', scope: 'root' },
+        { id: 'tool-skill', plugin: '@redspark/rsh-tool-skill', scope: 'root' },
       )
       await writeFile(profileConfig, JSON.stringify(composition))
       const options = { dshBin: installedBin, dshHome: home, patches: [patch],
         cwd: workspace, provider: 'fixture' as const, model: MODEL, env: childEnv, requestTimeoutMs: 20_000 }
-      const firstHarness = new DeepSeekHarness(options)
+      const firstHarness = new RedSparkHarness(options)
       let first: RunResult
       try { first = await firstHarness.session(SESSION_ID).run(FIRST_TASK) }
       finally { await firstHarness.close() }
-      const coldHarness = new DeepSeekHarness(options)
+      const coldHarness = new RedSparkHarness(options)
       let recovery: RunResult
       try { recovery = await coldHarness.session(SESSION_ID).run(COLD_TASK) }
       finally { await coldHarness.close() }

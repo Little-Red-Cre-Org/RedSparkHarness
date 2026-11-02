@@ -4,16 +4,16 @@ import { createHash, randomUUID } from 'node:crypto'
 import { mkdir, readFile, rename, rm, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import type { Sharp } from 'sharp'
-import { ImageVariantId } from '@deepseek-ai/dsh-attachment/brand'
-import { AttachmentError } from '@deepseek-ai/dsh-attachment/error'
-import { requestImageDimensions } from '@deepseek-ai/dsh-attachment/request-projection'
+import { ImageVariantId } from '@redspark/rsh-attachment/brand'
+import { AttachmentError } from '@redspark/rsh-attachment/error'
+import { requestImageDimensions } from '@redspark/rsh-attachment/request-projection'
 import type {
   ImageMediaType,
   ImageAttachmentRef,
   ImageRequestPolicy,
   RequestImageAttachment,
   StoredImageAttachment,
-} from '@deepseek-ai/dsh-attachment/types'
+} from '@redspark/rsh-attachment/types'
 import {
   IMAGE_ENCODING_QUALITIES,
   WEBP_ENCODING_EFFORT,

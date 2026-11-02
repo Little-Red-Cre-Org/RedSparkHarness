@@ -14,7 +14,7 @@ The session ran inside the RedSpark Harness Web GUI at port 3081 while its selec
 
 The resulting actions were individually plausible but did not share one acceptance target. A source edit, a successful build, an HTTP 200, an injected boot manifest, and the user's existing page were treated as interchangeable facts.
 
-The evidence source is the persisted event log for `session-3eb796c2-5159-4686-affe-df8719f6f987`, whose header records cwd `/Users/tn.shen/Documents/deepseek-harness-gui-master/test`. Its initial request header is sequence 6; the user-facing handoff, bare-Vite launch, replacement-host launch, boot-manifest probe, and first 3081 process probe are sequences 30939, 31865, 34309, 34441, and 34681 respectively. The timeline below follows those events rather than reconstructing intent from the later report.
+The evidence source is the persisted event log for `session-3eb796c2-5159-4686-affe-df8719f6f987`, whose header records cwd `/Users/tn.shen/Documents/redspark-harness-gui-master/test`. Its initial request header is sequence 6; the user-facing handoff, bare-Vite launch, replacement-host launch, boot-manifest probe, and first 3081 process probe are sequences 30939, 31865, 34309, 34441, and 34681 respectively. The timeline below follows those events rather than reconstructing intent from the later report.
 
 ## Impact
 
@@ -39,7 +39,7 @@ Background process semantics were also bypassed with shell `&`, so job identity,
 
 ## Guardrails added
 
-- The Web launcher publishes the canonical loopback URL in the logged `app:web-surface` prompt section and the managed `$DSH_WEB_URL` environment.
+- The Web launcher publishes the canonical loopback URL in the logged `app:web-surface` prompt section and the managed `$RSH_WEB_URL` environment.
 - Production guidance requires rebuilding artifacts and verifying the existing URL after refresh. Development guidance explains that the HMR receiver is always on; `pnpm run dev:web` in the same checkout rebuilds client-plugin bundles for refresh-free reload, while shell and plain-package changes still require refresh.
 - `rsh/Programs/Web/application` standalone Vite serve mode rejects during configuration. Its subprocess test proves natural exit and instruments `Server.listen()` so a transient bind cannot pass unnoticed.
 - Layered real-path tests cover the CLI request, exact production/development prompts, shell runtime facts, same-port static replacement, source watcher rebuild, host stat polling, and browser HMR under an unchanged page identity.

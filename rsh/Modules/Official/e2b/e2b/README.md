@@ -3,7 +3,7 @@ description: "One shared remote Linux sandbox for E2B-backed file and command wo
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-e2b
+# @redspark/rsh-e2b
 
 English | [中文](README.zh.md)
 
@@ -36,14 +36,14 @@ Choose the E2B family when work should be isolated from the host machine — for
 Three settings matter: an API key (or the `E2B_API_KEY` environment variable), an absolute remote working directory, and the sandbox lifetime. A bad key, a relative working directory, or an invalid lifetime rejects startup before any remote work happens.
 
 ```yaml
-- name: '@deepseek-ai/dsh-e2b'
+- name: '@redspark/rsh-e2b'
   config:
     apiKey: <E2B API key>
     cwd: /home/user/workspace
     timeoutMs: 300000
 
-- name: '@deepseek-ai/dsh-subprocess-e2b'
-- name: '@deepseek-ai/dsh-fs-e2b'
+- name: '@redspark/rsh-subprocess-e2b'
+- name: '@redspark/rsh-fs-e2b'
 ```
 
 | Field | Default | Meaning |

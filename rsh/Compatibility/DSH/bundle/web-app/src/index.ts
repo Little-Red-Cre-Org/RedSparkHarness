@@ -1,5 +1,5 @@
 /**
- * @deepseek-ai/dsh-web-app — the browser-surface bundle's runtime glue plugin
+ * @redspark/rsh-web-app — the browser-surface bundle's runtime glue plugin
  * plus the bundle patch (`cordis.patch.yml`, declared by the `dsh.bundle.patch`
  * manifest field). The plugin owns the browser-surface glue: it resolves
  * the built frontend dist (workspace knowledge of this bundle, never user
@@ -8,7 +8,7 @@
  * variable, the process-token URL line, and the default-browser handoff. The
  * model and shell retain the clean URL. App command-line values arrive through
  * the `webStartup` service expressions in the bundle patch.
- * @module @deepseek-ai/dsh-web-app
+ * @module @redspark/rsh-web-app
  */
 
 import { spawn, type ChildProcess } from 'node:child_process'
@@ -16,16 +16,16 @@ import { createRequire } from 'node:module'
 import { dirname, join } from 'node:path'
 import { networkInterfaces } from 'node:os'
 import { fileURLToPath } from 'node:url'
-import type { Context } from '@deepseek-ai/cordis'
-import z from '@deepseek-ai/schemastery'
-import { addHarnessSourceSection } from '@deepseek-ai/dsh-app-boot'
-import type {} from '@deepseek-ai/dsh-client-connection'
-import * as FrontendStatic from '@deepseek-ai/dsh-host-frontend-static'
-import { launchedThroughSsh, launchEnvironmentOf } from '@deepseek-ai/dsh-launch-environment'
-import { scrubbedParentEnv } from '@deepseek-ai/dsh-subprocess/native'
-import type {} from '@deepseek-ai/cordis-plugin-loader'
-import type {} from '@deepseek-ai/dsh-http-routes-cordis'
-import type {} from '@deepseek-ai/dsh-shell-env'
+import type { Context } from '@redspark/cordis'
+import z from '@redspark/schemastery'
+import { addHarnessSourceSection } from '@redspark/rsh-app-boot'
+import type {} from '@redspark/rsh-client-connection'
+import * as FrontendStatic from '@redspark/rsh-host-frontend-static'
+import { launchedThroughSsh, launchEnvironmentOf } from '@redspark/rsh-launch-environment'
+import { scrubbedParentEnv } from '@redspark/rsh-subprocess/native'
+import type {} from '@redspark/cordis-plugin-loader'
+import type {} from '@redspark/rsh-http-routes-cordis'
+import type {} from '@redspark/rsh-shell-env'
 
 /** Stable Cordis plugin name. */
 export const name = 'web-app'
@@ -48,7 +48,7 @@ export interface Config {
   printUrl: boolean
   /**
    * Register the model-visible surface context (the `app:web-surface` prompt
-   * section and the `DSH_WEB_URL` bash variable). A one-shot non-interactive
+   * section and the `RSH_WEB_URL` bash variable). A one-shot non-interactive
    * layer can turn it off when its user is not in the GUI, so the
    * orientation text would be false.
    */
@@ -73,7 +73,7 @@ export interface WebRuntimeValues {
 }
 
 /** Environment variable naming the canonical local URL of this Web GUI. */
-const DSH_WEB_URL = 'DSH_WEB_URL' as const
+const RSH_WEB_URL = 'RSH_WEB_URL' as const
 
 // Display-only mirror of the webserver schema's loopback host: the address the
 // local URL always prints. Not a source of truth — the schema is.
@@ -162,10 +162,10 @@ function localWebUrl(ctx: Context): string {
 function resolveDistIndex(): string {
   const require = createRequire(import.meta.url)
   try {
-    return join(dirname(require.resolve('@deepseek-ai/dsh-web-compatibility/package.json')), 'dist', 'index.html')
+    return join(dirname(require.resolve('@redspark/rsh-web-compatibility/package.json')), 'dist', 'index.html')
   } catch {
     /* v8 ignore next 2 -- reachable only when the frontend package is absent from the checkout */
-    throw new Error('web-app: @deepseek-ai/dsh-web-compatibility is not resolvable from this composition')
+    throw new Error('web-app: @redspark/rsh-web-compatibility is not resolvable from this composition')
   }
 }
 
@@ -243,9 +243,9 @@ export function apply(ctx: Context, config: Config): void {
       runtimeCtx.shellEnv.register({
         name: 'web-runtime',
         variables: {
-          [DSH_WEB_URL]: { description: 'Canonical local URL of the RedSpark Harness Web GUI serving this session.' },
+          [RSH_WEB_URL]: { description: 'Canonical local URL of the RedSpark Harness Web GUI serving this session.' },
         },
-        resolve: () => ({ [DSH_WEB_URL]: localWebUrl(runtimeCtx) }),
+        resolve: () => ({ [RSH_WEB_URL]: localWebUrl(runtimeCtx) }),
       })
     })
   }

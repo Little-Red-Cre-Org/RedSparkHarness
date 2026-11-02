@@ -1,9 +1,9 @@
 /** Human command Definition over exact Program-owned Session transactions. */
-import type { NativeAgent } from '@deepseek-ai/dsh-native-agent'
-import type { NativeScope } from '@deepseek-ai/dsh-native-runtime'
-import type { NativeActiveSessionOwner } from '@deepseek-ai/dsh-native-session-execution'
-import type { Session } from '@deepseek-ai/dsh-session/native'
-import type { FileBlock, ImageBlock } from '@deepseek-ai/dsh-llm/native'
+import type { NativeAgent } from '@redspark/rsh-native-agent'
+import type { NativeScope } from '@redspark/rsh-native-runtime'
+import type { NativeActiveSessionOwner } from '@redspark/rsh-native-session-execution'
+import type { Session } from '@redspark/rsh-session/native'
+import type { FileBlock, ImageBlock } from '@redspark/rsh-llm/native'
 import type { CommandId } from './brand.ts'
 import type { CommandDescriptor, CommandExecution, CommandResult } from './facts.ts'
 
@@ -73,6 +73,6 @@ export interface NativeCommandOperations {
   dispatch(request: NativeCommandRequest): Promise<CommandExecution | undefined>
 }
 
-declare module '@deepseek-ai/dsh-native-runtime' {
+declare module '@redspark/rsh-native-runtime' {
   interface NativeServices { commands: NativeCommandOperations }
 }

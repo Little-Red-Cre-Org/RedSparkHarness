@@ -2,15 +2,15 @@
  * Provider-routed model-request retry policy on the agent loop's request
  * recovery extension point. Each scheduled retry is durable before its cancellable wait.
  *
- * @module @deepseek-ai/dsh-llm-retry
+ * @module @redspark/rsh-llm-retry
  */
 
-import type { Context } from '@deepseek-ai/cordis'
-import z from '@deepseek-ai/schemastery'
+import type { Context } from '@redspark/cordis'
+import z from '@redspark/schemastery'
 import { z as zod } from 'zod'
-import type { Agent, RequestErrorAction } from '@deepseek-ai/dsh-agent'
-import type {} from '@deepseek-ai/dsh-session-projection'
-import type {} from '@deepseek-ai/dsh-session-projection/types'
+import type { Agent, RequestErrorAction } from '@redspark/rsh-agent'
+import type {} from '@redspark/rsh-session-projection'
+import type {} from '@redspark/rsh-session-projection/types'
 import type { RetryId } from './brand.ts'
 import { assertEmptyRetryConfig, recoverWithRetry, retryStateKey, type RetryInternals } from './core.ts'
 
@@ -45,7 +45,7 @@ const llmRetryStateSchema: zod.ZodType<LlmRetryState> = zod.record(zod.string(),
   retry: zod.number().int().nonnegative(),
   retryId: zod.string(),
 })) as unknown as zod.ZodType<LlmRetryState>
-declare module '@deepseek-ai/dsh-session-projection/types' {
+declare module '@redspark/rsh-session-projection/types' {
   interface SessionProjectionStateMap {
     /** Retry state for the current step by provider and policy. */
     llmRetry: LlmRetryState

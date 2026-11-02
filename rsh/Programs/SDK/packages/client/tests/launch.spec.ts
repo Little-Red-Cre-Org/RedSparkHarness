@@ -58,14 +58,14 @@ describe('SDK dsh launch resolution', () => {
       patches: ['./first.yml', '../second.yml'],
       dshHome: './home',
       processCwd: './worker',
-      env: { PATH: '/bin', DSH_HOME: '/stale' },
+      env: { PATH: '/bin', RSH_HOME: '/stale' },
       initializeTimeoutMs: 123,
       requestTimeoutMs: 456,
       shutdownTimeoutMs: 789,
       disposeEofGraceMs: 12,
       disposeGraceMs: 34,
     }, caller)
-    const expectedEnvironment: NodeJS.ProcessEnv = { PATH: '/bin', DSH_HOME: join(caller, 'home') }
+    const expectedEnvironment: NodeJS.ProcessEnv = { PATH: '/bin', RSH_HOME: join(caller, 'home') }
     if (process.platform === 'win32' && process.env.SystemRoot !== undefined) {
       expectedEnvironment.SystemRoot = process.env.SystemRoot
     }
@@ -146,7 +146,7 @@ describe('SDK dsh launch resolution', () => {
     const launch: RuntimeProcessOptions = {
       command: process.execPath,
       args: [...source.nodeArgs, '--profile', 'sdk'],
-      environment: () => ({ ...process.env, DSH_HOME: home, ...source.environment }),
+      environment: () => ({ ...process.env, RSH_HOME: home, ...source.environment }),
       description: 'dsh profile "sdk" source entry',
       initializeTimeoutMs: 30_000,
       shutdownTimeoutMs: 5_000,
@@ -156,7 +156,7 @@ describe('SDK dsh launch resolution', () => {
       const initialized = await client.initialize({
         cwd: process.cwd(), provider: 'deepseek-official', model: 'deepseek-v4-flash',
       })
-      expect(initialized.serverInfo).toMatchObject({ name: 'deepseek-harness-sdk-runtime' })
+      expect(initialized.serverInfo).toMatchObject({ name: 'redspark-harness-sdk-runtime' })
     } finally {
       await client.close()
     }
@@ -192,11 +192,11 @@ describe('SDK dsh launch resolution', () => {
     expect(explicitLaunch.environment().MARKER).toBe('after')
 
     const inheritedLaunch = resolveDshLaunch({ dshBin: '/bin/dsh' })
-    process.env.DSH_SDK_LATE_ENV_TEST = 'late'
+    process.env.RSH_SDK_LATE_ENV_TEST = 'late'
     try {
-      expect(inheritedLaunch.environment().DSH_SDK_LATE_ENV_TEST).toBe('late')
+      expect(inheritedLaunch.environment().RSH_SDK_LATE_ENV_TEST).toBe('late')
     } finally {
-      delete process.env.DSH_SDK_LATE_ENV_TEST
+      delete process.env.RSH_SDK_LATE_ENV_TEST
     }
   })
 

@@ -3,7 +3,7 @@ description: "Expose bounded TypeScript or Python execution as a reversible nati
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-tool-code-runtime
+# @redspark/rsh-tool-code-runtime
 
 English | [中文](README.zh.md)
 

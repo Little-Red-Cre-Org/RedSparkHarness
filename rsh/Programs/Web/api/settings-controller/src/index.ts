@@ -4,26 +4,26 @@
  * `ctx.settings`, owned by the class below; and `credentials`, mounted from
  * here as its own plugin.
  *
- * @module @deepseek-ai/dsh-api-settings-controller
+ * @module @redspark/rsh-api-settings-controller
  */
 
 import { dirname } from 'node:path'
-import { Context } from '@deepseek-ai/cordis'
-import Schema from '@deepseek-ai/schemastery'
+import { Context } from '@redspark/cordis'
+import Schema from '@redspark/schemastery'
 // Type-only: resolves the `agentPresets` Context augmentation this controller reads.
-import type {} from '@deepseek-ai/dsh-agent-presets'
+import type {} from '@redspark/rsh-agent-presets'
 import {
   canOpenNativePath,
   openNativePath,
   openNativeTextFile,
-} from '@deepseek-ai/dsh-native-command'
-import type { SettingsDescriptor, SettingsPathOp, SettingsService } from '@deepseek-ai/dsh-settings-definition'
+} from '@redspark/rsh-native-command'
+import type { SettingsDescriptor, SettingsPathOp, SettingsService } from '@redspark/rsh-settings-definition'
 import type {
   SettingsDescribeValue, SettingsNamespaceView, SettingsPathOpView,
-} from '@deepseek-ai/dsh-settings-definition/types'
-import type {} from '@deepseek-ai/dsh-compat-settings-definition'
-import { Remote, RemoteError, TypertRemoteService } from '@deepseek-ai/dsh-typert-protocol'
-import type { JsonValue } from '@deepseek-ai/dsh-util-values'
+} from '@redspark/rsh-settings-definition/types'
+import type {} from '@redspark/rsh-compat-settings-definition'
+import { Remote, RemoteError, TypertRemoteService } from '@redspark/rsh-typert-protocol'
+import type { JsonValue } from '@redspark/rsh-util-values'
 import { z } from 'zod'
 import { CredentialsController } from './credentials.ts'
 import { AuthorizationController } from './authorization.ts'
@@ -76,7 +76,7 @@ function namespaceView(descriptor: SettingsDescriptor): SettingsNamespaceView {
   }
 }
 
-declare module '@deepseek-ai/cordis' {
+declare module '@redspark/cordis' {
   interface Context {
     /** Host owner of the `settings` Remote namespace. */
     settingsController: SettingsController
@@ -300,7 +300,7 @@ export class SettingsController extends TypertRemoteService {
     if (settings === undefined) {
       throw new RemoteError(
         'gateway/internal',
-        'settings service is absent: this deployment does not mount a settings provider (e.g. @deepseek-ai/dsh-settings-file) in its composition',
+        'settings service is absent: this deployment does not mount a settings provider (e.g. @redspark/rsh-settings-file) in its composition',
         {},
       )
     }

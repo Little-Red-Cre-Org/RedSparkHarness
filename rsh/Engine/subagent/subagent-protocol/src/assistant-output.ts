@@ -7,11 +7,11 @@
  * select the accumulated assistant text. Selection is independent of the
  * run's stop reason.
  *
- * @module @deepseek-ai/dsh-subagent/assistant-output
+ * @module @redspark/rsh-subagent/assistant-output
  */
 
-import { joinAssistantStreamText, type ContentBlock } from '@deepseek-ai/dsh-llm/native'
-import type { SessionEvent } from '@deepseek-ai/dsh-session/native'
+import { joinAssistantStreamText, type ContentBlock } from '@redspark/rsh-llm/native'
+import type { SessionEvent } from '@redspark/rsh-session/native'
 
 /**
  * Incremental fold of the selection rule, for backends that observe a child's

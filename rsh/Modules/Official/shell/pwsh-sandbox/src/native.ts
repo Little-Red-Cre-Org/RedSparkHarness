@@ -1,16 +1,16 @@
 /** Native sandboxing PowerShell Provider over managed subprocess execution. */
-import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
-import type {} from '@deepseek-ai/dsh-subprocess/native'
-import type {} from '@deepseek-ai/dsh-sandbox/native'
-import type {} from '@deepseek-ai/dsh-native-sandbox-policy/native'
-export type {} from '@deepseek-ai/dsh-pwsh-local/native'
-import { LocalPwshController, resolveConfig } from '@deepseek-ai/dsh-pwsh-local/native'
+import type { NativePlugin } from '@redspark/rsh-native-runtime'
+import type {} from '@redspark/rsh-subprocess/native'
+import type {} from '@redspark/rsh-sandbox/native'
+import type {} from '@redspark/rsh-native-sandbox-policy/native'
+export type {} from '@redspark/rsh-pwsh-local/native'
+import { LocalPwshController, resolveConfig } from '@redspark/rsh-pwsh-local/native'
 import { SandboxPwshController } from './controller.ts'
 
 /** Install PowerShell only when the process, runner, and policy Providers are present. */
 export const plugin: NativePlugin = {
   apiVersion: 1,
-  name: '@deepseek-ai/dsh-pwsh-sandbox',
+  name: '@redspark/rsh-pwsh-sandbox',
   targets: ['host'],
   requires: ['subprocess', 'sandbox', 'sandboxPolicy'],
   provides: ['shell'],

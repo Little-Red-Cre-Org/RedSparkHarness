@@ -1,11 +1,11 @@
-import type { ConversationLocation, ConversationNodeDefinition } from '@deepseek-ai/dsh-client-ui-conversation/client'
-import type { ChatConversationViewNode } from '@deepseek-ai/dsh-client-ui-chat/client'
+import type { ConversationLocation, ConversationNodeDefinition } from '@redspark/rsh-client-ui-conversation/client'
+import type { ChatConversationViewNode } from '@redspark/rsh-client-ui-chat/client'
 import { projectWorkflowState, updateAgentEnd, updateAgentStart, type WorkflowRunChatData, type WorkflowState } from '../workflow-projection.ts'
 
 export type { WorkflowRunChatData, WorkflowRunMemberData, WorkflowRunPhaseData, WorkflowRunStatus } from '../workflow-projection.ts'
 export { workflowPhaseKey } from '../workflow-projection.ts'
 
-declare module '@deepseek-ai/dsh-client-ui-chat/client' {
+declare module '@redspark/rsh-client-ui-chat/client' {
   interface ChatNodeDataMap {
     /** Durable top-level workflow run and all members that actually started. */
     'workflow-run': WorkflowRunChatData

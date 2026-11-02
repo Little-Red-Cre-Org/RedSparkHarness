@@ -1,5 +1,5 @@
 import { expect, it } from 'vitest'
-import z from '@deepseek-ai/schemastery'
+import z from '@redspark/schemastery'
 import { NativeSettings } from '../src/native.ts'
 import type { NativeSettingsSection } from '../src/native.ts'
 

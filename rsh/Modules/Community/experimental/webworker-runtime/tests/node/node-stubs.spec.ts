@@ -27,7 +27,7 @@ import * as ws from '../../src/node/external_packages/ws.ts'
 import { REPLACED_EXTERNAL_PACKAGES } from '../../src/node/external_packages/replaced-externals.ts'
 import * as os from '../../src/node/builtin_modules/implemented/os.ts'
 import * as perfHooks from '../../src/node/builtin_modules/implemented/perf_hooks.ts'
-import { DSH_HOME, DSH_TMP } from '../../src/storage/paths.ts'
+import { RSH_HOME, RSH_TMP } from '../../src/storage/paths.ts'
 
 /** Every refusal writes its message to the console before throwing; keep the run quiet. */
 const quiet = (): void => { vi.spyOn(console, 'error').mockImplementation(() => {}) }
@@ -43,7 +43,7 @@ const CALLED: [string, Record<string, unknown>, readonly string[]][] = [
   // these three need a real process, so they stay refusals.
   ['node:child_process', childProcess, ['execFileSync', 'execSync', 'fork']],
   ['node-pty', nodePty, ['spawn', 'open']],
-  ['@deepseek-ai/pi-ai', piAi, [
+  ['@redspark/pi-ai', piAi, [
     'createProvider', 'createModels', 'openAICompletionsApi', 'openAIResponsesApi', 'anthropicMessagesApi',
     'isContextOverflow', 'getSupportedThinkingLevels',
   ]],
@@ -118,8 +118,8 @@ describe('constructible-but-inert fakes', () => {
 describe('replaced external packages', () => {
   it('lists the packages the loader serves from the bundle', () => {
     expect(REPLACED_EXTERNAL_PACKAGES).not.toContain('chokidar')
-    expect(REPLACED_EXTERNAL_PACKAGES).not.toContain('@deepseek-ai/node-addon-system')
-    expect(REPLACED_EXTERNAL_PACKAGES).not.toContain('@deepseek-ai/node-addon-system/landlock-run')
+    expect(REPLACED_EXTERNAL_PACKAGES).not.toContain('@redspark/node-addon-system')
+    expect(REPLACED_EXTERNAL_PACKAGES).not.toContain('@redspark/node-addon-system/landlock-run')
     expect(REPLACED_EXTERNAL_PACKAGES).toContain('ws')
   })
 
@@ -148,7 +148,7 @@ describe('node:net address predicates', () => {
 
 describe('node:os', () => {
   it('reports the virtual platform identity and the VFS directories', () => {
-    expect([os.EOL, os.tmpdir(), os.homedir()]).toEqual(['\n', DSH_TMP, DSH_HOME])
+    expect([os.EOL, os.tmpdir(), os.homedir()]).toEqual(['\n', RSH_TMP, RSH_HOME])
     expect([os.platform(), os.type(), os.arch()]).toEqual(['linux', 'Linux', 'x64'])
     expect([os.release(), os.hostname()]).toEqual(['0.0.0-dsh-worker', 'dsh-worker'])
   })

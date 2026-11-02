@@ -1,7 +1,7 @@
 /** PowerShell confinement policy over the shared shell sandbox controller. */
-import type { ProcessSandbox, SandboxExecutionPolicy, SandboxMode } from '@deepseek-ai/dsh-sandbox/native'
-import { SandboxShellController } from '@deepseek-ai/dsh-shell-sandbox-core'
-import { LocalPwshController } from '@deepseek-ai/dsh-pwsh-local/native'
+import type { ProcessSandbox, SandboxExecutionPolicy, SandboxMode } from '@redspark/rsh-sandbox/native'
+import { SandboxShellController } from '@redspark/rsh-shell-sandbox-core'
+import { LocalPwshController } from '@redspark/rsh-pwsh-local/native'
 
 /** Policy provider selected by the active composition. */
 export interface PwshPolicy {

@@ -2,7 +2,7 @@ import { mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { expect, it, vi } from 'vitest'
-import { prepareNativeClientBundle, type NativeClientBundle } from '@deepseek-ai/dsh-native-web-assets'
+import { prepareNativeClientBundle, type NativeClientBundle } from '@redspark/rsh-native-web-assets'
 import { NativeClientReloader } from '../src/client-reload.ts'
 
 it('publishes a source edit, keeps the last good bundle on failure and drains shutdown', async () => {

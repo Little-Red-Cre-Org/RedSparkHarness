@@ -6,12 +6,12 @@ import { fileURLToPath, pathToFileURL } from 'node:url'
 import { execa } from 'execa'
 import { expect, it } from 'vitest'
 import { assertWorkspaceOutsideTemp } from '../../rsh/Scripts/snapshot-workspace-parent.ts'
-import { JsonlSessionBackend } from '@deepseek-ai/dsh-session-persistence-jsonl'
-import { SESSION_FORMAT_VERSION } from '@deepseek-ai/dsh-session/native'
-import { deriveReplayScript, parseSessionLog } from '@deepseek-ai/dsh-llm-replay'
+import { JsonlSessionBackend } from '@redspark/rsh-session-persistence-jsonl'
+import { SESSION_FORMAT_VERSION } from '@redspark/rsh-session/native'
+import { deriveReplayScript, parseSessionLog } from '@redspark/rsh-llm-replay'
 import { shippedNativeProfileComposition } from '../../rsh/Programs/CLI/src/native-profile-template.ts'
 import { formatSystemPromptSnapshot, formatToolSchemasSnapshot, normalizedSystemPrompts, normalizedToolSchemas,
-  normalizeSessionSnapshot, redactSessionSnapshotIds, sessionFixtureName } from '@deepseek-ai/dsh-session-snapshot'
+  normalizeSessionSnapshot, redactSessionSnapshotIds, sessionFixtureName } from '@redspark/rsh-session-snapshot'
 
 const root = fileURLToPath(new URL('../../', import.meta.url))
 const scene = join(root, 'snapshots/native-headless/fs-sandbox-tool-round')
@@ -35,7 +35,7 @@ it('records confined native file tools and a denied out-of-workspace write throu
   const approvals = join(home, 'approval-requests.jsonl')
   const outsidePath = resolve(workspace, '../../outside.txt')
   const links: string[] = []
-  mkdirSync(join(modules, '@deepseek-ai'), { recursive: true })
+  mkdirSync(join(modules, '@redspark'), { recursive: true })
   mkdirSync(workspace)
   writeFileSync(join(workspace, 'seed.txt'), readFileSync(join(scene, 'workspace/seed.txt'), 'utf8'))
   expect(existsSync(outsidePath)).toBe(false)
@@ -53,7 +53,7 @@ it('records confined native file tools and a denied out-of-workspace write throu
     ['dsh-native-approval', 'rsh/Modules/Official/interaction/native-approval'],
     ['dsh-tool-fs', 'rsh/Modules/Official/fs/tool-fs'],
   ] as const) {
-    const link = join(modules, '@deepseek-ai', name)
+    const link = join(modules, '@redspark', name)
     symlinkSync(join(root, path), link, 'junction')
     links.push(link)
   }
@@ -137,7 +137,7 @@ export const plugin = { apiVersion: 1, name: 'native-fs-sandbox-approval', targe
     const child = await execa(process.execPath, [
       '--import', pathToFileURL(join(root, 'rsh/Programs/CLI/tests/fixtures/deny-cordis-context-register.mjs')).href,
       join(root, 'rsh/Programs/CLI/lib/bin.js'), '--profile', 'native-headless', replayTask,
-    ], { env: { ...process.env, DSH_HOME: home }, reject: false, timeout: 30_000 })
+    ], { env: { ...process.env, RSH_HOME: home }, reject: false, timeout: 30_000 })
     expect(child.exitCode, child.stderr).toBe(0)
     expect(child.stdout).toBe('Workspace files updated; the outside write was denied.')
     expect(readFileSync(join(workspace, 'seed.txt'), 'utf8')).toBe('after\n')
@@ -192,7 +192,7 @@ export const plugin = { apiVersion: 1, name: 'native-fs-sandbox-approval', targe
       [join(scene, 'tool-schemas.expected.json')]: formatToolSchemasSnapshot(schemas[0], schemas.slice(1)),
     }
     for (const [path, value] of Object.entries(output)) {
-      if (process.env.DSH_SNAPSHOT === 'refresh') writeFileSync(path, value)
+      if (process.env.RSH_SNAPSHOT === 'refresh') writeFileSync(path, value)
       else expect(value).toBe(readFileSync(path, 'utf8'))
     }
     expect(readFileSync(join(workspace, 'seed.txt'), 'utf8')).toBe(readFileSync(join(scene, 'workspace.expected/seed.txt'), 'utf8'))

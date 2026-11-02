@@ -3,7 +3,7 @@ description: "面向选择、组合或排查自动 Goal Round 的用户与维护
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-goal-round-driver
+# @redspark/rsh-goal-round-driver
 
 [English](README.md) | 中文
 
@@ -35,13 +35,13 @@ kind: "package-reference"
 
 ```yaml
 - id: goal
-  name: '@deepseek-ai/dsh-goal'
+  name: '@redspark/rsh-goal'
 
 - id: tool-goal
-  name: '@deepseek-ai/dsh-tool-goal'
+  name: '@redspark/rsh-tool-goal'
 
 - id: goal-round-driver
-  name: '@deepseek-ai/dsh-goal-round-driver'
+  name: '@redspark/rsh-goal-round-driver'
 ```
 
 `maxGoalRounds` 属于 goal 定义，面向模型的阻塞阈值属于 `dsh-tool-goal`；在驱动器中重复任一数值都可能产生分歧策略。

@@ -3,7 +3,7 @@ description: "The Native Codex app-server product module for detached external s
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-codex-app-server
+# @redspark/rsh-codex-app-server
 
 English | [中文](README.zh.md)
 
@@ -35,10 +35,10 @@ Run a one-shot text delegation in a fresh Codex app-server thread and return its
 
 Mount the module in a Native Host composition that provides `childConnection`. The selected Native Subagent provider names the instance; this module registers that name as its external child driver.
 
-The Host composition must provide `@deepseek-ai/dsh-llm` and `@deepseek-ai/dsh-native-subagent` as required peers at compatible versions in the same Host dependency graph.
+The Host composition must provide `@redspark/rsh-llm` and `@redspark/rsh-native-subagent` as required peers at compatible versions in the same Host dependency graph.
 
 ```yaml
-- name: '@deepseek-ai/dsh-codex-app-server'
+- name: '@redspark/rsh-codex-app-server'
   config:
     name: codex
     permissionMode: never

@@ -3,7 +3,7 @@
 
 # Shared-instance dependency graph
 
-Peer dependencies among the `@deepseek-ai/dsh-*` harness packages. A peer means the consumer requires a shared instance; ordinary runtime dependencies and development-only relationships are not shown. The graph is grouped by logical package groups derived from the RSH physical tree. An edge `a --> b` means package `a` has package `b` as a peer. Names omit the `@deepseek-ai/dsh-` prefix.
+Peer dependencies among the `@redspark/rsh-*` harness packages. A peer means the consumer requires a shared instance; ordinary runtime dependencies and development-only relationships are not shown. The graph is grouped by logical package groups derived from the RSH physical tree. An edge `a --> b` means package `a` has package `b` as a peer. Names omit the `@redspark/rsh-` prefix.
 
 ```mermaid
 flowchart TD

@@ -2,7 +2,7 @@ import { expect, it } from 'vitest'
 import type {
   NativeExternalJsonValue,
   NativeExternalSubagentModelOperations,
-} from '@deepseek-ai/dsh-native-subagent/native'
+} from '@redspark/rsh-native-subagent/native'
 import {
   createCodexDynamicToolCatalog,
   parseCodexResponsesToolCalls,

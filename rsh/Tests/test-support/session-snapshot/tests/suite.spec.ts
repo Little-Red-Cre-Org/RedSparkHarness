@@ -102,7 +102,7 @@ const REPLAY_SCENARIOS: Scenario[] = [
     hasModelTurn: true,
     recorded: true,
     headerClass: 'main',
-    env: { DSH_PERMISSION_MODE: 'never' },
+    env: { RSH_PERMISSION_MODE: 'never' },
     configPath: AGENT.configPath,
     workspaceParent: tmpdir(),
     pinsChildToolSchemas: [1],

@@ -1,6 +1,6 @@
 /** Explicit native Web page entry; the legacy Loader is loaded only by index.html. */
-import '@deepseek-ai/dsh-client-web/base.css'
-import { BootPage } from '@deepseek-ai/dsh-client-web/boot-page'
+import '@redspark/rsh-client-web/base.css'
+import { BootPage } from '@redspark/rsh-client-web/boot-page'
 import { bootNativeClientEntry } from './native-entry.ts'
 
 const container = document.getElementById('root')

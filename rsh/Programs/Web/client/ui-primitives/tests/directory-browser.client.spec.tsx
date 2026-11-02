@@ -2,8 +2,8 @@
 /** The directory browser's volume picker: a host with several roots is crossable. */
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, expect, it, vi } from 'vitest'
-import { DirectoryBrowser } from '@deepseek-ai/dsh-client-ui-primitives'
-import type { DirectoryBrowserEntry, DirectoryBrowserListing } from '@deepseek-ai/dsh-client-ui-primitives'
+import { DirectoryBrowser } from '@redspark/rsh-client-ui-primitives'
+import type { DirectoryBrowserEntry, DirectoryBrowserListing } from '@redspark/rsh-client-ui-primitives'
 
 afterEach(cleanup)
 

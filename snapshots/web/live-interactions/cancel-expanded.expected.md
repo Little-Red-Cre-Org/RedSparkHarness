@@ -23,10 +23,10 @@
 - button "Thought for a while" [expanded]:
   - text: Thought for a while
   - img
-- button "Context injection @deepseek-ai/dsh-system-prompt":
+- button "Context injection @redspark/rsh-system-prompt":
   - img
   - img
-  - text: Context injection @deepseek-ai/dsh-system-prompt
+  - text: Context injection @redspark/rsh-system-prompt
 - paragraph: partial
 - text: Stopped
 - button "Copy":

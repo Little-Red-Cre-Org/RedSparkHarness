@@ -3,7 +3,7 @@ description: "Share the Native tmux-context service types between an application
 kind: "package-library"
 ---
 
-# @deepseek-ai/dsh-tmux-context-definition
+# @redspark/rsh-tmux-context-definition
 
 English | [中文](README.zh.md)
 
@@ -34,7 +34,7 @@ Use the Definition from a Native application or Provider that shares the `tmuxCo
 Import the request and service types from the package root. The service receives the exact Session, active turn and step, and cancellation signal; `seed()` and `record()` follow the owning application's loaded and committed event sequence.
 
 ```ts
-import type { NativeTmuxContext, NativeTmuxContextRequest } from '@deepseek-ai/dsh-tmux-context-definition'
+import type { NativeTmuxContext, NativeTmuxContextRequest } from '@redspark/rsh-tmux-context-definition'
 ```
 
 The package exports [`NativeTmuxContextRequest` and `NativeTmuxContext`](../../../Docs/subsystems/tmux-context.md), where the source declarations and JSDoc are documented verbatim.

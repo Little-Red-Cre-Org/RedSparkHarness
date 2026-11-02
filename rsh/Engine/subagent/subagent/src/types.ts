@@ -6,18 +6,18 @@
  * continuation host in `./continuation.ts` — so this module stays the published
  * surface rather than a bag of everything type-shaped.
  *
- * @module @deepseek-ai/dsh-subagent/types
+ * @module @redspark/rsh-subagent/types
  */
 
-import type { Agent, AgentOptions } from '@deepseek-ai/dsh-agent'
-import type { Branded } from '@deepseek-ai/dsh-brand'
-import type { ContentBlock, MessageId } from '@deepseek-ai/dsh-llm'
-import type { SessionEvent, SessionId } from '@deepseek-ai/dsh-session'
-import type { SubagentStopReason } from '@deepseek-ai/dsh-subagent-protocol'
-import type { ObjectJsonSchema, ToolRestriction } from '@deepseek-ai/dsh-tools'
+import type { Agent, AgentOptions } from '@redspark/rsh-agent'
+import type { Branded } from '@redspark/rsh-brand'
+import type { ContentBlock, MessageId } from '@redspark/rsh-llm'
+import type { SessionEvent, SessionId } from '@redspark/rsh-session'
+import type { SubagentStopReason } from '@redspark/rsh-subagent-protocol'
+import type { ObjectJsonSchema, ToolRestriction } from '@redspark/rsh-tools'
 import type { SubagentDescriptorData } from './descriptor.ts'
 
-export type { SubagentStopReason, SubagentStopReasonMap } from '@deepseek-ai/dsh-subagent-protocol'
+export type { SubagentStopReason, SubagentStopReasonMap } from '@redspark/rsh-subagent-protocol'
 
 /** Identifies one accepted subagent run across its lifecycle event pair. */
 export type SubagentRunId = Branded<'SubagentRunId'>

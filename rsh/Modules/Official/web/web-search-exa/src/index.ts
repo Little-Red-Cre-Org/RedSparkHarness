@@ -2,12 +2,12 @@
  * Exa-backed `WebSearchProvider` plugin. It contributes to the `ctx.web`
  * registry without owning the service.
  *
- * @module @deepseek-ai/dsh-web-search-exa
+ * @module @redspark/rsh-web-search-exa
  */
 
-import type { Context } from '@deepseek-ai/cordis'
-import { launchEnvironmentOf } from '@deepseek-ai/dsh-launch-environment'
-import type {} from '@deepseek-ai/dsh-web'
+import type { Context } from '@redspark/cordis'
+import { launchEnvironmentOf } from '@redspark/rsh-launch-environment'
+import type {} from '@redspark/rsh-web'
 import { ExaSearchProvider } from './provider.ts'
 import { resolveExaOptions, type Config } from './config.ts'
 

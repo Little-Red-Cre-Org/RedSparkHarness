@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 /** Inspect the public Claude Code Bundle composition without invoking the product. */
 
-import { resolveConfigPath } from '@deepseek-ai/dsh-app-boot'
-import type {} from '@deepseek-ai/dsh-subagent'
-import type {} from '@deepseek-ai/dsh-tools'
+import { resolveConfigPath } from '@redspark/rsh-app-boot'
+import type {} from '@redspark/rsh-subagent'
+import type {} from '@redspark/rsh-tools'
 import { bootProductionProfile } from '../../../../../../../Tests/test-support/loader-smoke/tests/fixtures/production-profile.ts'
 
 const configPath = process.argv[2]

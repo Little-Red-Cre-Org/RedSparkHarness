@@ -14,7 +14,7 @@ Web agent 修改了 GUI 源码，却不知道当前会话对应哪个 URL、由�
 
 由此产生的各个动作单看都合理，却没有指向同一个验收目标。源码修改、成功构建、HTTP 200、注入的启动 manifest（元数据清单）和用户原本打开的页面，被当成了可以相互替代的事实。
 
-证据源是 `session-3eb796c2-5159-4686-affe-df8719f6f987` 的持久化事件日志，其头部记录的 cwd 为 `/Users/tn.shen/Documents/deepseek-harness-gui-master/test`。初始请求头位于序列 6；面向用户的交接、裸 Vite 启动、替代宿主启动、启动 manifest 探测，以及首次探测 3081 进程，分别位于序列 30939、31865、34309、34441 和 34681。下方时间线以这些事件为依据，而不是根据后续报告反推意图。
+证据源是 `session-3eb796c2-5159-4686-affe-df8719f6f987` 的持久化事件日志，其头部记录的 cwd 为 `/Users/tn.shen/Documents/redspark-harness-gui-master/test`。初始请求头位于序列 6；面向用户的交接、裸 Vite 启动、替代宿主启动、启动 manifest 探测，以及首次探测 3081 进程，分别位于序列 30939、31865、34309、34441 和 34681。下方时间线以这些事件为依据，而不是根据后续报告反推意图。
 
 ## 影响
 
@@ -39,7 +39,7 @@ agent 还通过 shell `&` 绕过了后台进程语义，因此任务身份、完
 
 ## 已添加的防护措施
 
-- Web 启动器在记录到日志的 `app:web-surface` 提示词区段和受管的 `$DSH_WEB_URL` 环境变量中发布规范环回 URL。
+- Web 启动器在记录到日志的 `app:web-surface` 提示词区段和受管的 `$RSH_WEB_URL` 环境变量中发布规范环回 URL。
 - 生产指南要求重新构建产物，并在刷新后验证既有 URL。开发指南说明 HMR 接收端始终开启；同一源码检出目录中的 `pnpm run dev:web` 会重新构建客户端插件 bundle，实现免刷新的重载，而 Web shell 和普通包的改动仍然需要刷新页面。
 - `rsh/Programs/Web/application` 的独立 Vite 服务模式会在配置阶段拒绝启动。其子进程测试验证进程自然退出，并插桩 `Server.listen()`，确保短暂绑定端口也不会漏检。
 - 分层的真实路径测试覆盖 CLI（命令行界面）请求、精确的生产／开发模式提示词、shell 运行时事实、同端口静态产物替换、源码 watcher 重建、宿主 stat 轮询，以及页面 identity 不变的浏览器 HMR。

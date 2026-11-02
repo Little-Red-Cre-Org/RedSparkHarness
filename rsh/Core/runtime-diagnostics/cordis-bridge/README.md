@@ -3,7 +3,7 @@ description: "A Native activation can host one Cordis plugin by creating a Cordi
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-cordis-bridge
+# @redspark/rsh-cordis-bridge
 
 English | [中文](README.zh.md)
 
@@ -23,7 +23,7 @@ English | [中文](README.zh.md)
 
 `hostCordisPlugin` takes the Cordis plugin, its configuration, and the service objects it may read. `nativePluginForCordis` wraps that host as a Native plugin. `requires` must match the package native manifest.
 
-The package owns the Cordis context, not the services. A caller translates the Native services its Cordis plugin reads and hands the translated set to the host; `@deepseek-ai/dsh-native-persona` publishes the persona translation.
+The package owns the Cordis context, not the services. A caller translates the Native services its Cordis plugin reads and hands the translated set to the host; `@redspark/rsh-native-persona` publishes the persona translation.
 
 <a id="model-experience"></a>
 ## Model Experience

@@ -750,7 +750,7 @@ interface LlmCallConfigAdapterDefaults {
 
 [协议参考](../deepseek-llm-api-wire-extensions.zh.md)定义确切的请求标头、扩展事务、字段版本和接收方义务。随附组合会将 [`dsh_session_log`](../../Modules/Official/llm/session-log-deepseek/README.zh.md) 注册为无损增量权威日志后缀，并将 [`dsh_plugin_packages`](../../Modules/Official/llm/plugin-package-inventory-deepseek/README.zh.md) 注册为完整存活 Loader 包集合。这些字段仍位于模型消息之外，也不会进入 pi-ai 适配器路径。
 
-Native Host 配置通过独立的 `@deepseek-ai/dsh-deepseek-llm-api-extensions/native` 入口使用扩展；该入口提供显式作用域的 `deepseekLlmApiExtensions` 服务。`llm-deepseek` 会将此服务声明为可选，因此未安装 Native 贡献 Provider 时模型调用仍可运行。存在 `activeSessions` 时，匹配请求 `sessionId` 会选择该所有者的 Agent 作用域；否则 Provider 查找使用模型安装作用域。Native 入口是显式 Host 包子路径；随附 profile 继续组合 Cordis 入口。
+Native Host 配置通过独立的 `@redspark/rsh-deepseek-llm-api-extensions/native` 入口使用扩展；该入口提供显式作用域的 `deepseekLlmApiExtensions` 服务。`llm-deepseek` 会将此服务声明为可选，因此未安装 Native 贡献 Provider 时模型调用仍可运行。存在 `activeSessions` 时，匹配请求 `sessionId` 会选择该所有者的 Agent 作用域；否则 Provider 查找使用模型安装作用域。Native 入口是显式 Host 包子路径；随附 profile 继续组合 Cordis 入口。
 
 ```ts type-equiv
 /** Scoped Native API for registering and preparing DeepSeek request fields. */

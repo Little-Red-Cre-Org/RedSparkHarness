@@ -6,7 +6,7 @@ import type {
   SessionId, SessionSearchItem,
   SubagentCatalog, SubagentInterruptReceipt, SubagentPromptReceipt,
   WorkspaceId, WorkspaceView,
-} from '@deepseek-ai/dsh-api-remotes/client'
+} from '@redspark/rsh-api-remotes/client'
 import type {
   SessionAddress,
   SessionAssistantStreamBaseline,
@@ -19,14 +19,14 @@ import type {
   SessionProjectionBaseline,
   SessionSelectModelRequest,
   SessionSelectModelValue,
-} from '@deepseek-ai/dsh-api-session-controller/types'
-import type { WorkspaceRemote } from '@deepseek-ai/dsh-api-workspace-controller/client'
-import type { WorkspaceFollowFrame } from '@deepseek-ai/dsh-api-workspace-controller/types'
-import type { RemoteFailure, RemoteResult } from '@deepseek-ai/dsh-typert-protocol'
+} from '@redspark/rsh-api-session-controller/types'
+import type { WorkspaceRemote } from '@redspark/rsh-api-workspace-controller/client'
+import type { WorkspaceFollowFrame } from '@redspark/rsh-api-workspace-controller/types'
+import type { RemoteFailure, RemoteResult } from '@redspark/rsh-typert-protocol'
 import {
   RemoteStream,
   type RemoteStreamOptions,
-} from '@deepseek-ai/dsh-api-gateway/client'
+} from '@redspark/rsh-api-gateway/client'
 import type { SessionRemotes } from '../src/client/sessions/remotes.ts'
 import { followSnapshot, pageThrough } from './remote/history.client.ts'
 

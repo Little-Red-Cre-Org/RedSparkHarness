@@ -175,7 +175,7 @@ function replaceSpanTexts(markdown: string, spans: MarkdownSpan[], replacements:
 }
 
 function maskCodeSpans(markdown: string, spans: MarkdownSpan[]): string {
-  return replaceSpanTexts(markdown, spans, new Map(spans.map(span => [span.index, `DSH_TRANSLATION_CODE_${span.index}\n`])))
+  return replaceSpanTexts(markdown, spans, new Map(spans.map(span => [span.index, `RSH_TRANSLATION_CODE_${span.index}\n`])))
 }
 
 /**

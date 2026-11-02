@@ -1,17 +1,17 @@
 /** Native official DeepSeek Provider over the existing fetch/SSE adapter and shared configuration. */
-import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
-import { NativeAdapterModel } from '@deepseek-ai/dsh-native-model-execution/native'
-import { NativeAdapterModelDirectory } from '@deepseek-ai/dsh-native-model-execution/adapter-directory'
-import type {} from '@deepseek-ai/dsh-deepseek-llm-api-extensions/native'
-import type { NativeDeepSeekLlmApiExtensions } from '@deepseek-ai/dsh-deepseek-llm-api-extensions/native'
-import type { NativeActiveSessionOperations } from '@deepseek-ai/dsh-native-session-execution/active-session-protocol'
-import type {} from '@deepseek-ai/dsh-credentials/native'
-import type {} from '@deepseek-ai/dsh-launch-environment/native'
-import type {} from '@deepseek-ai/dsh-attachment/native'
-import type {} from '@deepseek-ai/dsh-fs/native'
-import { assertUsableApiKey, LlmError, resolveImageAttachmentAccess } from '@deepseek-ai/dsh-llm/native'
-import { getOrCreateAnonymousUserId } from '@deepseek-ai/dsh-anonymous-user-id'
-import type { DeepSeekLlmApiExtensionRequest } from '@deepseek-ai/dsh-deepseek-llm-api-extensions/types'
+import type { NativePlugin } from '@redspark/rsh-native-runtime'
+import { NativeAdapterModel } from '@redspark/rsh-native-model-execution/native'
+import { NativeAdapterModelDirectory } from '@redspark/rsh-native-model-execution/adapter-directory'
+import type {} from '@redspark/rsh-deepseek-llm-api-extensions/native'
+import type { NativeDeepSeekLlmApiExtensions } from '@redspark/rsh-deepseek-llm-api-extensions/native'
+import type { NativeActiveSessionOperations } from '@redspark/rsh-native-session-execution/active-session-protocol'
+import type {} from '@redspark/rsh-credentials/native'
+import type {} from '@redspark/rsh-launch-environment/native'
+import type {} from '@redspark/rsh-attachment/native'
+import type {} from '@redspark/rsh-fs/native'
+import { assertUsableApiKey, LlmError, resolveImageAttachmentAccess } from '@redspark/rsh-llm/native'
+import { getOrCreateAnonymousUserId } from '@redspark/rsh-anonymous-user-id'
+import type { DeepSeekLlmApiExtensionRequest } from '@redspark/rsh-deepseek-llm-api-extensions/types'
 import { DeepSeekAdapter } from './adapter.ts'
 import { Config, resolveAdapterOptions } from './config.ts'
 
@@ -19,7 +19,7 @@ const PROVIDER = 'deepseek-official'
 
 /** Publish the actual official adapter with one installation-captured configuration. */
 export const plugin: NativePlugin = {
-  apiVersion: 1, name: '@deepseek-ai/dsh-llm-deepseek', targets: ['host'],
+  apiVersion: 1, name: '@redspark/rsh-llm-deepseek', targets: ['host'],
   requires: ['credentials', 'launchEnvironment'],
   optional: ['attachments', 'fs', 'activeSessions', 'deepseekLlmApiExtensions'], provides: ['model', 'modelDirectory'],
   resolve(input) {
@@ -38,7 +38,7 @@ export const plugin: NativePlugin = {
       const fs = context.optional('fs')
       const extensions: NativeDeepSeekLlmApiExtensions | undefined = context.optional('deepseekLlmApiExtensions')
       const options = resolveAdapterOptions(config, environment)
-      const home = environment.get('DSH_HOME')
+      const home = environment.get('RSH_HOME')
       const adapter = new DeepSeekAdapter({
         options: () => options,
         async resolveApiKey(connection) {
@@ -47,7 +47,7 @@ export const plugin: NativePlugin = {
           if (hit === undefined) throw new LlmError(`llm-deepseek: no API key for provider route "${PROVIDER}"; set ${connection.apiKeyEnv} in the credential store or launch environment`, 'MISSING_CREDENTIAL')
           return assertUsableApiKey(hit.value, 'llm-deepseek', connection.apiKeyEnv)
         },
-        resolveUserId: () => getOrCreateAnonymousUserId({ env: { ...home === undefined ? {} : { DSH_HOME: home.value } } }),
+        resolveUserId: () => getOrCreateAnonymousUserId({ env: { ...home === undefined ? {} : { RSH_HOME: home.value } } }),
         resolveAttachments: () => attachments,
         resolveImageAccess: (store, ref) => resolveImageAttachmentAccess(store, hostPath => fs?.processPathFromHostPath(hostPath), ref),
         prepareExtensions: (request: DeepSeekLlmApiExtensionRequest) => {

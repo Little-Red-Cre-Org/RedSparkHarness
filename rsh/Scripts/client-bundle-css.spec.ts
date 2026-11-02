@@ -16,9 +16,9 @@ interface CssPlugin {
 
 function cssPlugin(name: 'dsh-css-modules-inline' | 'dsh-css-global-inline' | 'dsh-css-text-inline'): CssPlugin {
   const configs = clientBundle(
-    '@deepseek-ai/dsh-client-test',
+    '@redspark/rsh-client-test',
     ['lib/types/index.js', 'lib/types/invariant.js'],
-  )({ env: { DSH_BUILD_FACE: 'client' } })
+  )({ env: { RSH_BUILD_FACE: 'client' } })
   const client = configs.find(config => config.platform === 'browser')
   if (client === undefined) throw new Error('client config missing')
   const plugins = (client as { plugins: CssPlugin[] }).plugins
@@ -28,8 +28,8 @@ function cssPlugin(name: 'dsh-css-modules-inline' | 'dsh-css-global-inline' | 'd
 }
 
 function staticLinkedCssPlugin(): CssPlugin {
-  const configs = staticLinkedLeaf('@deepseek-ai/dsh-client-test-native', ['lib/types/native.js'])({
-    env: { DSH_BUILD_FACE: 'client' },
+  const configs = staticLinkedLeaf('@redspark/rsh-client-test-native', ['lib/types/native.js'])({
+    env: { RSH_BUILD_FACE: 'client' },
   })
   const plugins = (configs[0] as { plugins: CssPlugin[] }).plugins
   const plugin = plugins.find(candidate => candidate.name === 'dsh-css-text-inline')

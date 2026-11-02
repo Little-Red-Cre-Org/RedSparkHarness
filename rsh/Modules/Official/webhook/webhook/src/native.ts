@@ -1,22 +1,22 @@
 /** Native trusted Webhook rules with ordinary root Session execution. */
 import { randomUUID } from 'node:crypto'
 import { isAbsolute } from 'node:path'
-import { deepFreeze, snapshotJsonValue } from '@deepseek-ai/dsh-util-values'
-import { boundContextSummary, createUserMessage } from '@deepseek-ai/dsh-llm/native'
-import { SessionId } from '@deepseek-ai/dsh-session/native'
-import { normalizeSessionTitle } from '@deepseek-ai/dsh-session-title/normalize'
-import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
-import type { NativeActiveSessionOwner, NativeRootExecutionOperations, NativeRootRouteId } from '@deepseek-ai/dsh-native-session-execution'
-import type { NativeAgentPresetOperations } from '@deepseek-ai/dsh-agent-presets/native'
-import type { NativeModelDirectory } from '@deepseek-ai/dsh-native-model-execution/model-directory'
-import type { NativeModelSelectionOperations } from '@deepseek-ai/dsh-native-model-selection/native'
-import type { NativePermissionPresetOperations } from '@deepseek-ai/dsh-permission-presets/native-definition'
-import type { WorkspaceRegistryRuntime } from '@deepseek-ai/dsh-workspace/native'
+import { deepFreeze, snapshotJsonValue } from '@redspark/rsh-util-values'
+import { boundContextSummary, createUserMessage } from '@redspark/rsh-llm/native'
+import { SessionId } from '@redspark/rsh-session/native'
+import { normalizeSessionTitle } from '@redspark/rsh-session-title/normalize'
+import type { NativePlugin } from '@redspark/rsh-native-runtime'
+import type { NativeActiveSessionOwner, NativeRootExecutionOperations, NativeRootRouteId } from '@redspark/rsh-native-session-execution'
+import type { NativeAgentPresetOperations } from '@redspark/rsh-agent-presets/native'
+import type { NativeModelDirectory } from '@redspark/rsh-native-model-execution/model-directory'
+import type { NativeModelSelectionOperations } from '@redspark/rsh-native-model-selection/native'
+import type { NativePermissionPresetOperations } from '@redspark/rsh-permission-presets/native-definition'
+import type { WorkspaceRegistryRuntime } from '@redspark/rsh-workspace/native'
 import type { WebhookRuleId } from './brand.ts'
 import type { NativeWebhookRuleOperations } from './native-definition.ts'
 import type { VerifiedWebhookDelivery, WebhookRule, WebhookSessionRequest } from './types.ts'
-import type {} from '@deepseek-ai/dsh-permission-presets/native-definition'
-import type {} from '@deepseek-ai/dsh-session-title/types'
+import type {} from '@redspark/rsh-permission-presets/native-definition'
+import type {} from '@redspark/rsh-session-title/types'
 import type {} from './types.ts'
 
 interface AnyRule {
@@ -354,7 +354,7 @@ export class NativeWebhookRuleRegistry implements NativeWebhookRuleOperations {
 /** Native provider that exposes the one trusted-rule registry over selected root authorities. */
 export const plugin: NativePlugin = {
   apiVersion: 1,
-  name: '@deepseek-ai/dsh-webhook',
+  name: '@redspark/rsh-webhook',
   targets: ['host'],
   requires: ['rootExecution', 'workspaceRegistry', 'agentPresets', 'permissionPresets'],
   optional: ['modelSelection', 'modelDirectory'],

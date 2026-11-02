@@ -1,11 +1,11 @@
 /** Cordis-free state-fold and checkpoint algorithms shared by both registries. */
 
 import type { ZodType } from 'zod'
-import { SessionLogOffset, SessionSeq } from '@deepseek-ai/dsh-session/native'
-import type { Session, SessionEvent, SessionHeader, SessionSeqCursor } from '@deepseek-ai/dsh-session/native'
+import { SessionLogOffset, SessionSeq } from '@redspark/rsh-session/native'
+import type { Session, SessionEvent, SessionHeader, SessionSeqCursor } from '@redspark/rsh-session/native'
 
-import type { SessionProjectionMap, SessionProjectionStateMap } from '@deepseek-ai/dsh-session-projection/types'
-import type { ProjectionDefinition } from '@deepseek-ai/dsh-session-projection/definition'
+import type { SessionProjectionMap, SessionProjectionStateMap } from '@redspark/rsh-session-projection/types'
+import type { ProjectionDefinition } from '@redspark/rsh-session-projection/definition'
 
 /**
  * Change-feed listener: one unit's raw `view` result changed by `Object.is`

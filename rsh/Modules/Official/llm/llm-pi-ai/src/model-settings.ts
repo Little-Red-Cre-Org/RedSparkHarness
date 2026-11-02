@@ -1,6 +1,6 @@
 /** Native settings metadata and discovery service for the pi-ai adapter. */
-import type { LlmConfigurableProvider, LlmDiscoveredModel, LlmModelDiscoveryRequest } from '@deepseek-ai/dsh-llm/native'
-import type {} from '@deepseek-ai/dsh-native-runtime'
+import type { LlmConfigurableProvider, LlmDiscoveredModel, LlmModelDiscoveryRequest } from '@redspark/rsh-llm/native'
+import type {} from '@redspark/rsh-native-runtime'
 
 /** Settings-page model operations owned by the selected pi-ai adapter. */
 export interface NativeModelSettings {
@@ -25,7 +25,7 @@ export interface NativeModelSettings {
   ): Promise<readonly LlmDiscoveredModel[]>
 }
 
-declare module '@deepseek-ai/dsh-native-runtime' {
+declare module '@redspark/rsh-native-runtime' {
   interface NativeServices {
     /** Model-page provider configuration and discovery for this adapter. */
     modelSettings: NativeModelSettings

@@ -1,5 +1,5 @@
 /** Owned asynchronous policy registrations, exactly-once waterfall delegation and surrounding execution. */
-import type { NativeContributions, NativeScope } from '@deepseek-ai/dsh-native-runtime'
+import type { NativeContributions, NativeScope } from '@redspark/rsh-native-runtime'
 
 /** One captured policy whose removal cancels and drains its accepted operations. */
 export interface AsyncPolicyRegistration<T> {

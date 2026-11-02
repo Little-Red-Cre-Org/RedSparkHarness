@@ -1,5 +1,5 @@
 {
-  "name": "@deepseek-ai/dsh-spill-policy",
+  "name": "@redspark/rsh-spill-policy",
   "description": "Tool-result spill policy for the RedSpark Harness — replaces oversized plain-text tool results with a retained preview plus a spill-file path (no service API)",
   "version": "1.0.0",
   "publishConfig": {
@@ -32,37 +32,37 @@
   ],
   "license": "MIT",
   "peerDependencies": {
-    "@deepseek-ai/dsh-llm": "workspace:^",
-    "@deepseek-ai/dsh-output-retention": "workspace:^",
-    "@deepseek-ai/dsh-session": "workspace:^",
-    "@deepseek-ai/dsh-spill": "workspace:^",
-    "@deepseek-ai/dsh-tools": "workspace:^",
-    "@deepseek-ai/cordis": "workspace:^"
+    "@redspark/rsh-llm": "workspace:^",
+    "@redspark/rsh-output-retention": "workspace:^",
+    "@redspark/rsh-session": "workspace:^",
+    "@redspark/rsh-spill": "workspace:^",
+    "@redspark/rsh-tools": "workspace:^",
+    "@redspark/cordis": "workspace:^"
   },
   "dependencies": {
-    "@deepseek-ai/schemastery": "workspace:^"
+    "@redspark/schemastery": "workspace:^"
   },
   "devDependencies": {
-    "@deepseek-ai/dsh-agent": "workspace:^",
-    "@deepseek-ai/dsh-code-runtime-worker-thread": "workspace:^",
-    "@deepseek-ai/dsh-llm": "workspace:^",
-    "@deepseek-ai/dsh-output-retention": "workspace:^",
-    "@deepseek-ai/dsh-session": "workspace:^",
-    "@deepseek-ai/dsh-spill": "workspace:^",
-    "@deepseek-ai/dsh-tools": "workspace:^",
-    "@deepseek-ai/cordis": "workspace:^"
+    "@redspark/rsh-agent": "workspace:^",
+    "@redspark/rsh-code-runtime-worker-thread": "workspace:^",
+    "@redspark/rsh-llm": "workspace:^",
+    "@redspark/rsh-output-retention": "workspace:^",
+    "@redspark/rsh-session": "workspace:^",
+    "@redspark/rsh-spill": "workspace:^",
+    "@redspark/rsh-tools": "workspace:^",
+    "@redspark/cordis": "workspace:^"
   },
   "peerDependenciesMeta": {
-    "@deepseek-ai/cordis": {
+    "@redspark/cordis": {
       "optional": true
     },
-    "@deepseek-ai/dsh-llm": {
+    "@redspark/rsh-llm": {
       "optional": true
     },
-    "@deepseek-ai/dsh-session": {
+    "@redspark/rsh-session": {
       "optional": true
     },
-    "@deepseek-ai/dsh-tools": {
+    "@redspark/rsh-tools": {
       "optional": true
     }
   }

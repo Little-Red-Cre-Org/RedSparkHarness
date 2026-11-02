@@ -8,12 +8,12 @@ import { fileURLToPath } from 'node:url'
 import { execa } from 'execa'
 import { expect, it } from 'vitest'
 import { shippedNativeProfileComposition } from '../../rsh/Programs/CLI/src/native-profile-template.ts'
-import { createWebConnectionRpc } from '@deepseek-ai/dsh-client-connection/native'
-import { createNativeSessionClient } from '@deepseek-ai/dsh-client-native-session/native'
-import { SESSION_FORMAT_VERSION, SessionId } from '@deepseek-ai/dsh-session/native'
-import { JsonlSessionBackend } from '@deepseek-ai/dsh-session-persistence-jsonl'
+import { createWebConnectionRpc } from '@redspark/rsh-client-connection/native'
+import { createNativeSessionClient } from '@redspark/rsh-client-native-session/native'
+import { SESSION_FORMAT_VERSION, SessionId } from '@redspark/rsh-session/native'
+import { JsonlSessionBackend } from '@redspark/rsh-session-persistence-jsonl'
 import { normalizeSessionSnapshot, redactSessionSnapshotIds, normalizedSystemPrompts, normalizedToolSchemas,
-  formatSystemPromptSnapshot, formatToolSchemasSnapshot, sessionFixtureName } from '@deepseek-ai/dsh-session-snapshot'
+  formatSystemPromptSnapshot, formatToolSchemasSnapshot, sessionFixtureName } from '@redspark/rsh-session-snapshot'
 
 const root = fileURLToPath(new URL('../../', import.meta.url))
 const scenario = join(root, 'snapshots/web/native-session-core')
@@ -26,7 +26,7 @@ it('records native feedback through dsh native-web and exports only its redacted
   const sessionRoot = join(home, 'sessions')
   mkdirSync(profile, { recursive: true })
   mkdirSync(workspace)
-  const modules = join(profile, 'node_modules/@deepseek-ai')
+  const modules = join(profile, 'node_modules/@redspark')
   mkdirSync(modules, { recursive: true })
   const links: string[] = []
   for (const [name, path] of [
@@ -85,8 +85,8 @@ it('records native feedback through dsh native-web and exports only its redacted
   writeFileSync(join(profile, 'package.json'), JSON.stringify({ name: 'native-web-snapshot', private: true,
     dsh: { profile: { runtime: 'native', config: 'rsh.profile.json' } } }))
   writeFileSync(join(profile, 'rsh.client.json'), JSON.stringify({ formatVersion: 1, installations: [
-    { id: 'connection', plugin: '@deepseek-ai/dsh-client-connection' },
-    { id: 'session', plugin: '@deepseek-ai/dsh-client-native-session' },
+    { id: 'connection', plugin: '@redspark/rsh-client-connection' },
+    { id: 'session', plugin: '@redspark/rsh-client-native-session' },
   ] }))
   const shipped = shippedNativeProfileComposition(home, 'native-web')
   const app = shipped.installations.find(row => row.id === 'app')
@@ -123,12 +123,12 @@ it('records native feedback through dsh native-web and exports only its redacted
     }, processor: { scheduledDelayMillis: 20 } }],
   ] as const
   writeFileSync(join(profile, 'rsh.profile.json'), JSON.stringify({ formatVersion: 1, scopes: [{ id: 'root' }], installations: [
-    ...rows.map(([id, name, config]) => ({ id, plugin: `@deepseek-ai/dsh-${name}`, scope: 'root', ...config === undefined ? {} : { config } })),
+    ...rows.map(([id, name, config]) => ({ id, plugin: `@redspark/rsh-${name}`, scope: 'root', ...config === undefined ? {} : { config } })),
     ...shipped.installations.filter(row => row.id === 'session-execution'),
     { id: 'model', plugin: 'native-web-fixture-model', scope: 'root' },
   ] }))
-  const environment: NodeJS.ProcessEnv = { ...process.env, DSH_HOME: home }
-  delete environment.DSH_TELEMETRY_DISABLED
+  const environment: NodeJS.ProcessEnv = { ...process.env, RSH_HOME: home }
+  delete environment.RSH_TELEMETRY_DISABLED
   const child = execa(process.execPath, [join(root, 'rsh/Programs/CLI/lib/bin.js'), '--profile', 'native-web'], {
     cwd: root, env: environment, reject: false,
   })
@@ -152,7 +152,7 @@ it('records native feedback through dsh native-web and exports only its redacted
       return fetch(new URL(input.pathname, address), { ...init, headers })
     })
     const client = createNativeSessionClient(rpc, { maxFollowBufferChars: 1_000_000 })
-    const fixture = process.env.DSH_SNAPSHOT === 'refresh' ? undefined
+    const fixture = process.env.RSH_SNAPSHOT === 'refresh' ? undefined
       : readFileSync(join(scenario, sessionFixtureName(0, SESSION_FORMAT_VERSION)), 'utf8').trim().split('\n').map(line => JSON.parse(line) as { type?: string; data?: { content?: { type: string; text?: string }[] } })
     const text = fixture === undefined ? 'Native browser input.'
       : fixture.find(event => event.type === 'user/message')?.data?.content?.find(block => block.type === 'text')?.text
@@ -178,7 +178,7 @@ it('records native feedback through dsh native-web and exports only its redacted
       if (normalized === undefined) throw new Error('missing normalized Session')
       const prompts = normalizedSystemPrompts(raw, context)
       const schemas = normalizedToolSchemas(raw, context)
-      if (process.env.DSH_SNAPSHOT === 'refresh') {
+      if (process.env.RSH_SNAPSHOT === 'refresh') {
         mkdirSync(scenario, { recursive: true })
         writeFileSync(join(scenario, name), normalized)
         writeFileSync(join(scenario, 'system-prompt.expected.md'), formatSystemPromptSnapshot(prompts[0]!, prompts.slice(1)))
@@ -213,7 +213,7 @@ it('records native feedback through dsh native-web and exports only its redacted
     const feedbackNormalized = normalizeSessionSnapshot(redactSessionSnapshotIds([feedbackRaw])[0] ?? feedbackRaw,
       { sessionIds: [sessionId], cwd: workspace }, { identityMode: 'preserve' })
     if (feedbackNormalized === undefined) throw new Error('missing normalized Native feedback Session')
-    if (process.env.DSH_SNAPSHOT === 'refresh') {
+    if (process.env.RSH_SNAPSHOT === 'refresh') {
       mkdirSync(feedbackScenario, { recursive: true })
       writeFileSync(join(feedbackScenario, feedbackName), feedbackNormalized)
     } else expect(feedbackNormalized).toBe(readFileSync(join(feedbackScenario, feedbackName), 'utf8'))

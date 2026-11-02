@@ -1,8 +1,8 @@
 /** Scoped structured results commit after the Session owner accepts their transport outcome. */
-import type { NativeDelegationSetup } from '@deepseek-ai/dsh-native-session-execution'
-import type { NativeToolExecution, NativeToolRegistry } from '@deepseek-ai/dsh-native-tools'
-import type { ObjectJsonSchema } from '@deepseek-ai/dsh-native-tools/json-schema'
-import type { NativePromptRegistry } from '@deepseek-ai/dsh-native-prompt'
+import type { NativeDelegationSetup } from '@redspark/rsh-native-session-execution'
+import type { NativeToolExecution, NativeToolRegistry } from '@redspark/rsh-native-tools'
+import type { ObjectJsonSchema } from '@redspark/rsh-native-tools/json-schema'
+import type { NativePromptRegistry } from '@redspark/rsh-native-prompt'
 
 const TOOL = 'structured_output'
 const INSTRUCTION = 'When you have your final answer, you MUST report it by calling the '

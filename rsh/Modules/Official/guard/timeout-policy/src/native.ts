@@ -1,10 +1,10 @@
 /**
  * Native cooperative tool-call timeout policy over the selected tool registry.
- * @module @deepseek-ai/dsh-tool-call-timeout-policy/native
+ * @module @redspark/rsh-tool-call-timeout-policy/native
  */
-import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
-import type { NativeToolExecutionPolicy, NativeToolResult } from '@deepseek-ai/dsh-native-tools'
-import type {} from '@deepseek-ai/dsh-native-tools/native'
+import type { NativePlugin } from '@redspark/rsh-native-runtime'
+import type { NativeToolExecutionPolicy, NativeToolResult } from '@redspark/rsh-native-tools'
+import type {} from '@redspark/rsh-native-tools/native'
 import { runWithToolDeadline, TOOL_TIMEOUT, TOOL_TIMEOUT_ERROR_NAME, toolTimeoutMessage } from './core.ts'
 
 export { TOOL_TIMEOUT } from './core.ts'
@@ -37,7 +37,7 @@ export const nativeToolTimeoutPolicy: NativeToolExecutionPolicy = (call, tool, n
 
 /** Install the timeout policy for every tool visible in this installation's scope. */
 export const plugin: NativePlugin = {
-  apiVersion: 1, name: '@deepseek-ai/dsh-tool-call-timeout-policy', targets: ['host'],
+  apiVersion: 1, name: '@redspark/rsh-tool-call-timeout-policy', targets: ['host'],
   requires: ['tools'], provides: [],
   resolve(input) {
     if (input !== undefined && (typeof input !== 'object' || input === null || Array.isArray(input) || Object.keys(input).length !== 0)) {

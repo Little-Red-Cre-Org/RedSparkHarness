@@ -1,10 +1,10 @@
 /** Shared immutable snapshot preparation for Cordis and Native callers. */
 
-import { createUserMessage } from '@deepseek-ai/dsh-llm/native'
-import type { ContentBlock } from '@deepseek-ai/dsh-llm/native'
-import type { SaveTextSpill, SpillRef } from '@deepseek-ai/dsh-spill/native'
-import type { SessionId } from '@deepseek-ai/dsh-session/native'
-import type { SessionSurfaceSnapshot } from '@deepseek-ai/dsh-session-query/native'
+import { createUserMessage } from '@redspark/rsh-llm/native'
+import type { ContentBlock } from '@redspark/rsh-llm/native'
+import type { SaveTextSpill, SpillRef } from '@redspark/rsh-spill/native'
+import type { SessionId } from '@redspark/rsh-session/native'
+import type { SessionSurfaceSnapshot } from '@redspark/rsh-session-query/native'
 import { prepareReferenceOmission, REFERENCE_WARNING } from './spill.ts'
 import { SessionReferenceError } from './config.ts'
 import { retainReferencedSession } from './projection.ts'

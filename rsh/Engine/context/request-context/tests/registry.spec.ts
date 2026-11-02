@@ -1,10 +1,10 @@
 import { expect, it, vi } from 'vitest'
 import { setImmediate } from 'node:timers/promises'
-import { NativeScope } from '@deepseek-ai/dsh-native-runtime'
-import { createUserMessage } from '@deepseek-ai/dsh-llm/native'
-import type { NativeActiveSessionOwner } from '@deepseek-ai/dsh-native-session-execution/active-session-protocol'
+import { NativeScope } from '@redspark/rsh-native-runtime'
+import { createUserMessage } from '@redspark/rsh-llm/native'
+import type { NativeActiveSessionOwner } from '@redspark/rsh-native-session-execution/active-session-protocol'
 import { NativeRequestContextProviderId, type NativeRequestContextProvider,
-  type NativeRequestContextRequest } from '@deepseek-ai/dsh-request-context-definition'
+  type NativeRequestContextRequest } from '@redspark/rsh-request-context-definition'
 import { NativeRequestContextRegistry } from '../src/index.ts'
 
 function request(scope: NativeScope): NativeRequestContextRequest {

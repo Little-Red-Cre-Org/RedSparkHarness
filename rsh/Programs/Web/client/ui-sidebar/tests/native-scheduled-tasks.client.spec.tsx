@@ -1,11 +1,11 @@
 // @vitest-environment jsdom
 import { act, cleanup, render, screen } from '@testing-library/react'
 import { afterEach, expect, it } from 'vitest'
-import type { SnapshotSelectorHook } from '@deepseek-ai/dsh-client-ui-slots'
-import type { NativeLocaleSnapshot } from '@deepseek-ai/dsh-client-locale/native'
+import type { SnapshotSelectorHook } from '@redspark/rsh-client-ui-slots'
+import type { NativeLocaleSnapshot } from '@redspark/rsh-client-locale/native'
 import type {
   NativeScheduleClient, NativeScheduleFrame, NativeScheduledJob,
-} from '@deepseek-ai/dsh-client-native-session/native'
+} from '@redspark/rsh-client-native-session/native'
 import { NativeScheduledTasksPanel } from '../src/native-ui.tsx'
 
 afterEach(cleanup)

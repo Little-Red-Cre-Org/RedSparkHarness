@@ -1,7 +1,7 @@
 /** Framework-independent durable model choice and advisory catalog values. */
-import type { SessionEvent } from '@deepseek-ai/dsh-session/types'
+import type { SessionEvent } from '@redspark/rsh-session/types'
 
-declare module '@deepseek-ai/dsh-session/types' {
+declare module '@redspark/rsh-session/types' {
   interface SessionEventMap {
     /** Complete validated selection for subsequent prompt assembly; excluded from model history. */
     'model/selection': ModelSelection

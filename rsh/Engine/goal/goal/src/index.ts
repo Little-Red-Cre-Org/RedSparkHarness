@@ -2,22 +2,22 @@ export type * from './projection-types.ts'
 /**
  * Same-session goal domain: event-sourced state, compare-and-set mutations,
  * and process-local continuation activation.
- * @module @deepseek-ai/dsh-goal
+ * @module @redspark/rsh-goal
  */
 
 import { assertGoalCreationReference, resolveBlockReason, resolveCreateGoal, resolveMaxGoalRounds, resolveObjective } from './requests.ts'
 import { randomUUID } from 'node:crypto'
-import { Context } from '@deepseek-ai/cordis'
-import z from '@deepseek-ai/schemastery'
+import { Context } from '@redspark/cordis'
+import z from '@redspark/schemastery'
 import { z as zod } from 'zod'
 import type { ZodType } from 'zod'
-import { agentEvents } from '@deepseek-ai/dsh-agent'
-import type { Agent } from '@deepseek-ai/dsh-agent'
-import { SessionSeq } from '@deepseek-ai/dsh-session'
-import type { Session, SessionEvent, SessionLogOffset } from '@deepseek-ai/dsh-session'
-import { TypertRemoteService, Remote } from '@deepseek-ai/dsh-typert-protocol'
-import type {} from '@deepseek-ai/dsh-session-projection'
-import type { ProjectionDefinition } from '@deepseek-ai/dsh-session-projection'
+import { agentEvents } from '@redspark/rsh-agent'
+import type { Agent } from '@redspark/rsh-agent'
+import { SessionSeq } from '@redspark/rsh-session'
+import type { Session, SessionEvent, SessionLogOffset } from '@redspark/rsh-session'
+import { TypertRemoteService, Remote } from '@redspark/rsh-typert-protocol'
+import type {} from '@redspark/rsh-session-projection'
+import type { ProjectionDefinition } from '@redspark/rsh-session-projection'
 import {
   applyGoalEvent,
   goalChangeRef,
@@ -58,7 +58,7 @@ export type * from './domain.ts'
 export { GOAL_CHANGE_VERSION, GoalError, GoalId } from './runtime.ts'
 export { decodeGoalChange, foldGoal, goalChangeRef } from './fold.ts'
 
-declare module '@deepseek-ai/cordis' {
+declare module '@redspark/cordis' {
   interface Context {
     goals: GoalService
   }

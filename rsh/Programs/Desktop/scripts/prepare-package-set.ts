@@ -29,8 +29,8 @@ import { capture } from '../../../Scripts/release/process.ts'
 import { tarballFiles } from '../../../Scripts/release/tarball.ts'
 import { resolveDesktopTargetBuildPaths } from './desktop-build-paths.mjs'
 
-const DSH_PACKAGE = '@deepseek-ai/dsh'
-const ROOT_PACKAGES = [DSH_PACKAGE, DESKTOP_HOST_PACKAGE] as const
+const RSH_PACKAGE = '@redspark/dsh'
+const ROOT_PACKAGES = [RSH_PACKAGE, DESKTOP_HOST_PACKAGE] as const
 const APP_ROOT = resolve(import.meta.dirname, '..')
 const REPOSITORY_ROOT = resolve(APP_ROOT, '..', '..', '..')
 
@@ -93,7 +93,7 @@ function selectClosure(
       return
     }
     if (available.has(dependency)) visit(dependency)
-    else if (kind !== 'optional' && dependency.startsWith('@deepseek-ai/')) {
+    else if (kind !== 'optional' && dependency.startsWith('@redspark/')) {
       throw new Error(`desktop package set: ${owner} requires unpacked internal package ${dependency}`)
     }
   }
@@ -123,8 +123,8 @@ export function selectDesktopPackageSets(
   available: ReadonlyMap<string, PackedDesktopPackage>,
   assembly: DesktopPackageAssembly = 'native',
 ): SelectedDesktopPackageSet {
-  const dsh = available.get(DSH_PACKAGE)
-  if (dsh === undefined) throw new Error(`desktop package set: packed inputs omit ${DSH_PACKAGE}`)
+  const dsh = available.get(RSH_PACKAGE)
+  if (dsh === undefined) throw new Error(`desktop package set: packed inputs omit ${RSH_PACKAGE}`)
   const host = available.get(DESKTOP_HOST_PACKAGE)
   if (host === undefined) throw new Error(`desktop package set: packed inputs omit ${DESKTOP_HOST_PACKAGE}`)
   const dshOptional = new Set(dependencyNames(dsh.manifest, OPTIONAL_DEPENDENCY_SECTION))
@@ -258,7 +258,7 @@ function main(): void {
   }
   const buildPaths = values.assembly === undefined
     ? resolveDesktopTargetBuildPaths()
-    : resolveDesktopTargetBuildPaths({ ...process.env, DSH_DESKTOP_ASSEMBLY: values.assembly })
+    : resolveDesktopTargetBuildPaths({ ...process.env, RSH_DESKTOP_ASSEMBLY: values.assembly })
   const inputs = (values.from ?? [buildPaths.packedDsh, buildPaths.packedVendor, buildPaths.packedLandlock])
     .map(path => resolve(REPOSITORY_ROOT, path))
   const output = values.out === undefined ? buildPaths.packageSet : resolve(REPOSITORY_ROOT, values.out)

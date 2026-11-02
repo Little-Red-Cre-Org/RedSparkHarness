@@ -4,12 +4,12 @@ import { tmpdir } from 'node:os'
 import { basename, dirname, join, resolve } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { execa } from 'execa'
-import { deriveReplayScript, parseSessionLog } from '@deepseek-ai/dsh-llm-replay'
+import { deriveReplayScript, parseSessionLog } from '@redspark/rsh-llm-replay'
 import { expect, it } from 'vitest'
 import { shippedNativeProfileComposition } from '../../rsh/Programs/CLI/src/native-profile-template.ts'
-import { JsonlSessionBackend } from '@deepseek-ai/dsh-session-persistence-jsonl'
+import { JsonlSessionBackend } from '@redspark/rsh-session-persistence-jsonl'
 import { formatSystemPromptSnapshot, formatToolSchemasSnapshot, normalizeSessionSnapshot, redactSessionSnapshotIds,
-  normalizedSystemPrompts, normalizedToolSchemas } from '@deepseek-ai/dsh-session-snapshot'
+  normalizedSystemPrompts, normalizedToolSchemas } from '@redspark/rsh-session-snapshot'
 
 const root = fileURLToPath(new URL('../../', import.meta.url))
 const scene = join(root, 'snapshots/native-headless/search-native')
@@ -28,7 +28,7 @@ it('records capped real searches with complete recovery artifacts and cold-repla
   const sessions = join(home, 'sessions')
   const audit = join(home, 'audit.jsonl')
   const links: string[] = []
-  mkdirSync(join(modules, '@deepseek-ai'), { recursive: true })
+  mkdirSync(join(modules, '@redspark'), { recursive: true })
   mkdirSync(workspace)
   writeFileSync(join(workspace, 'a.data'), 'first\nsecond\n')
   writeFileSync(join(workspace, 'b.data'), 'other\n')
@@ -45,7 +45,7 @@ it('records capped real searches with complete recovery artifacts and cold-repla
     ['dsh-spill-local', 'rsh/Modules/Official/spill/spill-local'],
   ] as const
   for (const [name, path] of packages) {
-    const link = join(modules, '@deepseek-ai', name)
+    const link = join(modules, '@redspark', name)
     symlinkSync(join(root, path), link, 'junction'); links.push(link)
   }
   writeFileSync(join(profile, 'package.json'), JSON.stringify({ name: 'native-headless-profile', private: true,
@@ -59,7 +59,7 @@ it('records capped real searches with complete recovery artifacts and cold-repla
       cwd: workspace, provider: 'mock', model: 'search', systemPrompt: 'Use glob and grep for file discovery.', maxSteps: 3,
     } }
     if (row.id === 'tools') return { ...row, config: { mode: 'native' } }
-    if (row.id === 'fs') return { ...row, plugin: '@deepseek-ai/dsh-fs-local', config: { cwd: workspace } }
+    if (row.id === 'fs') return { ...row, plugin: '@redspark/rsh-fs-local', config: { cwd: workspace } }
     if (row.id === 'search-tools') return { ...row, config: { sampleOverCapGlobResults: false, globMaxResults: 1, grepMaxMatches: 1 } }
     if (row.id === 'spill-store') return { ...row, config: { root: join(workspace, '.spill'), cleanupPeriodDays: 0 } }
     if (row.id === 'pi-ai') return { id: row.id, scope: row.scope, plugin: 'search-model' }
@@ -98,7 +98,7 @@ export const plugin = { apiVersion: 1, name: 'search-model', targets: ['host'], 
     const child = await execa(process.execPath, ['--import', pathToFileURL(join(root,
       'rsh/Programs/CLI/tests/fixtures/deny-cordis-context-register.mjs')).href,
       join(root, 'rsh/Programs/CLI/lib/bin.js'), '--profile', 'native-headless', task],
-    { env: { ...process.env, DSH_HOME: home }, reject: false, timeout: 30_000 })
+    { env: { ...process.env, RSH_HOME: home }, reject: false, timeout: 30_000 })
     expect(child.timedOut).toBe(false)
     expect(child.exitCode, child.stderr).toBe(0)
     const requests = readFileSync(audit, 'utf8').trim().split('\n')
@@ -137,7 +137,7 @@ export const plugin = { apiVersion: 1, name: 'search-model', targets: ['host'], 
       'tool-schemas.expected.json': formatToolSchemasSnapshot(schemas[0]!, schemas.slice(1)),
     }
     for (const [name, text] of Object.entries(outputs)) {
-      if (process.env.DSH_SNAPSHOT === 'refresh') writeFileSync(join(scene, name), text)
+      if (process.env.RSH_SNAPSHOT === 'refresh') writeFileSync(join(scene, name), text)
       else expect(text).toBe(readFileSync(join(scene, name), 'utf8'))
     }
   } finally {

@@ -194,7 +194,7 @@ function validateSessionFormatRelease(source: string, currentWriterVersion: numb
     || !/^dsh-v\d+\.\d+\.\d+(?:-[\dA-Za-z]+(?:[.-][\dA-Za-z]+)*)?(?:\+[\dA-Za-z]+(?:[.-][\dA-Za-z]+)*)?$/u.test(evidenceTag)) {
     throw new Error('evidenceTag must be a non-empty dsh-v version tag without URL delimiters')
   }
-  const repository = 'https://github.com/deepseek-harness/deepseek-harness'
+  const repository = 'https://github.com/redspark-harness/redspark-harness'
   for (const link of [
     `${repository}/releases/tag/${evidenceTag}`,
     `${repository}/blob/${evidenceTag}/packages/core/session/src/types.ts`,
@@ -210,7 +210,7 @@ function sessionFormatReleaseFixture(): { record: SessionFormatRelease; body: st
     readCurrentSessionFormatVersion(root),
   )
   const body = `latestReleasedVersion: ${record.latestReleasedVersion}\nevidenceTag: ${record.evidenceTag}`
-  const repository = 'https://github.com/deepseek-harness/deepseek-harness'
+  const repository = 'https://github.com/redspark-harness/redspark-harness'
   const links = `[release](${repository}/releases/tag/${record.evidenceTag})\n`
     + `[source](${repository}/blob/${record.evidenceTag}/packages/core/session/src/types.ts)`
   return { record, body, links, source: releaseDocument(body, links) }

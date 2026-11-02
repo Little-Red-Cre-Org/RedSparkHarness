@@ -1,16 +1,16 @@
 /** Cordis-free projection checkpoint Provider over the Native storage domain. */
 
 import { z } from 'zod'
-import { snapshotJsonValue } from '@deepseek-ai/dsh-util-values'
-import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
+import { snapshotJsonValue } from '@redspark/rsh-util-values'
+import type { NativePlugin } from '@redspark/rsh-native-runtime'
 import type {
   NativeActiveSessionOperations,
   NativeActiveSessionOwner,
-} from '@deepseek-ai/dsh-native-session-execution/active-session-protocol'
-import { SessionLogOffset } from '@deepseek-ai/dsh-session/native'
-import type { Session, SessionEvent, SessionHeader, SessionLogOffset as SessionLogOffsetValue } from '@deepseek-ai/dsh-session/native'
-import type { ProjectionCheckpoint, NativeSessionProjectionOperations } from '@deepseek-ai/dsh-session-projection/native'
-import type { Domain } from '@deepseek-ai/dsh-storage-domain/native'
+} from '@redspark/rsh-native-session-execution/active-session-protocol'
+import { SessionLogOffset } from '@redspark/rsh-session/native'
+import type { Session, SessionEvent, SessionHeader, SessionLogOffset as SessionLogOffsetValue } from '@redspark/rsh-session/native'
+import type { ProjectionCheckpoint, NativeSessionProjectionOperations } from '@redspark/rsh-session-projection/native'
+import type { Domain } from '@redspark/rsh-storage-domain/native'
 import { identityMatches, identityOf } from './identity.ts'
 import { projectionCacheDomainSpec } from './spec.ts'
 import type { CheckpointRecord } from './spec.ts'
@@ -34,7 +34,7 @@ export interface NativeSessionProjectionCacheOperations {
   cachedCheckpoint(header: SessionHeader, inheritedEventCount: SessionLogOffsetValue): ProjectionCheckpoint | undefined
 }
 
-declare module '@deepseek-ai/dsh-native-runtime' {
+declare module '@redspark/rsh-native-runtime' {
   interface NativeServices { sessionProjectionCache: NativeSessionProjectionCacheOperations }
 }
 
@@ -243,7 +243,7 @@ class NativeSessionProjectionCache implements NativeSessionProjectionCacheOperat
 /** Native projection-cache Provider uses the existing validated `session_projcache` domain. */
 export const plugin: NativePlugin = {
   apiVersion: 1,
-  name: '@deepseek-ai/dsh-session-projection-cache',
+  name: '@redspark/rsh-session-projection-cache',
   targets: ['host'],
   requires: ['activeSessions', 'sessionProjections', 'storageDomain'],
   provides: ['sessionProjectionCache'],

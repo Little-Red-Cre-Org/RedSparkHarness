@@ -31,9 +31,9 @@ function runCli(
     timeout: 90_000,
     env: {
       ...process.env,
-      DSH_HOME: home,
-      DSH_AGENTS_HOME: join(home, 'agents'),
-      DSH_TELEMETRY_DISABLED: '1',
+      RSH_HOME: home,
+      RSH_AGENTS_HOME: join(home, 'agents'),
+      RSH_TELEMETRY_DISABLED: '1',
       ARCHIFY_UPDATE_CHECK_DISABLED: '1',
       npm_config_update_notifier: 'false',
       TSX_TSCONFIG_PATH: join(repoRoot, 'tsconfig.json'),
@@ -68,7 +68,7 @@ describe('Archify legacy profile composition', () => {
     ])
     expect(dump.status, dump.stderr || dump.stdout).toBe(0)
     expect(dump.stdout).toContain('id: archify')
-    expect(dump.stdout).toContain("name: '@deepseek-ai/dsh-archify'")
+    expect(dump.stdout).toContain("name: '@redspark/rsh-archify'")
 
     const booted = runCli(
       workspace,

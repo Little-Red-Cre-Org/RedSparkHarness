@@ -5,13 +5,13 @@ import { join } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { execa } from 'execa'
 import { expect, it } from 'vitest'
-import { JsonlSessionBackend } from '@deepseek-ai/dsh-session-persistence-jsonl'
-import { SESSION_FORMAT_VERSION } from '@deepseek-ai/dsh-session/native'
-import { deriveReplayScript, parseSessionLog } from '@deepseek-ai/dsh-llm-replay'
+import { JsonlSessionBackend } from '@redspark/rsh-session-persistence-jsonl'
+import { SESSION_FORMAT_VERSION } from '@redspark/rsh-session/native'
+import { deriveReplayScript, parseSessionLog } from '@redspark/rsh-llm-replay'
 import {
   formatSystemPromptSnapshot, formatToolSchemasSnapshot, normalizeSessionSnapshot, redactSessionSnapshotIds,
   normalizedSystemPrompts, normalizedToolSchemas, sessionFixtureName,
-} from '@deepseek-ai/dsh-session-snapshot'
+} from '@redspark/rsh-session-snapshot'
 import { ensureShippedNativeProfile } from '../../rsh/Programs/CLI/src/native-profile-template.ts'
 
 const root = fileURLToPath(new URL('../../', import.meta.url))
@@ -85,7 +85,7 @@ it('records and replays a session search through the shipped Native query profil
     const child = await execa(process.execPath, [
       '--import', pathToFileURL(join(root, 'rsh/Programs/CLI/tests/fixtures/deny-cordis-context-register.mjs')).href,
       join(root, 'rsh/Programs/CLI/lib/bin.js'), '--profile', 'native-headless-query', '--patch', patchPath, task,
-    ], { env: { ...process.env, DSH_HOME: home }, reject: false, timeout: 60_000 })
+    ], { env: { ...process.env, RSH_HOME: home }, reject: false, timeout: 60_000 })
     expect(child.timedOut, child.stderr).toBe(false)
     expect(child.exitCode, child.stderr).toBe(0)
 
@@ -116,7 +116,7 @@ it('records and replays a session search through the shipped Native query profil
     if (prompts[0] === undefined || schemas[0] === undefined) throw new Error('session-query: missing request header')
     const prompt = formatSystemPromptSnapshot(prompts[0], prompts.slice(1))
     const tools = formatToolSchemasSnapshot(schemas[0], schemas.slice(1))
-    if (process.env.DSH_SNAPSHOT === 'refresh') {
+    if (process.env.RSH_SNAPSHOT === 'refresh') {
       writeFileSync(fixturePath, normalized)
       writeFileSync(join(scenario, 'system-prompt.expected.md'), prompt)
       writeFileSync(join(scenario, 'tool-schemas.expected.json'), tools)

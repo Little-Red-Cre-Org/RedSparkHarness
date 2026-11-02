@@ -1,11 +1,11 @@
 /** Host HTTP bridge for browser-client RPC. */
-import type { Context } from '@deepseek-ai/cordis'
-import z from '@deepseek-ai/schemastery'
-import type {} from '@deepseek-ai/dsh-attachment'
-import type {} from '@deepseek-ai/dsh-credentials'
+import type { Context } from '@redspark/cordis'
+import z from '@redspark/schemastery'
+import type {} from '@redspark/rsh-attachment'
+import type {} from '@redspark/rsh-credentials'
 // Activates the webServer Context merge used below.
-import type { HttpRoute } from '@deepseek-ai/dsh-http-routes/host'
-import type {} from '@deepseek-ai/dsh-http-routes-cordis'
+import type { HttpRoute } from '@redspark/rsh-http-routes/host'
+import type {} from '@redspark/rsh-http-routes-cordis'
 import { API_PATH } from './api-path.ts'
 import { bridge, DEFAULT_MAX_REQUEST_BODY_BYTES } from './http-bridge.ts'
 import { assertTrustedAuthority } from './api-request-trust.ts'

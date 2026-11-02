@@ -8,7 +8,7 @@ import { readFile, readdir } from 'node:fs/promises'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
-import { LOADER_SMOKE_TEST_TIMEOUT_MS, runLoaderSmoke } from '@deepseek-ai/dsh-loader-smoke'
+import { LOADER_SMOKE_TEST_TIMEOUT_MS, runLoaderSmoke } from '@redspark/rsh-loader-smoke'
 
 const driver = fileURLToPath(new URL(
   './fixtures/driver.ts',
@@ -81,7 +81,7 @@ describe('session-telemetry-otel through the production headless profile', () =>
       libBinScript: driver,
       configPath,
       tsconfigPath: repoTsconfig,
-      env: { DSH_TELEMETRY_E2E_MODE: 'FULL' },
+      env: { RSH_TELEMETRY_E2E_MODE: 'FULL' },
       expectedExitCode: 1,
     })
     expect(stdout + stderr).toContain('FULL')
@@ -139,7 +139,7 @@ describe('session-telemetry-otel through the production headless profile', () =>
       libBinScript: driver,
       configPath,
       tsconfigPath: repoTsconfig,
-      env: { DSH_TELEMETRY_E2E_FEEDBACK: 'none' },
+      env: { RSH_TELEMETRY_E2E_FEEDBACK: 'none' },
       inspect: async (cwd) => { output = await readFixtureOutput(cwd) },
     })
     expect(stderr).not.toContain('UNHANDLED')
@@ -158,7 +158,7 @@ describe('session-telemetry-otel through the production headless profile', () =>
       libBinScript: driver,
       configPath,
       tsconfigPath: repoTsconfig,
-      env: { DSH_TELEMETRY_E2E_MODE: 'DISABLED' },
+      env: { RSH_TELEMETRY_E2E_MODE: 'DISABLED' },
       inspect: async (cwd) => { output = await readFixtureOutput(cwd) },
     })
 

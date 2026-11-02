@@ -1,5 +1,5 @@
 {
-  "name": "@deepseek-ai/cordis-plugin-loader",
+  "name": "@redspark/cordis-plugin-loader",
   "description": "Plugin loader for cordis",
   "version": "1.0.3",
   "publishConfig": {
@@ -30,7 +30,7 @@
   "author": "Shigma <shigma10826@gmail.com>",
   "license": "MIT",
   "peerDependencies": {
-    "@deepseek-ai/cordis": "workspace:^",
+    "@redspark/cordis": "workspace:^",
     "node-addon-require-builtin": "^0.1.4"
   },
   "peerDependenciesMeta": {
@@ -39,6 +39,6 @@
     }
   },
   "dependencies": {
-    "@deepseek-ai/cosmokit": "workspace:^"
+    "@redspark/cosmokit": "workspace:^"
   }
 }

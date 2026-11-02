@@ -1,3 +1,3 @@
 /** Shared accepted-work accounting for compatibility Agent consumers. */
-export { foldConsumedWork } from '@deepseek-ai/dsh-native-agent/consumed-work'
-export type { ConsumedWork } from '@deepseek-ai/dsh-native-agent/consumed-work'
+export { foldConsumedWork } from '@redspark/rsh-native-agent/consumed-work'
+export type { ConsumedWork } from '@redspark/rsh-native-agent/consumed-work'

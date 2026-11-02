@@ -30,11 +30,11 @@
       name: './mock-delegating-llm.ts'
 
     - id: subagent-acp
-      name: '@deepseek-ai/dsh-subagent-acp'
+      name: '@redspark/rsh-subagent-acp'
       config:
         providerName: acp
         command: !!js process.execPath
         args:
-          - !!js process.env.DSH_TEST_MOCK_ACP_SERVER
+          - !!js process.env.RSH_TEST_MOCK_ACP_SERVER
         permission: reject
-        env: !!js "process.env.DSH_TEST_ACP_MODE === 'diagnostic' ? { MOCK_TEXT: 'partial loader answer', MOCK_STOP: 'max_turn_requests' } : { MOCK_ECHO_CWD: '1' }"
+        env: !!js "process.env.RSH_TEST_ACP_MODE === 'diagnostic' ? { MOCK_TEXT: 'partial loader answer', MOCK_STOP: 'max_turn_requests' } : { MOCK_ECHO_CWD: '1' }"

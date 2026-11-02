@@ -7,8 +7,8 @@
 
 import TurndownService from 'turndown'
 import { gfm } from '@joplin/turndown-plugin-gfm'
-import type { WebFetchBody, WebFetchResult } from '@deepseek-ai/dsh-web/native'
-import { assertNever, type JsonValue } from '@deepseek-ai/dsh-util-values'
+import type { WebFetchBody, WebFetchResult } from '@redspark/rsh-web/native'
+import { assertNever, type JsonValue } from '@redspark/rsh-util-values'
 import { EXTERNAL_WEB_CONTENT_NOTICE } from './trust.ts'
 
 /**
@@ -95,7 +95,7 @@ turndown.addRule('tableRowWithoutSpanExpansion', {
  * Validate value constraints the schema DSL can't express: a non-blank `url`.
  * Throws a plain `Error` otherwise. No timeout parameter — the tool-call budget
  * is deployment policy declared via `fetchTimeoutMs` config and enforced by
- * `@deepseek-ai/dsh-tool-call-timeout-policy`, not a model argument.
+ * `@redspark/rsh-tool-call-timeout-policy`, not a model argument.
  *
  * @param args - the schema-validated `web_fetch` arguments.
  * @returns the arguments as the seam's request fields.

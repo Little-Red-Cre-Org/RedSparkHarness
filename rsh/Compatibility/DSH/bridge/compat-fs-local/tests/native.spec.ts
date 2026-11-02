@@ -4,28 +4,28 @@ import { existsSync, readFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { expect, it } from 'vitest'
-import { NativeHost, NativeScope, resolveInstallation, type NativePlugin } from '@deepseek-ai/dsh-native-runtime'
-import { NativeAgentId, type NativeAgent, type NativeAgentRegistry } from '@deepseek-ai/dsh-native-agent'
-import { plugin as agentPlugin } from '@deepseek-ai/dsh-native-agent/native'
-import type { CompatDshRuntime } from '@deepseek-ai/dsh-compat-dsh-runtime/native'
-import { plugin as compatRuntimePlugin } from '@deepseek-ai/dsh-compat-dsh-runtime/native'
-import type { FileSystemOperations } from '@deepseek-ai/dsh-fs/native'
-import { plugin as nativePolicyPlugin } from '@deepseek-ai/dsh-fs-observation-policy/native'
-import { LocalFileSystem } from '@deepseek-ai/dsh-fs-local'
-import type { LocalFileSystemBackend } from '@deepseek-ai/dsh-fs-local/backend'
-import { localFilesystemPlugin } from '@deepseek-ai/dsh-fs-local/native'
-import { plugin as toolsPlugin } from '@deepseek-ai/dsh-native-tools/native'
-import type { NativeToolRegistry } from '@deepseek-ai/dsh-native-tools'
-import { Session, SessionId, SESSION_FORMAT_VERSION } from '@deepseek-ai/dsh-session'
-import { ToolCallId } from '@deepseek-ai/dsh-llm'
-import { plugin as nativeFileToolsPlugin } from '@deepseek-ai/dsh-tool-fs/native'
+import { NativeHost, NativeScope, resolveInstallation, type NativePlugin } from '@redspark/rsh-native-runtime'
+import { NativeAgentId, type NativeAgent, type NativeAgentRegistry } from '@redspark/rsh-native-agent'
+import { plugin as agentPlugin } from '@redspark/rsh-native-agent/native'
+import type { CompatDshRuntime } from '@redspark/rsh-compat-dsh-runtime/native'
+import { plugin as compatRuntimePlugin } from '@redspark/rsh-compat-dsh-runtime/native'
+import type { FileSystemOperations } from '@redspark/rsh-fs/native'
+import { plugin as nativePolicyPlugin } from '@redspark/rsh-fs-observation-policy/native'
+import { LocalFileSystem } from '@redspark/rsh-fs-local'
+import type { LocalFileSystemBackend } from '@redspark/rsh-fs-local/backend'
+import { localFilesystemPlugin } from '@redspark/rsh-fs-local/native'
+import { plugin as toolsPlugin } from '@redspark/rsh-native-tools/native'
+import type { NativeToolRegistry } from '@redspark/rsh-native-tools'
+import { Session, SessionId, SESSION_FORMAT_VERSION } from '@redspark/rsh-session'
+import { ToolCallId } from '@redspark/rsh-llm'
+import { plugin as nativeFileToolsPlugin } from '@redspark/rsh-tool-fs/native'
 import { plugin as compatFsLocalPlugin, validateLegacyFilesystemManifest } from '../src/native.ts'
 
 it('checks the selected legacy declaration and configuration before activation', () => {
   const manifest = JSON.parse(readFileSync(new URL('../../../../../Modules/Official/fs/fs-local/package.json', import.meta.url), 'utf8')) as Parameters<typeof validateLegacyFilesystemManifest>[0]
   expect(() => { validateLegacyFilesystemManifest(manifest) }).not.toThrow()
-  expect(() => { validateLegacyFilesystemManifest({ ...manifest, version: '0.1.6' }) }).toThrow('unsupported @deepseek-ai/dsh-fs-local version')
-  expect(() => { validateLegacyFilesystemManifest({ ...manifest, name: '@deepseek-ai/other' }) }).toThrow('package name')
+  expect(() => { validateLegacyFilesystemManifest({ ...manifest, version: '0.1.6' }) }).toThrow('unsupported @redspark/rsh-fs-local version')
+  expect(() => { validateLegacyFilesystemManifest({ ...manifest, name: '@redspark/other' }) }).toThrow('package name')
   expect(() => { validateLegacyFilesystemManifest({ ...manifest, dsh: { ...manifest.dsh, runtime: { apiVersion: 2, role: 'provider', capability: 'filesystem' } } }) })
     .toThrow('unsupported')
   expect(() => compatFsLocalPlugin.resolve({ unknown: true })).toThrow('fs-local:')
@@ -81,7 +81,7 @@ it('serves an unchanged native Consumer and rejects a duplicate Provider', async
     const target = await liveFilesystem.resolve('legacy.txt')
     await liveFilesystem.writeText(target, 'from Cordis', { kind: 'createIfAbsent' })
     expect(await readFile(join(directory, 'legacy.txt'), 'utf8')).toBe('from Cordis')
-    await compat.update('@deepseek-ai/dsh-fs-local', { cwd: updatedDirectory })
+    await compat.update('@redspark/rsh-fs-local', { cwd: updatedDirectory })
     const oldFilesystem = compat.context.get('fs')
     if (!(oldFilesystem instanceof LocalFileSystem)) throw new Error('missing current Cordis LocalFileSystem')
     expect(oldFilesystem.config.cwd).toBe(updatedDirectory)
@@ -156,7 +156,7 @@ it('serves an unchanged native Consumer and rejects a duplicate Provider', async
       }
     })
     try {
-      replacing = compat.update('@deepseek-ai/dsh-fs-local', { cwd: substituteDirectory }).then(() => { replacementSettled = true })
+      replacing = compat.update('@redspark/rsh-fs-local', { cwd: substituteDirectory }).then(() => { replacementSettled = true })
       await cleanupEntered.promise
       expect(replacementSettled).toBe(false)
       if (tempPaths === undefined) throw new Error('write did not expose its staging paths')
@@ -185,7 +185,7 @@ it('serves an unchanged native Consumer and rejects a duplicate Provider', async
       expect(order).toEqual([
         'old cleanup entered', 'old cleanup completed', 'substitute published', 'substitute served',
       ])
-      await compat.remove('@deepseek-ai/dsh-fs-local')
+      await compat.remove('@redspark/rsh-fs-local')
       expect(() => liveFilesystem.resolve('after-remove.txt')).toThrow('Cordis service fs is unavailable')
     } finally {
       disposeServiceListener()

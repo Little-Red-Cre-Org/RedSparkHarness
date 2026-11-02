@@ -1,8 +1,8 @@
 /** Compatibility projection declarations over pure Goal payload types. */
-import type {} from '@deepseek-ai/dsh-session-projection/types'
+import type {} from '@redspark/rsh-session-projection/types'
 import type { GoalProjection, GoalProjectionState } from './types.ts'
 
-declare module '@deepseek-ai/dsh-session-projection/types' {
+declare module '@redspark/rsh-session-projection/types' {
   interface SessionProjectionStateMap {
     goal: GoalProjectionState
   }

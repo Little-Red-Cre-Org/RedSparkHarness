@@ -1,5 +1,5 @@
 {
-  "name": "@deepseek-ai/dsh-subprocess-e2b",
+  "name": "@redspark/rsh-subprocess-e2b",
   "description": "E2B subprocess implementation for RedSpark Harness",
   "version": "1.0.0",
   "publishConfig": {
@@ -27,18 +27,18 @@
   ],
   "license": "MIT",
   "peerDependencies": {
-    "@deepseek-ai/dsh-e2b": "workspace:^",
-    "@deepseek-ai/dsh-subprocess": "workspace:^",
-    "@deepseek-ai/dsh-timeout": "workspace:^",
-    "@deepseek-ai/cordis": "workspace:^"
+    "@redspark/rsh-e2b": "workspace:^",
+    "@redspark/rsh-subprocess": "workspace:^",
+    "@redspark/rsh-timeout": "workspace:^",
+    "@redspark/cordis": "workspace:^"
   },
   "dependencies": {
-    "@deepseek-ai/schemastery": "workspace:^"
+    "@redspark/schemastery": "workspace:^"
   },
   "devDependencies": {
-    "@deepseek-ai/dsh-e2b": "workspace:^",
-    "@deepseek-ai/dsh-subprocess": "workspace:^",
-    "@deepseek-ai/dsh-timeout": "workspace:^",
-    "@deepseek-ai/cordis": "workspace:^"
+    "@redspark/rsh-e2b": "workspace:^",
+    "@redspark/rsh-subprocess": "workspace:^",
+    "@redspark/rsh-timeout": "workspace:^",
+    "@redspark/cordis": "workspace:^"
   }
 }

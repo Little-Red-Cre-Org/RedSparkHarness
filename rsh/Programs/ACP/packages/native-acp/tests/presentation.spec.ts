@@ -1,6 +1,6 @@
 import { expect, it, vi } from 'vitest'
-import type { Session, SessionEvent } from '@deepseek-ai/dsh-session/native'
-import type { NativeContext } from '@deepseek-ai/dsh-native-runtime'
+import type { Session, SessionEvent } from '@redspark/rsh-session/native'
+import type { NativeContext } from '@redspark/rsh-native-runtime'
 import { nativeAcpUpdates, nativeAcpUsageUpdate } from '../src/presentation.ts'
 
 const image = { attachment: { attachmentId: 'stored-image', mediaType: 'image/png', bytes: 2, width: 1, height: 1 } }

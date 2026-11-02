@@ -3,22 +3,22 @@
 import { createHash } from 'node:crypto'
 import { createRequire } from 'node:module'
 import { valid } from 'semver'
-import { brandString } from '@deepseek-ai/dsh-brand'
-import { loadLayeredEnv } from '@deepseek-ai/dsh-launch-environment/layers'
+import { brandString } from '@redspark/rsh-brand'
+import { loadLayeredEnv } from '@redspark/rsh-launch-environment/layers'
 import { createLaunchEnvironmentSnapshot, launchEnvironmentProvider,
-  type LaunchEnvironmentSnapshot } from '@deepseek-ai/dsh-launch-environment/native'
+  type LaunchEnvironmentSnapshot } from '@redspark/rsh-launch-environment/native'
 import {
   createNativePluginInventoryProvider, expandNativeProfilePresets, nativeProfileChildProviderRoutes, nativeProfileChildRuntimeProviders,
   nativeProfileChildSupportInstallations, profileDirectoryRuntime, profileDirectoryReloadMode, readNativeProfile,
   refuseLegacyPatch, shippedNativeProfileClientComposition, shippedNativeProfileComposition,
   migrateNativeLegacyConfig, validateNativeLegacyConfig,
   type NativeProfileChildRouteProvider, type NativeProfileConfig,
-} from '@deepseek-ai/dsh/native-profile'
+} from '@redspark/dsh/native-profile'
 import { NativeScope, parseNativeEntryManifest,
-  type NativeEntryManifest, type NativePlugin } from '@deepseek-ai/dsh-native-runtime'
-import { parseNativeClientProfile, type NativeClientProfile } from '@deepseek-ai/dsh-native-web-assets/native-client'
-import { inspectSessionRootCompression } from '@deepseek-ai/dsh-session-persistence-jsonl/native-inspection'
-import type { JsonlCompression } from '@deepseek-ai/dsh-session-persistence-jsonl/native'
+  type NativeEntryManifest, type NativePlugin } from '@redspark/rsh-native-runtime'
+import { parseNativeClientProfile, type NativeClientProfile } from '@redspark/rsh-native-web-assets/native-client'
+import { inspectSessionRootCompression } from '@redspark/rsh-session-persistence-jsonl/native-inspection'
+import type { JsonlCompression } from '@redspark/rsh-session-persistence-jsonl/native'
 import { load as loadYaml } from 'js-yaml'
 import { spawn } from 'node:child_process'
 import {
@@ -133,11 +133,11 @@ interface NativeDesktopCandidatePreflight extends NativeDesktopPreflight {
   readonly compression: JsonlCompression
 }
 
-const PROJECT_NAME = '@deepseek-ai/dsh-desktop-runtime'
-const SESSION_STORAGE_PACKAGE = '@deepseek-ai/dsh-session-persistence-jsonl'
-const DSH_PACKAGE = '@deepseek-ai/dsh'
-const CORE_BUILD_PACKAGE = '@deepseek-ai/dsh-subprocess-local'
-const DESKTOP_PROFILE_BUNDLES = ['@deepseek-ai/dsh-base', '@deepseek-ai/dsh-web-app'] as const
+const PROJECT_NAME = '@redspark/rsh-desktop-runtime'
+const SESSION_STORAGE_PACKAGE = '@redspark/rsh-session-persistence-jsonl'
+const RSH_PACKAGE = '@redspark/dsh'
+const CORE_BUILD_PACKAGE = '@redspark/rsh-subprocess-local'
+const DESKTOP_PROFILE_BUNDLES = ['@redspark/rsh-base', '@redspark/rsh-web-app'] as const
 const WORKSPACE_SETTINGS = 'nodeLinker: hoisted\nautoInstallPeers: false\nstrictDepBuilds: true\n'
 const PACKAGE_NAME_PATTERN = /^(?:@[a-z0-9][a-z0-9._~-]*\/[a-z0-9][a-z0-9._~-]*|[a-z0-9][a-z0-9._~-]*)$/u
 const VERSION_PATTERN = /^[0-9A-Za-z][0-9A-Za-z.+_-]*$/u
@@ -764,10 +764,10 @@ function nativeRequiredClosure(
   const presetScopes = files.host.scopes.flatMap((scope) => {
     if (persistedScopes.has(scope.id) || scope.parent === undefined) return []
     const manager = composition.rows.find(row => row.target === 'host' && row.scope === scope.parent
-      && row.plugin === '@deepseek-ai/dsh-agent-presets')
+      && row.plugin === '@redspark/rsh-agent-presets')
     const rows = composition.rows.filter(row => row.target === 'host' && row.scope === scope.id)
     if (manager === undefined || !rows.some(row => row.id === scope.id
-      && row.plugin === '@deepseek-ai/dsh-agent-preset-standing')) return []
+      && row.plugin === '@redspark/rsh-agent-preset-standing')) return []
     return [{ managerKey: rowKey(manager.target, manager.id), rows }]
   })
   let addedPresetRows: boolean
@@ -805,9 +805,9 @@ async function validateNativeComposition(files: NativeProfileFiles, profileDir: 
   // Client entry files can reference browser globals; esbuild validates them without executing them in the shell.
   // esbuild cannot spawn its binary from app.asar.
   const nativeClientModule = await import(pathToFileURL(
-    createRequire(join(runtimeDir, 'node_modules', '@deepseek-ai', 'dsh-desktop-host', 'package.json'))
-      .resolve('@deepseek-ai/dsh-native-web-assets/native-client'),
-  ).href) as typeof import('@deepseek-ai/dsh-native-web-assets/native-client')
+    createRequire(join(runtimeDir, 'node_modules', '@redspark', 'dsh-desktop-host', 'package.json'))
+      .resolve('@redspark/rsh-native-web-assets/native-client'),
+  ).href) as typeof import('@redspark/rsh-native-web-assets/native-client')
   await nativeClientModule.prepareNativeClientProfileBundle(profileDir, runtimeDir, files.client, true)
 }
 
@@ -1569,7 +1569,7 @@ export class DesktopProjectManager {
     const environment = loadLayeredEnv('dsh', resetCandidate ? home : profileDirectory, undefined, home)
     await validateNativeLegacyConfig({ profileName: 'desktop', profileDirectory,
       clientPath: join(profileDirectory, 'rsh.client.json'),
-      installAnchor: join(this.runtime.dsh, 'node_modules', '@deepseek-ai', 'dsh', 'package.json'),
+      installAnchor: join(this.runtime.dsh, 'node_modules', '@redspark', 'dsh', 'package.json'),
       home, profile, profileDocument, clientDocument, patchFiles: [], environment })
     return candidate ? { environment, compression } : { environment }
   }
@@ -1579,7 +1579,7 @@ export class DesktopProjectManager {
     const profile = readNativeProfile({ profile: 'desktop', profileDir: profileDirectory, patchFiles: [] })
     await migrateNativeLegacyConfig({ profileName: 'desktop', profileDirectory,
       clientPath: join(profileDirectory, 'rsh.client.json'),
-      installAnchor: join(this.runtime.dsh, 'node_modules', '@deepseek-ai', 'dsh', 'package.json'),
+      installAnchor: join(this.runtime.dsh, 'node_modules', '@redspark', 'dsh', 'package.json'),
       home, profile, patchFiles: [], environment: environment ?? loadLayeredEnv('dsh', profileDirectory, undefined, home) })
   }
 
@@ -1655,7 +1655,7 @@ export class DesktopProjectManager {
     const npmrc = join(this.paths.pnpm.config, 'npmrc')
     if (!existsSync(npmrc)) writeFileSync(npmrc, '', { mode: 0o600 })
     const inherited = Object.fromEntries(Object.entries(process.env).filter(([name]) => (
-      name !== 'NODE_OPTIONS' && name !== 'NODE_PATH' && !/^DSH_DESKTOP_/u.test(name) && !/^(?:npm|pnpm|corepack)_/iu.test(name)
+      name !== 'NODE_OPTIONS' && name !== 'NODE_PATH' && !/^RSH_DESKTOP_/u.test(name) && !/^(?:npm|pnpm|corepack)_/iu.test(name)
     )))
     writeFileSync(this.pendingPackages, '')
     await new Promise<void>((settle, reject) => {
@@ -1810,7 +1810,7 @@ export function createDevelopmentProjectMetadata(
   compression: JsonlCompression,
 ): void {
   createNativeDesktopProfile(projectDir, home, process.platform, {
-    [DSH_PACKAGE]: release.version,
+    [RSH_PACKAGE]: release.version,
     [DESKTOP_HOST_PACKAGE]: release.version,
   }, compression)
 }

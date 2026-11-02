@@ -3,7 +3,7 @@ description: "The model-facing glob and grep discovery tools for users and maint
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-tool-fs-search
+# @redspark/rsh-tool-fs-search
 
 English | [中文](README.zh.md)
 
@@ -34,11 +34,11 @@ The package root is the Cordis compatibility entry; native compositions should i
 A subprocess backend, then the tools; the spill backend is optional and makes capped results fully recoverable.
 
 ```yaml
-- name: '@deepseek-ai/dsh-subprocess-local'
-- name: '@deepseek-ai/dsh-tool-fs-search'
+- name: '@redspark/rsh-subprocess-local'
+- name: '@redspark/rsh-tool-fs-search'
   config:
     sampleOverCapGlobResults: false
-- name: '@deepseek-ai/dsh-spill-local'
+- name: '@redspark/rsh-spill-local'
 ```
 
 `sampleOverCapGlobResults` is required and has no fallback: deployments choose the over-cap ordering contract explicitly. When formatted spill succeeds, both modes preserve the complete sorted list in the spill artifact.

@@ -1,12 +1,12 @@
 /** Reversible native tool contributions consumed by a selected application. */
-import { HarnessError, type ContentBlock, type ToolCallId, type ToolSchema, type UserMessage } from '@deepseek-ai/dsh-llm/native'
-import type { StoredImageAttachment } from '@deepseek-ai/dsh-attachment/native'
-import { deepFreeze, snapshotJsonValue, type JsonValue } from '@deepseek-ai/dsh-util-values'
-import { type NativeAgent, type NativeAgentRegistry } from '@deepseek-ai/dsh-native-agent'
-import { NativeContributions, type NativeScope } from '@deepseek-ai/dsh-native-runtime'
+import { HarnessError, type ContentBlock, type ToolCallId, type ToolSchema, type UserMessage } from '@redspark/rsh-llm/native'
+import type { StoredImageAttachment } from '@redspark/rsh-attachment/native'
+import { deepFreeze, snapshotJsonValue, type JsonValue } from '@redspark/rsh-util-values'
+import { type NativeAgent, type NativeAgentRegistry } from '@redspark/rsh-native-agent'
+import { NativeContributions, type NativeScope } from '@redspark/rsh-native-runtime'
 import type {
   Session, SessionEvent, SessionEventMap, SessionEventType, SurfaceEventType, SurfaceIntent,
-} from '@deepseek-ai/dsh-session/native'
+} from '@redspark/rsh-session/native'
 import { assertSupportedJsonSchema, type JsonSchemaNode, ToolArgsError, validateJsonSchemaValue } from './json-schema.ts'
 import type { ToolSdkSchema } from './ts-types.ts'
 import type { NativeToolDelegationContext, NativeToolRestriction } from './types.ts'
@@ -157,7 +157,7 @@ export interface NativeExternalToolInvocation {
   readAcceptedImages(): Promise<readonly StoredImageAttachment[]>
 }
 
-export type { StoredImageAttachment } from '@deepseek-ai/dsh-attachment/native'
+export type { StoredImageAttachment } from '@redspark/rsh-attachment/native'
 
 /** Captured Engine tool authority for one external operation. */
 export interface NativeExternalToolOperations {

@@ -1,6 +1,6 @@
 /** Private snapshot owner for asynchronous GUI operations. */
-import { createSnapshotStore, type SnapshotStore } from '@deepseek-ai/dsh-client-store'
-import type { SessionId } from '@deepseek-ai/dsh-session/types'
+import { createSnapshotStore, type SnapshotStore } from '@redspark/rsh-client-store'
+import type { SessionId } from '@redspark/rsh-session/types'
 import type { CreateTaskRequest, SchedulerOwner, SchedulerSnapshot } from '../gui-types.ts'
 
 /** Domain operations consumed by the panel; transport errors reject. */

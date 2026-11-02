@@ -1,7 +1,7 @@
 /** Canonical native filesystem results and their existing model presentations. */
-import type { ImageAttachmentRef } from '@deepseek-ai/dsh-attachment/types'
-import type { NativeValueToolContribution } from '@deepseek-ai/dsh-native-tools'
-import type { FsWriteOutcome } from '@deepseek-ai/dsh-fs/native'
+import type { ImageAttachmentRef } from '@redspark/rsh-attachment/types'
+import type { NativeValueToolContribution } from '@redspark/rsh-native-tools'
+import type { FsWriteOutcome } from '@redspark/rsh-fs/native'
 import { formatReadOutput, type FileReadOutcome } from './read-render.ts'
 import { formatImageReadOutput } from './read-image-core.ts'
 import { formatEditOutput, formatWriteOutput, parseReadArgs } from './text-operations.ts'

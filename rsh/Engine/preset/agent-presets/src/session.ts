@@ -11,10 +11,10 @@
  *
  * Reconstruction reads the `agentPreset` Session projection, never the header
  * alone.
- * @module @deepseek-ai/dsh-agent-presets/session
+ * @module @redspark/rsh-agent-presets/session
  */
 
-import type { ProjectionDefinition } from '@deepseek-ai/dsh-session-projection'
+import type { ProjectionDefinition } from '@redspark/rsh-session-projection'
 import { z } from 'zod'
 export type * from './selection-events.ts'
 

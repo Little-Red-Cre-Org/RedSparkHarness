@@ -1,7 +1,7 @@
 /** Cordis-free service ports shared by both session-query tool installers. */
-import type { SessionQueryOperations } from '@deepseek-ai/dsh-session-query/native'
-import type { Session } from '@deepseek-ai/dsh-session/native'
-import type { TurnBoundaryProjection } from '@deepseek-ai/dsh-native-agent/turn-boundary'
+import type { SessionQueryOperations } from '@redspark/rsh-session-query/native'
+import type { Session } from '@redspark/rsh-session/native'
+import type { TurnBoundaryProjection } from '@redspark/rsh-native-agent/turn-boundary'
 
 /** Services used by the shared workspace authorization and tool operations. */
 export interface SessionQueryToolServices {

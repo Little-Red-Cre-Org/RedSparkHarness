@@ -3,7 +3,7 @@ description: "Shared Settings interfaces for providers, APIs, and consumers, inc
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-settings-definition
+# @redspark/rsh-settings-definition
 
 English | [中文](README.zh.md)
 
@@ -28,8 +28,8 @@ Use this package to share Settings service, namespace, descriptor, edit, and Nat
 Providers and configuration APIs use the root export for framework-neutral Settings declarations. Browser consumers use `/types`; Native providers and consumers use `/native`.
 
 ```ts
-import type { SettingsService } from '@deepseek-ai/dsh-settings-definition'
-import type { NativeSettingsService } from '@deepseek-ai/dsh-settings-definition/native'
+import type { SettingsService } from '@redspark/rsh-settings-definition'
+import type { NativeSettingsService } from '@redspark/rsh-settings-definition/native'
 ```
 
 These imports resolve type contracts at compile time. They do not create a Settings service or load a provider. Cordis plugins use [`compat-settings-definition`](../../../Compatibility/DSH/bridge/compat-settings-definition/README.md) for `Context.settings` declarations.

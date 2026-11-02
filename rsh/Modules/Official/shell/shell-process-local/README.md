@@ -3,7 +3,7 @@ description: "Shared native process lifecycle for Bash and PowerShell shell Prov
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-shell-process-local
+# @redspark/rsh-shell-process-local
 
 English | [中文](README.zh.md)
 

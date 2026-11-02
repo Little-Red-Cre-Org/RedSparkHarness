@@ -1,5 +1,5 @@
 /** Shared model policy and canonical Goal results for both runtime Consumers. */
-import type { GoalView } from '@deepseek-ai/dsh-goal/types'
+import type { GoalView } from '@redspark/rsh-goal/types'
 
 /** Model policy for direct-human Goal creation. */
 export const CREATE_DESCRIPTION =

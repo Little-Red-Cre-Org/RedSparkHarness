@@ -28,7 +28,7 @@ const isWin32 = process.platform === 'win32'
 const FILE_READ_DATA = 0x0001
 
 /** koffi SID layout: revision@0, subAuthorityCount@1, identifierAuthority@2 (6 bytes, big-endian), subAuthority@8. */
-const SID_STRUCT = koffi.struct('DSH_ACL_SPEC_SID', {
+const SID_STRUCT = koffi.struct('RSH_ACL_SPEC_SID', {
   revision: 'uint8',
   subAuthorityCount: 'uint8',
   identifierAuthority: 'uint8[6]',

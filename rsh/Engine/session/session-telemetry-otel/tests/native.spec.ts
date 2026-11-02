@@ -4,18 +4,18 @@ import { mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { expect, it } from 'vitest'
-import { NativeAgentId, NativeAgentRegistry } from '@deepseek-ai/dsh-native-agent'
-import { createLaunchEnvironmentSnapshot, launchEnvironmentProvider } from '@deepseek-ai/dsh-launch-environment/native'
-import { createAssistantMessage } from '@deepseek-ai/dsh-llm'
-import { NativeHost, NativeScope, resolveInstallation, type NativePlugin } from '@deepseek-ai/dsh-native-runtime'
-import { NativeActiveSessionRegistry } from '@deepseek-ai/dsh-native-session-execution'
-import type {} from '@deepseek-ai/dsh-session-telemetry/native-definition'
-import { createUserMessage } from '@deepseek-ai/dsh-llm/native'
-import { Session, SessionId } from '@deepseek-ai/dsh-session/native'
-import type { NativeSessionPersistenceOperations } from '@deepseek-ai/dsh-session-persistence/native'
-import { plugin as persistencePlugin } from '@deepseek-ai/dsh-session-persistence-jsonl/native'
-import { plugin as messageFeedbackPlugin } from '@deepseek-ai/dsh-message-feedback/native'
-import type { NativeMessageFeedbackOperations } from '@deepseek-ai/dsh-message-feedback/native-definition'
+import { NativeAgentId, NativeAgentRegistry } from '@redspark/rsh-native-agent'
+import { createLaunchEnvironmentSnapshot, launchEnvironmentProvider } from '@redspark/rsh-launch-environment/native'
+import { createAssistantMessage } from '@redspark/rsh-llm'
+import { NativeHost, NativeScope, resolveInstallation, type NativePlugin } from '@redspark/rsh-native-runtime'
+import { NativeActiveSessionRegistry } from '@redspark/rsh-native-session-execution'
+import type {} from '@redspark/rsh-session-telemetry/native-definition'
+import { createUserMessage } from '@redspark/rsh-llm/native'
+import { Session, SessionId } from '@redspark/rsh-session/native'
+import type { NativeSessionPersistenceOperations } from '@redspark/rsh-session-persistence/native'
+import { plugin as persistencePlugin } from '@redspark/rsh-session-persistence-jsonl/native'
+import { plugin as messageFeedbackPlugin } from '@redspark/rsh-message-feedback/native'
+import type { NativeMessageFeedbackOperations } from '@redspark/rsh-message-feedback/native-definition'
 import { NativeProgramActiveSession } from '../../../core/native-headless/src/continuation-active-session.ts'
 import { NativeContinuationSession } from '../../../core/native-headless/src/continuation-session.ts'
 import { plugin } from '../src/native.ts'
@@ -31,7 +31,7 @@ it('honors the process hardoff over FEEDBACK_ONLY configuration without construc
     { plugin, scope, config: { mode: 'FEEDBACK_ONLY', exporter: { url: 'not-an-endpoint' } } },
     { plugin: consumer, scope, config: undefined },
     { plugin: launchEnvironmentProvider(createLaunchEnvironmentSnapshot([{
-      source: 'process', values: { DSH_TELEMETRY_DISABLED: '1' },
+      source: 'process', values: { RSH_TELEMETRY_DISABLED: '1' },
     }])), scope, config: undefined },
   ], 'host'))
 
@@ -129,7 +129,7 @@ it('drains an accepted delegated feedback prefix through owner release and Nativ
   }
   const host = new NativeHost(resolveInstallation([
     { plugin: launchEnvironmentProvider(createLaunchEnvironmentSnapshot([
-      { source: 'process', values: { DSH_TELEMETRY_DISABLED: '' } },
+      { source: 'process', values: { RSH_TELEMETRY_DISABLED: '' } },
     ])), scope, config: undefined },
     { plugin: activeProvider, scope, config: undefined },
     { plugin: persistencePlugin, scope, config: { root, compression: 'none' } },
@@ -233,7 +233,7 @@ it('drains an accepted delegated feedback prefix through owner release and Nativ
     const prefix = committedPrefix
     if (prefix === undefined) throw new Error('feedback commit prefix was not captured')
     const records = captures.flatMap(capture => capture.resourceLogs.flatMap(resource => resource.scopeLogs
-      .filter(entry => entry.scope.name === '@deepseek-ai/dsh-session-telemetry-otel')
+      .filter(entry => entry.scope.name === '@redspark/rsh-session-telemetry-otel')
       .flatMap(entry => entry.logRecords)))
     const observed = records.map((record) => {
       const attributes = new Map((record.attributes ?? []).map(attribute => [attribute.key, attribute.value]))

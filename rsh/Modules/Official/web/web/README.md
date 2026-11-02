@@ -3,7 +3,7 @@ description: "The web access service (ctx.web): how deployments and plugin autho
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-web
+# @redspark/rsh-web
 
 English | [中文](README.zh.md)
 
@@ -33,12 +33,12 @@ Choose the service when a plugin or tool must search or fetch without hard-codin
 
 ### Minimal configuration
 
-Load the service and let a single mounted backend auto-select, or pin a provider id with `searchProvider`/`fetchProvider`. The environment variables `$DSH_WEB_SEARCH_PROVIDER` and `$DSH_WEB_FETCH_PROVIDER` feed the same fields and are not a separate priority chain.
+Load the service and let a single mounted backend auto-select, or pin a provider id with `searchProvider`/`fetchProvider`. The environment variables `$RSH_WEB_SEARCH_PROVIDER` and `$RSH_WEB_FETCH_PROVIDER` feed the same fields and are not a separate priority chain.
 
 ```yaml
-- name: '@deepseek-ai/dsh-web'
-- name: '@deepseek-ai/dsh-web-search-exa'
-- name: '@deepseek-ai/dsh-web-fetch-http'
+- name: '@redspark/rsh-web'
+- name: '@redspark/rsh-web-search-exa'
+- name: '@redspark/rsh-web-fetch-http'
 ```
 
 | Field | Default | Meaning |
@@ -83,7 +83,7 @@ Failures throw `WebError` with a stable, machine-routable code; the message adds
 
 ### Native entry
 
-Native compositions import `./native`, which provides the `web` service and requires `launchEnvironment`. It reuses the same selection rules, duplicate-id rejection, `maxResults` capping and `WebError` codes from the shared `selection.ts`. Configured pins win over `$DSH_WEB_SEARCH_PROVIDER` / `$DSH_WEB_FETCH_PROVIDER` read from the process layer. Native providers receive the consuming invocation's cancellation signal and Session `appendEvent`; removing a provider closes its admission, cancels its admitted operations and resolves after they settle. The shipped `native-headless`, `native-web` and `native-tui` compositions install it with `searchProvider: deepseek-official` and `fetchProvider: http` ([Agent Note](../../../../../.agents/notes/implemented/architecture/2026-10-08-native-web-tools.md)).
+Native compositions import `./native`, which provides the `web` service and requires `launchEnvironment`. It reuses the same selection rules, duplicate-id rejection, `maxResults` capping and `WebError` codes from the shared `selection.ts`. Configured pins win over `$RSH_WEB_SEARCH_PROVIDER` / `$RSH_WEB_FETCH_PROVIDER` read from the process layer. Native providers receive the consuming invocation's cancellation signal and Session `appendEvent`; removing a provider closes its admission, cancels its admitted operations and resolves after they settle. The shipped `native-headless`, `native-web` and `native-tui` compositions install it with `searchProvider: deepseek-official` and `fetchProvider: http` ([Agent Note](../../../../../.agents/notes/implemented/architecture/2026-10-08-native-web-tools.md)).
 
 -----
 

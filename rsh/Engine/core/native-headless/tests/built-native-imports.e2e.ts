@@ -22,7 +22,7 @@ const nativePackages = [
 const importScript = `
   import { registerHooks } from 'node:module'
   registerHooks({ resolve(specifier, context, nextResolve) {
-    if (specifier === '@deepseek-ai/cordis' || specifier.startsWith('@deepseek-ai/cordis/')) {
+    if (specifier === '@redspark/cordis' || specifier.startsWith('@redspark/cordis/')) {
       throw new Error('Cordis imported by ' + context.parentURL)
     }
     return nextResolve(specifier, context)
@@ -38,9 +38,9 @@ function importInIsolatedNode(specifier: string, cwd: string) {
   })
 }
 
-describe.skipIf(process.env.DSH_EXAMPLE_MODE !== 'lib')('built native entry imports', () => {
+describe.skipIf(process.env.RSH_EXAMPLE_MODE !== 'lib')('built native entry imports', () => {
   it('rejects a direct Cordis import', () => {
-    const result = importInIsolatedNode('@deepseek-ai/cordis', nativePackages[0]!.cwd)
+    const result = importInIsolatedNode('@redspark/cordis', nativePackages[0]!.cwd)
     expect(result.status).not.toBe(0)
     expect(result.stderr).toContain('Cordis imported by')
   })
@@ -54,7 +54,7 @@ describe.skipIf(process.env.DSH_EXAMPLE_MODE !== 'lib')('built native entry impo
 
   it('loads the native credential definition without Cordis', () => {
     const cwd = join(root, 'rsh/Modules/Official/credentials/credentials')
-    const result = importInIsolatedNode('@deepseek-ai/dsh-credentials/native', cwd)
+    const result = importInIsolatedNode('@redspark/rsh-credentials/native', cwd)
     expect(result.error).toBeUndefined()
     expect(result.status, result.stderr).toBe(0)
     expect(result.stdout.trim()).toBe('loaded')
@@ -62,7 +62,7 @@ describe.skipIf(process.env.DSH_EXAMPLE_MODE !== 'lib')('built native entry impo
 
   it('loads the native launch environment without Cordis', () => {
     const cwd = join(root, 'rsh/Core/util/launch-environment')
-    const result = importInIsolatedNode('@deepseek-ai/dsh-launch-environment/native', cwd)
+    const result = importInIsolatedNode('@redspark/rsh-launch-environment/native', cwd)
     expect(result.error).toBeUndefined()
     expect(result.status, result.stderr).toBe(0)
     expect(result.stdout.trim()).toBe('loaded')
@@ -70,7 +70,7 @@ describe.skipIf(process.env.DSH_EXAMPLE_MODE !== 'lib')('built native entry impo
 
   it('loads the browser module system entry without Cordis', () => {
     const cwd = join(root, 'rsh/Programs/Web/client/modules')
-    const result = importInIsolatedNode('@deepseek-ai/dsh-client-modules/native', cwd)
+    const result = importInIsolatedNode('@redspark/rsh-client-modules/native', cwd)
     expect(result.error).toBeUndefined()
     expect(result.status, result.stderr).toBe(0)
     expect(result.stdout.trim()).toBe('loaded')
@@ -78,7 +78,7 @@ describe.skipIf(process.env.DSH_EXAMPLE_MODE !== 'lib')('built native entry impo
 
   it('loads the browser native boot entry without Cordis', () => {
     const cwd = join(root, 'rsh/Programs/Web/client/web')
-    const result = importInIsolatedNode('@deepseek-ai/dsh-client-web/native', cwd)
+    const result = importInIsolatedNode('@redspark/rsh-client-web/native', cwd)
     expect(result.error).toBeUndefined()
     expect(result.status, result.stderr).toBe(0)
     expect(result.stdout.trim()).toBe('loaded')

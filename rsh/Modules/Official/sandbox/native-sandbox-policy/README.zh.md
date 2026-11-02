@@ -3,7 +3,7 @@ description: "原生 profile 可为每个感知 Session 的文件系统变更选
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-native-sandbox-policy
+# @redspark/rsh-native-sandbox-policy
 
 [English](README.md) | 中文
 

@@ -1,12 +1,12 @@
 /** Native foreground workflow Consumer with durable child progress and canonical model output. */
 import z from 'zod'
-import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
-import type { NativeToolExecution } from '@deepseek-ai/dsh-native-tools'
-import type { NativeWorkflowOperations } from '@deepseek-ai/dsh-workflow/native'
-import type { WorkflowResult, WorkflowRunId, WorkflowMeta } from '@deepseek-ai/dsh-workflow/types'
-import type { JsonValue } from '@deepseek-ai/dsh-util-values'
+import type { NativePlugin } from '@redspark/rsh-native-runtime'
+import type { NativeToolExecution } from '@redspark/rsh-native-tools'
+import type { NativeWorkflowOperations } from '@redspark/rsh-workflow/native'
+import type { WorkflowResult, WorkflowRunId, WorkflowMeta } from '@redspark/rsh-workflow/types'
+import type { JsonValue } from '@redspark/rsh-util-values'
 import { runNativeForegroundWorkflow } from './foreground.ts'
-import type {} from '@deepseek-ai/dsh-native-prompt/native'
+import type {} from '@redspark/rsh-native-prompt/native'
 
 const Configuration = z.object({ provider: z.string().min(1), toolName: z.string().min(1).default('workflow'),
   promptOrder: z.number().default(600),
@@ -59,7 +59,7 @@ function assertCompleted(result: WorkflowResult): void {
 
 /** Model-facing foreground orchestration backed by a selected native worker Provider. */
 export const plugin: NativePlugin = {
-  apiVersion: 1, name: '@deepseek-ai/dsh-tool-workflow', targets: ['host'], requires: ['workflow', 'tools', 'promptSections'], provides: [],
+  apiVersion: 1, name: '@redspark/rsh-tool-workflow', targets: ['host'], requires: ['workflow', 'tools', 'promptSections'], provides: [],
   resolve(input) {
     const config = resolveNativeWorkflowToolConfig(input)
     return (context) => {

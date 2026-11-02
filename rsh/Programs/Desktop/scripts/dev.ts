@@ -57,19 +57,19 @@ async function launchElectron(home: string): Promise<void> {
   const require = createRequire(import.meta.url)
   const electron: unknown = require('electron')
   if (typeof electron !== 'string') throw new Error('desktop development: electron executable is unavailable')
-  const mainPort = debugPort('DSH_DESKTOP_MAIN_INSPECT_PORT', 9229)
-  const rendererPort = debugPort('DSH_DESKTOP_RENDERER_DEBUG_PORT', 9222)
-  const hostPort = debugPort('DSH_DESKTOP_HOST_INSPECT_PORT', 9230)
+  const mainPort = debugPort('RSH_DESKTOP_MAIN_INSPECT_PORT', 9229)
+  const rendererPort = debugPort('RSH_DESKTOP_RENDERER_DEBUG_PORT', 9222)
+  const hostPort = debugPort('RSH_DESKTOP_HOST_INSPECT_PORT', 9230)
   const userData = join(DEVELOPMENT_ROOT, 'electron-user-data')
   const environment: NodeJS.ProcessEnv = {
     ...process.env,
-    DSH_HOME: home,
-    DSH_DESKTOP_HOST_INSPECT_PORT: String(hostPort),
-    DSH_DESKTOP_NODE_BINARY: process.execPath,
-    DSH_DESKTOP_OPEN_DEVTOOLS: process.env.DSH_DESKTOP_OPEN_DEVTOOLS ?? '1',
+    RSH_HOME: home,
+    RSH_DESKTOP_HOST_INSPECT_PORT: String(hostPort),
+    RSH_DESKTOP_NODE_BINARY: process.execPath,
+    RSH_DESKTOP_OPEN_DEVTOOLS: process.env.RSH_DESKTOP_OPEN_DEVTOOLS ?? '1',
     ELECTRON_ENABLE_LOGGING: process.env.ELECTRON_ENABLE_LOGGING ?? '1',
   }
-  console.log(`desktop development: DSH_HOME=${home}`)
+  console.log(`desktop development: RSH_HOME=${home}`)
   console.log(`desktop development: inspectors main=${String(mainPort)}, renderer=${String(rendererPort)}, host=${String(hostPort)}`)
   await run(electron, [
     `--inspect=127.0.0.1:${String(mainPort)}`,
@@ -104,7 +104,7 @@ async function main(): Promise<void> {
     pnpmVersion,
   }
   const projectDir = join(DEVELOPMENT_ROOT, 'project')
-  const home = resolve(process.env.DSH_HOME ?? join(DEVELOPMENT_ROOT, 'home'))
+  const home = resolve(process.env.RSH_HOME ?? join(DEVELOPMENT_ROOT, 'home'))
   await prepareDevelopmentProject({
     projectDir,
     cliDir: join(REPOSITORY_ROOT, 'rsh', 'Programs', 'CLI'),

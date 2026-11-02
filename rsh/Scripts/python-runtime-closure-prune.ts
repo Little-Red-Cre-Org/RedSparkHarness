@@ -63,7 +63,7 @@ export function readStagedPackages(nodeModules: string): Map<string, StagedPacka
  * install can skip them. A packaged runtime resolves `optionalDependencies` eagerly, which is what
  * drags the legacy assembly into the Python wheel.
  */
-export const OPTIONAL_EDGES_EXCLUDED_FOR: readonly string[] = ['@deepseek-ai/dsh']
+export const OPTIONAL_EDGES_EXCLUDED_FOR: readonly string[] = ['@redspark/dsh']
 
 /**
  * Optional neighbours that are legacy assembly rather than runtime needs.
@@ -73,7 +73,7 @@ export const OPTIONAL_EDGES_EXCLUDED_FOR: readonly string[] = ['@deepseek-ai/dsh
  * packaged runtime, so only the legacy Cordis neighbours stay excluded.
  */
 function isLegacyOptionalNeighbour(name: string): boolean {
-  return name.startsWith('@deepseek-ai/cordis')
+  return name.startsWith('@redspark/cordis')
 }
 
 /**
@@ -271,7 +271,7 @@ function sameMap(left: Record<string, string> | undefined, right: Record<string,
 export function missingStagedNeighbours(
   nodeModules: string,
   excludedDependents: readonly string[] = [],
-  scopePrefix = '@deepseek-ai/',
+  scopePrefix = '@redspark/',
 ): string[] {
   const packages = readStagedPackages(nodeModules)
   const excluded = new Set(excludedDependents)

@@ -1,8 +1,8 @@
 /** Secret-free settings invalidations streamed to the authenticated browser. */
-import type { NativeContext } from '@deepseek-ai/dsh-native-runtime'
-import type {} from '@deepseek-ai/dsh-settings-definition/native'
-import type {} from '@deepseek-ai/dsh-credentials/native'
-import type {} from '@deepseek-ai/dsh-llm-pi-ai/native'
+import type { NativeContext } from '@redspark/rsh-native-runtime'
+import type {} from '@redspark/rsh-settings-definition/native'
+import type {} from '@redspark/rsh-credentials/native'
+import type {} from '@redspark/rsh-llm-pi-ai/native'
 import { z } from 'zod'
 
 const requestSchema = z.strictObject({})

@@ -1,7 +1,7 @@
 /** Tool presentation derived solely from accepted, durable Session facts. */
-import { NativeToolCard, type ToolCallBlock, type RunningToolCall } from '@deepseek-ai/dsh-client-ui-tool/native'
-import type { SessionEvent } from '@deepseek-ai/dsh-session/types'
-import type {} from '@deepseek-ai/dsh-native-tools/types'
+import { NativeToolCard, type ToolCallBlock, type RunningToolCall } from '@redspark/rsh-client-ui-tool/native'
+import type { SessionEvent } from '@redspark/rsh-session/types'
+import type {} from '@redspark/rsh-native-tools/types'
 
 interface ToolCardRecord { readonly seq: number; readonly block: ToolCallBlock }
 

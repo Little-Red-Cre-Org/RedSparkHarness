@@ -1,7 +1,7 @@
 /**
  * Electron child-process entry: boots the desktop project without a listening
  * socket and carries API plus validated Web assets over framed byte pipes.
- * @module @deepseek-ai/dsh-desktop-host
+ * @module @redspark/rsh-desktop-host
  */
 
 import { mkdirSync, readFileSync } from 'node:fs'
@@ -9,7 +9,7 @@ import { once } from 'node:events'
 import { createRequire } from 'node:module'
 import { join, resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
-import { profileDirectoryRuntime } from '@deepseek-ai/dsh/native-profile'
+import { profileDirectoryRuntime } from '@redspark/dsh/native-profile'
 import type { DesktopHostRuntime } from './runtime.ts'
 import { openDesktopHostPipes } from './pipes.ts'
 import {
@@ -57,7 +57,7 @@ type DesktopHostFailure = Extract<DesktopHostEvent, { type: 'fatal' }>
 const errorTypes = new Set<DesktopHostFailure['errorType']>([
   'AggregateError', 'Error', 'RangeError', 'SyntaxError', 'TypeError', 'ValidationError',
 ])
-const COMPATIBILITY_HOST_PACKAGE = '@deepseek-ai/dsh-desktop-host-compatibility'
+const COMPATIBILITY_HOST_PACKAGE = '@redspark/rsh-desktop-host-compatibility'
 
 async function createCompatibilityRuntime(
   runtimeDir: string, projectDir: string, allowLinkedPackages: boolean,
@@ -69,7 +69,7 @@ async function createCompatibilityRuntime(
   } catch (error) {
     throw new Error('dsh desktop: legacy bundles require the separately installed Desktop compatibility Host; profile files were preserved', { cause: error })
   }
-  const compatibility = await import(pathToFileURL(entry).href) as typeof import('@deepseek-ai/dsh-desktop-host-compatibility')
+  const compatibility = await import(pathToFileURL(entry).href) as typeof import('@redspark/rsh-desktop-host-compatibility')
   return compatibility.createLegacyDesktopRuntime(runtimeDir, projectDir, allowLinkedPackages)
 }
 
@@ -137,7 +137,7 @@ function isDesktopHostCommand(message: unknown): message is DesktopHostCommand {
 }
 
 function dshVersion(runtimeDir: string): string {
-  const value: unknown = JSON.parse(readFileSync(join(runtimeDir, 'node_modules', '@deepseek-ai', 'dsh', 'package.json'), 'utf8'))
+  const value: unknown = JSON.parse(readFileSync(join(runtimeDir, 'node_modules', '@redspark', 'dsh', 'package.json'), 'utf8'))
   if (!isRecord(value) || typeof value.version !== 'string') throw new Error('dsh desktop: installed dsh manifest has no version')
   return value.version
 }

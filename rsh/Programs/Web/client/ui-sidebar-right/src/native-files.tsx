@@ -1,14 +1,14 @@
 /** Native workspace tree and preview over the optional Session file client. */
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
-import type { NativeWorkspaceFilesClient } from '@deepseek-ai/dsh-client-native-session/native'
+import type { NativeWorkspaceFilesClient } from '@redspark/rsh-client-native-session/native'
 import {
   Button, IconRefreshOutline16, SidebarPathBar,
   WorkspaceCodePreview, WorkspaceFileTreeRows, WorkspaceHtmlPreview, WorkspaceImagePreview,
   WorkspaceMarkdownPreview, classifyFileType, htmlRelativePath, isCodeFileType, languageForPath,
-} from '@deepseek-ai/dsh-client-ui-primitives'
-import type { MarkdownLabels, ReadHtmlRelative, WorkspaceFileTreeLevel } from '@deepseek-ai/dsh-client-ui-primitives'
-import type { TranslateNS } from '@deepseek-ai/dsh-client-ui-slots'
-import type { SessionId } from '@deepseek-ai/dsh-session/types'
+} from '@redspark/rsh-client-ui-primitives'
+import type { MarkdownLabels, ReadHtmlRelative, WorkspaceFileTreeLevel } from '@redspark/rsh-client-ui-primitives'
+import type { TranslateNS } from '@redspark/rsh-client-ui-slots'
+import type { SessionId } from '@redspark/rsh-session/types'
 import css from './native-files.module.css'
 
 type FilesTranslate = TranslateNS<'nativeSidebarRight'>

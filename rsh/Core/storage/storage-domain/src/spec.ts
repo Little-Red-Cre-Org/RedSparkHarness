@@ -5,11 +5,11 @@
  * (validation, descriptor projection) derive from it. Record schemas are zod
  * (`z.infer` keeps types un-duplicated and the same schemas later project to
  * RPC wire schemas); plugin `Config` stays schemastery.
- * @module @deepseek-ai/dsh-storage-domain/src/spec
+ * @module @redspark/rsh-storage-domain/src/spec
  */
 
 import type { ZodType } from 'zod'
-import { UNIT_NAME_RE, type KvUnitDescriptor } from '@deepseek-ai/dsh-storage/backend'
+import { UNIT_NAME_RE, type KvUnitDescriptor } from '@redspark/rsh-storage/backend'
 
 /** Global singleton declaration: schema plus the value used before the first write. */
 export interface DomainGlobalSpec<G> {

@@ -3,7 +3,7 @@ description: "The one-shot Claude Code subagent provider for users and maintaine
 kind: "package-bundle"
 ---
 
-# @deepseek-ai/dsh-subagent-claude-code
+# @redspark/rsh-subagent-claude-code
 
 English | [中文](README.zh.md)
 
@@ -32,8 +32,8 @@ Mount this provider when a delegation should run as a real Claude Code session i
 Install the package into the target Profile, then restart that Profile. The installation brings the pinned Agent SDK and one compatible platform CLI payload into the Profile; the declared patch layer registers only the dormant provider and starts no Claude process.
 
 ```sh
-dsh plugin --profile <name> add @deepseek-ai/dsh-subagent-claude-code
-dsh plugin --profile <name> remove @deepseek-ai/dsh-subagent-claude-code
+dsh plugin --profile <name> add @redspark/rsh-subagent-claude-code
+dsh plugin --profile <name> remove @redspark/rsh-subagent-claude-code
 dsh --profile <name>
 ```
 
@@ -71,11 +71,11 @@ Each delegation tool row names one provider and needs its own `toolName`, so the
 
 ```yaml
 - id: jobs
-  name: '@deepseek-ai/dsh-jobs-local'
+  name: '@redspark/rsh-jobs-local'
 - id: tool-jobs
-  name: '@deepseek-ai/dsh-tool-jobs'
+  name: '@redspark/rsh-tool-jobs'
 - id: tool-subagent-claude
-  name: '@deepseek-ai/dsh-tool-subagent'
+  name: '@redspark/rsh-tool-subagent'
   config:
     provider: claude-code
     toolName: subagent_claude_code

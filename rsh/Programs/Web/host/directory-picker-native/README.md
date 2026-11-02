@@ -3,7 +3,7 @@ description: "Native-OS-chooser backend of the directory-picker seam: opens one 
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-host-directory-picker-native
+# @redspark/rsh-host-directory-picker-native
 
 English | [中文](README.zh.md)
 
@@ -11,7 +11,7 @@ English | [中文](README.zh.md)
 
 An operator at the host's display picks a workspace directory through a native OS chooser: `dsh-host-directory-picker-native` opens one platform directory chooser per pick and resolves the chosen absolute path (`null` on cancel). macOS drives `osascript`, Linux uses Zenity with a KDialog fallback, and Windows opens the modern `IFileOpenDialog` in a spawned child process. Only viable when the operator sits at the host's display — remote deployments compose the [browse backend](../directory-picker-browse/README.md) instead. One composition row also registers the matching browser-side interaction in the workspace flow.
 
-Native Host integrations can import `pickNativeDirectory(signal)` from `@deepseek-ai/dsh-host-directory-picker-native/native-picker` without loading the Cordis service entry.
+Native Host integrations can import `pickNativeDirectory(signal)` from `@redspark/rsh-host-directory-picker-native/native-picker` without loading the Cordis service entry.
 
 ## Table of Contents
 

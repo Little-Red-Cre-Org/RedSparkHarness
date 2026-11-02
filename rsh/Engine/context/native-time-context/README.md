@@ -3,7 +3,7 @@ description: "Native Provider for durable request-time context, for native profi
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-native-time-context
+# @redspark/rsh-native-time-context
 
 English | [中文](README.zh.md)
 
@@ -28,7 +28,7 @@ Install the Provider in a native profile when its application must present durab
 ```json
 {
   "id": "time-context",
-  "plugin": "@deepseek-ai/dsh-native-time-context",
+  "plugin": "@redspark/rsh-native-time-context",
   "scope": "root",
   "config": {
     "timeZone": "Asia/Shanghai",

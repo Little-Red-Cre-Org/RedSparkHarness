@@ -1,10 +1,10 @@
 /**
  * RSH plugin-role registry and adapter over the owned Cordis runtime.
- * @module @deepseek-ai/dsh-plugin-host
+ * @module @redspark/rsh-plugin-host
  */
 
-import { Context, Service } from '@deepseek-ai/cordis'
-import type { Fiber, Plugin, Inject } from '@deepseek-ai/cordis'
+import { Context, Service } from '@redspark/cordis'
+import type { Fiber, Plugin, Inject } from '@redspark/cordis'
 
 /** Runtime API revision implemented by this package. */
 export const RSH_PLUGIN_API_VERSION = 1 as const
@@ -45,7 +45,7 @@ export interface CordisPluginAdapter {
   apply(ctx: Context, config: unknown): Promise<void>
 }
 
-declare module '@deepseek-ai/cordis' {
+declare module '@redspark/cordis' {
   interface Context {
     pluginHost: RshPluginHost
   }

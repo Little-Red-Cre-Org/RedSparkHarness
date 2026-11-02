@@ -1,7 +1,7 @@
-import * as nativeCommand from '@deepseek-ai/dsh-native-command'
-import { Context } from '@deepseek-ai/cordis'
-import AgentRegistry from '@deepseek-ai/dsh-agent'
-import SessionStore from '@deepseek-ai/dsh-session'
+import * as nativeCommand from '@redspark/rsh-native-command'
+import { Context } from '@redspark/cordis'
+import AgentRegistry from '@redspark/rsh-agent'
+import SessionStore from '@redspark/rsh-session'
 import { describe, expect, it, vi } from 'vitest'
 import {
   createSessionTestController,

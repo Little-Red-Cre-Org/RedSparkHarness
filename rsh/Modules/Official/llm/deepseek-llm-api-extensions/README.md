@@ -3,7 +3,7 @@ description: "Official DeepSeek request-extension registry for provider plugins 
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-deepseek-llm-api-extensions
+# @redspark/rsh-deepseek-llm-api-extensions
 
 English | [中文](README.zh.md)
 
@@ -30,7 +30,7 @@ Provider-specific registry for additive top-level fields on official DeepSeek LL
 
 Each provider sees the exact serialized base body, the request `AbortSignal`, plus optional `sessionId` and auxiliary-call `purpose`. It must stop its own work promptly after cancellation and returns `undefined` when its field does not apply to that request. A prepared operation retains the providers it captured even if HMR removes their registrations before HTTP acceptance.
 
-The registry owns addition and lifecycle, not field semantics. `@deepseek-ai/dsh-session-log-deepseek` owns `dsh_session_log`; `@deepseek-ai/dsh-plugin-package-inventory-deepseek` owns `dsh_plugin_packages`. The provider-neutral LLM seam and `llm-pi-ai` do not consume this registry.
+The registry owns addition and lifecycle, not field semantics. `@redspark/rsh-session-log-deepseek` owns `dsh_session_log`; `@redspark/rsh-plugin-package-inventory-deepseek` owns `dsh_plugin_packages`. The provider-neutral LLM seam and `llm-pi-ai` do not consume this registry.
 
 <a id="native-host-api"></a>
 ## Native Host API
@@ -40,7 +40,7 @@ The `./native` package export provides the same `deepseekLlmApiExtensions` servi
 <a id="model-experience"></a>
 ## Model Experience
 
-Indirectly, through `@deepseek-ai/dsh-llm-deepseek`, which sends registered Cordis or Native fields outside the model's `messages`, system prompt, and tool schemas.
+Indirectly, through `@redspark/rsh-llm-deepseek`, which sends registered Cordis or Native fields outside the model's `messages`, system prompt, and tool schemas.
 
 #### KV Cache effect
 

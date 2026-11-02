@@ -3,13 +3,13 @@ description: "面向模型的 pwsh 工具，供选择、配置或排查 Windows 
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-tool-pwsh
+# @redspark/rsh-tool-pwsh
 
 [English](README.md) | 中文
 
 ## 概述
 
-`dsh-tool-pwsh` 通过已挂载的 shell 执行器运行 PowerShell 命令。`./native` 入口基于原生 shell、任务、审批和环境服务注册同一工具。每次调用都启动全新 pwsh 进程；`run_in_background` 创建受管理的后台任务。命令使用原生 `C:\...` 路径与 `$env:NAME` 变量。每次调用都接收受管 `DSH_*` 环境。在沙箱执行器下，工具向模型说明 Windows 语言模式和命名管道限制。请与 PowerShell 执行器及 `dsh-shell-env` 一起挂载。
+`dsh-tool-pwsh` 通过已挂载的 shell 执行器运行 PowerShell 命令。`./native` 入口基于原生 shell、任务、审批和环境服务注册同一工具。每次调用都启动全新 pwsh 进程；`run_in_background` 创建受管理的后台任务。命令使用原生 `C:\...` 路径与 `$env:NAME` 变量。每次调用都接收受管 `RSH_*` 环境。在沙箱执行器下，工具向模型说明 Windows 语言模式和命名管道限制。请与 PowerShell 执行器及 `dsh-shell-env` 一起挂载。
 
 ## 目录
 
@@ -42,9 +42,9 @@ kind: "package-reference"
 常用路径是 PowerShell 执行器提供方、环境注册表与本工具。
 
 ```yaml
-- name: '@deepseek-ai/dsh-pwsh-local'
-- name: '@deepseek-ai/dsh-shell-env'
-- name: '@deepseek-ai/dsh-tool-pwsh'
+- name: '@redspark/rsh-pwsh-local'
+- name: '@redspark/rsh-shell-env'
+- name: '@redspark/rsh-tool-pwsh'
 ```
 
 唯一的配置字段用于开关后台支持。
@@ -65,7 +65,7 @@ kind: "package-reference"
 
 ### 可能出什么问题
 
-没有 PowerShell 执行器的组合永远不会激活该工具，且注入的服务（`tools`、`shell`、`systemPrompt`、`shellEnv`）必须全部存在。没有任务运行时的后台调用会以 `background jobs unavailable: load @deepseek-ai/dsh-jobs and @deepseek-ai/dsh-tool-jobs` 失败；没有沙箱执行器时的 `sandbox_permissions` 会以 `sandbox_permissions is not available in this composition (no sandboxing executor to escalate)` 失败。
+没有 PowerShell 执行器的组合永远不会激活该工具，且注入的服务（`tools`、`shell`、`systemPrompt`、`shellEnv`）必须全部存在。没有任务运行时的后台调用会以 `background jobs unavailable: load @redspark/rsh-jobs and @redspark/rsh-tool-jobs` 失败；没有沙箱执行器时的 `sandbox_permissions` 会以 `sandbox_permissions is not available in this composition (no sandboxing executor to escalate)` 失败。
 
 -----
 
@@ -109,7 +109,7 @@ kind: "package-reference"
 
 - [shell 包映射](../README.zh.md)——bash 能力家族及其角色。
 - [Bash 执行器子系统](../../../../Docs/subsystems/shell.zh.md)——请求／spec 词汇、结果与后台进程。
-- [shell-env](../shell-env/README.zh.md)——每次调用都会收到的受管 `DSH_*` 环境。
+- [shell-env](../shell-env/README.zh.md)——每次调用都会收到的受管 `RSH_*` 环境。
 - [tool-jobs](../../../../Engine/jobs/tool-jobs/README.zh.md)——后台运行的 `job_output`、`job_list` 与 `job_kill` 控制。
 - [pwsh 工具与 bash 对齐 Agent Note](../../../../../.agents/notes/implemented/feature/2026-08-02-pwsh-tool-bash-parity.zh.md)——为什么工具镜像 bash 工具。
 - [Windows ACL 受限令牌沙箱 Agent Note](../../../../../.agents/notes/implemented/feature/2026-08-08-windows-acl-restricted-token-sandbox.zh.md)——语言模式与命名管道约定。
@@ -190,7 +190,7 @@ Non-zero exits are reported as `[exit code: N]` markers; investigate failures be
 
 #### 模型看到什么
 
-验证与基础设施失败统一为 `Error: <message>`。本包的稳定消息包括 `invalid command: expected a non-empty string`、`invalid description: expected a non-empty string`、`invalid timeoutMs: expected a positive number, got <value>`、升权配对失败、`sandbox_permissions is not available in this composition (no sandboxing executor to escalate)`、共享升权失败（未严格加宽／无审批服务／无 agent 可路由／无审批通道／用户拒绝／已取消）、`run_in_background is disabled for this deployment (enableRunInBackground: false)`、`background jobs unavailable: load @deepseek-ai/dsh-jobs and @deepseek-ai/dsh-tool-jobs`，以及 `tool call aborted`。
+验证与基础设施失败统一为 `Error: <message>`。本包的稳定消息包括 `invalid command: expected a non-empty string`、`invalid description: expected a non-empty string`、`invalid timeoutMs: expected a positive number, got <value>`、升权配对失败、`sandbox_permissions is not available in this composition (no sandboxing executor to escalate)`、共享升权失败（未严格加宽／无审批服务／无 agent 可路由／无审批通道／用户拒绝／已取消）、`run_in_background is disabled for this deployment (enableRunInBackground: false)`、`background jobs unavailable: load @redspark/rsh-jobs and @redspark/rsh-tool-jobs`，以及 `tool call aborted`。
 
 #### Token 影响
 
@@ -208,7 +208,7 @@ Non-zero exits are reported as `[exit code: N]` markers; investigate failures be
 这些限制说明工具何时不合适或需要特别小心。它们是当前包约束，不是任务积压。
 
 - **Windows 沙箱下的语言模式与命名管道捕获**——在 [Windows ACL 沙箱](../../sandbox/sandbox-windows-acl/README.zh.md)下，只读 pwsh 以 ConstrainedLanguage 启动，因为其临时目录写入被拒绝，导致 PowerShell 的 AppLocker 探测失败并按拒绝处理：`Add-Type`、非核心 .NET 静态调用（`[System.IO.*]::`、`[math]::`）、COM 对象与反射会以 "only core types" 错误失败，且该模式无法从内部解除。workspace-write 的私有临时目录让探测完成，因此除非宿主策略另有规定，它保持 FullLanguage。两种受限模式都拒绝命名管道打开，因此受限命令内部的管道 stdio spawn 会以 EPERM 失败。工具描述把两条约定都教给模型；完整限制以后端 README 为准。
-- **没有持久 shell**——每次调用都启动全新的 `pwsh -Command`；持久 shell 对应物是 [`@deepseek-ai/dsh-tool-pwsh-persistent`](../tool-pwsh-persistent/README.zh.md)，它跨调用保持一个按所有者隔离的 pwsh 存活。
+- **没有持久 shell**——每次调用都启动全新的 `pwsh -Command`；持久 shell 对应物是 [`@redspark/rsh-tool-pwsh-persistent`](../tool-pwsh-persistent/README.zh.md)，它跨调用保持一个按所有者隔离的 pwsh 存活。
 - **PowerShell 方言约定**——模型必须编写 PowerShell（原生路径、`$env:` 变量），而不是 bash；没有方言翻译。
 - **会话 cwd 身份未规范化**——workdir 基准就是会话头部 cwd 原样，不像 bash 工具那样以沙箱根规范化身份为准。在约束执行器下，策略的 workspace root 确实被规范化（由共享策略服务完成），因此当原始会话 cwd 与其规范形式不同时，workdir 与约束根可能分叉——这是推迟到共享 shell 工具基座抽取的对齐差距。
 

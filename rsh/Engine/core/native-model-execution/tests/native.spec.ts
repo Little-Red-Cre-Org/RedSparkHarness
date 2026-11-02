@@ -1,10 +1,10 @@
 /** Stream settlement records a completed assistant or a partial attempt. */
 import { expect, it } from 'vitest'
-import { Session, SessionId, SESSION_FORMAT_VERSION, type SessionEvent } from '@deepseek-ai/dsh-session'
-import type { GenerateOptions, StreamChunk } from '@deepseek-ai/dsh-llm'
+import { Session, SessionId, SESSION_FORMAT_VERSION, type SessionEvent } from '@redspark/rsh-session'
+import type { GenerateOptions, StreamChunk } from '@redspark/rsh-llm'
 import { NativeModelExecution } from '../src/index.ts'
 import { NativeAdapterModel } from '../src/adapter-model.ts'
-import { LlmAdapter } from '@deepseek-ai/dsh-llm/native'
+import { LlmAdapter } from '@redspark/rsh-llm/native'
 
 function fixture(chunks: readonly StreamChunk[]) {
   const id = SessionId('native-model-execution-test')

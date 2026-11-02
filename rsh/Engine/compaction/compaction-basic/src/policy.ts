@@ -3,14 +3,14 @@
  * Providers: routed-target resolution, pressure thresholds, the optional
  * model-free prune pass, bounded summary attempts and overflow reduction.
  *
- * @module @deepseek-ai/dsh-compaction-basic/policy
+ * @module @redspark/rsh-compaction-basic/policy
  */
 
-import type { CompactionResult, CompactionTrigger } from '@deepseek-ai/dsh-compaction/native'
-import type { CommandId } from '@deepseek-ai/dsh-commands/brand'
-import type { LlmCallConfig } from '@deepseek-ai/dsh-llm/native'
-import type { Session, SessionSeq } from '@deepseek-ai/dsh-session/native'
-import { assertNever } from '@deepseek-ai/dsh-util-values'
+import type { CompactionResult, CompactionTrigger } from '@redspark/rsh-compaction/native'
+import type { CommandId } from '@redspark/rsh-commands/brand'
+import type { LlmCallConfig } from '@redspark/rsh-llm/native'
+import type { Session, SessionSeq } from '@redspark/rsh-session/native'
+import { assertNever } from '@redspark/rsh-util-values'
 import { resolveCompactSpec, resolveTargetPolicy, TargetPressureConfigError } from './config.ts'
 import { assertNoActiveCompaction, compactSurfaceRegion, selectCompactableRange } from './region.ts'
 import type { RegionDependencies, RegionMeter, RegionTarget } from './region.ts'

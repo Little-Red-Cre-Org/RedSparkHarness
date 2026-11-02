@@ -1,5 +1,5 @@
 {
-  "name": "@deepseek-ai/dsh-fs-sandbox",
+  "name": "@redspark/rsh-fs-sandbox",
   "description": "Sandbox-enforcing implementation of the RedSpark Harness filesystem seam: fences write/edit by the per-call sandbox mode (read-only denies mutation, workspace-write contains it to the workspace + temp roots) while reads pass through",
   "version": "1.0.0",
   "publishConfig": {
@@ -54,29 +54,29 @@
   ],
   "license": "MIT",
   "peerDependencies": {
-    "@deepseek-ai/dsh-fs": "workspace:^",
-    "@deepseek-ai/dsh-fs-local": "workspace:^",
-    "@deepseek-ai/dsh-plugin-host": "workspace:^",
-    "@deepseek-ai/dsh-sandbox": "workspace:^",
-    "@deepseek-ai/dsh-sandbox-policy": "workspace:^",
-    "@deepseek-ai/cordis": "workspace:^"
+    "@redspark/rsh-fs": "workspace:^",
+    "@redspark/rsh-fs-local": "workspace:^",
+    "@redspark/rsh-plugin-host": "workspace:^",
+    "@redspark/rsh-sandbox": "workspace:^",
+    "@redspark/rsh-sandbox-policy": "workspace:^",
+    "@redspark/cordis": "workspace:^"
   },
   "peerDependenciesMeta": {
-    "@deepseek-ai/dsh-plugin-host": { "optional": true },
-    "@deepseek-ai/dsh-sandbox-policy": { "optional": true },
-    "@deepseek-ai/cordis": { "optional": true }
+    "@redspark/rsh-plugin-host": { "optional": true },
+    "@redspark/rsh-sandbox-policy": { "optional": true },
+    "@redspark/cordis": { "optional": true }
   },
   "dependencies": {
-    "@deepseek-ai/dsh-native-runtime": "workspace:^",
-    "@deepseek-ai/dsh-native-sandbox-policy": "workspace:^"
+    "@redspark/rsh-native-runtime": "workspace:^",
+    "@redspark/rsh-native-sandbox-policy": "workspace:^"
   },
   "devDependencies": {
-    "@deepseek-ai/dsh-fs": "workspace:^",
-    "@deepseek-ai/dsh-fs-local": "workspace:^",
-    "@deepseek-ai/dsh-plugin-host": "workspace:^",
-    "@deepseek-ai/dsh-sandbox": "workspace:^",
-    "@deepseek-ai/dsh-sandbox-policy": "workspace:^",
-    "@deepseek-ai/cordis": "workspace:^",
-    "@deepseek-ai/dsh-session-projection": "workspace:^"
+    "@redspark/rsh-fs": "workspace:^",
+    "@redspark/rsh-fs-local": "workspace:^",
+    "@redspark/rsh-plugin-host": "workspace:^",
+    "@redspark/rsh-sandbox": "workspace:^",
+    "@redspark/rsh-sandbox-policy": "workspace:^",
+    "@redspark/cordis": "workspace:^",
+    "@redspark/rsh-session-projection": "workspace:^"
   }
 }

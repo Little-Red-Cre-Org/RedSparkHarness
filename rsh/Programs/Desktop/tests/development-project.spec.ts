@@ -37,11 +37,11 @@ describe('desktop development project', () => {
     mkdirSync(join(cli, 'lib'), { recursive: true })
     mkdirSync(join(host, 'lib'), { recursive: true })
     mkdirSync(join(dependencies, '@scope'), { recursive: true })
-    mkdirSync(join(dependencies, '@deepseek-ai', 'dsh'), { recursive: true })
-    writeFileSync(join(cli, 'package.json'), '{"name":"@deepseek-ai/dsh","version":"1.2.3"}\n')
-    writeFileSync(join(host, 'package.json'), '{"name":"@deepseek-ai/dsh-desktop-host","version":"1.2.3"}\n')
+    mkdirSync(join(dependencies, '@redspark', 'dsh'), { recursive: true })
+    writeFileSync(join(cli, 'package.json'), '{"name":"@redspark/dsh","version":"1.2.3"}\n')
+    writeFileSync(join(host, 'package.json'), '{"name":"@redspark/rsh-desktop-host","version":"1.2.3"}\n')
     writeFileSync(join(host, 'lib', 'index.js'), '')
-    writeFileSync(join(dependencies, '@deepseek-ai', 'dsh', 'package.json'), '{}\n')
+    writeFileSync(join(dependencies, '@redspark', 'dsh', 'package.json'), '{}\n')
     mkdirSync(join(dependencies, 'plain-dependency'))
     writeFileSync(join(dependencies, 'plain-dependency', 'package.json'), '{}\n')
     mkdirSync(join(dependencies, '@scope', 'dependency'))
@@ -55,8 +55,8 @@ describe('desktop development project', () => {
       release: release(),
       home: join(root, 'home'),
     })
-    expect(realpathSync(join(project, 'node_modules', '@deepseek-ai', 'dsh'))).toBe(realpathSync(cli))
-    expect(realpathSync(join(project, 'node_modules', '@deepseek-ai', 'dsh-desktop-host'))).toBe(realpathSync(host))
+    expect(realpathSync(join(project, 'node_modules', '@redspark', 'dsh'))).toBe(realpathSync(cli))
+    expect(realpathSync(join(project, 'node_modules', '@redspark', 'dsh-desktop-host'))).toBe(realpathSync(host))
     expect(realpathSync(join(project, 'node_modules', 'plain-dependency')))
       .toBe(realpathSync(join(dependencies, 'plain-dependency')))
     expect(realpathSync(join(project, 'node_modules', '@scope', 'dependency')))
@@ -64,8 +64,8 @@ describe('desktop development project', () => {
     const manifest = JSON.parse(readFileSync(join(project, 'package.json'), 'utf8')) as {
       dependencies: Record<string, string>
     }
-    expect(manifest.dependencies['@deepseek-ai/dsh']).toBe('1.2.3')
-    expect(manifest.dependencies['@deepseek-ai/dsh-desktop-host']).toBe('1.2.3')
+    expect(manifest.dependencies['@redspark/dsh']).toBe('1.2.3')
+    expect(manifest.dependencies['@redspark/rsh-desktop-host']).toBe('1.2.3')
   })
 
   it('projects runtime entrypoints from linked dependency packages', async () => {
@@ -73,12 +73,12 @@ describe('desktop development project', () => {
     const cli = join(root, 'apps', 'cli')
     const host = join(root, 'apps', 'desktop-host')
     const dependencies = join(root, 'workspace-dependencies')
-    const adapter = join(dependencies, '@deepseek-ai', 'dsh-example-runtime')
+    const adapter = join(dependencies, '@redspark', 'dsh-example-runtime')
     mkdirSync(join(cli, 'lib'), { recursive: true })
     mkdirSync(join(host, 'lib'), { recursive: true })
     mkdirSync(join(adapter, 'lib'), { recursive: true })
-    writeFileSync(join(cli, 'package.json'), '{"name":"@deepseek-ai/dsh","version":"1.2.3"}\n')
-    writeFileSync(join(host, 'package.json'), '{"name":"@deepseek-ai/dsh-desktop-host","version":"1.2.3"}\n')
+    writeFileSync(join(cli, 'package.json'), '{"name":"@redspark/dsh","version":"1.2.3"}\n')
+    writeFileSync(join(host, 'package.json'), '{"name":"@redspark/rsh-desktop-host","version":"1.2.3"}\n')
     writeFileSync(join(host, 'lib', 'index.js'), '')
     writeFileSync(join(adapter, 'lib', 'runtime.js'), '')
 
@@ -90,7 +90,7 @@ describe('desktop development project', () => {
       release: release(),
       home: join(root, 'home'),
     })
-    expect(existsSync(join(project, 'node_modules', '@deepseek-ai', 'dsh-example-runtime', 'lib', 'runtime.js'))).toBe(true)
+    expect(existsSync(join(project, 'node_modules', '@redspark', 'dsh-example-runtime', 'lib', 'runtime.js'))).toBe(true)
   })
 
   it('rejects a CLI package from another release', async () => {
@@ -101,8 +101,8 @@ describe('desktop development project', () => {
     mkdirSync(join(cli, 'lib'), { recursive: true })
     mkdirSync(join(host, 'lib'), { recursive: true })
     mkdirSync(dependencies, { recursive: true })
-    writeFileSync(join(cli, 'package.json'), '{"name":"@deepseek-ai/dsh","version":"2.0.0"}\n')
-    writeFileSync(join(host, 'package.json'), '{"name":"@deepseek-ai/dsh-desktop-host","version":"1.2.3"}\n')
+    writeFileSync(join(cli, 'package.json'), '{"name":"@redspark/dsh","version":"2.0.0"}\n')
+    writeFileSync(join(host, 'package.json'), '{"name":"@redspark/rsh-desktop-host","version":"1.2.3"}\n')
     writeFileSync(join(host, 'lib', 'index.js'), '')
     await expect(prepareDevelopmentProject({
       projectDir: join(root, 'development'),
@@ -111,6 +111,6 @@ describe('desktop development project', () => {
       dependencyDir: dependencies,
       release: release(),
       home: join(root, 'home'),
-    })).rejects.toThrow(/must be @deepseek-ai\/dsh@1\.2\.3/u)
+    })).rejects.toThrow(/must be @redspark\/dsh@1\.2\.3/u)
   })
 })

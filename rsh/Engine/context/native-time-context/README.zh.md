@@ -3,7 +3,7 @@ description: "为原生 profile 作者和维护者提供持久请求时间上下
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-native-time-context
+# @redspark/rsh-native-time-context
 
 [English](README.md) | 中文
 
@@ -28,7 +28,7 @@ kind: "package-reference"
 ```json
 {
   "id": "time-context",
-  "plugin": "@deepseek-ai/dsh-native-time-context",
+  "plugin": "@redspark/rsh-native-time-context",
   "scope": "root",
   "config": {
     "timeZone": "Asia/Shanghai",

@@ -1,9 +1,9 @@
 import { afterEach, expect, it } from 'vitest'
-import { NativeHost, NativeScope, resolveInstallation, type NativePlugin } from '@deepseek-ai/dsh-native-runtime'
+import { NativeHost, NativeScope, resolveInstallation, type NativePlugin } from '@redspark/rsh-native-runtime'
 import { plugin as nativeExtensions } from '../src/native.ts'
 import type { NativeDeepSeekLlmApiExtensions } from '../src/native.ts'
 
-declare module '@deepseek-ai/dsh-deepseek-llm-api-extensions/types' {
+declare module '@redspark/rsh-deepseek-llm-api-extensions/types' {
   interface DeepSeekLlmApiExtensionMap {
     test_native: string
   }

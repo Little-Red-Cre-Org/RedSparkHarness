@@ -1,9 +1,9 @@
 /** Cordis-free settings definition shared by native providers and consumers. */
-import { deepEqualJson, deepFreeze, snapshotJsonValue } from '@deepseek-ai/dsh-util-values'
-import type z from '@deepseek-ai/schemastery'
+import { deepEqualJson, deepFreeze, snapshotJsonValue } from '@redspark/rsh-util-values'
+import type z from '@redspark/schemastery'
 import { redactSecrets } from './redact.ts'
 
-import type {} from '@deepseek-ai/dsh-settings-definition/native'
+import type {} from '@redspark/rsh-settings-definition/native'
 import type {
   NativeSettingsDescriptor,
   NativeSettingsPathOp,
@@ -13,7 +13,7 @@ import type {
   NativeSettingsService,
   NativeSettingsStorage,
   SettingsNamespaceInput,
-} from '@deepseek-ai/dsh-settings-definition/native'
+} from '@redspark/rsh-settings-definition/native'
 
 export type {
   NativeSettingsDescriptor,
@@ -24,7 +24,7 @@ export type {
   NativeSettingsService,
   NativeSettingsStorage,
   SettingsNamespaceInput,
-} from '@deepseek-ai/dsh-settings-definition/native'
+} from '@redspark/rsh-settings-definition/native'
 
 interface NativeSettingsWatcher<T> {
   callback: (next: T, previous: T) => void | Promise<void>

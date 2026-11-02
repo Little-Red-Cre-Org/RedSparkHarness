@@ -8,12 +8,12 @@ import {
   decodeSeqRanges,
   SessionLogOffset,
   type SessionEvent,
-} from '@deepseek-ai/dsh-session'
-import type { SessionLogOffset as SessionLogOffsetType } from '@deepseek-ai/dsh-session'
-import { sessionFormatCatalog } from '@deepseek-ai/dsh-session-format-catalog'
-import { SessionFormatEventCollector, type SessionFormatArtifactDecoder, type SessionFormatCodec } from '@deepseek-ai/dsh-session-format'
-import { releasedV0SessionFormatCodec, releasedV1SessionFormatCodec } from '@deepseek-ai/dsh-session-format-v0-to-v1'
-import { releasedV2SessionFormatCodec } from '@deepseek-ai/dsh-session-format-v1-to-v2'
+} from '@redspark/rsh-session'
+import type { SessionLogOffset as SessionLogOffsetType } from '@redspark/rsh-session'
+import { sessionFormatCatalog } from '@redspark/rsh-session-format-catalog'
+import { SessionFormatEventCollector, type SessionFormatArtifactDecoder, type SessionFormatCodec } from '@redspark/rsh-session-format'
+import { releasedV0SessionFormatCodec, releasedV1SessionFormatCodec } from '@redspark/rsh-session-format-v0-to-v1'
+import { releasedV2SessionFormatCodec } from '@redspark/rsh-session-format-v1-to-v2'
 
 const historicalCodecs: readonly SessionFormatCodec[] = [
   releasedV0SessionFormatCodec, releasedV1SessionFormatCodec, releasedV2SessionFormatCodec,

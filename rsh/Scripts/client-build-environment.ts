@@ -11,22 +11,22 @@ import {
 import { dirname, resolve } from 'node:path'
 
 /** Prefix reserved for build-time values that may be embedded in browser artifacts. */
-const CLIENT_BUILD_ENV_PREFIX = 'DSH_CLIENT_'
+const CLIENT_BUILD_ENV_PREFIX = 'RSH_CLIENT_'
 
 /** Non-public selector used by build orchestration to request a named client profile. */
-export const CLIENT_BUILD_PROFILE_SELECTOR = 'DSH_BUILD_CLIENT_PROFILE'
+export const CLIENT_BUILD_PROFILE_SELECTOR = 'RSH_BUILD_CLIENT_PROFILE'
 
 /** Public client environment required by official DSH artifacts. */
 const OFFICIAL_CLIENT_BUILD_ENVIRONMENT = {
-  DSH_CLIENT_BUILD_PROFILE: 'official',
-  DSH_CLIENT_TITLE: 'RedSpark Harness',
+  RSH_CLIENT_BUILD_PROFILE: 'official',
+  RSH_CLIENT_TITLE: 'RedSpark Harness',
 } as const
 
 /** Public variable carrying the source commit embedded in client artifacts. */
-const CLIENT_COMMIT_HASH_VARIABLE = 'DSH_CLIENT_COMMIT_HASH'
+const CLIENT_COMMIT_HASH_VARIABLE = 'RSH_CLIENT_COMMIT_HASH'
 
 /** Public variable carrying the repository package version embedded in client artifacts. */
-const CLIENT_VERSION_VARIABLE = 'DSH_CLIENT_VERSION'
+const CLIENT_VERSION_VARIABLE = 'RSH_CLIENT_VERSION'
 
 /** Repository-relative path of the complete client build record. */
 export const CLIENT_BUILD_RECORD_PATH = '.dsh-build/client-build-environment.json'
@@ -119,15 +119,15 @@ export function repositoryClientBuildEnvironment(
   environment: NodeJS.ProcessEnv = process.env,
 ): ClientBuildEnvironment {
   const inherited = { ...clientBuildEnvironment(environment) }
-  delete inherited.DSH_CLIENT_COMMIT_HASH
-  delete inherited.DSH_CLIENT_GIT_DIRTY
-  delete inherited.DSH_CLIENT_VERSION
+  delete inherited.RSH_CLIENT_COMMIT_HASH
+  delete inherited.RSH_CLIENT_GIT_DIRTY
+  delete inherited.RSH_CLIENT_VERSION
   const dirty = repositoryGitDirty(root)
   return {
     ...inherited,
-    DSH_CLIENT_COMMIT_HASH: repositoryCommitHash(root, environment),
-    ...(dirty === true ? { DSH_CLIENT_GIT_DIRTY: 'true' } : {}),
-    DSH_CLIENT_VERSION: repositoryVersion(root),
+    RSH_CLIENT_COMMIT_HASH: repositoryCommitHash(root, environment),
+    ...(dirty === true ? { RSH_CLIENT_GIT_DIRTY: 'true' } : {}),
+    RSH_CLIENT_VERSION: repositoryVersion(root),
   }
 }
 
@@ -140,10 +140,10 @@ export function repositoryClientBuildEnvironment(
 export function officialClientBuildEnvironment(
   root: string,
   environment: NodeJS.ProcessEnv = process.env,
-): Readonly<Record<`DSH_CLIENT_${string}`, string>> {
+): Readonly<Record<`RSH_CLIENT_${string}`, string>> {
   return {
-    DSH_CLIENT_COMMIT_HASH: repositoryCommitHash(root, environment),
-    DSH_CLIENT_VERSION: repositoryVersion(root),
+    RSH_CLIENT_COMMIT_HASH: repositoryCommitHash(root, environment),
+    RSH_CLIENT_VERSION: repositoryVersion(root),
     ...OFFICIAL_CLIENT_BUILD_ENVIRONMENT,
   }
 }
@@ -169,7 +169,7 @@ export interface ClientBuildRecord {
 /**
  * Collect the public client environment in deterministic key order.
  * @param environment - environment inherited by the build process.
- * @returns defined `DSH_CLIENT_*` values only.
+ * @returns defined `RSH_CLIENT_*` values only.
  */
 function clientBuildEnvironment(environment: NodeJS.ProcessEnv): ClientBuildEnvironment {
   return Object.fromEntries(Object.entries(environment)
@@ -198,8 +198,8 @@ export function resolveClientBuildEnvironment(
       throw new Error(`${CLIENT_VERSION_VARIABLE} is required for the official client build profile`)
     }
     return {
-      DSH_CLIENT_COMMIT_HASH: commitHash,
-      DSH_CLIENT_VERSION: version,
+      RSH_CLIENT_COMMIT_HASH: commitHash,
+      RSH_CLIENT_VERSION: version,
       ...OFFICIAL_CLIENT_BUILD_ENVIRONMENT,
     }
   }
@@ -236,7 +236,7 @@ export function clientBuildProcessEnvironment(
  */
 export function assertClientBuildEnvironment(
   environment: Readonly<Record<string, string | undefined>>,
-  expected: Readonly<Record<`DSH_CLIENT_${string}`, string>>,
+  expected: Readonly<Record<`RSH_CLIENT_${string}`, string>>,
 ): void {
   const actual = Object.fromEntries(Object.entries(environment)
     .filter(([name, value]) => name.startsWith(CLIENT_BUILD_ENV_PREFIX) && value !== undefined)
@@ -300,7 +300,7 @@ export function writeClientBuildRecord(
  */
 export function readClientBuildRecord(
   root: string,
-  expected?: Readonly<Record<`DSH_CLIENT_${string}`, string>>,
+  expected?: Readonly<Record<`RSH_CLIENT_${string}`, string>>,
 ): ClientBuildRecord {
   const path = resolve(root, CLIENT_BUILD_RECORD_PATH)
   if (!existsSync(path)) {

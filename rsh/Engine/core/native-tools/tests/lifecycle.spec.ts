@@ -1,14 +1,14 @@
 /** Canonical value processing and quiescent contribution replacement. */
 import { expect, it, vi } from 'vitest'
-import { NativeHost, NativeScope, resolveInstallation, type NativePlugin } from '@deepseek-ai/dsh-native-runtime'
-import { NativeAgentId, NativeAgentRegistry } from '@deepseek-ai/dsh-native-agent'
-import { plugin as agentPlugin } from '@deepseek-ai/dsh-native-agent/native'
-import { ToolCallId } from '@deepseek-ai/dsh-llm/native'
-import { Session, SessionId, SESSION_FORMAT_VERSION } from '@deepseek-ai/dsh-session/native'
+import { NativeHost, NativeScope, resolveInstallation, type NativePlugin } from '@redspark/rsh-native-runtime'
+import { NativeAgentId, NativeAgentRegistry } from '@redspark/rsh-native-agent'
+import { plugin as agentPlugin } from '@redspark/rsh-native-agent/native'
+import { ToolCallId } from '@redspark/rsh-llm/native'
+import { Session, SessionId, SESSION_FORMAT_VERSION } from '@redspark/rsh-session/native'
 import { NativeToolRegistry, type NativeToolExecution, type NativeToolContribution, type NativeToolResult,
   type NativeValueToolContribution } from '../src/index.ts'
 import { plugin as toolsPlugin } from '../src/native.ts'
-import type { JsonValue } from '@deepseek-ai/dsh-util-values'
+import type { JsonValue } from '@redspark/rsh-util-values'
 
 
 function execution(agents: NativeAgentRegistry, scope: NativeScope, name = 'held') {

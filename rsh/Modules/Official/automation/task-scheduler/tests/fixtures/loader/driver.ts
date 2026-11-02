@@ -1,8 +1,8 @@
 import { mkdir, writeFile } from 'node:fs/promises'
-import { boot, resolveConfigPath } from '@deepseek-ai/dsh-app-boot'
-import { SessionId } from '@deepseek-ai/dsh-session'
-import { createUserMessage, ToolCallId } from '@deepseek-ai/dsh-llm'
-import { brandString } from '@deepseek-ai/dsh-brand'
+import { boot, resolveConfigPath } from '@redspark/rsh-app-boot'
+import { SessionId } from '@redspark/rsh-session'
+import { createUserMessage, ToolCallId } from '@redspark/rsh-llm'
+import { brandString } from '@redspark/rsh-brand'
 
 import { z } from 'zod'
 import type {} from '../../../src/gateway.ts'
@@ -10,7 +10,7 @@ import type {} from '../../../src/gateway.ts'
 const runsSchema = z.array(z.object({ state: z.string(), sessionId: z.string().nullable(), detail: z.string() }))
 
 await mkdir('presets/test', { recursive: true })
-await writeFile('presets/test/agent.cordis.yml', "- name: '@deepseek-ai/dsh-tool-goal'\n")
+await writeFile('presets/test/agent.cordis.yml', "- name: '@redspark/rsh-tool-goal'\n")
 const ctx = await boot('task-scheduler-smoke', resolveConfigPath(process.argv[2]!, undefined))
 try {
   const handle = await ctx.agents.create({ sessionId: SessionId('scheduler-owner'),

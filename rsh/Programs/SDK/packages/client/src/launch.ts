@@ -1,6 +1,6 @@
 /**
  * Resolve the public SDK launch configuration to one dsh subprocess.
- * @module @deepseek-ai/dsh-sdk-client/launch
+ * @module @redspark/rsh-sdk-client/launch
  */
 
 import { existsSync, readFileSync } from 'node:fs'
@@ -64,7 +64,7 @@ export function resolveDshBinFromManifests(dshManifestUrl: string, clientManifes
   const bin = typeof dshManifest.bin === 'object' && dshManifest.bin !== null
     ? (dshManifest.bin as Record<string, unknown>).dsh
     : dshManifest.bin
-  if (typeof bin !== 'string' || bin === '') throw new Error('@deepseek-ai/dsh declares no dsh executable')
+  if (typeof bin !== 'string' || bin === '') throw new Error('@redspark/dsh declares no dsh executable')
   return resolve(dirname(fileURLToPath(dshManifestUrl)), bin)
 }
 
@@ -74,7 +74,7 @@ export function resolveDshBinFromManifests(dshManifestUrl: string, clientManifes
  */
 export function installedDshBin(): string {
   return resolveDshBinFromManifests(
-    import.meta.resolve('@deepseek-ai/dsh/package.json'),
+    import.meta.resolve('@redspark/dsh/package.json'),
     new URL('../package.json', import.meta.url).href,
   )
 }
@@ -100,7 +100,7 @@ export function resolveDshNodeLaunchFromManifests(
   const sourceFiles = [sourceBin, sourceTsconfig]
   if (sourceFiles.some(path => !existsSync(path))) {
     throw new Error(
-      `@deepseek-ai/dsh is missing its built executable ${bin} and complete source launch files ${sourceFiles.join(', ')}`,
+      `@redspark/dsh is missing its built executable ${bin} and complete source launch files ${sourceFiles.join(', ')}`,
     )
   }
   const loader = options.sourceLoaderUrl ?? import.meta.resolve('tsx/esm')
@@ -116,7 +116,7 @@ export function resolveDshNodeLaunchFromManifests(
  */
 function installedDshNodeLaunch(): DshNodeLaunch {
   return resolveDshNodeLaunchFromManifests(
-    import.meta.resolve('@deepseek-ai/dsh/package.json'),
+    import.meta.resolve('@redspark/dsh/package.json'),
     new URL('../package.json', import.meta.url).href,
   )
 }
@@ -151,7 +151,7 @@ export function resolveDshLaunch(
           ? { SystemRoot: process.env.SystemRoot } : {}),
         ...childEnvironment,
         ...dshLaunch.environment,
-        ...dshHome === undefined ? {} : { DSH_HOME: dshHome },
+        ...dshHome === undefined ? {} : { RSH_HOME: dshHome },
       }
     },
     description: `dsh profile ${JSON.stringify(profile)}`,

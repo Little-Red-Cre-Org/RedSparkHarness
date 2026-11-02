@@ -14,15 +14,15 @@
  * error. The module owns no catalog state and does not consult Activation,
  * Agent-registry, continuation-manager, or provider state.
  *
- * @module @deepseek-ai/dsh-subagent
+ * @module @redspark/rsh-subagent
  */
 
-import type { Context } from '@deepseek-ai/cordis'
-import { SessionLogOffset } from '@deepseek-ai/dsh-session'
-import type { Session, SessionHeader, SessionId } from '@deepseek-ai/dsh-session'
-import type { SessionProjectionRegistry } from '@deepseek-ai/dsh-session-projection'
-import type { SessionProjectionCache } from '@deepseek-ai/dsh-session-projection-cache'
-import type { SessionObservation, SessionQueryOperations } from '@deepseek-ai/dsh-session-query/native'
+import type { Context } from '@redspark/cordis'
+import { SessionLogOffset } from '@redspark/rsh-session'
+import type { Session, SessionHeader, SessionId } from '@redspark/rsh-session'
+import type { SessionProjectionRegistry } from '@redspark/rsh-session-projection'
+import type { SessionProjectionCache } from '@redspark/rsh-session-projection-cache'
+import type { SessionObservation, SessionQueryOperations } from '@redspark/rsh-session-query/native'
 import type { SubagentListEntry } from './control-types.ts'
 import { SubagentError } from './error.ts'
 import type { SubagentIdentityProjection } from './projection-types.ts'
@@ -140,7 +140,7 @@ async function prepareListing(
   // deployment configuration error, never an empty success.
   if (projections === undefined) {
     throw new SubagentError(
-      'listing subagents requires the sessionProjections registry (load @deepseek-ai/dsh-session-projection)',
+      'listing subagents requires the sessionProjections registry (load @redspark/rsh-session-projection)',
       'SUBAGENT_CONTROL_PROJECTIONS_UNAVAILABLE',
     )
   }
@@ -150,7 +150,7 @@ async function prepareListing(
   const sessions = ctx.get('sessions')
   if (sessions === undefined) {
     throw new SubagentError(
-      'listing subagents requires the session store (load @deepseek-ai/dsh-session)',
+      'listing subagents requires the session store (load @redspark/rsh-session)',
       'SUBAGENT_CONTROL_SESSION_STORE_UNAVAILABLE',
     )
   }
@@ -158,7 +158,7 @@ async function prepareListing(
   const query = ctx.get('sessionQuery') as Pick<SessionQueryOperations, 'listSessions' | 'observeSession'> | undefined
   if (query === undefined) {
     throw new SubagentError(
-      'listing subagents requires the sessionQuery service (load @deepseek-ai/dsh-session-query)',
+      'listing subagents requires the sessionQuery service (load @redspark/rsh-session-query)',
       'SUBAGENT_CONTROL_QUERY_UNAVAILABLE',
     )
   }

@@ -1,5 +1,5 @@
 /** Client-safe GUI requests and snapshots. */
-import type { SessionId } from '@deepseek-ai/dsh-session/types'
+import type { SessionId } from '@redspark/rsh-session/types'
 import type { Task, Run } from './types.ts'
 
 /** A durable occurrence notification, independent of whether its owning conversation is open. */

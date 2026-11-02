@@ -1,9 +1,9 @@
 /** Direct human Goal commands over the selected native Goal Definition. */
-import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
-import { CommandDefinitionId, type NativeCommandInvocation, type CommandResult } from '@deepseek-ai/dsh-commands/native'
-import { GoalError, type NativeGoalOperations } from '@deepseek-ai/dsh-goal/native'
-import type { NativeGoalContinuationOperations } from '@deepseek-ai/dsh-goal-round-driver/native'
-import { createUserMessage } from '@deepseek-ai/dsh-llm/native'
+import type { NativePlugin } from '@redspark/rsh-native-runtime'
+import { CommandDefinitionId, type NativeCommandInvocation, type CommandResult } from '@redspark/rsh-commands/native'
+import { GoalError, type NativeGoalOperations } from '@redspark/rsh-goal/native'
+import type { NativeGoalContinuationOperations } from '@redspark/rsh-goal-round-driver/native'
+import { createUserMessage } from '@redspark/rsh-llm/native'
 import { assertNever, prepareGoalCommand, resolveGoalCommandState, renderGoal, goalCommandRef, missingGoal } from './common.ts'
 
 async function submitAttachments(invocation: NativeCommandInvocation): Promise<void> {
@@ -65,7 +65,7 @@ async function execute(goals: NativeGoalOperations, continuation: NativeGoalCont
 
 /** Native Goal human Consumer; slash input stays outside model history. */
 export const plugin: NativePlugin = {
-  apiVersion: 1, name: '@deepseek-ai/dsh-command-goal', targets: ['host'], requires: ['commands', 'goals'],
+  apiVersion: 1, name: '@redspark/rsh-command-goal', targets: ['host'], requires: ['commands', 'goals'],
   optional: ['goalContinuation'], provides: [],
   resolve(input) {
     if (input !== undefined && (input === null || typeof input !== 'object' || Array.isArray(input) || Object.keys(input).length !== 0)) {
@@ -74,7 +74,7 @@ export const plugin: NativePlugin = {
     return (context) => {
       const goals = context.require('goals')
       const continuation = context.optional('goalContinuation')
-      context.effect(context.require('commands').register({ definitionId: CommandDefinitionId('@deepseek-ai/dsh-command-goal'),
+      context.effect(context.require('commands').register({ definitionId: CommandDefinitionId('@redspark/rsh-command-goal'),
         name: 'goal', description: 'Set or view the goal for a long-running task',
         input: { hint: '[<objective>|clear|edit <objective>|pause|resume]', attachments: true },
         handler: invocation => execute(goals, continuation, invocation),

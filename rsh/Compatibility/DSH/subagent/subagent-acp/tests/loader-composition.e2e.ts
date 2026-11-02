@@ -3,8 +3,8 @@ import { readFile, readdir } from 'node:fs/promises'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
-import { type SessionEvent } from '@deepseek-ai/dsh-session'
-import { LOADER_SMOKE_TEST_TIMEOUT_MS, runLoaderSmoke } from '@deepseek-ai/dsh-loader-smoke'
+import { type SessionEvent } from '@redspark/rsh-session'
+import { LOADER_SMOKE_TEST_TIMEOUT_MS, runLoaderSmoke } from '@redspark/rsh-loader-smoke'
 
 /**
  * Keyless REAL-composition coverage for the ACP provider through a test-only
@@ -54,7 +54,7 @@ describe('ACP subagent cwd inheritance through the production profile', () => {
       libBinScript: driver,
       configPath,
       tsconfigPath: repoTsconfig,
-      env: { DSH_TEST_MOCK_ACP_SERVER: mockServer },
+      env: { RSH_TEST_MOCK_ACP_SERVER: mockServer },
       inspect: async (cwd) => {
         // The child reports realpaths; canonicalize the temp workspace to match.
         workspace = realpathSync(cwd)
@@ -82,8 +82,8 @@ describe('ACP subagent cwd inheritance through the production profile', () => {
       configPath,
       tsconfigPath: repoTsconfig,
       env: {
-        DSH_TEST_MOCK_ACP_SERVER: mockServer,
-        DSH_TEST_ACP_MODE: 'diagnostic',
+        RSH_TEST_MOCK_ACP_SERVER: mockServer,
+        RSH_TEST_ACP_MODE: 'diagnostic',
       },
       inspect: async (cwd) => {
         const logs = await jsonlFiles(join(cwd, '.sessions'))

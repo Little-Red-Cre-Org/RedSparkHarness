@@ -3,7 +3,7 @@ description: "The model-facing ralph tool: a fixed foreground fresh-agent loop t
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-tool-ralph
+# @redspark/rsh-tool-ralph
 
 English | [中文](README.zh.md)
 
@@ -46,7 +46,7 @@ Each child receives only the immutable objective, its current round and cap, a s
 
 The generated [configuration catalog](../../../Docs/config-catalog.md#deepseek-aidsh-tool-ralph) is the exhaustive source for every accepted Cordis field. In Cordis compositions, the selected provider must support structured output and report `inheritsParentContext: false`; Native profiles instead select `workflowProvider` and `subagentProvider` explicitly and require the Native Tools registry for the structured report call.
 
-Native profiles mount `@deepseek-ai/dsh-tool-ralph/native`; shipped compositions select the `worker-thread` workflow Provider and `spawn` NativeSubagent Provider. Ralph remains a foreground Consumer of the shared Workflow Definition and Subagent execution authority.
+Native profiles mount `@redspark/rsh-tool-ralph/native`; shipped compositions select the `worker-thread` workflow Provider and `spawn` NativeSubagent Provider. Ralph remains a foreground Consumer of the shared Workflow Definition and Subagent execution authority.
 
 -----
 

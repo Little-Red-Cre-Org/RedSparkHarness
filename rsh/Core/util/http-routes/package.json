@@ -1,5 +1,5 @@
 {
-  "name": "@deepseek-ai/dsh-http-routes",
+  "name": "@redspark/rsh-http-routes",
   "description": "Framework-neutral HTTP route definitions and shared route registry",
   "version": "1.0.0",
   "publishConfig": { "access": "public" },
@@ -21,7 +21,7 @@
   },
   "files": ["lib/index.js", "lib/client.js", "lib/host.js", "lib/native.js", "lib/shared-*.js", "lib/types/**/*.d.ts"],
   "license": "MIT",
-  "peerDependencies": { "@deepseek-ai/dsh-native-runtime": "workspace:^" },
-  "peerDependenciesMeta": { "@deepseek-ai/dsh-native-runtime": { "optional": true } },
-  "devDependencies": { "@deepseek-ai/dsh-native-runtime": "workspace:^" }
+  "peerDependencies": { "@redspark/rsh-native-runtime": "workspace:^" },
+  "peerDependenciesMeta": { "@redspark/rsh-native-runtime": { "optional": true } },
+  "devDependencies": { "@redspark/rsh-native-runtime": "workspace:^" }
 }

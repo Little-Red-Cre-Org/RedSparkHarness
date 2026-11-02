@@ -3,7 +3,7 @@ description: "官方构建使用的 RedSpark 侧栏标志；供选择或替换�
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-client-ui-brand-official
+# @redspark/rsh-client-ui-brand-official
 
 [English](README.md) | 中文
 
@@ -29,7 +29,7 @@ kind: "package-reference"
 
 ### 选择 profile
 
-`DSH_CLIENT_BUILD_PROFILE=official` 启用侧栏标志填充。其他取值保留侧栏的默认标志。本包不占据 `sidebar.brand.name` 或 `conversation.hero.brand.mark`；声明这些槽位的包负责本地化名称和首屏呈现。两种情况下插件都会加载；只有注册受 profile 门控。
+`RSH_CLIENT_BUILD_PROFILE=official` 启用侧栏标志填充。其他取值保留侧栏的默认标志。本包不占据 `sidebar.brand.name` 或 `conversation.hero.brand.mark`；声明这些槽位的包负责本地化名称和首屏呈现。两种情况下插件都会加载；只有注册受 profile 门控。
 
 ### 替换品牌
 
@@ -43,7 +43,7 @@ kind: "package-reference"
 <details>
 <summary>实现细节——点击展开</summary>
 
-标志通过 `ctx.slots.inject()` 在侧栏声明可用后注册，并在声明消失时撤回。浏览器半部是 [`src/client/index.ts`](src/client/index.ts)；node 半部是一个空 Loader 座位。浏览器标题是构建环境的事（`DSH_CLIENT_TITLE`），不在 slot 系统之内。
+标志通过 `ctx.slots.inject()` 在侧栏声明可用后注册，并在声明消失时撤回。浏览器半部是 [`src/client/index.ts`](src/client/index.ts)；node 半部是一个空 Loader 座位。浏览器标题是构建环境的事（`RSH_CLIENT_TITLE`），不在 slot 系统之内。
 
 </details>
 
@@ -77,7 +77,7 @@ kind: "package-reference"
 这些限制界定了品牌呈现的供给方式。它们是当前包约束，不是品牌设计对比或任务积压。
 
 - **只有一组填充**——替代呈现属于占据相同 slot 的另一个 Cordis 包。
-- **浏览器标题独立**——`DSH_CLIENT_TITLE` 在构建时选择标题文本，而非通过 UI slot。
+- **浏览器标题独立**——`RSH_CLIENT_TITLE` 在构建时选择标题文本，而非通过 UI slot。
 
 <a id="dev-note"></a>
 ### 开发备注

@@ -1,11 +1,11 @@
 /** Native process-sandbox Provider over the shared local runner backend. */
-import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
-export type {} from '@deepseek-ai/dsh-sandbox/native'
+import type { NativePlugin } from '@redspark/rsh-native-runtime'
+export type {} from '@redspark/rsh-sandbox/native'
 import { LocalSandboxBackend, resolveConfig } from './backend.ts'
 
 /** Install one scoped runner backend and revoke its temporary grants on removal. */
 export const plugin: NativePlugin = {
-  apiVersion: 1, name: '@deepseek-ai/dsh-sandbox-local', targets: ['host'],
+  apiVersion: 1, name: '@redspark/rsh-sandbox-local', targets: ['host'],
   requires: [], provides: ['sandbox'],
   resolve(input) {
     const config = resolveConfig(input)

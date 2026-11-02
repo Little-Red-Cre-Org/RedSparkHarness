@@ -6,15 +6,15 @@
  * was the part that carried the value, and it survives here as plain folds a stored Session can
  * replay without the Agent alive.
  *
- * @module @deepseek-ai/dsh-context-insight
+ * @module @redspark/rsh-context-insight
  */
 
-import type { NativeContext, NativePlugin } from '@deepseek-ai/dsh-native-runtime'
+import type { NativeContext, NativePlugin } from '@redspark/rsh-native-runtime'
 import type { ActivityState } from './activity.ts'
 import type { CompositionState } from './composition.ts'
 import type { RequestHistoryState } from './requests.ts'
-import { CommandDefinitionId } from '@deepseek-ai/dsh-commands/native'
-import type {} from '@deepseek-ai/dsh-session-projection/native'
+import { CommandDefinitionId } from '@redspark/rsh-commands/native'
+import type {} from '@redspark/rsh-session-projection/native'
 import {
   activityStateSchema, applyActivityEvent, initialActivityState,
 } from './activity.ts'
@@ -33,7 +33,7 @@ export const REQUESTS_KEY = 'contextRequests'
 /** Projection key holding per-day usage folded from the same log. */
 export const ACTIVITY_KEY = 'contextActivity'
 
-declare module '@deepseek-ai/dsh-session-projection/types' {
+declare module '@redspark/rsh-session-projection/types' {
   interface SessionProjectionStateMap {
     /** What this Session's context is made of. */
     contextComposition: CompositionState
@@ -52,7 +52,7 @@ export const CONTEXT_COMMAND_DESCRIPTION = "Show what this Session's context is 
 /** Host plugin: the three folds, plus the command when a command service is composed. */
 export const plugin: NativePlugin = {
   apiVersion: 1,
-  name: '@deepseek-ai/dsh-context-insight',
+  name: '@redspark/rsh-context-insight',
   targets: ['host'],
   requires: ['sessionProjections'],
   // The command service is optional: a headless deployment keeps the projections without a

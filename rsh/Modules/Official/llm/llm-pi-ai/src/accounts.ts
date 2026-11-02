@@ -1,12 +1,12 @@
 /** Native account operations for supported provider accounts. */
 
-import { credentialKey } from '@deepseek-ai/dsh-credentials/native'
-import type { CredentialKey, NativeCredentials, CredentialRecord } from '@deepseek-ai/dsh-credentials/native'
-import type { DeepSeekAccount } from '@deepseek-ai/dsh-deepseek-account/native'
+import { credentialKey } from '@redspark/rsh-credentials/native'
+import type { CredentialKey, NativeCredentials, CredentialRecord } from '@redspark/rsh-credentials/native'
+import type { DeepSeekAccount } from '@redspark/rsh-deepseek-account/native'
 import { isSiwcCredential } from './siwc.ts'
 import { CodexUsageStore } from './rate-limits.ts'
 
-declare module '@deepseek-ai/dsh-native-runtime' {
+declare module '@redspark/rsh-native-runtime' {
   interface NativeServices { accounts: NativeAccounts }
   interface NativeEvents {
     /** A supported account credential record changed.

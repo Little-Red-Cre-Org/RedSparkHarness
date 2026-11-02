@@ -1,5 +1,5 @@
 {
-  "name": "@deepseek-ai/dsh-util-workspace-path",
+  "name": "@redspark/rsh-util-workspace-path",
   "description": "Browser-safe Workspace path and display helpers",
   "version": "1.0.0",
   "publishConfig": {

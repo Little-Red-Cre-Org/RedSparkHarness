@@ -3,7 +3,7 @@ description: "The model-facing workflow tool: run a JavaScript orchestration scr
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-tool-workflow
+# @redspark/rsh-tool-workflow
 
 English | [中文](README.zh.md)
 
@@ -46,7 +46,7 @@ While the script runs, the parent turn waits: the tool starts the run, awaits it
 
 The generated [configuration catalog](../../../Docs/config-catalog.md#deepseek-aidsh-tool-workflow) is the exhaustive source for every accepted field.
 
-Native compositions mount `@deepseek-ai/dsh-tool-workflow/native` with a `provider` name visible in the scoped Native workflow Definition; the worker Provider is installed separately. Root calls record run and child progress in the invoking Session before returning the result.
+Native compositions mount `@redspark/rsh-tool-workflow/native` with a `provider` name visible in the scoped Native workflow Definition; the worker Provider is installed separately. Root calls record run and child progress in the invoking Session before returning the result.
 
 -----
 

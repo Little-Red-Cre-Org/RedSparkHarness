@@ -1,5 +1,5 @@
 {
-  "name": "@deepseek-ai/dsh-subagent-protocol",
+  "name": "@redspark/rsh-subagent-protocol",
   "description": "Pure durable Subagent descriptor and assistant output values",
   "version": "1.0.0",
   "publishConfig": {
@@ -37,8 +37,8 @@
   ],
   "license": "MIT",
   "dependencies": {
-    "@deepseek-ai/dsh-llm": "workspace:^",
-    "@deepseek-ai/dsh-session": "workspace:^",
-    "@deepseek-ai/dsh-util-values": "workspace:^"
+    "@redspark/rsh-llm": "workspace:^",
+    "@redspark/rsh-session": "workspace:^",
+    "@redspark/rsh-util-values": "workspace:^"
   }
 }

@@ -1,16 +1,16 @@
 /** Native conversation view state; Session execution and persistence remain on the Host. */
 import type {
   NativeSessionClient, NativeSessionFollowFrame, NativeSessionListFrame, NativeSessionListItem,
-} from '@deepseek-ai/dsh-client-native-session/native'
-import { randomUUID } from '@deepseek-ai/dsh-util-crypto'
-import { nativeSubmissionRequestId } from '@deepseek-ai/dsh-client-native-session/native'
-import type { NativeSubmissionsSnapshot, NativeSubmissionRequestId, NativeSubmissionAcknowledgement } from '@deepseek-ai/dsh-client-native-session/native'
-import type { NativeImageUpload, NativeSessionImage, NativeSessionInputPart } from '@deepseek-ai/dsh-client-native-session/native'
-import type { NativeWebHumanPrompt, NativeWebHumanAnswer } from '@deepseek-ai/dsh-client-native-session/native'
-import type { NativeModelControls } from '@deepseek-ai/dsh-client-native-session/native'
-import type { NativeModeControls, NativePermissionControls } from '@deepseek-ai/dsh-client-native-session/native'
-import { foldNativeModelSelectionState, type ModelSelection } from '@deepseek-ai/dsh-native-model-selection/types'
-import { SessionSeq, type SessionEvent, type SessionHeader, type SessionId } from '@deepseek-ai/dsh-session/types'
+} from '@redspark/rsh-client-native-session/native'
+import { randomUUID } from '@redspark/rsh-util-crypto'
+import { nativeSubmissionRequestId } from '@redspark/rsh-client-native-session/native'
+import type { NativeSubmissionsSnapshot, NativeSubmissionRequestId, NativeSubmissionAcknowledgement } from '@redspark/rsh-client-native-session/native'
+import type { NativeImageUpload, NativeSessionImage, NativeSessionInputPart } from '@redspark/rsh-client-native-session/native'
+import type { NativeWebHumanPrompt, NativeWebHumanAnswer } from '@redspark/rsh-client-native-session/native'
+import type { NativeModelControls } from '@redspark/rsh-client-native-session/native'
+import type { NativeModeControls, NativePermissionControls } from '@redspark/rsh-client-native-session/native'
+import { foldNativeModelSelectionState, type ModelSelection } from '@redspark/rsh-native-model-selection/types'
+import { SessionSeq, type SessionEvent, type SessionHeader, type SessionId } from '@redspark/rsh-session/types'
 
 /** Settled durable history and the Client's outstanding operation. */
 export interface ConversationSnapshot {

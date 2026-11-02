@@ -9,9 +9,9 @@ Adding or changing a `ctx.remote` endpoint takes the five steps on this page: de
 The owner is a Host-side Cordis service: extend `TypertRemoteService` so the service key and the wire namespace are bound together, then mark the exposed methods with `@Remote`. Mark the business method itself when its signature already satisfies the wire conventions; write a `remoteExport*` adapter only when the shape has to change (adding `signal`, reordering parameters, exporting another name), and let that adapter call the unrenamed business method. Lookup objects (`Agent`, `Session`) may only occupy top-level parameter positions, and a method that supports cooperative cancellation takes `signal: AbortSignal` as its final parameter.
 
 ```ts
-import type { Context } from '@deepseek-ai/cordis'
-import type { Agent } from '@deepseek-ai/dsh-agent'
-import { Remote, TypertRemoteService } from '@deepseek-ai/dsh-typert-protocol'
+import type { Context } from '@redspark/cordis'
+import type { Agent } from '@redspark/rsh-agent'
+import { Remote, TypertRemoteService } from '@redspark/rsh-typert-protocol'
 
 /** One stored note as a Client reads it. */
 export interface NoteRow {
@@ -19,7 +19,7 @@ export interface NoteRow {
   readonly title: string
 }
 
-declare module '@deepseek-ai/cordis' {
+declare module '@redspark/cordis' {
   interface Context {
     notesController: NotesController
   }
@@ -60,11 +60,11 @@ A code reads `<domain>/<reason>`, and its declaration has four placement rules:
 - A local failure that never crosses the wire stays out of the code table; express it with the caller's own type.
 
 ```ts
-import { RemoteError } from '@deepseek-ai/dsh-typert-protocol'
+import { RemoteError } from '@redspark/rsh-typert-protocol'
 
-import type {} from '@deepseek-ai/dsh-typert-protocol/types'
+import type {} from '@redspark/rsh-typert-protocol/types'
 
-declare module '@deepseek-ai/dsh-typert-protocol/types' {
+declare module '@redspark/rsh-typert-protocol/types' {
   interface RemoteErrorDetailsMap {
     /** No stored note carries that id. */
     'note/not-found': { readonly noteId: string }
@@ -91,7 +91,7 @@ export async function rename(noteId: string, title: string): Promise<void> {
 
 ## 3. Register it on the package
 
-`@Remote` must live in a Loader entry plugin package; when the owner is an abstract seam, the controller goes in the matching package under `rsh/Programs/Web/api/`. The manifest gains the two generated entries and the protocol peer dependency, while on the Client side the `@deepseek-ai/dsh-api-remotes` assembly mounts the contribution and re-exports the type vocabulary that consumers need. Which generated artifact each entry points at, and how the generation pipeline is ordered, are in the [API Gateway reference](../api-gateway.md).
+`@Remote` must live in a Loader entry plugin package; when the owner is an abstract seam, the controller goes in the matching package under `rsh/Programs/Web/api/`. The manifest gains the two generated entries and the protocol peer dependency, while on the Client side the `@redspark/rsh-api-remotes` assembly mounts the contribution and re-exports the type vocabulary that consumers need. Which generated artifact each entry points at, and how the generation pipeline is ordered, are in the [API Gateway reference](../api-gateway.md).
 
 ```json
 {
@@ -99,8 +99,8 @@ export async function rename(noteId: string, title: string): Promise<void> {
     "./typert": { "types": "./lib/typert.host.d.ts", "default": "./lib/typert.host.js" },
     "./remote": { "types": "./lib/typert.remote-client.d.ts", "default": "./lib/typert.remote-client.js" }
   },
-  "peerDependencies": { "@deepseek-ai/dsh-typert-protocol": "workspace:^" },
-  "devDependencies": { "@deepseek-ai/dsh-typert-protocol": "workspace:^" }
+  "peerDependencies": { "@redspark/rsh-typert-protocol": "workspace:^" },
+  "devDependencies": { "@redspark/rsh-typert-protocol": "workspace:^" }
 }
 ```
 
@@ -113,9 +113,9 @@ The calling plugin declares both `remote` and `remote.<namespace>` in its `injec
 Fixed Host facts come from `ctx.remote.$host`: `home` and `isLoopback` are plain reads with no subscription and no generation counter, and `home` is `undefined` until the first ready frame. Refresh after a reconnect through `ctx.on('connection/reset')` or a domain's own remote event. When the caller aborts a unary call, the outcome is `gateway/cancelled` on the error branch rather than a throw.
 
 ```ts ignore-check
-import type { Context } from '@deepseek-ai/cordis'
-import { isRemoteFailure } from '@deepseek-ai/dsh-api-gateway/client'
-import type {} from '@deepseek-ai/dsh-api-remotes/client'
+import type { Context } from '@redspark/cordis'
+import { isRemoteFailure } from '@redspark/rsh-api-gateway/client'
+import type {} from '@redspark/rsh-api-remotes/client'
 
 export const inject = ['remote', 'remote.notes']
 
@@ -153,7 +153,7 @@ export function hostLabel(): string {
 On the owner side, assert the code that was thrown: recover the failure with `remoteErrorOf` after catching, then compare `code` and the details fields you care about with `toMatchObject` — never deep-compare the error object with `toEqual`, and never assert `instanceof`.
 
 ```ts
-import { remoteErrorOf } from '@deepseek-ai/dsh-typert-protocol'
+import { remoteErrorOf } from '@redspark/rsh-typert-protocol'
 import { expect, it } from 'vitest'
 
 declare function rename(noteId: string, title: string): Promise<void>
@@ -168,11 +168,11 @@ it('refuses an unknown note before writing', async () => {
 })
 ```
 
-A Client-side double returns real instances: take the `RemoteError` and `TestRemote` value imports from `@deepseek-ai/dsh-client-test-runtime`, because a value import from the `api-remotes` facade would load the unbuilt assembly chain. `TestRemote.$host` is a plain field a spec assigns directly.
+A Client-side double returns real instances: take the `RemoteError` and `TestRemote` value imports from `@redspark/rsh-client-test-runtime`, because a value import from the `api-remotes` facade would load the unbuilt assembly chain. `TestRemote.$host` is a plain field a spec assigns directly.
 
 ```ts ignore-check
-import { Context } from '@deepseek-ai/cordis'
-import { RemoteError, TestRemote } from '@deepseek-ai/dsh-client-test-runtime'
+import { Context } from '@redspark/cordis'
+import { RemoteError, TestRemote } from '@redspark/rsh-client-test-runtime'
 import { expect, it } from 'vitest'
 
 it('renders the failure code the Host reported', async () => {

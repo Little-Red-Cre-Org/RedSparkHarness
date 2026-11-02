@@ -3,7 +3,7 @@ description: "The web GUI host's HTTP server: named-route and upgrade registrati
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-host-webserver
+# @redspark/rsh-host-webserver
 
 English | [中文](README.zh.md)
 
@@ -30,7 +30,7 @@ Compose the webserver as the HTTP transport of a browser-facing host, then let f
 ### Minimal configuration
 
 ```yaml
-- name: '@deepseek-ai/dsh-host-webserver'
+- name: '@redspark/rsh-host-webserver'
   config:
     host: 127.0.0.1
     port: 3000
@@ -64,7 +64,7 @@ A listen failure (for example EADDRINUSE) rejects plugin initialization with the
 
 ### Design concept
 
-The generic route definitions and drainable table live in `@deepseek-ai/dsh-http-routes`; this package owns the Cordis `WebServer` listener Provider. The Cordis `ctx.webServer` and `webserver/index-inject` declarations live in `@deepseek-ai/dsh-http-routes-cordis`, while browser-safe injection rows live in the Core Client face. `WebServer` extends Cordis `Service` and owns the socket, gzip policy, fallback slot, raw index-tap list, and index event collection. The upgrade handler owns protocol negotiation and socket use; the webserver only delivers the raw socket and request. `host` and `port` getters expose composition-time facts other plugins adapt to (for example the directory-picker chooser).
+The generic route definitions and drainable table live in `@redspark/rsh-http-routes`; this package owns the Cordis `WebServer` listener Provider. The Cordis `ctx.webServer` and `webserver/index-inject` declarations live in `@redspark/rsh-http-routes-cordis`, while browser-safe injection rows live in the Core Client face. `WebServer` extends Cordis `Service` and owns the socket, gzip policy, fallback slot, raw index-tap list, and index event collection. The upgrade handler owns protocol negotiation and socket use; the webserver only delivers the raw socket and request. `host` and `port` getters expose composition-time facts other plugins adapt to (for example the directory-picker chooser).
 
 ### Matching and lifecycle
 

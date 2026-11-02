@@ -1,9 +1,9 @@
 /** Cordis adapter for the shared local subprocess implementation. */
-import { Context } from '@deepseek-ai/cordis'
-import { SubprocessRuntime } from '@deepseek-ai/dsh-subprocess'
+import { Context } from '@redspark/cordis'
+import { SubprocessRuntime } from '@redspark/rsh-subprocess'
 import type {
   SubprocessHandle, SubprocessSpawnSpec, SubprocessTerminalHandle, SubprocessTerminalSpawnSpec,
-} from '@deepseek-ai/dsh-subprocess'
+} from '@redspark/rsh-subprocess'
 import { LocalSubprocessController } from './controller.ts'
 import type { SpawnInternals } from './spawn.ts'
 import type { ProcessInspector } from './process-inspector.ts'

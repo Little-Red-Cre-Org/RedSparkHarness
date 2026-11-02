@@ -3,7 +3,7 @@ description: "The persisted same-session goal service for users and maintainers 
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-goal
+# @redspark/rsh-goal
 
 English | [中文](README.zh.md)
 
@@ -40,7 +40,7 @@ A create request may include `expectedRef`: `null` requires that no current Goal
 Load the package with a composition entry; the only deployment choice is the default round cap applied to creates that do not name their own.
 
 ```yaml
-- name: '@deepseek-ai/dsh-goal'
+- name: '@redspark/rsh-goal'
   config:
     defaultMaxGoalRounds: 256
 ```
@@ -53,7 +53,7 @@ Load the package with a composition entry; the only deployment choice is the def
 
 ### Session projection
 
-`GoalService` requires `ctx.sessionProjections` ([`@deepseek-ai/dsh-session-projection`](../../session/session-projection/README.md)) and registers the `goal` projection unit at startup; a composition that omits the projection registry cannot activate `ctx.goals`. The unit's version 6 host state retains the latest valid current goal, every previously used goal id, and the first strict replay failure. Its client view exposes the current goal or `null` before the first create and after a clear tombstone. The key merges into both `SessionProjectionStateMap` and `SessionProjectionMap`; carriers serve the client value on the history tail page and the `session/projection` push frame.
+`GoalService` requires `ctx.sessionProjections` ([`@redspark/rsh-session-projection`](../../session/session-projection/README.md)) and registers the `goal` projection unit at startup; a composition that omits the projection registry cannot activate `ctx.goals`. The unit's version 6 host state retains the latest valid current goal, every previously used goal id, and the first strict replay failure. Its client view exposes the current goal or `null` before the first create and after a clear tombstone. The key merges into both `SessionProjectionStateMap` and `SessionProjectionMap`; carriers serve the client value on the history tail page and the `session/projection` push frame.
 
 ### Drive the lifecycle
 
@@ -118,7 +118,7 @@ This section explains how the service realizes the behavior above; the observabl
 
 ### Events and attribution
 
-`goal/changed` fires after the durable event commits, with listener failures contained; the payload carries the operation, the exact ref, and the fresh view (absent for a clear tombstone). `goal/activation-changed` forwards a process-local `armed`/`disarmed` edge with the exact current ref, or no goal after a clear, without changing durable state. Cordis consumers import this activation event declaration from `@deepseek-ai/dsh-goal/compatibility-events`; `./types` and `./native` remain Cordis-free. Admitted continuation rounds are attributed through `GoalMessageSource { goalId, revision, round }` on the `user/message` event, which the strict fold validates as the next admitted round of the current goal.
+`goal/changed` fires after the durable event commits, with listener failures contained; the payload carries the operation, the exact ref, and the fresh view (absent for a clear tombstone). `goal/activation-changed` forwards a process-local `armed`/`disarmed` edge with the exact current ref, or no goal after a clear, without changing durable state. Cordis consumers import this activation event declaration from `@redspark/rsh-goal/compatibility-events`; `./types` and `./native` remain Cordis-free. Admitted continuation rounds are attributed through `GoalMessageSource { goalId, revision, round }` on the `user/message` event, which the strict fold validates as the next admitted round of the current goal.
 
 ### Native profile
 

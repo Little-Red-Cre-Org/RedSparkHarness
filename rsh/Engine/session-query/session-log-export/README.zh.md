@@ -3,7 +3,7 @@ description: "面向 Web 下载与 Native Host 消费者的会话日志 ZIP 导�
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-session-log-export
+# @redspark/rsh-session-log-export
 
 [English](README.md) | 中文
 
@@ -35,7 +35,7 @@ kind: "package-reference"
 
 ```yaml
 - id: session-log-download
-  name: '@deepseek-ai/dsh-session-log-export'
+  name: '@redspark/rsh-session-log-export'
 ```
 
 Web bundle 将本包与 Connection、`dsh-commands`、`dsh-client-ui-commands` 和 `dsh-client-ui-conversation` 一起挂载。

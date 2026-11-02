@@ -1,7 +1,7 @@
 import { expect, it } from 'vitest'
-import type { ClientConnectionRpc } from '@deepseek-ai/dsh-client-connection/native'
-import { SESSION_FORMAT_VERSION, SessionSeq, type SessionEvent, type SessionHeader, type SessionId } from '@deepseek-ai/dsh-session/types'
-import type { NativeSessionClient, NativeSessionListFrame, NativeSessionListItem } from '@deepseek-ai/dsh-client-native-session/native'
+import type { ClientConnectionRpc } from '@redspark/rsh-client-connection/native'
+import { SESSION_FORMAT_VERSION, SessionSeq, type SessionEvent, type SessionHeader, type SessionId } from '@redspark/rsh-session/types'
+import type { NativeSessionClient, NativeSessionListFrame, NativeSessionListItem } from '@redspark/rsh-client-native-session/native'
 import { NativeConversationController } from '../src/controller.ts'
 import { createNativeSessionClient } from '../../native-session/src/native.ts'
 

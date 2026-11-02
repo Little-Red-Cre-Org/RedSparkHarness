@@ -3,15 +3,15 @@
 
 - insert:
     - id: webhook-runtime
-      name: '@deepseek-ai/dsh-webhook'
+      name: '@redspark/rsh-webhook'
 
     - id: github-webhook-real-e2e-rule
       name: './github-webhook-rule.mjs'
       config:
         source: github-real-e2e
-        repository: deepseek-harness/deepseek-harness
-        workspacePath: !!js process.env.DSH_GITHUB_E2E_WORKSPACE
-        marker: !!js process.env.DSH_GITHUB_E2E_MARKER
+        repository: redspark-harness/redspark-harness
+        workspacePath: !!js process.env.RSH_GITHUB_E2E_WORKSPACE
+        marker: !!js process.env.RSH_GITHUB_E2E_MARKER
         agentPreset: minimal
         permissionPreset: read-only
 
@@ -22,15 +22,15 @@
         webServer: true
       config:
         - id: github-webhook-real-e2e-server
-          name: '@deepseek-ai/dsh-host-webserver'
+          name: '@redspark/rsh-host-webserver'
           config:
             host: '127.0.0.1'
-            port: !!js Number(process.env.DSH_GITHUB_WEBHOOK_PORT)
+            port: !!js Number(process.env.RSH_GITHUB_WEBHOOK_PORT)
 
         - id: github-webhook-real-e2e-adapter
-          name: '@deepseek-ai/dsh-webhook-github'
+          name: '@redspark/rsh-webhook-github'
           config:
             source: github-real-e2e
             path: /github
-            secretEnv: DSH_GITHUB_WEBHOOK_SECRET
+            secretEnv: RSH_GITHUB_WEBHOOK_SECRET
             maxBodyBytes: 1048576

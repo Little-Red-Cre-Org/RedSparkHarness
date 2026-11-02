@@ -1,9 +1,9 @@
 /** Cordis Client adapter for the shared browser connection implementation. */
-import type { Context } from '@deepseek-ai/cordis'
+import type { Context } from '@redspark/cordis'
 import { createFixtureConnectionRpc } from './fixture.ts'
 import { createConnectionHandle } from './native-core.ts'
 
-declare module '@deepseek-ai/cordis' {
+declare module '@redspark/cordis' {
   interface Events {
     /**
      * A connection generation was established. Wire-derived caches must

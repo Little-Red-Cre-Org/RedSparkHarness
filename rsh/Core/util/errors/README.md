@@ -3,7 +3,7 @@ description: "Shared coded errors and diagnostic rendering without service depen
 kind: "package-library"
 ---
 
-# @deepseek-ai/dsh-errors
+# @redspark/rsh-errors
 
 English | [中文](README.zh.md)
 

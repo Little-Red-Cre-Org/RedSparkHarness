@@ -1,5 +1,5 @@
 /** Application-scoped inbox polling; it runs even while Settings is closed. */
-import { createSnapshotStore, type SnapshotStore } from '@deepseek-ai/dsh-client-store'
+import { createSnapshotStore, type SnapshotStore } from '@redspark/rsh-client-store'
 import type { TaskNotice } from '../gui-types.ts'
 
 /** Observable reminder state owned by this plugin mount. */

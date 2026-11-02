@@ -1,5 +1,5 @@
 {
-  "name": "@deepseek-ai/dsh-sdk-child",
+  "name": "@redspark/rsh-sdk-child",
   "description": "Native Subagent adapter using the standard Native SDK child runtime",
   "version": "1.0.0",
   "publishConfig": {
@@ -50,25 +50,25 @@
   ],
   "license": "MIT",
   "peerDependencies": {
-    "@deepseek-ai/dsh-attachment": "workspace:^",
-    "@deepseek-ai/dsh-llm": "workspace:^",
-    "@deepseek-ai/dsh-native-runtime": "workspace:^",
-    "@deepseek-ai/dsh-native-subagent": "workspace:^",
-    "@deepseek-ai/dsh-session": "workspace:^",
-    "@deepseek-ai/dsh-sdk-protocol": "workspace:^",
-    "@deepseek-ai/dsh-subagent-protocol": "workspace:^",
-    "@deepseek-ai/dsh-credentials": "workspace:^",
-    "@deepseek-ai/dsh-sdk-runtime": "workspace:^"
+    "@redspark/rsh-attachment": "workspace:^",
+    "@redspark/rsh-llm": "workspace:^",
+    "@redspark/rsh-native-runtime": "workspace:^",
+    "@redspark/rsh-native-subagent": "workspace:^",
+    "@redspark/rsh-session": "workspace:^",
+    "@redspark/rsh-sdk-protocol": "workspace:^",
+    "@redspark/rsh-subagent-protocol": "workspace:^",
+    "@redspark/rsh-credentials": "workspace:^",
+    "@redspark/rsh-sdk-runtime": "workspace:^"
   },
   "devDependencies": {
-    "@deepseek-ai/dsh-attachment": "workspace:^",
-    "@deepseek-ai/dsh-llm": "workspace:^",
-    "@deepseek-ai/dsh-native-runtime": "workspace:^",
-    "@deepseek-ai/dsh-native-subagent": "workspace:^",
-    "@deepseek-ai/dsh-session": "workspace:^",
-    "@deepseek-ai/dsh-sdk-protocol": "workspace:^",
-    "@deepseek-ai/dsh-subagent-protocol": "workspace:^",
-    "@deepseek-ai/dsh-credentials": "workspace:^",
-    "@deepseek-ai/dsh-sdk-runtime": "workspace:^"
+    "@redspark/rsh-attachment": "workspace:^",
+    "@redspark/rsh-llm": "workspace:^",
+    "@redspark/rsh-native-runtime": "workspace:^",
+    "@redspark/rsh-native-subagent": "workspace:^",
+    "@redspark/rsh-session": "workspace:^",
+    "@redspark/rsh-sdk-protocol": "workspace:^",
+    "@redspark/rsh-subagent-protocol": "workspace:^",
+    "@redspark/rsh-credentials": "workspace:^",
+    "@redspark/rsh-sdk-runtime": "workspace:^"
   }
 }

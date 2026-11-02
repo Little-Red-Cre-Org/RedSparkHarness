@@ -3,7 +3,7 @@ description: "Framework-independent Workspace identity and consumer operations s
 kind: "package-library"
 ---
 
-# @deepseek-ai/dsh-workspace-definition
+# @redspark/rsh-workspace-definition
 
 English | [中文](README.zh.md)
 

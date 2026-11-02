@@ -4,14 +4,14 @@ import { createHash, randomUUID } from 'node:crypto'
 import { constants, createReadStream } from 'node:fs'
 import { chmod, link, mkdir, open, readFile, unlink } from 'node:fs/promises'
 import { dirname, join, parse, resolve } from 'node:path'
-import { AttachmentId } from '@deepseek-ai/dsh-attachment/brand'
-import { AttachmentError } from '@deepseek-ai/dsh-attachment/error'
+import { AttachmentId } from '@redspark/rsh-attachment/brand'
+import { AttachmentError } from '@redspark/rsh-attachment/error'
 import type {
   ImageAttachmentLimits,
   ImageAttachmentRef,
   SaveImageAttachment,
   StoredImageAttachment,
-} from '@deepseek-ai/dsh-attachment/types'
+} from '@redspark/rsh-attachment/types'
 import { normalizeImage } from './normalization.ts'
 import type { NormalizationPolicy } from './normalization.ts'
 import { detectImage, probeImage } from './image.ts'
@@ -42,7 +42,7 @@ function ensureReference(ref: ImageAttachmentRef): string {
 
 /**
  * Derive the absolute immutable-object path for one normalized attachment.
- * @param root - absolute `DSH_HOME/attachments/v1` root.
+ * @param root - absolute `RSH_HOME/attachments/v1` root.
  * @param ref - durable normalized attachment reference.
  * @returns provider-local path without reading the object.
  */
@@ -167,7 +167,7 @@ async function ensureDurableDirectory(path: string, boundary: string): Promise<v
 }
 
 /**
- * Establish this process's proof that one DSH_HOME entry and every ancestor
+ * Establish this process's proof that one RSH_HOME entry and every ancestor
  * below the filesystem root are durable. Mere existence is insufficient: a
  * concurrent process may have created the directory but not synced its parent.
  */
@@ -182,7 +182,7 @@ async function ensureDurableHome(path: string): Promise<string> {
 
 /**
  * Publish one already verified normalized image below a versioned attachment root.
- * @param root - absolute `DSH_HOME/attachments/v1` root.
+ * @param root - absolute `RSH_HOME/attachments/v1` root.
  * @param prepared - deterministic normalized bytes and reference.
  * @returns durable content-addressed normalized image reference.
  */
@@ -204,7 +204,7 @@ export async function commitPreparedImageFile(
  * root: staged write, fsync, hard-link into place, digest-verified EEXIST
  * deduplication, read-only mode, and durable directory entries from the
  * target's parent up to (excluding) `root`.
- * @param root - absolute `DSH_HOME/attachments/v1` root.
+ * @param root - absolute `RSH_HOME/attachments/v1` root.
  * @param target - absolute final object path below `root`.
  * @param data - exact object bytes whose digest is `sha256`.
  * @param sha256 - hex digest the stored bytes must match on deduplication.
@@ -234,7 +234,7 @@ export interface StreamedImmutableObject {
 /**
  * Stream one immutable object from bounded chunks into a staging file, then
  * publish it at a digest-derived target without collecting the complete object in memory.
- * @param root - absolute `DSH_HOME/attachments/v1` root.
+ * @param root - absolute `RSH_HOME/attachments/v1` root.
  * @param data - exact object bytes in order.
  * @param targetFor - derive the final absolute target from the completed digest and byte count.
  * @param signal - optional cancellation for source reads and storage writes.
@@ -310,7 +310,7 @@ async function stageImmutableObject(
   signal?: AbortSignal,
 ): Promise<StagedImmutableObject> {
   const staging = join(root, 'tmp')
-  // Establish DSH_HOME itself against the filesystem root once per process.
+  // Establish RSH_HOME itself against the filesystem root once per process.
   // Every process performs that proof independently, so observing a directory
   // another process created can never be mistaken for durable publication.
   const boundary = await ensureDurableHome(dirname(dirname(resolve(root))))
@@ -403,7 +403,7 @@ async function removeTemporary(path: string): Promise<void> {
 
 /**
  * Decode and normalize one image once, then publish the prepared object.
- * @param root - absolute `DSH_HOME/attachments/v1` root.
+ * @param root - absolute `RSH_HOME/attachments/v1` root.
  * @param input - submitted encoded bytes and declared media type.
  * @param limits - resolved source admission policy.
  * @param policy - resolved normalization policy.
@@ -420,7 +420,7 @@ export async function saveImageFile(
 
 /**
  * Read and verify one content-addressed image.
- * @param root - absolute `DSH_HOME/attachments/v1` root.
+ * @param root - absolute `RSH_HOME/attachments/v1` root.
  * @param ref - reference recorded in the session log.
  * @param signal - optional cancellation for filesystem and verification work.
  * @returns verified bytes and reference.

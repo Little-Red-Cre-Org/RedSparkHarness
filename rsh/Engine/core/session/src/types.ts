@@ -1,4 +1,4 @@
-import { brandNumber, brandString, type Branded, type BrandedNumber } from '@deepseek-ai/dsh-brand'
+import { brandNumber, brandString, type Branded, type BrandedNumber } from '@redspark/rsh-brand'
 import type {
   AssistantMessage,
   AssistantStreamRecord,
@@ -12,8 +12,8 @@ import type {
   ToolResultMessage,
   ToolSchema,
   UserMessage,
-} from '@deepseek-ai/dsh-llm/native'
-import type { JsonValue } from '@deepseek-ai/dsh-util-values'
+} from '@redspark/rsh-llm/native'
+import type { JsonValue } from '@redspark/rsh-util-values'
 
 /** Identifies one session in the store (and its persistence artifacts). */
 export type SessionId = Branded<'SessionId'>

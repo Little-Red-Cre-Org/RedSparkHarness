@@ -1,18 +1,18 @@
 /**
  * Model-facing `get_goal`, `create_goal`, and `update_goal` tools over the
  * persisted same-session goal domain.
- * @module @deepseek-ai/dsh-tool-goal
+ * @module @redspark/rsh-tool-goal
  */
 
 import { CREATE_DESCRIPTION, GET_DESCRIPTION, goalValue, guidance } from './common.ts'
 import type { GoalToolValue } from './common.ts'
-import type { Context } from '@deepseek-ai/cordis'
-import z from '@deepseek-ai/schemastery'
-import { GoalId } from '@deepseek-ai/dsh-goal'
-import type { GoalRef } from '@deepseek-ai/dsh-goal'
-import { boundContextSummary, createUserMessage, HarnessError } from '@deepseek-ai/dsh-llm'
-import { defineTool } from '@deepseek-ai/dsh-tools'
-import type { GenericCallView } from '@deepseek-ai/dsh-tools'
+import type { Context } from '@redspark/cordis'
+import z from '@redspark/schemastery'
+import { GoalId } from '@redspark/rsh-goal'
+import type { GoalRef } from '@redspark/rsh-goal'
+import { boundContextSummary, createUserMessage, HarnessError } from '@redspark/rsh-llm'
+import { defineTool } from '@redspark/rsh-tools'
+import type { GenericCallView } from '@redspark/rsh-tools'
 import {
   completionAuthority,
   goalToolExecution,

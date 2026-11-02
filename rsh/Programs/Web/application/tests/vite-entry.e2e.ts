@@ -46,7 +46,7 @@ describe('Web development entry', () => {
         timeout: 10_000,
         env: {
           ...process.env,
-          DSH_LISTEN_PROBE_MARKER: marker,
+          RSH_LISTEN_PROBE_MARKER: marker,
           NODE_OPTIONS: `${process.env.NODE_OPTIONS ?? ''} --import ${pathToFileURL(probeModule).href}`.trim(),
         },
       })

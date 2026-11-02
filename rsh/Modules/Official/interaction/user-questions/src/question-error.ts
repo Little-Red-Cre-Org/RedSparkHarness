@@ -1,5 +1,5 @@
 /** Coded question failures shared by native and Cordis adapters. */
-import { HarnessError } from '@deepseek-ai/dsh-errors'
+import { HarnessError } from '@redspark/rsh-errors'
 
 /** Stable error taxonomy for user-questions failures. */
 export class UserQuestionError extends HarnessError {

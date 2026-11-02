@@ -1,6 +1,6 @@
 /** Cordis Service adapter for the framework-free code execution definition. */
-import { Context, Service } from '@deepseek-ai/cordis'
-import type { CodeRunRequest, CodeRunResult, CodeRuntimeDefinition } from '@deepseek-ai/dsh-code-runtime-definition'
+import { Context, Service } from '@redspark/cordis'
+import type { CodeRunRequest, CodeRunResult, CodeRuntimeDefinition } from '@redspark/rsh-code-runtime-definition'
 
 export type {
   CodeBindingErrorClass,
@@ -10,10 +10,10 @@ export type {
   CodeRunFailure,
   CodeRunRequest,
   CodeRunResult,
-} from '@deepseek-ai/dsh-code-runtime-definition'
-export { DUNDER_MEMBER, PORTABLE_RESERVED_WORDS, RESERVED_BINDING_GLOBALS, RESERVED_ERROR_MEMBERS } from '@deepseek-ai/dsh-code-runtime-definition'
+} from '@redspark/rsh-code-runtime-definition'
+export { DUNDER_MEMBER, PORTABLE_RESERVED_WORDS, RESERVED_BINDING_GLOBALS, RESERVED_ERROR_MEMBERS } from '@redspark/rsh-code-runtime-definition'
 
-declare module '@deepseek-ai/cordis' {
+declare module '@redspark/cordis' {
   interface Context {
     codeRuntime: CodeRuntimeDefinition
   }

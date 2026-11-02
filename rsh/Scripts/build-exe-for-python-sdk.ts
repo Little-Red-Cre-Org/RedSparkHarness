@@ -25,21 +25,21 @@ const DEPLOY_ROOT_PACKAGE = 'dsh-python-runtime-closure'
  * CLI package that owns the executable entry. It is a closure leaf: its own manifest declares the
  * legacy superset, so the prune keeps the package without following those edges.
  */
-const CLI_PACKAGE = '@deepseek-ai/dsh'
+const CLI_PACKAGE = '@redspark/dsh'
 /**
  * Cordis packages the shipped `cordis` agent preset mounts on purpose: it is the preset that edits
  * the live composition, so its own toolset stays in the closure. Every other Cordis package is an
  * unreachable legacy edge and must not reach the packaged runtime.
  */
 const PRESET_REQUIRED_CORDIS = new Set([
-  '@deepseek-ai/cordis',
-  '@deepseek-ai/dsh-cordis-host-runner',
-  '@deepseek-ai/dsh-tool-cordis',
+  '@redspark/cordis',
+  '@redspark/rsh-cordis-host-runner',
+  '@redspark/rsh-tool-cordis',
 ])
 /** The sole executable entry inside the deployed closure. */
 const ENTRY_BIN = 'runtime-bootstrap.mjs'
 /** Python-visible executable basename. */
-const OUTPUT_BASENAME = 'deepseek-harness-sdk-runtime'
+const OUTPUT_BASENAME = 'redspark-harness-sdk-runtime'
 /** Default Node major; SEA mode requires at least Node 22. */
 const DEFAULT_NODE_RANGE = 'node24'
 const OUT_DIR = 'dist-exe'
@@ -78,9 +78,9 @@ const ASSET_GLOBS = [
   'node_modules/**/*.exe',
   'node_modules/**/bin/*',
   // web-app builds this path dynamically, so pkg cannot discover the static frontend.
-  'node_modules/@deepseek-ai/dsh-web-frontend/dist/**/*',
+  'node_modules/@redspark/rsh-web-frontend/dist/**/*',
   // skill-badge resolves both Markdown and image resources through import.meta.url.
-  'node_modules/@deepseek-ai/dsh-skill-badge/assets/**/*',
+  'node_modules/@redspark/rsh-skill-badge/assets/**/*',
 ]
 
 const PLATFORMS = ['linux', 'macos', 'win'] as const
@@ -327,13 +327,13 @@ class SingleExeBuild {
     await this.pruneToDeclaredClosure()
     await this.materializeStagedLinks()
     if (this.cli.dryRun) {
-      console.log('build-exe-for-python-sdk: [dry-run] coalesce identical nested @deepseek-ai/dsh-tools peer copies')
+      console.log('build-exe-for-python-sdk: [dry-run] coalesce identical nested @redspark/rsh-tools peer copies')
     } else {
       // Pruning already removed nested copies of anything outside the closure. Coalescing a tree that
       // still holds them requires each peer to resolve, which the pruned tree no longer guarantees.
       const coalescedToolsCopies = await coalesceStagedDshToolsPeer(this.staging)
       if (coalescedToolsCopies > 0) {
-        console.log(`build-exe-for-python-sdk: coalesced ${coalescedToolsCopies} identical nested @deepseek-ai/dsh-tools peer copies.`)
+        console.log(`build-exe-for-python-sdk: coalesced ${coalescedToolsCopies} identical nested @redspark/rsh-tools peer copies.`)
       }
     }
     if (this.cli.dryRun) {

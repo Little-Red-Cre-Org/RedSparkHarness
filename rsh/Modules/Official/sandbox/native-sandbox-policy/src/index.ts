@@ -1,8 +1,8 @@
 /** Native filesystem policy resolved for the calling Session. */
 import { isAbsolute, resolve } from 'node:path'
-import type { SandboxExecutionPolicy, SandboxMode } from '@deepseek-ai/dsh-sandbox/native-types'
-import type { Session } from '@deepseek-ai/dsh-session/native'
-import { SessionSeq } from '@deepseek-ai/dsh-session/native'
+import type { SandboxExecutionPolicy, SandboxMode } from '@redspark/rsh-sandbox/native-types'
+import type { Session } from '@redspark/rsh-session/native'
+import { SessionSeq } from '@redspark/rsh-session/native'
 
 const sessionModes = new WeakMap<Session, { nextSeq: number; mode: SandboxMode | undefined }>()
 

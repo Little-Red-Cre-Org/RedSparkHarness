@@ -1,22 +1,22 @@
 /** Plugin-owned GUI mounted through the existing Settings and Remote extension points. */
-import type { Context } from '@deepseek-ai/cordis'
-import type {} from '@deepseek-ai/dsh-api-remotes/client'
-import type {} from '@deepseek-ai/dsh-client-ui-settings/client'
-import type {} from '@deepseek-ai/dsh-client-ui-renderer/client'
-import type {} from '@deepseek-ai/dsh-client-locale/client'
-import type { RemoteResult } from '@deepseek-ai/dsh-typert-protocol'
-import contribution from '@deepseek-ai/dsh-task-scheduler/remote'
+import type { Context } from '@redspark/cordis'
+import type {} from '@redspark/rsh-api-remotes/client'
+import type {} from '@redspark/rsh-client-ui-settings/client'
+import type {} from '@redspark/rsh-client-ui-renderer/client'
+import type {} from '@redspark/rsh-client-locale/client'
+import type { RemoteResult } from '@redspark/rsh-typert-protocol'
+import contribution from '@redspark/rsh-task-scheduler/remote'
 import { createSchedulerController } from './controller.ts'
 import { SchedulerPanel } from './Panel.tsx'
 import { NoticePanel } from './NoticePanel.tsx'
 import { createNoticeController } from './notices.ts'
 import { nativeNoticeContent, noticeStatus } from './native-notice.ts'
-import type {} from '@deepseek-ai/dsh-client-ui-workspace/client'
-import type { SessionId } from '@deepseek-ai/dsh-session/types'
-import type { IWorkspaces } from '@deepseek-ai/dsh-api-workspace-controller/client'
+import type {} from '@redspark/rsh-client-ui-workspace/client'
+import type { SessionId } from '@redspark/rsh-session/types'
+import type { IWorkspaces } from '@redspark/rsh-api-workspace-controller/client'
 import { en, zh, type SchedulerKey } from './locales.ts'
 
-declare module '@deepseek-ai/dsh-client-ui-slots' {
+declare module '@redspark/rsh-client-ui-slots' {
   interface LocaleNamespaceMap {
     taskScheduler: SchedulerKey
   }

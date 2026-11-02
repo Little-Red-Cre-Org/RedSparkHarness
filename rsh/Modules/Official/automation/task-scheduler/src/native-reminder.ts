@@ -1,7 +1,7 @@
 /** Append one reminder through the selected Program's sole root Session writer. */
-import { brandString } from '@deepseek-ai/dsh-brand'
-import { createUserMessage } from '@deepseek-ai/dsh-llm/native'
-import type { NativeActiveSessionOwner } from '@deepseek-ai/dsh-native-session-execution'
+import { brandString } from '@redspark/rsh-brand'
+import { createUserMessage } from '@redspark/rsh-llm/native'
+import type { NativeActiveSessionOwner } from '@redspark/rsh-native-session-execution'
 import type { Task, Run } from './types.ts'
 import { formatReminderRecord } from './reminder-format.ts'
 

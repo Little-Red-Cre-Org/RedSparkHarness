@@ -1,7 +1,7 @@
 /** Cordis-free type contracts shared by native Conversation targets. */
 import type { ReactNode } from 'react'
-import type { PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
-import type { MessageImageLoader, MessageImageSource } from '@deepseek-ai/dsh-client-ui-conversation/tool-records'
+import type { PropsRuntime } from '@redspark/rsh-client-ui-slots'
+import type { MessageImageLoader, MessageImageSource } from '@redspark/rsh-client-ui-conversation/tool-records'
 
 export type { MessageImageLoader, MessageImageSource }
 

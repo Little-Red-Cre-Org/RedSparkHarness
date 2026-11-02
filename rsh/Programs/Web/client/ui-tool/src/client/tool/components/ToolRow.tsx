@@ -3,9 +3,9 @@ import clsx from 'clsx'
 import {
   CodeBlock, DiffBlock, DisclosureRow, IconInspectOutline12, ReadBlock, SearchBlock, StateDot, TerminalBlock, WebBlock,
   diffTotals,
-} from '@deepseek-ai/dsh-client-ui-primitives'
-import type { TranslateNS } from '@deepseek-ai/dsh-client-ui-slots'
-import type { OpenFileOptions, MessageImageLoader } from '@deepseek-ai/dsh-client-ui-conversation/tool-records'
+} from '@redspark/rsh-client-ui-primitives'
+import type { TranslateNS } from '@redspark/rsh-client-ui-slots'
+import type { OpenFileOptions, MessageImageLoader } from '@redspark/rsh-client-ui-conversation/tool-records'
 import type { ToolImagesOwnerProps } from '../../../tool-renderer-types.ts'
 import { CHAT_DIFF_MAX_LINES, type DiffCardModel } from '../models/diff-card-model.ts'
 import { CHAT_READ_MAX_LINES, type ReadCardModel } from '../models/read-card-model.ts'

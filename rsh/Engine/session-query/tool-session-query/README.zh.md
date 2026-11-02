@@ -3,7 +3,7 @@ description: "面向 agent（智能体）开发者与维护者、经工作区授
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-tool-session-query
+# @redspark/rsh-tool-session-query
 
 [English](README.md) | 中文
 
@@ -56,7 +56,7 @@ Native CLI 用户可以选择内置的 `native-headless-query` profile。它会�
 
 ### 失败与恢复
 
-每个可信查询服务调用都经过一个错误净化器：调用方取消被精确保留，语料库与提供方诊断进入内部日志，不安全或不可打印的失败回退到固定 `SESSION_QUERY_TOOL_FAILED` 代码与消息。本地参数校验与授权错误保留精确的工具自有消息（目标在调用方工作区之外时为 `SESSION_QUERY_TOOL_UNAUTHORIZED`）。本包不执行字节或字符截断，也不导入 spill 后端；需要限制内联输出的部署应挂载 `@deepseek-ai/dsh-spill-policy`，它可以在保留完整结果的同时替换过大的已渲染文本。
+每个可信查询服务调用都经过一个错误净化器：调用方取消被精确保留，语料库与提供方诊断进入内部日志，不安全或不可打印的失败回退到固定 `SESSION_QUERY_TOOL_FAILED` 代码与消息。本地参数校验与授权错误保留精确的工具自有消息（目标在调用方工作区之外时为 `SESSION_QUERY_TOOL_UNAUTHORIZED`）。本包不执行字节或字符截断，也不导入 spill 后端；需要限制内联输出的部署应挂载 `@redspark/rsh-spill-policy`，它可以在保留完整结果的同时替换过大的已渲染文本。
 
 -----
 
@@ -91,7 +91,7 @@ Native CLI 用户可以选择内置的 `native-headless-query` profile。它会�
 | [`src/workspace-access.ts`](src/workspace-access.ts) | 调用方身份、工作区授权、标题访问、血缘投影 |
 | [`src/service-boundary.ts`](src/service-boundary.ts) | 可信调用与模型安全错误转换 |
 | [`src/operations.ts`](src/operations.ts) | 五个操作工作流 |
-| [`src/presentation.ts`](src/presentation.ts) | 文本结果渲染与工具调用卡片，类型来自 `@deepseek-ai/dsh-native-tools/presentation` |
+| [`src/presentation.ts`](src/presentation.ts) | 文本结果渲染与工具调用卡片，类型来自 `@redspark/rsh-native-tools/presentation` |
 
 ### 操作流程
 

@@ -1,5 +1,5 @@
 {
-  "name": "@deepseek-ai/dsh-native-subagent",
+  "name": "@redspark/rsh-native-subagent",
   "description": "Native Subagent Definition, selected Provider and external-driver contract",
   "version": "1.0.0",
   "publishConfig": {
@@ -30,16 +30,16 @@
   ],
   "license": "MIT",
   "dependencies": {
-    "@deepseek-ai/dsh-native-runtime": "workspace:^",
-    "@deepseek-ai/dsh-native-agent": "workspace:^",
-    "@deepseek-ai/dsh-native-session-execution": "workspace:^",
-    "@deepseek-ai/dsh-native-tools": "workspace:^",
-    "@deepseek-ai/dsh-native-prompt": "workspace:^",
-    "@deepseek-ai/dsh-llm": "workspace:^",
-    "@deepseek-ai/dsh-session": "workspace:^",
-    "@deepseek-ai/dsh-subagent-protocol": "workspace:^",
-    "@deepseek-ai/dsh-native-jobs": "workspace:^",
-    "@deepseek-ai/dsh-native-model-execution": "workspace:^"
+    "@redspark/rsh-native-runtime": "workspace:^",
+    "@redspark/rsh-native-agent": "workspace:^",
+    "@redspark/rsh-native-session-execution": "workspace:^",
+    "@redspark/rsh-native-tools": "workspace:^",
+    "@redspark/rsh-native-prompt": "workspace:^",
+    "@redspark/rsh-llm": "workspace:^",
+    "@redspark/rsh-session": "workspace:^",
+    "@redspark/rsh-subagent-protocol": "workspace:^",
+    "@redspark/rsh-native-jobs": "workspace:^",
+    "@redspark/rsh-native-model-execution": "workspace:^"
   },
   "dsh": {
     "native": {

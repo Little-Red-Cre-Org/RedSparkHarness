@@ -3,11 +3,11 @@ import { createRequire } from 'node:module'
 import { realpathSync } from 'node:fs'
 import { readFile } from 'node:fs/promises'
 import { dirname, extname, join, normalize, resolve, sep } from 'node:path'
-import type { Context } from '@deepseek-ai/cordis'
-import type { ConnectionFetchHandler } from '@deepseek-ai/dsh-client-connection'
-import type {} from '@deepseek-ai/dsh-client-modules'
-import type {} from '@deepseek-ai/dsh-http-routes-cordis'
-import { renderIndexInjections, type IndexInjection } from '@deepseek-ai/dsh-http-routes/client'
+import type { Context } from '@redspark/cordis'
+import type { ConnectionFetchHandler } from '@redspark/rsh-client-connection'
+import type {} from '@redspark/rsh-client-modules'
+import type {} from '@redspark/rsh-http-routes-cordis'
+import { renderIndexInjections, type IndexInjection } from '@redspark/rsh-http-routes/client'
 
 /** Desktop stream endpoint shared with the injected browser transport. */
 export const DESKTOP_STREAM_PATH = '/.dsh/remote-stream'
@@ -46,7 +46,7 @@ const MIME: Readonly<Record<string, string>> = {
 /** Serve the installed legacy frontend and its Host-owned transport. */
 export function createDesktopAssetHandler(ctx: Context, runtimeDir: string): ConnectionFetchHandler {
   const require = createRequire(join(runtimeDir, 'package.json'))
-  const distIndex = require.resolve('@deepseek-ai/dsh-web-compatibility/dist/index.html')
+  const distIndex = require.resolve('@redspark/rsh-web-compatibility/dist/index.html')
   const distRoot = realpathSync(dirname(distIndex))
   const renderIndex = async (): Promise<Response> => {
     const rows: IndexInjection[] = [{ kind: 'script', placement: 'head', text: DESKTOP_TRANSPORT_SCRIPT }]

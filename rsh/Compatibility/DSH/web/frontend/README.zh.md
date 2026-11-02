@@ -3,7 +3,7 @@ description: "运行使用现有 Client 模块表的旧版 Cordis 浏览器外�
 kind: "package-library"
 ---
 
-# @deepseek-ai/dsh-web-compatibility
+# @redspark/rsh-web-compatibility
 
 [English](README.md) | 中文
 
@@ -29,7 +29,7 @@ Desktop Host 可通过本包继续提供 Cordis 浏览器外壳及其现有 Clie
 
 ### 何时使用
 
-当现有 Host 通过 Client 模块表选择 Cordis 插件时，使用兼容页面。Host 提供 Native 模块选择并需要无 Cordis 页面时，使用 `@deepseek-ai/dsh-web-frontend`。
+当现有 Host 通过 Client 模块表选择 Cordis 插件时，使用兼容页面。Host 提供 Native 模块选择并需要无 Cordis 页面时，使用 `@redspark/rsh-web-frontend`。
 
 ### 入口
 
@@ -37,15 +37,15 @@ Desktop Host 可通过本包继续提供 Cordis 浏览器外壳及其现有 Clie
 
 ```ts ignore-check
 // Client-only entry: the Host aggregate cannot compile this package's Client declarations.
-import { AppWebEntry } from '@deepseek-ai/dsh-web-compatibility'
+import { AppWebEntry } from '@redspark/rsh-web-compatibility'
 
 const entry = new AppWebEntry(document.getElementById('root')!)
 void entry.run()
 ```
 
-应用挂载或启动页报告失败后，`run()` 会完成。Host 若在独立页面嵌入此入口，必须从该页面的浏览器入口导入 `@deepseek-ai/dsh-client-web/base.css`。
+应用挂载或启动页报告失败后，`run()` 会完成。Host 若在独立页面嵌入此入口，必须从该页面的浏览器入口导入 `@redspark/rsh-client-web/base.css`。
 
-运行 `pnpm --filter @deepseek-ai/dsh-web-compatibility run build` 构建 `dist/index.html`。运行 `pnpm --filter @deepseek-ai/dsh-web-compatibility run build:preview` 构建 worker preview。`pnpm run build:web` 会依次构建 Native 和兼容分发包。
+运行 `pnpm --filter @redspark/rsh-web-compatibility run build` 构建 `dist/index.html`。运行 `pnpm --filter @redspark/rsh-web-compatibility run build:preview` 构建 worker preview。`pnpm run build:web` 会依次构建 Native 和兼容分发包。
 
 -----
 

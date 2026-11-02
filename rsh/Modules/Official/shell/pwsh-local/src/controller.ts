@@ -1,10 +1,10 @@
 /** Local PowerShell policy over the shared managed process controller. */
-import type { ShellExecSpec, ShellProcess } from '@deepseek-ai/dsh-shell/native'
-import type { SubprocessOperations } from '@deepseek-ai/dsh-subprocess/native'
+import type { ShellExecSpec, ShellProcess } from '@redspark/rsh-shell/native'
+import type { SubprocessOperations } from '@redspark/rsh-subprocess/native'
 import {
   LocalShellController, assertServiceableConfig, resolveConfig as resolveLocalConfig,
   type Config as LocalConfig, type ResolvedConfig as ResolvedLocalConfig,
-} from '@deepseek-ai/dsh-shell-process-local'
+} from '@redspark/rsh-shell-process-local'
 import { resolvePwshPath } from './resolve.ts'
 
 /** UTF-8 output for Windows PowerShell 5.1 and pwsh 7. */

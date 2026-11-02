@@ -15,14 +15,14 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { Context } from '@deepseek-ai/cordis'
-import Loader from '@deepseek-ai/cordis-plugin-loader'
-import Include from '@deepseek-ai/cordis-plugin-include'
-import WebServer from '@deepseek-ai/dsh-host-webserver'
-import type { NativeCommandRunner } from '@deepseek-ai/dsh-native-command'
+import { Context } from '@redspark/cordis'
+import Loader from '@redspark/cordis-plugin-loader'
+import Include from '@redspark/cordis-plugin-include'
+import WebServer from '@redspark/rsh-host-webserver'
+import type { NativeCommandRunner } from '@redspark/rsh-native-command'
 import {
-  createLaunchEnvironmentSnapshot, DSH_LAUNCH_ENVIRONMENT_KEY, type LaunchEnvironmentLayerInput,
-} from '@deepseek-ai/dsh-launch-environment'
+  createLaunchEnvironmentSnapshot, RSH_LAUNCH_ENVIRONMENT_KEY, type LaunchEnvironmentLayerInput,
+} from '@redspark/rsh-launch-environment'
 import * as OpenInApp from '../src/index.ts'
 import { internals } from '../src/internals.ts'
 import type { OpenInAppLauncher } from '../src/resolver.ts'
@@ -53,11 +53,11 @@ async function boot(layers: readonly LaunchEnvironmentLayerInput[] = []): Promis
   root = await mkdtemp(join(tmpdir(), 'dsh-open-in-app-loader-'))
   const configPath = join(root, 'cordis.yml')
   await writeFile(configPath, [
-    "- name: '@deepseek-ai/dsh-host-webserver'",
+    "- name: '@redspark/rsh-host-webserver'",
     '  config:',
     "    host: '127.0.0.1'",
     '    port: 0',
-    "- name: '@deepseek-ai/dsh-host-open-in-app'",
+    "- name: '@redspark/rsh-host-open-in-app'",
     '  config:',
     '    probeTimeoutMs: 5000',
     '    iconTimeoutMs: 5000',
@@ -66,7 +66,7 @@ async function boot(layers: readonly LaunchEnvironmentLayerInput[] = []): Promis
   ].join('\n'))
 
   context = new Context()
-  context.provide(DSH_LAUNCH_ENVIRONMENT_KEY, createLaunchEnvironmentSnapshot(layers))
+  context.provide(RSH_LAUNCH_ENVIRONMENT_KEY, createLaunchEnvironmentSnapshot(layers))
   context.baseUrl = pathToFileURL(root).href + '/'
   context.provide('connection', { requestRejection: () => trust.rejection } as never)
   // The plugin resolves PATH names through the composition's subprocess
@@ -77,8 +77,8 @@ async function boot(layers: readonly LaunchEnvironmentLayerInput[] = []): Promis
   await context.plugin(Loader)
   context.loader.builtins.include = Include
   const modules = new Map<string, unknown>([
-    ['@deepseek-ai/dsh-host-webserver', WebServer],
-    ['@deepseek-ai/dsh-host-open-in-app', OpenInApp],
+    ['@redspark/rsh-host-webserver', WebServer],
+    ['@redspark/rsh-host-open-in-app', OpenInApp],
   ])
   context.loader.internal = {
     version: 'v2',
@@ -482,7 +482,7 @@ describe('open-in-app host routes (real Loader composition)', () => {
     const base = await boot()
     expect((await fetch(`${base}/open-in-app/apps`)).status).toBe(200)
     const entry = [...(context as Context).loader.entries()]
-      .find(candidate => candidate.options.name === '@deepseek-ai/dsh-host-open-in-app')
+      .find(candidate => candidate.options.name === '@redspark/rsh-host-open-in-app')
     await entry?.fiber?.dispose()
     // The webserver survives; the routes are gone (its 404 fallback answers).
     expect((await fetch(`${base}/open-in-app/apps`)).status).toBe(404)

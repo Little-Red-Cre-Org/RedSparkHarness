@@ -1,9 +1,9 @@
 /** Cordis adapter for the existing provider-neutral webhook rule runtime. */
 
-import type { Context } from '@deepseek-ai/cordis'
-import type { CredentialRef } from '@deepseek-ai/dsh-credentials'
-import type { HttpRoute } from '@deepseek-ai/dsh-http-routes/host'
-import type {} from '@deepseek-ai/dsh-webhook'
+import type { Context } from '@redspark/cordis'
+import type { CredentialRef } from '@redspark/rsh-credentials'
+import type { HttpRoute } from '@redspark/rsh-http-routes/host'
+import type {} from '@redspark/rsh-webhook'
 import { createGitHubWebhookRequestHandler } from './ingress.ts'
 
 /** Values validated once by the Cordis plugin configuration. */

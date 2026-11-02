@@ -3,7 +3,7 @@ description: "`ctx.fs` 的宿主文件系统后端：面向选择或排查本地
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-fs-local
+# @redspark/rsh-fs-local
 
 [English](README.md) | 中文
 
@@ -27,9 +27,9 @@ kind: "package-reference"
 
 当组合需要由真实宿主文件系统支撑的 `ctx.fs`、且可以接受进程本地实现时，挂载此后端。常用路径是显式的：加载后端、给出基准目录，然后面向模型的工具（`dsh-tool-fs`）或你自己的插件即可读取、写入和编辑文件。
 
-`@deepseek-ai/dsh-fs-local/backend` 导出 `LocalFileSystemBackend`，直接装配时显式提供 `cwd` 和 `diffBasisMaxBytes`。Cordis 服务委托同一个实现的单个实例。`resolveLocalFilesystemConfig(input)` 在构造前验证配置并固定默认值。直接调用方通过 `close()` 停止接收 I/O、取消操作、关闭暂停的文本流并等待清理。已完成的写入保持提交状态。本包仍声明兼容依赖；仅使用这个子路径并不代表安装产物已无 Cordis。
+`@redspark/rsh-fs-local/backend` 导出 `LocalFileSystemBackend`，直接装配时显式提供 `cwd` 和 `diffBasisMaxBytes`。Cordis 服务委托同一个实现的单个实例。`resolveLocalFilesystemConfig(input)` 在构造前验证配置并固定默认值。直接调用方通过 `close()` 停止接收 I/O、取消操作、关闭暂停的文本流并等待清理。已完成的写入保持提交状态。本包仍声明兼容依赖；仅使用这个子路径并不代表安装产物已无 Cordis。
 
-`@deepseek-ai/dsh-fs-local/native` 导出用于 `resolveInstallation` 的 `localFilesystemPlugin`。它在 Host 提供显式选择的 `fs` 服务，将取消绑定到安装实例，并在移除或停止时等待后端清理。Cordis 注册使用相同后端，并通过 effect 拥有其关闭操作。当前应用 profile 仍使用已有装配。
+`@redspark/rsh-fs-local/native` 导出用于 `resolveInstallation` 的 `localFilesystemPlugin`。它在 Host 提供显式选择的 `fs` 服务，将取消绑定到安装实例，并在移除或停止时等待后端清理。Cordis 注册使用相同后端，并通过 effect 拥有其关闭操作。当前应用 profile 仍使用已有装配。
 
 ### 何时选择
 
@@ -40,7 +40,7 @@ kind: "package-reference"
 加载后端并给出基准目录；相对路径以它为基准解析，绝对路径忽略它。
 
 ```yaml
-- name: '@deepseek-ai/dsh-fs-local'
+- name: '@redspark/rsh-fs-local'
   config:
     cwd: /absolute/path/to/workspace
 ```

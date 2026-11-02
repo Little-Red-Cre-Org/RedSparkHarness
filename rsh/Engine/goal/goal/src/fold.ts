@@ -1,7 +1,7 @@
 /** Pure replay fold and strict decoder for durable goal changes. */
 
-import type { MessageSource } from '@deepseek-ai/dsh-llm/native'
-import type { SessionEvent } from '@deepseek-ai/dsh-session/native'
+import type { MessageSource } from '@redspark/rsh-llm/native'
+import type { SessionEvent } from '@redspark/rsh-session/native'
 import { GOAL_CHANGE_VERSION, GoalId } from './replay-runtime.ts'
 import type { GoalBlockReason, GoalPhase, GoalRef, GoalSnapshot } from './types.ts'
 import type {

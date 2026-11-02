@@ -1,5 +1,5 @@
 /** Framework-neutral contracts for mounting a Native Client application. */
-import type {} from '@deepseek-ai/dsh-native-runtime'
+import type {} from '@redspark/rsh-native-runtime'
 
 /** Application view supplied by the selected Native Client composition. */
 export interface NativeClientApplication {
@@ -19,7 +19,7 @@ export interface NativeClientRenderer {
   mount(container: HTMLElement, application: NativeClientApplication, signal: AbortSignal): () => void
 }
 
-declare module '@deepseek-ai/dsh-native-runtime' {
+declare module '@redspark/rsh-native-runtime' {
   interface NativeServices {
     /** Application selected by the Native Client profile. */
     clientApplication: NativeClientApplication

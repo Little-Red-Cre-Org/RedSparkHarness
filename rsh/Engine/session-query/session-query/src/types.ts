@@ -2,7 +2,7 @@
  * Public records for exact reads and relationship traces over the
  * live-preferred logical session corpus.
  *
- * @module @deepseek-ai/dsh-session-query/types
+ * @module @redspark/rsh-session-query/types
  */
 
 import type {
@@ -15,10 +15,10 @@ import type {
   SessionSeqCursor,
   OptionalSessionSeq,
   SurfaceEvent,
-} from '@deepseek-ai/dsh-session/native'
-import type { SessionTitleSnapshot } from '@deepseek-ai/dsh-session-title/native'
-import type { SessionPersistenceRevision } from '@deepseek-ai/dsh-session-persistence/native'
-import type { ProjectionSnapshot } from '@deepseek-ai/dsh-session-projection/native'
+} from '@redspark/rsh-session/native'
+import type { SessionTitleSnapshot } from '@redspark/rsh-session-title/native'
+import type { SessionPersistenceRevision } from '@redspark/rsh-session-persistence/native'
+import type { ProjectionSnapshot } from '@redspark/rsh-session-projection/native'
 import type { SessionSearchCursor } from './cursor.ts'
 
 export type { SessionSearchCursor } from './cursor.ts'

@@ -1,4 +1,4 @@
-/** JSON string-prefix accounting for the outer-output ledger. @module @deepseek-ai/dsh-native-code-runtime/output-json */
+/** JSON string-prefix accounting for the outer-output ledger. @module @redspark/rsh-native-code-runtime/output-json */
 
 import type { CodeJsonValue } from './types.ts'
 

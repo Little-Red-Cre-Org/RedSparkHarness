@@ -1,11 +1,11 @@
 /** Scoped conversational management of persistent tasks. */
-import type { Context } from '@deepseek-ai/cordis'
-import type { Agent } from '@deepseek-ai/dsh-agent'
-import { defineTool } from '@deepseek-ai/dsh-tools'
+import type { Context } from '@redspark/cordis'
+import type { Agent } from '@redspark/rsh-agent'
+import { defineTool } from '@redspark/rsh-tools'
 import type { TaskStore } from './store.ts'
 import type { SchedulerOptions } from './types.ts'
-import type {} from '@deepseek-ai/dsh-agent-presets'
-import type {} from '@deepseek-ai/dsh-permission-presets'
+import type {} from '@redspark/rsh-agent-presets'
+import type {} from '@redspark/rsh-permission-presets'
 import { createOwnedTask } from './management.ts'
 
 /**

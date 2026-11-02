@@ -1,5 +1,5 @@
 /** Native request-field registry Provider for the official DeepSeek adapter. */
-import { NativeContributions, type NativeContext, type NativePlugin, type NativeScope } from '@deepseek-ai/dsh-native-runtime'
+import { NativeContributions, type NativeContext, type NativePlugin, type NativeScope } from '@redspark/rsh-native-runtime'
 import type {
   DeepSeekLlmApiExtensionMap,
   DeepSeekLlmApiExtensionProvider,
@@ -34,7 +34,7 @@ export interface NativeDeepSeekLlmApiExtensions {
   prepare(scope: NativeScope, request: DeepSeekLlmApiExtensionRequest): Promise<PreparedDeepSeekLlmApiExtensions>
 }
 
-declare module '@deepseek-ai/dsh-native-runtime' {
+declare module '@redspark/rsh-native-runtime' {
   interface NativeServices {
     deepseekLlmApiExtensions: NativeDeepSeekLlmApiExtensions
   }
@@ -63,7 +63,7 @@ function registryProvider(context: NativeContext): NativeDeepSeekLlmApiExtension
 /** Provide the scoped Native extension registry without a Cordis dependency. */
 export const plugin: NativePlugin = {
   apiVersion: 1,
-  name: '@deepseek-ai/dsh-deepseek-llm-api-extensions',
+  name: '@redspark/rsh-deepseek-llm-api-extensions',
   targets: ['host'],
   requires: [],
   provides: ['deepseekLlmApiExtensions'],

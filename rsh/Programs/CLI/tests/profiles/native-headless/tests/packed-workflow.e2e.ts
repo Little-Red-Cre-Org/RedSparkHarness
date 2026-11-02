@@ -5,8 +5,8 @@ import { isAbsolute, join, relative, sep } from 'node:path'
 import { execa } from 'execa'
 import { expect, it } from 'vitest'
 
-const PACKED_BIN = process.env.DSH_PACKED_DSH_BIN
-const CONSUMER_ROOT = process.env.DSH_PACKED_CONSUMER_ROOT
+const PACKED_BIN = process.env.RSH_PACKED_DSH_BIN
+const CONSUMER_ROOT = process.env.RSH_PACKED_CONSUMER_ROOT
 const PARENT_TASK = 'PACKED_WORKFLOW_PARENT_TASK_5b0c7a'
 const CHILD_TASK = 'PACKED_WORKFLOW_CHILD_TASK_5b0c7a'
 const CHILD_RESULT = 'PACKED_WORKFLOW_CHILD_RESULT_5b0c7a'
@@ -97,7 +97,7 @@ it.skipIf(PACKED_BIN === undefined || CONSUMER_ROOT === undefined)(
     const installedBin = await realpath(packedBin)
     const binRelative = relative(installedRoot, installedBin)
     expect(binRelative.startsWith(`..${sep}`) || isAbsolute(binRelative)).toBe(false)
-    expect(binRelative.split(sep)).toEqual(['node_modules', '@deepseek-ai', 'dsh', 'lib', 'bin.js'])
+    expect(binRelative.split(sep)).toEqual(['node_modules', '@redspark', 'dsh', 'lib', 'bin.js'])
 
     const home = await mkdtemp(join(installedRoot, '.dsh-p4-workflow-'))
     let server: ReturnType<typeof createServer> | undefined
@@ -165,8 +165,8 @@ it.skipIf(PACKED_BIN === undefined || CONSUMER_ROOT === undefined)(
           models: [{ id: MODEL }] } } } },
       ] }))
 
-      const childEnv: NodeJS.ProcessEnv = { ...process.env, DSH_HOME: home, DSH_AGENTS_HOME: join(home, 'agents'),
-        DSH_TELEMETRY_DISABLED: '1', DEEPSEEK_API_KEY: 'packed-local-fixture-key' }
+      const childEnv: NodeJS.ProcessEnv = { ...process.env, RSH_HOME: home, RSH_AGENTS_HOME: join(home, 'agents'),
+        RSH_TELEMETRY_DISABLED: '1', DEEPSEEK_API_KEY: 'packed-local-fixture-key' }
       delete childEnv.NODE_OPTIONS
       delete childEnv.NODE_PATH
       delete childEnv.DEEPSEEK_BASE_URL
@@ -237,7 +237,7 @@ it.skipIf(PACKED_BIN === undefined || CONSUMER_ROOT === undefined)(
       expect(coldChild).toContain(CHILD_TASK)
       expect(coldChild).toContain(CHILD_RESULT)
 
-      const evidenceDirectory = process.env.DSH_P4_EVIDENCE_DIR
+      const evidenceDirectory = process.env.RSH_P4_EVIDENCE_DIR
       if (evidenceDirectory !== undefined) {
         await mkdir(evidenceDirectory, { recursive: true })
         const parentFile = 'parent.jsonl'

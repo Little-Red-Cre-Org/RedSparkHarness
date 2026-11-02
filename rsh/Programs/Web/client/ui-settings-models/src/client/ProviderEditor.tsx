@@ -1,2 +1,2 @@
-export { ProviderEditor, pathOps } from '@deepseek-ai/dsh-client-ui-primitives'
-export type { ProviderEditorProps } from '@deepseek-ai/dsh-client-ui-primitives'
+export { ProviderEditor, pathOps } from '@redspark/rsh-client-ui-primitives'
+export type { ProviderEditorProps } from '@redspark/rsh-client-ui-primitives'

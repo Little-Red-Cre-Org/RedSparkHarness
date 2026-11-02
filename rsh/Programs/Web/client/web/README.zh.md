@@ -3,7 +3,7 @@ description: "Cordis-free Native 浏览器启动 API 与无框架进度页，供
 kind: "package-library"
 ---
 
-# @deepseek-ai/dsh-client-web
+# @redspark/rsh-client-web
 
 [English](README.md) | 中文
 
@@ -27,7 +27,7 @@ kind: "package-library"
 
 Host 准备了 Client 行和浏览器模块图后，可调用 `bootNativeClient`。该调用会导入每个已选模块，校验其 Native plugin 导出，解析组合并挂载必需的 `clientRenderer`。返回的 host 拥有组合生命周期：导航或关闭时调用并等待 `stop()`；热重载时使用完整的新选择与模块图调用 `replace()`。
 
-可选的 `AbortSignal` 会在待处理导入完成后阻止插件激活，并在中止时停止已启动的组合。`./boot-page` 导出共享的无框架启动页；`./base.css` 导出浏览器基础样式。`@deepseek-ai/dsh-web-compatibility` 拥有 `AppWebEntry`、Cordis Loader 启动和共享模块表。默认 Web `index.html` 使用 Native API，而兼容包分别构建旧版页面和 worker preview。
+可选的 `AbortSignal` 会在待处理导入完成后阻止插件激活，并在中止时停止已启动的组合。`./boot-page` 导出共享的无框架启动页；`./base.css` 导出浏览器基础样式。`@redspark/rsh-web-compatibility` 拥有 `AppWebEntry`、Cordis Loader 启动和共享模块表。默认 Web `index.html` 使用 Native API，而兼容包分别构建旧版页面和 worker preview。
 
 外壳基础样式会在支持的浏览器中为普通内容自动添加中西文间距。语义化代码以及终端、diff、读取和搜索输出容器会保留源码中的原始间距和列对齐；不支持 `text-autospace` 的浏览器会忽略这两项声明。
 

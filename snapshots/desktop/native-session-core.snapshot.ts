@@ -12,9 +12,9 @@ import { desktopRuntimeFileExclusion } from '../../rsh/Programs/Desktop/scripts/
 import { DesktopBackendController } from '../../rsh/Programs/Desktop/src/backend-controller.ts'
 import { DesktopHostProcess } from '../../rsh/Programs/Desktop/src/host-process.ts'
 import { shippedNativeProfileComposition } from '../../rsh/Programs/CLI/src/native-profile-template.ts'
-import { SESSION_FORMAT_VERSION } from '@deepseek-ai/dsh-session/native'
+import { SESSION_FORMAT_VERSION } from '@redspark/rsh-session/native'
 import { normalizeSessionSnapshot, redactSessionSnapshotIds, normalizedSystemPrompts, normalizedToolSchemas,
-  formatSystemPromptSnapshot, formatToolSchemasSnapshot, sessionFixtureName } from '@deepseek-ai/dsh-session-snapshot'
+  formatSystemPromptSnapshot, formatToolSchemasSnapshot, sessionFixtureName } from '@redspark/rsh-session-snapshot'
 
 const repository = fileURLToPath(new URL('../../', import.meta.url))
 const scenario = fileURLToPath(new URL('./native-session-core/', import.meta.url))
@@ -26,7 +26,7 @@ it('executes and cold-resumes a native Desktop Session over private framed pipes
   let host: DesktopHostProcess | undefined
   let backend: DesktopBackendController<DesktopHostProcess> | undefined
   try {
-    const fixture = process.env.DSH_SNAPSHOT === 'refresh' ? undefined
+    const fixture = process.env.RSH_SNAPSHOT === 'refresh' ? undefined
       : readFileSync(join(scenario, sessionFixtureName(0, SESSION_FORMAT_VERSION)), 'utf8').trim().split('\n')
         .map(line => JSON.parse(line) as { type?: string; data?: { content?: { type: string; text?: string }[] } })
     const inputs = fixture?.filter(event => event.type === 'user/message')
@@ -34,11 +34,11 @@ it('executes and cold-resumes a native Desktop Session over private framed pipes
       ?? ['Native desktop input.', 'Continue the native desktop conversation.']
     if (inputs.length !== 2 || inputs.some(text => text === undefined)) throw new Error('recorded Desktop Session requires two user inputs')
     const sessionConfig = shippedNativeProfileComposition(home, 'native-web').installations
-      .find(row => row.plugin === '@deepseek-ai/dsh-native-web-session-controller')?.config
+      .find(row => row.plugin === '@redspark/rsh-native-web-session-controller')?.config
     if (sessionConfig === undefined) throw new Error('shipped native-web omitted Session settings')
-    const deployed = await execa('pnpm', ['--config.node-linker=hoisted', '--config.enable-global-virtual-store=false', '--config.inject-workspace-packages=true', '--filter', '@deepseek-ai/dsh-desktop-host', 'deploy', '--prod', deployment], { cwd: repository, reject: false })
+    const deployed = await execa('pnpm', ['--config.node-linker=hoisted', '--config.enable-global-virtual-store=false', '--config.inject-workspace-packages=true', '--filter', '@redspark/rsh-desktop-host', 'deploy', '--prod', deployment], { cwd: repository, reject: false })
     // Deploy rewrites the reviewed workspace script's file locator to an absolute URI.
-    const script = '@deepseek-ai/dsh-subprocess-local'
+    const script = '@redspark/rsh-subprocess-local'
     const locator = script + '@' + pathToFileURL(join(repository, 'rsh/Core/subprocess/subprocess-local')).href
     const workspaceFile = join(deployment, 'pnpm-workspace.yaml')
     const settings = readFileSync(workspaceFile, 'utf8')
@@ -52,15 +52,15 @@ it('executes and cold-resumes a native Desktop Session over private framed pipes
     const modules = join(deployment, 'node_modules')
     cpSync(modules, join(runtime, 'node_modules'), { recursive: true, dereference: true,
       filter: path => desktopRuntimeFileExclusion(relative(modules, path), process) === undefined })
-    const hostPackage = join(runtime, 'node_modules/@deepseek-ai/dsh-desktop-host')
+    const hostPackage = join(runtime, 'node_modules/@redspark/rsh-desktop-host')
     mkdirSync(hostPackage)
     for (const file of ['lib', 'config', 'package.json']) cpSync(join(deployment, file), join(hostPackage, file), { recursive: true, dereference: true })
     writeFileSync(join(runtime, 'package.json'), JSON.stringify({ name: 'desktop-runtime-snapshot', private: true, type: 'module' }))
     const version = JSON.parse(readFileSync(join(hostPackage, 'package.json'), 'utf8')).version as string
-    const shared = readdirSync(join(runtime, 'node_modules/@deepseek-ai')).map(name => '@deepseek-ai/' + name)
+    const shared = readdirSync(join(runtime, 'node_modules/@redspark')).map(name => '@redspark/' + name)
     const pnpmVersion = (await execa('pnpm', ['--version'], { cwd: repository })).stdout.trim()
     writeDesktopRuntime(runtime, { version, nodeVersion: process.versions.node, pnpmVersion }, shared)
-    const clientManifest = join(runtime, 'node_modules/@deepseek-ai/dsh-client-native-application/package.json')
+    const clientManifest = join(runtime, 'node_modules/@redspark/rsh-client-native-application/package.json')
     expect(existsSync(clientManifest), deployed.stdout).toBe(true)
     const realClient = realpathSync(clientManifest)
     expect(realClient.startsWith(realpathSync(runtime)), realClient).toBe(true)
@@ -85,13 +85,13 @@ it('executes and cold-resumes a native Desktop Session over private framed pipes
   yield { type: 'block-end', index: 0, block: { type: 'text', text } };
   yield { type: 'finish', reason: { kind: 'stop' } };
   } }); } }`)
-    writeFileSync(join(project, 'package.json'), JSON.stringify({ name: '@deepseek-ai/dsh-desktop-runtime', version: '0.0.0', private: true,
+    writeFileSync(join(project, 'package.json'), JSON.stringify({ name: '@redspark/rsh-desktop-runtime', version: '0.0.0', private: true,
       dsh: { profile: { runtime: 'native', config: 'rsh.profile.json' } } }))
     writeFileSync(join(project, 'rsh.client.json'), JSON.stringify({ formatVersion: 1, installations: [
-      { id: 'application', plugin: '@deepseek-ai/dsh-client-native-application' },
-      { id: 'renderer', plugin: '@deepseek-ai/dsh-client-ui-renderer' },
-      { id: 'connection', plugin: '@deepseek-ai/dsh-client-connection' },
-      { id: 'session', plugin: '@deepseek-ai/dsh-client-native-session' },
+      { id: 'application', plugin: '@redspark/rsh-client-native-application' },
+      { id: 'renderer', plugin: '@redspark/rsh-client-ui-renderer' },
+      { id: 'connection', plugin: '@redspark/rsh-client-connection' },
+      { id: 'session', plugin: '@redspark/rsh-client-native-session' },
     ] }))
     const rows = [
       ['sessions', 'native-web-session-controller', { ...sessionConfig as object,
@@ -101,11 +101,11 @@ it('executes and cold-resumes a native Desktop Session over private framed pipes
       ['credentials', 'credentials-local', { path: join(home, 'credentials.json') }],
     ] as const
     writeFileSync(join(project, 'rsh.profile.json'), JSON.stringify({ formatVersion: 1, scopes: [{ id: 'root' }], installations: [
-      ...rows.map(([id, name, config]) => ({ id, plugin: `@deepseek-ai/dsh-${name}`, scope: 'root', ...config === undefined ? {} : { config } })),
+      ...rows.map(([id, name, config]) => ({ id, plugin: `@redspark/rsh-${name}`, scope: 'root', ...config === undefined ? {} : { config } })),
       { id: 'model', plugin: 'desktop-fixture-model', scope: 'root' },
     ] }))
     const manager = new DesktopProjectManager(paths, { node: process.execPath, pnpm: 'unused', dsh: runtime })
-    const start = (onFailure?: (error: Error) => void): DesktopHostProcess => new DesktopHostProcess(process.execPath, runtime, project, undefined, { ...process.env, DSH_HOME: home }, onFailure)
+    const start = (onFailure?: (error: Error) => void): DesktopHostProcess => new DesktopHostProcess(process.execPath, runtime, project, undefined, { ...process.env, RSH_HOME: home }, onFailure)
     const sessionId = 'native-desktop-recorded'
     const manifestPath = join(project, 'package.json')
     const manifest = readFileSync(manifestPath, 'utf8')
@@ -171,7 +171,7 @@ it('executes and cold-resumes a native Desktop Session over private framed pipes
     const context = { sessionIds: [sessionId], cwd: workspace }
     const normalized = normalizeSessionSnapshot(redactSessionSnapshotIds([raw])[0] ?? raw, { ...context, sessionIds: [] }, { identityMode: 'preserve' })
     if (normalized === undefined) throw new Error('missing normalized Desktop Session')
-    if (process.env.DSH_SNAPSHOT === 'refresh') {
+    if (process.env.RSH_SNAPSHOT === 'refresh') {
       const prompts = normalizedSystemPrompts(raw, context), schemas = normalizedToolSchemas(raw, context)
       writeFileSync(join(scenario, name), normalized)
       writeFileSync(join(scenario, 'system-prompt.expected.md'), formatSystemPromptSnapshot(prompts[0]!, prompts.slice(1)))

@@ -1,6 +1,6 @@
 /** Theme preferences stored in the Host user-settings document. */
 
-import z from '@deepseek-ai/schemastery'
+import z from '@redspark/schemastery'
 import {
   DEFAULT_FONT_SIZE, DEFAULT_PREFERENCE, THEME_PREFERENCES, type ThemePreference,
 } from './theme-contract.ts'

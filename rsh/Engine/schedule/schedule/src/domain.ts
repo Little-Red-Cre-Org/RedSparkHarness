@@ -1,10 +1,10 @@
 /**
  * Strict Schedule decoding, replay, time validation, and framing.
- * @module @deepseek-ai/dsh-schedule
+ * @module @redspark/rsh-schedule
  */
 
-import { SessionLogOffset } from '@deepseek-ai/dsh-session/native'
-import type { SessionEvent, SessionLogOffset as SessionLogOffsetType } from '@deepseek-ai/dsh-session/native'
+import { SessionLogOffset } from '@redspark/rsh-session/native'
+import type { SessionEvent, SessionLogOffset as SessionLogOffsetType } from '@redspark/rsh-session/native'
 import type {
   AfterScheduleRecord,
   AtInput,

@@ -1,5 +1,5 @@
 {
-  "name": "@deepseek-ai/dsh-code-runtime-worker-thread",
+  "name": "@redspark/rsh-code-runtime-worker-thread",
   "description": "Worker-thread implementation of the RedSpark Harness code-execution seam",
   "version": "1.0.0",
   "publishConfig": {
@@ -31,19 +31,19 @@
   ],
   "license": "MIT",
   "peerDependencies": {
-    "@deepseek-ai/cordis": "workspace:^",
-    "@deepseek-ai/dsh-code-runtime": "workspace:^",
-    "@deepseek-ai/dsh-session": "workspace:^",
-    "@deepseek-ai/dsh-timeout": "workspace:^"
+    "@redspark/cordis": "workspace:^",
+    "@redspark/rsh-code-runtime": "workspace:^",
+    "@redspark/rsh-session": "workspace:^",
+    "@redspark/rsh-timeout": "workspace:^"
   },
   "dependencies": {
-    "@deepseek-ai/dsh-util-values": "workspace:^",
-    "@deepseek-ai/schemastery": "workspace:^"
+    "@redspark/rsh-util-values": "workspace:^",
+    "@redspark/schemastery": "workspace:^"
   },
   "devDependencies": {
-    "@deepseek-ai/cordis": "workspace:^",
-    "@deepseek-ai/dsh-code-runtime": "workspace:^",
-    "@deepseek-ai/dsh-session": "workspace:^",
-    "@deepseek-ai/dsh-timeout": "workspace:^"
+    "@redspark/cordis": "workspace:^",
+    "@redspark/rsh-code-runtime": "workspace:^",
+    "@redspark/rsh-session": "workspace:^",
+    "@redspark/rsh-timeout": "workspace:^"
   }
 }

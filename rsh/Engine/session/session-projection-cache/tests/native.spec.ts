@@ -2,23 +2,23 @@
 
 import { expect, it, vi } from 'vitest'
 import { z } from 'zod'
-import { NativeHost, NativeScope, resolveInstallation, type NativePlugin, type NativeServices } from '@deepseek-ai/dsh-native-runtime'
-import type { NativeActiveSessionOwner } from '@deepseek-ai/dsh-native-session-execution/active-session-protocol'
-import { Session, SessionId, SessionLogOffset } from '@deepseek-ai/dsh-session/native'
-import type { SessionEvent } from '@deepseek-ai/dsh-session/native'
-import { NativeSessionProjectionRegistry, plugin as projectionPlugin } from '@deepseek-ai/dsh-session-projection/native'
-import type { ProjectionDefinition } from '@deepseek-ai/dsh-session-projection/native'
+import { NativeHost, NativeScope, resolveInstallation, type NativePlugin, type NativeServices } from '@redspark/rsh-native-runtime'
+import type { NativeActiveSessionOwner } from '@redspark/rsh-native-session-execution/active-session-protocol'
+import { Session, SessionId, SessionLogOffset } from '@redspark/rsh-session/native'
+import type { SessionEvent } from '@redspark/rsh-session/native'
+import { NativeSessionProjectionRegistry, plugin as projectionPlugin } from '@redspark/rsh-session-projection/native'
+import type { ProjectionDefinition } from '@redspark/rsh-session-projection/native'
 import { plugin as cachePlugin } from '../src/native.ts'
 import type { CheckpointRecord } from '../src/spec.ts'
 
-declare module '@deepseek-ai/dsh-session-projection/types' {
+declare module '@redspark/rsh-session-projection/types' {
   interface SessionProjectionStateMap {
     'test/native-cache': number
     'test/native-cache-non-json': number
   }
 }
 
-declare module '@deepseek-ai/dsh-session/types' {
+declare module '@redspark/rsh-session/types' {
   interface SessionEventMap { 'test/cache-event': { index: number } }
 }
 

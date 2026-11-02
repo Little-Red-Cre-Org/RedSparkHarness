@@ -1,16 +1,16 @@
 /** Cordis SessionStore and scoped event publication over the shared Session object. */
-import { Context, Service } from '@deepseek-ai/cordis'
-import { brandString } from '@deepseek-ai/dsh-brand'
-import { assertNever } from '@deepseek-ai/dsh-util-values'
-import { scopeOf, scopeTarget } from '@deepseek-ai/dsh-scope'
-import type { Scoped } from '@deepseek-ai/dsh-scope'
-import type {} from '@deepseek-ai/dsh-typert-protocol/types'
-import type { TypertLookup } from '@deepseek-ai/dsh-typert-protocol'
+import { Context, Service } from '@redspark/cordis'
+import { brandString } from '@redspark/rsh-brand'
+import { assertNever } from '@redspark/rsh-util-values'
+import { scopeOf, scopeTarget } from '@redspark/rsh-scope'
+import type { Scoped } from '@redspark/rsh-scope'
+import type {} from '@redspark/rsh-typert-protocol/types'
+import type { TypertLookup } from '@redspark/rsh-typert-protocol'
 import { SESSION_FORMAT_VERSION, SessionLogOffset, SessionSeq } from './types.ts'
 import type { CreateSessionOptions, PrepareSessionOptions, SessionEvent, SessionId, SessionHeader } from './types.ts'
 import { Session, SessionForkError, attachSessionPublication, detachSessionPublication, hasSessionPublication, type SessionForkSource } from './session-core.ts'
 export * from './native.ts'
-declare module '@deepseek-ai/cordis' {
+declare module '@redspark/cordis' {
   interface Context {
     sessions: SessionStore
   }
@@ -21,7 +21,7 @@ declare module '@deepseek-ai/cordis' {
      * back with a paired disposal; detach requested during dispatch is deferred.
      * A returned-promise rejection is logged but cannot retroactively veto this
      * synchronous boundary.
-     * Scope-filtered dispatch (`@deepseek-ai/dsh-scope`): agent-scoped listeners
+     * Scope-filtered dispatch (`@redspark/rsh-scope`): agent-scoped listeners
      * receive only sessions entered through that agent's context.
      * @param session - the session just entered and announced.
      * @dshScopeScan unsupported
@@ -32,7 +32,7 @@ declare module '@deepseek-ai/cordis' {
      * Emitted once when an announced session leaves the store, including
      * publication rollback, but never for an entry whose creation announcement
      * did not begin. Listener failures are logged and contained.
-     * Scope-filtered dispatch (`@deepseek-ai/dsh-scope`) reuses the owner scope.
+     * Scope-filtered dispatch (`@redspark/rsh-scope`) reuses the owner scope.
      * @param session - the session that is no longer live in the store.
      * @dshScopeScan unsupported
      * @mode emit
@@ -42,7 +42,7 @@ declare module '@deepseek-ai/cordis' {
      * Post-commit, fire-and-forget append feed. The listener snapshot resolves
      * before the log push, but callbacks run after it; observer failures are
      * logged and contained without making the committed append fail.
-     * Scope-filtered dispatch (`@deepseek-ai/dsh-scope`): agent-scoped listeners
+     * Scope-filtered dispatch (`@redspark/rsh-scope`): agent-scoped listeners
      * receive only events from sessions entered through that agent's context.
      * @param session - the session whose log grew.
      * @param event - the appended event, exactly as recorded.
@@ -53,7 +53,7 @@ declare module '@deepseek-ai/cordis' {
     /**
      * Awaited parallel durability checkpoint: every listener runs and the
      * caller awaits all of them, with no waterfall veto. Scope-filtered dispatch
-     * (`@deepseek-ai/dsh-scope`) reuses the session's owner scope.
+     * (`@redspark/rsh-scope`) reuses the session's owner scope.
      * @param session - the session whose buffered events must reach durable storage.
      * @dshScopeScan unsupported
      * @mode parallel
@@ -62,13 +62,13 @@ declare module '@deepseek-ai/cordis' {
   }
 }
 
-declare module '@deepseek-ai/dsh-typert-protocol' {
+declare module '@redspark/rsh-typert-protocol' {
   interface TypertLookupMap {
     session: TypertLookup<Session, SessionId>
   }
 }
 
-declare module '@deepseek-ai/dsh-typert-protocol/types' {
+declare module '@redspark/rsh-typert-protocol/types' {
   interface RemoteErrorDetailsMap {
     /** The named Session does not exist; produced by every layer that resolves a SessionId. */
     'session/not-found': { readonly sessionId: SessionId }
@@ -133,8 +133,8 @@ export class SessionStore extends Service {
       typeCtx.typert.lookups.register('session', {
         parameter: 'session',
         wire: 'sessionId',
-        hostTypeSymbol: '@deepseek-ai/dsh-session#Session',
-        wireTypeSymbol: '@deepseek-ai/dsh-session/types#SessionId',
+        hostTypeSymbol: '@redspark/rsh-session#Session',
+        wireTypeSymbol: '@redspark/rsh-session/types#SessionId',
         resolve: sessionId => this.get(sessionId),
       })
     })

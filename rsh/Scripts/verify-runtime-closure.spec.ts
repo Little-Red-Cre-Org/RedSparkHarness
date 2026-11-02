@@ -133,7 +133,7 @@ describe('verifyRuntimeClosure', () => {
       'rsh/Engine/preset/agent-presets/presets/standard/agent.cordis.yml': `
 - id: conditional
   name: '@scope/conditional'
-  disabled: !!js process.env.DSH_DISABLE_CONDITIONAL === '1'
+  disabled: !!js process.env.RSH_DISABLE_CONDITIONAL === '1'
 `,
     })
 
@@ -167,7 +167,7 @@ describe('verifyRuntimeClosure', () => {
         name: 'runtime',
         dependencies: runtimeDependencies(
           { '@scope/plugin': '1.2.3' },
-          ['@deepseek-ai/dsh-native-sdk-server'],
+          ['@redspark/rsh-native-sdk-server'],
         ),
       },
       'rsh/Programs/SDK/python/sdk-runtime/platforms.json': platforms,
@@ -181,7 +181,7 @@ describe('verifyRuntimeClosure', () => {
 
     expect(result.failures).toEqual([
       'standard preset -> @scope/plugin [runtime dependency is "1.2.3"; expected workspace:] (linux-arm64, linux-x64, macos-arm64, macos-x64, win-x64)',
-      'native-sdk profile -> @deepseek-ai/dsh-native-sdk-server (linux-arm64, linux-x64, macos-arm64, macos-x64, win-x64)',
+      'native-sdk profile -> @redspark/rsh-native-sdk-server (linux-arm64, linux-x64, macos-arm64, macos-x64, win-x64)',
     ])
   })
 
@@ -252,45 +252,45 @@ describe('verifyRuntimeClosure', () => {
     const dependencies = Object.fromEntries(plugins.map(plugin => [plugin, 'workspace:^']))
     const root = fixture({
       'rsh/Programs/CLI/package.json': {
-        name: '@deepseek-ai/dsh',
+        name: '@redspark/dsh',
         dependencies,
-        optionalDependencies: { '@deepseek-ai/cordis': 'workspace:^' },
+        optionalDependencies: { '@redspark/cordis': 'workspace:^' },
       },
       'rsh/Programs/SDK/python/sdk-runtime/platforms.json': platforms,
-      'rsh/Programs/CLI/src/bin.ts': "import('@deepseek-ai/dsh-launch-environment/layers')\n",
-      'rsh/Compatibility/DSH/bundle/web-app/src/index.ts': "import { scrubbedParentEnv } from '@deepseek-ai/dsh-subprocess/native'\n",
+      'rsh/Programs/CLI/src/bin.ts': "import('@redspark/rsh-launch-environment/layers')\n",
+      'rsh/Compatibility/DSH/bundle/web-app/src/index.ts': "import { scrubbedParentEnv } from '@redspark/rsh-subprocess/native'\n",
     })
     const workspacePaths = workspacePackages(root, [...new Set([
       ...plugins,
       '@scope/required',
-      '@deepseek-ai/dsh-api-workspace-files',
-      '@deepseek-ai/dsh-typert-protocol',
-      '@deepseek-ai/dsh-host-directory-picker-native',
-      '@deepseek-ai/dsh-host-directory-picker',
+      '@redspark/rsh-api-workspace-files',
+      '@redspark/rsh-typert-protocol',
+      '@redspark/rsh-host-directory-picker-native',
+      '@redspark/rsh-host-directory-picker',
     ])])
     const packageManifests = [
-      ['@deepseek-ai/dsh-client-native-session', {
-        dependencies: { '@deepseek-ai/dsh-api-workspace-files': 'workspace:^' },
+      ['@redspark/rsh-client-native-session', {
+        dependencies: { '@redspark/rsh-api-workspace-files': 'workspace:^' },
       }],
-      ['@deepseek-ai/dsh-api-workspace-files', {
-        dependencies: { '@deepseek-ai/dsh-typert-protocol': 'workspace:^' },
-        peerDependencies: { '@deepseek-ai/cordis': 'workspace:^' },
-        peerDependenciesMeta: { '@deepseek-ai/cordis': { optional: true } },
+      ['@redspark/rsh-api-workspace-files', {
+        dependencies: { '@redspark/rsh-typert-protocol': 'workspace:^' },
+        peerDependencies: { '@redspark/cordis': 'workspace:^' },
+        peerDependenciesMeta: { '@redspark/cordis': { optional: true } },
       }],
-      ['@deepseek-ai/dsh-typert-protocol', {
-        peerDependencies: { '@deepseek-ai/cordis': 'workspace:^' },
-        peerDependenciesMeta: { '@deepseek-ai/cordis': { optional: true } },
+      ['@redspark/rsh-typert-protocol', {
+        peerDependencies: { '@redspark/cordis': 'workspace:^' },
+        peerDependenciesMeta: { '@redspark/cordis': { optional: true } },
       }],
-      ['@deepseek-ai/dsh-native-web-session-controller', {
-        dependencies: { '@deepseek-ai/dsh-host-directory-picker-native': 'workspace:^' },
+      ['@redspark/rsh-native-web-session-controller', {
+        dependencies: { '@redspark/rsh-host-directory-picker-native': 'workspace:^' },
       }],
-      ['@deepseek-ai/dsh-host-directory-picker-native', {
-        dependencies: { '@deepseek-ai/dsh-host-directory-picker': 'workspace:^' },
-        peerDependencies: { '@deepseek-ai/cordis': 'workspace:^' },
-        peerDependenciesMeta: { '@deepseek-ai/cordis': { optional: true } },
+      ['@redspark/rsh-host-directory-picker-native', {
+        dependencies: { '@redspark/rsh-host-directory-picker': 'workspace:^' },
+        peerDependencies: { '@redspark/cordis': 'workspace:^' },
+        peerDependenciesMeta: { '@redspark/cordis': { optional: true } },
       }],
-      ['@deepseek-ai/dsh-host-directory-picker', {
-        peerDependencies: { '@deepseek-ai/cordis': 'workspace:^' },
+      ['@redspark/rsh-host-directory-picker', {
+        peerDependencies: { '@redspark/cordis': 'workspace:^' },
       }],
     ] as const
     for (const [name, manifest] of packageManifests) {
@@ -301,15 +301,15 @@ describe('verifyRuntimeClosure', () => {
 
     const requiredPickerPeer = await verifyRuntimeClosure(root, 'rsh/Programs/CLI/package.json', 'native-cli')
     expect(requiredPickerPeer.failures).toEqual(expect.arrayContaining([
-      expect.stringContaining('@deepseek-ai/dsh-host-directory-picker -> required Cordis peer @deepseek-ai/cordis'),
+      expect.stringContaining('@redspark/rsh-host-directory-picker -> required Cordis peer @redspark/cordis'),
     ]))
 
-    const pickerPath = workspacePaths.get('@deepseek-ai/dsh-host-directory-picker')
+    const pickerPath = workspacePaths.get('@redspark/rsh-host-directory-picker')
     if (pickerPath === undefined) throw new Error('directory-picker fixture is missing')
     writeFileSync(pickerPath, `${JSON.stringify({
-      name: '@deepseek-ai/dsh-host-directory-picker',
-      peerDependencies: { '@deepseek-ai/cordis': 'workspace:^' },
-      peerDependenciesMeta: { '@deepseek-ai/cordis': { optional: true } },
+      name: '@redspark/rsh-host-directory-picker',
+      peerDependencies: { '@redspark/cordis': 'workspace:^' },
+      peerDependenciesMeta: { '@redspark/cordis': { optional: true } },
     }, null, 2)}\n`)
     expect((await verifyRuntimeClosure(root, 'rsh/Programs/CLI/package.json', 'native-cli')).failures).toEqual([])
 
@@ -318,55 +318,55 @@ describe('verifyRuntimeClosure', () => {
       dependencies: Record<string, string>
       optionalDependencies: Record<string, string>
     }
-    cli.optionalDependencies['@deepseek-ai/dsh-task-scheduler'] = 'workspace:^'
+    cli.optionalDependencies['@redspark/rsh-task-scheduler'] = 'workspace:^'
     writeFileSync(cliPath, `${JSON.stringify(cli, null, 2)}\n`)
 
     const missingPlugin = plugins.find(plugin =>
-      plugin !== '@deepseek-ai/dsh-task-scheduler' && plugin !== '@deepseek-ai/dsh-native-agent')
+      plugin !== '@redspark/rsh-task-scheduler' && plugin !== '@redspark/rsh-native-agent')
     if (missingPlugin === undefined) throw new Error('native CLI fixture has no other shipped plugin')
     const missingPluginPath = workspacePaths.get(missingPlugin)
     if (missingPluginPath === undefined) throw new Error(`${missingPlugin} fixture is missing`)
     rmSync(missingPluginPath)
 
-    const nativeAgentPath = workspacePaths.get('@deepseek-ai/dsh-native-agent')
+    const nativeAgentPath = workspacePaths.get('@redspark/rsh-native-agent')
     if (nativeAgentPath === undefined) throw new Error('native-agent fixture is missing')
     writeFileSync(nativeAgentPath, `${JSON.stringify({
-      name: '@deepseek-ai/dsh-native-agent',
+      name: '@redspark/rsh-native-agent',
       dependencies: { '@scope/required': 'workspace:^' },
       optionalDependencies: { '@scope/required': 'workspace:^' },
     }, null, 2)}\n`)
     const duplicateResult = await verifyRuntimeClosure(root, 'rsh/Programs/CLI/package.json', 'native-cli')
     expect(duplicateResult.failures).toEqual(expect.arrayContaining([
-      expect.stringContaining('@deepseek-ai/dsh-task-scheduler is declared in both dependencies and optionalDependencies'),
-      expect.stringContaining('@deepseek-ai/dsh-native-agent -> @scope/required is declared in both dependencies and optionalDependencies'),
+      expect.stringContaining('@redspark/rsh-task-scheduler is declared in both dependencies and optionalDependencies'),
+      expect.stringContaining('@redspark/rsh-native-agent -> @scope/required is declared in both dependencies and optionalDependencies'),
     ]))
 
-    delete cli.dependencies['@deepseek-ai/dsh-task-scheduler']
-    cli.optionalDependencies['@deepseek-ai/dsh-task-scheduler'] = 'workspace:^'
+    delete cli.dependencies['@redspark/rsh-task-scheduler']
+    cli.optionalDependencies['@redspark/rsh-task-scheduler'] = 'workspace:^'
     writeFileSync(cliPath, `${JSON.stringify(cli, null, 2)}\n`)
 
     writeFileSync(nativeAgentPath, `${JSON.stringify({
-      name: '@deepseek-ai/dsh-native-agent',
+      name: '@redspark/rsh-native-agent',
       peerDependencies: {
-        '@deepseek-ai/cordis': 'workspace:^',
+        '@redspark/cordis': 'workspace:^',
         '@scope/required': 'workspace:^',
       },
     }, null, 2)}\n`)
-    writeFileSync(join(root, 'rsh/Programs/CLI/src/bin.ts'), "import('@deepseek-ai/dsh-app-boot')\n")
+    writeFileSync(join(root, 'rsh/Programs/CLI/src/bin.ts'), "import('@redspark/rsh-app-boot')\n")
     writeFileSync(
       join(root, 'rsh/Compatibility/DSH/bundle/web-app/src/index.ts'),
-      "import { scrubbedParentEnv } from '@deepseek-ai/dsh-subprocess'\n",
+      "import { scrubbedParentEnv } from '@redspark/rsh-subprocess'\n",
     )
 
     const result = await verifyRuntimeClosure(root, 'rsh/Programs/CLI/package.json', 'native-cli')
 
     expect(result.failures).toEqual(expect.arrayContaining([
-      expect.stringContaining('@deepseek-ai/dsh-task-scheduler'),
+      expect.stringContaining('@redspark/rsh-task-scheduler'),
       expect.stringContaining(`${missingPlugin} [workspace package not found]`),
-      expect.stringContaining('required Cordis peer @deepseek-ai/cordis'),
+      expect.stringContaining('required Cordis peer @redspark/cordis'),
       expect.stringContaining('@scope/required'),
-      expect.stringContaining('rsh/Programs/CLI/src/bin.ts: import @deepseek-ai/dsh-app-boot'),
-      expect.stringContaining('rsh/Compatibility/DSH/bundle/web-app/src/index.ts: import @deepseek-ai/dsh-subprocess'),
+      expect.stringContaining('rsh/Programs/CLI/src/bin.ts: import @redspark/rsh-app-boot'),
+      expect.stringContaining('rsh/Compatibility/DSH/bundle/web-app/src/index.ts: import @redspark/rsh-subprocess'),
     ]))
   })
 })

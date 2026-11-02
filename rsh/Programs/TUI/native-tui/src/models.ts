@@ -1,12 +1,12 @@
 /** Provider-owned model menus over the existing exclusive Session maintenance operation. */
-import type { LlmResolvedModelInfo } from '@deepseek-ai/dsh-llm/native'
-import type { NativeHeadlessApplication } from '@deepseek-ai/dsh-native-headless/native'
-import type { NativeAgent, NativeAgentExecution } from '@deepseek-ai/dsh-native-agent'
-import type { NativeModelDirectory } from '@deepseek-ai/dsh-native-model-execution/model-directory'
-import type { ModelCatalog } from '@deepseek-ai/dsh-native-model-execution/model-selection'
-import type { NativeModelSelectionOperations } from '@deepseek-ai/dsh-native-model-selection/native'
-import type { NativeModelSelectionRequest, NativeModelSelectionState } from '@deepseek-ai/dsh-native-model-selection/types'
-import type { SessionId } from '@deepseek-ai/dsh-session/types'
+import type { LlmResolvedModelInfo } from '@redspark/rsh-llm/native'
+import type { NativeHeadlessApplication } from '@redspark/rsh-native-headless/native'
+import type { NativeAgent, NativeAgentExecution } from '@redspark/rsh-native-agent'
+import type { NativeModelDirectory } from '@redspark/rsh-native-model-execution/model-directory'
+import type { ModelCatalog } from '@redspark/rsh-native-model-execution/model-selection'
+import type { NativeModelSelectionOperations } from '@redspark/rsh-native-model-selection/native'
+import type { NativeModelSelectionRequest, NativeModelSelectionState } from '@redspark/rsh-native-model-selection/types'
+import type { SessionId } from '@redspark/rsh-session/types'
 import type { Config } from './config.ts'
 
 /** Exact durable selection and actual advisory capabilities displayed by the terminal. */

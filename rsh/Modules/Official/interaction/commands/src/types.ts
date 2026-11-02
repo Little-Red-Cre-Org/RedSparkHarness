@@ -1,14 +1,14 @@
 /** Compatibility command vocabulary and Cordis registry notifications. */
 export type * from './facts.ts'
 
-import type { EncodedImageAttachment } from '@deepseek-ai/dsh-attachment/types'
+import type { EncodedImageAttachment } from '@redspark/rsh-attachment/types'
 
 /** One browser-submitted command attachment: encoded image input or a staged file receipt. */
 export type CommandSubmitAttachment =
   | ({ readonly type: 'image' } & EncodedImageAttachment)
   | { readonly type: 'file'; readonly receiptId: string }
 
-declare module '@deepseek-ai/cordis' {
+declare module '@redspark/cordis' {
   interface Events {
     /**
      * A command was registered or unregistered. This is an unfiltered registry

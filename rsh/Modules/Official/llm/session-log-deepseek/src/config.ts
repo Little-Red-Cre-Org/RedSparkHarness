@@ -1,5 +1,5 @@
 /** Cordis-free request configuration shared by the Native and Cordis Consumers. */
-import z from '@deepseek-ai/schemastery'
+import z from '@redspark/schemastery'
 
 /** Session-log request contribution configuration. */
 export interface Config {

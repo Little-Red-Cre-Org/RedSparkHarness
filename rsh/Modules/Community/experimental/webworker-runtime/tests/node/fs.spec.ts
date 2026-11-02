@@ -8,11 +8,11 @@
  * imports can create two slots, leaving the bridge with no mounted filesystem.
  */
 import { expect, test } from 'vitest'
-import { MemoryVfs } from '@deepseek-ai/dsh-experimental-webworker-runtime/src/storage/memory.ts'
-import { setActiveVfs } from '@deepseek-ai/dsh-experimental-webworker-runtime/src/storage/active.ts'
-import * as fs from '@deepseek-ai/dsh-experimental-webworker-runtime/src/node/builtin_modules/implemented/fs.ts'
-import * as fsp from '@deepseek-ai/dsh-experimental-webworker-runtime/src/node/builtin_modules/implemented/fs/promises.ts'
-import type { VfsBigIntStats, VfsMutationSink, VfsStats } from '@deepseek-ai/dsh-experimental-webworker-runtime/src/storage/types.ts'
+import { MemoryVfs } from '@redspark/rsh-experimental-webworker-runtime/src/storage/memory.ts'
+import { setActiveVfs } from '@redspark/rsh-experimental-webworker-runtime/src/storage/active.ts'
+import * as fs from '@redspark/rsh-experimental-webworker-runtime/src/node/builtin_modules/implemented/fs.ts'
+import * as fsp from '@redspark/rsh-experimental-webworker-runtime/src/node/builtin_modules/implemented/fs/promises.ts'
+import type { VfsBigIntStats, VfsMutationSink, VfsStats } from '@redspark/rsh-experimental-webworker-runtime/src/storage/types.ts'
 
 let flushes = 0
 const sink: VfsMutationSink = {

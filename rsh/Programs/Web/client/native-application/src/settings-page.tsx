@@ -1,14 +1,14 @@
 /** Generic native Settings and write-only credential controls for registered schemas. */
 import { useCallback, useEffect, useRef, useState } from 'react'
-import type { NativeSessionClient, NativeSettingsDescriptor } from '@deepseek-ai/dsh-client-native-session/native'
-import { NativeSessionRpcError } from '@deepseek-ai/dsh-client-native-session/native'
+import type { NativeSessionClient, NativeSettingsDescriptor } from '@redspark/rsh-client-native-session/native'
+import { NativeSessionRpcError } from '@redspark/rsh-client-native-session/native'
 import {
   IconDarkOutline16, IconFollowsystemOutline16, IconLightOutline16,
   RiskConfirmation, Switch,
-} from '@deepseek-ai/dsh-client-ui-primitives'
-import type { SnapshotSelectorHook } from '@deepseek-ai/dsh-client-ui-slots'
-import type { NativeLocaleService, NativeLocaleSnapshot } from '@deepseek-ai/dsh-client-locale/native'
-import type { NativeThemeService } from '@deepseek-ai/dsh-client-ui-theme/native'
+} from '@redspark/rsh-client-ui-primitives'
+import type { SnapshotSelectorHook } from '@redspark/rsh-client-ui-slots'
+import type { NativeLocaleService, NativeLocaleSnapshot } from '@redspark/rsh-client-locale/native'
+import type { NativeThemeService } from '@redspark/rsh-client-ui-theme/native'
 import type { ConversationLocaleKey } from './locales.ts'
 import { ModelsSettingsPage } from './models-settings-page.tsx'
 import { AgentPresetsSection } from './agent-presets-section.tsx'

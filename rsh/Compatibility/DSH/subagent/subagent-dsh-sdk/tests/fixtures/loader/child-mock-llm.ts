@@ -1,8 +1,8 @@
-import type { Context } from '@deepseek-ai/cordis'
+import type { Context } from '@redspark/cordis'
 import { existsSync, writeFileSync } from 'node:fs'
 import { setTimeout } from 'node:timers/promises'
-import type { GenerateOptions, LlmResolvedModelInfo, PreparedAdapterCall, StreamChunk } from '@deepseek-ai/dsh-llm'
-import { LlmAdapter, ReasoningEffortId } from '@deepseek-ai/dsh-llm'
+import type { GenerateOptions, LlmResolvedModelInfo, PreparedAdapterCall, StreamChunk } from '@redspark/rsh-llm'
+import { LlmAdapter, ReasoningEffortId } from '@redspark/rsh-llm'
 
 /**
  * Scripted model for the CHILD runtime: validates either the routed success
@@ -30,7 +30,7 @@ class RouteEchoAdapter extends LlmAdapter {
   }
 
   async * stream(options: GenerateOptions): AsyncIterable<StreamChunk> {
-    const failure = process.env.DSH_TEST_CHILD_FAILURE === '1'
+    const failure = process.env.RSH_TEST_CHILD_FAILURE === '1'
     const dynamicRoute = options.provider === 'mock'
       && options.model === 'mock-routed'
       && options.reasoningEffort === 'max'

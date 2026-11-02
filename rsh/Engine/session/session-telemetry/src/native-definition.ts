@@ -1,5 +1,5 @@
 /** Native telemetry service and copied-record redaction Definition. */
-import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
+import type { NativePlugin } from '@redspark/rsh-native-runtime'
 import type { SessionTelemetryRecord, SessionTelemetrySharingStatus } from './types.ts'
 
 /** Native telemetry service provided by an explicitly selected backend. */
@@ -12,7 +12,7 @@ export interface NativeSessionTelemetryOperations {
   shutdown(): Promise<void>
 }
 
-declare module '@deepseek-ai/dsh-native-runtime' {
+declare module '@redspark/rsh-native-runtime' {
   interface NativeServices { sessionTelemetry: NativeSessionTelemetryOperations }
   interface NativeEvents {
     /** Redact one copied candidate before the telemetry backend receives it. @param record - independent outbound copy. @mode waterfall */

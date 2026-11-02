@@ -1,12 +1,12 @@
-import { fileHandleText, type ContentBlock, type UserMessage } from '@deepseek-ai/dsh-llm/native'
+import { fileHandleText, type ContentBlock, type UserMessage } from '@redspark/rsh-llm/native'
 import type {
   NativeExternalJsonValue,
   NativeExternalToolCall,
   NativeExternalToolCallGrant,
   NativeExternalToolSettlement,
   NativeExternalSubagentModelOperations,
-} from '@deepseek-ai/dsh-native-subagent/native'
-import type { StoredImageAttachment } from '@deepseek-ai/dsh-native-tools'
+} from '@redspark/rsh-native-subagent/native'
+import type { StoredImageAttachment } from '@redspark/rsh-native-tools'
 import type { CodexDynamicToolCatalog } from './dynamic-tools.ts'
 
 /** Text or verified inline image content returned for one accepted app-server tool call. */

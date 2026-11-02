@@ -3,7 +3,7 @@ description: "The local host provider for the subprocess service: run OS-owned m
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-subprocess-local
+# @redspark/rsh-subprocess-local
 
 English | [中文](README.zh.md)
 
@@ -34,8 +34,8 @@ Mount the provider beside its consumers and start processes exactly as the subpr
 Load the provider in the same composition as its consumers. It has no config fields: every choice arrives on the spawn request, so deployment-varying decisions stay with the caller's configuration.
 
 ```yaml
-- name: '@deepseek-ai/dsh-subprocess-local'
-- name: '@deepseek-ai/dsh-bash-local'
+- name: '@redspark/rsh-subprocess-local'
+- name: '@redspark/rsh-bash-local'
 ```
 
 ### Resolving executables
@@ -112,7 +112,7 @@ Spill files are opened `0600` with `O_EXCL` and random names under a `0700` per-
 
 Read these pages when the provider-level contract is not enough. They move from the exhaustive type reference to the abstract contract and the decisions behind the host mechanics.
 
-- [Subprocess subsystem](../../../Docs/subsystems/subprocess.md) — spawn specs, output readers, outcomes, and the `DSH_*` environment in full.
+- [Subprocess subsystem](../../../Docs/subsystems/subprocess.md) — spawn specs, output readers, outcomes, and the `RSH_*` environment in full.
 - [dsh-subprocess](../subprocess/README.md) — the abstract contract this provider implements.
 - [dsh-bash-local](../../../Modules/Official/shell/bash-local/README.md) — the largest consumer and the concrete stdio shapes it asks for.
 - [Subprocess seam Agent Note](../../../../.agents/notes/archived/architecture/2026-07-26-subprocess-seam.md) — why the process half became its own seam.

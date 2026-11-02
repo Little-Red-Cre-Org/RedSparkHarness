@@ -44,18 +44,18 @@ export function verifyPackedGoalScenarios(consumer: PackedGoalConsumer): void {
     writeFileSync(join(profile, 'package.json'), JSON.stringify({ name: `packed-goal-profile-${scenario}`, private: true,
       dsh: { profile: { runtime: 'native', config: 'rsh.profile.json' } } }))
     writeFileSync(join(profile, 'rsh.profile.json'), JSON.stringify({ formatVersion: 1, scopes: [{ id: 'root' }], installations: [
-      { id: 'application', plugin: '@deepseek-ai/dsh-native-headless', scope: 'root',
+      { id: 'application', plugin: '@redspark/rsh-native-headless', scope: 'root',
         config: { cwd: consumer.output, provider: 'fixture', model: 'goal', systemPrompt: 'Use the explicit Goal.', maxSteps: 4 } },
-      { id: 'agents', plugin: '@deepseek-ai/dsh-native-agent', scope: 'root' },
-      { id: 'execution', plugin: '@deepseek-ai/dsh-native-session-execution', scope: 'root' },
-      { id: 'model-execution', plugin: '@deepseek-ai/dsh-native-model-execution', scope: 'root' },
-      { id: 'tools', plugin: '@deepseek-ai/dsh-native-tools', scope: 'root' },
-      { id: 'prompt', plugin: '@deepseek-ai/dsh-native-prompt', scope: 'root' },
-      { id: 'goals', plugin: '@deepseek-ai/dsh-goal', scope: 'root', config: { defaultMaxGoalRounds: maxRounds } },
-      { id: 'driver', plugin: '@deepseek-ai/dsh-goal-round-driver', scope: 'root' },
-      { id: 'goal-tools', plugin: '@deepseek-ai/dsh-tool-goal', scope: 'root' },
-      { id: 'fs', plugin: '@deepseek-ai/dsh-fs-local', scope: 'root', config: { cwd: consumer.output } },
-      { id: 'storage', plugin: '@deepseek-ai/dsh-session-persistence-jsonl', scope: 'root',
+      { id: 'agents', plugin: '@redspark/rsh-native-agent', scope: 'root' },
+      { id: 'execution', plugin: '@redspark/rsh-native-session-execution', scope: 'root' },
+      { id: 'model-execution', plugin: '@redspark/rsh-native-model-execution', scope: 'root' },
+      { id: 'tools', plugin: '@redspark/rsh-native-tools', scope: 'root' },
+      { id: 'prompt', plugin: '@redspark/rsh-native-prompt', scope: 'root' },
+      { id: 'goals', plugin: '@redspark/rsh-goal', scope: 'root', config: { defaultMaxGoalRounds: maxRounds } },
+      { id: 'driver', plugin: '@redspark/rsh-goal-round-driver', scope: 'root' },
+      { id: 'goal-tools', plugin: '@redspark/rsh-tool-goal', scope: 'root' },
+      { id: 'fs', plugin: '@redspark/rsh-fs-local', scope: 'root', config: { cwd: consumer.output } },
+      { id: 'storage', plugin: '@redspark/rsh-session-persistence-jsonl', scope: 'root',
         config: { root: sessions, compression: 'none' } },
       { id: 'model', plugin: 'packed-goal-model', scope: 'root' },
     ] }))
@@ -100,7 +100,7 @@ export function verifyPackedGoalScenarios(consumer: PackedGoalConsumer): void {
           }
         }) }
     `)
-    const environment = { DSH_HOME: home }
+    const environment = { RSH_HOME: home }
     expect(consumer.run(['--profile', profileName, 'Create an explicit Goal for packed acceptance.'], environment).trim())
       .toBe(scenario === 'completion' ? 'packed Goal complete' : 'packed Goal bounded round')
     const paths = globSync('**/session.v3.jsonl', { cwd: sessions })

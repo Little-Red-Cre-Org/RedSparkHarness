@@ -1,5 +1,5 @@
 import { fileURLToPath } from 'node:url'
-import { LOADER_SMOKE_TEST_TIMEOUT_MS, runLoaderSmoke } from '@deepseek-ai/dsh-loader-smoke'
+import { LOADER_SMOKE_TEST_TIMEOUT_MS, runLoaderSmoke } from '@redspark/rsh-loader-smoke'
 import { describe, expect, it } from 'vitest'
 
 const binScript = fileURLToPath(new URL('../../../src/bin.ts', import.meta.url))
@@ -16,7 +16,7 @@ describe('RSH legacy profile template', () => {
       tsconfigPath,
       binArgs: ['--profile', 'legacy-rsh', '--from-default-profile', 'rsh'],
       expectedExitCode: 1,
-      env: { DSH_TELEMETRY_DISABLED: '1' },
+      env: { RSH_TELEMETRY_DISABLED: '1' },
     })
     expect(result.stdout).toBe('')
     expect(result.stderr).toContain('rsh requires an interactive terminal')
@@ -30,9 +30,9 @@ describe('RSH legacy profile template', () => {
       configPath,
       tsconfigPath,
       binArgs: ['--profile', 'legacy-rsh', '--from-default-profile', 'rsh', '--dump-config'],
-      env: { DSH_TELEMETRY_DISABLED: '1' },
+      env: { RSH_TELEMETRY_DISABLED: '1' },
     })
-    expect(result.stdout).toContain('@deepseek-ai/dsh-rsh')
-    expect(result.stdout).toContain('@deepseek-ai/dsh-agent-presets')
+    expect(result.stdout).toContain('@redspark/rsh-rsh')
+    expect(result.stdout).toContain('@redspark/rsh-agent-presets')
   }, LOADER_SMOKE_TEST_TIMEOUT_MS)
 })

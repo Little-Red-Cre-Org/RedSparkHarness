@@ -1,5 +1,5 @@
 {
-  "name": "@deepseek-ai/dsh-rsh",
+  "name": "@redspark/rsh-rsh",
   "version": "1.0.0",
   "description": "RedSpark Ink terminal UI bundle",
   "publishConfig": {
@@ -45,21 +45,21 @@
     "lint:fix": "eslint src test --ext .js --fix"
   },
   "dependencies": {
-    "@deepseek-ai/dsh-agent": "workspace:^",
-    "@deepseek-ai/dsh-agent-default-model": "workspace:^",
-    "@deepseek-ai/dsh-agent-presets": "workspace:^",
-    "@deepseek-ai/dsh-compat-settings-adapters": "workspace:^",
-    "@deepseek-ai/dsh-llm": "workspace:^",
-    "@deepseek-ai/dsh-session": "workspace:^",
+    "@redspark/rsh-agent": "workspace:^",
+    "@redspark/rsh-agent-default-model": "workspace:^",
+    "@redspark/rsh-agent-presets": "workspace:^",
+    "@redspark/rsh-compat-settings-adapters": "workspace:^",
+    "@redspark/rsh-llm": "workspace:^",
+    "@redspark/rsh-session": "workspace:^",
     "ink": "^5.2.1",
     "ink-text-input": "^6.0.0",
     "react": "^18.2.0",
-    "@deepseek-ai/dsh-terminal-ui": "workspace:^"
+    "@redspark/rsh-terminal-ui": "workspace:^"
   },
   "peerDependencies": {
-    "@deepseek-ai/cordis": "workspace:^"
+    "@redspark/cordis": "workspace:^"
   },
   "devDependencies": {
-    "@deepseek-ai/cordis": "workspace:^"
+    "@redspark/cordis": "workspace:^"
   }
 }

@@ -8,11 +8,11 @@
 // The block union's defining home is runtime (fold-product types); this
 // contract only forwards it (type-definition authority stays with the layer
 // that produces the values).
-import type { ToolCallBlock, ToolResultNode } from '@deepseek-ai/dsh-client-ui-conversation/tool-records'
-import type { LocaleKeysOf } from '@deepseek-ai/dsh-client-ui-slots'
-import { abbreviateHomePath, relativizeToCwd } from '@deepseek-ai/dsh-util-workspace-path'
+import type { ToolCallBlock, ToolResultNode } from '@redspark/rsh-client-ui-conversation/tool-records'
+import type { LocaleKeysOf } from '@redspark/rsh-client-ui-slots'
+import { abbreviateHomePath, relativizeToCwd } from '@redspark/rsh-util-workspace-path'
 
-export type { ToolCallBlock } from '@deepseek-ai/dsh-client-ui-conversation/tool-records'
+export type { ToolCallBlock } from '@redspark/rsh-client-ui-conversation/tool-records'
 
 /** Tool-call row variants selected by the generic atomic renderer. */
 export type ToolRowVariant = 'search' | 'read' | 'bash' | 'write' | 'edit' | 'code' | 'others'

@@ -13,13 +13,13 @@ import { describe, expect, it } from 'vitest'
 
 const pkgDir = fileURLToPath(new URL('..', import.meta.url))
 const built = ['lib/index.js', 'lib/worker.cjs'].every(file => existsSync(join(pkgDir, file)))
-  && existsSync(fileURLToPath(import.meta.resolve('@deepseek-ai/dsh-code-runtime')))
+  && existsSync(fileURLToPath(import.meta.resolve('@redspark/rsh-code-runtime')))
 
 describe.skipIf(!built)('built lib real load path (plain node)', () => {
   it('runs a TypeScript program with a binding through lib/index.js and its lib/worker.cjs entry', async () => {
     const script = `
-      const { Context } = await import('@deepseek-ai/cordis')
-      const { WorkerThreadCodeRuntime } = await import('@deepseek-ai/dsh-code-runtime-worker-thread')
+      const { Context } = await import('@redspark/cordis')
+      const { WorkerThreadCodeRuntime } = await import('@redspark/rsh-code-runtime-worker-thread')
       const ctx = new Context()
       await ctx.plugin(WorkerThreadCodeRuntime, {})
       const result = await ctx.codeRuntime.run({

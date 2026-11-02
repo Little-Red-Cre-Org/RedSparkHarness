@@ -7,16 +7,16 @@ import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { runInNewContext } from 'node:vm'
-import { Context, type Fiber } from '@deepseek-ai/cordis'
+import { Context, type Fiber } from '@redspark/cordis'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { renderIndexInjections } from '@deepseek-ai/dsh-http-routes/client'
-import type { HttpWebServer as WebServer, WebRoute } from '@deepseek-ai/dsh-http-routes-cordis'
+import { renderIndexInjections } from '@redspark/rsh-http-routes/client'
+import type { HttpWebServer as WebServer, WebRoute } from '@redspark/rsh-http-routes-cordis'
 import * as modulesClient from '../src/client/index.ts'
 import { ClientModuleRegistry, bootInjections, orderByModuleGraph } from '../src/index.ts'
 import type { ClientModuleLoaderTarget, WebBootEntry, WebBootGraph } from '../src/client/index.ts'
 
-const MODULES_ID = '@deepseek-ai/dsh-client-modules'
-const UI_RENDERER_ID = '@deepseek-ai/dsh-client-ui-renderer'
+const MODULES_ID = '@redspark/rsh-client-modules'
+const UI_RENDERER_ID = '@redspark/rsh-client-ui-renderer'
 
 const comboUrl = (ids: readonly string[], rev: string): string =>
   `/plugins/??${ids.map(id => `${id}/client.js`).join(',')}&rev=${rev}`
@@ -811,7 +811,7 @@ describe('module graph order', () => {
 
   it('leaves a request no row answers to the static assembly channel', () => {
     expect(ids(orderByModuleGraph([
-      entry('consumer', { external: ['@deepseek-ai/cordis'] }),
+      entry('consumer', { external: ['@redspark/cordis'] }),
       entry('other'),
     ]))).toEqual(['consumer', 'other'])
   })

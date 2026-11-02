@@ -3,7 +3,7 @@ description: "在 Provider 与 Consumer 间共享原生审批契约和 Cordis-fr
 kind: "package-library"
 ---
 
-# @deepseek-ai/dsh-approval-definition
+# @redspark/rsh-approval-definition
 
 [English](README.md) | 中文
 
@@ -33,8 +33,8 @@ kind: "package-library"
 根入口和 legacy 入口分别保留 `native-approval/*` 记录与兼容 `approval/*` 记录。调用方必须使用所选 Provider 对应的契约；本包不会把一种历史转换成另一种。
 
 ```ts
-import type { Agent } from '@deepseek-ai/dsh-agent'
-import type { ApprovalServiceDefinition } from '@deepseek-ai/dsh-approval-definition/legacy'
+import type { Agent } from '@redspark/rsh-agent'
+import type { ApprovalServiceDefinition } from '@redspark/rsh-approval-definition/legacy'
 
 type CordisApproval = ApprovalServiceDefinition<Agent>
 ```

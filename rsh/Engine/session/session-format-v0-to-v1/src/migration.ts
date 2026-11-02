@@ -3,7 +3,7 @@ import {
   SessionFormatUnsupportedMigrationError,
   defineSessionFormatMigration,
   sessionFormatCount,
-} from '@deepseek-ai/dsh-session-format'
+} from '@redspark/rsh-session-format'
 import type {
   SessionFormatEvent,
   SessionFormatEventRun,
@@ -13,7 +13,7 @@ import type {
   SessionFormatMigrationContext,
   SessionFormatMigrationStage,
   SessionFormatMigrationStageInput,
-} from '@deepseek-ai/dsh-session-format'
+} from '@redspark/rsh-session-format'
 import { isReleasedAssistantChunkRun } from './codec.ts'
 import {
   assertReleasedEventPayload,
@@ -23,7 +23,7 @@ import { assertReleasedV0Keys, releasedV0Record } from './validation-helpers.ts'
 
 /** Identity format edge that promotes released v0 into released v1. */
 export const sessionFormatV0ToV1 = defineSessionFormatMigration({
-  name: '@deepseek-ai/dsh-session-format-v0-to-v1',
+  name: '@redspark/rsh-session-format-v0-to-v1',
   fromVersion: 0,
   toVersion: 1,
   migrateHeader(header) {

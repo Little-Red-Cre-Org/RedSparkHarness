@@ -1,3 +1,3 @@
 /** Cordis consumers retain this path while protocol ownership lives in Official. */
-export { CodexAppServerWire } from '@deepseek-ai/dsh-codex-app-server/wire'
-export type { CodexWireFailureFacts, CodexWireResult } from '@deepseek-ai/dsh-codex-app-server'
+export { CodexAppServerWire } from '@redspark/rsh-codex-app-server/wire'
+export type { CodexWireFailureFacts, CodexWireResult } from '@redspark/rsh-codex-app-server'

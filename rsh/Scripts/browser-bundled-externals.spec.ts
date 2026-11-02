@@ -21,9 +21,9 @@ function fixture(): string {
       paths: {
         '@fixture/static': ['./rsh/Programs/Web/client/static/src/index.ts'],
         '@fixture/static/boot-page': ['./rsh/Programs/Web/client/static/src/boot-page.ts'],
-        '@deepseek-ai/dsh-client-web/base.css': ['./rsh/Programs/Web/client/web/src/base.css'],
-        '@deepseek-ai/dsh-experimental-webworker-runtime/worker': ['./rsh/Modules/Community/experimental/webworker-runtime/src/worker.ts'],
-        '@deepseek-ai/dsh-experimental-webworker-runtime/client': ['./rsh/Modules/Community/experimental/webworker-runtime/src/client/index.ts'],
+        '@redspark/rsh-client-web/base.css': ['./rsh/Programs/Web/client/web/src/base.css'],
+        '@redspark/rsh-experimental-webworker-runtime/worker': ['./rsh/Modules/Community/experimental/webworker-runtime/src/worker.ts'],
+        '@redspark/rsh-experimental-webworker-runtime/client': ['./rsh/Modules/Community/experimental/webworker-runtime/src/client/index.ts'],
       },
     },
   }))
@@ -106,9 +106,9 @@ describe('browser dependency discovery', () => {
       'export const lazy = () => import("lazy-lib")',
     ].join('\n'))
     write(root, 'rsh/Programs/Web/client/static/src/boot-page.ts', 'import { value } from "leaf-lib"; export const BootPage = value')
-    write(root, 'rsh/Programs/Web/client/web/package.json', '{"name":"@deepseek-ai/dsh-client-web"}')
+    write(root, 'rsh/Programs/Web/client/web/package.json', '{"name":"@redspark/rsh-client-web"}')
     write(root, 'rsh/Programs/Web/client/web/src/base.css', '.native-and-compat { color: red }')
-    write(root, 'rsh/Modules/Community/experimental/webworker-runtime/package.json', '{"name":"@deepseek-ai/dsh-experimental-webworker-runtime"}')
+    write(root, 'rsh/Modules/Community/experimental/webworker-runtime/package.json', '{"name":"@redspark/rsh-experimental-webworker-runtime"}')
     write(root, 'rsh/Modules/Community/experimental/webworker-runtime/src/worker.ts', 'import { value } from "worker-only-lib"; self.postMessage(value)')
     write(root, 'rsh/Modules/Community/experimental/webworker-runtime/src/client/index.ts', 'import { value } from "client-only-lib"; export { value }')
     const app = join(root, 'rsh/Programs/Web/application')
@@ -121,16 +121,16 @@ describe('browser dependency discovery', () => {
     write(root, 'rsh/Programs/Web/application/main.ts', [
       'import { output, lazy } from "@fixture/static"',
       'import { BootPage } from "@fixture/static/boot-page"',
-      'import "@deepseek-ai/dsh-client-web/base.css"',
+      'import "@redspark/rsh-client-web/base.css"',
       'console.log(output, BootPage)',
       'void lazy()',
     ].join('\n'))
     write(root, 'rsh/Programs/Web/application/native.ts', 'import { value } from "native-only-lib"; console.log(value)')
     write(root, 'rsh/Programs/Web/application/compat-main.ts', 'import { value } from "compat-shell-lib"; console.log(value)')
     write(root, 'rsh/Programs/Web/application/preview.ts', [
-      'import DshWorker from "@deepseek-ai/dsh-experimental-webworker-runtime/worker?worker"',
-      'import { value } from "@deepseek-ai/dsh-experimental-webworker-runtime/client"',
-      'import "@deepseek-ai/dsh-client-web/base.css"',
+      'import DshWorker from "@redspark/rsh-experimental-webworker-runtime/worker?worker"',
+      'import { value } from "@redspark/rsh-experimental-webworker-runtime/client"',
+      'import "@redspark/rsh-client-web/base.css"',
       'import { value as compatibilityValue } from "compat-shell-lib"',
       'await Promise.resolve(value)',
       'console.log(compatibilityValue, new DshWorker())',

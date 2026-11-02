@@ -1,16 +1,16 @@
 /**
  * Runtime-neutral `/compact` argument validation and result presentation
  * shared by the Cordis and native command Consumers.
- * @module @deepseek-ai/dsh-command-compact/common
+ * @module @redspark/rsh-command-compact/common
  */
 
-import { ManualCompactionError } from '@deepseek-ai/dsh-compaction/native'
-import type { CompactionResult } from '@deepseek-ai/dsh-compaction/native'
-import type { CommandId } from '@deepseek-ai/dsh-commands/brand'
-import type { CommandResult } from '@deepseek-ai/dsh-commands/facts'
+import { ManualCompactionError } from '@redspark/rsh-compaction/native'
+import type { CompactionResult } from '@redspark/rsh-compaction/native'
+import type { CommandId } from '@redspark/rsh-commands/brand'
+import type { CommandResult } from '@redspark/rsh-commands/facts'
 
 /** Stable command definition identity shared by both runtimes. */
-export const COMPACT_DEFINITION_ID = '@deepseek-ai/dsh-command-compact'
+export const COMPACT_DEFINITION_ID = '@redspark/rsh-command-compact'
 /** Registered command name. */
 export const COMPACT_COMMAND_NAME = 'compact'
 /** Human-facing command description. */

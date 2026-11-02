@@ -3,7 +3,7 @@ description: "在原生 profile scope 中注册一个常驻 Agent 装配，供�
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-agent-preset-standing
+# @redspark/rsh-agent-preset-standing
 
 [English](README.md) | 中文
 
@@ -38,7 +38,7 @@ kind: "package-reference"
 ```json
 {
   "id": "preset-minimal",
-  "plugin": "@deepseek-ai/dsh-agent-preset-standing",
+  "plugin": "@redspark/rsh-agent-preset-standing",
   "scope": "minimal",
   "config": {
     "id": "minimal",

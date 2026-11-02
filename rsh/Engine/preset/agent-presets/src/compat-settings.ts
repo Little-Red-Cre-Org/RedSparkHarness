@@ -1,4 +1,4 @@
-import type { SettingsScope, SettingsService } from '@deepseek-ai/dsh-settings-definition'
+import type { SettingsScope, SettingsService } from '@redspark/rsh-settings-definition'
 import type { AgentPresetSettings } from './index.ts'
 import { readSettingsOwner, type SettingsOwner } from './settings-owner.ts'
 import type { AgentPresets } from './index.ts'

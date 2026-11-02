@@ -1,5 +1,5 @@
 /** Shared MCP configuration and canonical protocol results. */
-import type { JsonValue } from '@deepseek-ai/dsh-util-values'
+import type { JsonValue } from '@redspark/rsh-util-values'
 
 /** Automatic reconnect policy for one MCP server connection. */
 export interface ReconnectConfig {

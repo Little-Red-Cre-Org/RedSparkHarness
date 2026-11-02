@@ -3,7 +3,7 @@ description: "原生 profile 可将现有 Cordis 本地文件系统 Provider 作
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-compat-fs-local
+# @redspark/rsh-compat-fs-local
 
 [English](README.md) | 中文
 

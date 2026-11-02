@@ -1,5 +1,5 @@
 /** Legacy Agent backend attribution over the shared terminal protocol. */
-import type { Agent } from '@deepseek-ai/dsh-agent'
+import type { Agent } from '@redspark/rsh-agent'
 import type { TerminalSpawnRequest, TerminalSessionIdValue, TerminalBackendSession } from './protocol.ts'
 export * from './protocol.ts'
 

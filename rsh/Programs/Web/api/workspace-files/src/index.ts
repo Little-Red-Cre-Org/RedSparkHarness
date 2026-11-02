@@ -20,15 +20,15 @@
  */
 
 import { posix, win32 } from 'node:path'
-import type { Context } from '@deepseek-ai/cordis'
-import z from '@deepseek-ai/schemastery'
-import type {} from '@deepseek-ai/dsh-fs'
-import type { FsDirEntry, FsInfo, FsPathInfo, FsTarget } from '@deepseek-ai/dsh-fs'
-import type {} from '@deepseek-ai/dsh-sandbox-policy'
-import type {} from '@deepseek-ai/dsh-session'
-import type {} from '@deepseek-ai/dsh-session-persistence'
-import type { SessionId } from '@deepseek-ai/dsh-session/types'
-import { Remote, RemoteError, TypertRemoteService, type TypertLookup } from '@deepseek-ai/dsh-typert-protocol'
+import type { Context } from '@redspark/cordis'
+import z from '@redspark/schemastery'
+import type {} from '@redspark/rsh-fs'
+import type { FsDirEntry, FsInfo, FsPathInfo, FsTarget } from '@redspark/rsh-fs'
+import type {} from '@redspark/rsh-sandbox-policy'
+import type {} from '@redspark/rsh-session'
+import type {} from '@redspark/rsh-session-persistence'
+import type { SessionId } from '@redspark/rsh-session/types'
+import { Remote, RemoteError, TypertRemoteService, type TypertLookup } from '@redspark/rsh-typert-protocol'
 import { WorkspaceChangeFeed } from './changes.ts'
 import { cutWorkspaceFilePage, WorkspaceFilePageTooLargeError, type WorkspaceFilePage } from './native-helpers.ts'
 import type {
@@ -44,7 +44,7 @@ import type {
 
 export type * from './remote-types.ts'
 
-declare module '@deepseek-ai/cordis' {
+declare module '@redspark/cordis' {
   interface Context {
     /** Host owner of the `workspaceFiles` Remote namespace. */
     workspaceFiles: WorkspaceFiles
@@ -59,7 +59,7 @@ export interface WorkspaceFileScope {
   readonly workspaceRoot: string
 }
 
-declare module '@deepseek-ai/dsh-typert-protocol' {
+declare module '@redspark/rsh-typert-protocol' {
   interface TypertLookupMap {
     /** Resolve a Session id to its workspace root without loading its event body or activating an Agent. */
     workspaceFileScope: TypertLookup<WorkspaceFileScope, SessionId>
@@ -139,8 +139,8 @@ export class WorkspaceFiles extends TypertRemoteService {
       scope.typert.lookups.register('workspaceFileScope', {
         parameter: 'workspaceFileScope',
         wire: 'workspaceFileScopeId',
-        hostTypeSymbol: '@deepseek-ai/dsh-api-workspace-files#WorkspaceFileScope',
-        wireTypeSymbol: '@deepseek-ai/dsh-session/types#SessionId',
+        hostTypeSymbol: '@redspark/rsh-api-workspace-files#WorkspaceFileScope',
+        wireTypeSymbol: '@redspark/rsh-session/types#SessionId',
         resolve: async (sessionId) => {
           const live = scope.sessions.get(sessionId)?.header
           const stored = live === undefined

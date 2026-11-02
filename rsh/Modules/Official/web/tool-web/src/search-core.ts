@@ -5,8 +5,8 @@
  * never provider selection or network access.
  */
 
-import type { JsonValue } from '@deepseek-ai/dsh-util-values'
-import type { WebSearchRequest, WebSearchResult, WebSearchSource } from '@deepseek-ai/dsh-web/native'
+import type { JsonValue } from '@redspark/rsh-util-values'
+import type { WebSearchRequest, WebSearchResult, WebSearchSource } from '@redspark/rsh-web/native'
 import { EXTERNAL_WEB_CONTENT_NOTICE } from './trust.ts'
 
 /**

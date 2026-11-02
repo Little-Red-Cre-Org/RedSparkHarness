@@ -3,8 +3,8 @@
 import type { AuthEvent, AuthPrompt, Credential, Provider, ProviderAuthInteraction } from '@earendil-works/pi-ai'
 import type {
   AuthorizationFlow, AuthorizationMethod, AuthorizationPrompt, AuthorizationSession,
-} from '@deepseek-ai/dsh-authorization/native'
-import { isCredentialKeySegment } from '@deepseek-ai/dsh-credentials/native'
+} from '@redspark/rsh-authorization/native'
+import { isCredentialKeySegment } from '@redspark/rsh-credentials/native'
 import { catalogProvider, catalogProviderIds } from './catalog.ts'
 import { recordKeyFor } from './auth-core.ts'
 import type { PiAiAuthInjection } from './adapter.ts'

@@ -3,13 +3,13 @@ description: "The retry executor for users and maintainers configuring provider-
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-llm-retry
+# @redspark/rsh-llm-retry
 
 English | [中文](README.zh.md)
 
 ## Summary
 
-Mount `@deepseek-ai/dsh-llm-retry` to retry failed model requests at durable agent-step boundaries. Provider `retryPolicy` settings choose bounded normal-mode retries or unlimited always-mode retries; scheduled attempts reach the session log before backoff, and cancellation leaves consistent history. Retries re-run the failed step in the same open turn, while direct `ctx.llm.stream()` calls remain single-attempt. The Cordis-free `./native` installer applies the same policy in every shipped native profile. Each retry is another billed provider request, and always mode continues until success, cancellation, or disposal.
+Mount `@redspark/rsh-llm-retry` to retry failed model requests at durable agent-step boundaries. Provider `retryPolicy` settings choose bounded normal-mode retries or unlimited always-mode retries; scheduled attempts reach the session log before backoff, and cancellation leaves consistent history. Retries re-run the failed step in the same open turn, while direct `ctx.llm.stream()` calls remain single-attempt. The Cordis-free `./native` installer applies the same policy in every shipped native profile. Each retry is another billed provider request, and always mode continues until success, cancellation, or disposal.
 
 ## Table of Contents
 
@@ -34,7 +34,7 @@ Choose it when a composition runs the agent loop and wants durable request recov
 ### Minimal configuration
 
 ```yaml
-- name: '@deepseek-ai/dsh-llm-deepseek'
+- name: '@redspark/rsh-llm-deepseek'
   config:
     apiKeyEnv: DEEPSEEK_API_KEY
     retryPolicy:
@@ -44,7 +44,7 @@ Choose it when a composition runs the agent loop and wants durable request recov
         maxDelayMs: 30000
         jitterRatio: 0.2
 
-- name: '@deepseek-ai/dsh-llm-retry'
+- name: '@redspark/rsh-llm-retry'
 ```
 
 Omission of `retryPolicy` uses normal mode: five retries for `EMPTY_RESPONSE`, `RATE_LIMIT`, `SERVER`, `TIMEOUT`, and `TRANSPORT`, with bounded exponential backoff from 500 ms to 10 seconds and 10 percent jitter. Normal mode can change its finite budget, eligible codes, and backoff; always mode asks downstream recovery first, then retries every model-request failure without an attempt limit, stopping only on success, cancellation, or plugin disposal.

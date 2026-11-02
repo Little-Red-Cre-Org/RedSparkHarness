@@ -3,10 +3,10 @@
  * live in the framework-free core; this module only binds them to the Cordis registries.
  */
 
-import type { Context } from '@deepseek-ai/cordis'
-import { defineTool } from '@deepseek-ai/dsh-tools'
-import type { GenericCallView, ToolResult, WebFetchResultView } from '@deepseek-ai/dsh-tools'
-import type {} from '@deepseek-ai/dsh-web'
+import type { Context } from '@redspark/cordis'
+import { defineTool } from '@redspark/rsh-tools'
+import type { GenericCallView, ToolResult, WebFetchResultView } from '@redspark/rsh-tools'
+import type {} from '@redspark/rsh-web'
 import {
   fetchMetaFromResult, fetchMetaFromValue, fetchOutputValue, formatFetchOutput, parseFetchArgs,
   WEB_FETCH_DESCRIPTION, WEB_FETCH_URL_DESCRIPTION, webFetchGuidance,
@@ -54,7 +54,7 @@ export function presentFetchResult(args: { url: string }, result: ToolResult): W
  * @param ctx - context whose `tools` and `systemPrompt` registries receive the
  *   registrations; both are effect-scoped and unregister on plugin dispose.
  * @param timeoutMs - the cooperative tool-call budget (ms) attached as the tool's
- *   `ToolDefinition.timeoutMs` for `@deepseek-ai/dsh-tool-call-timeout-policy` to enforce.
+ *   `ToolDefinition.timeoutMs` for `@redspark/rsh-tool-call-timeout-policy` to enforce.
  * @param maxOutputChars - cap on the complete rendered tool output (see
  *   {@link formatFetchOutput}) and on source characters converted synchronously.
  */

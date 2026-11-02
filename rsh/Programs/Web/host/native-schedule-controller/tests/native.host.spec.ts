@@ -1,7 +1,7 @@
 /** Authenticated Native schedule RPC and change frames use the existing Host services. */
 import { expect, it } from 'vitest'
-import { NativeHost, NativeScope, resolveInstallation, type NativePlugin } from '@deepseek-ai/dsh-native-runtime'
-import type { NativeScheduleFrame, NativeScheduledJob } from '@deepseek-ai/dsh-client-native-session/schedule-types'
+import { NativeHost, NativeScope, resolveInstallation, type NativePlugin } from '@redspark/rsh-native-runtime'
+import type { NativeScheduleFrame, NativeScheduledJob } from '@redspark/rsh-client-native-session/schedule-types'
 import { plugin as scheduleController } from '../src/native.ts'
 
 it('lists safe schedule rows and follows baseline, upsert, and remove frames', async () => {

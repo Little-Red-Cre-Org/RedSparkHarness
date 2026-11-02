@@ -2,7 +2,7 @@
 import type { DomainChanged } from './event-types.ts'
 export type { DomainChanged, DomainChangedBase, DomainChangedPut, DomainChangedDeleted } from './event-types.ts'
 
-declare module '@deepseek-ai/cordis' {
+declare module '@redspark/cordis' {
   interface Events {
     /**
      * A domain record or the global singleton changed, emitted once per write

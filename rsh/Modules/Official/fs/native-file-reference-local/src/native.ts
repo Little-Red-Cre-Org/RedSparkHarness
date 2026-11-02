@@ -1,14 +1,14 @@
 /** Native local-workspace file-reference Provider using the selected filesystem. */
 import { z } from 'zod'
-import type { NativeAgent } from '@deepseek-ai/dsh-native-agent'
-import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
-import type { NativeActiveSessionOwner } from '@deepseek-ai/dsh-native-session-execution'
-import type {} from '@deepseek-ai/dsh-native-session-execution/native'
-import type {} from '@deepseek-ai/dsh-native-tools/native'
-import type {} from '@deepseek-ai/dsh-native-prompt/native'
-import type { FileSystemOperations } from '@deepseek-ai/dsh-fs/native'
-import type { NativeFileReferenceOperations } from '@deepseek-ai/dsh-file-reference/native'
-import type { Session } from '@deepseek-ai/dsh-session/native'
+import type { NativeAgent } from '@redspark/rsh-native-agent'
+import type { NativePlugin } from '@redspark/rsh-native-runtime'
+import type { NativeActiveSessionOwner } from '@redspark/rsh-native-session-execution'
+import type {} from '@redspark/rsh-native-session-execution/native'
+import type {} from '@redspark/rsh-native-tools/native'
+import type {} from '@redspark/rsh-native-prompt/native'
+import type { FileSystemOperations } from '@redspark/rsh-fs/native'
+import type { NativeFileReferenceOperations } from '@redspark/rsh-file-reference/native'
+import type { Session } from '@redspark/rsh-session/native'
 import {
   DEFAULT_FILE_SEARCH_EXCLUDED_DIRECTORIES,
   DEFAULT_FILE_SEARCH_MAX_ENTRIES,
@@ -17,8 +17,8 @@ import {
   type FileReferenceDirectoryEntry,
   type FileReferenceSearchConfig,
   type FileReferenceSearchReader,
-} from '@deepseek-ai/dsh-file-reference/search'
-import { FILE_REFERENCE_PROMPT } from '@deepseek-ai/dsh-file-reference/prompt'
+} from '@redspark/rsh-file-reference/search'
+import { FILE_REFERENCE_PROMPT } from '@redspark/rsh-file-reference/prompt'
 
 const positiveSafeInteger = z.number().int().positive().refine(Number.isSafeInteger)
 const configSchema = z.object({
@@ -131,7 +131,7 @@ class OwnerWorkspaceSearch {
 /** Register the Native file-reference service and its conditional model guidance. */
 export const plugin: NativePlugin = {
   apiVersion: 1,
-  name: '@deepseek-ai/dsh-native-file-reference-local',
+  name: '@redspark/rsh-native-file-reference-local',
   targets: ['host'],
   requires: ['fs', 'activeSessions', 'tools', 'promptSections'],
   provides: ['fileReferences'],

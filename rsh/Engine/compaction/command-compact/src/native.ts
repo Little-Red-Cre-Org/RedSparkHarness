@@ -2,17 +2,17 @@
  * Native `/compact` human command over the selected native compaction Provider.
  * The command runs inside the Program's idle Session operation, so the
  * Provider writes through the invocation's exact active owner.
- * @module @deepseek-ai/dsh-command-compact/native
+ * @module @redspark/rsh-command-compact/native
  */
 
-import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
-import { CommandDefinitionId } from '@deepseek-ai/dsh-commands/native'
-import type {} from '@deepseek-ai/dsh-compaction/native'
+import type { NativePlugin } from '@redspark/rsh-native-runtime'
+import { CommandDefinitionId } from '@redspark/rsh-commands/native'
+import type {} from '@redspark/rsh-compaction/native'
 import { COMPACT_COMMAND_DESCRIPTION, COMPACT_COMMAND_NAME, COMPACT_DEFINITION_ID, executeCompact } from './common.ts'
 
 /** Register `/compact` with the selected native command service. */
 export const plugin: NativePlugin = {
-  apiVersion: 1, name: '@deepseek-ai/dsh-command-compact', targets: ['host'], requires: ['commands', 'compaction'],
+  apiVersion: 1, name: '@redspark/rsh-command-compact', targets: ['host'], requires: ['commands', 'compaction'],
   provides: [],
   resolve(input) {
     if (input !== undefined && (input === null || typeof input !== 'object' || Array.isArray(input) || Object.keys(input).length !== 0)) {

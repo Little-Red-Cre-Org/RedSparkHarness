@@ -3,12 +3,12 @@
  * Consumer: the durable `plan/mode` event, guidance validation, the reviewed
  * exit's question and answer interpretation, and the `/plan` command copy.
  *
- * @module @deepseek-ai/dsh-plan-mode/common
+ * @module @redspark/rsh-plan-mode/common
  */
 
-import type { AskUserQuestionAnswer, AskUserQuestionItem } from '@deepseek-ai/dsh-user-questions/protocol'
+import type { AskUserQuestionAnswer, AskUserQuestionItem } from '@redspark/rsh-user-questions/protocol'
 
-declare module '@deepseek-ai/dsh-session/types' {
+declare module '@redspark/rsh-session/types' {
   interface SessionEventMap {
     /**
      * Whether plan mode is in force from this point on: log-only, non-surface,

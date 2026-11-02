@@ -3,7 +3,7 @@ description: "原生 profile 可在应用记录最终提示词前组装有序、
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-native-prompt
+# @redspark/rsh-native-prompt
 
 [English](README.md) | 中文
 

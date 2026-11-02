@@ -3,7 +3,7 @@ description: "Portable native plugin planning, scoped services and owned asynchr
 kind: "package-library"
 ---
 
-# @deepseek-ai/dsh-native-runtime
+# @redspark/rsh-native-runtime
 
 English | [中文](README.zh.md)
 
@@ -30,7 +30,7 @@ This library resolves explicit plugin selections and activates them without Cord
 
 `resolveInstallation(requests, target)` checks versions, targets, provider conflicts, missing dependencies and cycles before resolving configuration. A plugin's `resolve(config)` validates configuration without acquiring resources and returns its activation function. A consumer reads only declared services, selecting the nearest provider in its scope or ancestry; separate roots isolate realms. Providers become visible only after activation succeeds and all declared services exist.
 
-Service Definition packages extend `NativeServices`, and event Definition packages extend `NativeEvents`, from the `@deepseek-ai/dsh-native-runtime` package root. The Host and event bus use those same merged declarations. The root also declares `pluginInventory`; launchers provide its read-only installation inventory.
+Service Definition packages extend `NativeServices`, and event Definition packages extend `NativeEvents`, from the `@redspark/rsh-native-runtime` package root. The Host and event bus use those same merged declarations. The root also declares `pluginInventory`; launchers provide its read-only installation inventory.
 
 <a id="package-provenance"></a>
 ### Package provenance

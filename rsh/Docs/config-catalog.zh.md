@@ -13,7 +13,7 @@
 
 <a id="deepseek-aidsh-acp"></a>
 
-## `@deepseek-ai/dsh-acp`
+## `@redspark/rsh-acp`
 
 需要：`agents` · `llm` · `sessionPersistence` · `sessions`
 
@@ -37,7 +37,7 @@ export interface AcpConfig {
 
 <a id="deepseek-aidsh-agent-default-model"></a>
 
-## `@deepseek-ai/dsh-agent-default-model`
+## `@redspark/rsh-agent-default-model`
 
 ```ts config-catalog
 /** Composition entry for the default model selection. */
@@ -53,14 +53,14 @@ export interface Config {
 
 <a id="deepseek-aidsh-agent-instructions"></a>
 
-## `@deepseek-ai/dsh-agent-instructions`
+## `@redspark/rsh-agent-instructions`
 
 需要：`sessionProjections`
 
 ```ts config-catalog
 /** User-facing workspace instruction loader configuration. */
 export interface Config {
-  /** Harness home containing the fixed user-global `AGENTS.md`; defaults to `$DSH_HOME` or `~/.dsh`. */
+  /** Harness home containing the fixed user-global `AGENTS.md`; defaults to `$RSH_HOME` or `~/.dsh`. */
   dshHome?: string
   /** Directory entries that identify the project root while walking upward from the session cwd. */
   projectRootMarkers?: string[]
@@ -85,7 +85,7 @@ export interface Config {
 
 <a id="deepseek-aidsh-agent-loop"></a>
 
-## `@deepseek-ai/dsh-agent-loop`
+## `@redspark/rsh-agent-loop`
 
 需要：`agents` · `sessions` · `llm` · `tools` · `systemPrompt` · `sessionProjections`
 
@@ -117,7 +117,7 @@ export interface Config {
 
 <a id="deepseek-aidsh-agent-presets"></a>
 
-## `@deepseek-ai/dsh-agent-presets`
+## `@redspark/rsh-agent-presets`
 
 需要：`loader` · `sessionProjections`
 
@@ -163,7 +163,7 @@ export type PresetTrust = 'system' | 'user'
 
 <a id="deepseek-aidsh-agent-tool-presentation"></a>
 
-## `@deepseek-ai/dsh-agent-tool-presentation`
+## `@redspark/rsh-agent-tool-presentation`
 
 需要：`tools`
 
@@ -187,7 +187,7 @@ export interface Config {
 
 <a id="deepseek-aidsh-api-gateway"></a>
 
-## `@deepseek-ai/dsh-api-gateway`
+## `@redspark/rsh-api-gateway`
 
 需要：`typert`
 
@@ -203,7 +203,7 @@ export interface Config {
 
 <a id="deepseek-aidsh-api-session-controller"></a>
 
-## `@deepseek-ai/dsh-api-session-controller`
+## `@redspark/rsh-api-session-controller`
 
 需要：`agentDefaultModel` · `agents` · `attachments` · `fileUploads` · `llm` · `sessions` · `sessionProjections` · `sessionQuery` · `typert` · `workspaceRegistry`
 
@@ -219,7 +219,7 @@ export interface Config {
 
 <a id="deepseek-aidsh-api-settings-controller"></a>
 
-## `@deepseek-ai/dsh-api-settings-controller`
+## `@redspark/rsh-api-settings-controller`
 
 ```ts config-catalog
 /** Native document-opening policy. */
@@ -235,7 +235,7 @@ export interface Config {
 
 <a id="deepseek-aidsh-api-workspace-files"></a>
 
-## `@deepseek-ai/dsh-api-workspace-files`
+## `@redspark/rsh-api-workspace-files`
 
 Requires: `fs` · `sandboxPolicy` · `sessions` · `typert`
 
@@ -263,7 +263,7 @@ export interface Config {
 
 <a id="deepseek-aidsh-archify"></a>
 
-## `@deepseek-ai/dsh-archify`
+## `@redspark/rsh-archify`
 
 需要：`agents` · `skills` · `shellEnv`
 
@@ -287,12 +287,12 @@ export interface Config {
 
 <a id="deepseek-aidsh-attachment-local"></a>
 
-## `@deepseek-ai/dsh-attachment-local`
+## `@redspark/rsh-attachment-local`
 
 ```ts config-catalog
 /** Local attachment backend configuration. */
 export interface Config {
-  /** Explicit harness home; omitted follows `DSH_HOME`, then `~/.dsh`. */
+  /** Explicit harness home; omitted follows `RSH_HOME`, then `~/.dsh`. */
   dshHome?: string
   /** Maximum encoded bytes accepted for one submitted image. */
   maxImageBytes?: number
@@ -319,7 +319,7 @@ export interface Config {
 
 <a id="deepseek-aidsh-bash-local"></a>
 
-## `@deepseek-ai/dsh-bash-local`
+## `@redspark/rsh-bash-local`
 
 需要：`subprocess`
 
@@ -337,7 +337,7 @@ export interface Config extends LocalConfig {
 
 <a id="deepseek-aidsh-bash-sandbox"></a>
 
-## `@deepseek-ai/dsh-bash-sandbox`
+## `@redspark/rsh-bash-sandbox`
 
 需要：`subprocess` · `sandbox` · `sandboxPolicy`
 
@@ -352,7 +352,7 @@ export type Config = LocalConfig
 
 <a id="deepseek-aidsh-client-connection"></a>
 
-## `@deepseek-ai/dsh-client-connection`
+## `@redspark/rsh-client-connection`
 
 需要：`credentials`
 
@@ -398,7 +398,7 @@ export interface ConnectionRecoveryConfig {
 
 <a id="deepseek-aidsh-client-hmr"></a>
 
-## `@deepseek-ai/dsh-client-hmr`
+## `@redspark/rsh-client-hmr`
 
 需要：`clientModules` · `webServer`
 
@@ -414,7 +414,7 @@ export interface Config {
 
 <a id="deepseek-aidsh-code-runtime-worker-thread"></a>
 
-## `@deepseek-ai/dsh-code-runtime-worker-thread`
+## `@redspark/rsh-code-runtime-worker-thread`
 
 ```ts config-catalog
 /** Plugin config: every execution cap, changeable from `cordis.yml` (no hardcoded tunables). */
@@ -451,7 +451,7 @@ export interface Config {
 
 <a id="deepseek-aidsh-compaction-basic"></a>
 
-## `@deepseek-ai/dsh-compaction-basic`
+## `@redspark/rsh-compaction-basic`
 
 需要：`llm` · `tokenMeter` · `sessions`
 
@@ -497,7 +497,7 @@ export interface ModelCompactPolicyConfig extends CompactionPolicyConfig {
 
 <a id="deepseek-aidsh-compaction-tool-result-pruner"></a>
 
-## `@deepseek-ai/dsh-compaction-tool-result-pruner`
+## `@redspark/rsh-compaction-tool-result-pruner`
 
 需要：`tokenMeter`
 
@@ -517,7 +517,7 @@ export interface ToolResultPruneConfig {
 
 <a id="deepseek-aidsh-cordis-host-runner"></a>
 
-## `@deepseek-ai/dsh-cordis-host-runner`
+## `@redspark/rsh-cordis-host-runner`
 
 需要：`tools`
 
@@ -533,14 +533,14 @@ export interface Config {
 
 <a id="deepseek-aidsh-credentials-local"></a>
 
-## `@deepseek-ai/dsh-credentials-local`
+## `@redspark/rsh-credentials-local`
 
 ```ts config-catalog
 /** Plugin config: file location and hot-reload behavior. */
 export interface Config {
   /** Credentials document path; defaults to `.credentials.yaml` under the harness home. */
   path?: string
-  /** Harness home used when `path` is omitted; defaults to `$DSH_HOME` or `~/.dsh`. */
+  /** Harness home used when `path` is omitted; defaults to `$RSH_HOME` or `~/.dsh`. */
   dshHome?: string
   /** Watch the document and hot-publish external edits; defaults to true. */
   watch?: boolean
@@ -553,7 +553,7 @@ export interface Config {
 
 <a id="deepseek-aidsh-e2b"></a>
 
-## `@deepseek-ai/dsh-e2b`
+## `@redspark/rsh-e2b`
 
 ```ts config-catalog
 /** Configuration for the shared E2B sandbox owner. */
@@ -571,7 +571,7 @@ export interface Config {
 
 <a id="deepseek-aidsh-experimental-agent-team"></a>
 
-## `@deepseek-ai/dsh-experimental-agent-team`
+## `@redspark/rsh-experimental-agent-team`
 
 需要：`agents` · `sessions` · `sessionPersistence` · `sessionProjections` · `subagents`
 
@@ -595,7 +595,7 @@ export interface Config {
 
 <a id="deepseek-aidsh-experimental-code-runtime-python"></a>
 
-## `@deepseek-ai/dsh-experimental-code-runtime-python`
+## `@redspark/rsh-experimental-code-runtime-python`
 
 ```ts config-catalog
 /** Plugin config: every cap, changeable from `cordis.yml` (no hardcoded tunables). */
@@ -662,7 +662,7 @@ export interface Config {
 
 <a id="deepseek-aidsh-experimental-inspector"></a>
 
-## `@deepseek-ai/dsh-experimental-inspector`
+## `@redspark/rsh-experimental-inspector`
 
 需要：`webServer`
 
@@ -730,7 +730,7 @@ export interface InspectorOptions {
 
 <a id="deepseek-aidsh-experimental-tool-agent-team"></a>
 
-## `@deepseek-ai/dsh-experimental-tool-agent-team`
+## `@redspark/rsh-experimental-tool-agent-team`
 
 需要：`agents` · `agentTeams` · `tools` · `systemPrompt`
 
@@ -748,7 +748,7 @@ export interface Config {
 
 <a id="deepseek-aidsh-file-reference-local"></a>
 
-## `@deepseek-ai/dsh-file-reference-local`
+## `@redspark/rsh-file-reference-local`
 
 需要：`agents` · `sessionProjections`
 
@@ -768,7 +768,7 @@ export interface Config {
 
 <a id="deepseek-aidsh-fs-local"></a>
 
-## `@deepseek-ai/dsh-fs-local`
+## `@redspark/rsh-fs-local`
 
 ```ts config-catalog
 /** Configuration for the local filesystem backend. */
@@ -787,7 +787,7 @@ export interface Config {
 
 <a id="deepseek-aidsh-fs-sandbox"></a>
 
-## `@deepseek-ai/dsh-fs-sandbox`
+## `@redspark/rsh-fs-sandbox`
 
 需要：`sandboxPolicy`
 
@@ -807,7 +807,7 @@ export type Config = LocalConfig
 
 <a id="deepseek-aidsh-goal"></a>
 
-## `@deepseek-ai/dsh-goal`
+## `@redspark/rsh-goal`
 
 需要：`agents` · `sessionProjections`
 
@@ -823,7 +823,7 @@ export interface Config {
 
 <a id="deepseek-aidsh-headless"></a>
 
-## `@deepseek-ai/dsh-headless`
+## `@redspark/rsh-headless`
 
 需要：`agentDefaultModel` · `agents` · `sessions`
 
@@ -839,7 +839,7 @@ export interface Config {
 
 <a id="deepseek-aidsh-hooks-claude-code"></a>
 
-## `@deepseek-ai/dsh-hooks-claude-code`
+## `@redspark/rsh-hooks-claude-code`
 
 需要：`shell` · `sessionProjections`
 
@@ -877,7 +877,7 @@ export interface Config {
 
 <a id="deepseek-aidsh-hooks-codex"></a>
 
-## `@deepseek-ai/dsh-hooks-codex`
+## `@redspark/rsh-hooks-codex`
 
 需要：`shell` · `sessionProjections`
 
@@ -904,7 +904,7 @@ export interface Config {
 
 <a id="deepseek-aidsh-host-directory-picker-browse"></a>
 
-## `@deepseek-ai/dsh-host-directory-picker-browse`
+## `@redspark/rsh-host-directory-picker-browse`
 
 ```ts config-catalog
 /** Validated plugin configuration. */
@@ -918,7 +918,7 @@ export interface Config {
 
 <a id="deepseek-aidsh-host-frontend-static"></a>
 
-## `@deepseek-ai/dsh-host-frontend-static`
+## `@redspark/rsh-host-frontend-static`
 
 需要：`webServer` · `connection`
 
@@ -934,7 +934,7 @@ export interface Config {
 
 <a id="deepseek-aidsh-host-open-in-app"></a>
 
-## `@deepseek-ai/dsh-host-open-in-app`
+## `@redspark/rsh-host-open-in-app`
 
 需要：`webServer` · `connection` · `subprocess`
 
@@ -965,7 +965,7 @@ export interface Config {
 
 <a id="deepseek-aidsh-host-webserver"></a>
 
-## `@deepseek-ai/dsh-host-webserver`
+## `@redspark/rsh-host-webserver`
 
 ```ts config-catalog
 type Config = HttpWebServerConfig
@@ -977,7 +977,7 @@ type Config = HttpWebServerConfig
 
 <a id="deepseek-aidsh-invariants"></a>
 
-## `@deepseek-ai/dsh-invariants`
+## `@redspark/rsh-invariants`
 
 ```ts config-catalog
 /** Runtime invariant selection configured on the service plugin. */
@@ -995,7 +995,7 @@ export interface Config {
 
 <a id="deepseek-aidsh-jobs-local"></a>
 
-## `@deepseek-ai/dsh-jobs-local`
+## `@redspark/rsh-jobs-local`
 
 ```ts config-catalog
 /** Configuration for the process-local job registry. */
@@ -1012,7 +1012,7 @@ export interface Config {
 
 <a id="deepseek-aidsh-llm-deepseek"></a>
 
-## `@deepseek-ai/dsh-llm-deepseek`
+## `@redspark/rsh-llm-deepseek`
 
 需要：`llm`
 
@@ -1093,13 +1093,13 @@ export interface DeepSeekCatalogModel {
 }
 ```
 
-依赖：`ModelModality` (`@deepseek-ai/dsh-llm/native`) · `RetryPolicyConfig` (`@deepseek-ai/dsh-llm/native`) · `SystemPromptUpdate` (`@deepseek-ai/dsh-llm/native`)
+依赖：`ModelModality` (`@redspark/rsh-llm/native`) · `RetryPolicyConfig` (`@redspark/rsh-llm/native`) · `SystemPromptUpdate` (`@redspark/rsh-llm/native`)
 
 来源：[`rsh/Modules/Official/llm/llm-deepseek/src/config.ts:74`](../Modules/Official/llm/llm-deepseek/src/config.ts)
 
 <a id="deepseek-aidsh-llm-pi-ai"></a>
 
-## `@deepseek-ai/dsh-llm-pi-ai`
+## `@redspark/rsh-llm-pi-ai`
 
 需要：`llm`
 
@@ -1368,25 +1368,25 @@ export type PiAiThinkingFormat = NonNullable<OpenAICompletionsCompat['thinkingFo
 export type PiAiThinkingTokenBudgetField = NonNullable<OpenAICompletionsCompat['thinkingTokenBudgetField']>
 ```
 
-依赖：`Api` (`@earendil-works/pi-ai`) · `CacheRetention` (`@earendil-works/pi-ai`) · `Model` (`@earendil-works/pi-ai`) · `ModelThinkingLevel` (`@earendil-works/pi-ai`) · `OpenAICompletionsCompat` (`@earendil-works/pi-ai`) · `RetryPolicyConfig` (`@deepseek-ai/dsh-llm/native`) · `ThinkingBudgets` (`@earendil-works/pi-ai`) · `Transport` (`@earendil-works/pi-ai`)
+依赖：`Api` (`@earendil-works/pi-ai`) · `CacheRetention` (`@earendil-works/pi-ai`) · `Model` (`@earendil-works/pi-ai`) · `ModelThinkingLevel` (`@earendil-works/pi-ai`) · `OpenAICompletionsCompat` (`@earendil-works/pi-ai`) · `RetryPolicyConfig` (`@redspark/rsh-llm/native`) · `ThinkingBudgets` (`@earendil-works/pi-ai`) · `Transport` (`@earendil-works/pi-ai`)
 
 来源：[`rsh/Modules/Official/llm/llm-pi-ai/src/config.ts:224`](../Modules/Official/llm/llm-pi-ai/src/config.ts)
 
 <a id="deepseek-aidsh-llm-replay"></a>
 
-## `@deepseek-ai/dsh-llm-replay`
+## `@redspark/rsh-llm-replay`
 
 需要：`llm`
 
 ```ts config-catalog
-/** Plugin config: the {@link ReplayConfig} inputs, each defaulting to its `DSH_SNAPSHOT_*` env var in `apply`. */
+/** Plugin config: the {@link ReplayConfig} inputs, each defaulting to its `RSH_SNAPSHOT_*` env var in `apply`. */
 export interface Config {
-  /** Override the fixture path; defaults to `$DSH_SNAPSHOT_FILE`. */
+  /** Override the fixture path; defaults to `$RSH_SNAPSHOT_FILE`. */
   file?: string
-  /** Override the sidecar path; defaults to `$DSH_SNAPSHOT_OVERRIDE`. */
+  /** Override the sidecar path; defaults to `$RSH_SNAPSHOT_OVERRIDE`. */
   overrideFile?: string
   /**
-   * Override the child-log paths; defaults to `$DSH_SNAPSHOT_CHILD_FILES` (a
+   * Override the child-log paths; defaults to `$RSH_SNAPSHOT_CHILD_FILES` (a
    * path-separator-delimited list). Each is a recorded subagent session log for
    * a nested-agent scenario; absent/empty for a single-session scenario.
    */
@@ -1453,7 +1453,7 @@ export interface ReplayModelConfig {
 
 <a id="deepseek-aidsh-llm-retry"></a>
 
-## `@deepseek-ai/dsh-llm-retry`
+## `@redspark/rsh-llm-retry`
 
 需要：`agents` · `sessionProjections`
 
@@ -1466,7 +1466,7 @@ export type Config = Readonly<Record<string, never>>
 
 <a id="deepseek-aidsh-lsp-stdio"></a>
 
-## `@deepseek-ai/dsh-lsp-stdio`
+## `@redspark/rsh-lsp-stdio`
 
 需要：`fs` · `lsp` · `subprocess`
 
@@ -1508,7 +1508,7 @@ export interface LspLocalServerConfig {
 
 <a id="deepseek-aidsh-mcp-client"></a>
 
-## `@deepseek-ai/dsh-mcp-client`
+## `@redspark/rsh-mcp-client`
 
 需要：`tools`
 
@@ -1584,7 +1584,7 @@ export interface ReconnectConfig {
 
 <a id="deepseek-aidsh-message-feedback"></a>
 
-## `@deepseek-ai/dsh-message-feedback`
+## `@redspark/rsh-message-feedback`
 
 需要：`sessionPersistence` · `sessions`
 
@@ -1600,7 +1600,7 @@ export interface Config {
 
 <a id="deepseek-aidsh-permission-presets"></a>
 
-## `@deepseek-ai/dsh-permission-presets`
+## `@redspark/rsh-permission-presets`
 
 需要：`shell` · `approval` · `sessions` · `sessionProjections`
 
@@ -1639,7 +1639,7 @@ export interface PresetSpec {
 
 <a id="deepseek-aidsh-persona"></a>
 
-## `@deepseek-ai/dsh-persona`
+## `@redspark/rsh-persona`
 
 需要：`systemPrompt`
 
@@ -1668,7 +1668,7 @@ export interface Config {
 
 <a id="deepseek-aidsh-plan-mode"></a>
 
-## `@deepseek-ai/dsh-plan-mode`
+## `@redspark/rsh-plan-mode`
 
 需要：`tools` · `systemPrompt` · `sessionProjections`
 
@@ -1684,7 +1684,7 @@ export interface PlanModeConfig {
 
 <a id="deepseek-aidsh-plugin-package-inventory-deepseek"></a>
 
-## `@deepseek-ai/dsh-plugin-package-inventory-deepseek`
+## `@redspark/rsh-plugin-package-inventory-deepseek`
 
 需要：`agents` · `deepseekLlmApiExtensions` · `loader`
 
@@ -1700,7 +1700,7 @@ export interface Config {
 
 <a id="deepseek-aidsh-pwsh-local"></a>
 
-## `@deepseek-ai/dsh-pwsh-local`
+## `@redspark/rsh-pwsh-local`
 
 需要：`subprocess`
 
@@ -1733,7 +1733,7 @@ export interface Config {
 
 <a id="deepseek-aidsh-pwsh-sandbox"></a>
 
-## `@deepseek-ai/dsh-pwsh-sandbox`
+## `@redspark/rsh-pwsh-sandbox`
 
 需要：`subprocess` · `sandbox` · `sandboxPolicy`
 
@@ -1741,7 +1741,7 @@ export interface Config {
 /**
  * Plugin config: the local executor's knobs, verbatim. The sandbox policy —
  * the default mode and fallback `workspace-write` root — is NOT here: it lives
- * on `ctx.sandboxPolicy` (`@deepseek-ai/dsh-sandbox-policy`), which resolves
+ * on `ctx.sandboxPolicy` (`@redspark/rsh-sandbox-policy`), which resolves
  * each calling session's mode and cwd for every enforcing capability. The
  * runner choice is likewise the `ctx.sandbox` provider's config, not this
  * executor's.
@@ -1755,7 +1755,7 @@ export type Config = LocalConfig
 
 <a id="deepseek-aidsh-repeat-tool-reminder"></a>
 
-## `@deepseek-ai/dsh-repeat-tool-reminder`
+## `@redspark/rsh-repeat-tool-reminder`
 
 ```ts config-catalog
 /**
@@ -1789,7 +1789,7 @@ export interface Config {
 
 <a id="deepseek-aidsh-sandbox-local"></a>
 
-## `@deepseek-ai/dsh-sandbox-local`
+## `@redspark/rsh-sandbox-local`
 
 ```ts config-catalog
 /** Local runner configuration. Omitted fields use the shipped selection defaults. */
@@ -1821,7 +1821,7 @@ export interface Config {
 
 <a id="deepseek-aidsh-sandbox-policy"></a>
 
-## `@deepseek-ai/dsh-sandbox-policy`
+## `@redspark/rsh-sandbox-policy`
 
 需要：`sessionProjections`
 
@@ -1850,7 +1850,7 @@ export interface Config {
 
 <a id="deepseek-aidsh-sdk-app"></a>
 
-## `@deepseek-ai/dsh-sdk-app`
+## `@redspark/rsh-sdk-app`
 
 需要：`cmdlineArgs`
 
@@ -1866,7 +1866,7 @@ export interface Config {
 
 <a id="deepseek-aidsh-sdk-jsonrpc-server"></a>
 
-## `@deepseek-ai/dsh-sdk-jsonrpc-server`
+## `@redspark/rsh-sdk-jsonrpc-server`
 
 需要：`agents`
 
@@ -1890,7 +1890,7 @@ export interface JsonRpcConfig {
 
 <a id="deepseek-aidsh-session-log-deepseek"></a>
 
-## `@deepseek-ai/dsh-session-log-deepseek`
+## `@redspark/rsh-session-log-deepseek`
 
 需要：`deepseekLlmApiExtensions` · `sessions`
 
@@ -1906,7 +1906,7 @@ export interface Config {
 
 <a id="deepseek-aidsh-session-log-export"></a>
 
-## `@deepseek-ai/dsh-session-log-export`
+## `@redspark/rsh-session-log-export`
 
 需要：`commands` · `connection`
 
@@ -1925,7 +1925,7 @@ export type SessionLogCompressionLevel = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9
 
 <a id="deepseek-aidsh-session-persistence-jsonl"></a>
 
-## `@deepseek-ai/dsh-session-persistence-jsonl`
+## `@redspark/rsh-session-persistence-jsonl`
 
 ```ts config-catalog
 /** Plugin config for the JSONL backend's root and physical encoding. */
@@ -1950,7 +1950,7 @@ export type JsonlCompression = 'zstd' | 'none'
 
 <a id="deepseek-aidsh-session-projection-cache"></a>
 
-## `@deepseek-ai/dsh-session-projection-cache`
+## `@redspark/rsh-session-projection-cache`
 
 需要：`storageDomain` · `sessionProjections` · `sessions`
 
@@ -1974,7 +1974,7 @@ export interface Config {
 
 <a id="deepseek-aidsh-session-query-sqlite"></a>
 
-## `@deepseek-ai/dsh-session-query-sqlite`
+## `@redspark/rsh-session-query-sqlite`
 
 需要：`sessions`
 
@@ -2019,13 +2019,13 @@ export type OpenAt = 'startup' | 'first-search' | 'never'
 export type JournalMode = 'wal' | 'delete' | 'truncate' | 'persist'
 ```
 
-依赖：SessionQueryConfig（`@deepseek-ai/dsh-session-query/native`）
+依赖：SessionQueryConfig（`@redspark/rsh-session-query/native`）
 
 来源：[`rsh/Engine/session-query/session-query-sqlite/src/index.ts:64`](../Engine/session-query/session-query-sqlite/src/index.ts)
 
 <a id="deepseek-aidsh-session-reference"></a>
 
-## `@deepseek-ai/dsh-session-reference`
+## `@redspark/rsh-session-reference`
 
 需要：`sessionQuery`
 
@@ -2047,7 +2047,7 @@ export interface Config {
 
 <a id="deepseek-aidsh-session-telemetry-otel"></a>
 
-## `@deepseek-ai/dsh-session-telemetry-otel`
+## `@redspark/rsh-session-telemetry-otel`
 
 需要：`sessions`
 
@@ -2092,7 +2092,7 @@ export enum SessionTelemetryMode {
 
 <a id="deepseek-aidsh-session-title"></a>
 
-## `@deepseek-ai/dsh-session-title`
+## `@redspark/rsh-session-title`
 
 需要：`sessions`
 
@@ -2115,7 +2115,7 @@ export interface SessionTitleConfig {
 
 <a id="deepseek-aidsh-session-title-all-prompts-llm"></a>
 
-## `@deepseek-ai/dsh-session-title-all-prompts-llm`
+## `@redspark/rsh-session-title-all-prompts-llm`
 
 需要：`sessionTitle` · `llm` · `sessions`
 
@@ -2130,7 +2130,7 @@ export type Config = SessionTitleLlmConfig
 
 <a id="deepseek-aidsh-session-title-first-prompt-llm"></a>
 
-## `@deepseek-ai/dsh-session-title-first-prompt-llm`
+## `@redspark/rsh-session-title-first-prompt-llm`
 
 需要：`sessionTitle` · `llm` · `sessions`
 
@@ -2145,14 +2145,14 @@ export type Config = SessionTitleLlmConfig
 
 <a id="deepseek-aidsh-settings-file"></a>
 
-## `@deepseek-ai/dsh-settings-file`
+## `@redspark/rsh-settings-file`
 
 ```ts config-catalog
 /** Plugin config: file location and hot-reload behavior. */
 export interface Config {
   /** Settings document path; defaults to `settings.yaml` under the harness home. */
   path?: string
-  /** Harness home used when `path` is omitted; defaults to `$DSH_HOME` or `~/.dsh`. */
+  /** Harness home used when `path` is omitted; defaults to `$RSH_HOME` or `~/.dsh`. */
   dshHome?: string
   /** Watch the document and hot-publish external edits; defaults to true. */
   watch?: boolean
@@ -2165,12 +2165,12 @@ export interface Config {
 
 <a id="deepseek-aidsh-shell-env"></a>
 
-## `@deepseek-ai/dsh-shell-env`
+## `@redspark/rsh-shell-env`
 
 ```ts config-catalog
 /** Plugin config (all optional — the built-in facts resolve without defaults). */
 export interface Config {
-  /** RedSpark Harness home directory exposed as `DSH_HOME`; defaults to `$DSH_HOME` or `~/.dsh`. */
+  /** RedSpark Harness home directory exposed as `RSH_HOME`; defaults to `$RSH_HOME` or `~/.dsh`. */
   dshHome?: string
 }
 ```
@@ -2179,7 +2179,7 @@ export interface Config {
 
 <a id="deepseek-aidsh-skill"></a>
 
-## `@deepseek-ai/dsh-skill`
+## `@redspark/rsh-skill`
 
 ```ts config-catalog
 /** Skill registry configuration. */
@@ -2193,7 +2193,7 @@ export interface Config {
 
 <a id="deepseek-aidsh-skill-filesystem"></a>
 
-## `@deepseek-ai/dsh-skill-filesystem`
+## `@redspark/rsh-skill-filesystem`
 
 需要：`skills`
 
@@ -2204,13 +2204,13 @@ export interface Config extends SkillWatchConfigInput {
   providerName?: string
   /** Whether project and user roots are included around custom roots. */
   includeDefaultRoots?: boolean
-  /** RedSpark Harness config root. Defaults to `$DSH_HOME` or `~/.dsh`. */
+  /** RedSpark Harness config root. Defaults to `$RSH_HOME` or `~/.dsh`. */
   dshHome?: string
-  /** Shared agent config root. Defaults to `$DSH_AGENTS_HOME` or `~/.agents`. */
+  /** Shared agent config root. Defaults to `$RSH_AGENTS_HOME` or `~/.agents`. */
   agentsHome?: string
   /** Additional skill roots scanned after project roots and before user roots. */
   customSkillDirs?: string[]
-  /** Bundled skill root; defaults to `$DSH_BUNDLED_SKILL_DIR` when default roots are included, otherwise mounts none. */
+  /** Bundled skill root; defaults to `$RSH_BUNDLED_SKILL_DIR` when default roots are included, otherwise mounts none. */
   bundledSkillDir?: string
 }
 
@@ -2235,7 +2235,7 @@ export interface SkillWatchConfigInput {
 
 <a id="deepseek-aidsh-spill-local"></a>
 
-## `@deepseek-ai/dsh-spill-local`
+## `@redspark/rsh-spill-local`
 
 ```ts config-catalog
 /** Plugin config (all optional — `static Config` supplies the defaults). */
@@ -2264,7 +2264,7 @@ export interface Config {
 
 <a id="deepseek-aidsh-spill-policy"></a>
 
-## `@deepseek-ai/dsh-spill-policy`
+## `@redspark/rsh-spill-policy`
 
 需要：`tools` · `sessionProjections`
 
@@ -2284,7 +2284,7 @@ export interface Config {
 
 <a id="deepseek-aidsh-storage-domain"></a>
 
-## `@deepseek-ai/dsh-storage-domain`
+## `@redspark/rsh-storage-domain`
 
 需要：`storage`
 
@@ -2307,7 +2307,7 @@ export interface Config {
 
 <a id="deepseek-aidsh-storage-json"></a>
 
-## `@deepseek-ai/dsh-storage-json`
+## `@redspark/rsh-storage-json`
 
 需要：`storage`
 
@@ -2328,7 +2328,7 @@ export interface Config {
 
 <a id="deepseek-aidsh-storage-sqlite"></a>
 
-## `@deepseek-ai/dsh-storage-sqlite`
+## `@redspark/rsh-storage-sqlite`
 
 需要：`storage`
 
@@ -2368,7 +2368,7 @@ export type JournalMode = 'wal' | 'delete' | 'truncate' | 'persist'
 
 <a id="deepseek-aidsh-subagent-acp"></a>
 
-## `@deepseek-ai/dsh-subagent-acp`
+## `@redspark/rsh-subagent-acp`
 
 需要：`subagents` · `subprocess`
 
@@ -2421,7 +2421,7 @@ export type PermissionPolicy = 'allow' | 'reject'
 
 <a id="deepseek-aidsh-subagent-claude-code"></a>
 
-## `@deepseek-ai/dsh-subagent-claude-code`
+## `@redspark/rsh-subagent-claude-code`
 
 需要：`subagents` · `subprocess`
 
@@ -2456,7 +2456,7 @@ export type ClaudeCodePermissionMode = typeof CLAUDE_CODE_PERMISSION_MODES[numbe
 
 <a id="deepseek-aidsh-subagent-codex"></a>
 
-## `@deepseek-ai/dsh-subagent-codex`
+## `@redspark/rsh-subagent-codex`
 
 需要：`subagents` · `subprocess`
 
@@ -2485,7 +2485,7 @@ export interface Config {
 
 <a id="deepseek-aidsh-subagent-dsh-sdk"></a>
 
-## `@deepseek-ai/dsh-subagent-dsh-sdk`
+## `@redspark/rsh-subagent-dsh-sdk`
 
 需要：`subagents`
 
@@ -2541,7 +2541,7 @@ export interface Config {
 
 <a id="deepseek-aidsh-subagent-fork-in-process"></a>
 
-## `@deepseek-ai/dsh-subagent-fork-in-process`
+## `@redspark/rsh-subagent-fork-in-process`
 
 需要：`subagents`
 
@@ -2557,7 +2557,7 @@ export interface Config {
 
 <a id="deepseek-aidsh-subagent-spawn-in-process"></a>
 
-## `@deepseek-ai/dsh-subagent-spawn-in-process`
+## `@redspark/rsh-subagent-spawn-in-process`
 
 需要：`subagents`
 
@@ -2573,7 +2573,7 @@ export interface Config {
 
 <a id="deepseek-aidsh-subprocess-e2b"></a>
 
-## `@deepseek-ai/dsh-subprocess-e2b`
+## `@redspark/rsh-subprocess-e2b`
 
 需要：`e2b`
 
@@ -2589,7 +2589,7 @@ export interface Config {
 
 <a id="deepseek-aidsh-system-prompt"></a>
 
-## `@deepseek-ai/dsh-system-prompt`
+## `@redspark/rsh-system-prompt`
 
 ```ts config-catalog
 /** Plugin config: the deployment-authored fragment of the system prompt (see {@link Config.personaPrefix} for its contract). */
@@ -2621,7 +2621,7 @@ export interface Config {
 
 <a id="deepseek-aidsh-task-scheduler"></a>
 
-## `@deepseek-ai/dsh-task-scheduler`
+## `@redspark/rsh-task-scheduler`
 
 依赖： `goals` · `agents` · `sessions` · `sessionPersistence` · `tools` · `agentPresets` · `permissionPresets` · `sessionTitle` · `workspaceRegistry`
 
@@ -2651,7 +2651,7 @@ export interface SchedulerOptions {
 
 <a id="deepseek-aidsh-terminal-bash"></a>
 
-## `@deepseek-ai/dsh-terminal-bash`
+## `@redspark/rsh-terminal-bash`
 
 需要：`terminals` · `sandboxPolicy` · `sessionProjections` · `subprocess`
 
@@ -2701,7 +2701,7 @@ export type ShellDialect = 'bash' | 'pwsh'
 
 <a id="deepseek-aidsh-time-context"></a>
 
-## `@deepseek-ai/dsh-time-context`
+## `@redspark/rsh-time-context`
 
 需要：`agents` · `sessionProjections`
 
@@ -2719,7 +2719,7 @@ export interface Config {
 
 <a id="deepseek-aidsh-tmux-context"></a>
 
-## `@deepseek-ai/dsh-tmux-context`
+## `@redspark/rsh-tmux-context`
 
 需要：`agents` · `sessionProjections`
 
@@ -2735,7 +2735,7 @@ export interface Config {
 
 <a id="deepseek-aidsh-token-meter"></a>
 
-## `@deepseek-ai/dsh-token-meter`
+## `@redspark/rsh-token-meter`
 
 需要：`sessionProjections`
 
@@ -2748,7 +2748,7 @@ export type TokenMeterConfig = Record<string, never>
 
 <a id="deepseek-aidsh-tool-bash"></a>
 
-## `@deepseek-ai/dsh-tool-bash`
+## `@redspark/rsh-tool-bash`
 
 需要：`tools` · `shell` · `systemPrompt` · `shellEnv`
 
@@ -2764,7 +2764,7 @@ export interface Config {
 
 <a id="deepseek-aidsh-tool-bash-persistent"></a>
 
-## `@deepseek-ai/dsh-tool-bash-persistent`
+## `@redspark/rsh-tool-bash-persistent`
 
 需要：`tools` · `terminals`
 
@@ -2786,7 +2786,7 @@ export interface Config {
 
 <a id="deepseek-aidsh-tool-fs"></a>
 
-## `@deepseek-ai/dsh-tool-fs`
+## `@redspark/rsh-tool-fs`
 
 需要：`tools` · `fs` · `systemPrompt`
 
@@ -2808,7 +2808,7 @@ export interface Config {
 
 <a id="deepseek-aidsh-tool-fs-search"></a>
 
-## `@deepseek-ai/dsh-tool-fs-search`
+## `@redspark/rsh-tool-fs-search`
 
 需要：`tools` · `systemPrompt` · `subprocess`
 
@@ -2833,7 +2833,7 @@ export interface Config {
   stderrMaxBytes?: number
   /**
    * Cooperative tool-call timeout budget (ms) on both tools, enforced by
-   * `@deepseek-ai/dsh-tool-call-timeout-policy` through `exec.signal`.
+   * `@redspark/rsh-tool-call-timeout-policy` through `exec.signal`.
    */
   timeoutMs?: number
 }
@@ -2843,7 +2843,7 @@ export interface Config {
 
 <a id="deepseek-aidsh-tool-goal"></a>
 
-## `@deepseek-ai/dsh-tool-goal`
+## `@redspark/rsh-tool-goal`
 
 需要：`agents` · `goals` · `tools` · `systemPrompt` · `sessionProjections`
 
@@ -2859,7 +2859,7 @@ export interface Config {
 
 <a id="deepseek-aidsh-tool-jobs"></a>
 
-## `@deepseek-ai/dsh-tool-jobs`
+## `@redspark/rsh-tool-jobs`
 
 需要：`tools` · `jobs` · `systemPrompt`
 
@@ -2893,7 +2893,7 @@ export type CompletionDelivery = 'quiet' | 'wakeup'
 
 <a id="deepseek-aidsh-tool-lsp"></a>
 
-## `@deepseek-ai/dsh-tool-lsp`
+## `@redspark/rsh-tool-lsp`
 
 需要：`tools` · `lsp` · `systemPrompt`
 
@@ -2913,7 +2913,7 @@ export interface Config {
 
 <a id="deepseek-aidsh-tool-present"></a>
 
-## `@deepseek-ai/dsh-tool-present`
+## `@redspark/rsh-tool-present`
 
 依赖： `tools` · `fs` · `sessionProjections`
 
@@ -2929,7 +2929,7 @@ export interface Config {
 
 <a id="deepseek-aidsh-tool-pwsh"></a>
 
-## `@deepseek-ai/dsh-tool-pwsh`
+## `@redspark/rsh-tool-pwsh`
 
 需要：`tools` · `shell` · `systemPrompt` · `shellEnv`
 
@@ -2945,7 +2945,7 @@ export interface Config {
 
 <a id="deepseek-aidsh-tool-pwsh-persistent"></a>
 
-## `@deepseek-ai/dsh-tool-pwsh-persistent`
+## `@redspark/rsh-tool-pwsh-persistent`
 
 需要：`tools` · `terminals`
 
@@ -2967,7 +2967,7 @@ export interface Config {
 
 <a id="deepseek-aidsh-tool-ralph"></a>
 
-## `@deepseek-ai/dsh-tool-ralph`
+## `@redspark/rsh-tool-ralph`
 
 需要：`tools` · `workflowEngine` · `subagents` · `systemPrompt`
 
@@ -2989,7 +2989,7 @@ export interface Config {
 
 <a id="deepseek-aidsh-tool-session-query"></a>
 
-## `@deepseek-ai/dsh-tool-session-query`
+## `@redspark/rsh-tool-session-query`
 
 需要：`tools` · `systemPrompt` · `sessionQuery` · `sessionProjections`
 
@@ -3010,7 +3010,7 @@ export interface SessionQueryToolConfig {
 
 <a id="deepseek-aidsh-tool-skill"></a>
 
-## `@deepseek-ai/dsh-tool-skill`
+## `@redspark/rsh-tool-skill`
 
 需要：`agents` · `tools` · `skills`
 
@@ -3026,7 +3026,7 @@ export interface Config {
 
 <a id="deepseek-aidsh-tool-str-replace-editor"></a>
 
-## `@deepseek-ai/dsh-tool-str-replace-editor`
+## `@redspark/rsh-tool-str-replace-editor`
 
 需要：`tools` · `fs`
 
@@ -3044,7 +3044,7 @@ export interface Config {
 
 <a id="deepseek-aidsh-tool-subagent"></a>
 
-## `@deepseek-ai/dsh-tool-subagent`
+## `@redspark/rsh-tool-subagent`
 
 需要：`tools` · `subagents` · `systemPrompt` · `sessionProjections`
 
@@ -3114,7 +3114,7 @@ export interface Config {
 
 <a id="deepseek-aidsh-tool-terminal"></a>
 
-## `@deepseek-ai/dsh-tool-terminal`
+## `@redspark/rsh-tool-terminal`
 
 需要：`terminals` · `tools` · `systemPrompt`
 
@@ -3132,7 +3132,7 @@ export interface Config {
 
 <a id="deepseek-aidsh-tool-todo"></a>
 
-## `@deepseek-ai/dsh-tool-todo`
+## `@redspark/rsh-tool-todo`
 
 需要：`tools`
 
@@ -3154,7 +3154,7 @@ export interface Config {
 
 <a id="deepseek-aidsh-tool-web"></a>
 
-## `@deepseek-ai/dsh-tool-web`
+## `@redspark/rsh-tool-web`
 
 需要：`tools` · `web` · `systemPrompt`
 
@@ -3182,7 +3182,7 @@ export interface Config {
 
 <a id="deepseek-aidsh-tool-workflow"></a>
 
-## `@deepseek-ai/dsh-tool-workflow`
+## `@redspark/rsh-tool-workflow`
 
 需要：`tools` · `workflowEngine` · `systemPrompt`
 
@@ -3200,7 +3200,7 @@ export interface Config {
 
 <a id="deepseek-aidsh-tools"></a>
 
-## `@deepseek-ai/dsh-tools`
+## `@redspark/rsh-tools`
 
 需要：`systemPrompt`
 
@@ -3236,7 +3236,7 @@ export type ToolPresentationMode = 'native' | 'ptc' | 'both'
 
 <a id="deepseek-aidsh-typert-loader"></a>
 
-## `@deepseek-ai/dsh-typert-loader`
+## `@redspark/rsh-typert-loader`
 
 需要：`typert` · `loader`
 
@@ -3252,7 +3252,7 @@ export interface Config {
 
 <a id="deepseek-aidsh-user-approval"></a>
 
-## `@deepseek-ai/dsh-user-approval`
+## `@redspark/rsh-user-approval`
 
 ```ts config-catalog
 /** Plugin config. All optional — `static Config` supplies the defaults. */
@@ -3273,7 +3273,7 @@ export interface Config {
 
 <a id="deepseek-aidsh-web"></a>
 
-## `@deepseek-ai/dsh-web`
+## `@redspark/rsh-web`
 
 ```ts config-catalog
 /**
@@ -3294,7 +3294,7 @@ export interface WebRuntimeConfig {
 
 <a id="deepseek-aidsh-web-app"></a>
 
-## `@deepseek-ai/dsh-web-app`
+## `@redspark/rsh-web-app`
 
 需要：`webServer`
 
@@ -3307,7 +3307,7 @@ export interface Config {
   printUrl: boolean
   /**
    * Register the model-visible surface context (the `app:web-surface` prompt
-   * section and the `DSH_WEB_URL` bash variable). A one-shot non-interactive
+   * section and the `RSH_WEB_URL` bash variable). A one-shot non-interactive
    * layer can turn it off when its user is not in the GUI, so the
    * orientation text would be false.
    */
@@ -3321,7 +3321,7 @@ export interface Config {
 
 <a id="deepseek-aidsh-web-fetch-http"></a>
 
-## `@deepseek-ai/dsh-web-fetch-http`
+## `@redspark/rsh-web-fetch-http`
 
 需要：`web`
 
@@ -3345,7 +3345,7 @@ export interface Config {
 
 <a id="deepseek-aidsh-web-search-deepseek"></a>
 
-## `@deepseek-ai/dsh-web-search-deepseek`
+## `@redspark/rsh-web-search-deepseek`
 
 需要：`web`
 
@@ -3373,7 +3373,7 @@ export interface Config {
 
 <a id="deepseek-aidsh-web-search-exa"></a>
 
-## `@deepseek-ai/dsh-web-search-exa`
+## `@redspark/rsh-web-search-exa`
 
 需要：`web`
 
@@ -3397,7 +3397,7 @@ export interface Config {
 
 <a id="deepseek-aidsh-web-search-perplexity"></a>
 
-## `@deepseek-ai/dsh-web-search-perplexity`
+## `@redspark/rsh-web-search-perplexity`
 
 需要：`web`
 
@@ -3421,7 +3421,7 @@ export interface Config {
 
 <a id="deepseek-aidsh-webhook-github"></a>
 
-## `@deepseek-ai/dsh-webhook-github`
+## `@redspark/rsh-webhook-github`
 
 需要：`webServer` · `webhookRuntime` · `credentials`
 
@@ -3443,7 +3443,7 @@ export interface Config {
 
 <a id="deepseek-aidsh-workflow-worker-thread"></a>
 
-## `@deepseek-ai/dsh-workflow-worker-thread`
+## `@redspark/rsh-workflow-worker-thread`
 
 需要：`subagents`
 
@@ -3475,231 +3475,231 @@ export interface Config {
 
 这些插件通过 `cordis.yml` 中不含 `config:` 块的条目加载；它们未声明任何配置接口。
 
-- `@deepseek-ai/dsh-acp-app` — 需要 `cmdlineArgs`（[`rsh/Compatibility/DSH/bundle/acp-app/src/index.ts`](../Compatibility/DSH/bundle/acp-app/src/index.ts)）
-- `@deepseek-ai/dsh-agent`（[`rsh/Engine/core/agent/src/index.ts`](../Engine/core/agent/src/index.ts)）
-- `@deepseek-ai/dsh-api-remotes` — 需要 `typertGateway`（[`rsh/Programs/Web/api/remotes/src/index.ts`](../Programs/Web/api/remotes/src/index.ts)）
-- `@deepseek-ai/dsh-api-workspace-controller` — 需要 `typert` · `workspaceRegistry`（[`rsh/Programs/Web/api/workspace-controller/src/index.ts`](../Programs/Web/api/workspace-controller/src/index.ts)）
-- `@deepseek-ai/dsh-authorization` — 需要 `credentials`（[`rsh/Modules/Official/credentials/authorization/src/index.ts`](../Modules/Official/credentials/authorization/src/index.ts)）
-- `@deepseek-ai/dsh-client-file-upload` — 需要 `agents` · `attachments` · `commands` · `connection`（[`rsh/Programs/Web/client/file-upload/src/index.ts`](../Programs/Web/client/file-upload/src/index.ts)）
-- `@deepseek-ai/dsh-client-locale`（[`rsh/Programs/Web/client/locale/src/index.ts`](../Programs/Web/client/locale/src/index.ts)）
-- `@deepseek-ai/dsh-client-modules` — 需要 `loader`（[`rsh/Programs/Web/client/modules/src/index.ts`](../Programs/Web/client/modules/src/index.ts)）
-- `@deepseek-ai/dsh-client-resources`（[`rsh/Programs/Web/client/resources/src/index.ts`](../Programs/Web/client/resources/src/index.ts)）
-- `@deepseek-ai/dsh-client-ui-agent-preset`（[`rsh/Programs/Web/client/ui-agent-preset/src/index.ts`](../Programs/Web/client/ui-agent-preset/src/index.ts)）
-- `@deepseek-ai/dsh-client-ui-approval`（[`rsh/Programs/Web/client/ui-approval/src/index.ts`](../Programs/Web/client/ui-approval/src/index.ts)）
-- `@deepseek-ai/dsh-client-ui-attachment`（[`rsh/Programs/Web/client/ui-attachment/src/index.ts`](../Programs/Web/client/ui-attachment/src/index.ts)）
-- `@deepseek-ai/dsh-client-ui-brand-official`（[`rsh/Programs/Web/client/ui-brand-official/src/index.ts`](../Programs/Web/client/ui-brand-official/src/index.ts)）
-- `@deepseek-ai/dsh-client-ui-chat`（[`rsh/Programs/Web/client/ui-chat/src/index.ts`](../Programs/Web/client/ui-chat/src/index.ts)）
-- `@deepseek-ai/dsh-client-ui-commands`（[`rsh/Programs/Web/client/ui-commands/src/index.ts`](../Programs/Web/client/ui-commands/src/index.ts)）
-- `@deepseek-ai/dsh-client-ui-conversation`（[`rsh/Programs/Web/client/ui-conversation/src/index.ts`](../Programs/Web/client/ui-conversation/src/index.ts)）
-- `@deepseek-ai/dsh-client-ui-cordis`（[`rsh/Modules/Official/extensions/ui-cordis/src/index.ts`](../Modules/Official/extensions/ui-cordis/src/index.ts)）
-- `@deepseek-ai/dsh-client-ui-deliverables` — 需要 `systemPrompt` · `connection` · `sessionQuery` · `sessionController` · `workspaceFiles` · `fs` · `sandboxPolicy`（[`rsh/Programs/Web/client/ui-deliverables/src/index.ts`](../Programs/Web/client/ui-deliverables/src/index.ts)）
-- `@deepseek-ai/dsh-client-ui-directory-picker-browse`（[`rsh/Programs/Web/client/ui-directory-picker-browse/src/index.ts`](../Programs/Web/client/ui-directory-picker-browse/src/index.ts)）
-- `@deepseek-ai/dsh-client-ui-directory-picker-native`（[`rsh/Programs/Web/client/ui-directory-picker-native/src/index.ts`](../Programs/Web/client/ui-directory-picker-native/src/index.ts)）
-- `@deepseek-ai/dsh-client-ui-goal`（[`rsh/Programs/Web/client/ui-goal/src/index.ts`](../Programs/Web/client/ui-goal/src/index.ts)）
-- `@deepseek-ai/dsh-client-ui-input-trigger`（[`rsh/Programs/Web/client/ui-input-trigger/src/index.ts`](../Programs/Web/client/ui-input-trigger/src/index.ts)）
-- `@deepseek-ai/dsh-client-ui-jobs`（[`rsh/Programs/Web/client/ui-jobs/src/index.ts`](../Programs/Web/client/ui-jobs/src/index.ts)）
-- `@deepseek-ai/dsh-client-ui-layout`（[`rsh/Programs/Web/client/ui-layout/src/index.ts`](../Programs/Web/client/ui-layout/src/index.ts)）
-- `@deepseek-ai/dsh-client-ui-message-feedback`（[`rsh/Programs/Web/client/ui-message-feedback/src/index.ts`](../Programs/Web/client/ui-message-feedback/src/index.ts)）
-- `@deepseek-ai/dsh-client-ui-model-selection`（[`rsh/Programs/Web/client/ui-model-selection/src/index.ts`](../Programs/Web/client/ui-model-selection/src/index.ts)）
-- `@deepseek-ai/dsh-client-ui-open-in-app`（[`rsh/Programs/Web/client/ui-open-in-app/src/index.ts`](../Programs/Web/client/ui-open-in-app/src/index.ts)）
-- `@deepseek-ai/dsh-client-ui-permission-presets`（[`rsh/Programs/Web/client/ui-permission-presets/src/index.ts`](../Programs/Web/client/ui-permission-presets/src/index.ts)）
-- `@deepseek-ai/dsh-client-ui-pet`（[`rsh/Programs/Web/client/ui-pet/src/index.ts`](../Programs/Web/client/ui-pet/src/index.ts)）
-- `@deepseek-ai/dsh-client-ui-plan`（[`rsh/Programs/Web/client/ui-plan/src/index.ts`](../Programs/Web/client/ui-plan/src/index.ts)）
-- `@deepseek-ai/dsh-client-ui-reference`（[`rsh/Programs/Web/client/ui-reference/src/index.ts`](../Programs/Web/client/ui-reference/src/index.ts)）
-- `@deepseek-ai/dsh-client-ui-renderer`（[`rsh/Programs/Web/client/ui-renderer/src/index.ts`](../Programs/Web/client/ui-renderer/src/index.ts)）
-- `@deepseek-ai/dsh-client-ui-schedule`（[`rsh/Programs/Web/client/ui-schedule/src/index.ts`](../Programs/Web/client/ui-schedule/src/index.ts)）
-- `@deepseek-ai/dsh-client-ui-session`（[`rsh/Programs/Web/client/ui-session/src/index.ts`](../Programs/Web/client/ui-session/src/index.ts)）
-- `@deepseek-ai/dsh-client-ui-settings`（[`rsh/Programs/Web/client/ui-settings/src/index.ts`](../Programs/Web/client/ui-settings/src/index.ts)）
-- `@deepseek-ai/dsh-client-ui-settings-general`（[`rsh/Programs/Web/client/ui-settings-general/src/index.ts`](../Programs/Web/client/ui-settings-general/src/index.ts)）
-- `@deepseek-ai/dsh-client-ui-settings-models`（[`rsh/Programs/Web/client/ui-settings-models/src/index.ts`](../Programs/Web/client/ui-settings-models/src/index.ts)）
-- `@deepseek-ai/dsh-client-ui-settings-plugin-inventory`（[`rsh/Programs/Web/client/ui-settings-plugin-inventory/src/index.ts`](../Programs/Web/client/ui-settings-plugin-inventory/src/index.ts)）
-- `@deepseek-ai/dsh-client-ui-settings-plugins`（[`rsh/Programs/Web/client/ui-settings-plugins/src/index.ts`](../Programs/Web/client/ui-settings-plugins/src/index.ts)）
-- `@deepseek-ai/dsh-client-ui-sidebar`（[`rsh/Programs/Web/client/ui-sidebar/src/index.ts`](../Programs/Web/client/ui-sidebar/src/index.ts)）
-- `@deepseek-ai/dsh-client-ui-sidebar-documentpreview`（[`rsh/Programs/Web/client/ui-sidebar-documentpreview/src/index.ts`](../Programs/Web/client/ui-sidebar-documentpreview/src/index.ts)）
-- `@deepseek-ai/dsh-client-ui-sidebar-files`（[`rsh/Programs/Web/client/ui-sidebar-files/src/index.ts`](../Programs/Web/client/ui-sidebar-files/src/index.ts)）
-- `@deepseek-ai/dsh-client-ui-sidebar-right`（[`rsh/Programs/Web/client/ui-sidebar-right/src/index.ts`](../Programs/Web/client/ui-sidebar-right/src/index.ts)）
-- `@deepseek-ai/dsh-client-ui-skill`（[`rsh/Programs/Web/client/ui-skill/src/index.ts`](../Programs/Web/client/ui-skill/src/index.ts)）
-- `@deepseek-ai/dsh-client-ui-subagent`（[`rsh/Programs/Web/client/ui-subagent/src/index.ts`](../Programs/Web/client/ui-subagent/src/index.ts)）
-- `@deepseek-ai/dsh-client-ui-theme`（[`rsh/Programs/Web/client/ui-theme/src/index.ts`](../Programs/Web/client/ui-theme/src/index.ts)）
-- `@deepseek-ai/dsh-client-ui-tool`（[`rsh/Programs/Web/client/ui-tool/src/index.ts`](../Programs/Web/client/ui-tool/src/index.ts)）
-- `@deepseek-ai/dsh-client-ui-trajectory`（[`rsh/Programs/Web/client/ui-trajectory/src/index.ts`](../Programs/Web/client/ui-trajectory/src/index.ts)）
-- `@deepseek-ai/dsh-client-ui-user-questions`（[`rsh/Programs/Web/client/ui-user-questions/src/index.ts`](../Programs/Web/client/ui-user-questions/src/index.ts)）
-- `@deepseek-ai/dsh-client-ui-workflow-run`（[`rsh/Programs/Web/client/ui-workflow-run/src/index.ts`](../Programs/Web/client/ui-workflow-run/src/index.ts)）
-- `@deepseek-ai/dsh-client-ui-workspace`（[`rsh/Programs/Web/client/ui-workspace/src/index.ts`](../Programs/Web/client/ui-workspace/src/index.ts)）
-- `@deepseek-ai/dsh-command-compact` — 需要 `commands` · `compact`（[`rsh/Engine/compaction/command-compact/src/index.ts`](../Engine/compaction/command-compact/src/index.ts)）
-- `@deepseek-ai/dsh-command-feedback` — 需要 `commands`（[`rsh/Modules/Official/feedback/command-feedback/src/index.ts`](../Modules/Official/feedback/command-feedback/src/index.ts)）
-- `@deepseek-ai/dsh-command-goal` — 需要 `commands` · `goals`（[`rsh/Engine/goal/command-goal/src/index.ts`](../Engine/goal/command-goal/src/index.ts)）
-- `@deepseek-ai/dsh-commands`（[`rsh/Modules/Official/interaction/commands/src/index.ts`](../Modules/Official/interaction/commands/src/index.ts)）
-- `@deepseek-ai/dsh-cordis-client-runner`（[`rsh/Modules/Official/extensions/cordis-client-runner/src/index.ts`](../Modules/Official/extensions/cordis-client-runner/src/index.ts)）
-- `@deepseek-ai/dsh-deepseek-llm-api-extensions`（[`rsh/Modules/Official/llm/deepseek-llm-api-extensions/src/index.ts`](../Modules/Official/llm/deepseek-llm-api-extensions/src/index.ts)）
-- `@deepseek-ai/dsh-experimental-client-ui-agent-team`（[`rsh/Modules/Community/experimental/client-ui-agent-team/src/index.ts`](../Modules/Community/experimental/client-ui-agent-team/src/index.ts)）
-- `@deepseek-ai/dsh-fs-e2b` — 需要 `e2b`（[`rsh/Modules/Official/e2b/fs-e2b/src/index.ts`](../Modules/Official/e2b/fs-e2b/src/index.ts)）
-- `@deepseek-ai/dsh-fs-observation-policy`（[`rsh/Modules/Official/fs/fs-observation-policy/src/index.ts`](../Modules/Official/fs/fs-observation-policy/src/index.ts)）
-- `@deepseek-ai/dsh-goal-round-driver` — 需要 `agents` · `goals` · `sessions`（[`rsh/Engine/goal/goal-round-driver/src/index.ts`](../Engine/goal/goal-round-driver/src/index.ts)）
-- `@deepseek-ai/dsh-host-directory-picker-auto` — 需要 `webServer` · `loader`（[`rsh/Programs/Web/host/directory-picker-auto/src/index.ts`](../Programs/Web/host/directory-picker-auto/src/index.ts)）
-- `@deepseek-ai/dsh-host-directory-picker-native`（[`rsh/Programs/Web/host/directory-picker-native/src/index.ts`](../Programs/Web/host/directory-picker-native/src/index.ts)）
-- `@deepseek-ai/dsh-host-plugin-inventory` — 需要 `loader`（[`rsh/Programs/Web/host/plugin-inventory/src/index.ts`](../Programs/Web/host/plugin-inventory/src/index.ts)）
-- `@deepseek-ai/dsh-llm`（[`rsh/Engine/llm/llm/src/index.ts`](../Engine/llm/llm/src/index.ts)）
-- `@deepseek-ai/dsh-lsp`（[`rsh/Modules/Official/lsp/lsp/src/index.ts`](../Modules/Official/lsp/lsp/src/index.ts)）
-- `@deepseek-ai/dsh-plugin-host`（[`rsh/Compatibility/DSH/bridge/compat-plugin-host/src/index.ts`](../Compatibility/DSH/bridge/compat-plugin-host/src/index.ts)）
-- `@deepseek-ai/dsh-rsh` — 需要 `agentDefaultModel` · `agentPresets` · `agents` · `commands` · `llm` · `permissionPresets` · `sessions`（[`rsh/Compatibility/DSH/bundle/rsh/src/index.ts`](../Compatibility/DSH/bundle/rsh/src/index.ts)）
-- `@deepseek-ai/dsh-schedule` — 需要 `agents` · `sessions` · `tools` · `sessionPersistence`（[`rsh/Engine/schedule/schedule/src/index.ts`](../Engine/schedule/schedule/src/index.ts)）
-- `@deepseek-ai/dsh-session`（[`rsh/Engine/core/session/src/index.ts`](../Engine/core/session/src/index.ts)）
-- `@deepseek-ai/dsh-session-checkpoint-policy` — 需要 `llm` · `sessionPersistence` · `sessions` · `tools`（[`rsh/Engine/session/session-checkpoint-policy/src/index.ts`](../Engine/session/session-checkpoint-policy/src/index.ts)）
-- `@deepseek-ai/dsh-session-projection`（[`rsh/Engine/session/session-projection/src/index.ts`](../Engine/session/session-projection/src/index.ts)）
-- `@deepseek-ai/dsh-session-stats` — 需要 `sessionProjections`（[`rsh/Engine/session/session-stats/src/index.ts`](../Engine/session/session-stats/src/index.ts)）
-- `@deepseek-ai/dsh-session-turn-outline` — 需要 `sessionProjections`（[`rsh/Engine/session/session-turn-outline/src/index.ts`](../Engine/session/session-turn-outline/src/index.ts)）
-- `@deepseek-ai/dsh-skill-badge` — 需要 `skills`（[`rsh/Modules/Official/skill/skill-badge/src/index.ts`](../Modules/Official/skill/skill-badge/src/index.ts)）
-- `@deepseek-ai/dsh-storage`（[`rsh/Core/storage/storage/src/index.ts`](../Core/storage/storage/src/index.ts)）
-- `@deepseek-ai/dsh-subagent`（[`rsh/Engine/subagent/subagent/src/index.ts`](../Engine/subagent/subagent/src/index.ts)）
-- `@deepseek-ai/dsh-subprocess-local`（[`rsh/Core/subprocess/subprocess-local/src/index.ts`](../Core/subprocess/subprocess-local/src/index.ts)）
-- `@deepseek-ai/dsh-terminal`（[`rsh/Modules/Official/terminal/terminal/src/index.ts`](../Modules/Official/terminal/terminal/src/index.ts)）
-- `@deepseek-ai/dsh-tool-ask-user` — 需要 `tools` · `userInteraction`（[`rsh/Modules/Official/interaction/tool-ask-user/src/index.ts`](../Modules/Official/interaction/tool-ask-user/src/index.ts)）
-- `@deepseek-ai/dsh-tool-call-timeout-policy` — 需要 `tools`（[`rsh/Modules/Official/guard/timeout-policy/src/index.ts`](../Modules/Official/guard/timeout-policy/src/index.ts)）
-- `@deepseek-ai/dsh-tool-cordis` — 需要 `tools` · `systemPrompt` · `dynamicCordisRunner` · `cordisInspect`（[`rsh/Modules/Official/extensions/tool-cordis/src/index.ts`](../Modules/Official/extensions/tool-cordis/src/index.ts)）
-- `@deepseek-ai/dsh-tool-subagent-control` — 需要 `tools` · `subagents`（[`rsh/Engine/subagent/tool-subagent-control/src/index.ts`](../Engine/subagent/tool-subagent-control/src/index.ts)）
-- `@deepseek-ai/dsh-user-questions`（[`rsh/Modules/Official/interaction/user-questions/src/index.ts`](../Modules/Official/interaction/user-questions/src/index.ts)）
-- `@deepseek-ai/dsh-webhook` — 需要 `agents` · `agentDefaultModel` · `agentPresets` · `permissionPresets` · `sessionTitle` · `workspaceRegistry`（[`rsh/Modules/Official/webhook/webhook/src/index.ts`](../Modules/Official/webhook/webhook/src/index.ts)）
-- `@deepseek-ai/dsh-workspace` — 需要 `storageDomain` · `sessionPersistence`（[`rsh/Modules/Official/workspace/workspace/src/index.ts`](../Modules/Official/workspace/workspace/src/index.ts)）
+- `@redspark/rsh-acp-app` — 需要 `cmdlineArgs`（[`rsh/Compatibility/DSH/bundle/acp-app/src/index.ts`](../Compatibility/DSH/bundle/acp-app/src/index.ts)）
+- `@redspark/rsh-agent`（[`rsh/Engine/core/agent/src/index.ts`](../Engine/core/agent/src/index.ts)）
+- `@redspark/rsh-api-remotes` — 需要 `typertGateway`（[`rsh/Programs/Web/api/remotes/src/index.ts`](../Programs/Web/api/remotes/src/index.ts)）
+- `@redspark/rsh-api-workspace-controller` — 需要 `typert` · `workspaceRegistry`（[`rsh/Programs/Web/api/workspace-controller/src/index.ts`](../Programs/Web/api/workspace-controller/src/index.ts)）
+- `@redspark/rsh-authorization` — 需要 `credentials`（[`rsh/Modules/Official/credentials/authorization/src/index.ts`](../Modules/Official/credentials/authorization/src/index.ts)）
+- `@redspark/rsh-client-file-upload` — 需要 `agents` · `attachments` · `commands` · `connection`（[`rsh/Programs/Web/client/file-upload/src/index.ts`](../Programs/Web/client/file-upload/src/index.ts)）
+- `@redspark/rsh-client-locale`（[`rsh/Programs/Web/client/locale/src/index.ts`](../Programs/Web/client/locale/src/index.ts)）
+- `@redspark/rsh-client-modules` — 需要 `loader`（[`rsh/Programs/Web/client/modules/src/index.ts`](../Programs/Web/client/modules/src/index.ts)）
+- `@redspark/rsh-client-resources`（[`rsh/Programs/Web/client/resources/src/index.ts`](../Programs/Web/client/resources/src/index.ts)）
+- `@redspark/rsh-client-ui-agent-preset`（[`rsh/Programs/Web/client/ui-agent-preset/src/index.ts`](../Programs/Web/client/ui-agent-preset/src/index.ts)）
+- `@redspark/rsh-client-ui-approval`（[`rsh/Programs/Web/client/ui-approval/src/index.ts`](../Programs/Web/client/ui-approval/src/index.ts)）
+- `@redspark/rsh-client-ui-attachment`（[`rsh/Programs/Web/client/ui-attachment/src/index.ts`](../Programs/Web/client/ui-attachment/src/index.ts)）
+- `@redspark/rsh-client-ui-brand-official`（[`rsh/Programs/Web/client/ui-brand-official/src/index.ts`](../Programs/Web/client/ui-brand-official/src/index.ts)）
+- `@redspark/rsh-client-ui-chat`（[`rsh/Programs/Web/client/ui-chat/src/index.ts`](../Programs/Web/client/ui-chat/src/index.ts)）
+- `@redspark/rsh-client-ui-commands`（[`rsh/Programs/Web/client/ui-commands/src/index.ts`](../Programs/Web/client/ui-commands/src/index.ts)）
+- `@redspark/rsh-client-ui-conversation`（[`rsh/Programs/Web/client/ui-conversation/src/index.ts`](../Programs/Web/client/ui-conversation/src/index.ts)）
+- `@redspark/rsh-client-ui-cordis`（[`rsh/Modules/Official/extensions/ui-cordis/src/index.ts`](../Modules/Official/extensions/ui-cordis/src/index.ts)）
+- `@redspark/rsh-client-ui-deliverables` — 需要 `systemPrompt` · `connection` · `sessionQuery` · `sessionController` · `workspaceFiles` · `fs` · `sandboxPolicy`（[`rsh/Programs/Web/client/ui-deliverables/src/index.ts`](../Programs/Web/client/ui-deliverables/src/index.ts)）
+- `@redspark/rsh-client-ui-directory-picker-browse`（[`rsh/Programs/Web/client/ui-directory-picker-browse/src/index.ts`](../Programs/Web/client/ui-directory-picker-browse/src/index.ts)）
+- `@redspark/rsh-client-ui-directory-picker-native`（[`rsh/Programs/Web/client/ui-directory-picker-native/src/index.ts`](../Programs/Web/client/ui-directory-picker-native/src/index.ts)）
+- `@redspark/rsh-client-ui-goal`（[`rsh/Programs/Web/client/ui-goal/src/index.ts`](../Programs/Web/client/ui-goal/src/index.ts)）
+- `@redspark/rsh-client-ui-input-trigger`（[`rsh/Programs/Web/client/ui-input-trigger/src/index.ts`](../Programs/Web/client/ui-input-trigger/src/index.ts)）
+- `@redspark/rsh-client-ui-jobs`（[`rsh/Programs/Web/client/ui-jobs/src/index.ts`](../Programs/Web/client/ui-jobs/src/index.ts)）
+- `@redspark/rsh-client-ui-layout`（[`rsh/Programs/Web/client/ui-layout/src/index.ts`](../Programs/Web/client/ui-layout/src/index.ts)）
+- `@redspark/rsh-client-ui-message-feedback`（[`rsh/Programs/Web/client/ui-message-feedback/src/index.ts`](../Programs/Web/client/ui-message-feedback/src/index.ts)）
+- `@redspark/rsh-client-ui-model-selection`（[`rsh/Programs/Web/client/ui-model-selection/src/index.ts`](../Programs/Web/client/ui-model-selection/src/index.ts)）
+- `@redspark/rsh-client-ui-open-in-app`（[`rsh/Programs/Web/client/ui-open-in-app/src/index.ts`](../Programs/Web/client/ui-open-in-app/src/index.ts)）
+- `@redspark/rsh-client-ui-permission-presets`（[`rsh/Programs/Web/client/ui-permission-presets/src/index.ts`](../Programs/Web/client/ui-permission-presets/src/index.ts)）
+- `@redspark/rsh-client-ui-pet`（[`rsh/Programs/Web/client/ui-pet/src/index.ts`](../Programs/Web/client/ui-pet/src/index.ts)）
+- `@redspark/rsh-client-ui-plan`（[`rsh/Programs/Web/client/ui-plan/src/index.ts`](../Programs/Web/client/ui-plan/src/index.ts)）
+- `@redspark/rsh-client-ui-reference`（[`rsh/Programs/Web/client/ui-reference/src/index.ts`](../Programs/Web/client/ui-reference/src/index.ts)）
+- `@redspark/rsh-client-ui-renderer`（[`rsh/Programs/Web/client/ui-renderer/src/index.ts`](../Programs/Web/client/ui-renderer/src/index.ts)）
+- `@redspark/rsh-client-ui-schedule`（[`rsh/Programs/Web/client/ui-schedule/src/index.ts`](../Programs/Web/client/ui-schedule/src/index.ts)）
+- `@redspark/rsh-client-ui-session`（[`rsh/Programs/Web/client/ui-session/src/index.ts`](../Programs/Web/client/ui-session/src/index.ts)）
+- `@redspark/rsh-client-ui-settings`（[`rsh/Programs/Web/client/ui-settings/src/index.ts`](../Programs/Web/client/ui-settings/src/index.ts)）
+- `@redspark/rsh-client-ui-settings-general`（[`rsh/Programs/Web/client/ui-settings-general/src/index.ts`](../Programs/Web/client/ui-settings-general/src/index.ts)）
+- `@redspark/rsh-client-ui-settings-models`（[`rsh/Programs/Web/client/ui-settings-models/src/index.ts`](../Programs/Web/client/ui-settings-models/src/index.ts)）
+- `@redspark/rsh-client-ui-settings-plugin-inventory`（[`rsh/Programs/Web/client/ui-settings-plugin-inventory/src/index.ts`](../Programs/Web/client/ui-settings-plugin-inventory/src/index.ts)）
+- `@redspark/rsh-client-ui-settings-plugins`（[`rsh/Programs/Web/client/ui-settings-plugins/src/index.ts`](../Programs/Web/client/ui-settings-plugins/src/index.ts)）
+- `@redspark/rsh-client-ui-sidebar`（[`rsh/Programs/Web/client/ui-sidebar/src/index.ts`](../Programs/Web/client/ui-sidebar/src/index.ts)）
+- `@redspark/rsh-client-ui-sidebar-documentpreview`（[`rsh/Programs/Web/client/ui-sidebar-documentpreview/src/index.ts`](../Programs/Web/client/ui-sidebar-documentpreview/src/index.ts)）
+- `@redspark/rsh-client-ui-sidebar-files`（[`rsh/Programs/Web/client/ui-sidebar-files/src/index.ts`](../Programs/Web/client/ui-sidebar-files/src/index.ts)）
+- `@redspark/rsh-client-ui-sidebar-right`（[`rsh/Programs/Web/client/ui-sidebar-right/src/index.ts`](../Programs/Web/client/ui-sidebar-right/src/index.ts)）
+- `@redspark/rsh-client-ui-skill`（[`rsh/Programs/Web/client/ui-skill/src/index.ts`](../Programs/Web/client/ui-skill/src/index.ts)）
+- `@redspark/rsh-client-ui-subagent`（[`rsh/Programs/Web/client/ui-subagent/src/index.ts`](../Programs/Web/client/ui-subagent/src/index.ts)）
+- `@redspark/rsh-client-ui-theme`（[`rsh/Programs/Web/client/ui-theme/src/index.ts`](../Programs/Web/client/ui-theme/src/index.ts)）
+- `@redspark/rsh-client-ui-tool`（[`rsh/Programs/Web/client/ui-tool/src/index.ts`](../Programs/Web/client/ui-tool/src/index.ts)）
+- `@redspark/rsh-client-ui-trajectory`（[`rsh/Programs/Web/client/ui-trajectory/src/index.ts`](../Programs/Web/client/ui-trajectory/src/index.ts)）
+- `@redspark/rsh-client-ui-user-questions`（[`rsh/Programs/Web/client/ui-user-questions/src/index.ts`](../Programs/Web/client/ui-user-questions/src/index.ts)）
+- `@redspark/rsh-client-ui-workflow-run`（[`rsh/Programs/Web/client/ui-workflow-run/src/index.ts`](../Programs/Web/client/ui-workflow-run/src/index.ts)）
+- `@redspark/rsh-client-ui-workspace`（[`rsh/Programs/Web/client/ui-workspace/src/index.ts`](../Programs/Web/client/ui-workspace/src/index.ts)）
+- `@redspark/rsh-command-compact` — 需要 `commands` · `compact`（[`rsh/Engine/compaction/command-compact/src/index.ts`](../Engine/compaction/command-compact/src/index.ts)）
+- `@redspark/rsh-command-feedback` — 需要 `commands`（[`rsh/Modules/Official/feedback/command-feedback/src/index.ts`](../Modules/Official/feedback/command-feedback/src/index.ts)）
+- `@redspark/rsh-command-goal` — 需要 `commands` · `goals`（[`rsh/Engine/goal/command-goal/src/index.ts`](../Engine/goal/command-goal/src/index.ts)）
+- `@redspark/rsh-commands`（[`rsh/Modules/Official/interaction/commands/src/index.ts`](../Modules/Official/interaction/commands/src/index.ts)）
+- `@redspark/rsh-cordis-client-runner`（[`rsh/Modules/Official/extensions/cordis-client-runner/src/index.ts`](../Modules/Official/extensions/cordis-client-runner/src/index.ts)）
+- `@redspark/rsh-deepseek-llm-api-extensions`（[`rsh/Modules/Official/llm/deepseek-llm-api-extensions/src/index.ts`](../Modules/Official/llm/deepseek-llm-api-extensions/src/index.ts)）
+- `@redspark/rsh-experimental-client-ui-agent-team`（[`rsh/Modules/Community/experimental/client-ui-agent-team/src/index.ts`](../Modules/Community/experimental/client-ui-agent-team/src/index.ts)）
+- `@redspark/rsh-fs-e2b` — 需要 `e2b`（[`rsh/Modules/Official/e2b/fs-e2b/src/index.ts`](../Modules/Official/e2b/fs-e2b/src/index.ts)）
+- `@redspark/rsh-fs-observation-policy`（[`rsh/Modules/Official/fs/fs-observation-policy/src/index.ts`](../Modules/Official/fs/fs-observation-policy/src/index.ts)）
+- `@redspark/rsh-goal-round-driver` — 需要 `agents` · `goals` · `sessions`（[`rsh/Engine/goal/goal-round-driver/src/index.ts`](../Engine/goal/goal-round-driver/src/index.ts)）
+- `@redspark/rsh-host-directory-picker-auto` — 需要 `webServer` · `loader`（[`rsh/Programs/Web/host/directory-picker-auto/src/index.ts`](../Programs/Web/host/directory-picker-auto/src/index.ts)）
+- `@redspark/rsh-host-directory-picker-native`（[`rsh/Programs/Web/host/directory-picker-native/src/index.ts`](../Programs/Web/host/directory-picker-native/src/index.ts)）
+- `@redspark/rsh-host-plugin-inventory` — 需要 `loader`（[`rsh/Programs/Web/host/plugin-inventory/src/index.ts`](../Programs/Web/host/plugin-inventory/src/index.ts)）
+- `@redspark/rsh-llm`（[`rsh/Engine/llm/llm/src/index.ts`](../Engine/llm/llm/src/index.ts)）
+- `@redspark/rsh-lsp`（[`rsh/Modules/Official/lsp/lsp/src/index.ts`](../Modules/Official/lsp/lsp/src/index.ts)）
+- `@redspark/rsh-plugin-host`（[`rsh/Compatibility/DSH/bridge/compat-plugin-host/src/index.ts`](../Compatibility/DSH/bridge/compat-plugin-host/src/index.ts)）
+- `@redspark/rsh-rsh` — 需要 `agentDefaultModel` · `agentPresets` · `agents` · `commands` · `llm` · `permissionPresets` · `sessions`（[`rsh/Compatibility/DSH/bundle/rsh/src/index.ts`](../Compatibility/DSH/bundle/rsh/src/index.ts)）
+- `@redspark/rsh-schedule` — 需要 `agents` · `sessions` · `tools` · `sessionPersistence`（[`rsh/Engine/schedule/schedule/src/index.ts`](../Engine/schedule/schedule/src/index.ts)）
+- `@redspark/rsh-session`（[`rsh/Engine/core/session/src/index.ts`](../Engine/core/session/src/index.ts)）
+- `@redspark/rsh-session-checkpoint-policy` — 需要 `llm` · `sessionPersistence` · `sessions` · `tools`（[`rsh/Engine/session/session-checkpoint-policy/src/index.ts`](../Engine/session/session-checkpoint-policy/src/index.ts)）
+- `@redspark/rsh-session-projection`（[`rsh/Engine/session/session-projection/src/index.ts`](../Engine/session/session-projection/src/index.ts)）
+- `@redspark/rsh-session-stats` — 需要 `sessionProjections`（[`rsh/Engine/session/session-stats/src/index.ts`](../Engine/session/session-stats/src/index.ts)）
+- `@redspark/rsh-session-turn-outline` — 需要 `sessionProjections`（[`rsh/Engine/session/session-turn-outline/src/index.ts`](../Engine/session/session-turn-outline/src/index.ts)）
+- `@redspark/rsh-skill-badge` — 需要 `skills`（[`rsh/Modules/Official/skill/skill-badge/src/index.ts`](../Modules/Official/skill/skill-badge/src/index.ts)）
+- `@redspark/rsh-storage`（[`rsh/Core/storage/storage/src/index.ts`](../Core/storage/storage/src/index.ts)）
+- `@redspark/rsh-subagent`（[`rsh/Engine/subagent/subagent/src/index.ts`](../Engine/subagent/subagent/src/index.ts)）
+- `@redspark/rsh-subprocess-local`（[`rsh/Core/subprocess/subprocess-local/src/index.ts`](../Core/subprocess/subprocess-local/src/index.ts)）
+- `@redspark/rsh-terminal`（[`rsh/Modules/Official/terminal/terminal/src/index.ts`](../Modules/Official/terminal/terminal/src/index.ts)）
+- `@redspark/rsh-tool-ask-user` — 需要 `tools` · `userInteraction`（[`rsh/Modules/Official/interaction/tool-ask-user/src/index.ts`](../Modules/Official/interaction/tool-ask-user/src/index.ts)）
+- `@redspark/rsh-tool-call-timeout-policy` — 需要 `tools`（[`rsh/Modules/Official/guard/timeout-policy/src/index.ts`](../Modules/Official/guard/timeout-policy/src/index.ts)）
+- `@redspark/rsh-tool-cordis` — 需要 `tools` · `systemPrompt` · `dynamicCordisRunner` · `cordisInspect`（[`rsh/Modules/Official/extensions/tool-cordis/src/index.ts`](../Modules/Official/extensions/tool-cordis/src/index.ts)）
+- `@redspark/rsh-tool-subagent-control` — 需要 `tools` · `subagents`（[`rsh/Engine/subagent/tool-subagent-control/src/index.ts`](../Engine/subagent/tool-subagent-control/src/index.ts)）
+- `@redspark/rsh-user-questions`（[`rsh/Modules/Official/interaction/user-questions/src/index.ts`](../Modules/Official/interaction/user-questions/src/index.ts)）
+- `@redspark/rsh-webhook` — 需要 `agents` · `agentDefaultModel` · `agentPresets` · `permissionPresets` · `sessionTitle` · `workspaceRegistry`（[`rsh/Modules/Official/webhook/webhook/src/index.ts`](../Modules/Official/webhook/webhook/src/index.ts)）
+- `@redspark/rsh-workspace` — 需要 `storageDomain` · `sessionPersistence`（[`rsh/Modules/Official/workspace/workspace/src/index.ts`](../Modules/Official/workspace/workspace/src/index.ts)）
 
 ## Seam 包（不可直接加载）
 
 抽象服务类——部署时应改为加载具体的实现包（参见[能力 seam](../../.agents/notes/implemented/architecture/2026-06-13-capability-seams.zh.md)）。
 
-- `@deepseek-ai/dsh-attachment` — 抽象 `AttachmentStore`（[`rsh/Modules/Official/attachment/attachment/src/index.ts`](../Modules/Official/attachment/attachment/src/index.ts)）
-- `@deepseek-ai/dsh-code-runtime` — 抽象 `CodeRuntime`（[`rsh/Compatibility/DSH/bridge/compat-code-runtime/src/index.ts`](../Compatibility/DSH/bridge/compat-code-runtime/src/index.ts)）
-- `@deepseek-ai/dsh-compaction` — 抽象 `CompactionEngine`（[`rsh/Engine/compaction/compaction/src/index.ts`](../Engine/compaction/compaction/src/index.ts)）
-- `@deepseek-ai/dsh-credentials` — 抽象 `Credentials`（[`rsh/Modules/Official/credentials/credentials/src/index.ts`](../Modules/Official/credentials/credentials/src/index.ts)）
-- `@deepseek-ai/dsh-file-reference` — 抽象 `FileReferenceService`（[`rsh/Engine/context/file-reference/src/index.ts`](../Engine/context/file-reference/src/index.ts)）
-- `@deepseek-ai/dsh-fs` — 抽象 `FileSystem`（[`rsh/Modules/Official/fs/fs/src/index.ts`](../Modules/Official/fs/fs/src/index.ts)）
-- `@deepseek-ai/dsh-host-directory-picker` — 抽象 `DirectoryPicker`（[`rsh/Programs/Web/host/directory-picker/src/index.ts`](../Programs/Web/host/directory-picker/src/index.ts)）
-- `@deepseek-ai/dsh-jobs` — 抽象 `JobRegistry`（[`rsh/Engine/jobs/jobs/src/index.ts`](../Engine/jobs/jobs/src/index.ts)）
-- `@deepseek-ai/dsh-sandbox` — 抽象 `SandboxProvider`（[`rsh/Modules/Official/sandbox/sandbox/src/index.ts`](../Modules/Official/sandbox/sandbox/src/index.ts)）
-- `@deepseek-ai/dsh-session-persistence` — 抽象 `SessionPersistence`（[`rsh/Engine/session/session-persistence/src/index.ts`](../Engine/session/session-persistence/src/index.ts)）
-- `@deepseek-ai/dsh-session-query` — 抽象 `SessionQueryEngine`（[`rsh/Engine/session-query/session-query/src/index.ts`](../Engine/session-query/session-query/src/index.ts)）
-- `@deepseek-ai/dsh-settings` — 抽象 `Settings`（[`rsh/Modules/Official/settings/settings/src/index.ts`](../Modules/Official/settings/settings/src/index.ts)）
-- `@deepseek-ai/dsh-shell` — 抽象 `ShellExecutor`（[`rsh/Modules/Official/shell/shell/src/index.ts`](../Modules/Official/shell/shell/src/index.ts)）
-- `@deepseek-ai/dsh-spill` — 抽象 `SpillStore`（[`rsh/Modules/Official/spill/spill/src/index.ts`](../Modules/Official/spill/spill/src/index.ts)）
-- `@deepseek-ai/dsh-subprocess` — 抽象 `SubprocessRuntime`（[`rsh/Core/subprocess/subprocess/src/index.ts`](../Core/subprocess/subprocess/src/index.ts)）
-- `@deepseek-ai/dsh-workflow` — 抽象 `WorkflowEngine`（[`rsh/Engine/workflow/workflow/src/index.ts`](../Engine/workflow/workflow/src/index.ts)）
+- `@redspark/rsh-attachment` — 抽象 `AttachmentStore`（[`rsh/Modules/Official/attachment/attachment/src/index.ts`](../Modules/Official/attachment/attachment/src/index.ts)）
+- `@redspark/rsh-code-runtime` — 抽象 `CodeRuntime`（[`rsh/Compatibility/DSH/bridge/compat-code-runtime/src/index.ts`](../Compatibility/DSH/bridge/compat-code-runtime/src/index.ts)）
+- `@redspark/rsh-compaction` — 抽象 `CompactionEngine`（[`rsh/Engine/compaction/compaction/src/index.ts`](../Engine/compaction/compaction/src/index.ts)）
+- `@redspark/rsh-credentials` — 抽象 `Credentials`（[`rsh/Modules/Official/credentials/credentials/src/index.ts`](../Modules/Official/credentials/credentials/src/index.ts)）
+- `@redspark/rsh-file-reference` — 抽象 `FileReferenceService`（[`rsh/Engine/context/file-reference/src/index.ts`](../Engine/context/file-reference/src/index.ts)）
+- `@redspark/rsh-fs` — 抽象 `FileSystem`（[`rsh/Modules/Official/fs/fs/src/index.ts`](../Modules/Official/fs/fs/src/index.ts)）
+- `@redspark/rsh-host-directory-picker` — 抽象 `DirectoryPicker`（[`rsh/Programs/Web/host/directory-picker/src/index.ts`](../Programs/Web/host/directory-picker/src/index.ts)）
+- `@redspark/rsh-jobs` — 抽象 `JobRegistry`（[`rsh/Engine/jobs/jobs/src/index.ts`](../Engine/jobs/jobs/src/index.ts)）
+- `@redspark/rsh-sandbox` — 抽象 `SandboxProvider`（[`rsh/Modules/Official/sandbox/sandbox/src/index.ts`](../Modules/Official/sandbox/sandbox/src/index.ts)）
+- `@redspark/rsh-session-persistence` — 抽象 `SessionPersistence`（[`rsh/Engine/session/session-persistence/src/index.ts`](../Engine/session/session-persistence/src/index.ts)）
+- `@redspark/rsh-session-query` — 抽象 `SessionQueryEngine`（[`rsh/Engine/session-query/session-query/src/index.ts`](../Engine/session-query/session-query/src/index.ts)）
+- `@redspark/rsh-settings` — 抽象 `Settings`（[`rsh/Modules/Official/settings/settings/src/index.ts`](../Modules/Official/settings/settings/src/index.ts)）
+- `@redspark/rsh-shell` — 抽象 `ShellExecutor`（[`rsh/Modules/Official/shell/shell/src/index.ts`](../Modules/Official/shell/shell/src/index.ts)）
+- `@redspark/rsh-spill` — 抽象 `SpillStore`（[`rsh/Modules/Official/spill/spill/src/index.ts`](../Modules/Official/spill/spill/src/index.ts)）
+- `@redspark/rsh-subprocess` — 抽象 `SubprocessRuntime`（[`rsh/Core/subprocess/subprocess/src/index.ts`](../Core/subprocess/subprocess/src/index.ts)）
+- `@redspark/rsh-workflow` — 抽象 `WorkflowEngine`（[`rsh/Engine/workflow/workflow/src/index.ts`](../Engine/workflow/workflow/src/index.ts)）
 ## 库包（无插件入口）
 
 由其他包作为库导入；`cordis.yml` 无法加载它们。
 
-- `@deepseek-ai/dsh-acp-child`（[`rsh/Modules/Official/subagent/acp-child/src/index.ts`](../Modules/Official/subagent/acp-child/src/index.ts)）
-- `@deepseek-ai/dsh-acp-protocol`（[`rsh/Modules/Official/subagent/acp-protocol/src/index.ts`](../Modules/Official/subagent/acp-protocol/src/index.ts)）
-- `@deepseek-ai/dsh-agent-loop-testkit`（[`rsh/Tests/test-support/agent-loop-testkit/src/index.ts`](../Tests/test-support/agent-loop-testkit/src/index.ts)）
-- `@deepseek-ai/dsh-agent-preset-standing`（[`rsh/Engine/preset/agent-preset-standing/src/index.ts`](../Engine/preset/agent-preset-standing/src/index.ts)）
-- `@deepseek-ai/dsh-anonymous-user-id`（[`rsh/Core/identity/anonymous-user-id/src/index.ts`](../Core/identity/anonymous-user-id/src/index.ts)）
-- `@deepseek-ai/dsh-app-boot`（[`rsh/Compatibility/DSH/boot/app-boot/src/index.ts`](../Compatibility/DSH/boot/app-boot/src/index.ts)）
-- `@deepseek-ai/dsh-approval-definition`（[`rsh/Engine/core/approval-definition/src/index.ts`](../Engine/core/approval-definition/src/index.ts)）
-- `@deepseek-ai/dsh-atomic-write`（[`rsh/Core/util/atomic-write/src/index.ts`](../Core/util/atomic-write/src/index.ts)）
-- `@deepseek-ai/dsh-base`（[`rsh/Compatibility/DSH/bundle/base/src/index.ts`](../Compatibility/DSH/bundle/base/src/index.ts)）
-- `@deepseek-ai/dsh-brand`（[`rsh/Core/util/brand/src/index.ts`](../Core/util/brand/src/index.ts)）
-- `@deepseek-ai/dsh-chunked-list`（[`rsh/Core/util/chunked-list/src/index.ts`](../Core/util/chunked-list/src/index.ts)）
-- `@deepseek-ai/dsh-client-native-application` ([`rsh/Programs/Web/client/native-application/src/index.ts`](../Programs/Web/client/native-application/src/index.ts))
-- `@deepseek-ai/dsh-client-native-session` ([`rsh/Programs/Web/client/native-session/src/index.ts`](../Programs/Web/client/native-session/src/index.ts))
-- `@deepseek-ai/dsh-client-store`（[`rsh/Programs/Web/client/store/src/index.ts`](../Programs/Web/client/store/src/index.ts)）
-- `@deepseek-ai/dsh-client-test-runtime`（[`rsh/Tests/test-support/client-runtime/src/index.ts`](../Tests/test-support/client-runtime/src/index.ts)）
-- `@deepseek-ai/dsh-client-ui-dockkit`（[`rsh/Programs/Web/client/ui-dockkit/src/index.ts`](../Programs/Web/client/ui-dockkit/src/index.ts)）
-- `@deepseek-ai/dsh-client-ui-primitives`（[`rsh/Programs/Web/client/ui-primitives/src/index.ts`](../Programs/Web/client/ui-primitives/src/index.ts)）
-- `@deepseek-ai/dsh-client-ui-slots`（[`rsh/Programs/Web/client/ui-slots/src/index.ts`](../Programs/Web/client/ui-slots/src/index.ts)）
-- `@deepseek-ai/dsh-client-web`（[`rsh/Programs/Web/client/web/src/index.ts`](../Programs/Web/client/web/src/index.ts)）
-- `@deepseek-ai/dsh-cmdline`（[`rsh/Compatibility/DSH/boot/cmdline/src/index.ts`](../Compatibility/DSH/boot/cmdline/src/index.ts)）
-- `@deepseek-ai/dsh-code-runtime-definition`（[`rsh/Engine/core/code-runtime-definition/src/index.ts`](../Engine/core/code-runtime-definition/src/index.ts)）
-- `@deepseek-ai/dsh-code-runtime-process-sandbox`（[`rsh/Modules/Official/code-runtime/code-runtime-process-sandbox/src/index.ts`](../Modules/Official/code-runtime/code-runtime-process-sandbox/src/index.ts)）
-- `@deepseek-ai/dsh-codex-app-server` ([`rsh/Modules/Official/subagent/codex-app-server/src/index.ts`](../Modules/Official/subagent/codex-app-server/src/index.ts))
-- `@deepseek-ai/dsh-compat-dsh-runtime`（[`rsh/Compatibility/DSH/bridge/compat-dsh-runtime/src/index.ts`](../Compatibility/DSH/bridge/compat-dsh-runtime/src/index.ts)）
-- `@deepseek-ai/dsh-compat-fs-local`（[`rsh/Compatibility/DSH/bridge/compat-fs-local/src/index.ts`](../Compatibility/DSH/bridge/compat-fs-local/src/index.ts)）
-- `@deepseek-ai/dsh-compat-fs-policy`（[`rsh/Compatibility/DSH/bridge/compat-fs-policy/src/index.ts`](../Compatibility/DSH/bridge/compat-fs-policy/src/index.ts)）
-- `@deepseek-ai/dsh-compat-fs-sandbox`（[`rsh/Compatibility/DSH/bridge/compat-fs-sandbox/src/index.ts`](../Compatibility/DSH/bridge/compat-fs-sandbox/src/index.ts)）
-- `@deepseek-ai/dsh-compat-settings-adapters`（[`rsh/Compatibility/DSH/bridge/compat-settings-adapters/src/index.ts`](../Compatibility/DSH/bridge/compat-settings-adapters/src/index.ts)）
-- `@deepseek-ai/dsh-compat-settings-definition`（[`rsh/Compatibility/DSH/bridge/compat-settings-definition/src/index.ts`](../Compatibility/DSH/bridge/compat-settings-definition/src/index.ts)）
-- `@deepseek-ai/dsh-compat-tool-fs`（[`rsh/Compatibility/DSH/bridge/compat-tool-fs/src/index.ts`](../Compatibility/DSH/bridge/compat-tool-fs/src/index.ts)）
-- `@deepseek-ai/dsh-context-insight`（[`rsh/Engine/context/context-insight/src/index.ts`](../Engine/context/context-insight/src/index.ts)）
-- `@deepseek-ai/dsh-cordis-bridge`（[`rsh/Core/runtime-diagnostics/cordis-bridge/src/index.ts`](../Core/runtime-diagnostics/cordis-bridge/src/index.ts)）
-- `@deepseek-ai/dsh-deepseek-account`（[`rsh/Modules/Official/credentials/deepseek-account/src/index.ts`](../Modules/Official/credentials/deepseek-account/src/index.ts)）
-- `@deepseek-ai/dsh-deque`（[`rsh/Core/util/deque/src/index.ts`](../Core/util/deque/src/index.ts)）
-- `@deepseek-ai/dsh-desktop-host-compatibility`（[`rsh/Compatibility/DSH/boot/desktop-host-compatibility/src/index.ts`](../Compatibility/DSH/boot/desktop-host-compatibility/src/index.ts)）
-- `@deepseek-ai/dsh-errors`（[`rsh/Core/util/errors/src/index.ts`](../Core/util/errors/src/index.ts)）
-- `@deepseek-ai/dsh-experimental-agent-team-profile`（[`rsh/Modules/Community/experimental/agent-team-profile/src/index.ts`](../Modules/Community/experimental/agent-team-profile/src/index.ts)）
-- `@deepseek-ai/dsh-experimental-agent-team-web-profile`（[`rsh/Modules/Community/experimental/agent-team-web-profile/src/index.ts`](../Modules/Community/experimental/agent-team-web-profile/src/index.ts)）
-- `@deepseek-ai/dsh-experimental-webworker-packer`（[`rsh/Modules/Community/experimental/webworker-packer/src/index.ts`](../Modules/Community/experimental/webworker-packer/src/index.ts)）
-- `@deepseek-ai/dsh-experimental-webworker-runtime`（[`rsh/Modules/Community/experimental/webworker-runtime/src/index.ts`](../Modules/Community/experimental/webworker-runtime/src/index.ts)）
-- `@deepseek-ai/dsh-home-paths`（[`rsh/Core/util/home-paths/src/index.ts`](../Core/util/home-paths/src/index.ts)）
-- `@deepseek-ai/dsh-hook-protocol`（[`rsh/Modules/Official/hooks/hook-protocol/src/index.ts`](../Modules/Official/hooks/hook-protocol/src/index.ts)）
-- `@deepseek-ai/dsh-http-proxy`（[`rsh/Core/util/http-proxy/src/index.ts`](../Core/util/http-proxy/src/index.ts)）
-- `@deepseek-ai/dsh-http-routes`（[`rsh/Core/util/http-routes/src/index.ts`](../Core/util/http-routes/src/index.ts)）
-- `@deepseek-ai/dsh-http-routes-cordis`（[`rsh/Compatibility/DSH/bridge/http-routes-cordis/src/index.ts`](../Compatibility/DSH/bridge/http-routes-cordis/src/index.ts)）
-- `@deepseek-ai/dsh-json-rpc-line`（[`rsh/Core/util/json-rpc-line/src/index.ts`](../Core/util/json-rpc-line/src/index.ts)）
-- `@deepseek-ai/dsh-launch-environment`（[`rsh/Core/util/launch-environment/src/index.ts`](../Core/util/launch-environment/src/index.ts)）
-- `@deepseek-ai/dsh-llm-mock-server`（[`rsh/Tests/test-support/llm-mock-server/src/index.ts`](../Tests/test-support/llm-mock-server/src/index.ts)）
-- `@deepseek-ai/dsh-loader-smoke`（[`rsh/Tests/test-support/loader-smoke/src/index.ts`](../Tests/test-support/loader-smoke/src/index.ts)）
-- `@deepseek-ai/dsh-native-acp`（[`rsh/Programs/ACP/packages/native-acp/src/index.ts`](../Programs/ACP/packages/native-acp/src/index.ts)）
-- `@deepseek-ai/dsh-native-agent`（[`rsh/Engine/core/native-agent/src/index.ts`](../Engine/core/native-agent/src/index.ts)）
-- `@deepseek-ai/dsh-native-approval`（[`rsh/Modules/Official/interaction/native-approval/src/index.ts`](../Modules/Official/interaction/native-approval/src/index.ts)）
-- `@deepseek-ai/dsh-native-code-runtime`（[`rsh/Modules/Official/code-runtime/native-code-runtime/src/index.ts`](../Modules/Official/code-runtime/native-code-runtime/src/index.ts)）
-- `@deepseek-ai/dsh-native-command`（[`rsh/Core/util/native-command/src/index.ts`](../Core/util/native-command/src/index.ts)）
-- `@deepseek-ai/dsh-native-file-reference-local`（[`rsh/Modules/Official/fs/native-file-reference-local/src/index.ts`](../Modules/Official/fs/native-file-reference-local/src/index.ts)）
-- `@deepseek-ai/dsh-native-headless`（[`rsh/Engine/core/native-headless/src/index.ts`](../Engine/core/native-headless/src/index.ts)）
-- `@deepseek-ai/dsh-native-jobs`（[`rsh/Engine/core/native-jobs/src/index.ts`](../Engine/core/native-jobs/src/index.ts)）
-- `@deepseek-ai/dsh-native-jobs-controller`（[`rsh/Programs/Web/api/native-jobs-controller/src/index.ts`](../Programs/Web/api/native-jobs-controller/src/index.ts)）
-- `@deepseek-ai/dsh-native-model-execution`（[`rsh/Engine/core/native-model-execution/src/index.ts`](../Engine/core/native-model-execution/src/index.ts)）
-- `@deepseek-ai/dsh-native-model-selection` ([`rsh/Engine/llm/native-model-selection/src/index.ts`](../Engine/llm/native-model-selection/src/index.ts))
-- `@deepseek-ai/dsh-native-persona`（[`rsh/Engine/preset/native-persona/src/index.ts`](../Engine/preset/native-persona/src/index.ts)）
-- `@deepseek-ai/dsh-native-prompt`（[`rsh/Engine/core/native-prompt/src/index.ts`](../Engine/core/native-prompt/src/index.ts)）
-- `@deepseek-ai/dsh-native-runtime`（[`rsh/Core/runtime-diagnostics/native-runtime/src/index.ts`](../Core/runtime-diagnostics/native-runtime/src/index.ts)）
-- `@deepseek-ai/dsh-native-sandbox-policy`（[`rsh/Modules/Official/sandbox/native-sandbox-policy/src/index.ts`](../Modules/Official/sandbox/native-sandbox-policy/src/index.ts)）
-- `@deepseek-ai/dsh-native-schedule-controller`（[`rsh/Programs/Web/host/native-schedule-controller/src/index.ts`](../Programs/Web/host/native-schedule-controller/src/index.ts)）
-- `@deepseek-ai/dsh-native-sdk-server`（[`rsh/Programs/SDK/packages/native-server/src/index.ts`](../Programs/SDK/packages/native-server/src/index.ts)）
-- `@deepseek-ai/dsh-native-session-execution`（[`rsh/Engine/core/native-session-execution/src/index.ts`](../Engine/core/native-session-execution/src/index.ts)）
-- `@deepseek-ai/dsh-native-subagent` ([`rsh/Engine/subagent/native-subagent/src/index.ts`](../Engine/subagent/native-subagent/src/index.ts))
-- `@deepseek-ai/dsh-native-time-context`（[`rsh/Engine/context/native-time-context/src/index.ts`](../Engine/context/native-time-context/src/index.ts)）
-- `@deepseek-ai/dsh-native-tmux-context`（[`rsh/Modules/Official/terminal/native-tmux-context/src/index.ts`](../Modules/Official/terminal/native-tmux-context/src/index.ts)）
-- `@deepseek-ai/dsh-native-tool-jobs`（[`rsh/Engine/jobs/native-tool-jobs/src/index.ts`](../Engine/jobs/native-tool-jobs/src/index.ts)）
-- `@deepseek-ai/dsh-native-tool-subagent-list-agents`（[`rsh/Engine/subagent/native-tool-subagent-list-agents/src/index.ts`](../Engine/subagent/native-tool-subagent-list-agents/src/index.ts)）
-- `@deepseek-ai/dsh-native-tools`（[`rsh/Engine/core/native-tools/src/index.ts`](../Engine/core/native-tools/src/index.ts)）
-- `@deepseek-ai/dsh-native-tui` ([`rsh/Programs/TUI/native-tui/src/index.ts`](../Programs/TUI/native-tui/src/index.ts))
-- `@deepseek-ai/dsh-native-web-assets`（[`rsh/Programs/Web/host/native-web-assets/src/index.ts`](../Programs/Web/host/native-web-assets/src/index.ts)）
-- `@deepseek-ai/dsh-native-web-host`（[`rsh/Programs/Web/host/native-web-host/src/index.ts`](../Programs/Web/host/native-web-host/src/index.ts)）
-- `@deepseek-ai/dsh-native-web-session-controller` ([`rsh/Programs/Web/api/native-web-session-controller/src/index.ts`](../Programs/Web/api/native-web-session-controller/src/index.ts))
-- `@deepseek-ai/dsh-output-retention`（[`rsh/Core/util/output-retention/src/index.ts`](../Core/util/output-retention/src/index.ts)）
-- `@deepseek-ai/dsh-package-manifest` ([`rsh/Core/util/package-manifest/src/index.ts`](../Core/util/package-manifest/src/index.ts))
-- `@deepseek-ai/dsh-remote-mock` ([`rsh/Tests/test-support/remote-mock/src/index.ts`](../Tests/test-support/remote-mock/src/index.ts))
-- `@deepseek-ai/dsh-request-context`（[`rsh/Engine/context/request-context/src/index.ts`](../Engine/context/request-context/src/index.ts)）
-- `@deepseek-ai/dsh-request-context-definition`（[`rsh/Engine/context/request-context-definition/src/index.ts`](../Engine/context/request-context-definition/src/index.ts)）
-- `@deepseek-ai/dsh-sandbox-windows-acl`（[`rsh/Modules/Official/sandbox/sandbox-windows-acl/src/index.ts`](../Modules/Official/sandbox/sandbox-windows-acl/src/index.ts)）
-- `@deepseek-ai/dsh-scope`（[`rsh/Engine/core/scope/src/index.ts`](../Engine/core/scope/src/index.ts)）
-- `@deepseek-ai/dsh-sdk-child`（[`rsh/Modules/Official/subagent/sdk-child/src/index.ts`](../Modules/Official/subagent/sdk-child/src/index.ts)）
-- `@deepseek-ai/dsh-sdk-client`（[`rsh/Programs/SDK/packages/client/src/index.ts`](../Programs/SDK/packages/client/src/index.ts)）
-- `@deepseek-ai/dsh-sdk-minimal`（[`rsh/Compatibility/DSH/bundle/sdk-minimal/src/index.ts`](../Compatibility/DSH/bundle/sdk-minimal/src/index.ts)）
-- `@deepseek-ai/dsh-sdk-protocol`（[`rsh/Engine/subagent/sdk-protocol/src/index.ts`](../Engine/subagent/sdk-protocol/src/index.ts)）
-- `@deepseek-ai/dsh-sdk-runtime`（[`rsh/Engine/subagent/sdk-runtime/src/index.ts`](../Engine/subagent/sdk-runtime/src/index.ts)）
-- `@deepseek-ai/dsh-session-format`（[`rsh/Engine/session/session-format/src/index.ts`](../Engine/session/session-format/src/index.ts)）
-- `@deepseek-ai/dsh-session-format-catalog`（[`rsh/Engine/session/session-format-catalog/src/index.ts`](../Engine/session/session-format-catalog/src/index.ts)）
-- `@deepseek-ai/dsh-session-format-v0-to-v1`（[`rsh/Engine/session/session-format-v0-to-v1/src/index.ts`](../Engine/session/session-format-v0-to-v1/src/index.ts)）
-- `@deepseek-ai/dsh-session-format-v1-to-v2`（[`rsh/Engine/session/session-format-v1-to-v2/src/index.ts`](../Engine/session/session-format-v1-to-v2/src/index.ts)）
-- `@deepseek-ai/dsh-session-format-v2-to-v3`（[`rsh/Engine/session/session-format-v2-to-v3/src/index.ts`](../Engine/session/session-format-v2-to-v3/src/index.ts)）
-- `@deepseek-ai/dsh-session-snapshot`（[`rsh/Tests/test-support/session-snapshot/src/index.ts`](../Tests/test-support/session-snapshot/src/index.ts)）
-- `@deepseek-ai/dsh-session-telemetry`（[`rsh/Engine/session/session-telemetry/src/index.ts`](../Engine/session/session-telemetry/src/index.ts)）
-- `@deepseek-ai/dsh-session-title-llm`（[`rsh/Engine/session/session-title-llm/src/index.ts`](../Engine/session/session-title-llm/src/index.ts)）
-- `@deepseek-ai/dsh-settings-definition` ([`rsh/Core/settings/settings-definition/src/index.ts`](../Core/settings/settings-definition/src/index.ts))
-- `@deepseek-ai/dsh-shell-process-local`（[`rsh/Modules/Official/shell/shell-process-local/src/index.ts`](../Modules/Official/shell/shell-process-local/src/index.ts)）
-- `@deepseek-ai/dsh-shell-sandbox-core`（[`rsh/Modules/Official/shell/shell-sandbox-core/src/index.ts`](../Modules/Official/shell/shell-sandbox-core/src/index.ts)）
-- `@deepseek-ai/dsh-subagent-in-process-driver`（[`rsh/Engine/subagent/subagent-in-process-driver/src/index.ts`](../Engine/subagent/subagent-in-process-driver/src/index.ts)）
-- `@deepseek-ai/dsh-subagent-protocol` ([`rsh/Engine/subagent/subagent-protocol/src/index.ts`](../Engine/subagent/subagent-protocol/src/index.ts))
-- `@deepseek-ai/dsh-terminal-ui` ([`rsh/Programs/TUI/terminal-ui/src/index.ts`](../Programs/TUI/terminal-ui/src/index.ts))
-- `@deepseek-ai/dsh-timeout`（[`rsh/Core/util/timeout/src/index.ts`](../Core/util/timeout/src/index.ts)）
-- `@deepseek-ai/dsh-tmux-context-definition`（[`rsh/Engine/context/tmux-context-definition/src/index.ts`](../Engine/context/tmux-context-definition/src/index.ts)）
-- `@deepseek-ai/dsh-tool-code-runtime`（[`rsh/Modules/Official/code-runtime/tool-code-runtime/src/index.ts`](../Modules/Official/code-runtime/tool-code-runtime/src/index.ts)）
-- `@deepseek-ai/dsh-typert-generator`（[`rsh/Core/typert/generator/src/index.ts`](../Core/typert/generator/src/index.ts)）
-- `@deepseek-ai/dsh-typert-protocol`（[`rsh/Core/typert/protocol/src/index.ts`](../Core/typert/protocol/src/index.ts)）
-- `@deepseek-ai/dsh-typert-registry`（[`rsh/Core/typert/registry/src/index.ts`](../Core/typert/registry/src/index.ts)）
-- `@deepseek-ai/dsh-user-question-broker`（[`rsh/Modules/Official/interaction/user-question-broker/src/index.ts`](../Modules/Official/interaction/user-question-broker/src/index.ts)）
-- `@deepseek-ai/dsh-util-crypto`（[`rsh/Core/util/crypto/src/index.ts`](../Core/util/crypto/src/index.ts)）
-- `@deepseek-ai/dsh-util-time`（[`rsh/Core/util/time/src/index.ts`](../Core/util/time/src/index.ts)）
-- `@deepseek-ai/dsh-util-values`（[`rsh/Core/util/values/src/index.ts`](../Core/util/values/src/index.ts)）
-- `@deepseek-ai/dsh-util-workspace-path`（[`rsh/Core/util/workspace-path/src/index.ts`](../Core/util/workspace-path/src/index.ts)）
-- `@deepseek-ai/dsh-web-compatibility`（[`rsh/Compatibility/DSH/web/frontend/src/index.ts`](../Compatibility/DSH/web/frontend/src/index.ts)）
-- `@deepseek-ai/dsh-win32-process`（[`rsh/Core/subprocess/win32-process/src/index.ts`](../Core/subprocess/win32-process/src/index.ts)）
-- `@deepseek-ai/dsh-workspace-definition`（[`rsh/Engine/workspace/workspace-definition/src/index.ts`](../Engine/workspace/workspace-definition/src/index.ts)）
+- `@redspark/rsh-acp-child`（[`rsh/Modules/Official/subagent/acp-child/src/index.ts`](../Modules/Official/subagent/acp-child/src/index.ts)）
+- `@redspark/rsh-acp-protocol`（[`rsh/Modules/Official/subagent/acp-protocol/src/index.ts`](../Modules/Official/subagent/acp-protocol/src/index.ts)）
+- `@redspark/rsh-agent-loop-testkit`（[`rsh/Tests/test-support/agent-loop-testkit/src/index.ts`](../Tests/test-support/agent-loop-testkit/src/index.ts)）
+- `@redspark/rsh-agent-preset-standing`（[`rsh/Engine/preset/agent-preset-standing/src/index.ts`](../Engine/preset/agent-preset-standing/src/index.ts)）
+- `@redspark/rsh-anonymous-user-id`（[`rsh/Core/identity/anonymous-user-id/src/index.ts`](../Core/identity/anonymous-user-id/src/index.ts)）
+- `@redspark/rsh-app-boot`（[`rsh/Compatibility/DSH/boot/app-boot/src/index.ts`](../Compatibility/DSH/boot/app-boot/src/index.ts)）
+- `@redspark/rsh-approval-definition`（[`rsh/Engine/core/approval-definition/src/index.ts`](../Engine/core/approval-definition/src/index.ts)）
+- `@redspark/rsh-atomic-write`（[`rsh/Core/util/atomic-write/src/index.ts`](../Core/util/atomic-write/src/index.ts)）
+- `@redspark/rsh-base`（[`rsh/Compatibility/DSH/bundle/base/src/index.ts`](../Compatibility/DSH/bundle/base/src/index.ts)）
+- `@redspark/rsh-brand`（[`rsh/Core/util/brand/src/index.ts`](../Core/util/brand/src/index.ts)）
+- `@redspark/rsh-chunked-list`（[`rsh/Core/util/chunked-list/src/index.ts`](../Core/util/chunked-list/src/index.ts)）
+- `@redspark/rsh-client-native-application` ([`rsh/Programs/Web/client/native-application/src/index.ts`](../Programs/Web/client/native-application/src/index.ts))
+- `@redspark/rsh-client-native-session` ([`rsh/Programs/Web/client/native-session/src/index.ts`](../Programs/Web/client/native-session/src/index.ts))
+- `@redspark/rsh-client-store`（[`rsh/Programs/Web/client/store/src/index.ts`](../Programs/Web/client/store/src/index.ts)）
+- `@redspark/rsh-client-test-runtime`（[`rsh/Tests/test-support/client-runtime/src/index.ts`](../Tests/test-support/client-runtime/src/index.ts)）
+- `@redspark/rsh-client-ui-dockkit`（[`rsh/Programs/Web/client/ui-dockkit/src/index.ts`](../Programs/Web/client/ui-dockkit/src/index.ts)）
+- `@redspark/rsh-client-ui-primitives`（[`rsh/Programs/Web/client/ui-primitives/src/index.ts`](../Programs/Web/client/ui-primitives/src/index.ts)）
+- `@redspark/rsh-client-ui-slots`（[`rsh/Programs/Web/client/ui-slots/src/index.ts`](../Programs/Web/client/ui-slots/src/index.ts)）
+- `@redspark/rsh-client-web`（[`rsh/Programs/Web/client/web/src/index.ts`](../Programs/Web/client/web/src/index.ts)）
+- `@redspark/rsh-cmdline`（[`rsh/Compatibility/DSH/boot/cmdline/src/index.ts`](../Compatibility/DSH/boot/cmdline/src/index.ts)）
+- `@redspark/rsh-code-runtime-definition`（[`rsh/Engine/core/code-runtime-definition/src/index.ts`](../Engine/core/code-runtime-definition/src/index.ts)）
+- `@redspark/rsh-code-runtime-process-sandbox`（[`rsh/Modules/Official/code-runtime/code-runtime-process-sandbox/src/index.ts`](../Modules/Official/code-runtime/code-runtime-process-sandbox/src/index.ts)）
+- `@redspark/rsh-codex-app-server` ([`rsh/Modules/Official/subagent/codex-app-server/src/index.ts`](../Modules/Official/subagent/codex-app-server/src/index.ts))
+- `@redspark/rsh-compat-dsh-runtime`（[`rsh/Compatibility/DSH/bridge/compat-dsh-runtime/src/index.ts`](../Compatibility/DSH/bridge/compat-dsh-runtime/src/index.ts)）
+- `@redspark/rsh-compat-fs-local`（[`rsh/Compatibility/DSH/bridge/compat-fs-local/src/index.ts`](../Compatibility/DSH/bridge/compat-fs-local/src/index.ts)）
+- `@redspark/rsh-compat-fs-policy`（[`rsh/Compatibility/DSH/bridge/compat-fs-policy/src/index.ts`](../Compatibility/DSH/bridge/compat-fs-policy/src/index.ts)）
+- `@redspark/rsh-compat-fs-sandbox`（[`rsh/Compatibility/DSH/bridge/compat-fs-sandbox/src/index.ts`](../Compatibility/DSH/bridge/compat-fs-sandbox/src/index.ts)）
+- `@redspark/rsh-compat-settings-adapters`（[`rsh/Compatibility/DSH/bridge/compat-settings-adapters/src/index.ts`](../Compatibility/DSH/bridge/compat-settings-adapters/src/index.ts)）
+- `@redspark/rsh-compat-settings-definition`（[`rsh/Compatibility/DSH/bridge/compat-settings-definition/src/index.ts`](../Compatibility/DSH/bridge/compat-settings-definition/src/index.ts)）
+- `@redspark/rsh-compat-tool-fs`（[`rsh/Compatibility/DSH/bridge/compat-tool-fs/src/index.ts`](../Compatibility/DSH/bridge/compat-tool-fs/src/index.ts)）
+- `@redspark/rsh-context-insight`（[`rsh/Engine/context/context-insight/src/index.ts`](../Engine/context/context-insight/src/index.ts)）
+- `@redspark/rsh-cordis-bridge`（[`rsh/Core/runtime-diagnostics/cordis-bridge/src/index.ts`](../Core/runtime-diagnostics/cordis-bridge/src/index.ts)）
+- `@redspark/rsh-deepseek-account`（[`rsh/Modules/Official/credentials/deepseek-account/src/index.ts`](../Modules/Official/credentials/deepseek-account/src/index.ts)）
+- `@redspark/rsh-deque`（[`rsh/Core/util/deque/src/index.ts`](../Core/util/deque/src/index.ts)）
+- `@redspark/rsh-desktop-host-compatibility`（[`rsh/Compatibility/DSH/boot/desktop-host-compatibility/src/index.ts`](../Compatibility/DSH/boot/desktop-host-compatibility/src/index.ts)）
+- `@redspark/rsh-errors`（[`rsh/Core/util/errors/src/index.ts`](../Core/util/errors/src/index.ts)）
+- `@redspark/rsh-experimental-agent-team-profile`（[`rsh/Modules/Community/experimental/agent-team-profile/src/index.ts`](../Modules/Community/experimental/agent-team-profile/src/index.ts)）
+- `@redspark/rsh-experimental-agent-team-web-profile`（[`rsh/Modules/Community/experimental/agent-team-web-profile/src/index.ts`](../Modules/Community/experimental/agent-team-web-profile/src/index.ts)）
+- `@redspark/rsh-experimental-webworker-packer`（[`rsh/Modules/Community/experimental/webworker-packer/src/index.ts`](../Modules/Community/experimental/webworker-packer/src/index.ts)）
+- `@redspark/rsh-experimental-webworker-runtime`（[`rsh/Modules/Community/experimental/webworker-runtime/src/index.ts`](../Modules/Community/experimental/webworker-runtime/src/index.ts)）
+- `@redspark/rsh-home-paths`（[`rsh/Core/util/home-paths/src/index.ts`](../Core/util/home-paths/src/index.ts)）
+- `@redspark/rsh-hook-protocol`（[`rsh/Modules/Official/hooks/hook-protocol/src/index.ts`](../Modules/Official/hooks/hook-protocol/src/index.ts)）
+- `@redspark/rsh-http-proxy`（[`rsh/Core/util/http-proxy/src/index.ts`](../Core/util/http-proxy/src/index.ts)）
+- `@redspark/rsh-http-routes`（[`rsh/Core/util/http-routes/src/index.ts`](../Core/util/http-routes/src/index.ts)）
+- `@redspark/rsh-http-routes-cordis`（[`rsh/Compatibility/DSH/bridge/http-routes-cordis/src/index.ts`](../Compatibility/DSH/bridge/http-routes-cordis/src/index.ts)）
+- `@redspark/rsh-json-rpc-line`（[`rsh/Core/util/json-rpc-line/src/index.ts`](../Core/util/json-rpc-line/src/index.ts)）
+- `@redspark/rsh-launch-environment`（[`rsh/Core/util/launch-environment/src/index.ts`](../Core/util/launch-environment/src/index.ts)）
+- `@redspark/rsh-llm-mock-server`（[`rsh/Tests/test-support/llm-mock-server/src/index.ts`](../Tests/test-support/llm-mock-server/src/index.ts)）
+- `@redspark/rsh-loader-smoke`（[`rsh/Tests/test-support/loader-smoke/src/index.ts`](../Tests/test-support/loader-smoke/src/index.ts)）
+- `@redspark/rsh-native-acp`（[`rsh/Programs/ACP/packages/native-acp/src/index.ts`](../Programs/ACP/packages/native-acp/src/index.ts)）
+- `@redspark/rsh-native-agent`（[`rsh/Engine/core/native-agent/src/index.ts`](../Engine/core/native-agent/src/index.ts)）
+- `@redspark/rsh-native-approval`（[`rsh/Modules/Official/interaction/native-approval/src/index.ts`](../Modules/Official/interaction/native-approval/src/index.ts)）
+- `@redspark/rsh-native-code-runtime`（[`rsh/Modules/Official/code-runtime/native-code-runtime/src/index.ts`](../Modules/Official/code-runtime/native-code-runtime/src/index.ts)）
+- `@redspark/rsh-native-command`（[`rsh/Core/util/native-command/src/index.ts`](../Core/util/native-command/src/index.ts)）
+- `@redspark/rsh-native-file-reference-local`（[`rsh/Modules/Official/fs/native-file-reference-local/src/index.ts`](../Modules/Official/fs/native-file-reference-local/src/index.ts)）
+- `@redspark/rsh-native-headless`（[`rsh/Engine/core/native-headless/src/index.ts`](../Engine/core/native-headless/src/index.ts)）
+- `@redspark/rsh-native-jobs`（[`rsh/Engine/core/native-jobs/src/index.ts`](../Engine/core/native-jobs/src/index.ts)）
+- `@redspark/rsh-native-jobs-controller`（[`rsh/Programs/Web/api/native-jobs-controller/src/index.ts`](../Programs/Web/api/native-jobs-controller/src/index.ts)）
+- `@redspark/rsh-native-model-execution`（[`rsh/Engine/core/native-model-execution/src/index.ts`](../Engine/core/native-model-execution/src/index.ts)）
+- `@redspark/rsh-native-model-selection` ([`rsh/Engine/llm/native-model-selection/src/index.ts`](../Engine/llm/native-model-selection/src/index.ts))
+- `@redspark/rsh-native-persona`（[`rsh/Engine/preset/native-persona/src/index.ts`](../Engine/preset/native-persona/src/index.ts)）
+- `@redspark/rsh-native-prompt`（[`rsh/Engine/core/native-prompt/src/index.ts`](../Engine/core/native-prompt/src/index.ts)）
+- `@redspark/rsh-native-runtime`（[`rsh/Core/runtime-diagnostics/native-runtime/src/index.ts`](../Core/runtime-diagnostics/native-runtime/src/index.ts)）
+- `@redspark/rsh-native-sandbox-policy`（[`rsh/Modules/Official/sandbox/native-sandbox-policy/src/index.ts`](../Modules/Official/sandbox/native-sandbox-policy/src/index.ts)）
+- `@redspark/rsh-native-schedule-controller`（[`rsh/Programs/Web/host/native-schedule-controller/src/index.ts`](../Programs/Web/host/native-schedule-controller/src/index.ts)）
+- `@redspark/rsh-native-sdk-server`（[`rsh/Programs/SDK/packages/native-server/src/index.ts`](../Programs/SDK/packages/native-server/src/index.ts)）
+- `@redspark/rsh-native-session-execution`（[`rsh/Engine/core/native-session-execution/src/index.ts`](../Engine/core/native-session-execution/src/index.ts)）
+- `@redspark/rsh-native-subagent` ([`rsh/Engine/subagent/native-subagent/src/index.ts`](../Engine/subagent/native-subagent/src/index.ts))
+- `@redspark/rsh-native-time-context`（[`rsh/Engine/context/native-time-context/src/index.ts`](../Engine/context/native-time-context/src/index.ts)）
+- `@redspark/rsh-native-tmux-context`（[`rsh/Modules/Official/terminal/native-tmux-context/src/index.ts`](../Modules/Official/terminal/native-tmux-context/src/index.ts)）
+- `@redspark/rsh-native-tool-jobs`（[`rsh/Engine/jobs/native-tool-jobs/src/index.ts`](../Engine/jobs/native-tool-jobs/src/index.ts)）
+- `@redspark/rsh-native-tool-subagent-list-agents`（[`rsh/Engine/subagent/native-tool-subagent-list-agents/src/index.ts`](../Engine/subagent/native-tool-subagent-list-agents/src/index.ts)）
+- `@redspark/rsh-native-tools`（[`rsh/Engine/core/native-tools/src/index.ts`](../Engine/core/native-tools/src/index.ts)）
+- `@redspark/rsh-native-tui` ([`rsh/Programs/TUI/native-tui/src/index.ts`](../Programs/TUI/native-tui/src/index.ts))
+- `@redspark/rsh-native-web-assets`（[`rsh/Programs/Web/host/native-web-assets/src/index.ts`](../Programs/Web/host/native-web-assets/src/index.ts)）
+- `@redspark/rsh-native-web-host`（[`rsh/Programs/Web/host/native-web-host/src/index.ts`](../Programs/Web/host/native-web-host/src/index.ts)）
+- `@redspark/rsh-native-web-session-controller` ([`rsh/Programs/Web/api/native-web-session-controller/src/index.ts`](../Programs/Web/api/native-web-session-controller/src/index.ts))
+- `@redspark/rsh-output-retention`（[`rsh/Core/util/output-retention/src/index.ts`](../Core/util/output-retention/src/index.ts)）
+- `@redspark/rsh-package-manifest` ([`rsh/Core/util/package-manifest/src/index.ts`](../Core/util/package-manifest/src/index.ts))
+- `@redspark/rsh-remote-mock` ([`rsh/Tests/test-support/remote-mock/src/index.ts`](../Tests/test-support/remote-mock/src/index.ts))
+- `@redspark/rsh-request-context`（[`rsh/Engine/context/request-context/src/index.ts`](../Engine/context/request-context/src/index.ts)）
+- `@redspark/rsh-request-context-definition`（[`rsh/Engine/context/request-context-definition/src/index.ts`](../Engine/context/request-context-definition/src/index.ts)）
+- `@redspark/rsh-sandbox-windows-acl`（[`rsh/Modules/Official/sandbox/sandbox-windows-acl/src/index.ts`](../Modules/Official/sandbox/sandbox-windows-acl/src/index.ts)）
+- `@redspark/rsh-scope`（[`rsh/Engine/core/scope/src/index.ts`](../Engine/core/scope/src/index.ts)）
+- `@redspark/rsh-sdk-child`（[`rsh/Modules/Official/subagent/sdk-child/src/index.ts`](../Modules/Official/subagent/sdk-child/src/index.ts)）
+- `@redspark/rsh-sdk-client`（[`rsh/Programs/SDK/packages/client/src/index.ts`](../Programs/SDK/packages/client/src/index.ts)）
+- `@redspark/rsh-sdk-minimal`（[`rsh/Compatibility/DSH/bundle/sdk-minimal/src/index.ts`](../Compatibility/DSH/bundle/sdk-minimal/src/index.ts)）
+- `@redspark/rsh-sdk-protocol`（[`rsh/Engine/subagent/sdk-protocol/src/index.ts`](../Engine/subagent/sdk-protocol/src/index.ts)）
+- `@redspark/rsh-sdk-runtime`（[`rsh/Engine/subagent/sdk-runtime/src/index.ts`](../Engine/subagent/sdk-runtime/src/index.ts)）
+- `@redspark/rsh-session-format`（[`rsh/Engine/session/session-format/src/index.ts`](../Engine/session/session-format/src/index.ts)）
+- `@redspark/rsh-session-format-catalog`（[`rsh/Engine/session/session-format-catalog/src/index.ts`](../Engine/session/session-format-catalog/src/index.ts)）
+- `@redspark/rsh-session-format-v0-to-v1`（[`rsh/Engine/session/session-format-v0-to-v1/src/index.ts`](../Engine/session/session-format-v0-to-v1/src/index.ts)）
+- `@redspark/rsh-session-format-v1-to-v2`（[`rsh/Engine/session/session-format-v1-to-v2/src/index.ts`](../Engine/session/session-format-v1-to-v2/src/index.ts)）
+- `@redspark/rsh-session-format-v2-to-v3`（[`rsh/Engine/session/session-format-v2-to-v3/src/index.ts`](../Engine/session/session-format-v2-to-v3/src/index.ts)）
+- `@redspark/rsh-session-snapshot`（[`rsh/Tests/test-support/session-snapshot/src/index.ts`](../Tests/test-support/session-snapshot/src/index.ts)）
+- `@redspark/rsh-session-telemetry`（[`rsh/Engine/session/session-telemetry/src/index.ts`](../Engine/session/session-telemetry/src/index.ts)）
+- `@redspark/rsh-session-title-llm`（[`rsh/Engine/session/session-title-llm/src/index.ts`](../Engine/session/session-title-llm/src/index.ts)）
+- `@redspark/rsh-settings-definition` ([`rsh/Core/settings/settings-definition/src/index.ts`](../Core/settings/settings-definition/src/index.ts))
+- `@redspark/rsh-shell-process-local`（[`rsh/Modules/Official/shell/shell-process-local/src/index.ts`](../Modules/Official/shell/shell-process-local/src/index.ts)）
+- `@redspark/rsh-shell-sandbox-core`（[`rsh/Modules/Official/shell/shell-sandbox-core/src/index.ts`](../Modules/Official/shell/shell-sandbox-core/src/index.ts)）
+- `@redspark/rsh-subagent-in-process-driver`（[`rsh/Engine/subagent/subagent-in-process-driver/src/index.ts`](../Engine/subagent/subagent-in-process-driver/src/index.ts)）
+- `@redspark/rsh-subagent-protocol` ([`rsh/Engine/subagent/subagent-protocol/src/index.ts`](../Engine/subagent/subagent-protocol/src/index.ts))
+- `@redspark/rsh-terminal-ui` ([`rsh/Programs/TUI/terminal-ui/src/index.ts`](../Programs/TUI/terminal-ui/src/index.ts))
+- `@redspark/rsh-timeout`（[`rsh/Core/util/timeout/src/index.ts`](../Core/util/timeout/src/index.ts)）
+- `@redspark/rsh-tmux-context-definition`（[`rsh/Engine/context/tmux-context-definition/src/index.ts`](../Engine/context/tmux-context-definition/src/index.ts)）
+- `@redspark/rsh-tool-code-runtime`（[`rsh/Modules/Official/code-runtime/tool-code-runtime/src/index.ts`](../Modules/Official/code-runtime/tool-code-runtime/src/index.ts)）
+- `@redspark/rsh-typert-generator`（[`rsh/Core/typert/generator/src/index.ts`](../Core/typert/generator/src/index.ts)）
+- `@redspark/rsh-typert-protocol`（[`rsh/Core/typert/protocol/src/index.ts`](../Core/typert/protocol/src/index.ts)）
+- `@redspark/rsh-typert-registry`（[`rsh/Core/typert/registry/src/index.ts`](../Core/typert/registry/src/index.ts)）
+- `@redspark/rsh-user-question-broker`（[`rsh/Modules/Official/interaction/user-question-broker/src/index.ts`](../Modules/Official/interaction/user-question-broker/src/index.ts)）
+- `@redspark/rsh-util-crypto`（[`rsh/Core/util/crypto/src/index.ts`](../Core/util/crypto/src/index.ts)）
+- `@redspark/rsh-util-time`（[`rsh/Core/util/time/src/index.ts`](../Core/util/time/src/index.ts)）
+- `@redspark/rsh-util-values`（[`rsh/Core/util/values/src/index.ts`](../Core/util/values/src/index.ts)）
+- `@redspark/rsh-util-workspace-path`（[`rsh/Core/util/workspace-path/src/index.ts`](../Core/util/workspace-path/src/index.ts)）
+- `@redspark/rsh-web-compatibility`（[`rsh/Compatibility/DSH/web/frontend/src/index.ts`](../Compatibility/DSH/web/frontend/src/index.ts)）
+- `@redspark/rsh-win32-process`（[`rsh/Core/subprocess/win32-process/src/index.ts`](../Core/subprocess/win32-process/src/index.ts)）
+- `@redspark/rsh-workspace-definition`（[`rsh/Engine/workspace/workspace-definition/src/index.ts`](../Engine/workspace/workspace-definition/src/index.ts)）

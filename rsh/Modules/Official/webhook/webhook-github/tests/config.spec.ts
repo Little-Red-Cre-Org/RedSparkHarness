@@ -1,4 +1,4 @@
-import { Context } from '@deepseek-ai/cordis'
+import { Context } from '@redspark/cordis'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { apply, type Config } from '../src/index.ts'
 
@@ -23,7 +23,7 @@ function harness(): { ctx: Context; register: ReturnType<typeof vi.fn>; remove: 
 const valid = {
   source: 'primary',
   path: '/github',
-  secretEnv: 'DSH_GITHUB_WEBHOOK_SECRET',
+  secretEnv: 'RSH_GITHUB_WEBHOOK_SECRET',
   maxBodyBytes: 1024,
 } satisfies Config
 

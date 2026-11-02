@@ -1,25 +1,25 @@
 /** Native Web conversation application; the renderer and Session transport are selected Providers. */
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import type { KeyboardEvent, ReactNode } from 'react'
-import { foldTodos } from '@deepseek-ai/dsh-tool-todo/client-native'
+import { foldTodos } from '@redspark/rsh-tool-todo/client-native'
 import {
   Button, ChatComposerButton, ChatComposerCard, ChatComposerToolbar, IconChevronDownOutline14, Menu,
   ChatMascotHero, ChatWelcome, FishLogo,
-} from '@deepseek-ai/dsh-client-ui-primitives'
-import type { DirectoryBrowserListing, MarkdownLabels } from '@deepseek-ai/dsh-client-ui-primitives'
-import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
-import type { SnapshotSelectorHook, TranslateNS } from '@deepseek-ai/dsh-client-ui-slots'
-import type {} from '@deepseek-ai/dsh-client-ui-renderer/native'
-import type {} from '@deepseek-ai/dsh-client-native-session/native'
-import type { NativeLocaleSnapshot } from '@deepseek-ai/dsh-client-locale/native'
-import type {} from '@deepseek-ai/dsh-client-ui-session/native'
-import type { NativeMessageActionsOwnerProps } from '@deepseek-ai/dsh-client-ui-session/native'
-import type {} from '@deepseek-ai/dsh-client-ui-sidebar/native'
-import { deriveEventMessage, isAppendSurfaceEvent } from '@deepseek-ai/dsh-session/surface'
-import type { SessionId } from '@deepseek-ai/dsh-session/types'
+} from '@redspark/rsh-client-ui-primitives'
+import type { DirectoryBrowserListing, MarkdownLabels } from '@redspark/rsh-client-ui-primitives'
+import type { NativePlugin } from '@redspark/rsh-native-runtime'
+import type { SnapshotSelectorHook, TranslateNS } from '@redspark/rsh-client-ui-slots'
+import type {} from '@redspark/rsh-client-ui-renderer/native'
+import type {} from '@redspark/rsh-client-native-session/native'
+import type { NativeLocaleSnapshot } from '@redspark/rsh-client-locale/native'
+import type {} from '@redspark/rsh-client-ui-session/native'
+import type { NativeMessageActionsOwnerProps } from '@redspark/rsh-client-ui-session/native'
+import type {} from '@redspark/rsh-client-ui-sidebar/native'
+import { deriveEventMessage, isAppendSurfaceEvent } from '@redspark/rsh-session/surface'
+import type { SessionId } from '@redspark/rsh-session/types'
 import type {
   NativeAgentPresetList, NativeDirectoryPickerClient, NativeSessionImage, NativeWorkspace,
-} from '@deepseek-ai/dsh-client-native-session/native'
+} from '@redspark/rsh-client-native-session/native'
 import { NativeConversationController } from './controller.ts'
 import type { ConversationSnapshot } from './controller.ts'
 import { NativeComposerAttachments, NativeComposerImagePicker } from './attachments.tsx'
@@ -92,7 +92,7 @@ function SubagentMenu({ sessions, runningCount, ready, selectSession, t }: {
   } />
 }
 
-declare module '@deepseek-ai/dsh-client-ui-slots' {
+declare module '@redspark/rsh-client-ui-slots' {
   interface LocaleNamespaceMap {
     /** Native conversation vocabulary and settings copy. */
     nativeApplication: ConversationLocaleKey
@@ -506,7 +506,7 @@ function Conversation({ snapshot, useLocale, settingsActions, listWorkspaces, ch
 
 /** Minimal native application selected by the explicit native-web profile. */
 export const plugin: NativePlugin = {
-  apiVersion: 1, name: '@deepseek-ai/dsh-client-native-application', targets: ['client'],
+  apiVersion: 1, name: '@redspark/rsh-client-native-application', targets: ['client'],
   requires: ['clientNativeSession', 'clientNativeWorkspace', 'clientNativeDirectoryPicker', 'clientSlots', 'clientLocale', 'clientNativeTheme'], provides: ['clientApplication', 'clientNativeConversation'],
   resolve(input) {
     if (input !== undefined && (input === null || typeof input !== 'object' || Array.isArray(input)

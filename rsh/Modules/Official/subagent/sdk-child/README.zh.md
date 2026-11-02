@@ -3,7 +3,7 @@ description: "Native Subagent 适配器：使用标准 dsh Native SDK profile �
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-sdk-child
+# @redspark/rsh-sdk-child
 
 [English](README.md) | 中文
 
@@ -25,7 +25,7 @@ kind: "package-reference"
 <a id="use-this-package"></a>
 ## 使用本包
 
-使用显式的 `native-sdk-dsh-child` profile 选择该能力。现有 `native-sdk` profile 及其 `spawn` 默认不变。这个 profile 选择 sandbox 文件系统、Native sandbox policy 和本地进程沙箱 Provider，再挂载本 Module 与固定 launcher carrier。launcher 在操作系统临时目录中创建随机的新 DSH_HOME；只有托管进程范围确认静止后才删除这个精确目录。它只把所选 pi-ai 提供方配置复制到该 home。子进程通过 Host 凭据 Provider 解析所选凭据；不会整份继承父环境，也不会读取已存储的 OAuth/API-key 记录。被选配置必须显式声明 `apiKeyEnv`。
+使用显式的 `native-sdk-dsh-child` profile 选择该能力。现有 `native-sdk` profile 及其 `spawn` 默认不变。这个 profile 选择 sandbox 文件系统、Native sandbox policy 和本地进程沙箱 Provider，再挂载本 Module 与固定 launcher carrier。launcher 在操作系统临时目录中创建随机的新 RSH_HOME；只有托管进程范围确认静止后才删除这个精确目录。它只把所选 pi-ai 提供方配置复制到该 home。子进程通过 Host 凭据 Provider 解析所选凭据；不会整份继承父环境，也不会读取已存储的 OAuth/API-key 记录。被选配置必须显式声明 `apiKeyEnv`。
 
 子进程使用父 Session 的确切 cwd。模型可见文件权限只来自父 Native Headless 内建工具；同名自定义 Plugin 工具不会授予 child 内建能力。child 读取仍限制在 cwd。只有父快照授予 `write_file`、父级要求审批、快照提供 workspace-write 根，且 `dsh-sdk` driver 持有绑定已准入 owner、epoch 与 turn 的审批 callback 时，child 才能获得 `write_file`。固定 launcher 只在这个私有 child 组合中安装 `ask` 策略的 Native Approval。child 请求按 operation、request、Session 与 tool-call 身份关联；仅 parent authority 写入 asked／decided 事件并可返回 `allowed-once`。取消或 owner 退役会排空 relay，并拒绝迟到决策。进程沙箱另行限制文件副作用；backend 仍具有文档所述临时目录语义，Windows enforcement 在适用时报告为 partial（部分），不能称作完整 OS 边界。
 

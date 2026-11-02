@@ -2,10 +2,10 @@
  * Service Definition for the same-world process-confinement capability seam: wrap exact subprocess argv under a
  * host-path file policy. Containers, microVMs, and remote execution replace the
  * surrounding capability seam instead; this service shares the host kernel and filesystem.
- * @module @deepseek-ai/dsh-sandbox
+ * @module @redspark/rsh-sandbox
  */
 
-import { Context, Service } from '@deepseek-ai/cordis'
+import { Context, Service } from '@redspark/cordis'
 import type { ConfinedArgv, SandboxPolicy } from './native-types.ts'
 
 export {
@@ -30,7 +30,7 @@ export type {
 
 export { SANDBOX_UNAVAILABLE, SandboxUnavailableError } from './native.ts'
 
-declare module '@deepseek-ai/cordis' {
+declare module '@redspark/cordis' {
   interface Context {
     sandbox: SandboxProvider
   }

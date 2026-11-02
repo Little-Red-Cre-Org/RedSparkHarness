@@ -1,5 +1,5 @@
 /** Cordis-free local attachment storage configuration and resolved limits. */
-import type { ImageAttachmentLimits } from '@deepseek-ai/dsh-attachment/types'
+import type { ImageAttachmentLimits } from '@redspark/rsh-attachment/types'
 import type { NormalizationPolicy } from './normalization.ts'
 
 /** Default maximum encoded bytes for one submitted image. */
@@ -25,7 +25,7 @@ export const MAX_IMAGE_COMPRESSION_CONCURRENCY = 8
 
 /** Local attachment backend configuration. */
 export interface Config {
-  /** Explicit harness home; omitted follows `DSH_HOME`, then `~/.dsh`. */
+  /** Explicit harness home; omitted follows `RSH_HOME`, then `~/.dsh`. */
   dshHome?: string
   /** Maximum encoded bytes accepted for one submitted image. */
   maxImageBytes?: number

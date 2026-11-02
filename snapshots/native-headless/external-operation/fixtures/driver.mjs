@@ -1,5 +1,5 @@
 import { isDeepStrictEqual } from 'node:util'
-import { serializeNativeExternalJson } from '@deepseek-ai/dsh-native-subagent'
+import { serializeNativeExternalJson } from '@redspark/rsh-native-subagent'
 import { normalizeWorkspacePaths } from './workspace-paths.mjs'
 
 const parseJson = value => typeof value === 'string' ? JSON.parse(value) : value

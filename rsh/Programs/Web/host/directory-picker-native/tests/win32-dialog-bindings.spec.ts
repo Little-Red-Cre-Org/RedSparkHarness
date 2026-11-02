@@ -342,11 +342,11 @@ describe('closeThreadWindows over the fake COM world', () => {
 
 describe('the worker entry over a mocked process boundary', () => {
   const originalSend = process.send?.bind(process)
-  const originalTitle = process.env.DSH_DIALOG_TITLE
+  const originalTitle = process.env.RSH_DIALOG_TITLE
 
   const installBoundary = (): { posted: { kind: string; message?: string }[] } => {
     const posted: { kind: string; message?: string }[] = []
-    process.env.DSH_DIALOG_TITLE = 'Pick'
+    process.env.RSH_DIALOG_TITLE = 'Pick'
     // Never invoke the post callback: it runs the worker's disconnect(), and
     // this process is IPC-connected under the forks pool — severing vitest's
     // own channel would kill the test worker. The real close lifecycle
@@ -361,8 +361,8 @@ describe('the worker entry over a mocked process boundary', () => {
   afterEach(() => {
     delete (process as { send?: unknown }).send
     if (originalSend !== undefined) (process as { send?: unknown }).send = originalSend
-    if (originalTitle === undefined) delete process.env.DSH_DIALOG_TITLE
-    else process.env.DSH_DIALOG_TITLE = originalTitle
+    if (originalTitle === undefined) delete process.env.RSH_DIALOG_TITLE
+    else process.env.RSH_DIALOG_TITLE = originalTitle
     vi.doUnmock('../src/win32-dialog-bindings.ts')
     vi.resetModules()
   })
@@ -418,13 +418,13 @@ describe('the worker entry over a mocked process boundary', () => {
   })
 
   it('refuses to run without the dialog title', async () => {
-    delete process.env.DSH_DIALOG_TITLE
+    delete process.env.RSH_DIALOG_TITLE
     ;(process as { send?: unknown }).send = () => true
-    await expect(import('../src/win32-dialog-worker.ts')).rejects.toThrow('DSH_DIALOG_TITLE is required')
+    await expect(import('../src/win32-dialog-worker.ts')).rejects.toThrow('RSH_DIALOG_TITLE is required')
   })
 
   it('refuses to run outside a child process', async () => {
-    process.env.DSH_DIALOG_TITLE = 'Pick'
+    process.env.RSH_DIALOG_TITLE = 'Pick'
     delete (process as { send?: unknown }).send
     await expect(import('../src/win32-dialog-worker.ts')).rejects.toThrow('must run as a child process')
   })

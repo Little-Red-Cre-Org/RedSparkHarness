@@ -1,5 +1,5 @@
 {
-  "name": "@deepseek-ai/dsh-compat-fs-sandbox",
+  "name": "@redspark/rsh-compat-fs-sandbox",
   "description": "Selected legacy sandbox filesystem Provider for native profiles",
   "version": "1.0.0",
   "publishConfig": { "access": "public" },
@@ -15,15 +15,15 @@
   },
   "files": ["lib/index.js", "lib/types/**/*.d.ts"],
   "license": "MIT",
-  "peerDependencies": { "@deepseek-ai/cordis": "workspace:^" },
-  "devDependencies": { "@deepseek-ai/cordis": "workspace:^" },
+  "peerDependencies": { "@redspark/cordis": "workspace:^" },
+  "devDependencies": { "@redspark/cordis": "workspace:^" },
   "dependencies": {
-    "@deepseek-ai/dsh-native-runtime": "workspace:^",
-    "@deepseek-ai/dsh-compat-dsh-runtime": "workspace:^",
-    "@deepseek-ai/dsh-fs": "workspace:^",
-    "@deepseek-ai/dsh-fs-local": "workspace:^",
-    "@deepseek-ai/dsh-fs-sandbox": "workspace:^",
-    "@deepseek-ai/dsh-sandbox-policy": "workspace:^",
-    "@deepseek-ai/dsh-native-sandbox-policy": "workspace:^"
+    "@redspark/rsh-native-runtime": "workspace:^",
+    "@redspark/rsh-compat-dsh-runtime": "workspace:^",
+    "@redspark/rsh-fs": "workspace:^",
+    "@redspark/rsh-fs-local": "workspace:^",
+    "@redspark/rsh-fs-sandbox": "workspace:^",
+    "@redspark/rsh-sandbox-policy": "workspace:^",
+    "@redspark/rsh-native-sandbox-policy": "workspace:^"
   }
 }

@@ -8,12 +8,12 @@ import { execa } from 'execa'
 import { expect, it } from 'vitest'
 import { chromium, type Browser } from 'playwright'
 import { ensureShippedNativeProfile, shippedNativeProfileComposition } from '../../../../../rsh/Programs/CLI/src/native-profile-template.ts'
-import { SESSION_FORMAT_VERSION } from '@deepseek-ai/dsh-session/native'
-import { parseSessionEvent } from '@deepseek-ai/dsh-session/event-validation'
-import type { SessionEvent, SessionId } from '@deepseek-ai/dsh-session/types'
-import { JsonlSessionBackend } from '@deepseek-ai/dsh-session-persistence-jsonl'
+import { SESSION_FORMAT_VERSION } from '@redspark/rsh-session/native'
+import { parseSessionEvent } from '@redspark/rsh-session/event-validation'
+import type { SessionEvent, SessionId } from '@redspark/rsh-session/types'
+import { JsonlSessionBackend } from '@redspark/rsh-session-persistence-jsonl'
 import { normalizeSessionSnapshot, redactSessionSnapshotIds, normalizedSystemPrompts, normalizedToolSchemas,
-  formatSystemPromptSnapshot, formatToolSchemasSnapshot, sessionFixtureName } from '@deepseek-ai/dsh-session-snapshot'
+  formatSystemPromptSnapshot, formatToolSchemasSnapshot, sessionFixtureName } from '@redspark/rsh-session-snapshot'
 
 const root = fileURLToPath(new URL('../../../../../', import.meta.url))
 const scenario = join(root, 'snapshots/web/native-conversation')
@@ -44,7 +44,7 @@ it('creates, submits and restores the built native conversation through the ship
   ensureShippedNativeProfile('native-web', home)
   mkdirSync(workspace)
   writeFileSync(join(workspace, 'tool-card.txt'), 'Persisted read-card content.\n')
-  const modules = join(profile, 'node_modules/@deepseek-ai')
+  const modules = join(profile, 'node_modules/@redspark')
   mkdirSync(modules, { recursive: true })
   const links: string[] = []
   for (const [name, path] of [
@@ -191,14 +191,14 @@ it('creates, submits and restores the built native conversation through the ship
     ['credentials', 'credentials-local', { path: join(home, 'credentials.json') }],
   ] as const
   writeFileSync(join(profile, 'rsh.profile.json'), JSON.stringify({ formatVersion: 1, scopes: [{ id: 'root' }], installations: [
-    ...rows.map(([id, name, config]) => ({ id, plugin: `@deepseek-ai/dsh-${name}`, scope: 'root', ...config === undefined ? {} : { config } })),
+    ...rows.map(([id, name, config]) => ({ id, plugin: `@redspark/rsh-${name}`, scope: 'root', ...config === undefined ? {} : { config } })),
     ...shipped.installations.filter(row => row.id === 'session-execution' || row.id === 'model-selection' || row.id === 'storage-hub' || row.id === 'storage-json' || row.id === 'storage-domain' || row.id === 'workspace' || row.id === 'user-questions' || row.id === 'tool-ask-user' || row.id === 'attachments' || row.id === 'file-tools' || row.id === 'policy' || row.id === 'tool-todo' || row.id === 'session-title' || row.id === 'session-title-llm' || row.id === 'settings'),
     { id: 'model', plugin: 'native-web-fixture-model', scope: 'root' },
   ] }))
   const child = execa(process.execPath, [
     '--import', pathToFileURL(fixedSessionClock).href, join(root, 'rsh/Programs/CLI/lib/bin.js'), '--profile', 'native-web',
   ], {
-    cwd: root, env: { ...process.env, DSH_HOME: home }, reject: false,
+    cwd: root, env: { ...process.env, RSH_HOME: home }, reject: false,
   })
   let browser: Browser | undefined
   try {
@@ -213,7 +213,7 @@ it('creates, submits and restores the built native conversation through the ship
       })
       void child.then((result) => { clearTimeout(timeout); reject(new Error(`native Web exited: ${result.stderr}`)) })
     })
-    const fixture = process.env.DSH_SNAPSHOT === 'refresh' ? undefined
+    const fixture = process.env.RSH_SNAPSHOT === 'refresh' ? undefined
       : readFileSync(join(scenario, sessionFixtureName(0, SESSION_FORMAT_VERSION)), 'utf8').trim().split('\n').map(line => JSON.parse(line) as { type?: string; data?: { content?: { type: string; text?: string }[] } })
     const text = fixture === undefined ? 'Native browser input.'
       : fixture.find(event => event.type === 'user/message')?.data?.content?.find(block => block.type === 'text')?.text
@@ -276,7 +276,7 @@ it('creates, submits and restores the built native conversation through the ship
     if (modelPickerLabel === null) throw new Error('model picker omitted its accessible current selection')
     const controlsText = `${modelPickerLabel}\n${(await page.getByRole('group', { name: 'Model, mode, and permission controls', exact: true }).innerText()).replace(/\r\n/gu, '\n').trimEnd()}\n`
     const controlsPath = join(scenario, 'controls.expected.md')
-    if (process.env.DSH_SNAPSHOT === 'refresh') writeFileSync(controlsPath, controlsText)
+    if (process.env.RSH_SNAPSHOT === 'refresh') writeFileSync(controlsPath, controlsText)
     else expect(controlsText).toBe(readFileSync(controlsPath, 'utf8'))
     await page.getByRole('textbox', { name: 'Message', exact: true }).fill(text)
     await page.getByLabel('Add images', { exact: true }).setInputFiles(join(scenario, 'image.png'))
@@ -296,7 +296,7 @@ it('creates, submits and restores the built native conversation through the ship
     await questions.getByRole('button', { name: 'Submit answer', exact: true }).click()
     const humanText = humanCards.join('\n\n').replace(/\r\n/gu, '\n').trimEnd() + '\n'
     const humanPath = join(scenario, 'human.expected.md')
-    if (process.env.DSH_SNAPSHOT === 'refresh') writeFileSync(humanPath, humanText)
+    if (process.env.RSH_SNAPSHOT === 'refresh') writeFileSync(humanPath, humanText)
     else expect(humanText).toBe(readFileSync(humanPath, 'utf8'))
     const live = page.locator('[data-streaming="true"]')
     await live.getByText('Native browser answer.', { exact: true }).waitFor()
@@ -306,12 +306,12 @@ it('creates, submits and restores the built native conversation through the ship
     ])
     const todoText = (await todoPanel.innerText()).replace(/\r\n/gu, '\n').trimEnd() + '\n'
     const todoPath = join(scenario, 'todos.expected.md')
-    if (process.env.DSH_SNAPSHOT === 'refresh') writeFileSync(todoPath, todoText)
+    if (process.env.RSH_SNAPSHOT === 'refresh') writeFileSync(todoPath, todoText)
     else expect(todoText).toBe(readFileSync(todoPath, 'utf8'))
     await page.getByRole('button', { name: 'Stop', exact: true }).waitFor()
     const liveText = (await live.innerText()).replace(/\r\n/gu, '\n').trimEnd() + '\n'
     const livePath = join(scenario, 'live.expected.md')
-    if (process.env.DSH_SNAPSHOT === 'refresh') writeFileSync(livePath, liveText)
+    if (process.env.RSH_SNAPSHOT === 'refresh') writeFileSync(livePath, liveText)
     else expect(liveText).toBe(readFileSync(livePath, 'utf8'))
     await page.evaluate(async () => { const response = await fetch('/api/native-fixture/release', { method: 'POST' }); if (!response.ok) throw new Error('fixture release failed') })
     await waitForComposerReady()
@@ -391,7 +391,7 @@ it('creates, submits and restores the built native conversation through the ship
     expect(await actionRow.getByLabel('Duration').count()).toBe(1)
     expect(await actionRow.getByLabel('Time').count()).toBe(1)
     const transcriptPath = join(scenario, 'conversation.expected.md')
-    if (process.env.DSH_SNAPSHOT === 'refresh') writeFileSync(transcriptPath, transcript)
+    if (process.env.RSH_SNAPSHOT === 'refresh') writeFileSync(transcriptPath, transcript)
     else expect(transcript).toBe(readFileSync(transcriptPath, 'utf8'))
     await reasoningDisclosure.click()
     await page.getByText('Then I will summarize it.', { exact: false }).waitFor()
@@ -403,7 +403,7 @@ it('creates, submits and restores the built native conversation through the ship
     expect(await readCard.innerText()).toContain('Persisted read-card content.')
     const cardText = (await readCard.innerText()).replace(/\r\n/gu, '\n').trimEnd() + '\n'
     const cardPath = join(scenario, 'tool-card.expected.md')
-    if (process.env.DSH_SNAPSHOT === 'refresh') writeFileSync(cardPath, cardText)
+    if (process.env.RSH_SNAPSHOT === 'refresh') writeFileSync(cardPath, cardText)
     else expect(cardText).toBe(readFileSync(cardPath, 'utf8'))
 
     const cursorBeforeIdleTitle = readStoredSessionRows().at(-1)?.seq
@@ -587,7 +587,7 @@ it('creates, submits and restores the built native conversation through the ship
       if (normalized === undefined) throw new Error('missing normalized Session')
       const prompts = normalizedSystemPrompts(raw, context)
       const schemas = normalizedToolSchemas(raw, context)
-      if (process.env.DSH_SNAPSHOT === 'refresh') {
+      if (process.env.RSH_SNAPSHOT === 'refresh') {
         mkdirSync(scenario, { recursive: true })
         writeFileSync(join(scenario, name), normalized)
         writeFileSync(join(scenario, 'system-prompt.expected.md'), formatSystemPromptSnapshot(prompts[0]!, prompts.slice(1)))
@@ -627,7 +627,7 @@ it('creates, submits and restores the built native conversation through the ship
     expect(await workflow.locator('[data-member-status="completed"]').count()).toBe(1)
     expect(await workflow.getByRole('button', { name: /^Open / }).count()).toBe(0)
     expect(await page.locator('[data-tool="workflow"]').count()).toBe(1)
-    const workflowEvidence = process.env.DSH_NATIVE_WORKFLOW_EVIDENCE
+    const workflowEvidence = process.env.RSH_NATIVE_WORKFLOW_EVIDENCE
     if (workflowEvidence !== undefined) {
       mkdirSync(workflowEvidence, { recursive: true })
       await page.screenshot({ path: join(workflowEvidence, 'native-workflow-history.png'), fullPage: true })

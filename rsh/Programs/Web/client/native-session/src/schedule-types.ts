@@ -1,5 +1,5 @@
 /** Browser-safe schedule rows and change frames shared with the Native Host. */
-import type { SessionId } from '@deepseek-ai/dsh-session/types'
+import type { SessionId } from '@redspark/rsh-session/types'
 
 /** One pending scheduled plan without its prompt or captured execution configuration. */
 export interface NativeScheduledJob {

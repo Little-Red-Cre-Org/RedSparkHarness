@@ -1,9 +1,9 @@
 /** Low-overhead automatic routing for the upstream Archify Skill. */
-import type { Context } from '@deepseek-ai/cordis'
-import type { PreStepDecision } from '@deepseek-ai/dsh-agent'
-import { createUserMessage } from '@deepseek-ai/dsh-llm'
-import { renderSkillContent } from '@deepseek-ai/dsh-skill'
-import type { BashEnvContributor } from '@deepseek-ai/dsh-shell-env'
+import type { Context } from '@redspark/cordis'
+import type { PreStepDecision } from '@redspark/rsh-agent'
+import { createUserMessage } from '@redspark/rsh-llm'
+import { renderSkillContent } from '@redspark/rsh-skill'
+import type { BashEnvContributor } from '@redspark/rsh-shell-env'
 import {
   ARCHIFY_SKILL_DIRECTORY_ENV,
   archifyShellEnvValues,

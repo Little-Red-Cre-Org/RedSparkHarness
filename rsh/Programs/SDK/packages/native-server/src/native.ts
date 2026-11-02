@@ -2,26 +2,26 @@
 import { randomUUID } from 'node:crypto'
 import { isAbsolute, resolve } from 'node:path'
 import type { Readable, Writable } from 'node:stream'
-import { JsonRpcLineTransport } from '@deepseek-ai/dsh-json-rpc-line'
-import { createNativeHeadlessApplication, type NativeHeadlessApplication } from '@deepseek-ai/dsh-native-headless/native'
-import { createUserMessage, ReasoningEffortId } from '@deepseek-ai/dsh-llm/native'
-import type { UserMessage } from '@deepseek-ai/dsh-llm/native'
-import { brandString } from '@deepseek-ai/dsh-brand'
+import { JsonRpcLineTransport } from '@redspark/rsh-json-rpc-line'
+import { createNativeHeadlessApplication, type NativeHeadlessApplication } from '@redspark/rsh-native-headless/native'
+import { createUserMessage, ReasoningEffortId } from '@redspark/rsh-llm/native'
+import type { UserMessage } from '@redspark/rsh-llm/native'
+import { brandString } from '@redspark/rsh-brand'
 import type { NativeRootExecutionOperations, NativeRootRouteId, NativeActiveSessionOwner,
-  NativeStagedFileBlock, NativeStagedFileReceipt, NativeStagedFileReceiptId } from '@deepseek-ai/dsh-native-session-execution'
-import type { NativeAgent } from '@deepseek-ai/dsh-native-agent'
-import type { NativeSubagentFinished } from '@deepseek-ai/dsh-native-subagent'
-import { SessionId, SessionSeq, type SessionEvent, type SessionId as NativeSessionId } from '@deepseek-ai/dsh-session/native'
-import type { NativeApplication, NativeContext, NativePlugin } from '@deepseek-ai/dsh-native-runtime'
-import type { NativeApprovalOutcome, NativeApprovalServiceDefinition } from '@deepseek-ai/dsh-approval-definition'
-import type { NativeCommandOperations } from '@deepseek-ai/dsh-commands/native'
-import type {} from '@deepseek-ai/dsh-approval-definition'
-import type {} from '@deepseek-ai/dsh-fs/native'
-import type { AttachmentAdmissionPart } from '@deepseek-ai/dsh-attachment/native'
-import type { NativeSdkPromptContentBlock } from '@deepseek-ai/dsh-sdk-protocol'
-import type {} from '@deepseek-ai/dsh-session-persistence/native'
-import type {} from '@deepseek-ai/dsh-native-agent/native'
-import type {} from '@deepseek-ai/dsh-native-model-execution/native'
+  NativeStagedFileBlock, NativeStagedFileReceipt, NativeStagedFileReceiptId } from '@redspark/rsh-native-session-execution'
+import type { NativeAgent } from '@redspark/rsh-native-agent'
+import type { NativeSubagentFinished } from '@redspark/rsh-native-subagent'
+import { SessionId, SessionSeq, type SessionEvent, type SessionId as NativeSessionId } from '@redspark/rsh-session/native'
+import type { NativeApplication, NativeContext, NativePlugin } from '@redspark/rsh-native-runtime'
+import type { NativeApprovalOutcome, NativeApprovalServiceDefinition } from '@redspark/rsh-approval-definition'
+import type { NativeCommandOperations } from '@redspark/rsh-commands/native'
+import type {} from '@redspark/rsh-approval-definition'
+import type {} from '@redspark/rsh-fs/native'
+import type { AttachmentAdmissionPart } from '@redspark/rsh-attachment/native'
+import type { NativeSdkPromptContentBlock } from '@redspark/rsh-sdk-protocol'
+import type {} from '@redspark/rsh-session-persistence/native'
+import type {} from '@redspark/rsh-native-agent/native'
+import type {} from '@redspark/rsh-native-model-execution/native'
 
 const SDK_ROOT_ROUTE = brandString<NativeRootRouteId>('root')
 
@@ -361,7 +361,7 @@ export class NativeSdkApplication implements NativeApplication {
       Object.freeze(this.rootExecution)
       if (approval !== undefined) this.registerApprovalAnswerer(approval, approvalOperationId ?? randomUUID())
       for (const waiter of [...this.rootExecutionWaiters]) waiter.wake()
-      return { serverInfo: { name: 'deepseek-harness-sdk-runtime', version: '0.0.1' }, maxSteps }
+      return { serverInfo: { name: 'redspark-harness-sdk-runtime', version: '0.0.1' }, maxSteps }
     } catch (failure: unknown) {
       this.rootInitializationFailure = { cause: failure }
       this.rejectRootExecutionWaiters(failure)
@@ -660,7 +660,7 @@ export class NativeSdkApplication implements NativeApplication {
 
 /** Host installation selected by the shipped native-sdk profile. */
 export const plugin: NativePlugin = {
-  apiVersion: 1, name: '@deepseek-ai/dsh-native-sdk-server', targets: ['host'],
+  apiVersion: 1, name: '@redspark/rsh-native-sdk-server', targets: ['host'],
   requires: ['fs', 'sessionPersistence', 'model', 'modelExecution', 'agents', 'sessionExecution', 'activeSessions', 'attachments'],
   optional: ['subagents', 'tools', 'promptSections', 'sandboxPolicy', 'approval', 'codeRuntime', 'timeContext', 'tmuxContext', 'agentInstructions', 'modelSelection',
     'agentPresets', 'workspaceRegistry', 'commands', 'requestContexts'],

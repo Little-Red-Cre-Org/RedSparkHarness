@@ -1,5 +1,5 @@
 /** Pure record props shared by native and compatibility Tool renderers. */
-import type { ToolCallBlock, MessageImageSource, MessageImageLoader, OpenFileOptions } from '@deepseek-ai/dsh-client-ui-conversation/tool-records'
+import type { ToolCallBlock, MessageImageSource, MessageImageLoader, OpenFileOptions } from '@redspark/rsh-client-ui-conversation/tool-records'
 
 /** Owner currency of the Tool image gallery slot: references plus the loader. */
 export interface ToolImagesOwnerProps {

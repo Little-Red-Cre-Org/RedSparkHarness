@@ -1,5 +1,5 @@
 /** Parser for package-authored legacy dsh.client declarations. */
-import type { DshClientManifest } from '@deepseek-ai/dsh-package-manifest'
+import type { DshClientManifest } from '@redspark/rsh-package-manifest'
 import { optionalStringArray } from './manifest.ts'
 
 /**

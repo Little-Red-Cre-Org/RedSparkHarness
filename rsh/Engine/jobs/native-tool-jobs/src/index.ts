@@ -1,15 +1,15 @@
 /** Model-facing controls for native Agent-owned background jobs. */
-import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
-import { NativeJobId, type NativeJobRegistry, type NativeJobSnapshot } from '@deepseek-ai/dsh-native-jobs'
-import type { NativeValueToolContribution } from '@deepseek-ai/dsh-native-tools'
-import { TextRetainer } from '@deepseek-ai/dsh-output-retention'
+import type { NativePlugin } from '@redspark/rsh-native-runtime'
+import { NativeJobId, type NativeJobRegistry, type NativeJobSnapshot } from '@redspark/rsh-native-jobs'
+import type { NativeValueToolContribution } from '@redspark/rsh-native-tools'
+import { TextRetainer } from '@redspark/rsh-output-retention'
 
 /** Registry bound to the installed job_output, job_list and job_kill tools. */
 export interface NativeJobControls {
   readonly jobs: NativeJobRegistry
 }
 
-declare module '@deepseek-ai/dsh-native-runtime' {
+declare module '@redspark/rsh-native-runtime' {
   interface NativeServices { jobControls: NativeJobControls }
 }
 
@@ -173,7 +173,7 @@ export function nativeJobTools(jobs: NativeJobRegistry, config: Config): readonl
 
 /** Native job controls contribution selected alongside the job and tool registries. */
 export const plugin: NativePlugin = {
-  apiVersion: 1, name: '@deepseek-ai/dsh-native-tool-jobs', targets: ['host'],
+  apiVersion: 1, name: '@redspark/rsh-native-tool-jobs', targets: ['host'],
   requires: ['jobs', 'tools'], provides: ['jobControls'],
   resolve(input) {
     const config = resolveConfig(input)

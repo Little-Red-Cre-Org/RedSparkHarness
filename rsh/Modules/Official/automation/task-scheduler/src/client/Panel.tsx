@@ -1,8 +1,8 @@
 /** Settings panel for direct, non-model task creation and management. */
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
-import type { InjectFace, PropsLocale, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
-import type {} from '@deepseek-ai/dsh-client-ui-settings/client'
-import type { SessionId } from '@deepseek-ai/dsh-session/types'
+import type { InjectFace, PropsLocale, PropsRuntime } from '@redspark/rsh-client-ui-slots'
+import type {} from '@redspark/rsh-client-ui-settings/client'
+import type { SessionId } from '@redspark/rsh-session/types'
 import type { createSchedulerController } from './controller.ts'
 import css from './panel.module.css'
 import { scheduleEnded } from './schedule-state.ts'

@@ -3,7 +3,7 @@ description: "面向用户与维护者的 DeepSeek chat-completions 适配器说
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-llm-deepseek
+# @redspark/rsh-llm-deepseek
 
 [English](README.md) | 中文
 
@@ -34,7 +34,7 @@ kind: "package-reference"
 ### 最小配置
 
 ```yaml
-- name: '@deepseek-ai/dsh-llm-deepseek'
+- name: '@redspark/rsh-llm-deepseek'
   config:
     apiKeyEnv: DEEPSEEK_API_KEY  # credential reference, resolved per request
     baseURL: https://api.deepseek.com # optional; $DEEPSEEK_BASE_URL then this default

@@ -23,7 +23,7 @@ import {
 import { RELEASE_MANIFEST_GLOBS, WORKSPACE_MANIFEST_GLOBS } from './workspace-manifest-globs.ts'
 
 const GATE = 'verify-package-dependencies'
-const CORDIS = '@deepseek-ai/cordis'
+const CORDIS = '@redspark/cordis'
 const WORKSPACE_RANGE = 'workspace:^'
 
 type DependencySection = 'dependencies' | 'devDependencies' | 'optionalDependencies' | 'peerDependencies'

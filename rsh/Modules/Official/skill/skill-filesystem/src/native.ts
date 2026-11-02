@@ -1,11 +1,11 @@
 /** Native Host provider for skills stored in the selected filesystem world. */
 import { readdir, readFile, realpath, stat } from 'node:fs/promises'
 import { join, win32, posix } from 'node:path'
-import type { NativePlugin, NativeContext } from '@deepseek-ai/dsh-native-runtime'
-import type {} from '@deepseek-ai/dsh-fs/native'
-import type { FileSystemOperations } from '@deepseek-ai/dsh-fs/operations'
-import type { FsTarget } from '@deepseek-ai/dsh-fs/types'
-import type {} from '@deepseek-ai/dsh-skill/native'
+import type { NativePlugin, NativeContext } from '@redspark/rsh-native-runtime'
+import type {} from '@redspark/rsh-fs/native'
+import type { FileSystemOperations } from '@redspark/rsh-fs/operations'
+import type { FsTarget } from '@redspark/rsh-fs/types'
+import type {} from '@redspark/rsh-skill/native'
 import type {
   SkillCandidate,
   SkillDefinition,
@@ -14,7 +14,7 @@ import type {
   SkillProviderControl,
   SkillProviderObservation,
   SkillSource,
-} from '@deepseek-ai/dsh-skill/types'
+} from '@redspark/rsh-skill/types'
 import { parseSkillContent } from './frontmatter.ts'
 import type { ParsedSkillContent } from './frontmatter.ts'
 import { buildSkillRoots, type SkillRoot } from './roots.ts'
@@ -24,7 +24,7 @@ import { resolveSkillWatchConfig, SkillWatchManager, type SkillWatchRoot } from 
 /** Named Native Host entry selected through the explicit package manifest. */
 export const plugin: NativePlugin = {
   apiVersion: 1,
-  name: '@deepseek-ai/dsh-skill-filesystem',
+  name: '@redspark/rsh-skill-filesystem',
   targets: ['host'],
   requires: ['fs', 'skills'],
   provides: [],

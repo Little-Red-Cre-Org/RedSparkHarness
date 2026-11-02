@@ -2,9 +2,9 @@
 import { InitiatorRunTracker } from './initiator-runs.ts'
 export { InitiatorRunTracker } from './initiator-runs.ts'
 import { AsyncLocalStorage } from 'node:async_hooks'
-import { brandString } from '@deepseek-ai/dsh-brand'
-import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
-import type {} from '@deepseek-ai/dsh-session/types'
+import { brandString } from '@redspark/rsh-brand'
+import type { NativePlugin } from '@redspark/rsh-native-runtime'
+import type {} from '@redspark/rsh-session/types'
 import { NativeAgentExecution } from './execution.ts'
 import type { NativeAgent, NativeAgentEventDispatcher, NativeAgentId as NativeAgentIdType } from './definition.ts'
 
@@ -14,7 +14,7 @@ export type * from './definition.ts'
 export type NativeAgentId = NativeAgentIdType
 export type * from './lifecycle-types.ts'
 
-declare module '@deepseek-ai/dsh-native-runtime' {
+declare module '@redspark/rsh-native-runtime' {
   interface NativeServices { agents: NativeAgentRegistry }
 }
 
@@ -252,7 +252,7 @@ export class NativeAgentRegistry {
 
 /** Native Agent lifecycle Provider with no configuration surface. */
 export const plugin: NativePlugin = {
-  apiVersion: 1, name: '@deepseek-ai/dsh-native-agent', targets: ['host'],
+  apiVersion: 1, name: '@redspark/rsh-native-agent', targets: ['host'],
   requires: [], provides: ['agents'],
   resolve(input) {
     if (input !== undefined && (typeof input !== 'object' || input === null || Array.isArray(input) || Object.keys(input).length > 0)) {

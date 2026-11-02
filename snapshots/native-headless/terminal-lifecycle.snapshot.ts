@@ -6,10 +6,10 @@ import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { execa } from 'execa'
 import { expect, it } from 'vitest'
-import { SESSION_FORMAT_VERSION } from '@deepseek-ai/dsh-session'
-import { deriveReplayScript, parseSessionLog } from '@deepseek-ai/dsh-llm-replay'
+import { SESSION_FORMAT_VERSION } from '@redspark/rsh-session'
+import { deriveReplayScript, parseSessionLog } from '@redspark/rsh-llm-replay'
 import { formatSystemPromptSnapshot, formatToolSchemasSnapshot, normalizeSessionSnapshot, redactSessionSnapshotIds,
-  normalizedSystemPrompts, normalizedToolSchemas, sessionFixtureName } from '@deepseek-ai/dsh-session-snapshot'
+  normalizedSystemPrompts, normalizedToolSchemas, sessionFixtureName } from '@redspark/rsh-session-snapshot'
 
 const root = fileURLToPath(new URL('../../', import.meta.url))
 const scenario = join(root, 'snapshots/native-headless/terminal-lifecycle')
@@ -43,7 +43,7 @@ it('records the native terminal lifecycle tool schema and list result', async ()
   const workspace = join(home, 'work')
   const sessions = join(home, 'sessions')
   const junctions: string[] = []
-  mkdirSync(join(modules, '@deepseek-ai'), { recursive: true })
+  mkdirSync(join(modules, '@redspark'), { recursive: true })
   mkdirSync(workspace)
   for (const file of ['package.json', 'rsh.profile.json']) copyFileSync(join(shippedProfile, file), join(profile, file))
   for (const [name, path] of [
@@ -59,7 +59,7 @@ it('records the native terminal lifecycle tool schema and list result', async ()
     ['dsh-terminal-bash', 'rsh/Modules/Official/terminal/terminal-bash'],
     ['dsh-tool-terminal', 'rsh/Modules/Official/terminal/tool-terminal'],
   ] as const) {
-    const junction = join(modules, '@deepseek-ai', name)
+    const junction = join(modules, '@redspark', name)
     symlinkSync(join(root, path), junction, 'junction')
     junctions.push(junction)
   }
@@ -90,7 +90,7 @@ it('records the native terminal lifecycle tool schema and list result', async ()
   ] }))
   try {
     const result = await execa(process.execPath, [join(root, 'rsh/Programs/CLI/lib/bin.js'), '--profile', 'native-terminal-lifecycle',
-      '--patch', patch, task], { env: { ...process.env, DSH_HOME: home }, reject: false, timeout: 30_000 })
+      '--patch', patch, task], { env: { ...process.env, RSH_HOME: home }, reject: false, timeout: 30_000 })
     expect(result.exitCode, result.stderr).toBe(0)
     expect(result.stdout).toBe('No terminal sessions are open.')
     const storedName = readdirSync(sessions, { recursive: true }).find(name => String(name).endsWith(currentName))
@@ -106,7 +106,7 @@ it('records the native terminal lifecycle tool schema and list result', async ()
     if (prompts[0] === undefined || schemas[0] === undefined) throw new Error('terminal-lifecycle: missing request header')
     const prompt = formatSystemPromptSnapshot(prompts[0], prompts.slice(1))
     const tools = formatToolSchemasSnapshot(schemas[0], schemas.slice(1))
-    if (process.env.DSH_SNAPSHOT === 'refresh') {
+    if (process.env.RSH_SNAPSHOT === 'refresh') {
       writeFileSync(expected, normalized)
       writeFileSync(join(scenario, 'system-prompt.expected.md'), prompt)
       writeFileSync(join(scenario, 'tool-schemas.expected.json'), tools)

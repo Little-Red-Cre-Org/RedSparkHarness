@@ -1,12 +1,12 @@
 /** Managed shell environment values shared by Cordis and native Providers. */
-import { DSH_HOME_ENV, resolveDshHome } from '@deepseek-ai/dsh-home-paths'
-import { DSH_ENV_PREFIX } from '@deepseek-ai/dsh-shell/native'
-import type { DshEnvironment, DshEnvironmentKey } from '@deepseek-ai/dsh-shell/native'
+import { RSH_HOME_ENV, resolveDshHome } from '@redspark/rsh-home-paths'
+import { RSH_ENV_PREFIX } from '@redspark/rsh-shell/native'
+import type { DshEnvironment, DshEnvironmentKey } from '@redspark/rsh-shell/native'
 import type { ShellEnvContributor, ShellEnvironment, ShellEnvVariable, ShellEnvVariableInfo } from './definition.ts'
 
-const DSH_SHELL_KEY = `${DSH_ENV_PREFIX}SHELL` as const
-const DSH_SESSION_ID_KEY = `${DSH_ENV_PREFIX}SESSION_ID` as const
-const RESERVED_KEYS = new Set<DshEnvironmentKey>([DSH_HOME_ENV, DSH_SHELL_KEY, DSH_SESSION_ID_KEY])
+const RSH_SHELL_KEY = `${RSH_ENV_PREFIX}SHELL` as const
+const RSH_SESSION_ID_KEY = `${RSH_ENV_PREFIX}SESSION_ID` as const
+const RESERVED_KEYS = new Set<DshEnvironmentKey>([RSH_HOME_ENV, RSH_SHELL_KEY, RSH_SESSION_ID_KEY])
 const KEY_SUFFIX = /^[A-Z][A-Z0-9_]*$/
 
 /** Registry mechanics independent of the plugin lifecycle that owns each disposer. */
@@ -35,7 +35,7 @@ export class ShellEnvController<Execution> implements ShellEnvironment<Execution
     }
     const variables = Object.entries(contributor.variables) as [DshEnvironmentKey, ShellEnvVariable][]
     for (const [key, variable] of variables) {
-      if (!key.startsWith(DSH_ENV_PREFIX) || !KEY_SUFFIX.test(key.slice(DSH_ENV_PREFIX.length))) {
+      if (!key.startsWith(RSH_ENV_PREFIX) || !KEY_SUFFIX.test(key.slice(RSH_ENV_PREFIX.length))) {
         throw new Error(`bash env contributor "${contributor.name}" declared invalid key "${key}"`)
       }
       if (RESERVED_KEYS.has(key)) {
@@ -65,11 +65,11 @@ export class ShellEnvController<Execution> implements ShellEnvironment<Execution
    */
   collect(execution: Execution): DshEnvironment {
     const values: Record<DshEnvironmentKey, string> = {
-      [DSH_HOME_ENV]: this.dshHome,
-      [DSH_SHELL_KEY]: '1',
+      [RSH_HOME_ENV]: this.dshHome,
+      [RSH_SHELL_KEY]: '1',
     }
     const sessionId = this.sessionId(execution)
-    if (sessionId !== undefined) values[DSH_SESSION_ID_KEY] = sessionId
+    if (sessionId !== undefined) values[RSH_SESSION_ID_KEY] = sessionId
     for (const contributor of [...this.contributors.values()].sort((left, right) => left.name.localeCompare(right.name))) {
       const resolved = contributor.resolve(execution)
       for (const [rawKey, value] of Object.entries(resolved)) {

@@ -3,7 +3,7 @@ description: "Native profiles can select an explicit sandbox mode and workspace 
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-native-sandbox-policy
+# @redspark/rsh-native-sandbox-policy
 
 English | [中文](README.zh.md)
 

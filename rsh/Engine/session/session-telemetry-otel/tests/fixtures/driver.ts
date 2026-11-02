@@ -10,9 +10,9 @@ import { writeFile } from 'node:fs/promises'
 import { createServer } from 'node:http'
 import { once } from 'node:events'
 import { gunzipSync } from 'node:zlib'
-import { resolveConfigPath } from '@deepseek-ai/dsh-app-boot'
-import { recordFeedback } from '@deepseek-ai/dsh-command-feedback'
-import { runFixtureTurn } from '@deepseek-ai/dsh-loader-smoke'
+import { resolveConfigPath } from '@redspark/rsh-app-boot'
+import { recordFeedback } from '@redspark/rsh-command-feedback'
+import { runFixtureTurn } from '@redspark/rsh-loader-smoke'
 import { bootProductionProfile } from '../../../../../Tests/test-support/loader-smoke/tests/fixtures/production-profile.ts'
 
 const configPath = process.argv[2]
@@ -33,9 +33,9 @@ server.listen(0, '127.0.0.1')
 await once(server, 'listening')
 const address = server.address()
 if (address === null || typeof address === 'string') throw new Error('collector has no port')
-process.env.DSH_TELEMETRY_E2E_URL = `http://127.0.0.1:${address.port}/v1/logs`
-process.env.DSH_TELEMETRY_OTLP_URL = process.env.DSH_TELEMETRY_E2E_URL
-process.env.DSH_TELEMETRY_MODE = process.env.DSH_TELEMETRY_E2E_MODE ?? 'FEEDBACK_ONLY'
+process.env.RSH_TELEMETRY_E2E_URL = `http://127.0.0.1:${address.port}/v1/logs`
+process.env.RSH_TELEMETRY_OTLP_URL = process.env.RSH_TELEMETRY_E2E_URL
+process.env.RSH_TELEMETRY_MODE = process.env.RSH_TELEMETRY_E2E_MODE ?? 'FEEDBACK_ONLY'
 
 try {
   const ctx = await bootProductionProfile({
@@ -47,7 +47,7 @@ try {
     await runFixtureTurn(ctx, { task: 'prove telemetry with key sk-e2efixture1234567890' })
     const [agent] = ctx.get('agents')?.roots() ?? []
     if (agent === undefined) throw new Error('session-telemetry-otel driver requires one root agent')
-    if (process.env.DSH_TELEMETRY_E2E_FEEDBACK !== 'none') {
+    if (process.env.RSH_TELEMETRY_E2E_FEEDBACK !== 'none') {
       recordFeedback(agent.session, { text: 'fixture feedback' })
     }
     await runFixtureTurn(ctx, { task: 'post-feedback private suffix' })

@@ -2,7 +2,7 @@
 
 [English](mcp-memory.md) | 中文
 
-这三份**默认关闭的参考配置**通过 [`@deepseek-ai/dsh-mcp-client`](../../../Modules/Official/mcp/mcp-client/README.zh.md) 将一个记忆系统连接到 DSH。请选择其中一份，或复制相同的通用 MCP 配置项来连接其他服务器。
+这三份**默认关闭的参考配置**通过 [`@redspark/rsh-mcp-client`](../../../Modules/Official/mcp/mcp-client/README.zh.md) 将一个记忆系统连接到 DSH。请选择其中一份，或复制相同的通用 MCP 配置项来连接其他服务器。
 
 这些第三方配置仅作为互操作参考；收录不代表 DeepSeek 的认可、推荐、合作关系或持续支持承诺。
 
@@ -10,7 +10,7 @@
 
 DSH 解析选中的 Cordis overlay，启动已配置的 stdio 命令或连接已配置的 Streamable HTTP URL，发现 MCP 工具，并以 `mcp__<serverName>__<tool>` 的形式公开这些工具。DSH **不负责** 下载服务器、初始化其数据库、选择模型或 embedding 提供方、创建云端账户、迁移提供方数据，也不监管独立的 HTTP 服务。对于 stdio，通用客户端会随 DSH 插件生命周期启动和停止子进程；对于 HTTP，上游服务必须已经运行。
 
-stdio 桥接器在启动子进程前会主动移除环境中名称通常表示凭据的变量和所有 `DSH_*` 变量；其余环境变量仍会继承。每份示例仅添加其基线所需的覆盖项。如果某个可选的上游功能还需要其他密钥，请将该变量添加到配置项的 `config.env`，不要把密钥直接写进 YAML。
+stdio 桥接器在启动子进程前会主动移除环境中名称通常表示凭据的变量和所有 `RSH_*` 变量；其余环境变量仍会继承。每份示例仅添加其基线所需的覆盖项。如果某个可选的上游功能还需要其他密钥，请将该变量添加到配置项的 `config.env`，不要把密钥直接写进 YAML。
 
 ## 选择一个
 
@@ -30,7 +30,7 @@ dsh web --patch "$PWD/rsh/Programs/CLI/config/examples/mcp-memory/memorix.cordis
 
 请将文件名替换为 `mcp-reference-memory.cordis.yml` 或 `engram.cordis.yml`。该路径可以指向磁盘任意位置的一份复制文件。交付组合不包含任何记忆服务器，因此不传 `--patch` 就会让这三项全部保持关闭。
 
-如果要跨次运行保留所选配置，请将对应文件中的单个 `insert` patch 合并到用户 patch 层：只对一个 profile 生效则写入 `$DSH_HOME/profiles/<name>/cordis.patch.yml`，对本机所有 profile 生效则写入 `$DSH_HOME/cordis.patch.yml`。不要覆盖已有文件，其中可能已经包含无关的用户 patch。
+如果要跨次运行保留所选配置，请将对应文件中的单个 `insert` patch 合并到用户 patch 层：只对一个 profile 生效则写入 `$RSH_HOME/profiles/<name>/cordis.patch.yml`，对本机所有 profile 生效则写入 `$RSH_HOME/cordis.patch.yml`。不要覆盖已有文件，其中可能已经包含无关的用户 patch。
 
 ## 提供方设置
 
@@ -88,7 +88,7 @@ Engram 负责存储和项目选择：它默认使用 `~/.engram`，从 DSH 工�
 ```yaml
 - insert:
     - id: memory-my-server
-      name: '@deepseek-ai/dsh-mcp-client'
+      name: '@redspark/rsh-mcp-client'
       config:
         serverName: my-memory
         transport: stdio

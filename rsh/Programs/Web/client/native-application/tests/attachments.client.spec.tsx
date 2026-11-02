@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
-import type { NativeModelControls, NativeSessionImage } from '@deepseek-ai/dsh-client-native-session/native'
-import type { SessionId } from '@deepseek-ai/dsh-session/types'
+import type { NativeModelControls, NativeSessionImage } from '@redspark/rsh-client-native-session/native'
+import type { SessionId } from '@redspark/rsh-session/types'
 import { afterEach, expect, it, vi } from 'vitest'
 import { NativeComposerAttachments, NativeMessageImage } from '../src/attachments.tsx'
 

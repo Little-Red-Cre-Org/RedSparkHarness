@@ -12,7 +12,7 @@ import {
   unlinkSync,
 } from 'node:fs'
 import { dirname, join } from 'node:path'
-import { inspectSessionRootCompression } from '@deepseek-ai/dsh-session-persistence-jsonl/native-inspection'
+import { inspectSessionRootCompression } from '@redspark/rsh-session-persistence-jsonl/native-inspection'
 import { createDevelopmentProjectMetadata } from '../src/project-manager.ts'
 import type { DesktopRelease } from '../src/release.ts'
 
@@ -88,9 +88,9 @@ function mirrorDependencyLinks(sourceRoot: string, destinationRoot: string): voi
  */
 export async function prepareDevelopmentProject(options: DevelopmentProjectOptions): Promise<string> {
   const cliManifest = readManifest(join(options.cliDir, 'package.json'))
-  if (cliManifest.name !== '@deepseek-ai/dsh' || cliManifest.version !== options.release.version) {
+  if (cliManifest.name !== '@redspark/dsh' || cliManifest.version !== options.release.version) {
     throw new Error(
-      `desktop development: rsh/Programs/CLI must be @deepseek-ai/dsh@${options.release.version}, found `
+      `desktop development: rsh/Programs/CLI must be @redspark/dsh@${options.release.version}, found `
       + `${String(cliManifest.name)}@${String(cliManifest.version)}`,
     )
   }
@@ -98,9 +98,9 @@ export async function prepareDevelopmentProject(options: DevelopmentProjectOptio
     throw new Error('desktop development: workspace dependency links are missing; run pnpm install')
   }
   const hostManifest = readManifest(join(options.hostDir, 'package.json'))
-  if (hostManifest.name !== '@deepseek-ai/dsh-desktop-host' || hostManifest.version !== options.release.version) {
+  if (hostManifest.name !== '@redspark/rsh-desktop-host' || hostManifest.version !== options.release.version) {
     throw new Error(
-      `desktop development: rsh/Programs/DesktopHost must be @deepseek-ai/dsh-desktop-host@${options.release.version}, found `
+      `desktop development: rsh/Programs/DesktopHost must be @redspark/rsh-desktop-host@${options.release.version}, found `
       + `${String(hostManifest.name)}@${String(hostManifest.version)}`,
     )
   }
@@ -114,10 +114,10 @@ export async function prepareDevelopmentProject(options: DevelopmentProjectOptio
   const destinationModules = join(options.projectDir, 'node_modules')
   mkdirSync(destinationModules, { recursive: true })
   mirrorDependencyLinks(options.dependencyDir, destinationModules)
-  const dshLink = join(destinationModules, '@deepseek-ai', 'dsh')
+  const dshLink = join(destinationModules, '@redspark', 'dsh')
   removeOwnedPath(dshLink)
   linkDirectory(options.cliDir, dshLink)
-  const hostLink = join(destinationModules, '@deepseek-ai', 'dsh-desktop-host')
+  const hostLink = join(destinationModules, '@redspark', 'dsh-desktop-host')
   removeOwnedPath(hostLink)
   linkDirectory(options.hostDir, hostLink)
   return options.projectDir

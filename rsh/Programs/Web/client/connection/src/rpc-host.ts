@@ -1,7 +1,7 @@
 /** Cordis lifetime and HTTP adapter over the shared Host Connection registry. */
 
-import { Context, Service } from '@deepseek-ai/cordis'
-import type { HttpRoute } from '@deepseek-ai/dsh-http-routes/host'
+import { Context, Service } from '@redspark/cordis'
+import type { HttpRoute } from '@redspark/rsh-http-routes/host'
 import type { BrowserAuth } from './browser-auth.ts'
 import { HostConnectionRegistry, type HostConnectionOwner } from './host-core.ts'
 import { bridge } from './http-bridge.ts'
@@ -16,7 +16,7 @@ import type {
   HostConnectionRpc,
 } from './rpc.ts'
 
-declare module '@deepseek-ai/cordis' {
+declare module '@redspark/cordis' {
   interface Context {
     /** Host Connection transport and RPC registrations. */
     connection: HostConnectionHandle

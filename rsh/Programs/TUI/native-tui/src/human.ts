@@ -3,13 +3,13 @@ import type {
   NativeApprovalAnswererRequest,
   NativeApprovalOutcome,
   NativeApprovalServiceDefinition,
-} from '@deepseek-ai/dsh-approval-definition'
-import type { NativeActiveSessionOperations, NativeRootExecutionOperations } from '@deepseek-ai/dsh-native-session-execution'
-import type { NativeContext } from '@deepseek-ai/dsh-native-runtime'
-import type { NativeHeadlessApplication } from '@deepseek-ai/dsh-native-headless/native'
+} from '@redspark/rsh-approval-definition'
+import type { NativeActiveSessionOperations, NativeRootExecutionOperations } from '@redspark/rsh-native-session-execution'
+import type { NativeContext } from '@redspark/rsh-native-runtime'
+import type { NativeHeadlessApplication } from '@redspark/rsh-native-headless/native'
 import type { NativeAdmittedUserQuestionRequest, NativeUserQuestionRegistry, AskUserQuestionItem,
-  AskUserQuestionAnswer, AskUserQuestionAnswerItem } from '@deepseek-ai/dsh-user-questions/native'
-import type { SessionId } from '@deepseek-ai/dsh-session/types'
+  AskUserQuestionAnswer, AskUserQuestionAnswerItem } from '@redspark/rsh-user-questions/native'
+import type { SessionId } from '@redspark/rsh-session/types'
 import type { terminalCopy } from './locale.ts'
 
 /** Only presentation data crosses into Ink; Agent and writer objects remain in the answerers. */

@@ -32,7 +32,7 @@ Native follow-up 是普通持久 user-role 消息，使用 `source.kind: "webhoo
 
 ## GitHub 适配器
 
-Cordis `@deepseek-ai/dsh-webhook-github` entry 会在注入的 `ctx.webServer` 上注册精确路由，为每次请求解析凭据引用，在 JSON 解析前验证未改动的 `application/json` body，并在内存分发后返回 `202`。其规范化事件保证为已签名的无损 JSON 对象；规则负责验证自己消费的事件特定字段。
+Cordis `@redspark/rsh-webhook-github` entry 会在注入的 `ctx.webServer` 上注册精确路由，为每次请求解析凭据引用，在 JSON 解析前验证未改动的 `application/json` body，并在内存分发后返回 `202`。其规范化事件保证为已签名的无损 JSON 对象；规则负责验证自己消费的事件特定字段。
 
 同一 package 的显式 `./native` entry 会在 Native Web Assets 提供的 listener 上注册，并由该 listener 先行执行 `/api`、已挂载 channel 与 Client 页面检查。它通过 `webhookRules` 分发。每条 `WebhookSessionRequest` 都由所选 Program 准备：规范 Workspace 路径必须通过已配置的 allowed roots 与 sandbox policy；Agent preset、permission preset、标题和可选模型选择通过正常 root owner 应用；提示词则作为 user message 持久入队，并关联精确的 `agent/inbox/spliced` 事件。inbox 接纳前失败返回 `503`。接纳后 root 最终结果仍由 `rootExecution` 拥有并记录。卸载会撤回路由接纳、中止规则回调与接纳前工作，并排空 route handler 和自有 execution。此路径不会安装第二个 application、Agent 注册表或 Session writer。
 

@@ -7,14 +7,14 @@
  * evaluated through the caller-supplied Loader evaluator so the file answer
  * matches the decision a mount on this host would make. A row whose
  * expression the evaluator refuses stays `'conditional'`.
- * @module @deepseek-ai/dsh-agent-presets/composition-inventory
+ * @module @redspark/rsh-agent-presets/composition-inventory
  */
 
 import { readFile } from 'node:fs/promises'
 import { load } from 'js-yaml'
-import type { FiberState } from '@deepseek-ai/cordis'
-import { isJsExpr, type EntryTree } from '@deepseek-ai/cordis-plugin-loader'
-import { entryListSchema } from '@deepseek-ai/cordis-plugin-include'
+import type { FiberState } from '@redspark/cordis'
+import { isJsExpr, type EntryTree } from '@redspark/cordis-plugin-loader'
+import { entryListSchema } from '@redspark/cordis-plugin-include'
 import { entryListProblem } from './discovery.ts'
 import type { PresetTrust } from './preset.ts'
 

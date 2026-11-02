@@ -1,19 +1,19 @@
 import { describe, expect, it } from 'vitest'
 import type {
   ChatConversationViewNode, ChatSnapshot,
-} from '@deepseek-ai/dsh-client-ui-chat/client'
+} from '@redspark/rsh-client-ui-chat/client'
 import type {
   SessionEventLikeEntry, SessionLiveEventEntry,
-} from '@deepseek-ai/dsh-api-session-controller/client'
+} from '@redspark/rsh-api-session-controller/client'
 import {
   ConversationNodeAssembler,
   type ConversationNodeDefinition,
   type ConversationViewDefinition,
-} from '@deepseek-ai/dsh-client-ui-conversation/client'
-import type { SessionEvent } from '@deepseek-ai/dsh-session/types'
+} from '@redspark/rsh-client-ui-conversation/client'
+import type { SessionEvent } from '@redspark/rsh-session/types'
 import { inspectSystemPrompt } from '../../ui-conversation/src/client/contract/system-prompt.ts'
-import { AssistantStreamAccumulator } from '@deepseek-ai/dsh-llm/assistant-stream'
-import type { StreamChunk } from '@deepseek-ai/dsh-llm'
+import { AssistantStreamAccumulator } from '@redspark/rsh-llm/assistant-stream'
+import type { StreamChunk } from '@redspark/rsh-llm'
 import { hasAssistantReplyContent } from '../src/client/contract/assistant-content.ts'
 import { assistantDefinition } from '../src/client/conversation-nodes/assistant.ts'
 import { chatViewDefinition } from '../src/client/conversation-nodes/chat-snapshot-builder.ts'
@@ -22,7 +22,7 @@ import { compactionDefinition } from '../src/client/conversation-nodes/compactio
 import { unknownFallbackDefinition } from '../src/client/conversation-nodes/fallback.ts'
 import { nextStepInboxDefinition } from '../src/client/conversation-nodes/inbox.ts'
 import { messageDefinition } from '../src/client/conversation-nodes/message.ts'
-import { inspectRequestPrompt } from '@deepseek-ai/dsh-client-ui-conversation/client'
+import { inspectRequestPrompt } from '@redspark/rsh-client-ui-conversation/client'
 import { requestPromptDefinition, systemMessageDefinition } from '../src/client/conversation-nodes/request-prompt.ts'
 import { retryDefinition } from '../src/client/conversation-nodes/retry.ts'
 import { toolDefinition } from '../src/client/conversation-nodes/tool.ts'
@@ -179,7 +179,7 @@ function systemMessage(text: string) {
     id: `system-${text}`,
     role: 'system',
     content: text === '' ? [] : [{ type: 'text', text }],
-    source: { kind: 'plugin', plugin: '@deepseek-ai/dsh-system-prompt' },
+    source: { kind: 'plugin', plugin: '@redspark/rsh-system-prompt' },
   }
 }
 
@@ -1556,7 +1556,7 @@ describe('built-in conversation node Definitions', () => {
       at(4, 'user/message', textMessage('direct-user', 'prompt'), { surfaceOp: 'append' }),
       at(5, 'user/message', {
         ...textMessage('runtime-context', 'runtime facts'),
-        source: { kind: 'plugin', plugin: '@deepseek-ai/dsh-system-prompt', form: 'snapshot' },
+        source: { kind: 'plugin', plugin: '@redspark/rsh-system-prompt', form: 'snapshot' },
       }, { surfaceOp: 'append' }),
       at(6, 'request/header', {
         reason: 'initial',

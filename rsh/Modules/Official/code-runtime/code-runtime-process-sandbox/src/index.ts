@@ -6,10 +6,10 @@ import {
   snapshotCodeJsonValue,
   type NativeCodeRuntime, type ResolvedNativeWorkerThreadCodeRuntimeConfig,
   type CodeBindingNamespace, type CodeJsonValue, type CodeRunFailure, type CodeRunResult, type NativeCodeRunRequest,
-} from '@deepseek-ai/dsh-native-code-runtime'
-import { classifyRunnerFailure, isRunnerSpawnFailure, SandboxUnavailableError, type ProcessSandbox } from '@deepseek-ai/dsh-sandbox/native'
-import type { SubprocessHandle, SubprocessOperations } from '@deepseek-ai/dsh-subprocess/native'
-import type { NativeSandboxPolicy } from '@deepseek-ai/dsh-native-sandbox-policy'
+} from '@redspark/rsh-native-code-runtime'
+import { classifyRunnerFailure, isRunnerSpawnFailure, SandboxUnavailableError, type ProcessSandbox } from '@redspark/rsh-sandbox/native'
+import type { SubprocessHandle, SubprocessOperations } from '@redspark/rsh-subprocess/native'
+import type { NativeSandboxPolicy } from '@redspark/rsh-native-sandbox-policy'
 
 interface LiveRun {
   stop(failure: CodeRunFailure): void

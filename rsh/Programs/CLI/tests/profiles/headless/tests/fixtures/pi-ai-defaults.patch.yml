@@ -13,7 +13,7 @@
     providers:
       deepseek:
         apiKeyEnv: DEEPSEEK_API_KEY
-        baseURL: !!js process.env.DSH_SNAPSHOT_BASE_URL
+        baseURL: !!js process.env.RSH_SNAPSHOT_BASE_URL
         reasoning: low
         modelOverrides:
           deepseek-v4-flash:

@@ -1,16 +1,16 @@
 /** Cordis-free command execution definition shared by native shell Providers. */
-import type { SandboxMode } from '@deepseek-ai/dsh-sandbox/native'
+import type { SandboxMode } from '@redspark/rsh-sandbox/native'
 import type { ShellExecRequest, ShellExecSpec, ShellProcess, ShellRunResult } from './types.ts'
-import type {} from '@deepseek-ai/dsh-native-runtime'
+import type {} from '@redspark/rsh-native-runtime'
 
-declare module '@deepseek-ai/dsh-native-runtime' {
+declare module '@redspark/rsh-native-runtime' {
   interface NativeServices { shell: ShellOperations }
 }
 
 /** Settings namespace shared by shell executor implementations. */
 export const SHELL_SETTINGS_NAMESPACE = 'shell'
 
-export { DSH_ENV_PREFIX } from './types.ts'
+export { RSH_ENV_PREFIX } from './types.ts'
 export type {
   ShellExecRequest, ShellExecSpec, ShellProcess, ShellProcessRead,
   ShellProcessStatus, ShellRunResult, ShellSandboxInfo,

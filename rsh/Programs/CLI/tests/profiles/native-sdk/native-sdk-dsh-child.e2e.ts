@@ -5,10 +5,10 @@ import { basename, dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { execa } from 'execa'
 import { expect, it } from 'vitest'
-import { DeepSeekHarness } from '../../../../SDK/packages/client/src/index.ts'
+import { RedSparkHarness } from '../../../../SDK/packages/client/src/index.ts'
 
 const bin = fileURLToPath(new URL('../../../src/bin.ts', import.meta.url))
-const childNodeArgs = process.env.DSH_EXAMPLE_MODE === 'lib'
+const childNodeArgs = process.env.RSH_EXAMPLE_MODE === 'lib'
   ? [fileURLToPath(new URL('../../../lib/bin.js', import.meta.url))]
   : ['--import', 'tsx/esm', bin]
 const root = fileURLToPath(new URL('../../../../../../', import.meta.url))
@@ -203,7 +203,7 @@ it('runs the selected Native SDK child and enforces the negotiated one-step ceil
   ] }))
   const child = execa(process.execPath, [...childNodeArgs, '--profile', 'native-sdk-dsh-child', '--patch', patch], {
     cwd: root,
-    env: { DSH_HOME: home, DSH_TELEMETRY_DISABLED: '1', DEEPSEEK_API_KEY: 'fixture-key', DEEPSEEK_BASE_URL: baseURL,
+    env: { RSH_HOME: home, RSH_TELEMETRY_DISABLED: '1', DEEPSEEK_API_KEY: 'fixture-key', DEEPSEEK_BASE_URL: baseURL,
       TMP: runnerTempRoot, TEMP: runnerTempRoot, TMPDIR: runnerTempRoot },
     reject: false,
     timeout: 40_000,
@@ -254,7 +254,7 @@ it('runs the selected Native SDK child and enforces the negotiated one-step ceil
       cwd: home, provider: 'deepseek-official', model: 'sdk-child-fixture', maxSteps: 8,
     } })}\n`)
     expect(await receive(frame => frame.id === 1)).toMatchObject({
-      result: { serverInfo: { name: 'deepseek-harness-sdk-runtime' }, maxSteps: 8 },
+      result: { serverInfo: { name: 'redspark-harness-sdk-runtime' }, maxSteps: 8 },
     })
     child.stdin.write(`${JSON.stringify({ jsonrpc: '2.0', id: 2, method: 'session/prompt', params: {
       sessionId: 'native-sdk-child-parent', contentBlocks: [{ type: 'text', text: 'start the bounded child' }],
@@ -354,7 +354,7 @@ it('runs the selected Native SDK child and enforces the negotiated one-step ceil
 
     const readOnlyChild = execa(process.execPath, [...childNodeArgs, '--profile', 'native-sdk-dsh-child', '--patch', readOnlyPatch], {
       cwd: root,
-      env: { DSH_HOME: readOnlyHome, DSH_TELEMETRY_DISABLED: '1', DEEPSEEK_API_KEY: 'fixture-key', DEEPSEEK_BASE_URL: baseURL,
+      env: { RSH_HOME: readOnlyHome, RSH_TELEMETRY_DISABLED: '1', DEEPSEEK_API_KEY: 'fixture-key', DEEPSEEK_BASE_URL: baseURL,
         TMP: runnerTempRoot, TEMP: runnerTempRoot, TMPDIR: runnerTempRoot },
       reject: false,
       timeout: 40_000,
@@ -395,14 +395,14 @@ it('runs the selected Native SDK child and enforces the negotiated one-step ceil
         cwd: readOnlyWorkspace, provider: 'deepseek-official', model: 'sdk-child-fixture', maxSteps: 8,
         allowedTools: ['read_file', 'subagent'],
       } })}\n`)
-      expect(await receiveReadOnly(frame => frame.id === 1)).toMatchObject({ result: { serverInfo: { name: 'deepseek-harness-sdk-runtime' } } })
+      expect(await receiveReadOnly(frame => frame.id === 1)).toMatchObject({ result: { serverInfo: { name: 'redspark-harness-sdk-runtime' } } })
       readOnlyChild.stdin.write(`${JSON.stringify({ jsonrpc: '2.0', id: 2, method: 'session/prompt', params: {
         sessionId: 'native-sdk-child-read-only-parent', contentBlocks: [{ type: 'text', text: readOnlyParentTask }],
       } })}\n`)
       expect(await receiveReadOnly(frame => frame.id === 2)).toMatchObject({ result: { messageId: expect.any(String) as unknown } })
       await readOnlyChildRequest.promise
       const noWriterHome = (await childHomes(runnerTempRoot))[0]
-      if (noWriterHome === undefined) throw new Error('read-only child DSH_HOME was not observed')
+      if (noWriterHome === undefined) throw new Error('read-only child RSH_HOME was not observed')
       expect(modelToolNames(childRequests[2])).toContain('read_file')
       expect(modelToolNames(childRequests[2])).not.toContain('write_file')
       const childInstructionRequest = childRequests.find(value => JSON.stringify(value).includes(readOnlyChildTask))
@@ -467,9 +467,9 @@ it('runs the selected Native SDK child and enforces the negotiated one-step ceil
     }
 
     const directHome = join(home, 'direct-sdk-home')
-    const direct = new DeepSeekHarness({
+    const direct = new RedSparkHarness({
       profile: 'native-sdk', patches: [patch], dshHome: directHome, processCwd: root,
-      env: { DSH_TELEMETRY_DISABLED: '1', DEEPSEEK_API_KEY: 'fixture-key' },
+      env: { RSH_TELEMETRY_DISABLED: '1', DEEPSEEK_API_KEY: 'fixture-key' },
       cwd: home, provider: 'deepseek-official', model: 'sdk-child-fixture', maxSteps: 1,
       allowedTools: ['write_file'], workspaceWriteRoot: home,
     })

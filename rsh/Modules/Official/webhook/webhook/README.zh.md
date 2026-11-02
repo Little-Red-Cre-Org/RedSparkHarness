@@ -3,7 +3,7 @@ description: "面向注册可信外部事件策略并创建 Workspace 会话的�
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-webhook
+# @redspark/rsh-webhook
 
 [English](README.md) | 中文
 
@@ -43,7 +43,7 @@ Cordis compatibility Provider 保留现有 `Agent.followup()` 提交点和进程
 <a id="composition"></a>
 ## 组合
 
-Cordis Provider 在 Web Host plane 上加载于 Agents、模型默认值、agent presets、permission presets、标题与 Workspace 注册表之后。用户编写的规则插件注入 `webhookRuntime`，并通过自己的 effect 交出 `register()` 返回的 disposer。Native composition 使用 `@deepseek-ai/dsh-webhook/native`，要求所选 `rootExecution`、Workspace registry、Agent preset 与 permission preset Provider、可恢复 Session deletion，并在该 root 上启用动态 `workspaceRoutes`。显式模型请求还要求 model selection 和 model directory Provider。
+Cordis Provider 在 Web Host plane 上加载于 Agents、模型默认值、agent presets、permission presets、标题与 Workspace 注册表之后。用户编写的规则插件注入 `webhookRuntime`，并通过自己的 effect 交出 `register()` 返回的 disposer。Native composition 使用 `@redspark/rsh-webhook/native`，要求所选 `rootExecution`、Workspace registry、Agent preset 与 permission preset Provider、可恢复 Session deletion，并在该 root 上启用动态 `workspaceRoutes`。显式模型请求还要求 model selection 和 model directory Provider。
 
 包根入口是 Cordis compatibility Provider。只有 Cordis 和仅供旧 Agent 兼容入口使用的 helper peers 标记为 optional；Cordis profile 必须提供它们，仓库 CLI profile 已显式声明这些 peers。Native runtime 与公开声明所需 peers 在 package 层仍为必需，其中也包括仅用于类型的 peers。`dsh.native` 的 service `requires` 与 `optional` 分别描述 Provider 能力，不改变 package 安装依赖。Native consumer 可在不安装 Cordis 的情况下导入中立 `./definition` 契约；导入 `./native` 的 consumer 必须安装该入口声明的 peers。缺少必需 peer 时会在模块解析阶段失败。Native Web 在配置动态 Workspace 创建的 root 上支持完整规则到 Session 的路径。当前 SDK facade 未公开该创建能力，因此 Native Provider 会在安装时拒绝该组合；ACP facade 支持仍待其独立集成完成。
 

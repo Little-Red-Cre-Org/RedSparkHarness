@@ -14,7 +14,7 @@ import { formatMessage } from 'publint/utils'
 import ts from 'typescript'
 import { PACKAGE_MANIFEST_GLOBS } from './workspace-manifest-globs.ts'
 
-const CONCURRENCY_ENV = 'DSH_PUBLINT_CONCURRENCY'
+const CONCURRENCY_ENV = 'RSH_PUBLINT_CONCURRENCY'
 const repositoryRoot = resolve(import.meta.dirname, '..', '..')
 const { values: options } = parseArgs({
   args: process.argv.slice(2),

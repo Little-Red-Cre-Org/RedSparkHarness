@@ -1,19 +1,19 @@
 /**
  * Service Definition and Cordis adapter for session projections. Projection
  * folds and checkpoints live in a Cordis-free core shared with Native hosts.
- * @module @deepseek-ai/dsh-session-projection
+ * @module @redspark/rsh-session-projection
  */
 
-import { Context, Service } from '@deepseek-ai/cordis'
-import type {} from '@deepseek-ai/dsh-session'
+import { Context, Service } from '@redspark/cordis'
+import type {} from '@redspark/rsh-session'
 import type {
   Session,
   SessionEvent,
   SessionHeader,
   SessionLogOffset,
-} from '@deepseek-ai/dsh-session/native'
-import type { SessionProjectionMap, SessionProjectionStateMap } from '@deepseek-ai/dsh-session-projection/types'
-import type { ProjectionDefinition } from '@deepseek-ai/dsh-session-projection/definition'
+} from '@redspark/rsh-session/native'
+import type { SessionProjectionMap, SessionProjectionStateMap } from '@redspark/rsh-session-projection/types'
+import type { ProjectionDefinition } from '@redspark/rsh-session-projection/definition'
 import {
   ProjectionRegistryCore,
   type ProjectionChangeListener,
@@ -21,14 +21,14 @@ import {
   type ProjectionSnapshot,
 } from './registry-core.ts'
 
-declare module '@deepseek-ai/cordis' {
+declare module '@redspark/cordis' {
   interface Context {
     sessionProjections: SessionProjectionRegistry
   }
 }
 
-export type { SessionProjectionMap, SessionProjectionStateMap } from '@deepseek-ai/dsh-session-projection/types'
-export type { ProjectionDefinition } from '@deepseek-ai/dsh-session-projection/definition'
+export type { SessionProjectionMap, SessionProjectionStateMap } from '@redspark/rsh-session-projection/types'
+export type { ProjectionDefinition } from '@redspark/rsh-session-projection/definition'
 export type {
   ProjectionChangeListener,
   ProjectionCheckpoint,

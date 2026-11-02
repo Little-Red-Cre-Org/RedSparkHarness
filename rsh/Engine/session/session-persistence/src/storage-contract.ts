@@ -2,16 +2,16 @@
  * Backend-shared storage validation: the version gate, the fail-closed event
  * vocabulary, append-batch materialization, and contiguity — one place so
  * every backend refuses the same inputs identically.
- * @module @deepseek-ai/dsh-session-persistence/storage-contract
+ * @module @redspark/rsh-session-persistence/storage-contract
  */
 
 import {
   adoptSessionEvent,
   KNOWN_SESSION_EVENT_TYPES,
   SESSION_FORMAT_VERSION,
-} from '@deepseek-ai/dsh-session/native'
-import { snapshotJsonValue } from '@deepseek-ai/dsh-util-values'
-import type { SessionEvent, SessionHeader, SessionId } from '@deepseek-ai/dsh-session/native'
+} from '@redspark/rsh-session/native'
+import { snapshotJsonValue } from '@redspark/rsh-util-values'
+import type { SessionEvent, SessionHeader, SessionId } from '@redspark/rsh-session/native'
 import {
   SessionFormatUnsupportedError,
   SessionPersistenceCorruptionError,

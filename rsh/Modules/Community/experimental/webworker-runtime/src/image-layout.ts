@@ -21,7 +21,7 @@ export const IMAGE_CONFIG_PATH = 'config/cordis.yml'
 /** Image path of the manifest the runtime reads before it wraps a single module. */
 export const IMAGE_MANIFEST_PATH = 'config/vfs-manifest.json'
 
-/** Home directory under the root; the process shim's `DSH_HOME`/`HOME` default. */
+/** Home directory under the root; the process shim's `RSH_HOME`/`HOME` default. */
 export const IMAGE_HOME_DIRECTORY = 'home'
 
 /** Working directories the host tree expects to exist, empty. */

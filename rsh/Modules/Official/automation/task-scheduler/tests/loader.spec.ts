@@ -2,7 +2,7 @@ import { readFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { expect, it } from 'vitest'
-import { runLoaderSmoke } from '@deepseek-ai/dsh-loader-smoke'
+import { runLoaderSmoke } from '@redspark/rsh-loader-smoke'
 import { z } from 'zod'
 
 const reportSchema = z.object({ description: z.string(), runs: z.array(z.object({ state: z.string(), detail: z.string() })),

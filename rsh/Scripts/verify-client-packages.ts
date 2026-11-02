@@ -17,7 +17,7 @@ const CONFIG_GLOB = 'rsh/Programs/Web/client/*/tsdown.config.ts'
 const PLATFORM_SOURCE = 'rsh/Compatibility/DSH/web/frontend/src/platform.ts'
 const PARSER_PRELOAD_SOURCE = 'rsh/Programs/Web/client/modules/src/index.ts'
 const STATIC_PRESET_SOURCE = 'rsh/Programs/Web/client/tsdown.client.ts'
-const CORDIS = '@deepseek-ai/cordis'
+const CORDIS = '@redspark/cordis'
 
 /** One workspace package's browser-module declaration. */
 export interface ClientDeclaration {
@@ -523,7 +523,7 @@ async function readStaticLinkedRoster(root: string): Promise<Set<string>> {
     const loaded = await import(pathToFileURL(resolve(root, configPath)).href) as { default?: unknown }
     if (typeof loaded.default !== 'function') continue
     const configs = (loaded.default as (input: { env: Record<string, string> }) => unknown)({
-      env: { DSH_BUILD_FACE: 'client' },
+      env: { RSH_BUILD_FACE: 'client' },
     })
     if (!Array.isArray(configs) || !predicate(configs)) continue
     const manifest = JSON.parse(

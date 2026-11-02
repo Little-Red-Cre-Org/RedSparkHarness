@@ -5,7 +5,7 @@
  * get there": one row per model request with the message and tool counts that were actually sent,
  * so a spike can be traced to the step that caused it.
  *
- * @module @deepseek-ai/dsh-context-insight/requests
+ * @module @redspark/rsh-context-insight/requests
  */
 
 import { z } from 'zod'

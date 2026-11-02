@@ -5,33 +5,33 @@ import { Readable, Writable } from 'node:stream'
 import { agent, methods, ndJsonStream, PROTOCOL_VERSION, RequestError,
   type AgentConnection, type NewSessionRequest, type PromptRequest, type PromptResponse,
   type SessionNotification, type SessionConfigOption } from '@agentclientprotocol/sdk'
-import { brandString } from '@deepseek-ai/dsh-brand'
-import { createNativeHeadlessApplication, type NativeHeadlessApplication, type NativeTurnRequest } from '@deepseek-ai/dsh-native-headless/native'
-import { createUserMessage, resolveCallConfigWithModel } from '@deepseek-ai/dsh-llm/native'
-import { isImageAdmissionError, type AttachmentAdmissionPart } from '@deepseek-ai/dsh-attachment/native'
-import type { NativeCommandOperations } from '@deepseek-ai/dsh-commands/native'
-import { SessionId, Session, type SessionEvent } from '@deepseek-ai/dsh-session/native'
-import { nativeSessionExecutionPolicy, type NativeSessionExecutionPolicy, type NativeSessionOwnerApproval } from '@deepseek-ai/dsh-native-session-execution'
+import { brandString } from '@redspark/rsh-brand'
+import { createNativeHeadlessApplication, type NativeHeadlessApplication, type NativeTurnRequest } from '@redspark/rsh-native-headless/native'
+import { createUserMessage, resolveCallConfigWithModel } from '@redspark/rsh-llm/native'
+import { isImageAdmissionError, type AttachmentAdmissionPart } from '@redspark/rsh-attachment/native'
+import type { NativeCommandOperations } from '@redspark/rsh-commands/native'
+import { SessionId, Session, type SessionEvent } from '@redspark/rsh-session/native'
+import { nativeSessionExecutionPolicy, type NativeSessionExecutionPolicy, type NativeSessionOwnerApproval } from '@redspark/rsh-native-session-execution'
 import { NATIVE_ACP_SUBAGENT_PROTOCOL_VERSION, nativeAcpSubagentPermissionRequestMetadata, nativeAcpSubagentPolicyMetadata,
   nativeAcpSubagentServerMetadata, readNativeAcpSubagentClientCapabilities,
   readNativeAcpSubagentPolicy,
   type NativeAcpSubagentClientCapabilities, type NativeAcpSubagentPolicy,
-  type NativeAcpSubagentServerCapabilities } from '@deepseek-ai/dsh-acp-protocol'
+  type NativeAcpSubagentServerCapabilities } from '@redspark/rsh-acp-protocol'
 import type { NativeRootExecutionOperations, NativeRootForkRequest, NativeRootRouteId,
   NativeRootSessionDeletionOperations, NativeRootSessionRequest, NativeRootStagedFileOperations,
-  NativeActiveSessionOwner } from '@deepseek-ai/dsh-native-session-execution'
-import type { NativeApplication, NativeContext, NativePlugin } from '@deepseek-ai/dsh-native-runtime'
-import { NativeScope, ResourceOwner } from '@deepseek-ai/dsh-native-runtime'
-import { installNativeMcpClient, resolveNativeMcpConfig, type Config as McpConfig } from '@deepseek-ai/dsh-mcp-client/native'
-import { AcpMcpConfigError, resolveAcpMcpConfigs } from '@deepseek-ai/dsh-mcp-client/acp-config'
-import { MAX_TIMER_DELAY_MS } from '@deepseek-ai/dsh-timeout'
-import type {} from '@deepseek-ai/dsh-fs/native'
-import type {} from '@deepseek-ai/dsh-session-persistence/native'
-import type {} from '@deepseek-ai/dsh-native-agent/native'
-import type {} from '@deepseek-ai/dsh-native-model-execution/native'
-import type {} from '@deepseek-ai/dsh-native-model-execution/model-directory'
-import type {} from '@deepseek-ai/dsh-token-meter/native'
-import type { NativeApprovalAnswererRequest, NativeApprovalOutcome } from '@deepseek-ai/dsh-approval-definition'
+  NativeActiveSessionOwner } from '@redspark/rsh-native-session-execution'
+import type { NativeApplication, NativeContext, NativePlugin } from '@redspark/rsh-native-runtime'
+import { NativeScope, ResourceOwner } from '@redspark/rsh-native-runtime'
+import { installNativeMcpClient, resolveNativeMcpConfig, type Config as McpConfig } from '@redspark/rsh-mcp-client/native'
+import { AcpMcpConfigError, resolveAcpMcpConfigs } from '@redspark/rsh-mcp-client/acp-config'
+import { MAX_TIMER_DELAY_MS } from '@redspark/rsh-timeout'
+import type {} from '@redspark/rsh-fs/native'
+import type {} from '@redspark/rsh-session-persistence/native'
+import type {} from '@redspark/rsh-native-agent/native'
+import type {} from '@redspark/rsh-native-model-execution/native'
+import type {} from '@redspark/rsh-native-model-execution/model-directory'
+import type {} from '@redspark/rsh-token-meter/native'
+import type { NativeApprovalAnswererRequest, NativeApprovalOutcome } from '@redspark/rsh-approval-definition'
 import { NativeAcpModelControls } from './model-controls.ts'
 import { nativeAcpUpdates, nativeAcpUsageUpdate } from './presentation.ts'
 
@@ -1059,7 +1059,7 @@ export class NativeAcpApplication implements NativeApplication {
 
 /** Host installation for the explicitly selected native-acp profile. */
 export const plugin: NativePlugin = {
-  apiVersion: 1, name: '@deepseek-ai/dsh-native-acp', targets: ['host'],
+  apiVersion: 1, name: '@redspark/rsh-native-acp', targets: ['host'],
   requires: ['fs', 'sessionPersistence', 'model', 'modelExecution', 'agents', 'activeSessions'],
   optional: ['tools', 'promptSections', 'sandboxPolicy', 'approval', 'codeRuntime', 'timeContext', 'tmuxContext', 'agentInstructions', 'modelSelection',
     'sessionExecution', 'agentPresets', 'workspaceRegistry', 'attachments', 'modelDirectory', 'commands', 'requestContexts', 'tokenMeter'],

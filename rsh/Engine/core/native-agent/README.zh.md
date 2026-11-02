@@ -3,7 +3,7 @@ description: "原生 Agent 注册、作用域生命周期事件与异步 initiat
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-native-agent
+# @redspark/rsh-native-agent
 
 [English](README.md) | 中文
 

@@ -1,9 +1,9 @@
 /** Bridged services: a Cordis plugin reading a Native registry through the translation. */
 import { describe, expect, it } from 'vitest'
-import { Context } from '@deepseek-ai/cordis'
-import type { NativeContext } from '@deepseek-ai/dsh-native-runtime'
-import type { NativePromptRegistry } from '@deepseek-ai/dsh-native-prompt'
-import { apply as applyPersona } from '@deepseek-ai/dsh-persona'
+import { Context } from '@redspark/cordis'
+import type { NativeContext } from '@redspark/rsh-native-runtime'
+import type { NativePromptRegistry } from '@redspark/rsh-native-prompt'
+import { apply as applyPersona } from '@redspark/rsh-persona'
 import { bridgedSystemPrompt, personaServices, PERSONA_PREFIX_SECTION, PERSONA_SUFFIX_SECTION } from '../src/services.ts'
 
 /**

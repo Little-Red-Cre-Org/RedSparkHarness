@@ -1,7 +1,7 @@
 /** Native local credential provider over the shared document backend. */
-import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
-import type {} from '@deepseek-ai/dsh-credentials/native'
-import type {} from '@deepseek-ai/dsh-launch-environment/native'
+import type { NativePlugin } from '@redspark/rsh-native-runtime'
+import type {} from '@redspark/rsh-credentials/native'
+import type {} from '@redspark/rsh-launch-environment/native'
 import { NativeLocalCredentialProvider } from './backend.ts'
 import type { Config } from './document.ts'
 
@@ -39,7 +39,7 @@ export function resolveNativeCredentialConfig(input: unknown): Config {
 /** File-backed Provider selected for native Host compositions. */
 export const plugin: NativePlugin = {
   apiVersion: 1,
-  name: '@deepseek-ai/dsh-credentials-local',
+  name: '@redspark/rsh-credentials-local',
   targets: ['host'],
   requires: ['launchEnvironment'],
   provides: ['credentials'],

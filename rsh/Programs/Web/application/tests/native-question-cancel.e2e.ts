@@ -8,9 +8,9 @@ import { expect, it } from 'vitest'
 import { chromium, type Browser } from 'playwright'
 import { ensureShippedNativeProfile, shippedNativeProfileComposition } from '../../../../../rsh/Programs/CLI/src/native-profile-template.ts'
 import { WORKSPACE_MANIFEST_GLOBS } from '../../../../../rsh/Scripts/workspace-manifest-globs.ts'
-import { SESSION_FORMAT_VERSION } from '@deepseek-ai/dsh-session/native'
+import { SESSION_FORMAT_VERSION } from '@redspark/rsh-session/native'
 import { normalizeSessionSnapshot, redactSessionSnapshotIds, normalizedSystemPrompts, normalizedToolSchemas,
-  formatSystemPromptSnapshot, formatToolSchemasSnapshot, sessionFixtureName } from '@deepseek-ai/dsh-session-snapshot'
+  formatSystemPromptSnapshot, formatToolSchemasSnapshot, sessionFixtureName } from '@redspark/rsh-session-snapshot'
 
 const root = fileURLToPath(new URL('../../../../../', import.meta.url))
 const scenario = join(root, 'snapshots/web/native-question-cancel')
@@ -105,7 +105,7 @@ export const plugin = {
 };\n`)
   writeFileSync(join(profile, 'rsh.profile.json'), JSON.stringify({ ...shipped,
     installations: [...rows, { id: 'model', plugin: 'question-cancel-fixture-model', scope: 'root' }] }))
-  const env: NodeJS.ProcessEnv = Object.fromEntries(Object.entries({ ...process.env, DSH_HOME: home })
+  const env: NodeJS.ProcessEnv = Object.fromEntries(Object.entries({ ...process.env, RSH_HOME: home })
     .filter(([name]) => !/(?:KEY|TOKEN|SECRET|PASSWORD)/iu.test(name)))
   const child = execa(process.execPath, ['--import', pathToFileURL(clock).href,
     join(root, 'rsh/Programs/CLI/lib/bin.js'), '--profile', 'native-web'], { cwd: root, env, reject: false })
@@ -143,7 +143,7 @@ export const plugin = {
     expect(await (await modeSelected).json()).toMatchObject({ result: { ok: true } })
     const name = sessionFixtureName(0, SESSION_FORMAT_VERSION)
     const fixturePath = join(scenario, name)
-    const task = process.env.DSH_SNAPSHOT === 'refresh' ? 'Ask me, then continue after question cancellation.'
+    const task = process.env.RSH_SNAPSHOT === 'refresh' ? 'Ask me, then continue after question cancellation.'
       : readFileSync(fixturePath, 'utf8').split('\n').filter(Boolean).map(line => JSON.parse(line) as { type: string; data?: { source: { kind: string }; content: { text: string }[] } })
         .find(event => event.type === 'user/message' && event.data?.source.kind === 'user')?.data?.content[0]?.text
     if (task === undefined) throw new Error('recorded browser Session omitted its user input')
@@ -157,7 +157,7 @@ export const plugin = {
     expect(await card.innerText()).toContain('Continue this task?')
     const id = await card.getAttribute('data-question-key')
     if (id === null) throw new Error('missing question presentation id')
-    const evidence = process.env.DSH_QUESTION_CANCEL_EVIDENCE
+    const evidence = process.env.RSH_QUESTION_CANCEL_EVIDENCE
     if (evidence !== undefined) {
       mkdirSync(evidence, { recursive: true })
       await page.screenshot({ path: join(evidence, 'native-question-pending.png'), fullPage: true })
@@ -240,7 +240,7 @@ export const plugin = {
     expect(events.filter(event => event.type === 'plan/mode').at(-1)?.data.active).toBe(true)
     expect(events.filter(event => event.type === 'turn/end')).toHaveLength(1)
     const normalized = normalizeSessionSnapshot(redactSessionSnapshotIds([raw])[0]!, { sessionIds: [], cwd: workspace }, { identityMode: 'preserve' })
-    if (process.env.DSH_SNAPSHOT === 'refresh') {
+    if (process.env.RSH_SNAPSHOT === 'refresh') {
       mkdirSync(scenario, { recursive: true })
       writeFileSync(fixturePath, normalized)
       const prompts = normalizedSystemPrompts(raw, { sessionIds: [payload.payload.sessionId], cwd: workspace })

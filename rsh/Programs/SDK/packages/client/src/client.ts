@@ -1,7 +1,7 @@
 /** Program-owned launcher facade for the Engine SDK transport. */
 
-import { HarnessClient as SdkHarnessClient } from '@deepseek-ai/dsh-sdk-runtime'
-import type { HarnessClientOptions, RuntimeProcessOptions } from '@deepseek-ai/dsh-sdk-runtime'
+import { HarnessClient as SdkHarnessClient } from '@redspark/rsh-sdk-runtime'
+import type { HarnessClientOptions, RuntimeProcessOptions } from '@redspark/rsh-sdk-runtime'
 import { resolveDshLaunch } from './launch.ts'
 
 /** Low-level public SDK client using the Program-owned dsh launcher. */
@@ -15,6 +15,6 @@ export {
   RequestTimeoutError,
   SdkProtocolError,
   TransportClosedError,
-} from '@deepseek-ai/dsh-sdk-runtime'
-export type { NotificationSubscription } from '@deepseek-ai/dsh-sdk-runtime'
-export { JsonRpcResponseError } from '@deepseek-ai/dsh-sdk-runtime'
+} from '@redspark/rsh-sdk-runtime'
+export type { NotificationSubscription } from '@redspark/rsh-sdk-runtime'
+export { JsonRpcResponseError } from '@redspark/rsh-sdk-runtime'

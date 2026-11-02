@@ -1,5 +1,5 @@
 {
-  "name": "@deepseek-ai/dsh-json-rpc-line",
+  "name": "@redspark/rsh-json-rpc-line",
   "description": "Newline-delimited JSON-RPC transport over caller-owned Node streams",
   "version": "1.0.0",
   "publishConfig": { "access": "public" },

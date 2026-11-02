@@ -1,36 +1,36 @@
 /**
  * Service Definition for the approval capability seam, covering requests, cancellation, audit, and per-session policy. Missing
  * answerers fail closed; grants apply only to the requested action.
- * @module @deepseek-ai/dsh-user-approval
+ * @module @redspark/rsh-user-approval
  */
 
 import { randomUUID } from 'node:crypto'
-import { Context, Service } from '@deepseek-ai/cordis'
-import z from '@deepseek-ai/schemastery'
-import type { Agent } from '@deepseek-ai/dsh-agent'
-import { createUserMessage } from '@deepseek-ai/dsh-llm'
-import { scopeTarget } from '@deepseek-ai/dsh-scope'
-import type { Session } from '@deepseek-ai/dsh-session/native'
-import { SessionSeq } from '@deepseek-ai/dsh-session/native'
-import type {} from '@deepseek-ai/dsh-system-prompt'
+import { Context, Service } from '@redspark/cordis'
+import z from '@redspark/schemastery'
+import type { Agent } from '@redspark/rsh-agent'
+import { createUserMessage } from '@redspark/rsh-llm'
+import { scopeTarget } from '@redspark/rsh-scope'
+import type { Session } from '@redspark/rsh-session/native'
+import { SessionSeq } from '@redspark/rsh-session/native'
+import type {} from '@redspark/rsh-system-prompt'
 import {
   ApprovalRequestId,
   approvalPolicyOf,
   setApprovalPolicy,
-} from '@deepseek-ai/dsh-approval-definition/legacy'
+} from '@redspark/rsh-approval-definition/legacy'
 import type {
   ApprovalOutcome,
   ApprovalPolicy,
-} from '@deepseek-ai/dsh-approval-definition/legacy'
+} from '@redspark/rsh-approval-definition/legacy'
 import type { ApprovalRequest, ApprovalServiceDefinition } from './types.ts'
 
-declare module '@deepseek-ai/cordis' {
+declare module '@redspark/cordis' {
   interface Context {
     approval: ApprovalServiceDefinition
   }
 }
 
-export { APPROVAL_POLICIES, ApprovalRequestId, setApprovalPolicy } from '@deepseek-ai/dsh-approval-definition/legacy'
+export { APPROVAL_POLICIES, ApprovalRequestId, setApprovalPolicy } from '@redspark/rsh-approval-definition/legacy'
 export type {
   ApprovalOutcome, ApprovalPolicy, ApprovalRequest, ApprovalRequestEvent, ApprovalServiceDefinition,
 } from './types.ts'

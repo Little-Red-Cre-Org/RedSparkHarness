@@ -1,10 +1,10 @@
 /** Browser Workspace and directory-picker Consumers over the native Connection. */
 import { EventSourceParserStream } from 'eventsource-parser/stream'
 import { z } from 'zod'
-import { brandString } from '@deepseek-ai/dsh-brand'
-import type { ClientConnectionRpc } from '@deepseek-ai/dsh-client-connection/native'
-import type { SessionId } from '@deepseek-ai/dsh-session/types'
-import type { WorkspaceId } from '@deepseek-ai/dsh-workspace-definition'
+import { brandString } from '@redspark/rsh-brand'
+import type { ClientConnectionRpc } from '@redspark/rsh-client-connection/native'
+import type { SessionId } from '@redspark/rsh-session/types'
+import type { WorkspaceId } from '@redspark/rsh-workspace-definition'
 import { NativeSessionRpcError } from './rpc-error.ts'
 
 /** Workspace row projected by the Host registry. */

@@ -1,5 +1,5 @@
 import { expect, it } from 'vitest'
-import * as packaged from '@deepseek-ai/cordis'
+import * as packaged from '@redspark/cordis'
 import * as sourced from '../../../../Core/vendor/cordis/src/index.ts'
 
 it('resolves Cordis imports to the same source module', () => {

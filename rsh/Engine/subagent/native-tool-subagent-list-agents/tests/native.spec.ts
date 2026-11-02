@@ -1,8 +1,8 @@
 import { expect, it, vi } from 'vitest'
-import type { NativeContext } from '@deepseek-ai/dsh-native-runtime'
-import type { NativeValueToolContribution } from '@deepseek-ai/dsh-native-tools'
-import type { NativeToolExecution } from '@deepseek-ai/dsh-native-tools'
-import type { NativeSubagentOperations } from '@deepseek-ai/dsh-native-subagent'
+import type { NativeContext } from '@redspark/rsh-native-runtime'
+import type { NativeValueToolContribution } from '@redspark/rsh-native-tools'
+import type { NativeToolExecution } from '@redspark/rsh-native-tools'
+import type { NativeSubagentOperations } from '@redspark/rsh-native-subagent'
 import { plugin } from '../src/index.ts'
 
 it('registers a separate read-only tool over the selected Provider and resolves default scope', async () => {

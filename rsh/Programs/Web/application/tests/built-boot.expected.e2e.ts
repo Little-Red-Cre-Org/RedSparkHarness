@@ -65,12 +65,12 @@ it('boots the built plugin graph and renders a fixture session end to end', asyn
   expect(document.querySelector('svg[viewBox="0 0 64 64"]')).not.toBeNull()
   expect(document.querySelector('svg[viewBox="26 0 156 24"]')).toBeNull()
   expect(screen.queryByText('DSH Local Build')).toBeNull()
-  const version = clientBuildValue('DSH_CLIENT_VERSION')
-  if (version === undefined) throw new Error('client build record must carry DSH_CLIENT_VERSION')
-  const commit = clientBuildValue('DSH_CLIENT_COMMIT_HASH')
+  const version = clientBuildValue('RSH_CLIENT_VERSION')
+  if (version === undefined) throw new Error('client build record must carry RSH_CLIENT_VERSION')
+  const commit = clientBuildValue('RSH_CLIENT_COMMIT_HASH')
   const buildVersion = version
     + (commit === undefined ? '' : `-${commit}`)
-    + (clientBuildValue('DSH_CLIENT_GIT_DIRTY') === 'true' ? '-dirty' : '')
+    + (clientBuildValue('RSH_CLIENT_GIT_DIRTY') === 'true' ? '-dirty' : '')
   screen.getByText(buildVersion)
   // The compact layout dropped group session counts; the fixture workspace
   // group row renders immediately with its sessions beneath it.
@@ -153,17 +153,17 @@ it('boots the built plugin graph and renders a fixture session end to end', asyn
   // Every bundle injected its plugin-owned style tag (the loader's CSS path).
   const styleOwners = [...document.head.querySelectorAll('style[data-plugin]')]
     .map(style => style.getAttribute('data-plugin'))
-  for (const plugin of ['@deepseek-ai/dsh-client-ui-layout', '@deepseek-ai/dsh-client-ui-sidebar', '@deepseek-ai/dsh-client-ui-conversation', '@deepseek-ai/dsh-client-ui-tool']) {
+  for (const plugin of ['@redspark/rsh-client-ui-layout', '@redspark/rsh-client-ui-sidebar', '@redspark/rsh-client-ui-conversation', '@redspark/rsh-client-ui-tool']) {
     expect(styleOwners).toContain(plugin)
   }
 })
 
 it('boots without ui-chat and does not select another conversation view implicitly', async () => {
-  mountAssembledApp('?fixture', { exclude: ['@deepseek-ai/dsh-client-ui-chat'] })
+  mountAssembledApp('?fixture', { exclude: ['@redspark/rsh-client-ui-chat'] })
 
   const tree = await screen.findByRole('tree', { name: 'Sessions' }, { timeout: 10_000 })
   const boot = Reflect.get(window, '__DSH_BOOT__') as { entries: Array<{ id: string }> } | undefined
-  expect(boot?.entries.some(entry => entry.id === '@deepseek-ai/dsh-client-ui-chat')).toBe(false)
+  expect(boot?.entries.some(entry => entry.id === '@redspark/rsh-client-ui-chat')).toBe(false)
   const sessionTitle = await within(tree).findByText('Fixture 历史会话')
   fireEvent.click(sessionTitle)
   await waitFor(() => {

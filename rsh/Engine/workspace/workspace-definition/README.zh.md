@@ -3,7 +3,7 @@ description: "供路由和存储 Provider 共享的、与框架无关的 Workspa
 kind: "package-library"
 ---
 
-# @deepseek-ai/dsh-workspace-definition
+# @redspark/rsh-workspace-definition
 
 [English](README.md) | 中文
 

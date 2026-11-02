@@ -1,6 +1,6 @@
 /** Native durable request-time context with explicit time-zone configuration. */
-import { createUserMessage, type UserMessage } from '@deepseek-ai/dsh-llm/native'
-import type { Session, SessionEvent } from '@deepseek-ai/dsh-session/native'
+import { createUserMessage, type UserMessage } from '@redspark/rsh-llm/native'
+import type { Session, SessionEvent } from '@redspark/rsh-session/native'
 
 /** Configuration for the native request-time context Provider. */
 export interface Config {

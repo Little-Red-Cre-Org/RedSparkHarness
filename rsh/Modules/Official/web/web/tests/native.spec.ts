@@ -1,7 +1,7 @@
 /** The native web service keeps Cordis provider selection, pins and caps, and drains removed providers. */
 import { describe, expect, it } from 'vitest'
-import { NativeHost, NativeScope, resolveInstallation, type NativePlugin } from '@deepseek-ai/dsh-native-runtime'
-import { createLaunchEnvironmentSnapshot, launchEnvironmentProvider } from '@deepseek-ai/dsh-launch-environment/native'
+import { NativeHost, NativeScope, resolveInstallation, type NativePlugin } from '@redspark/rsh-native-runtime'
+import { createLaunchEnvironmentSnapshot, launchEnvironmentProvider } from '@redspark/rsh-launch-environment/native'
 import {
   createNativeWebService,
   plugin,
@@ -30,7 +30,7 @@ async function startWeb(config: unknown, processValues: Record<string, string> =
   const host = new NativeHost(resolveInstallation([
     { plugin: launchEnvironmentProvider(createLaunchEnvironmentSnapshot([
       { source: 'process', values: processValues },
-      { source: 'user-env', path: '/home/user/.env', values: { DSH_WEB_SEARCH_PROVIDER: 'from-user-env' } },
+      { source: 'user-env', path: '/home/user/.env', values: { RSH_WEB_SEARCH_PROVIDER: 'from-user-env' } },
     ])), scope, config: undefined },
     { plugin, scope, config },
     { plugin: capture, scope, config: undefined },
@@ -106,12 +106,12 @@ describe('native web service', () => {
   })
 
   it('takes pins from configuration over the process environment, never from env files', async () => {
-    const pinned = await startWeb({ searchProvider: 'b' }, { DSH_WEB_SEARCH_PROVIDER: 'a' })
+    const pinned = await startWeb({ searchProvider: 'b' }, { RSH_WEB_SEARCH_PROVIDER: 'a' })
     pinned.web.registerSearchProvider(searchProvider('a'))
     pinned.web.registerSearchProvider(searchProvider('b'))
     expect((await pinned.web.search({ query: 'q' }, operation())).sources).toEqual([{ url: 'https://b.test' }])
     await pinned.stop()
-    const fromProcess = await startWeb(undefined, { DSH_WEB_SEARCH_PROVIDER: 'a' })
+    const fromProcess = await startWeb(undefined, { RSH_WEB_SEARCH_PROVIDER: 'a' })
     fromProcess.web.registerSearchProvider(searchProvider('a'))
     fromProcess.web.registerSearchProvider(searchProvider('b'))
     expect((await fromProcess.web.search({ query: 'q' }, operation())).sources).toEqual([{ url: 'https://a.test' }])

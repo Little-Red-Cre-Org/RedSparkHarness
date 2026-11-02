@@ -3,7 +3,7 @@ description: "在选定的 DSH profile 中，把旧 Cordis Settings 接到 Engin
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-compat-settings-adapters
+# @redspark/rsh-compat-settings-adapters
 
 [English](README.md) | 中文
 
@@ -37,7 +37,7 @@ kind: "package-reference"
 
 ```yaml
 - id: agent-default-model-settings
-  name: '@deepseek-ai/dsh-compat-settings-adapters/agent-default-model'
+  name: '@redspark/rsh-compat-settings-adapters/agent-default-model'
 ```
 
 其他入口为 `./agent-loop`、`./agent-presets` 和 `./tool-subagent`；每个入口都要求同一组合中存在匹配的 Engine 服务。只加载选中的 Engine 依赖，所选依赖缺失时会在该入口激活时记录错误。

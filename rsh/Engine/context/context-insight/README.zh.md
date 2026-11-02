@@ -3,7 +3,7 @@ description: "记录一个会话的上下文由什么构成、如何增长：三
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-context-insight
+# @redspark/rsh-context-insight
 
 [English](README.md) | 中文
 

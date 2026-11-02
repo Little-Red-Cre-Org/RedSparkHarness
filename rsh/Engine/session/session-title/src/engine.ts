@@ -6,11 +6,11 @@
  * Each runtime supplies a {@link SessionTitleTarget} over its own Session
  * reads and sole writer, and forwards the durable events it observes.
  *
- * @module @deepseek-ai/dsh-session-title/engine
+ * @module @redspark/rsh-session-title/engine
  */
 
-import type { Session } from '@deepseek-ai/dsh-session/native'
-import type { SessionEvent, SessionEventMap, SessionSeq } from '@deepseek-ai/dsh-session/types'
+import type { Session } from '@redspark/rsh-session/native'
+import type { SessionEvent, SessionEventMap, SessionSeq } from '@redspark/rsh-session/types'
 import {
   sessionTitleUserMessageOf,
   validateSessionTitleResult,

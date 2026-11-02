@@ -12,7 +12,7 @@
        packaged app exits immediately with status 0 and no output. Detected by
        comparing `electron.exe --version` against Electron's own version; a Node
        version string (v24.x) means the variable leaked into this process.
-    2. DSH_DESKTOP_BASH_DIR  鈥?prepare-runtime.ts refuses to package a Windows runtime
+    2. RSH_DESKTOP_BASH_DIR  鈥?prepare-runtime.ts refuses to package a Windows runtime
        without a prepared Bash distribution. Supplied from an existing Git-for-Windows
        install whose msys-2.0.dll matches the repository's pinned originalRuntimeSha256.
        Only bash.exe and msys-2.0.dll are validated by the packaging code itself.
@@ -21,7 +21,7 @@
        (VC\Tools\MSVC\<version>\lib\spectre\x64). The newest installed toolset usually
        lacks them, so an installed toolset that has them is selected explicitly.
 
-  Nothing is written to the user's DeepSeek Harness installation. Only build output
+  Nothing is written to the user's RedSpark Harness installation. Only build output
   under rsh/Programs/Desktop/.desktop-build/ is touched, plus an optional JSON report.
 
 .PARAMETER Mode
@@ -30,11 +30,11 @@
   signed    Produce the signed installer. Requires the release signing credentials.
 
 .PARAMETER AppId
-  Reverse-DNS application id. Defaults to $env:DSH_DESKTOP_APP_ID, then org.redspark.harness.
+  Reverse-DNS application id. Defaults to $env:RSH_DESKTOP_APP_ID, then org.redspark.harness.
 
 .PARAMETER BashDir
   Git-for-Windows root supplying usr\bin\bash.exe and usr\bin\msys-2.0.dll.
-  Defaults to $env:DSH_DESKTOP_BASH_DIR, then the registered Git install.
+  Defaults to $env:RSH_DESKTOP_BASH_DIR, then the registered Git install.
 
 .PARAMETER VcToolsVersion
   MSVC toolset whose Spectre libraries are used. Defaults to the newest installed
@@ -209,12 +209,12 @@ if (-not $SkipPitfallChecks) {
   }
 }
 
-# --- pitfall 2: DSH_DESKTOP_BASH_DIR --------------------------------------
+# --- pitfall 2: RSH_DESKTOP_BASH_DIR --------------------------------------
 
 function Resolve-GitBashRoot {
   $candidates = [System.Collections.Generic.List[string]]::new()
   if ($BashDir) { $candidates.Add($BashDir) }
-  if ($env:DSH_DESKTOP_BASH_DIR) { $candidates.Add($env:DSH_DESKTOP_BASH_DIR) }
+  if ($env:RSH_DESKTOP_BASH_DIR) { $candidates.Add($env:RSH_DESKTOP_BASH_DIR) }
 
   # Preferred: ask the git on PATH where it lives, then climb to the distribution
   # root. This follows whatever installation the machine actually has, including
@@ -258,17 +258,17 @@ function Resolve-GitBashRoot {
 }
 
 if (-not $SkipPitfallChecks) {
-  Write-Stage 'pitfall 2/3: DSH_DESKTOP_BASH_DIR'
+  Write-Stage 'pitfall 2/3: RSH_DESKTOP_BASH_DIR'
   $resolvedBash = Resolve-GitBashRoot
   if ($null -eq $resolvedBash) {
     Fail 'No Git-for-Windows distribution with usr/bin/bash.exe and usr/bin/msys-2.0.dll was found.' @(
-      'prepare-runtime.ts requires DSH_DESKTOP_BASH_DIR for a Windows target.',
+      'prepare-runtime.ts requires RSH_DESKTOP_BASH_DIR for a Windows target.',
       'Install Git for Windows, or pass -BashDir <root of a prepared distribution>.',
       'A release build must use the patched DLL from rsh/Core/native/windows-bash/README.md, not a stock one.'
     )
   }
-  $env:DSH_DESKTOP_BASH_DIR = $resolvedBash
-  Write-Note "DSH_DESKTOP_BASH_DIR = $resolvedBash"
+  $env:RSH_DESKTOP_BASH_DIR = $resolvedBash
+  Write-Note "RSH_DESKTOP_BASH_DIR = $resolvedBash"
 
   # Report whether the stock or the patched loader is being shipped: one is a
   # local smoke-test input, the other is the documented release input.
@@ -373,14 +373,14 @@ if (-not $SkipPitfallChecks) {
 # --- application id --------------------------------------------------------
 
 Write-Stage 'application id'
-$resolvedAppId = if ($AppId) { $AppId } elseif ($env:DSH_DESKTOP_APP_ID) { $env:DSH_DESKTOP_APP_ID } else { 'org.redspark.harness' }
+$resolvedAppId = if ($AppId) { $AppId } elseif ($env:RSH_DESKTOP_APP_ID) { $env:RSH_DESKTOP_APP_ID } else { 'org.redspark.harness' }
 if ($resolvedAppId -notmatch '^[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)+$') {
   Fail "Application id is not reverse-DNS: $resolvedAppId" @(
-    'desktop-release-environment.mjs validates DSH_DESKTOP_APP_ID with that pattern.'
+    'desktop-release-environment.mjs validates RSH_DESKTOP_APP_ID with that pattern.'
   )
 }
-$env:DSH_DESKTOP_APP_ID = $resolvedAppId
-Write-Note "DSH_DESKTOP_APP_ID = $resolvedAppId"
+$env:RSH_DESKTOP_APP_ID = $resolvedAppId
+Write-Note "RSH_DESKTOP_APP_ID = $resolvedAppId"
 
 # --- invoke packaging ------------------------------------------------------
 
@@ -483,19 +483,19 @@ if ($versionInfo.FileVersion -ne $expectedVersion) {
   )
 }
 
-# The bundled runtime must actually contain the @deepseek-ai packages.
-$packagesDir = Join-Path $unpacked 'resources/dsh/node_modules/@deepseek-ai'
+# The bundled runtime must actually contain the @redspark packages.
+$packagesDir = Join-Path $unpacked 'resources/dsh/node_modules/@redspark'
 if (-not (Test-Path -LiteralPath $packagesDir)) {
-  Fail "The bundled runtime has no @deepseek-ai packages: $packagesDir"
+  Fail "The bundled runtime has no @redspark packages: $packagesDir"
 }
 $bundledPackages = @(Get-ChildItem -LiteralPath $packagesDir -Directory |
   Select-Object -ExpandProperty Name |
   Sort-Object)
-Write-Host ("         bundled @deepseek-ai packages: {0}" -f $bundledPackages.Count)
+Write-Host ("         bundled @redspark packages: {0}" -f $bundledPackages.Count)
 
 foreach ($requiredPackage in @('dsh', 'dsh-desktop-host')) {
   if ($bundledPackages -notcontains $requiredPackage) {
-    Fail "The bundled runtime is missing @deepseek-ai/$requiredPackage" @(
+    Fail "The bundled runtime is missing @redspark/$requiredPackage" @(
       'prepare-dsh.ts installs the release package set; a missing Host means preparation was skipped or partial.'
     )
   }
@@ -520,7 +520,7 @@ if ($ReportPath) {
     repository       = $repoRoot
     appId            = $resolvedAppId
     packageVersion   = $expectedVersion
-    bashDir          = if (-not $SkipPitfallChecks) { $env:DSH_DESKTOP_BASH_DIR } else { $null }
+    bashDir          = if (-not $SkipPitfallChecks) { $env:RSH_DESKTOP_BASH_DIR } else { $null }
     vcToolsVersion   = if (-not $SkipPitfallChecks) { $env:VCToolsVersion } else { $null }
     packagingSeconds = [math]::Round($packSeconds, 1)
     totalSeconds     = [math]::Round($totalSeconds, 1)

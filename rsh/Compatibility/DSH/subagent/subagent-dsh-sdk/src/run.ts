@@ -1,30 +1,30 @@
 /**
  * Fresh-process SDK subagent client. Drives one child RedSpark Harness
- * runtime over stdio JSON-RPC through `@deepseek-ai/dsh-sdk-client` and owns
+ * runtime over stdio JSON-RPC through `@redspark/rsh-sdk-client` and owns
  * cancellation and quiescent disposal. It publishes after the child
  * handshake, maps child failures to stop reasons, and tears down to
  * quiescence. The SDK client spawns the child rather than using
  * `ctx.subprocess` — the subprocess seam's documented exception for
  * SDK-managed transports — so this driver applies the seam's shared env scrub.
  *
- * @module @deepseek-ai/dsh-subagent-dsh-sdk/run
+ * @module @redspark/rsh-subagent-dsh-sdk/run
  */
 
 import { randomUUID } from 'node:crypto'
-import { brandString } from '@deepseek-ai/dsh-brand'
+import { brandString } from '@redspark/rsh-brand'
 import {
-  DeepSeekHarness,
+  RedSparkHarness,
   type DeepSeekHarnessOptions,
   type HarnessNotification,
   JsonRpcResponseError,
   SdkProtocolError,
   TransportClosedError,
-} from '@deepseek-ai/dsh-sdk-client'
-import type { ContentBlock, ReasoningEffortId } from '@deepseek-ai/dsh-llm'
-import type { SessionEvent, SessionId, TurnEndReason } from '@deepseek-ai/dsh-session'
-import type { SubagentResult, SubagentRun, SubagentStartRequest, SubagentStopReason } from '@deepseek-ai/dsh-subagent'
-import { AssistantOutputFold, settleRunResult, subprocessRunHandle } from '@deepseek-ai/dsh-subagent'
-import { scrubbedParentEnv } from '@deepseek-ai/dsh-subprocess'
+} from '@redspark/rsh-sdk-client'
+import type { ContentBlock, ReasoningEffortId } from '@redspark/rsh-llm'
+import type { SessionEvent, SessionId, TurnEndReason } from '@redspark/rsh-session'
+import type { SubagentResult, SubagentRun, SubagentStartRequest, SubagentStopReason } from '@redspark/rsh-subagent'
+import { AssistantOutputFold, settleRunResult, subprocessRunHandle } from '@redspark/rsh-subagent'
+import { scrubbedParentEnv } from '@redspark/rsh-subprocess'
 
 /** Resolved spawn spec for an SDK runtime child process (no defaults — see Config). */
 export interface SdkRunSpec {
@@ -54,7 +54,7 @@ export interface SdkRunSpec {
    * Extra environment variables to ADD for the child (e.g. the child
    * runtime's own `DEEPSEEK_API_KEY`). Merged after
    * the seam's `scrubbedParentEnv()` base, so an explicit credential or
-   * current `DSH_*` fact survives while ambient namesakes never leak.
+   * current `RSH_*` fact survives while ambient namesakes never leak.
    */
   env: Record<string, string>
   /** Bound (ms) on the protocol `shutdown` exchange during dispose. */
@@ -115,8 +115,8 @@ class SdkRunFailure extends Error {
 }
 
 /** Runtime constructor seam replaced only by package-local fake-runtime tests. */
-export const internals: { createHarness(options: DeepSeekHarnessOptions): DeepSeekHarness } = {
-  createHarness: options => new DeepSeekHarness(options),
+export const internals: { createHarness(options: DeepSeekHarnessOptions): RedSparkHarness } = {
+  createHarness: options => new RedSparkHarness(options),
 }
 
 /**

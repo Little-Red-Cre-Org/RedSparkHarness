@@ -1,6 +1,6 @@
 /** Durable adjacent-Agent attribution and continuation guidance shared by both runtimes. */
-import { createUserMessage, type ContentBlock, type UserMessage } from '@deepseek-ai/dsh-llm/native'
-import type { SessionId } from '@deepseek-ai/dsh-session/native'
+import { createUserMessage, type ContentBlock, type UserMessage } from '@redspark/rsh-llm/native'
+import type { SessionId } from '@redspark/rsh-session/native'
 
 /** Durable attribution for one model-authored message between adjacent Agents. */
 export interface AgentMessageSource {
@@ -11,7 +11,7 @@ export interface AgentMessageSource {
   readonly senderSessionId: SessionId
 }
 
-declare module '@deepseek-ai/dsh-llm/message' {
+declare module '@redspark/rsh-llm/message' {
   interface MessageSourceMap { 'agent-message': AgentMessageSource }
 }
 

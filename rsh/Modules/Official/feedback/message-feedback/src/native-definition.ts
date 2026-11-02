@@ -1,5 +1,5 @@
 /** Native message-feedback operations over the Program writer or cold Session lease. */
-import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
+import type { NativePlugin } from '@redspark/rsh-native-runtime'
 import type {
   MessageFeedbackDeleteRequest, MessageFeedbackDeleteResult, MessageFeedbackListRequest,
   MessageFeedbackListResult, MessageFeedbackPutRequest, MessageFeedbackPutResult,
@@ -27,7 +27,7 @@ export interface NativeMessageFeedbackOperations {
   delete(request: MessageFeedbackDeleteRequest, signal?: AbortSignal): Promise<MessageFeedbackDeleteResult>
 }
 
-declare module '@deepseek-ai/dsh-native-runtime' {
+declare module '@redspark/rsh-native-runtime' {
   interface NativeServices { messageFeedback: NativeMessageFeedbackOperations }
 }
 

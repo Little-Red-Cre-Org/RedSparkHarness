@@ -4,13 +4,13 @@ import { tmpdir } from 'node:os'
 import { basename, dirname, join, resolve } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { execa } from 'execa'
-import { deriveReplayScript, parseSessionLog } from '@deepseek-ai/dsh-llm-replay'
+import { deriveReplayScript, parseSessionLog } from '@redspark/rsh-llm-replay'
 import { expect, it } from 'vitest'
 import { shippedNativeProfileComposition } from '../../rsh/Programs/CLI/src/native-profile-template.ts'
-import { JsonlSessionBackend } from '@deepseek-ai/dsh-session-persistence-jsonl'
-import { readTodos } from '@deepseek-ai/dsh-tool-todo/native'
+import { JsonlSessionBackend } from '@redspark/rsh-session-persistence-jsonl'
+import { readTodos } from '@redspark/rsh-tool-todo/native'
 import { formatSystemPromptSnapshot, formatToolSchemasSnapshot, normalizeSessionSnapshot, redactSessionSnapshotIds,
-  normalizedSystemPrompts, normalizedToolSchemas } from '@deepseek-ai/dsh-session-snapshot'
+  normalizedSystemPrompts, normalizedToolSchemas } from '@redspark/rsh-session-snapshot'
 
 const root = fileURLToPath(new URL('../../', import.meta.url))
 const scene = join(root, 'snapshots/native-headless/todo-native')
@@ -29,7 +29,7 @@ it('commits todo replacement before the next model request and restores the same
   const sessions = join(home, 'sessions')
   const audit = join(home, 'audit.jsonl')
   const links: string[] = []
-  mkdirSync(join(modules, '@deepseek-ai'), { recursive: true })
+  mkdirSync(join(modules, '@redspark'), { recursive: true })
   mkdirSync(workspace)
   const packages = [
     ['dsh-native-headless', 'rsh/Engine/core/native-headless'], ['dsh-native-agent', 'rsh/Engine/core/native-agent'],
@@ -39,14 +39,14 @@ it('commits todo replacement before the next model request and restores the same
     ['dsh-tool-todo', 'rsh/Modules/Official/todo/tool-todo'],
   ] as const
   for (const [name, path] of packages) {
-    const link = join(modules, '@deepseek-ai', name)
+    const link = join(modules, '@redspark', name)
     symlinkSync(join(root, path), link, 'junction'); links.push(link)
   }
   writeFileSync(join(profile, 'package.json'), JSON.stringify({ name: 'native-headless-profile', private: true,
     dsh: { profile: { runtime: 'native', config: 'rsh.profile.json' } } }))
   const composition = shippedNativeProfileComposition(home, 'native-headless')
   expect(composition.installations.find(row => row.id === 'session-execution')?.plugin)
-    .toBe('@deepseek-ai/dsh-native-session-execution')
+    .toBe('@redspark/rsh-native-session-execution')
   // This module scene selects the shipped rows it exercises; other P4 capabilities have separate acceptance owners.
   const selected = new Set(['app', 'agents', 'session-execution', 'tools', 'model-execution', 'storage', 'fs', 'policy', 'tool-todo', 'pi-ai'])
   const installations = composition.installations.map((row) => {
@@ -55,7 +55,7 @@ it('commits todo replacement before the next model request and restores the same
       cwd: workspace, provider: 'mock', model: 'todo', systemPrompt: 'Maintain the task list.', maxSteps: 3,
     } }
     if (row.id === 'tools') return { ...row, config: { mode: 'native' } }
-    if (row.id === 'fs') return { ...row, plugin: '@deepseek-ai/dsh-fs-local', config: { cwd: workspace } }
+    if (row.id === 'fs') return { ...row, plugin: '@redspark/rsh-fs-local', config: { cwd: workspace } }
     if (row.id === 'tool-todo') return { ...row, config: { allowParallelInProgress: false } }
     if (row.id === 'pi-ai') return { id: row.id, scope: row.scope, plugin: 'todo-model' }
     return row
@@ -89,7 +89,7 @@ export const plugin = { apiVersion: 1, name: 'todo-model', targets: ['host'], re
     const child = await execa(process.execPath, ['--import', pathToFileURL(join(root,
       'rsh/Programs/CLI/tests/fixtures/deny-cordis-context-register.mjs')).href,
       join(root, 'rsh/Programs/CLI/lib/bin.js'), '--profile', 'native-headless', task],
-    { env: { ...process.env, DSH_HOME: home }, reject: false, timeout: 30_000 })
+    { env: { ...process.env, RSH_HOME: home }, reject: false, timeout: 30_000 })
     expect(child.exitCode, child.stderr).toBe(0)
     const requests = readFileSync(audit, 'utf8').trim().split('\n')
     expect(requests).toHaveLength(3)
@@ -120,7 +120,7 @@ export const plugin = { apiVersion: 1, name: 'todo-model', targets: ['host'], re
       'tool-schemas.expected.json': formatToolSchemasSnapshot(schemas[0]!, schemas.slice(1)),
     }
     for (const [name, text] of Object.entries(outputs)) {
-      if (process.env.DSH_SNAPSHOT === 'refresh') writeFileSync(join(scene, name), text)
+      if (process.env.RSH_SNAPSHOT === 'refresh') writeFileSync(join(scene, name), text)
       else expect(text).toBe(readFileSync(join(scene, name), 'utf8'))
     }
   } finally {

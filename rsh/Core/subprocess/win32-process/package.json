@@ -1,5 +1,5 @@
 {
-  "name": "@deepseek-ai/dsh-win32-process",
+  "name": "@redspark/rsh-win32-process",
   "description": "Shared low-level Win32 process, stdio, and Job Object primitives",
   "version": "1.0.0",
   "publishConfig": {

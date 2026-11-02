@@ -1,5 +1,5 @@
 {
-  "name": "@deepseek-ai/dsh-client-ui-schedule",
+  "name": "@redspark/rsh-client-ui-schedule",
   "description": "Read-only active Schedule catalog in the Web Session header",
   "version": "1.0.0",
   "type": "module",
@@ -20,9 +20,9 @@
   "dsh": {
     "client": {
       "inject": [
-        "@deepseek-ai/dsh-client-locale",
-        "@deepseek-ai/dsh-client-ui-conversation",
-        "@deepseek-ai/dsh-client-ui-primitives"
+        "@redspark/rsh-client-locale",
+        "@redspark/rsh-client-ui-conversation",
+        "@redspark/rsh-client-ui-primitives"
       ],
       "platform": "web"
     }
@@ -41,23 +41,23 @@
     "access": "public"
   },
   "peerDependencies": {
-    "@deepseek-ai/cordis": "workspace:^"
+    "@redspark/cordis": "workspace:^"
   },
   "devDependencies": {
-    "@deepseek-ai/dsh-api-session-controller": "workspace:^",
-    "@deepseek-ai/dsh-client-locale": "workspace:^",
-    "@deepseek-ai/dsh-client-test-runtime": "workspace:^",
-    "@deepseek-ai/dsh-client-ui-conversation": "workspace:^",
-    "@deepseek-ai/dsh-client-ui-primitives": "workspace:^",
-    "@deepseek-ai/dsh-client-ui-renderer": "workspace:^",
-    "@deepseek-ai/dsh-client-ui-session": "workspace:^",
-    "@deepseek-ai/dsh-client-ui-slots": "workspace:^",
-    "@deepseek-ai/dsh-schedule": "workspace:^",
-    "@deepseek-ai/dsh-session": "workspace:^",
+    "@redspark/rsh-api-session-controller": "workspace:^",
+    "@redspark/rsh-client-locale": "workspace:^",
+    "@redspark/rsh-client-test-runtime": "workspace:^",
+    "@redspark/rsh-client-ui-conversation": "workspace:^",
+    "@redspark/rsh-client-ui-primitives": "workspace:^",
+    "@redspark/rsh-client-ui-renderer": "workspace:^",
+    "@redspark/rsh-client-ui-session": "workspace:^",
+    "@redspark/rsh-client-ui-slots": "workspace:^",
+    "@redspark/rsh-schedule": "workspace:^",
+    "@redspark/rsh-session": "workspace:^",
     "@testing-library/react": "^16.1.0",
     "@types/react": "~18.3.1",
     "@types/react-dom": "~18.3.0",
-    "@deepseek-ai/cordis": "workspace:^",
+    "@redspark/cordis": "workspace:^",
     "react": "^18.2.0",
     "react-dom": "^18.2.0"
   },

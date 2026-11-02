@@ -2,16 +2,16 @@
  * Named wire types for the RedSpark Harness SDK runtime protocol: the
  * request/result pairs and the server-to-client notification payloads
  * exchanged over the newline-delimited JSON-RPC stdio transport. The server
- * plugin (`@deepseek-ai/dsh-sdk-jsonrpc-server`) and SDK clients share these shapes;
- * `serverInfo.name` stays the wire-stable `deepseek-harness-sdk-runtime`.
+ * plugin (`@redspark/rsh-sdk-jsonrpc-server`) and SDK clients share these shapes;
+ * `serverInfo.name` stays the wire-stable `redspark-harness-sdk-runtime`.
  *
- * @module @deepseek-ai/dsh-sdk-protocol/types
+ * @module @redspark/rsh-sdk-protocol/types
  */
 
-import type { ContentBlock, ReasoningEffortId, StreamChunk } from '@deepseek-ai/dsh-llm/native'
-import type { NativeStagedFileReceipt, NativeStagedFileReceiptId } from '@deepseek-ai/dsh-native-session-execution'
-import type { SessionEvent } from '@deepseek-ai/dsh-session/native'
-import type { SubagentStopReason } from '@deepseek-ai/dsh-subagent-protocol'
+import type { ContentBlock, ReasoningEffortId, StreamChunk } from '@redspark/rsh-llm/native'
+import type { NativeStagedFileReceipt, NativeStagedFileReceiptId } from '@redspark/rsh-native-session-execution'
+import type { SessionEvent } from '@redspark/rsh-session/native'
+import type { SubagentStopReason } from '@redspark/rsh-subagent-protocol'
 
 /** Parameters for the process-wide SDK handshake. */
 export interface InitializeParams {
@@ -37,7 +37,7 @@ export interface InitializeParams {
 
 /** Wire-stable server identity returned by initialization. */
 export interface InitializeResult {
-  /** Wire-stable server identity (`deepseek-harness-sdk-runtime`) and version. */
+  /** Wire-stable server identity (`redspark-harness-sdk-runtime`) and version. */
   serverInfo: { name: string; version: string }
   /** Effective positive per-turn step cap when the server reports one. */
   maxSteps?: number

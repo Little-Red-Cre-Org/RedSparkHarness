@@ -1,8 +1,8 @@
 /** Wire presentation facts shared by the Host producer and browser Consumer. */
 import type { NativeWebHumanPrompt, NativeWebHumanId } from './human.ts'
-import type { SessionEvent, SessionId, SessionSeqCursor } from '@deepseek-ai/dsh-session/types'
-import type { UserMessage } from '@deepseek-ai/dsh-llm/native'
-import { brandString, type Branded } from '@deepseek-ai/dsh-brand'
+import type { SessionEvent, SessionId, SessionSeqCursor } from '@redspark/rsh-session/types'
+import type { UserMessage } from '@redspark/rsh-llm/native'
+import { brandString, type Branded } from '@redspark/rsh-brand'
 
 /** Stable identity shared by a queued request and its durable inbox message. */
 export type NativeSubmissionRequestId = Branded<'native-submission-request'>

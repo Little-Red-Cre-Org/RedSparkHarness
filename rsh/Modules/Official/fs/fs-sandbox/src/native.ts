@@ -1,15 +1,15 @@
 /** Native sandboxing filesystem Provider with installation-owned cancellation and draining. */
 
-import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
-import type { NativeSandboxPolicy } from '@deepseek-ai/dsh-native-sandbox-policy'
-import type {} from '@deepseek-ai/dsh-fs/native'
-import { FsError } from '@deepseek-ai/dsh-fs/types'
-import type { FsEditOutcome, FsEditRequest, FsTarget, FsVersion, FsWriteIntent, FsWriteOutcome } from '@deepseek-ai/dsh-fs/types'
-import type { SandboxExecutionPolicy, SandboxMode } from '@deepseek-ai/dsh-sandbox/native-types'
-import { LocalFileSystemBackend, resolveLocalFilesystemConfig } from '@deepseek-ai/dsh-fs-local/backend'
+import type { NativePlugin } from '@redspark/rsh-native-runtime'
+import type { NativeSandboxPolicy } from '@redspark/rsh-native-sandbox-policy'
+import type {} from '@redspark/rsh-fs/native'
+import { FsError } from '@redspark/rsh-fs/types'
+import type { FsEditOutcome, FsEditRequest, FsTarget, FsVersion, FsWriteIntent, FsWriteOutcome } from '@redspark/rsh-fs/types'
+import type { SandboxExecutionPolicy, SandboxMode } from '@redspark/rsh-sandbox/native-types'
+import { LocalFileSystemBackend, resolveLocalFilesystemConfig } from '@redspark/rsh-fs-local/backend'
 import { checkedSandboxTarget } from './policy.ts'
 
-declare module '@deepseek-ai/dsh-native-runtime' {
+declare module '@redspark/rsh-native-runtime' {
   interface NativeServices { sandboxPolicy: NativeSandboxPolicy }
 }
 
@@ -78,7 +78,7 @@ class NativeSandboxedFileSystem extends LocalFileSystemBackend {
 /** Install the selected native policy and local backend as the one `fs` authority. */
 export const plugin: NativePlugin = {
   apiVersion: 1,
-  name: '@deepseek-ai/dsh-fs-sandbox',
+  name: '@redspark/rsh-fs-sandbox',
   targets: ['host'],
   requires: ['sandboxPolicy'],
   provides: ['fs'],

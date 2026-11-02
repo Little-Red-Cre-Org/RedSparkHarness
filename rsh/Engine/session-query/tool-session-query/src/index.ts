@@ -1,16 +1,16 @@
 /**
  * Model-facing, workspace-authorized session-history search and read tools.
  *
- * @module @deepseek-ai/dsh-tool-session-query
+ * @module @redspark/rsh-tool-session-query
  */
 
-import type { Context } from '@deepseek-ai/cordis'
-import type {} from '@deepseek-ai/dsh-session-projection'
-import type {} from '@deepseek-ai/dsh-session-query'
-import z from '@deepseek-ai/schemastery'
-import { MAX_TIMER_DELAY_MS } from '@deepseek-ai/dsh-timeout'
-import { defineTool } from '@deepseek-ai/dsh-tools'
-import type { ToolRunContext } from '@deepseek-ai/dsh-tools'
+import type { Context } from '@redspark/cordis'
+import type {} from '@redspark/rsh-session-projection'
+import type {} from '@redspark/rsh-session-query'
+import z from '@redspark/schemastery'
+import { MAX_TIMER_DELAY_MS } from '@redspark/rsh-timeout'
+import { defineTool } from '@redspark/rsh-tools'
+import type { ToolRunContext } from '@redspark/rsh-tools'
 import { DEFAULT_MAX_SEARCH_RESULTS, DEFAULT_SEARCH_TIMEOUT_MS, resolveSessionQueryToolConfig } from './config.ts'
 import type { SessionQueryToolConfig } from './config.ts'
 import { toolInput } from './input.ts'

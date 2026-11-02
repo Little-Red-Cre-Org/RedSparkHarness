@@ -1,11 +1,11 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { Context } from '@deepseek-ai/cordis'
-import { stubSettingsScope, type StubSettingsScope } from '@deepseek-ai/dsh-client-test-runtime'
-import { NativeHost, NativeScope, resolveInstallation, type NativePlugin } from '@deepseek-ai/dsh-native-runtime'
-import { plugin as nativeRendererPlugin } from '@deepseek-ai/dsh-client-ui-renderer/native'
-import type { LocaleSettings, LocaleSnapshot } from '@deepseek-ai/dsh-client-locale/client'
-import { FALLBACK_LOCALE, LocaleRuntime } from '@deepseek-ai/dsh-client-locale/client'
+import { Context } from '@redspark/cordis'
+import { stubSettingsScope, type StubSettingsScope } from '@redspark/rsh-client-test-runtime'
+import { NativeHost, NativeScope, resolveInstallation, type NativePlugin } from '@redspark/rsh-native-runtime'
+import { plugin as nativeRendererPlugin } from '@redspark/rsh-client-ui-renderer/native'
+import type { LocaleSettings, LocaleSnapshot } from '@redspark/rsh-client-locale/client'
+import { FALLBACK_LOCALE, LocaleRuntime } from '@redspark/rsh-client-locale/client'
 import { plugin as nativeLocalePlugin, type NativeLocaleService } from '../src/native.ts'
 const make = (host?: StubSettingsScope<LocaleSettings>): {
   ctx: Context

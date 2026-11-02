@@ -10,7 +10,7 @@ import {
   type FileReferenceDirectoryEntry,
   type FileReferenceSearchConfig,
   type FileReferenceSearchReader,
-} from '@deepseek-ai/dsh-file-reference/search'
+} from '@redspark/rsh-file-reference/search'
 
 export {
   DEFAULT_FILE_SEARCH_EXCLUDED_DIRECTORIES,
@@ -19,7 +19,7 @@ export {
 }
 /** Configuration for the local workspace file-reference search adapter. */
 export type FileSearchConfig = FileReferenceSearchConfig
-export { activeAtToken, formatFileMention } from '@deepseek-ai/dsh-file-reference/grammar'
+export { activeAtToken, formatFileMention } from '@redspark/rsh-file-reference/grammar'
 
 class LocalWorkspaceReader implements FileReferenceSearchReader {
   private readonly root: string

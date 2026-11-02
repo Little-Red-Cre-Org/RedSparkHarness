@@ -1,5 +1,5 @@
 /** Shared validation and model-facing text for legacy and native filesystem tools. */
-import type { FsWriteOutcome } from '@deepseek-ai/dsh-fs/native'
+import type { FsWriteOutcome } from '@redspark/rsh-fs/native'
 
 /** Default and maximum number of lines returned by one read call. */
 export const READ_LIMIT = 2000

@@ -2,7 +2,7 @@
 
 import { fileURLToPath } from 'node:url'
 import { expect, it } from 'vitest'
-import { LOADER_SMOKE_TEST_TIMEOUT_MS, runLoaderSmoke } from '@deepseek-ai/dsh-loader-smoke'
+import { LOADER_SMOKE_TEST_TIMEOUT_MS, runLoaderSmoke } from '@redspark/rsh-loader-smoke'
 
 const fixtureRoot = new URL('../../../../../../Modules/Official/mcp/mcp-client/tests/fixtures/', import.meta.url)
 const configPath = fileURLToPath(new URL('repeated-cursor.patch.yml', fixtureRoot))
@@ -21,8 +21,8 @@ it('reports a repeated MCP discovery cursor and exits before starting a turn', a
     tsconfigPath: fileURLToPath(new URL('../../../../../../../tsconfig.json', import.meta.url)),
     expectedExitCode: 1,
     env: {
-      DSH_MCP_PAGINATION_FIXTURE: fileURLToPath(new URL('repeated-cursor-server.ts', fixtureRoot)),
-      DSH_TELEMETRY_DISABLED: '1',
+      RSH_MCP_PAGINATION_FIXTURE: fileURLToPath(new URL('repeated-cursor-server.ts', fixtureRoot)),
+      RSH_TELEMETRY_DISABLED: '1',
     },
   })
   expect(stdout).toBe('')

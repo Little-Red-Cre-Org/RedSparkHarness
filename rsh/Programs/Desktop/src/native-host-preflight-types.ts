@@ -1,5 +1,5 @@
 /** Serialized Native Host graph sent from the Desktop main process to its validation worker. */
-import type { NativeEntryManifest, NativePlugin } from '@deepseek-ai/dsh-native-runtime'
+import type { NativeEntryManifest, NativePlugin } from '@redspark/rsh-native-runtime'
 import type { NativeDesktopValidationDiagnostic } from './native-module-management.ts'
 
 /** Serializable declaration for a loader-owned Host Provider that is not a profile package row. */

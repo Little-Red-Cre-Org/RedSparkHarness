@@ -1,6 +1,6 @@
 /** Cordis-free session-query tool limits shared by both installers. */
 
-import { MAX_TIMER_DELAY_MS } from '@deepseek-ai/dsh-timeout'
+import { MAX_TIMER_DELAY_MS } from '@redspark/rsh-timeout'
 
 /** Default maximum authorized hits returned by one search call. */
 export const DEFAULT_MAX_SEARCH_RESULTS = 100

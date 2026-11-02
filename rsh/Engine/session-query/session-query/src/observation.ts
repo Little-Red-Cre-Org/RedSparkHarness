@@ -1,15 +1,15 @@
 /** Shared live/prepared observations for Session page and lifecycle consumers. */
 
-import type { Context } from '@deepseek-ai/cordis'
-import { SessionLogOffset, SessionSeq } from '@deepseek-ai/dsh-session'
-import type { Session, SessionEvent, SessionId } from '@deepseek-ai/dsh-session'
-import type SessionPersistence from '@deepseek-ai/dsh-session-persistence'
+import type { Context } from '@redspark/cordis'
+import { SessionLogOffset, SessionSeq } from '@redspark/rsh-session'
+import type { Session, SessionEvent, SessionId } from '@redspark/rsh-session'
+import type SessionPersistence from '@redspark/rsh-session-persistence'
 import type {
   SessionPersistenceRevision,
   SessionPersistenceSnapshot,
-} from '@deepseek-ai/dsh-session-persistence'
-import type { ProjectionSnapshot } from '@deepseek-ai/dsh-session-projection'
-import type {} from '@deepseek-ai/dsh-session-projection-cache'
+} from '@redspark/rsh-session-persistence'
+import type { ProjectionSnapshot } from '@redspark/rsh-session-projection'
+import type {} from '@redspark/rsh-session-projection-cache'
 import { SESSION_QUERY_DEFAULT_PREPARED_SESSION_CACHE_SIZE, SessionQueryError } from './config.ts'
 import { readColdSessionLog, type ColdSessionLog } from './cold-read.ts'
 import type { SessionObservation, SessionObservationOptions } from './types.ts'

@@ -3,7 +3,7 @@ description: "Target-neutral conversation assembly and browser shell: event and 
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-client-ui-conversation
+# @redspark/rsh-client-ui-conversation
 
 English | [中文](README.zh.md)
 
@@ -37,7 +37,7 @@ Target packages declaration-merge their snapshot and Location data maps, then re
 <a id="native-target-types"></a>
 ## Native target types
 
-Native Client packages that implement Conversation targets import shared event, node, prompt, View, and image-rendering types from `@deepseek-ai/dsh-client-ui-conversation/native-types`. The entry contains type declarations and no runtime code.
+Native Client packages that implement Conversation targets import shared event, node, prompt, View, and image-rendering types from `@redspark/rsh-client-ui-conversation/native-types`. The entry contains type declarations and no runtime code.
 
 <a id="shell-and-standard-props"></a>
 ## Shell and standard props
@@ -84,9 +84,9 @@ interface ComposerChainProps {
 A business package may install one entry only while a Remote waterfall request is pending:
 
 ```tsx
-import type { ComposerChainProps } from '@deepseek-ai/dsh-client-ui-conversation/client'
-import type { ChainSelect, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
-import type { SessionId } from '@deepseek-ai/dsh-session/types'
+import type { ComposerChainProps } from '@redspark/rsh-client-ui-conversation/client'
+import type { ChainSelect, PropsRuntime } from '@redspark/rsh-client-ui-slots'
+import type { SessionId } from '@redspark/rsh-session/types'
 
 interface Request {
   readonly sessionId: SessionId

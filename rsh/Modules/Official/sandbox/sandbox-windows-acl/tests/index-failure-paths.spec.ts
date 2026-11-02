@@ -11,9 +11,9 @@
 import { mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
-import { Win32Error } from '@deepseek-ai/dsh-win32-process'
-import { ERROR_BROKEN_PIPE } from '@deepseek-ai/dsh-win32-process/src/abi.ts'
-import { PROCESS_INFORMATION } from '@deepseek-ai/dsh-win32-process/src/ffi.ts'
+import { Win32Error } from '@redspark/rsh-win32-process'
+import { ERROR_BROKEN_PIPE } from '@redspark/rsh-win32-process/src/abi.ts'
+import { PROCESS_INFORMATION } from '@redspark/rsh-win32-process/src/ffi.ts'
 import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import koffi from 'koffi'
 
@@ -39,8 +39,8 @@ interface HappyStubs {
 
 const state = vi.hoisted(() => ({ stubs: undefined as HappyStubs | undefined }))
 
-vi.mock('@deepseek-ai/dsh-win32-process', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@deepseek-ai/dsh-win32-process')>()
+vi.mock('@redspark/rsh-win32-process', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@redspark/rsh-win32-process')>()
   return { ...actual, resolveWindowsExecutable: () => 'C:\\fixtures\\probe.exe' }
 })
 

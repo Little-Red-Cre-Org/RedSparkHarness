@@ -1,42 +1,42 @@
 /** Native navigation surface over the Session, layout, and schedule owners. */
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import type { FocusEvent as ReactFocusEvent, KeyboardEvent as ReactKeyboardEvent } from 'react'
-import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
+import type { NativePlugin } from '@redspark/rsh-native-runtime'
 import {
   Button, DirectoryBrowser, IconClockOutline16, IconPersonalizationOutline16, IconProjectAddOutline16, Menu, Modal, Tooltip,
   ProjectRowItem, SearchResultItem, SessionNodeItem, WorkspaceSectionEmpty, WorkspaceSectionHeader, workspaceLabel,
-} from '@deepseek-ai/dsh-client-ui-primitives'
-import type { DirectoryBrowserListing, MenuEntry, SessionSearchRow, WorkspaceGroupRow } from '@deepseek-ai/dsh-client-ui-primitives'
-import { resolveSlotLabel } from '@deepseek-ai/dsh-client-ui-slots'
-import { createSnapshotStore } from '@deepseek-ai/dsh-client-store'
-import type { HostObservable } from '@deepseek-ai/dsh-client-ui-slots'
+} from '@redspark/rsh-client-ui-primitives'
+import type { DirectoryBrowserListing, MenuEntry, SessionSearchRow, WorkspaceGroupRow } from '@redspark/rsh-client-ui-primitives'
+import { resolveSlotLabel } from '@redspark/rsh-client-ui-slots'
+import { createSnapshotStore } from '@redspark/rsh-client-store'
+import type { HostObservable } from '@redspark/rsh-client-ui-slots'
 import type {
   NativeScheduleClient, NativeScheduleFrame, NativeScheduledJob, NativeSessionClient, NativeSessionListItem, NativeSessionRpcError,
-} from '@deepseek-ai/dsh-client-native-session/native'
+} from '@redspark/rsh-client-native-session/native'
 import type {
   NativeDirectoryPickerClient, NativeWorkspace, NativeWorkspaceBaseline, NativeWorkspaceClient, NativeWorkspaceFrame,
 }
-  from '@deepseek-ai/dsh-client-native-session/workspaces'
+  from '@redspark/rsh-client-native-session/workspaces'
 import type {
   NativeConversationService, NativeConversationSnapshot, NativeSessionPresentation,
-} from '@deepseek-ai/dsh-client-ui-session/native'
-import type { MainPanelId } from '@deepseek-ai/dsh-client-ui-layout/native'
+} from '@redspark/rsh-client-ui-session/native'
+import type { MainPanelId } from '@redspark/rsh-client-ui-layout/native'
 import type {
   InjectFace, PropsLocale, PropsRuntime, SnapshotSelectorHook, TranslateNS,
-} from '@deepseek-ai/dsh-client-ui-slots'
-import type { NativeLocaleSnapshot } from '@deepseek-ai/dsh-client-locale/native'
-import type {} from '@deepseek-ai/dsh-client-ui-renderer/native'
-import type {} from '@deepseek-ai/dsh-client-ui-layout/native'
-import type {} from '@deepseek-ai/dsh-client-ui-session/native'
-import type {} from '@deepseek-ai/dsh-client-native-session/native'
-import type {} from '@deepseek-ai/dsh-client-locale/native'
+} from '@redspark/rsh-client-ui-slots'
+import type { NativeLocaleSnapshot } from '@redspark/rsh-client-locale/native'
+import type {} from '@redspark/rsh-client-ui-renderer/native'
+import type {} from '@redspark/rsh-client-ui-layout/native'
+import type {} from '@redspark/rsh-client-ui-session/native'
+import type {} from '@redspark/rsh-client-native-session/native'
+import type {} from '@redspark/rsh-client-locale/native'
 import type { SidebarPanelMetadata, SidebarRootInjected } from './client/contract/slots.ts'
 import { SidebarRoot } from './client/SidebarRoot.tsx'
 import css from './client/SidebarRoot.module.css'
 import { en as sidebarEn, zh as sidebarZh, type SidebarKey } from './client/locales.ts'
 import { en as nativeSidebarEn, zh as nativeSidebarZh, type NativeSidebarKey } from './locales.ts'
 
-declare module '@deepseek-ai/dsh-client-ui-slots' {
+declare module '@redspark/rsh-client-ui-slots' {
   interface LocaleNamespaceMap {
     sidebar: SidebarKey
     nativeSidebar: NativeSidebarKey
@@ -899,7 +899,7 @@ export function NativeScheduledTasksPanel({ client, close, useLocale, t }: {
 /** Native SidebarRoot and its optional Session browser are installed independently from AppFrame. */
 export const plugin: NativePlugin = {
   apiVersion: 1,
-  name: '@deepseek-ai/dsh-client-ui-sidebar',
+  name: '@redspark/rsh-client-ui-sidebar',
   targets: ['client'],
   requires: [
     'clientSlots', 'clientNativeLayout', 'clientNativeConversation', 'clientNativeSessionPresentation',

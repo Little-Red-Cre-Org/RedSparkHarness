@@ -1,17 +1,17 @@
 /**
  * Default model selection for an Agent without a session-specific selection.
  *
- * @module @deepseek-ai/dsh-agent-default-model
+ * @module @redspark/rsh-agent-default-model
  */
 
-import { Context, Service } from '@deepseek-ai/cordis'
-import z from '@deepseek-ai/schemastery'
-import type { ModelSelection } from '@deepseek-ai/dsh-agent'
-import { ReasoningEffortId } from '@deepseek-ai/dsh-llm'
-import type { SettingsService } from '@deepseek-ai/dsh-settings-definition'
+import { Context, Service } from '@redspark/cordis'
+import z from '@redspark/schemastery'
+import type { ModelSelection } from '@redspark/rsh-agent'
+import { ReasoningEffortId } from '@redspark/rsh-llm'
+import type { SettingsService } from '@redspark/rsh-settings-definition'
 import { retainSettingsOwner } from './settings-owner.ts'
 
-declare module '@deepseek-ai/cordis' {
+declare module '@redspark/cordis' {
   interface Context {
     /** Default model selection for Agents created without an explicit model. */
     agentDefaultModel: AgentDefaultModelConfig

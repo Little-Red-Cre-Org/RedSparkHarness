@@ -1,8 +1,8 @@
 /**
  * Framework-free tool-timeout enforcement shared by the Cordis wrapper and native execution policy.
- * @module @deepseek-ai/dsh-tool-call-timeout-policy/core
+ * @module @redspark/rsh-tool-call-timeout-policy/core
  */
-import { deadline, timeoutOf } from '@deepseek-ai/dsh-timeout'
+import { deadline, timeoutOf } from '@redspark/rsh-timeout'
 
 /**
  * The code owned by this plugin, used BOTH as the internal deadline

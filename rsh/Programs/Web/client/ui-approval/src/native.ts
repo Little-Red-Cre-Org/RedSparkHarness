@@ -1,6 +1,6 @@
 /** Cordis-free approval cards for Native Client consumers. */
-import { en as commonEn, formatLocaleTemplate, zh as commonZh } from '@deepseek-ai/dsh-client-locale/dictionary'
-import type { TranslateNS } from '@deepseek-ai/dsh-client-ui-slots'
+import { en as commonEn, formatLocaleTemplate, zh as commonZh } from '@redspark/rsh-client-locale/dictionary'
+import type { TranslateNS } from '@redspark/rsh-client-ui-slots'
 import { createElement, type ReactElement } from 'react'
 import { ApprovalCard } from './ApprovalCard.tsx'
 import { en, zh, type ApprovalKey } from './client/locales.ts'

@@ -1,6 +1,6 @@
 /** Native workflow Definition; selected Providers retain the sole Subagent execution authority. */
-import { NativeContributions, type NativePlugin, type NativeScope } from '@deepseek-ai/dsh-native-runtime'
-import type { NativeToolExecution } from '@deepseek-ai/dsh-native-tools'
+import { NativeContributions, type NativePlugin, type NativeScope } from '@redspark/rsh-native-runtime'
+import type { NativeToolExecution } from '@redspark/rsh-native-tools'
 import type { WorkflowAgentInfo, WorkflowAgentEndInfo } from './types.ts'
 import type { WorkflowMeta } from './types.ts'
 import type { WorkflowRun } from './types.ts'
@@ -51,7 +51,7 @@ export interface NativeWorkflowOperations {
   start(name: string, request: NativeWorkflowStartRequest): WorkflowRun
 }
 
-declare module '@deepseek-ai/dsh-native-runtime' {
+declare module '@redspark/rsh-native-runtime' {
   interface NativeServices { workflow: NativeWorkflowOperations }
 }
 
@@ -84,7 +84,7 @@ export class NativeWorkflowRegistry implements NativeWorkflowOperations {
 
 /** Native workflow Definition installation. */
 export const plugin: NativePlugin = {
-  apiVersion: 1, name: '@deepseek-ai/dsh-workflow', targets: ['host'], requires: [], provides: ['workflow'],
+  apiVersion: 1, name: '@redspark/rsh-workflow', targets: ['host'], requires: [], provides: ['workflow'],
   resolve(input) {
     if (input !== undefined && (typeof input !== 'object' || input === null || Array.isArray(input) || Object.keys(input).length > 0)) {
       throw new Error('native-workflow: configuration must be empty')

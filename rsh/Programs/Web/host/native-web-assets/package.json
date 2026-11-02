@@ -1,5 +1,5 @@
 {
-  "name": "@deepseek-ai/dsh-native-web-assets",
+  "name": "@redspark/rsh-native-web-assets",
   "description": "Cordis-free native Desktop page and built frontend asset routes",
   "version": "1.0.0",
   "publishConfig": { "access": "public" },
@@ -19,9 +19,9 @@
   "files": ["lib/index.js", "lib/native-client.js", "lib/shared-*.js", "lib/types/**/*.d.ts"],
   "license": "MIT",
   "dependencies": {
-    "@deepseek-ai/dsh-client-web": "workspace:^",
-    "@deepseek-ai/dsh-http-routes": "workspace:^",
-    "@deepseek-ai/dsh-native-runtime": "workspace:^",
+    "@redspark/rsh-client-web": "workspace:^",
+    "@redspark/rsh-http-routes": "workspace:^",
+    "@redspark/rsh-native-runtime": "workspace:^",
     "esbuild": "^0.28.1"
   }
 }

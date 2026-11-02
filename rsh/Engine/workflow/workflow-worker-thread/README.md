@@ -3,7 +3,7 @@ description: "The worker-thread workflow engine: executes model-written orchestr
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-workflow-worker-thread
+# @redspark/rsh-workflow-worker-thread
 
 English | [中文](README.zh.md)
 
@@ -32,8 +32,8 @@ Mount this engine when a composition needs the workflow capability: each orchest
 Loading the engine registers `ctx.workflowEngine`; adding `dsh-tool-workflow` on top gives the model the `workflow` tool. Every config field is optional:
 
 ```yaml
-- name: '@deepseek-ai/dsh-workflow-worker-thread'
-- name: '@deepseek-ai/dsh-tool-workflow'
+- name: '@redspark/rsh-workflow-worker-thread'
+- name: '@redspark/rsh-tool-workflow'
 ```
 
 | Field | Default | Meaning |
@@ -49,7 +49,7 @@ An owning consumer may set `WorkflowStartRequest.subagentProvider` and `Workflow
 
 ### Native profile configuration
 
-Native profiles install `@deepseek-ai/dsh-workflow-worker-thread/native` as the selected `workflow` Provider. The worker delegates through the NativeSubagent Definition and requires its configured provider name to match the installed provider. Native configuration is resolved before the Provider is installed:
+Native profiles install `@redspark/rsh-workflow-worker-thread/native` as the selected `workflow` Provider. The worker delegates through the NativeSubagent Definition and requires its configured provider name to match the installed provider. Native configuration is resolved before the Provider is installed:
 
 | Field | Default | Meaning |
 |---|---|---|

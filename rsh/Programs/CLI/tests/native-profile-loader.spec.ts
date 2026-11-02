@@ -6,7 +6,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { once } from 'node:events'
 import { expect, it } from 'vitest'
-import { NativeScope, type NativePlugin, type NativePluginInventory } from '@deepseek-ai/dsh-native-runtime'
+import { NativeScope, type NativePlugin, type NativePluginInventory } from '@redspark/rsh-native-runtime'
 import { loadNativeProfile, replaceNativeProfile } from '../src/native-profile-loader.ts'
 import { runNativeProfile } from '../src/native-profile-boot.ts'
 
@@ -61,10 +61,10 @@ async function inventoryPackage(profileDir: string, packageName: string, pluginN
 }
 
 async function childPackages(profileDir: string, kind: 'sdk' | 'acp'): Promise<void> {
-  await emptyNativePackage(profileDir, kind === 'sdk' ? '@deepseek-ai/dsh-sdk-child' : '@deepseek-ai/dsh-acp-child',
+  await emptyNativePackage(profileDir, kind === 'sdk' ? '@redspark/rsh-sdk-child' : '@redspark/rsh-acp-child',
     [kind === 'sdk' ? 'sdkChildRuntimeLauncher' : 'acpChildRuntimeLauncher'], ['externalSubagentDriver'])
-  await emptyNativePackage(profileDir, '@deepseek-ai/dsh-subprocess-local', [], ['childConnection'])
-  await emptyNativePackage(profileDir, '@deepseek-ai/dsh-sandbox-local', [], ['sandbox'])
+  await emptyNativePackage(profileDir, '@redspark/rsh-subprocess-local', [], ['childConnection'])
+  await emptyNativePackage(profileDir, '@redspark/rsh-sandbox-local', [], ['sandbox'])
 }
 
 it('inherits the nearest visible pi-ai provider catalog into the opt-in SDK child profile', async () => {
@@ -73,28 +73,28 @@ it('inherits the nearest visible pi-ai provider catalog into the opt-in SDK chil
     const rootProviders = { route: { baseURL: 'https://root.invalid/v1' } }
     const nestedProviders = { route: { baseURL: 'https://nested.invalid/v1' } }
     const unrelatedProviders = { route: { baseURL: 'https://unrelated.invalid/v1' } }
-    await emptyNativePackage(profileDir, '@deepseek-ai/dsh-llm-pi-ai', [], ['model'])
+    await emptyNativePackage(profileDir, '@redspark/rsh-llm-pi-ai', [], ['model'])
     await childPackages(profileDir, 'sdk')
     await emptyNativePackage(profileDir, 'test-credentials', [], ['credentials'])
     await emptyNativePackage(profileDir, 'test-child-connection', [], ['childConnection'])
     await emptyNativePackage(profileDir, 'test-child-sandbox', [], ['sandbox'])
     await writeFile(join(profileDir, 'rsh.profile.json'), JSON.stringify({
       formatVersion: 1, scopes: [{ id: 'root' }, { id: 'nested', parent: 'root' }, { id: 'other' }], installations: [
-        { id: 'root-pi-ai', plugin: '@deepseek-ai/dsh-llm-pi-ai', scope: 'root', config: { providers: rootProviders } },
-        { id: 'other-pi-ai', plugin: '@deepseek-ai/dsh-llm-pi-ai', scope: 'other', config: { providers: unrelatedProviders } },
-        { id: 'nested-pi-ai', plugin: '@deepseek-ai/dsh-llm-pi-ai', scope: 'nested', config: { providers: nestedProviders } },
+        { id: 'root-pi-ai', plugin: '@redspark/rsh-llm-pi-ai', scope: 'root', config: { providers: rootProviders } },
+        { id: 'other-pi-ai', plugin: '@redspark/rsh-llm-pi-ai', scope: 'other', config: { providers: unrelatedProviders } },
+        { id: 'nested-pi-ai', plugin: '@redspark/rsh-llm-pi-ai', scope: 'nested', config: { providers: nestedProviders } },
         { id: 'credentials', plugin: 'test-credentials', scope: 'root' },
         { id: 'child-connection', plugin: 'test-child-connection', scope: 'nested' },
         { id: 'child-sandbox', plugin: 'test-child-sandbox', scope: 'nested' },
-        { id: 'dsh-sdk-child', plugin: '@deepseek-ai/dsh-sdk-child', scope: 'nested', config: { providerName: 'dsh-sdk' } },
+        { id: 'dsh-sdk-child', plugin: '@redspark/rsh-sdk-child', scope: 'nested', config: { providerName: 'dsh-sdk' } },
       ],
     }))
     const loaded = await loadNativeProfile({ profile: 'probe', patchFiles: [], target: 'host', installAnchor, home })
     expect(loaded.profile.installations.find(row => row.id === 'dsh-sdk-child')?.config)
       .toEqual({ providerName: 'dsh-sdk', providers: nestedProviders })
     const diagnostics = loaded.host.diagnostics()
-    const launcher = diagnostics.find(row => row.name === '@deepseek-ai/dsh-sdk-child-runtime-launcher')
-    const child = diagnostics.find(row => row.name === '@deepseek-ai/dsh-sdk-child')
+    const launcher = diagnostics.find(row => row.name === '@redspark/rsh-sdk-child-runtime-launcher')
+    const child = diagnostics.find(row => row.name === '@redspark/rsh-sdk-child')
     const names = new Map(diagnostics.map(row => [row.id, row.name]))
     expect(launcher?.scope).toBe(child?.scope)
     expect(launcher?.dependencies.map(item => [item.service, names.get(item.provider)])).toEqual([
@@ -110,7 +110,7 @@ it('uses the nearest visible model Provider catalog and process Providers for AC
   const nestedProviders = { route: { baseURL: 'https://nested.invalid/v1' } }
   const unrelatedProviders = { route: { baseURL: 'https://unrelated.invalid/v1' } }
   try {
-    await emptyNativePackage(profileDir, '@deepseek-ai/dsh-llm-pi-ai', [], ['model'])
+    await emptyNativePackage(profileDir, '@redspark/rsh-llm-pi-ai', [], ['model'])
     await childPackages(profileDir, 'acp')
     await emptyNativePackage(profileDir, 'test-credentials', [], ['credentials'])
     await emptyNativePackage(profileDir, 'test-child-connection', [], ['childConnection'])
@@ -120,18 +120,18 @@ it('uses the nearest visible model Provider catalog and process Providers for AC
       formatVersion: 1,
       scopes: [{ id: 'root' }, { id: 'nested', parent: 'root' }, { id: 'other' }],
       installations: [
-        { id: 'root-pi-ai', plugin: '@deepseek-ai/dsh-llm-pi-ai', scope: 'root', config: { providers: rootProviders } },
+        { id: 'root-pi-ai', plugin: '@redspark/rsh-llm-pi-ai', scope: 'root', config: { providers: rootProviders } },
         { id: 'credentials', plugin: 'test-credentials', scope: 'root' },
-        { id: 'other-pi-ai', plugin: '@deepseek-ai/dsh-llm-pi-ai', scope: 'other', config: { providers: unrelatedProviders } },
+        { id: 'other-pi-ai', plugin: '@redspark/rsh-llm-pi-ai', scope: 'other', config: { providers: unrelatedProviders } },
         { id: 'other-credentials', plugin: 'test-credentials', scope: 'other' },
-        { id: 'nested-pi-ai', plugin: '@deepseek-ai/dsh-llm-pi-ai', scope: 'nested', config: { providers: nestedProviders } },
+        { id: 'nested-pi-ai', plugin: '@redspark/rsh-llm-pi-ai', scope: 'nested', config: { providers: nestedProviders } },
         { id: 'child-connection', plugin: 'test-child-connection', scope: 'nested' },
         { id: 'child-sandbox', plugin: 'test-child-sandbox', scope: 'nested' },
         { id: 'remote-acp-launcher', plugin: 'test-remote-acp-launcher', scope: 'other' },
-        { id: 'disabled-child-connection', plugin: '@deepseek-ai/dsh-subprocess-local', scope: 'other', disabled: true },
-        { id: 'disabled-child-sandbox', plugin: '@deepseek-ai/dsh-sandbox-local', scope: 'other', disabled: true },
-        { id: 'acp-child', plugin: '@deepseek-ai/dsh-acp-child', scope: 'nested', config: { providerName: 'dsh-acp-child' } },
-        { id: 'acp-child-other', plugin: '@deepseek-ai/dsh-acp-child', scope: 'other', config: { providerName: 'dsh-acp-child' } },
+        { id: 'disabled-child-connection', plugin: '@redspark/rsh-subprocess-local', scope: 'other', disabled: true },
+        { id: 'disabled-child-sandbox', plugin: '@redspark/rsh-sandbox-local', scope: 'other', disabled: true },
+        { id: 'acp-child', plugin: '@redspark/rsh-acp-child', scope: 'nested', config: { providerName: 'dsh-acp-child' } },
+        { id: 'acp-child-other', plugin: '@redspark/rsh-acp-child', scope: 'other', config: { providerName: 'dsh-acp-child' } },
       ],
     }))
     const desktopCarrier = { apiVersion: 1, name: 'test-desktop-carrier', targets: ['host'] as const,
@@ -144,8 +144,8 @@ it('uses the nearest visible model Provider catalog and process Providers for AC
     expect(loaded.profile.installations.find(row => row.id === 'acp-child-other')?.config)
       .toEqual({ providerName: 'dsh-acp-child', providers: unrelatedProviders })
     const diagnostics = loaded.host.diagnostics()
-    const launchers = diagnostics.filter(row => row.name === '@deepseek-ai/dsh-acp-child-runtime-launcher')
-    const children = diagnostics.filter(row => row.name === '@deepseek-ai/dsh-acp-child')
+    const launchers = diagnostics.filter(row => row.name === '@redspark/rsh-acp-child-runtime-launcher')
+    const children = diagnostics.filter(row => row.name === '@redspark/rsh-acp-child')
     const remoteLauncher = diagnostics.find(row => row.name === 'test-remote-acp-launcher')
     expect(launchers.map(row => row.scope)).toEqual([children[0]?.scope])
     expect(remoteLauncher?.scope).toBe(children[1]?.scope)
@@ -165,9 +165,9 @@ it('uses the nearest visible model Provider catalog and process Providers for AC
       formatVersion: 1,
       scopes: [{ id: 'root' }, { id: 'nested', parent: 'root' }],
       installations: [
-        { id: 'root-pi-ai', plugin: '@deepseek-ai/dsh-llm-pi-ai', scope: 'root', config: { providers: rootProviders } },
+        { id: 'root-pi-ai', plugin: '@redspark/rsh-llm-pi-ai', scope: 'root', config: { providers: rootProviders } },
         { id: 'nested-model', plugin: 'test-model-provider', scope: 'nested' },
-        { id: 'acp-child', plugin: '@deepseek-ai/dsh-acp-child', scope: 'nested', config: { providerName: 'dsh-acp-child' } },
+        { id: 'acp-child', plugin: '@redspark/rsh-acp-child', scope: 'nested', config: { providerName: 'dsh-acp-child' } },
       ],
     }))
     await expect(loadNativeProfile({ profile: 'probe', patchFiles: [], target: 'host', installAnchor, home }))
@@ -176,8 +176,8 @@ it('uses the nearest visible model Provider catalog and process Providers for AC
 })
 
 it.each([
-  { kind: 'SDK', packageKind: 'sdk' as const, package: '@deepseek-ai/dsh-sdk-child', name: '@deepseek-ai/dsh-sdk-child-runtime-launcher', providerName: 'dsh-sdk' },
-  { kind: 'ACP', packageKind: 'acp' as const, package: '@deepseek-ai/dsh-acp-child', name: '@deepseek-ai/dsh-acp-child-runtime-launcher', providerName: 'dsh-acp-child' },
+  { kind: 'SDK', packageKind: 'sdk' as const, package: '@redspark/rsh-sdk-child', name: '@redspark/rsh-sdk-child-runtime-launcher', providerName: 'dsh-sdk' },
+  { kind: 'ACP', packageKind: 'acp' as const, package: '@redspark/rsh-acp-child', name: '@redspark/rsh-acp-child-runtime-launcher', providerName: 'dsh-acp-child' },
 ])('rebuilds scoped $kind child runtime contributions for every profile candidate', async ({ packageKind, package: childPackage, name: launcherName, providerName }) => {
   const { home, profileDir, installAnchor } = await fixture()
   const profilePath = join(profileDir, 'rsh.profile.json')
@@ -187,12 +187,12 @@ it.each([
     carrier: { plugin: desktopCarrier, scope: 'root' } }
   let active: Awaited<ReturnType<typeof loadNativeProfile>> | undefined
   try {
-    await emptyNativePackage(profileDir, '@deepseek-ai/dsh-llm-pi-ai', [], ['model'])
+    await emptyNativePackage(profileDir, '@redspark/rsh-llm-pi-ai', [], ['model'])
     await childPackages(profileDir, packageKind)
     await emptyNativePackage(profileDir, 'test-credentials', [], ['credentials'])
     const scopes = [{ id: 'root' }, { id: 'first', parent: 'root' }, { id: 'second', parent: 'root' }]
     const base = { formatVersion: 1, scopes, installations: [
-      { id: 'pi-ai', plugin: '@deepseek-ai/dsh-llm-pi-ai', scope: 'root', config: { providers: { route: {} } } },
+      { id: 'pi-ai', plugin: '@redspark/rsh-llm-pi-ai', scope: 'root', config: { providers: { route: {} } } },
       { id: 'credentials', plugin: 'test-credentials', scope: 'root' },
     ] }
     await writeFile(profilePath, JSON.stringify(base))
@@ -212,7 +212,7 @@ it.each([
     expect(addedLauncher?.scope).toBe(addedChild?.scope)
     const addedNames = new Map(addedDiagnostics.map(row => [row.id, row.name]))
     expect(addedLauncher?.dependencies.map(item => addedNames.get(item.provider)))
-      .toEqual(['@deepseek-ai/dsh-subprocess-local', '@deepseek-ai/dsh-sandbox-local'])
+      .toEqual(['@redspark/rsh-subprocess-local', '@redspark/rsh-sandbox-local'])
     expect(added.profile.installations.filter(row => row.id.startsWith('native-child-runtime/')).map(row => row.id))
       .toEqual(['native-child-runtime/first/subprocess', 'native-child-runtime/first/sandbox'])
     expect(added.host.diagnostics().some(row => row.name === 'test-desktop-carrier')).toBe(true)
@@ -227,7 +227,7 @@ it.each([
     expect(relocatedLauncher?.scope).toBe(relocatedChild?.scope)
     const relocatedNames = new Map(relocatedDiagnostics.map(row => [row.id, row.name]))
     expect(relocatedLauncher?.dependencies.map(item => relocatedNames.get(item.provider)))
-      .toEqual(['@deepseek-ai/dsh-subprocess-local', '@deepseek-ai/dsh-sandbox-local'])
+      .toEqual(['@redspark/rsh-subprocess-local', '@redspark/rsh-sandbox-local'])
     expect(relocated.profile.installations.filter(row => row.id.startsWith('native-child-runtime/')).map(row => row.id))
       .toEqual(['native-child-runtime/second/subprocess', 'native-child-runtime/second/sandbox'])
     expect(relocated.host.diagnostics().some(row => row.name === 'test-desktop-carrier')).toBe(true)
@@ -236,11 +236,11 @@ it.each([
     const removed = await loadNativeProfile({ ...options, previous: active })
     active = await replaceNativeProfile(initial.host, removed)
     const retired = active.host.diagnostics().filter(row => row.name === launcherName
-      || row.name === '@deepseek-ai/dsh-subprocess-local' || row.name === '@deepseek-ai/dsh-sandbox-local')
+      || row.name === '@redspark/rsh-subprocess-local' || row.name === '@redspark/rsh-sandbox-local')
     expect(retired).toHaveLength(6)
     expect(retired.every(row => row.state === 'disposed')).toBe(true)
     expect(removed.host.diagnostics().some(row => row.name === launcherName
-      || row.name === '@deepseek-ai/dsh-subprocess-local' || row.name === '@deepseek-ai/dsh-sandbox-local')).toBe(false)
+      || row.name === '@redspark/rsh-subprocess-local' || row.name === '@redspark/rsh-sandbox-local')).toBe(false)
     expect(active.host.diagnostics().some(row => row.name === 'test-desktop-carrier')).toBe(true)
   } finally {
     await active?.host.stop()
@@ -271,9 +271,9 @@ it('registers ready user native preset folders under child scopes and lists thei
   const { home, profileDir, installAnchor } = await fixture()
   const directory = join(home, '.agent-presets', 'operator')
   try {
-    await emptyNativePackage(profileDir, '@deepseek-ai/dsh-agent-presets', [], ['agentPresets'])
+    await emptyNativePackage(profileDir, '@redspark/rsh-agent-presets', [], ['agentPresets'])
     await emptyNativePackage(profileDir, 'test-native-tools', [], [])
-    await emptyNativePackage(profileDir, '@deepseek-ai/dsh-agent-preset-standing', ['agentPresets'], [])
+    await emptyNativePackage(profileDir, '@redspark/rsh-agent-preset-standing', ['agentPresets'], [])
     await mkdir(directory, { recursive: true })
     await writeFile(join(directory, 'preset.yml'), 'name: Operator\ndescription: User tools.\n')
     await writeFile(join(directory, 'agent.native.json'), JSON.stringify({ formatVersion: 1, installations: [
@@ -281,7 +281,7 @@ it('registers ready user native preset folders under child scopes and lists thei
     ] }))
     await writeFile(join(profileDir, 'rsh.profile.json'), JSON.stringify({
       formatVersion: 1, scopes: [{ id: 'root' }],
-      installations: [{ id: 'agent-presets', plugin: '@deepseek-ai/dsh-agent-presets', scope: 'root', config: { default: 'operator' } }],
+      installations: [{ id: 'agent-presets', plugin: '@redspark/rsh-agent-presets', scope: 'root', config: { default: 'operator' } }],
     }))
 
     const loaded = await loadNativeProfile({ profile: 'probe', patchFiles: [], target: 'host', installAnchor, home })
@@ -289,7 +289,7 @@ it('registers ready user native preset folders under child scopes and lists thei
     expect(loaded.profile.scopes).toContainEqual({ id: 'preset:operator', parent: 'root' })
     expect(loaded.profile.installations).toContainEqual({ id: 'preset:operator/tools', plugin: 'test-native-tools',
       config: { enabled: true }, scope: 'preset:operator' })
-    expect(loaded.profile.installations).toContainEqual({ id: 'preset:operator', plugin: '@deepseek-ai/dsh-agent-preset-standing',
+    expect(loaded.profile.installations).toContainEqual({ id: 'preset:operator', plugin: '@redspark/rsh-agent-preset-standing',
       scope: 'preset:operator', config: { id: 'operator', name: 'Operator', description: 'User tools.' } })
     expect(loaded.requests.has('preset:operator')).toBe(true)
     const presetConfig = loaded.profile.installations.find(row => row.id === 'agent-presets')?.config as {
@@ -307,8 +307,8 @@ it('marks a preset invalid when an enabled row requires a service the profile do
   const { home, profileDir, installAnchor } = await fixture()
   const directory = join(home, '.agent-presets', 'needs-prompt')
   try {
-    await emptyNativePackage(profileDir, '@deepseek-ai/dsh-agent-presets', [], ['agentPresets'])
-    await emptyNativePackage(profileDir, '@deepseek-ai/dsh-agent-preset-standing', ['agentPresets'], [])
+    await emptyNativePackage(profileDir, '@redspark/rsh-agent-presets', [], ['agentPresets'])
+    await emptyNativePackage(profileDir, '@redspark/rsh-agent-preset-standing', ['agentPresets'], [])
     await emptyNativePackage(profileDir, 'needs-prompt-plugin', ['promptSections'], [])
     await mkdir(directory, { recursive: true })
     await writeFile(join(directory, 'preset.yml'), 'name: Needs prompt\n')
@@ -317,7 +317,7 @@ it('marks a preset invalid when an enabled row requires a service the profile do
     ] }))
     await writeFile(join(profileDir, 'rsh.profile.json'), JSON.stringify({
       formatVersion: 1, scopes: [{ id: 'root' }],
-      installations: [{ id: 'agent-presets', plugin: '@deepseek-ai/dsh-agent-presets', scope: 'root', config: { default: 'needs-prompt' } }],
+      installations: [{ id: 'agent-presets', plugin: '@redspark/rsh-agent-presets', scope: 'root', config: { default: 'needs-prompt' } }],
     }))
     const loaded = await loadNativeProfile({ profile: 'probe', patchFiles: [], target: 'host', installAnchor, home })
     expect(loaded.profile.installations.some(row => row.plugin === 'needs-prompt-plugin')).toBe(false)
@@ -334,7 +334,7 @@ it.each(['preset:operator/tools', 'preset:operator'])('rejects native preset ins
   const { home, profileDir, installAnchor } = await fixture()
   const directory = join(home, '.agent-presets', 'operator')
   try {
-    await emptyNativePackage(profileDir, '@deepseek-ai/dsh-agent-presets', [], ['agentPresets'])
+    await emptyNativePackage(profileDir, '@redspark/rsh-agent-presets', [], ['agentPresets'])
     await emptyNativePackage(profileDir, 'test-native-tools', [], [])
     await mkdir(directory, { recursive: true })
     await writeFile(join(directory, 'preset.yml'), 'name: Operator\n')
@@ -343,7 +343,7 @@ it.each(['preset:operator/tools', 'preset:operator'])('rejects native preset ins
     ] }))
     await writeFile(join(profileDir, 'rsh.profile.json'), JSON.stringify({
       formatVersion: 1, scopes: [{ id: 'root' }], installations: [
-        { id: 'agent-presets', plugin: '@deepseek-ai/dsh-agent-presets', scope: 'root' },
+        { id: 'agent-presets', plugin: '@redspark/rsh-agent-presets', scope: 'root' },
         { id: collisionId, plugin: 'test-native-tools', scope: 'root' },
       ],
     }))
@@ -357,13 +357,13 @@ it('rejects a preset folder whose scope is declared without registering that pre
   const { home, profileDir, installAnchor } = await fixture()
   const directory = join(home, '.agent-presets', 'operator')
   try {
-    await emptyNativePackage(profileDir, '@deepseek-ai/dsh-agent-presets', [], ['agentPresets'])
+    await emptyNativePackage(profileDir, '@redspark/rsh-agent-presets', [], ['agentPresets'])
     await mkdir(directory, { recursive: true })
     await writeFile(join(directory, 'preset.yml'), 'name: Operator\n')
     await writeFile(join(directory, 'agent.native.json'), JSON.stringify({ formatVersion: 1, installations: [] }))
     await writeFile(join(profileDir, 'rsh.profile.json'), JSON.stringify({
       formatVersion: 1, scopes: [{ id: 'root' }, { id: 'preset:operator', parent: 'root' }],
-      installations: [{ id: 'agent-presets', plugin: '@deepseek-ai/dsh-agent-presets', scope: 'root' }],
+      installations: [{ id: 'agent-presets', plugin: '@redspark/rsh-agent-presets', scope: 'root' }],
     }))
 
     await expect(loadNativeProfile({ profile: 'probe', patchFiles: [], target: 'host', installAnchor, home }))
@@ -404,7 +404,7 @@ it('installs the launch proxy before running a native application and awaits dis
   const packageDir = join(profileDir, 'node_modules', 'test-native-app')
   const marker = join(home, 'events.txt')
   const priorExitCode = process.exitCode
-  const proxyNames = ['HTTP_PROXY', 'http_proxy', 'HTTPS_PROXY', 'https_proxy', 'ALL_PROXY', 'all_proxy', 'NO_PROXY', 'no_proxy', 'DSH_HOME', 'CORDIS_SHARED']
+  const proxyNames = ['HTTP_PROXY', 'http_proxy', 'HTTPS_PROXY', 'https_proxy', 'ALL_PROXY', 'all_proxy', 'NO_PROXY', 'no_proxy', 'RSH_HOME', 'CORDIS_SHARED']
   const priorEnvironment = new Map(proxyNames.map(name => [name, process.env[name]]))
   let proxyRequest: string | undefined
   const proxy = createServer((request, response) => {
@@ -417,7 +417,7 @@ it('installs the launch proxy before running a native application and awaits dis
     const address = proxy.address()
     if (address === null || typeof address === 'string') throw new Error('test proxy did not bind a TCP port')
     for (const name of proxyNames) Reflect.deleteProperty(process.env, name)
-    process.env.DSH_HOME = home
+    process.env.RSH_HOME = home
     process.env.HTTP_PROXY = `http://127.0.0.1:${address.port}`
     process.env.HTTPS_PROXY = process.env.HTTP_PROXY
     process.env.NO_PROXY = ''

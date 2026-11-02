@@ -3,7 +3,7 @@ description: "RedSpark sidebar mark for official builds; for users and maintaine
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-client-ui-brand-official
+# @redspark/rsh-client-ui-brand-official
 
 English | [中文](README.zh.md)
 
@@ -29,7 +29,7 @@ Mount this plugin in the browser roster, then build the client with the `officia
 
 ### Choosing the profile
 
-`DSH_CLIENT_BUILD_PROFILE=official` enables the sidebar mark occupant. Other values leave the sidebar's default mark in place. This package does not occupy `sidebar.brand.name` or `conversation.hero.brand.mark`; their declaring packages own the localized name and hero presentation. The plugin loads in both cases; only registration is profile-gated.
+`RSH_CLIENT_BUILD_PROFILE=official` enables the sidebar mark occupant. Other values leave the sidebar's default mark in place. This package does not occupy `sidebar.brand.name` or `conversation.hero.brand.mark`; their declaring packages own the localized name and hero presentation. The plugin loads in both cases; only registration is profile-gated.
 
 ### Replacing the brand
 
@@ -43,7 +43,7 @@ A deployment with its own identity leaves this package out and composes another 
 <details>
 <summary>Implementation internals — click to expand</summary>
 
-The mark registers through `ctx.slots.inject()` after its sidebar declaration becomes available and withdraws when that declaration disappears. The browser half is [`src/client/index.ts`](src/client/index.ts); the node half is an empty Loader seat. The browser title is a build-environment concern (`DSH_CLIENT_TITLE`), outside the slot system.
+The mark registers through `ctx.slots.inject()` after its sidebar declaration becomes available and withdraws when that declaration disappears. The browser half is [`src/client/index.ts`](src/client/index.ts); the node half is an empty Loader seat. The browser title is a build-environment concern (`RSH_CLIENT_TITLE`), outside the slot system.
 
 </details>
 
@@ -77,7 +77,7 @@ None; this package neither assembles nor sends a provider request.
 These limits define how brand presentation is supplied. They are current package constraints, not a brand-design comparison or a task backlog.
 
 - **One occupant set** — alternative presentation belongs in another Cordis package occupying the same slots.
-- **The browser title is independent** — `DSH_CLIENT_TITLE` selects title text at build time rather than through a UI slot.
+- **The browser title is independent** — `RSH_CLIENT_TITLE` selects title text at build time rather than through a UI slot.
 
 <a id="dev-note"></a>
 ### Dev Note

@@ -7,24 +7,24 @@
  */
 
 import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from 'vitest'
-import { Context } from '@deepseek-ai/cordis'
+import { Context } from '@redspark/cordis'
 import { existsSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, relative } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import SubagentRuntime from '@deepseek-ai/dsh-subagent'
-import SessionProjectionRegistry from '@deepseek-ai/dsh-session-projection'
-import type { Agent, AgentOptions } from '@deepseek-ai/dsh-agent'
+import SubagentRuntime from '@redspark/rsh-subagent'
+import SessionProjectionRegistry from '@redspark/rsh-session-projection'
+import type { Agent, AgentOptions } from '@redspark/rsh-agent'
 import {
-  DeepSeekHarness,
+  RedSparkHarness,
   HarnessClient,
   HarnessSession,
   SdkProtocolError,
-} from '@deepseek-ai/dsh-sdk-client'
+} from '@redspark/rsh-sdk-client'
 import { createProcessDeepSeekHarness } from '../../../../../Programs/SDK/packages/client/src/api.ts'
 import type { RuntimeProcessOptions } from '../../../../../Programs/SDK/packages/client/src/launch.ts'
-import type { DeepSeekHarnessOptions } from '@deepseek-ai/dsh-sdk-client'
-import { ReasoningEffortId } from '@deepseek-ai/dsh-llm'
+import type { DeepSeekHarnessOptions } from '@redspark/rsh-sdk-client'
+import { ReasoningEffortId } from '@redspark/rsh-llm'
 import * as sdk from '../src/index.ts'
 import {
   DEFAULT_DISPOSE_EOF_GRACE_MS,
@@ -155,7 +155,7 @@ describe('sdkChildOutcome', () => {
 describe('dsh-subagent-dsh-sdk provider', () => {
   it('constructs the production dsh-backed harness lazily', async () => {
     const harness = defaultCreateHarness({})
-    expect(harness).toBeInstanceOf((await import('@deepseek-ai/dsh-sdk-client')).DeepSeekHarness)
+    expect(harness).toBeInstanceOf((await import('@redspark/rsh-sdk-client')).RedSparkHarness)
     await harness.close()
   })
 
@@ -288,22 +288,22 @@ describe('dsh-subagent-dsh-sdk provider', () => {
   })
 
   it('scrubs ambient credentials but forwards explicit config env', async () => {
-    process.env.DSH_TEST_AMBIENT_SECRET_KEY = 'leak-me-not'
+    process.env.RSH_TEST_AMBIENT_SECRET_KEY = 'leak-me-not'
     try {
       const ctx = await setup({
-        FAKE_ECHO_ENV: 'DSH_TEST_AMBIENT_SECRET_KEY,DEEPSEEK_API_KEY',
+        FAKE_ECHO_ENV: 'RSH_TEST_AMBIENT_SECRET_KEY,DEEPSEEK_API_KEY',
         DEEPSEEK_API_KEY: 'explicit-child-key',
         FAKE_TEXT: 'done',
       })
       const run = await ctx.subagents.start('dsh-sdk', request())
       const result = await run.result
       const answer = text(result.output)
-      expect(answer).toContain('DSH_TEST_AMBIENT_SECRET_KEY=\n')
+      expect(answer).toContain('RSH_TEST_AMBIENT_SECRET_KEY=\n')
       expect(answer).toContain('DEEPSEEK_API_KEY=explicit-child-key')
       await run.dispose()
       await ctx.fiber.dispose()
     } finally {
-      delete process.env.DSH_TEST_AMBIENT_SECRET_KEY
+      delete process.env.RSH_TEST_AMBIENT_SECRET_KEY
     }
   })
 
@@ -413,7 +413,7 @@ describe('dsh-subagent-dsh-sdk provider', () => {
 
   it('reports only safe shutdown facts when cancelled startup rollback fails', async () => {
     const rawCleanup = 'cancelled shutdown leaked SECRET_TOKEN'
-    const spy = vi.spyOn(DeepSeekHarness.prototype, 'close').mockImplementation(async function (this: DeepSeekHarness) {
+    const spy = vi.spyOn(RedSparkHarness.prototype, 'close').mockImplementation(async function (this: RedSparkHarness) {
       spy.mockRestore()
       await this.close()
       throw new Error(rawCleanup)
@@ -447,8 +447,8 @@ describe('dsh-subagent-dsh-sdk provider', () => {
 
   it('keeps an initialize failure authoritative when a later abort flag is already set', async () => {
     const rawFailure = new SdkProtocolError('scripted initialize rejection')
-    const start = vi.spyOn(DeepSeekHarness.prototype, 'start').mockRejectedValue(rawFailure)
-    const close = vi.spyOn(DeepSeekHarness.prototype, 'close').mockResolvedValue()
+    const start = vi.spyOn(RedSparkHarness.prototype, 'start').mockRejectedValue(rawFailure)
+    const close = vi.spyOn(RedSparkHarness.prototype, 'close').mockResolvedValue()
     try {
       const controller = new AbortController()
       const pending = startSdkRun(request('p', controller.signal), {
@@ -791,7 +791,7 @@ describe('dsh-subagent-dsh-sdk provider', () => {
     const ctx = await setup()
     const run = await ctx.subagents.start('dsh-sdk', request())
     await run.result
-    const spy = vi.spyOn(DeepSeekHarness.prototype, 'close').mockImplementation(async function (this: DeepSeekHarness) {
+    const spy = vi.spyOn(RedSparkHarness.prototype, 'close').mockImplementation(async function (this: RedSparkHarness) {
       spy.mockRestore()
       await this.close()
       throw new Error(rawCleanup)

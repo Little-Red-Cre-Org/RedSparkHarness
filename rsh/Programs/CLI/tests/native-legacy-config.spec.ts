@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { expect, it, vi } from 'vitest'
-import { createLaunchEnvironmentSnapshot } from '@deepseek-ai/dsh-launch-environment/native'
+import { createLaunchEnvironmentSnapshot } from '@redspark/rsh-launch-environment/native'
 import { shippedNativeProfileClientComposition, shippedNativeProfileComposition } from '../src/native-profile-template.ts'
 import { migrateNativeLegacyConfig } from '../src/native-legacy-config.ts'
 
@@ -38,7 +38,7 @@ it('migrates recognized settings into native profile and Client installations wi
     ...profile,
     installations: profile.installations.map((row) => {
       const key = row.id === presetRow.id ? 'default'
-        : row.plugin === '@deepseek-ai/dsh-native-sandbox-policy' ? 'mode' : undefined
+        : row.plugin === '@redspark/rsh-native-sandbox-policy' ? 'mode' : undefined
       if (key === undefined) return row
       const config = Object.fromEntries(Object.entries(row.config as Record<string, unknown>).filter(([name]) => name !== key))
       return { ...row, ...(row.id === presetRow.id ? { disabled: true } : {}), config }
@@ -63,13 +63,13 @@ it('migrates recognized settings into native profile and Client installations wi
       .toMatchObject({ default: 'compact' })
     expect(migrated.installations.find(row => row.id === 'agent-presets-secondary')?.config)
       .toMatchObject({ default: 'operator' })
-    expect(migrated.installations.find(row => row.plugin === '@deepseek-ai/dsh-native-sandbox-policy')?.config)
+    expect(migrated.installations.find(row => row.plugin === '@redspark/rsh-native-sandbox-policy')?.config)
       .toMatchObject({ mode: 'read-only' })
-    expect(migrated.installations.find(row => row.plugin === '@deepseek-ai/dsh-native-approval')?.config)
+    expect(migrated.installations.find(row => row.plugin === '@redspark/rsh-native-approval')?.config)
       .toMatchObject({ policy: 'ask' })
-    expect(client.installations.find(row => row.plugin === '@deepseek-ai/dsh-client-locale')?.config)
+    expect(client.installations.find(row => row.plugin === '@redspark/rsh-client-locale')?.config)
       .toMatchObject({ locale: 'zh' })
-    expect(client.installations.find(row => row.plugin === '@deepseek-ai/dsh-client-ui-theme')?.config)
+    expect(client.installations.find(row => row.plugin === '@redspark/rsh-client-ui-theme')?.config)
       .toMatchObject({ preference: 'dark' })
     expect(await readFile(settingsPath, 'utf8')).toBe(settingsText)
     const report = stderr.mock.calls.flat().join('')
@@ -94,7 +94,7 @@ it('migrates recognized settings into native profile and Client installations wi
     await writeFile(profilePath, `${JSON.stringify(withoutPresetDefault, null, 2)}\n`)
     const clientWithoutLocale = {
       ...client,
-      installations: client.installations.map(row => row.plugin === '@deepseek-ai/dsh-client-locale'
+      installations: client.installations.map(row => row.plugin === '@redspark/rsh-client-locale'
         ? { id: row.id, plugin: row.plugin } : row),
     }
     await writeFile(clientPath, `${JSON.stringify(clientWithoutLocale, null, 2)}\n`)
@@ -128,7 +128,7 @@ it('rejects persisted migration conflicts, including shipped defaults and system
   const profilePath = join(directory, 'rsh.profile.json')
   const conflicting = {
     ...profile,
-    installations: profile.installations.map(row => row.plugin === '@deepseek-ai/dsh-agent-presets'
+    installations: profile.installations.map(row => row.plugin === '@redspark/rsh-agent-presets'
       ? { ...row, config: { default: 'operator' } } : row),
   }
   await writeFile(profilePath, `${JSON.stringify(conflicting, null, 2)}\n`)
@@ -138,7 +138,7 @@ it('rejects persisted migration conflicts, including shipped defaults and system
       .rejects.toThrow(`${settingsPath} agent-presets.default="compact" conflicts with ${profilePath} installations[agent-presets].config.default="operator"`)
     const patchedToLegacy = {
       ...conflicting,
-      installations: conflicting.installations.map(row => row.plugin === '@deepseek-ai/dsh-agent-presets'
+      installations: conflicting.installations.map(row => row.plugin === '@redspark/rsh-agent-presets'
         ? { ...row, config: { default: 'compact' } } : row),
     }
     await expect(migrateNativeLegacyConfig({ profileName: 'native-web', installAnchor, home, profile: patchedToLegacy,
@@ -164,7 +164,7 @@ it('rejects persisted migration conflicts, including shipped defaults and system
     }
     const clientWithLocale = {
       ...client,
-      installations: client.installations.map(row => row.plugin === '@deepseek-ai/dsh-client-locale'
+      installations: client.installations.map(row => row.plugin === '@redspark/rsh-client-locale'
         ? { ...row, config: { locale: 'zh' } } : row),
     }
     await writeFile(clientPath, `${JSON.stringify(clientWithLocale, null, 2)}\n`)
@@ -181,26 +181,26 @@ it('rejects persisted migration conflicts, including shipped defaults and system
 })
 
 it('rejects a legacy process environment variable only when its native surface is installed', async () => {
-  const environment = createLaunchEnvironmentSnapshot([{ source: 'process', values: { DSH_PERMISSION_MODE: 'danger-full-access' } }])
+  const environment = createLaunchEnvironmentSnapshot([{ source: 'process', values: { RSH_PERMISSION_MODE: 'danger-full-access' } }])
   await expect(migrateNativeLegacyConfig({
     profileName: 'native-headless', installAnchor, home: tmpdir(),
     profile: { formatVersion: 1, scopes: [{ id: 'root' }], installations: [
-      { id: 'policy', plugin: '@deepseek-ai/dsh-native-sandbox-policy', scope: 'root' },
+      { id: 'policy', plugin: '@redspark/rsh-native-sandbox-policy', scope: 'root' },
     ] },
     patchFiles: [],
     environment,
-  })).rejects.toThrow('DSH_PERMISSION_MODE is not supported')
+  })).rejects.toThrow('RSH_PERMISSION_MODE is not supported')
 
   const { home, profile } = await nativeWebProfile()
   try {
     const presetPath = join(home, '.agent-presets', 'compact', 'agent.native.json')
     await writeFile(presetPath, JSON.stringify({ formatVersion: 1, installations: [
-      { id: 'model', plugin: '@deepseek-ai/dsh-llm-pi-ai' },
+      { id: 'model', plugin: '@redspark/rsh-llm-pi-ai' },
     ] }))
-    const contextEnvironment = createLaunchEnvironmentSnapshot([{ source: 'process', values: { DSH_CONTEXT_WINDOW: '32000' } }])
+    const contextEnvironment = createLaunchEnvironmentSnapshot([{ source: 'process', values: { RSH_CONTEXT_WINDOW: '32000' } }])
     await expect(migrateNativeLegacyConfig({
       profileName: 'native-web', installAnchor, home, profile, patchFiles: [], environment: contextEnvironment,
-    })).rejects.toThrow('DSH_CONTEXT_WINDOW is not supported')
+    })).rejects.toThrow('RSH_CONTEXT_WINDOW is not supported')
   } finally {
     await rm(home, { recursive: true, force: true })
   }

@@ -1,15 +1,15 @@
 # SDK-profile patch for the deterministic diagnostic child runtime.
 
 - id: llm-deepseek
-  name: '@deepseek-ai/dsh-llm-deepseek'
+  name: '@redspark/rsh-llm-deepseek'
   disabled: true
 
 - id: agent-instructions
-  name: '@deepseek-ai/dsh-agent-instructions'
+  name: '@redspark/rsh-agent-instructions'
   disabled: true
 
 - id: system-prompt
-  name: '@deepseek-ai/dsh-system-prompt'
+  name: '@redspark/rsh-system-prompt'
   config:
     personaPrefix: 'Return the scripted DSH SDK failure.'
 

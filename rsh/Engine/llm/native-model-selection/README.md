@@ -3,7 +3,7 @@ description: "Persist a Session model choice and use the exact selected Provider
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-native-model-selection
+# @redspark/rsh-native-model-selection
 
 English | [中文](README.zh.md)
 

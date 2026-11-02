@@ -4,19 +4,19 @@ Two runtime carriers coexist under ``runtime/``, both injected by the repo's
 ``rsh/Scripts/build-exe-for-python-sdk.ts`` build (neither is checked into git):
 
 - **exe (production)**: single-file Node executables named
-  ``deepseek-harness-sdk-runtime-<platform>-<arch>`` for Linux/macOS and an
+  ``redspark-harness-sdk-runtime-<platform>-<arch>`` for Linux/macOS and an
   ``.exe`` counterpart for Windows. Each has a sibling ripgrep executable;
   macOS also uses a sibling ``-spawn-helper``. The target machine needs no
   Node installation.
 - **node (dev-only)**: the full deploy closure under ``runtime/node/``
   (``package.json`` + ``node_modules/``), executed as ``node
-  runtime/node/node_modules/@deepseek-ai/dsh/lib/bin.js`` on a
+  runtime/node/node_modules/@redspark/dsh/lib/bin.js`` on a
   system Node >= 22.19. It is the current checkout's source build, never
   selected automatically, and excluded from wheel/sdist distributions.
 
 Both carriers execute the same dsh command grammar. The Python SDK selects the
 ``sdk`` profile and requires an explicit Harness home; the installed ``dsh``
-console command requires ``DSH_HOME`` for the same reason.
+console command requires ``RSH_HOME`` for the same reason.
 """
 
 from __future__ import annotations
@@ -28,16 +28,16 @@ import subprocess
 import sys
 from pathlib import Path
 
-PACKAGE_METADATA_FILENAME = "deepseek-harness-runtime.json"
+PACKAGE_METADATA_FILENAME = "redspark-harness-runtime.json"
 
-RUNTIME_MODE_ENV_VAR = "DSH_RUNTIME_MODE"
+RUNTIME_MODE_ENV_VAR = "RSH_RUNTIME_MODE"
 
 _PLATFORM_TAGS = {"linux": "linux", "darwin": "macos", "win32": "win"}
 _ARCH_TAGS = {"x86_64": "x64", "amd64": "x64", "arm64": "arm64", "aarch64": "arm64"}
 
 _EXE_ACQUISITION_HINT = (
     "Two ways to get the executable: run `rsh/Scripts/build-exe-for-python-sdk.ts` (via tsx) in a "
-    "deepseek-harness checkout, or install the matching `deepseek-harness-runtime-bin` platform "
+    "redspark-harness checkout, or install the matching `redspark-harness-runtime-bin` platform "
     "wheel retained by the `build-exe-for-python-sdk` CI workflow. For local development "
     "against a repo source build, explicitly select the dev-only node carrier with "
     f"{RUNTIME_MODE_ENV_VAR}=node (or resolve_bundled_launch_args('node'))."
@@ -49,7 +49,7 @@ def bundled_package_dir() -> Path:
     root = Path(__file__).resolve().parent
     metadata = root / PACKAGE_METADATA_FILENAME
     if not metadata.is_file():
-        raise FileNotFoundError(f"deepseek-harness-runtime-bin is missing {metadata}")
+        raise FileNotFoundError(f"redspark-harness-runtime-bin is missing {metadata}")
     return root
 
 
@@ -65,10 +65,10 @@ def bundled_runtime_path() -> Path:
     """
     tag = _current_platform_tag()
     extension = ".exe" if tag.startswith("win-") else ""
-    path = bundled_package_dir() / "runtime" / f"deepseek-harness-sdk-runtime-{tag}{extension}"
+    path = bundled_package_dir() / "runtime" / f"redspark-harness-sdk-runtime-{tag}{extension}"
     if not path.is_file():
         raise FileNotFoundError(
-            f"deepseek-harness-runtime-bin is missing the runtime executable at {path}. "
+            f"redspark-harness-runtime-bin is missing the runtime executable at {path}. "
             + _EXE_ACQUISITION_HINT
         )
     ripgrep = (
@@ -78,14 +78,14 @@ def bundled_runtime_path() -> Path:
     )
     if not ripgrep.is_file():
         raise FileNotFoundError(
-            f"deepseek-harness-runtime-bin is missing the ripgrep sidecar at {ripgrep}. "
+            f"redspark-harness-runtime-bin is missing the ripgrep sidecar at {ripgrep}. "
             + _EXE_ACQUISITION_HINT
         )
     if tag.startswith("macos-"):
         helper = Path(f"{path}-spawn-helper")
         if not helper.is_file():
             raise FileNotFoundError(
-                f"deepseek-harness-runtime-bin is missing the node-pty spawn helper at {helper}. "
+                f"redspark-harness-runtime-bin is missing the node-pty spawn helper at {helper}. "
                 + _EXE_ACQUISITION_HINT
             )
     return path
@@ -95,7 +95,7 @@ def resolve_bundled_launch_args(mode: str | None = None) -> tuple[str, ...]:
     """The argv tuple that launches the bundled runtime.
 
     Mode selection: the explicit ``mode`` argument wins, then the
-    ``DSH_RUNTIME_MODE`` environment variable (``exe`` | ``node``), then
+    ``RSH_RUNTIME_MODE`` environment variable (``exe`` | ``node``), then
     automatic resolution. Automatic resolution finds the production exe ONLY —
     the dev-only node carrier must be selected explicitly so a production
     deployment can never silently ride on a source build. Returns
@@ -135,7 +135,7 @@ def _node_launch_args() -> tuple[str, str]:
     bin_js = (
         node_root
         / "node_modules"
-        / "@deepseek-ai"
+        / "@redspark"
         / "dsh"
         / "lib"
         / "bin.js"
@@ -143,7 +143,7 @@ def _node_launch_args() -> tuple[str, str]:
     if not bin_js.is_file():
         raise FileNotFoundError(
             f"the dev-only node runtime closure is missing at {node_root} "
-            f"(no {bin_js}); run `rsh/Scripts/build-exe-for-python-sdk.ts` in a deepseek-harness "
+            f"(no {bin_js}); run `rsh/Scripts/build-exe-for-python-sdk.ts` in a redspark-harness "
             "checkout, which builds and copies the deploy closure here. The node carrier "
             "is for repo-local development only — production uses the single-file exe."
         )
@@ -157,10 +157,10 @@ def _node_launch_args() -> tuple[str, str]:
 
 
 def main() -> None:
-    """Launch the CLI with explicit DSH_HOME; wait on Windows, replace the process on POSIX."""
-    if not os.environ.get("DSH_HOME", "").strip():
+    """Launch the CLI with explicit RSH_HOME; wait on Windows, replace the process on POSIX."""
+    if not os.environ.get("RSH_HOME", "").strip():
         print(
-            "dsh: the Python runtime command requires an explicit DSH_HOME; "
+            "dsh: the Python runtime command requires an explicit RSH_HOME; "
             "it never uses ~/.dsh implicitly",
             file=sys.stderr,
         )

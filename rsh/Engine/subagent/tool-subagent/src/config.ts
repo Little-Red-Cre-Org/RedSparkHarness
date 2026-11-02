@@ -1,8 +1,8 @@
-import z from '@deepseek-ai/schemastery'
-import type { AgentOptions } from '@deepseek-ai/dsh-agent'
-import type { ReasoningEffortId } from '@deepseek-ai/dsh-llm'
+import z from '@redspark/schemastery'
+import type { AgentOptions } from '@redspark/rsh-agent'
+import type { ReasoningEffortId } from '@redspark/rsh-llm'
 
-/** @module @deepseek-ai/dsh-tool-subagent/config */
+/** @module @redspark/rsh-tool-subagent/config */
 
 /** Config: which registered provider this tool delegates to, plus child defaults. */
 export interface Config {

@@ -1,5 +1,5 @@
 /** Cordis adapter for the shared MCP connection supervisor. */
-import type { Context } from '@deepseek-ai/cordis'
+import type { Context } from '@redspark/cordis'
 import type { Config } from './types.ts'
 import { startConnection as startSharedConnection, type ResolvedReconnectPolicy, type ConnectionHandle } from './connection-core.ts'
 import { syncTools } from './tools.ts'

@@ -3,7 +3,7 @@ description: "基于共享 Session 执行器的原生 SDK JSON-RPC 应用。"
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-native-sdk-server
+# @redspark/rsh-native-sdk-server
 
 [English](README.md) | 中文
 

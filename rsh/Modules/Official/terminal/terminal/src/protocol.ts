@@ -1,10 +1,10 @@
 /**
  * Types shared by PTY backends, the owner-scoped registry, and tool consumers.
  * This vocabulary is independent of the selected runtime.
- * @module @deepseek-ai/dsh-terminal/protocol
+ * @module @redspark/rsh-terminal/protocol
  */
 
-import type { Branded } from '@deepseek-ai/dsh-brand'
+import type { Branded } from '@redspark/rsh-brand'
 
 /** Internal exported basis for the public `TerminalSessionId` type/value pair. */
 export type TerminalSessionIdValue = Branded<'TerminalSessionId'>
@@ -30,7 +30,7 @@ export type TerminalWaitReason = 'stdin_read' | 'inferred_idle' | 'timeout' | 's
 /**
  * Signals the model-facing PTY surface permits for foreground process groups.
  * Kept member-identical to `SubprocessTerminalSignal` in
- * `@deepseek-ai/dsh-subprocess` without a cross-seam dependency; change both together.
+ * `@redspark/rsh-subprocess` without a cross-seam dependency; change both together.
  */
 export type TerminalSignal = 'SIGINT' | 'SIGTERM' | 'SIGKILL' | 'SIGTSTP' | 'SIGHUP'
 

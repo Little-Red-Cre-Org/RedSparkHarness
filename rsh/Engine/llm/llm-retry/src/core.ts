@@ -1,9 +1,9 @@
 /**
  * Framework-free provider-routed retry decisions shared by the Cordis and native recovery installers.
- * @module @deepseek-ai/dsh-llm-retry/core
+ * @module @redspark/rsh-llm-retry/core
  */
 import { randomUUID } from 'node:crypto'
-import type { LlmFailure, ResolvedRetryPolicy } from '@deepseek-ai/dsh-llm/native'
+import type { LlmFailure, ResolvedRetryPolicy } from '@redspark/rsh-llm/native'
 import { RetryId } from './brand.ts'
 import type { LlmRetryEventData, LlmRetryStartedEventData } from './types.ts'
 

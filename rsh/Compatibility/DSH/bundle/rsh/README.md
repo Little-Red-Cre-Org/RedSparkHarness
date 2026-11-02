@@ -42,9 +42,9 @@ Transcript rows and text helpers come from the [shared terminal presentation lib
 
 The [bundle patch](cordis.patch.yml) leaves shared services in the base composition and moves Agent-owned tools into the selected preset. The named runner waits for Loader settlement before mounting an Agent. Durable events drive completed transcript rows, while live assistant frames provide temporary output. Plugin teardown owns the Ink instance, timers, approval requests, and Agent handle.
 
-No runtime invariant companion is published: the Agent, Session, and preset services own the independently observable relationships consumed by this renderer. Development checks are `pnpm --filter @deepseek-ai/dsh-rsh test` and `pnpm --filter @deepseek-ai/dsh-rsh lint`.
+No runtime invariant companion is published: the Agent, Session, and preset services own the independently observable relationships consumed by this renderer. Development checks are `pnpm --filter @redspark/rsh-rsh test` and `pnpm --filter @redspark/rsh-rsh lint`.
 
-The UI derives from the MIT-licensed `gxinxing/deepseek-harness-tui`. Its license is preserved in [LICENSE](LICENSE), with dependency notices in [THIRD_PARTY_NOTICES.md](../../../../../THIRD_PARTY_NOTICES.md).
+The UI derives from the MIT-licensed `gxinxing/redspark-harness-tui`. Its license is preserved in [LICENSE](LICENSE), with dependency notices in [THIRD_PARTY_NOTICES.md](../../../../../THIRD_PARTY_NOTICES.md).
 
 All displayed text passes through terminal-control filtering before Ink applies styling. Model output, tool results, session titles, and approval reasons cannot supply executable terminal escape sequences.
 

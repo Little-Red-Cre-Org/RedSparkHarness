@@ -1,12 +1,12 @@
-import type {} from '@deepseek-ai/dsh-typert-protocol/types'
+import type {} from '@redspark/rsh-typert-protocol/types'
 import { randomUUID } from 'node:crypto'
 import { once } from 'node:events'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import WebSocket, { type RawData } from 'ws'
-import { Context, Service, symbols } from '@deepseek-ai/cordis'
-import { apply as applyConnection, inject as connectionInject } from '@deepseek-ai/dsh-client-connection'
-import WebServer from '@deepseek-ai/dsh-host-webserver'
-import { MAX_TIMER_DELAY_MS } from '@deepseek-ai/dsh-timeout'
+import { Context, Service, symbols } from '@redspark/cordis'
+import { apply as applyConnection, inject as connectionInject } from '@redspark/rsh-client-connection'
+import WebServer from '@redspark/rsh-host-webserver'
+import { MAX_TIMER_DELAY_MS } from '@redspark/rsh-timeout'
 import {
   bindTypertRemote,
   Remote,
@@ -14,10 +14,10 @@ import {
   type TypertContextMap,
   type TypertContextWire,
   RemoteError,
-} from '@deepseek-ai/dsh-typert-protocol'
-import TypertRegistry from '@deepseek-ai/dsh-typert-registry'
+} from '@redspark/rsh-typert-protocol'
+import TypertRegistry from '@redspark/rsh-typert-registry'
 
-declare module '@deepseek-ai/dsh-typert-protocol/types' {
+declare module '@redspark/rsh-typert-protocol/types' {
   interface RemoteErrorDetailsMap {
     'fixture/rejected': { readonly retryable: boolean }
     'fixture/broken': { readonly count: bigint }
@@ -30,7 +30,7 @@ import TypertGatewayService, {
   type TypertRemoteEventDispatch,
   type TypertRemoteEventInvocation,
   type TypertRemoteEventOutcome,
-} from '@deepseek-ai/dsh-api-gateway'
+} from '@redspark/rsh-api-gateway'
 import { z } from 'zod'
 import type {
   RemoteEventClientId,

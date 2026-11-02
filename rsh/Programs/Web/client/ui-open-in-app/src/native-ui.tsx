@@ -21,20 +21,20 @@
  * Cordis half's props (`useSessions`, per-entry `sessionId`) do not exist here.
  */
 import { useEffect, useRef, useState, type ReactNode } from 'react'
-import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
-import type { HostObservable, InjectFace, TranslateNS } from '@deepseek-ai/dsh-client-ui-slots'
-import type {} from '@deepseek-ai/dsh-client-ui-renderer/native'
-import type {} from '@deepseek-ai/dsh-client-locale/native'
-import type {} from '@deepseek-ai/dsh-client-native-session/native'
-import { createSnapshotStore } from '@deepseek-ai/dsh-client-store'
+import type { NativePlugin } from '@redspark/rsh-native-runtime'
+import type { HostObservable, InjectFace, TranslateNS } from '@redspark/rsh-client-ui-slots'
+import type {} from '@redspark/rsh-client-ui-renderer/native'
+import type {} from '@redspark/rsh-client-locale/native'
+import type {} from '@redspark/rsh-client-native-session/native'
+import { createSnapshotStore } from '@redspark/rsh-client-store'
 import {
   IconChevronDownOutline14, Menu, Tooltip, type MenuItem,
-} from '@deepseek-ai/dsh-client-ui-primitives'
+} from '@redspark/rsh-client-ui-primitives'
 import {
   OPEN_IN_APP_APPS_ROUTE, OPEN_IN_APP_ICON_PREFIX, OPEN_IN_APP_OPEN_ROUTE,
   type OpenInAppAppsPayload, type OpenInAppOpenPayload,
-} from '@deepseek-ai/dsh-host-open-in-app/shared'
-import type { NativeConversationSnapshot } from '@deepseek-ai/dsh-client-ui-session/native'
+} from '@redspark/rsh-host-open-in-app/shared'
+import type { NativeConversationSnapshot } from '@redspark/rsh-client-ui-session/native'
 import { en, NS, zh, type OpenInAppKey } from './client/locales.ts'
 import css from './client/OpenInAppAction.module.css'
 
@@ -328,7 +328,7 @@ function iconUrl(appId: string): string {
 /** Native open-in-app Provider: the Session-header split button over the shared Conversation. */
 export const plugin: NativePlugin = {
   apiVersion: 1,
-  name: '@deepseek-ai/dsh-client-ui-open-in-app',
+  name: '@redspark/rsh-client-ui-open-in-app',
   targets: ['client'],
   requires: ['clientSlots', 'clientLocale', 'clientConnection', 'clientNativeConversation'],
   optional: [],

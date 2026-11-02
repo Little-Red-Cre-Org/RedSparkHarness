@@ -3,7 +3,7 @@ description: "面向开发者与维护者的 shell 执行器 seam 说明，用�
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-shell
+# @redspark/rsh-shell
 
 [English](README.md) | 中文
 
@@ -44,7 +44,7 @@ console.log(result.exitCode, result.stdout.text)
 
 ### 请求与已解析 spec
 
-每次执行都从带可选字段的 `ShellExecRequest` 开始；执行器的 `resolve()` 在任何东西运行之前，把它变成默认值与上限都已显式填好的 `ShellExecSpec`。这一请求/spec 拆分正是仓库在包边界显式解析的模板：调用方绝不依赖 `run` 或 `start` 内部隐藏的默认值。`resolve()` 从执行器配置填充工作目录与超时、对每次调用的覆盖值设上限，并按原样携带可选输入——`stdin`、普通 `env` 与受信任的 `DSH_*` 快照。
+每次执行都从带可选字段的 `ShellExecRequest` 开始；执行器的 `resolve()` 在任何东西运行之前，把它变成默认值与上限都已显式填好的 `ShellExecSpec`。这一请求/spec 拆分正是仓库在包边界显式解析的模板：调用方绝不依赖 `run` 或 `start` 内部隐藏的默认值。`resolve()` 从执行器配置填充工作目录与超时、对每次调用的覆盖值设上限，并按原样携带可选输入——`stdin`、普通 `env` 与受信任的 `RSH_*` 快照。
 
 ### 选择并组合一个执行器
 
@@ -52,7 +52,7 @@ seam 本身不是执行器：每个组合只挂载一个提供方，工具即可
 
 ```yaml
 - id: bash
-  name: '@deepseek-ai/dsh-bash-local'
+  name: '@redspark/rsh-bash-local'
   config:
     cwd: /path/to/workspace
 ```

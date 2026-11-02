@@ -1,5 +1,5 @@
 import type { ChatViewSlotProps } from '../contract/slots.ts'
-import { ChatContextMessage } from '@deepseek-ai/dsh-client-ui-primitives'
+import { ChatContextMessage } from '@redspark/rsh-client-ui-primitives'
 import type { ContextMessageNode } from '../contract/snapshot.ts'
 import { contextBody } from './ContextBody.tsx'
 

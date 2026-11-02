@@ -1,6 +1,6 @@
 /** Installed composition metadata and durable blank-Session selection for the terminal. */
-import type { NativeAgentPresetFacts, NativeAgentPresetSelectionRequest } from '@deepseek-ai/dsh-agent-presets/selection'
-import type { SessionId } from '@deepseek-ai/dsh-session/types'
+import type { NativeAgentPresetFacts, NativeAgentPresetSelectionRequest } from '@redspark/rsh-agent-presets/selection'
+import type { SessionId } from '@redspark/rsh-session/types'
 
 /** Detached standing metadata; scopes and Agent leases remain on the Host. */
 export interface TerminalPresetState {

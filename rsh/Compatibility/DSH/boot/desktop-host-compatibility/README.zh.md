@@ -3,7 +3,7 @@ description: "为显式选择旧 Cordis profile 的 Desktop Host 提供私有兼
 kind: "package-library"
 ---
 
-# @deepseek-ai/dsh-desktop-host-compatibility
+# @redspark/rsh-desktop-host-compatibility
 
 [English](README.md) | 中文
 
@@ -34,7 +34,7 @@ kind: "package-library"
 DesktopHost 选择兼容装配后会提供已安装 runtime 与项目目录：
 
 ```ts
-import { createLegacyDesktopRuntime } from '@deepseek-ai/dsh-desktop-host-compatibility'
+import { createLegacyDesktopRuntime } from '@redspark/rsh-desktop-host-compatibility'
 
 const runtimeDir = '/path/to/installed/dsh'
 const projectDir = '/path/to/desktop-project'

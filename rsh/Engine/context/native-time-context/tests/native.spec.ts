@@ -1,7 +1,7 @@
 /** Native time-context configuration and durable message scheduling. */
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { createSystemMessage, createUserMessage, type UserMessage } from '@deepseek-ai/dsh-llm'
-import { Session, SessionId } from '@deepseek-ai/dsh-session'
+import { createSystemMessage, createUserMessage, type UserMessage } from '@redspark/rsh-llm'
+import { Session, SessionId } from '@redspark/rsh-session'
 import { NativeTimeContext, resolveNativeTimeContextConfig } from '../src/index.ts'
 
 const BASE = Date.parse('2026-09-23T00:00:00.000Z')

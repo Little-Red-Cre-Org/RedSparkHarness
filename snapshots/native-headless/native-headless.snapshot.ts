@@ -5,12 +5,12 @@ import { join } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { execa } from 'execa'
 import { expect, it } from 'vitest'
-import { JsonlSessionBackend } from '@deepseek-ai/dsh-session-persistence-jsonl'
-import { SESSION_FORMAT_VERSION } from '@deepseek-ai/dsh-session'
+import { JsonlSessionBackend } from '@redspark/rsh-session-persistence-jsonl'
+import { SESSION_FORMAT_VERSION } from '@redspark/rsh-session'
 import {
   formatSystemPromptSnapshot, formatToolSchemasSnapshot, normalizeSessionSnapshot, redactSessionSnapshotIds,
   normalizedSystemPrompts, normalizedToolSchemas, sessionFixtureName,
-} from '@deepseek-ai/dsh-session-snapshot'
+} from '@redspark/rsh-session-snapshot'
 
 const root = fileURLToPath(new URL('../../', import.meta.url))
 const bin = join(root, 'rsh/Programs/CLI/lib/bin.js')
@@ -42,16 +42,16 @@ it('executes and restores a native profile through the published dsh command', a
   copyFileSync(join(shippedProfile, 'package.json'), join(profileDir, 'package.json'))
   const composition = JSON.parse(readFileSync(join(shippedProfile, 'rsh.profile.json'), 'utf8')) as { installations: unknown[] }
   composition.installations.push(
-    { id: 'subprocess', plugin: '@deepseek-ai/dsh-subprocess-local', scope: 'root' },
-    { id: 'shell', plugin: '@deepseek-ai/dsh-bash-local', scope: 'root', config: {
+    { id: 'subprocess', plugin: '@redspark/rsh-subprocess-local', scope: 'root' },
+    { id: 'shell', plugin: '@redspark/rsh-bash-local', scope: 'root', config: {
       bashPath: process.platform === 'win32' ? join(process.env.ProgramFiles ?? 'C:/Program Files', 'Git/bin/bash.exe') : 'bash',
     } },
-    { id: 'tmux-context', plugin: '@deepseek-ai/dsh-native-tmux-context', scope: 'root', disabled: true },
+    { id: 'tmux-context', plugin: '@redspark/rsh-native-tmux-context', scope: 'root', disabled: true },
   )
-  composition.installations.push({ id: 'agent-instructions', plugin: '@deepseek-ai/dsh-agent-instructions', scope: 'root', config: { dshHome: home, maxBytes: 65_536 } })
+  composition.installations.push({ id: 'agent-instructions', plugin: '@redspark/rsh-agent-instructions', scope: 'root', config: { dshHome: home, maxBytes: 65_536 } })
   writeFileSync(join(profileDir, 'rsh.profile.json'), JSON.stringify(composition))
   copyFileSync(join(scenario, 'workspace/AGENTS.md'), join(workspace, 'AGENTS.md'))
-  mkdirSync(join(modules, '@deepseek-ai'), { recursive: true })
+  mkdirSync(join(modules, '@redspark'), { recursive: true })
   for (const [name, path] of [
     ['dsh-agent-instructions', 'rsh/Engine/context/agent-instructions'],
     ['dsh-native-agent', 'rsh/Engine/core/native-agent'],
@@ -73,7 +73,7 @@ it('executes and restores a native profile through the published dsh command', a
     ['dsh-fs-observation-policy', 'rsh/Modules/Official/fs/fs-observation-policy'],
     ['dsh-session-persistence-jsonl', 'rsh/Engine/session/session-persistence-jsonl'],
   ] as const) {
-    symlinkSync(join(root, path), join(modules, '@deepseek-ai', name), 'junction')
+    symlinkSync(join(root, path), join(modules, '@redspark', name), 'junction')
   }
   mkdirSync(shellFixtureBin)
   writeFileSync(join(shellFixtureBin, 'ps'), `#!/bin/sh
@@ -143,7 +143,7 @@ export PATH="$fixture_dir:$PATH"
     { id: 'tmux-context', disabled: false },
   ] }
   writeFileSync(patchPath, JSON.stringify(patch))
-  const env = { ...process.env, DSH_HOME: home, TMUX_PANE: '%3', TMUX_FIXTURE_AUDIT: shellAudit, BASH_ENV: shellFixture }
+  const env = { ...process.env, RSH_HOME: home, TMUX_PANE: '%3', TMUX_FIXTURE_AUDIT: shellAudit, BASH_ENV: shellFixture }
   const invoke = (args: string[], extraEnv: Record<string, string> = {}) => execa(process.execPath, ['--import', contextProbeUrl, bin, '--profile', 'native-headless', '--patch', patchPath, ...args], {
     env: { ...env, ...extraEnv }, reject: false, timeout: 30_000,
   })
@@ -208,7 +208,7 @@ export PATH="$fixture_dir:$PATH"
       const prompts = normalizedSystemPrompts(raw, context)
       const schemas = normalizedToolSchemas(raw, context)
       if (prompts[0] === undefined || schemas[0] === undefined) throw new Error('native profile omitted its request header')
-      if (process.env.DSH_SNAPSHOT === 'refresh') {
+      if (process.env.RSH_SNAPSHOT === 'refresh') {
         writeFileSync(join(scenario, currentName), normalized)
         writeFileSync(join(scenario, 'system-prompt.expected.md'), formatSystemPromptSnapshot(prompts[0], prompts.slice(1)))
         writeFileSync(join(scenario, 'tool-schemas.expected.json'), formatToolSchemasSnapshot(schemas[0], schemas.slice(1)))

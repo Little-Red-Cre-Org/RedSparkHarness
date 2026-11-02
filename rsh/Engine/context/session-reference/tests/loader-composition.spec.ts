@@ -5,21 +5,21 @@ import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { afterEach, describe, expect, it } from 'vitest'
-import { Context } from '@deepseek-ai/cordis'
-import Loader from '@deepseek-ai/cordis-plugin-loader'
-import Include from '@deepseek-ai/cordis-plugin-include'
-import { agentEvents, type Agent } from '@deepseek-ai/dsh-agent'
-import { createUserMessage, ToolCallId } from '@deepseek-ai/dsh-llm'
-import * as systemPromptPlugin from '@deepseek-ai/dsh-system-prompt'
-import * as toolsPlugin from '@deepseek-ai/dsh-tools'
-import * as fsPlugin from '@deepseek-ai/dsh-fs-local'
-import * as toolFsPlugin from '@deepseek-ai/dsh-tool-fs'
-import * as sessionPlugin from '@deepseek-ai/dsh-session'
-import { Session, SessionId } from '@deepseek-ai/dsh-session'
-import * as queryPlugin from '@deepseek-ai/dsh-session-query-sqlite'
-import * as referencePlugin from '@deepseek-ai/dsh-session-reference'
-import * as spillPlugin from '@deepseek-ai/dsh-spill-local'
-import { sessionDir } from '@deepseek-ai/dsh-spill-local'
+import { Context } from '@redspark/cordis'
+import Loader from '@redspark/cordis-plugin-loader'
+import Include from '@redspark/cordis-plugin-include'
+import { agentEvents, type Agent } from '@redspark/rsh-agent'
+import { createUserMessage, ToolCallId } from '@redspark/rsh-llm'
+import * as systemPromptPlugin from '@redspark/rsh-system-prompt'
+import * as toolsPlugin from '@redspark/rsh-tools'
+import * as fsPlugin from '@redspark/rsh-fs-local'
+import * as toolFsPlugin from '@redspark/rsh-tool-fs'
+import * as sessionPlugin from '@redspark/rsh-session'
+import { Session, SessionId } from '@redspark/rsh-session'
+import * as queryPlugin from '@redspark/rsh-session-query-sqlite'
+import * as referencePlugin from '@redspark/rsh-session-reference'
+import * as spillPlugin from '@redspark/rsh-spill-local'
+import { sessionDir } from '@redspark/rsh-spill-local'
 import * as sourcePlugin from './fixtures/source-session.ts'
 
 let context: Context | undefined
@@ -44,14 +44,14 @@ describe('session-reference real Loader composition', () => {
     await ctx.plugin(Loader)
     ctx.loader.builtins.include = Include
     const modules = new Map<string, unknown>([
-      ['@deepseek-ai/dsh-session', sessionPlugin],
-      ['@deepseek-ai/dsh-system-prompt', systemPromptPlugin],
-      ['@deepseek-ai/dsh-tools', toolsPlugin],
-      ['@deepseek-ai/dsh-fs-local', fsPlugin],
-      ['@deepseek-ai/dsh-tool-fs', toolFsPlugin],
-      ['@deepseek-ai/dsh-session-query-sqlite', queryPlugin],
-      ['@deepseek-ai/dsh-session-reference', referencePlugin],
-      ['@deepseek-ai/dsh-spill-local', spillPlugin],
+      ['@redspark/rsh-session', sessionPlugin],
+      ['@redspark/rsh-system-prompt', systemPromptPlugin],
+      ['@redspark/rsh-tools', toolsPlugin],
+      ['@redspark/rsh-fs-local', fsPlugin],
+      ['@redspark/rsh-tool-fs', toolFsPlugin],
+      ['@redspark/rsh-session-query-sqlite', queryPlugin],
+      ['@redspark/rsh-session-reference', referencePlugin],
+      ['@redspark/rsh-spill-local', spillPlugin],
       ['./source-session.ts', sourcePlugin],
     ])
     ctx.loader.internal = {

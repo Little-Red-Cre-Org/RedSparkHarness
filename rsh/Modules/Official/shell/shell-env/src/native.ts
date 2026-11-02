@@ -1,6 +1,6 @@
 /** Native managed shell environment Provider. */
-import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
-import type { NativeToolExecution } from '@deepseek-ai/dsh-native-tools'
+import type { NativePlugin } from '@redspark/rsh-native-runtime'
+import type { NativeToolExecution } from '@redspark/rsh-native-tools'
 import { ShellEnvController } from './controller.ts'
 import type {} from './definition.ts'
 
@@ -24,7 +24,7 @@ function resolveConfig(input: unknown): string | undefined {
 
 /** Provide one scoped registry whose contributors release with their native installation. */
 export const plugin: NativePlugin = {
-  apiVersion: 1, name: '@deepseek-ai/dsh-shell-env', targets: ['host'],
+  apiVersion: 1, name: '@redspark/rsh-shell-env', targets: ['host'],
   requires: [], optional: [], provides: ['shellEnv'],
   resolve(input) {
     const dshHome = resolveConfig(input)

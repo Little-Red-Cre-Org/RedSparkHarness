@@ -1,24 +1,24 @@
 /** Native Host Consumer for the durable skill catalog and exact skill loader. */
 import { createHash } from 'node:crypto'
-import type { NativeContext, NativePlugin } from '@deepseek-ai/dsh-native-runtime'
-import { createUserMessage } from '@deepseek-ai/dsh-llm/native'
-import type { ToolSchema, UserMessage } from '@deepseek-ai/dsh-llm/native'
-import type { JsonSchemaNode } from '@deepseek-ai/dsh-native-tools/json-schema'
-import type { NativeToolRegistration, NativeValueToolContribution } from '@deepseek-ai/dsh-native-tools'
-import type { NativeRequestContextProvider, NativeRequestContextRequest } from '@deepseek-ai/dsh-request-context-definition'
-import type { NativeSkillInvocationOptions, NativeSkillInvocations, NativeSkills } from '@deepseek-ai/dsh-skill/native'
-import { NativeRequestContextProviderId } from '@deepseek-ai/dsh-request-context-definition'
+import type { NativeContext, NativePlugin } from '@redspark/rsh-native-runtime'
+import { createUserMessage } from '@redspark/rsh-llm/native'
+import type { ToolSchema, UserMessage } from '@redspark/rsh-llm/native'
+import type { JsonSchemaNode } from '@redspark/rsh-native-tools/json-schema'
+import type { NativeToolRegistration, NativeValueToolContribution } from '@redspark/rsh-native-tools'
+import type { NativeRequestContextProvider, NativeRequestContextRequest } from '@redspark/rsh-request-context-definition'
+import type { NativeSkillInvocationOptions, NativeSkillInvocations, NativeSkills } from '@redspark/rsh-skill/native'
+import { NativeRequestContextProviderId } from '@redspark/rsh-request-context-definition'
 import {
   escapeText,
   isModelInvocable,
   isSkillName,
   isUserInvocable,
   renderSkillContent,
-} from '@deepseek-ai/dsh-skill/shared'
-import type { SkillDefinition, SkillInvocationSource, SkillResourceBase, SkillSummary } from '@deepseek-ai/dsh-skill/types'
+} from '@redspark/rsh-skill/shared'
+import type { SkillDefinition, SkillInvocationSource, SkillResourceBase, SkillSummary } from '@redspark/rsh-skill/types'
 import type { SkillCatalogSource } from './types.ts'
-import type {} from '@deepseek-ai/dsh-native-tools/native'
-import type {} from '@deepseek-ai/dsh-skill/native'
+import type {} from '@redspark/rsh-native-tools/native'
+import type {} from '@redspark/rsh-skill/native'
 export type { SkillCatalogSource } from './types.ts'
 
 const PROVIDER_ID = NativeRequestContextProviderId('dsh-tool-skill')
@@ -69,7 +69,7 @@ interface ResolvedConfig {
 /** Native Host Consumer; its request-context registration records catalog and invocation messages durably. */
 export const plugin: NativePlugin = {
   apiVersion: 1,
-  name: '@deepseek-ai/dsh-tool-skill',
+  name: '@redspark/rsh-tool-skill',
   targets: ['host'],
   requires: ['skills', 'tools', 'requestContexts'],
   provides: ['skillInvocations'],

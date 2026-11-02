@@ -1,7 +1,7 @@
 import { expect, it, vi } from 'vitest'
-import { HarnessError } from '@deepseek-ai/dsh-llm/native'
-import { credentialKey, type CredentialKey, type CredentialRecord, type NativeCredentials } from '@deepseek-ai/dsh-credentials/native'
-import { NativeScope, RuntimeEvents } from '@deepseek-ai/dsh-native-runtime'
+import { HarnessError } from '@redspark/rsh-llm/native'
+import { credentialKey, type CredentialKey, type CredentialRecord, type NativeCredentials } from '@redspark/rsh-credentials/native'
+import { NativeScope, RuntimeEvents } from '@redspark/rsh-native-runtime'
 import { NativeAuthorizationProvider, type NativeAuthorization } from '../src/native.ts'
 import type { AuthorizationFrame } from '../src/types.ts'
 

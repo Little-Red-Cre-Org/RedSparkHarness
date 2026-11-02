@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import type { ReactElement } from 'react'
 import type { GenericToolCardProps } from '../src/client/tool/toolviews/GenericToolCard.tsx'
 import { NativeToolCard } from '../src/tool-renderer.ts'
-import type { RunningToolCall } from '@deepseek-ai/dsh-client-ui-conversation/tool-records'
+import type { RunningToolCall } from '@redspark/rsh-client-ui-conversation/tool-records'
 
 const block: RunningToolCall = {
   callId: 'read-1', name: 'read', argsRaw: '{"file_path":"tool-card.txt"}',

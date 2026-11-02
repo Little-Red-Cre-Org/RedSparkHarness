@@ -1,5 +1,5 @@
 {
-  "name": "@deepseek-ai/dsh-file-reference",
+  "name": "@redspark/rsh-file-reference",
   "description": "File-reference discovery contract and shared @file grammar",
   "version": "1.0.0",
   "publishConfig": {
@@ -48,24 +48,24 @@
   ],
   "license": "MIT",
   "peerDependencies": {
-    "@deepseek-ai/dsh-agent": "workspace:^",
-    "@deepseek-ai/cordis": "workspace:^",
-    "@deepseek-ai/dsh-native-agent": "workspace:^",
-    "@deepseek-ai/dsh-native-runtime": "workspace:^",
-    "@deepseek-ai/dsh-session": "workspace:^"
+    "@redspark/rsh-agent": "workspace:^",
+    "@redspark/cordis": "workspace:^",
+    "@redspark/rsh-native-agent": "workspace:^",
+    "@redspark/rsh-native-runtime": "workspace:^",
+    "@redspark/rsh-session": "workspace:^"
   },
   "devDependencies": {
-    "@deepseek-ai/dsh-agent": "workspace:^",
-    "@deepseek-ai/cordis": "workspace:^",
-    "@deepseek-ai/dsh-native-agent": "workspace:^",
-    "@deepseek-ai/dsh-native-runtime": "workspace:^",
-    "@deepseek-ai/dsh-session": "workspace:^"
+    "@redspark/rsh-agent": "workspace:^",
+    "@redspark/cordis": "workspace:^",
+    "@redspark/rsh-native-agent": "workspace:^",
+    "@redspark/rsh-native-runtime": "workspace:^",
+    "@redspark/rsh-session": "workspace:^"
   },
   "peerDependenciesMeta": {
-    "@deepseek-ai/cordis": { "optional": true },
-    "@deepseek-ai/dsh-agent": { "optional": true },
-    "@deepseek-ai/dsh-native-agent": { "optional": true },
-    "@deepseek-ai/dsh-native-runtime": { "optional": true },
-    "@deepseek-ai/dsh-session": { "optional": true }
+    "@redspark/cordis": { "optional": true },
+    "@redspark/rsh-agent": { "optional": true },
+    "@redspark/rsh-native-agent": { "optional": true },
+    "@redspark/rsh-native-runtime": { "optional": true },
+    "@redspark/rsh-session": { "optional": true }
   }
 }

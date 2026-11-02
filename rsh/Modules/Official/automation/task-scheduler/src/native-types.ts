@@ -1,7 +1,7 @@
 /** Native management of persisted scheduled work and personal reminders in one selected Program route. */
-import type { NativeActiveSessionOwner } from '@deepseek-ai/dsh-native-session-execution'
-import type { NativeScheduledGoalHost } from '@deepseek-ai/dsh-goal/native'
-import type { SessionId } from '@deepseek-ai/dsh-session/types'
+import type { NativeActiveSessionOwner } from '@redspark/rsh-native-session-execution'
+import type { NativeScheduledGoalHost } from '@redspark/rsh-goal/native'
+import type { SessionId } from '@redspark/rsh-session/types'
 import type { CreateTaskRequest } from './gui-types.ts'
 import type { Run, Task, TaskId } from './types.ts'
 
@@ -62,7 +62,7 @@ export interface NativeTaskScheduleView {
   readonly lastRunAt?: number
 }
 
-declare module '@deepseek-ai/dsh-native-runtime' {
+declare module '@redspark/rsh-native-runtime' {
   interface NativeServices {
     taskScheduler: NativeTaskSchedulerOperations
     scheduledGoalHost: NativeScheduledGoalHost

@@ -2,28 +2,28 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
-import { Context } from '@deepseek-ai/cordis'
-import Loader from '@deepseek-ai/cordis-plugin-loader'
-import { ToolCallId, ReasoningEffortId } from '@deepseek-ai/dsh-llm'
-import SystemPrompt from '@deepseek-ai/dsh-system-prompt'
-import ToolRuntime, { TOOL_ABORTED_BEFORE_DISPATCH } from '@deepseek-ai/dsh-tools'
-import { assembleContextFor, type Agent } from '@deepseek-ai/dsh-agent'
-import AgentRegistry from '@deepseek-ai/dsh-agent'
-import AgentLoop from '@deepseek-ai/dsh-agent-loop'
-import { mountAgentLoopTestDependencies } from '@deepseek-ai/dsh-agent-loop-testkit'
-import JsonlSessionPersistence from '@deepseek-ai/dsh-session-persistence-jsonl'
-import SessionProjectionRegistry from '@deepseek-ai/dsh-session-projection'
-import SubagentRuntime from '@deepseek-ai/dsh-subagent'
-import type { SubagentStartRequest } from '@deepseek-ai/dsh-subagent'
-import LocalJobRegistry from '@deepseek-ai/dsh-jobs-local'
-import * as SubagentSpawn from '@deepseek-ai/dsh-subagent-spawn-in-process'
-import * as ToolTasks from '@deepseek-ai/dsh-tool-jobs'
+import { Context } from '@redspark/cordis'
+import Loader from '@redspark/cordis-plugin-loader'
+import { ToolCallId, ReasoningEffortId } from '@redspark/rsh-llm'
+import SystemPrompt from '@redspark/rsh-system-prompt'
+import ToolRuntime, { TOOL_ABORTED_BEFORE_DISPATCH } from '@redspark/rsh-tools'
+import { assembleContextFor, type Agent } from '@redspark/rsh-agent'
+import AgentRegistry from '@redspark/rsh-agent'
+import AgentLoop from '@redspark/rsh-agent-loop'
+import { mountAgentLoopTestDependencies } from '@redspark/rsh-agent-loop-testkit'
+import JsonlSessionPersistence from '@redspark/rsh-session-persistence-jsonl'
+import SessionProjectionRegistry from '@redspark/rsh-session-projection'
+import SubagentRuntime from '@redspark/rsh-subagent'
+import type { SubagentStartRequest } from '@redspark/rsh-subagent'
+import LocalJobRegistry from '@redspark/rsh-jobs-local'
+import * as SubagentSpawn from '@redspark/rsh-subagent-spawn-in-process'
+import * as ToolTasks from '@redspark/rsh-tool-jobs'
 import { MockAdapter, textResponse } from '../../../core/agent-loop/tests/mock-adapter.ts'
 import { loadStoredSession } from '../../subagent/tests/persistence-helpers.ts'
 import * as mock from './scripted-provider.ts'
 import * as tool from '../src/compat.ts'
 import * as ToolSubagentEntry from '../src/index.ts'
-import { Session, SessionId } from '@deepseek-ai/dsh-session'
+import { Session, SessionId } from '@redspark/rsh-session'
 import {
   callSubagent,
   disposeSetupProvider,
@@ -681,12 +681,12 @@ describe('dsh-tool-subagent', () => {
     ctx.loader.internal = {
       version: 'v2',
       async import(specifier: string) {
-        if (specifier !== '@deepseek-ai/dsh-tool-subagent') throw new Error(`unexpected Loader import: ${specifier}`)
+        if (specifier !== '@redspark/rsh-tool-subagent') throw new Error(`unexpected Loader import: ${specifier}`)
         return ToolSubagentEntry
       },
     } as unknown as NonNullable<typeof ctx.loader.internal>
 
-    await ctx.loader.create({ name: '@deepseek-ai/dsh-tool-subagent', config: { provider: 'mock' } })
+    await ctx.loader.create({ name: '@redspark/rsh-tool-subagent', config: { provider: 'mock' } })
     await ctx.loader.await()
 
     expect(ctx.tools.get('subagent')).toBeDefined()
@@ -951,7 +951,7 @@ describe('dsh-tool-subagent background mode', () => {
     const ctx = await setup({ provider: 'mock' })
     const result = await callSubagent(ctx, { description: 'd', prompt: 'p', run_in_background: true })
     expect(result.isError).toBe(true)
-    expect(text(result)).toContain('background jobs unavailable: load @deepseek-ai/dsh-jobs')
+    expect(text(result)).toContain('background jobs unavailable: load @redspark/rsh-jobs')
   })
 
   it('skips background startup when the tool signal is already aborted', async () => {

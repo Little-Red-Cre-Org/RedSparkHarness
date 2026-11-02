@@ -14,7 +14,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url'
 import { describe, expect, it } from 'vitest'
 
 const REPO_ROOT = fileURLToPath(new URL('../../../..', import.meta.url))
-const DSH_SOURCE_BIN = join(REPO_ROOT, 'rsh/Programs/CLI/src/bin.ts')
+const RSH_SOURCE_BIN = join(REPO_ROOT, 'rsh/Programs/CLI/src/bin.ts')
 const TSX_LOADER = pathToFileURL(createRequire(join(REPO_ROOT, 'package.json')).resolve('tsx')).href
 
 interface RunningWeb {
@@ -54,9 +54,9 @@ function cleanEnvironment(root: string, dshHome: string): NodeJS.ProcessEnv {
     !/(?:KEY|SECRET|TOKEN|PASSWORD)/iu.test(name)))
   return {
     ...env,
-    DSH_AGENTS_HOME: join(root, '.agents'),
-    DSH_HOME: dshHome,
-    DSH_TELEMETRY_DISABLED: '1',
+    RSH_AGENTS_HOME: join(root, '.agents'),
+    RSH_HOME: dshHome,
+    RSH_TELEMETRY_DISABLED: '1',
     NODE_NO_WARNINGS: '1',
     SSH_CONNECTION: '',
     SSH_TTY: '',
@@ -68,7 +68,7 @@ function cleanEnvironment(root: string, dshHome: string): NodeJS.ProcessEnv {
 async function startWeb(root: string, dshHome: string, port: number): Promise<RunningWeb> {
   const child = spawn(process.execPath, [
     '--import', TSX_LOADER,
-    DSH_SOURCE_BIN,
+    RSH_SOURCE_BIN,
     'web',
     '--no-open',
     '--port', String(port),

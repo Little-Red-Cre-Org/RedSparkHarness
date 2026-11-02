@@ -3,13 +3,13 @@ import { copyFileSync, mkdirSync, readFileSync, writeFileSync, readdirSync, exis
 import { join } from 'node:path'
 import { DatabaseSync } from 'node:sqlite'
 import { expect, vi } from 'vitest'
-import { JsonlSessionBackend } from '@deepseek-ai/dsh-session-persistence-jsonl'
-import { SESSION_FORMAT_VERSION } from '@deepseek-ai/dsh-session/native'
-import { deriveReplayScript, parseSessionLog } from '@deepseek-ai/dsh-llm-replay'
-import type { ReplayEntry } from '@deepseek-ai/dsh-llm-replay'
-import type { StreamChunk } from '@deepseek-ai/dsh-llm/native'
+import { JsonlSessionBackend } from '@redspark/rsh-session-persistence-jsonl'
+import { SESSION_FORMAT_VERSION } from '@redspark/rsh-session/native'
+import { deriveReplayScript, parseSessionLog } from '@redspark/rsh-llm-replay'
+import type { ReplayEntry } from '@redspark/rsh-llm-replay'
+import type { StreamChunk } from '@redspark/rsh-llm/native'
 import { normalizeSessionSnapshot, redactSessionSnapshotIds, normalizedSystemPrompts, normalizedToolSchemas,
-  formatSystemPromptSnapshot, formatToolSchemasSnapshot, sessionFixtureName } from '@deepseek-ai/dsh-session-snapshot'
+  formatSystemPromptSnapshot, formatToolSchemasSnapshot, sessionFixtureName } from '@redspark/rsh-session-snapshot'
 import { terminalFixture } from './pty-profile.ts'
 
 type SnapshotRecord = Record<string, unknown>
@@ -292,7 +292,7 @@ export async function terminalScene(scenario: string, options: TerminalSceneOpti
     verifyTerminalSession(fixture, scenario, id)
   } finally {
     try {
-      const evidenceDirectory = process.env.DSH_TUI_EVIDENCE_DIR
+      const evidenceDirectory = process.env.RSH_TUI_EVIDENCE_DIR
       if (evidenceDirectory !== undefined) {
         mkdirSync(evidenceDirectory, { recursive: true })
         terminals.forEach((terminal, index) => { writeFileSync(join(evidenceDirectory, `terminal-${index + 1}.txt`), terminal.output()) })
@@ -338,7 +338,7 @@ export function verifyTerminalSession(fixture: ReturnType<typeof terminalFixture
   const outputs = [[scene, normalized], [join(scenario, 'system-prompt.expected.md'), formatSystemPromptSnapshot(prompts[0], prompts.slice(1))],
     [join(scenario, 'tool-schemas.expected.json'), formatToolSchemasSnapshot(schemas[0], schemas.slice(1))]] as const
   for (const [path, contents] of outputs) {
-    if (process.env.DSH_SNAPSHOT === 'refresh') writeFileSync(path, contents)
+    if (process.env.RSH_SNAPSHOT === 'refresh') writeFileSync(path, contents)
     else expect(contents).toBe(readFileSync(path, 'utf8'))
   }
 }

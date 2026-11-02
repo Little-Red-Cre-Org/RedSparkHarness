@@ -1,6 +1,6 @@
 import { setImmediate } from 'node:timers/promises'
 import { expect, it } from 'vitest'
-import { NativeScope, RuntimeEvents } from '@deepseek-ai/dsh-native-runtime'
+import { NativeScope, RuntimeEvents } from '@redspark/rsh-native-runtime'
 import { NativeSkillRegistry, plugin } from '../src/native.ts'
 import type { SkillCandidate, SkillDefinition, SkillProvider } from '../src/types.ts'
 

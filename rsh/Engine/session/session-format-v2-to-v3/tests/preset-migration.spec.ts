@@ -1,8 +1,8 @@
 /** Released preset references change after strict source admission without rewriting opaque ids. */
 
 import { describe, expect, it } from 'vitest'
-import { SessionFormatError, SessionFormatEventCollector, SessionFormatUnsupportedMigrationError } from '@deepseek-ai/dsh-session-format'
-import type { SessionFormatEvent, SessionFormatJsonValue } from '@deepseek-ai/dsh-session-format'
+import { SessionFormatError, SessionFormatEventCollector, SessionFormatUnsupportedMigrationError } from '@redspark/rsh-session-format'
+import type { SessionFormatEvent, SessionFormatJsonValue } from '@redspark/rsh-session-format'
 import { sessionFormatV2ToV3 } from '../src/index.ts'
 
 const header = Object.freeze({

@@ -1,6 +1,6 @@
 /** Native Client rebuilds retain published assets until a complete successor is ready. */
 import { watch, type FSWatcher } from 'chokidar'
-import { NativeClientBuildError, type NativeClientBundle } from '@deepseek-ai/dsh-native-web-assets'
+import { NativeClientBuildError, type NativeClientBundle } from '@redspark/rsh-native-web-assets'
 
 interface DirectoryObservation {
   readonly watcher: FSWatcher

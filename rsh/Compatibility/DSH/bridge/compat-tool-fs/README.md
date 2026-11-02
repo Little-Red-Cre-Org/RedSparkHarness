@@ -3,7 +3,7 @@ description: "Native headless profiles can expose selected legacy filesystem too
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-compat-tool-fs
+# @redspark/rsh-compat-tool-fs
 
 English | [中文](README.zh.md)
 

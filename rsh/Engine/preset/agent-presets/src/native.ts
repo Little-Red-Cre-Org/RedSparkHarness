@@ -1,6 +1,6 @@
 /** Native registry Provider for profile-installed standing compositions. */
 import { z } from 'zod'
-import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
+import type { NativePlugin } from '@redspark/rsh-native-runtime'
 import { NativeAgentPresetRegistry } from './native-registry.ts'
 import { PRESET_ID } from './preset.ts'
 import type { NativePresetFolderSummary } from './native-storage.ts'
@@ -51,7 +51,7 @@ export function resolveNativeAgentPresetsConfig(input: unknown): NativeAgentPres
 
 /** Registry only; the selected Program owns history, Agent creation and choice transactions. */
 export const plugin: NativePlugin = {
-  apiVersion: 1, name: '@deepseek-ai/dsh-agent-presets', targets: ['host'], requires: [], provides: ['agentPresets'],
+  apiVersion: 1, name: '@redspark/rsh-agent-presets', targets: ['host'], requires: [], provides: ['agentPresets'],
   resolve(input) {
     const config = resolveNativeAgentPresetsConfig(input)
     return (context) => {

@@ -11,14 +11,14 @@ import { mkdtempSync, realpathSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { Context } from '@deepseek-ai/cordis'
-import { LAUNCHER_FAILURE_EXIT } from '@deepseek-ai/node-addon-system/landlock-run'
-import { SANDBOX_UNAVAILABLE, SandboxUnavailableError } from '@deepseek-ai/dsh-sandbox'
-import type { SandboxPolicy } from '@deepseek-ai/dsh-sandbox'
+import { Context } from '@redspark/cordis'
+import { LAUNCHER_FAILURE_EXIT } from '@redspark/node-addon-system/landlock-run'
+import { SANDBOX_UNAVAILABLE, SandboxUnavailableError } from '@redspark/rsh-sandbox'
+import type { SandboxPolicy } from '@redspark/rsh-sandbox'
 import {
   LocalSandboxProvider,
-} from '@deepseek-ai/dsh-sandbox-local'
-import type { Config } from '@deepseek-ai/dsh-sandbox-local'
+} from '@redspark/rsh-sandbox-local'
+import type { Config } from '@redspark/rsh-sandbox-local'
 import { bwrapProfileArgs, landlockProfileArgs, seatbeltProfileArgs } from '../src/profiles.ts'
 
 const RO: SandboxPolicy = { mode: 'read-only', workspaceRoot: '/ws' }
@@ -230,7 +230,7 @@ describe('the platform chains', () => {
   })
 
   // The win32 chain's argv contract, denial dialect, and runner-failure rules
-  // live in @deepseek-ai/dsh-sandbox-windows-acl/tests/provider-chain.spec.ts
+  // live in @redspark/rsh-sandbox-windows-acl/tests/provider-chain.spec.ts
   // (platform-independent assertions that run in every CI lane, including
   // Windows where this package's POSIX-only suites are excluded).
 

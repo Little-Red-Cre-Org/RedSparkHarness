@@ -1,6 +1,6 @@
 /** Cordis-free workflow run projection and read-only presentation. */
-import type { SessionEvent } from '@deepseek-ai/dsh-session/types'
-import type { Translate } from '@deepseek-ai/dsh-client-ui-slots'
+import type { SessionEvent } from '@redspark/rsh-session/types'
+import type { Translate } from '@redspark/rsh-client-ui-slots'
 import { WorkflowRunView } from './WorkflowRunView.tsx'
 import {
   projectWorkflowState, updateAgentEnd, updateAgentStart,

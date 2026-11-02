@@ -5,12 +5,12 @@ import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { execa } from 'execa'
 import { expect, it } from 'vitest'
-import { JsonlSessionBackend } from '@deepseek-ai/dsh-session-persistence-jsonl'
-import { SESSION_FORMAT_VERSION } from '@deepseek-ai/dsh-session'
+import { JsonlSessionBackend } from '@redspark/rsh-session-persistence-jsonl'
+import { SESSION_FORMAT_VERSION } from '@redspark/rsh-session'
 import {
   formatSystemPromptSnapshot, formatToolSchemasSnapshot, normalizeSessionSnapshot, redactSessionSnapshotIds,
   normalizedSystemPrompts, normalizedToolSchemas, sessionFixtureName,
-} from '@deepseek-ai/dsh-session-snapshot'
+} from '@redspark/rsh-session-snapshot'
 
 const root = fileURLToPath(new URL('../../', import.meta.url))
 const bin = join(root, 'rsh/Programs/CLI/lib/bin.js')
@@ -30,7 +30,7 @@ it('adapts legacy file tools through the compatibility test profile and writes o
   mkdirSync(profileDir, { recursive: true })
   copyFileSync(join(profileFixture, 'package.json'), join(profileDir, 'package.json'))
   copyFileSync(join(profileFixture, 'rsh.profile.json'), join(profileDir, 'rsh.profile.json'))
-  mkdirSync(join(modules, '@deepseek-ai'), { recursive: true })
+  mkdirSync(join(modules, '@redspark'), { recursive: true })
   for (const [name, path] of [
     ['dsh-native-agent', 'rsh/Engine/core/native-agent'],
     ['dsh-native-headless', 'rsh/Engine/core/native-headless'],
@@ -41,7 +41,7 @@ it('adapts legacy file tools through the compatibility test profile and writes o
     ['dsh-native-tools', 'rsh/Engine/core/native-tools'],
     ['dsh-native-prompt', 'rsh/Engine/core/native-prompt'],
     ['dsh-compat-tool-fs', 'rsh/Compatibility/DSH/bridge/compat-tool-fs'],
-  ] as const) symlinkSync(join(root, path), join(modules, '@deepseek-ai', name), 'junction')
+  ] as const) symlinkSync(join(root, path), join(modules, '@redspark', name), 'junction')
   const modelDir = join(modules, 'native-compat-fixture-model')
   mkdirSync(modelDir)
   writeFileSync(join(modelDir, 'package.json'), JSON.stringify({
@@ -74,7 +74,7 @@ it('adapts legacy file tools through the compatibility test profile and writes o
   writeFileSync(patchPath, JSON.stringify(patch))
   try {
     const run = await execa(process.execPath, [bin, '--profile', 'compat', '--patch', patchPath, 'create', 'the', 'file'], {
-      env: { ...process.env, DSH_HOME: home }, reject: false, timeout: 30_000,
+      env: { ...process.env, RSH_HOME: home }, reject: false, timeout: 30_000,
     })
     expect(run.exitCode, run.stderr).toBe(0)
     expect(run.stdout).toBe('compat done')
@@ -116,7 +116,7 @@ it('adapts legacy file tools through the compatibility test profile and writes o
       const prompts = normalizedSystemPrompts(raw, context)
       const schemas = normalizedToolSchemas(raw, context)
       if (prompts[0] === undefined || schemas[0] === undefined) throw new Error('compat profile omitted its request header')
-      if (process.env.DSH_SNAPSHOT === 'refresh') {
+      if (process.env.RSH_SNAPSHOT === 'refresh') {
         writeFileSync(join(scenario, currentName), normalized)
         writeFileSync(join(scenario, 'system-prompt.expected.md'), formatSystemPromptSnapshot(prompts[0], prompts.slice(1)))
         writeFileSync(join(scenario, 'tool-schemas.expected.json'), formatToolSchemasSnapshot(schemas[0], schemas.slice(1)))

@@ -1,13 +1,13 @@
 /**
- * Package-owned invariant companion for `@deepseek-ai/dsh-settings`.
- * @module @deepseek-ai/dsh-settings/invariant
+ * Package-owned invariant companion for `@redspark/rsh-settings`.
+ * @module @redspark/rsh-settings/invariant
  */
 
-import type { Context } from '@deepseek-ai/cordis'
-import type { InvariantFailure, InvariantInstaller } from '@deepseek-ai/dsh-invariants'
-import { deepEqualJson } from '@deepseek-ai/dsh-util-values'
+import type { Context } from '@redspark/cordis'
+import type { InvariantFailure, InvariantInstaller } from '@redspark/rsh-invariants'
+import { deepEqualJson } from '@redspark/rsh-util-values'
 
-const PACKAGE_NAME = '@deepseek-ai/dsh-settings'
+const PACKAGE_NAME = '@redspark/rsh-settings'
 
 /** Cordis companion plugin name. */
 export const name = 'settings-invariant'

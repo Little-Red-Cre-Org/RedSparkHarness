@@ -11,11 +11,11 @@ export type {
   CodeRunResult,
   NativeCodeRunRequest,
   NativeCodeRuntime,
-} from '@deepseek-ai/dsh-code-runtime-definition'
+} from '@redspark/rsh-code-runtime-definition'
 export { NativeWorkerThreadCodeRuntime, resolveNativeWorkerThreadConfig } from './worker-thread.ts'
 export type { Config as NativeWorkerThreadCodeRuntimeConfig, ResolvedConfig as ResolvedNativeWorkerThreadCodeRuntimeConfig } from './worker-thread.ts'
 export { plugin } from './native.ts'
-export { DUNDER_MEMBER, PORTABLE_RESERVED_WORDS, RESERVED_BINDING_GLOBALS, RESERVED_ERROR_MEMBERS } from '@deepseek-ai/dsh-code-runtime-definition'
+export { DUNDER_MEMBER, PORTABLE_RESERVED_WORDS, RESERVED_BINDING_GLOBALS, RESERVED_ERROR_MEMBERS } from '@redspark/rsh-code-runtime-definition'
 
 export { snapshotCodeJsonValue } from './worker-json.ts'
 

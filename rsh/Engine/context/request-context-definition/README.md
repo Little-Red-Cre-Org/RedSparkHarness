@@ -3,7 +3,7 @@ description: "Share Native request-context types while leaving request acceptanc
 kind: "package-library"
 ---
 
-# @deepseek-ai/dsh-request-context-definition
+# @redspark/rsh-request-context-definition
 
 English | [中文](README.zh.md)
 
@@ -38,7 +38,7 @@ import type {
   NativeRequestContextRegistration,
   NativeRequestContexts,
   PreparedNativeRequestContext,
-} from '@deepseek-ai/dsh-request-context-definition'
+} from '@redspark/rsh-request-context-definition'
 ```
 
 The request, provider, visibility, prepared-result, and service declarations are documented verbatim on the [request-context subsystem page](../../../Docs/subsystems/request-context.md).

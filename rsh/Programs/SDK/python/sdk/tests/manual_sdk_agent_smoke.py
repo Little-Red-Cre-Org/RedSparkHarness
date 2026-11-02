@@ -15,7 +15,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
 
-from deepseek_harness import DeepSeekHarness
+from deepseek_harness import RedSparkHarness
 
 
 class MockCompletionHandler(BaseHTTPRequestHandler):
@@ -55,7 +55,7 @@ def run_smoke(repo_root: Path, keep_sessions: bool) -> None:
     print(f"mock_base_url={base_url}")
 
     try:
-        with DeepSeekHarness(
+        with RedSparkHarness(
             model="sdk-smoke-model",
             cwd=str(repo_root / "rsh/Programs/SDK/python/sdk"),
             runtime_cwd=str(repo_root),
@@ -68,9 +68,9 @@ def run_smoke(repo_root: Path, keep_sessions: bool) -> None:
                 "sdk",
             ),
             env={
-                "DSH_HOME": str(dsh_home),
-                "DSH_PERMISSION_MODE": "danger-full-access",
-                "DSH_TELEMETRY_DISABLED": "1",
+                "RSH_HOME": str(dsh_home),
+                "RSH_PERMISSION_MODE": "danger-full-access",
+                "RSH_TELEMETRY_DISABLED": "1",
                 "DEEPSEEK_BASE_URL": base_url,
                 "DEEPSEEK_API_KEY": "sdk-smoke-key",
             },
@@ -112,7 +112,7 @@ def main() -> None:
         "--repo-root",
         type=Path,
         default=Path(__file__).resolve().parents[6],
-        help="Path to the deepseek-harness checkout.",
+        help="Path to the redspark-harness checkout.",
     )
     parser.add_argument("--keep-sessions", action="store_true")
     args = parser.parse_args()

@@ -3,14 +3,14 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { afterEach, describe, expect, it } from 'vitest'
-import { Context } from '@deepseek-ai/cordis'
-import Loader from '@deepseek-ai/cordis-plugin-loader'
-import Include from '@deepseek-ai/cordis-plugin-include'
-import z from '@deepseek-ai/schemastery'
+import { Context } from '@redspark/cordis'
+import Loader from '@redspark/cordis-plugin-loader'
+import Include from '@redspark/cordis-plugin-include'
+import z from '@redspark/schemastery'
 import RshPluginHost, { adaptCordisPlugin, mountCordisPlugin } from '../src/index.ts'
 
 const descriptor = {
-  packageName: '@deepseek-ai/dsh-example-plugin',
+  packageName: '@redspark/rsh-example-plugin',
   apiVersion: 1 as const,
   role: 'consumer' as const,
   capability: 'example',

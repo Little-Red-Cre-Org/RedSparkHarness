@@ -1,7 +1,7 @@
 /** Shared Cordis-free image format and model-facing text for file reads. */
 import { extname } from 'node:path'
-import type { ImageAttachmentLimits, ImageAttachmentRef } from '@deepseek-ai/dsh-attachment/native'
-import type { ImageMediaType } from '@deepseek-ai/dsh-attachment/types'
+import type { ImageAttachmentLimits, ImageAttachmentRef } from '@redspark/rsh-attachment/native'
+import type { ImageMediaType } from '@redspark/rsh-attachment/types'
 
 const IMAGE_EXTENSIONS: Readonly<Record<string, ImageMediaType>> = {
   '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg',

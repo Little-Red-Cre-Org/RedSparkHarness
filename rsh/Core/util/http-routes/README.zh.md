@@ -3,13 +3,13 @@ description: "定义 Node HTTP 路由约定，以及供所选 Web listener 共�
 kind: "package-library"
 ---
 
-# @deepseek-ai/dsh-http-routes
+# @redspark/rsh-http-routes
 
 [English](README.md) | 中文
 
 ## 概述
 
-`@deepseek-ai/dsh-http-routes` 为所选 Node HTTP listener 提供一套路由约定与可排空的内存表。Cordis Web 和 Native Web listener Provider 共用它；功能 owner 注册路由并持有其 disposer。HTTP 匹配先查精确路径，再查最长匹配前缀；upgrade 使用另一张精确路径表。Host 与 Native 入口只包含 Node 路由类型；浏览器 index 输入由 Client 入口提供。
+`@redspark/rsh-http-routes` 为所选 Node HTTP listener 提供一套路由约定与可排空的内存表。Cordis Web 和 Native Web listener Provider 共用它；功能 owner 注册路由并持有其 disposer。HTTP 匹配先查精确路径，再查最长匹配前缀；upgrade 使用另一张精确路径表。Host 与 Native 入口只包含 Node 路由类型；浏览器 index 输入由 Client 入口提供。
 
 ## 目录
 
@@ -31,7 +31,7 @@ kind: "package-library"
 ### 入口
 
 ```text
-import { HttpRouteTable } from '@deepseek-ai/dsh-http-routes/native'
+import { HttpRouteTable } from '@redspark/rsh-http-routes/native'
 
 const routes = new HttpRouteTable()
 const dispose = routes.register({ kind: 'exact', path: '/health', handler })

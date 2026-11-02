@@ -2,9 +2,9 @@ import { mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { Context } from '@deepseek-ai/cordis'
-import LocalCredentialProvider from '@deepseek-ai/dsh-credentials-local'
-import { credentialKey, credentialRef } from '@deepseek-ai/dsh-credentials'
+import { Context } from '@redspark/cordis'
+import LocalCredentialProvider from '@redspark/rsh-credentials-local'
+import { credentialKey, credentialRef } from '@redspark/rsh-credentials'
 import type { ProviderAuthInteraction } from '@earendil-works/pi-ai'
 import { authContextFrom, credentialStoreFrom, recordKeyFor, siwcRegistrationStoreFrom } from '../src/auth.ts'
 import { createSiwcOAuth } from '../src/siwc.ts'
@@ -13,7 +13,7 @@ const CODEX = recordKeyFor('openai-codex')
 
 const dirs: string[] = []
 
-/** A context whose credential records live in a throwaway `$DSH_HOME`. */
+/** A context whose credential records live in a throwaway `$RSH_HOME`. */
 async function stored(): Promise<Context> {
   const dir = await mkdtemp(join(tmpdir(), 'dsh-pi-auth-'))
   dirs.push(dir)

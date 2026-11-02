@@ -12,8 +12,8 @@ it('rejects vendored and scoped Cordis ids through the Native Vite configuration
     name: 'test-native-browser-graph-input',
     enforce: 'pre',
     resolveId(id) {
-      if (id === '@deepseek-ai/cordis-plugin-loader') return { id: loaderSource, external: true }
-      if (id === '@deepseek-ai/cordis') return { id, external: true }
+      if (id === '@redspark/cordis-plugin-loader') return { id: loaderSource, external: true }
+      if (id === '@redspark/cordis') return { id, external: true }
       return undefined
     },
   }

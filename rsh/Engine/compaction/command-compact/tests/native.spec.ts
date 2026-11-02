@@ -1,8 +1,8 @@
 /** Native `/compact` installation and shared result presentation. */
 import { describe, expect, it } from 'vitest'
-import { CommandId } from '@deepseek-ai/dsh-commands/brand'
-import { ManualCompactionError, CompactionId } from '@deepseek-ai/dsh-compaction/native'
-import { SessionSeq } from '@deepseek-ai/dsh-session/native'
+import { CommandId } from '@redspark/rsh-commands/brand'
+import { ManualCompactionError, CompactionId } from '@redspark/rsh-compaction/native'
+import { SessionSeq } from '@redspark/rsh-session/native'
 import { executeCompact } from '../src/common.ts'
 import { plugin } from '../src/native.ts'
 

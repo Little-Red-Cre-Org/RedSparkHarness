@@ -3,7 +3,7 @@ description: "浏览器 UI 渲染器：React slot 绑定、ctx.uiRenderer 与 ds
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-client-ui-renderer
+# @redspark/rsh-client-ui-renderer
 
 [English](README.md) | 中文
 
@@ -37,7 +37,7 @@ kind: "package-reference"
 
 ### 原生 Client profile
 
-Cordis-free Client 组合使用 React slot 时，选择 `@deepseek-ai/dsh-client-ui-renderer/native`。它的插件提供 `clientSlots` 与 `clientRenderer`；选中的原生 UI 插件注册 `root` slot 并提供 `clientApplication`。Web 原生启动包负责挂载应用；原生 host 负责释放 slot 注册、renderer 与 React root。首次渲染失败时，renderer 会在向 host 传递挂载错误前释放 React root，使修正后的组合可以复用同一个容器。现有产品 Client 名册仍需补齐原生 Provider 才能走这条路径。
+Cordis-free Client 组合使用 React slot 时，选择 `@redspark/rsh-client-ui-renderer/native`。它的插件提供 `clientSlots` 与 `clientRenderer`；选中的原生 UI 插件注册 `root` slot 并提供 `clientApplication`。Web 原生启动包负责挂载应用；原生 host 负责释放 slot 注册、renderer 与 React root。首次渲染失败时，renderer 会在向 host 传递挂载错误前释放 React root，使修正后的组合可以复用同一个容器。现有产品 Client 名册仍需补齐原生 Provider 才能走这条路径。
 
 原生入口的声明会暴露共享 slot API，因此 renderer 将 `dsh-client-ui-slots` 声明为 peer；应用需提供该包和 React peers。
 

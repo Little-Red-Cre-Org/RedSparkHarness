@@ -1,10 +1,10 @@
 /** Native approval policy, ordered answerers, cancellation, and Agent identity. */
 import { describe, expect, it } from 'vitest'
-import { NativeHost, NativeScope, resolveInstallation, type NativePlugin } from '@deepseek-ai/dsh-native-runtime'
-import { NativeAgentId, type NativeAgent, type NativeAgentRegistry } from '@deepseek-ai/dsh-native-agent'
-import { plugin as agentPlugin } from '@deepseek-ai/dsh-native-agent/native'
-import { sessionApprovalPolicy, type NativeApprovalServiceDefinition } from '@deepseek-ai/dsh-approval-definition'
-import { SessionId, Session } from '@deepseek-ai/dsh-session/native'
+import { NativeHost, NativeScope, resolveInstallation, type NativePlugin } from '@redspark/rsh-native-runtime'
+import { NativeAgentId, type NativeAgent, type NativeAgentRegistry } from '@redspark/rsh-native-agent'
+import { plugin as agentPlugin } from '@redspark/rsh-native-agent/native'
+import { sessionApprovalPolicy, type NativeApprovalServiceDefinition } from '@redspark/rsh-approval-definition'
+import { SessionId, Session } from '@redspark/rsh-session/native'
 import { NativeApprovalRequestId, plugin as approvalPlugin } from '../src/index.ts'
 
 async function fixture(policy?: 'ask' | 'never'): Promise<{

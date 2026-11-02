@@ -1,15 +1,15 @@
 /** Direct one-shot Agent driving, durable aggregation, flushing, and exit mapping. */
 
 import { afterEach, describe, expect, it } from 'vitest'
-import { Context } from '@deepseek-ai/cordis'
-import AgentRegistry from '@deepseek-ai/dsh-agent'
-import type { Agent, AgentHandle, AssistantStreamFrame, CreateAgentOptions } from '@deepseek-ai/dsh-agent'
-import AgentDefaultModelConfig from '@deepseek-ai/dsh-agent-default-model'
-import { LlmAttemptId, createAssistantMessage, type StreamChunk } from '@deepseek-ai/dsh-llm'
-import SessionStore from '@deepseek-ai/dsh-session'
-import SessionProjectionRegistry from '@deepseek-ai/dsh-session-projection'
-import type { Session, UserMessage } from '@deepseek-ai/dsh-session'
-import { createInboxStub } from '@deepseek-ai/dsh-agent-loop-testkit'
+import { Context } from '@redspark/cordis'
+import AgentRegistry from '@redspark/rsh-agent'
+import type { Agent, AgentHandle, AssistantStreamFrame, CreateAgentOptions } from '@redspark/rsh-agent'
+import AgentDefaultModelConfig from '@redspark/rsh-agent-default-model'
+import { LlmAttemptId, createAssistantMessage, type StreamChunk } from '@redspark/rsh-llm'
+import SessionStore from '@redspark/rsh-session'
+import SessionProjectionRegistry from '@redspark/rsh-session-projection'
+import type { Session, UserMessage } from '@redspark/rsh-session'
+import { createInboxStub } from '@redspark/rsh-agent-loop-testkit'
 import { apply, Config, internals } from '../src/index.ts'
 
 const originalInternals = { ...internals }

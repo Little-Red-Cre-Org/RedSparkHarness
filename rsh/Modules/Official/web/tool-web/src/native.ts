@@ -4,14 +4,14 @@
  * meta, prompt guidance); this module only binds that core to the native tool and prompt registries.
  * Call-deadline enforcement belongs to the tool-call timeout guard, exactly as on the Cordis path,
  * so the tools honor the invocation signal and do not arm their own timer.
- * @module @deepseek-ai/dsh-tool-web/native
+ * @module @redspark/rsh-tool-web/native
  */
 
-import type { NativePlugin, NativeScope } from '@deepseek-ai/dsh-native-runtime'
-import type { NativeValueToolContribution } from '@deepseek-ai/dsh-native-tools'
-import type {} from '@deepseek-ai/dsh-native-tools/native'
-import type {} from '@deepseek-ai/dsh-native-prompt/native'
-import type { NativeWebService } from '@deepseek-ai/dsh-web/native'
+import type { NativePlugin, NativeScope } from '@redspark/rsh-native-runtime'
+import type { NativeValueToolContribution } from '@redspark/rsh-native-tools'
+import type {} from '@redspark/rsh-native-tools/native'
+import type {} from '@redspark/rsh-native-prompt/native'
+import type { NativeWebService } from '@redspark/rsh-web/native'
 import {
   Config,
   assertToolWebLimits,
@@ -152,7 +152,7 @@ function resolveConfig(input: unknown): ResolvedConfig {
 
 /** Register the enabled web tools and their scope-aware prompt guidance. */
 export const plugin: NativePlugin = {
-  apiVersion: 1, name: '@deepseek-ai/dsh-tool-web', targets: ['host'], requires: ['tools', 'web'],
+  apiVersion: 1, name: '@redspark/rsh-tool-web', targets: ['host'], requires: ['tools', 'web'],
   optional: ['promptSections'], provides: [],
   resolve(input) {
     const config = resolveConfig(input)

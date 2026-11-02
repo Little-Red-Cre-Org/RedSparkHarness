@@ -3,7 +3,7 @@ description: "原生 headless profile 可通过可撤销原生注册表暴露选
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-compat-tool-fs
+# @redspark/rsh-compat-tool-fs
 
 [English](README.md) | 中文
 

@@ -1,11 +1,11 @@
 /**
  * Model-facing workspace instruction rendering within an explicit byte budget.
  *
- * @module @deepseek-ai/dsh-agent-instructions/render
+ * @module @redspark/rsh-agent-instructions/render
  */
 
 import { basename, dirname } from 'node:path'
-import { DEFAULT_DSH_HOME_DISPLAY, DSH_HOME_ENV } from '@deepseek-ai/dsh-home-paths'
+import { DEFAULT_DSH_HOME_DISPLAY, RSH_HOME_ENV } from '@redspark/rsh-home-paths'
 import type { InstructionFile, LoadedInstructionFile } from './files.ts'
 
 const SYSTEM_REMINDER_OPEN = '<system-reminder>'
@@ -91,8 +91,8 @@ function sectionText(file: LoadedInstructionFile): string {
 export const USER_GLOBAL_DIRECTORY = 'user-global'
 
 /**
- * File name of the single user-global instruction file under `$DSH_HOME`.
- * Discovery (`$DSH_HOME/<name>`) and reconciliation (the user-global scope key's
+ * File name of the single user-global instruction file under `$RSH_HOME`.
+ * Discovery (`$RSH_HOME/<name>`) and reconciliation (the user-global scope key's
  * candidate component) both key on this name, so it lives in one place: were the
  * two to disagree, the user-global instruction would load but never reconcile.
  */
@@ -106,10 +106,10 @@ export const USER_GLOBAL_FILE = 'AGENTS.md'
 export function scopeForDisplayPath(displayPath: string): string {
   // The user-global home is rendered symbolically by `dshHomeDisplay`: the
   // default label follows the on-disk home directory name, and any configured
-  // home renders as `$DSH_HOME`. Both must map back to the single user-global
+  // home renders as `$RSH_HOME`. Both must map back to the single user-global
   // scope, or a renamed home (e.g. `~/.redspark`) would key the same file under
   // a directory scope that no baseline scope ever matches.
-  const userGlobalPrefixes = [DEFAULT_DSH_HOME_DISPLAY, `$${DSH_HOME_ENV}`]
+  const userGlobalPrefixes = [DEFAULT_DSH_HOME_DISPLAY, `$${RSH_HOME_ENV}`]
   if (userGlobalPrefixes.some(prefix => displayPath === `${prefix}/${USER_GLOBAL_FILE}`)) return USER_GLOBAL_DIRECTORY
   return dirname(displayPath)
 }

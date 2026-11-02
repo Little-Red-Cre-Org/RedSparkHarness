@@ -1,10 +1,10 @@
 /** Question composer props and one pending Remote waterfall response. */
-import type { PropsLocale, PropsRuntime, PropsStore } from '@deepseek-ai/dsh-client-ui-slots'
+import type { PropsLocale, PropsRuntime, PropsStore } from '@redspark/rsh-client-ui-slots'
 // The client module declares the conversation.composer SlotMap entry required by PropsRuntime.
-import type { SessionId } from '@deepseek-ai/dsh-session/types'
+import type { SessionId } from '@redspark/rsh-session/types'
 import type {
   AskUserQuestionAnswer, AskUserQuestionItem,
-} from '@deepseek-ai/dsh-user-questions'
+} from '@redspark/rsh-user-questions'
 import type { createQuestionDraftStore } from '../draft-store.ts'
 import { planReviewOf } from '../../question-presentation.ts'
 import type { PlanReview } from '../../question-presentation.ts'
@@ -12,7 +12,7 @@ import type { PlanReview } from '../../question-presentation.ts'
 export { planReviewOf }
 export type { PlanReview }
 
-declare module '@deepseek-ai/dsh-client-ui-session/client' {
+declare module '@redspark/rsh-client-ui-session/client' {
   interface SessionPendingInteractionMap {
     /** Pending question or plan-review request. */
     question: PendingQuestion

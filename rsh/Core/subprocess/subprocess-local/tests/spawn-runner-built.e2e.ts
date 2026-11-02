@@ -4,7 +4,7 @@ import { existsSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
-import type { SubprocessSpawnSpec } from '@deepseek-ai/dsh-subprocess'
+import type { SubprocessSpawnSpec } from '@redspark/rsh-subprocess'
 import {
   cleanupLinuxLaunchFiles,
   createLinuxLaunchFiles,
@@ -22,7 +22,7 @@ import { launchWindowsJob } from '../src/windows-job.ts'
 
 const repoRoot = resolve(import.meta.dirname, '../../../../..')
 const sourceRunner = resolve(repoRoot, 'rsh/Core/subprocess/subprocess-local/src/bin.ts')
-const builtRunner = fileURLToPath(import.meta.resolve('@deepseek-ai/dsh-subprocess-local/runner'))
+const builtRunner = fileURLToPath(import.meta.resolve('@redspark/rsh-subprocess-local/runner'))
 
 function targetEnv(): Record<string, string> {
   return {

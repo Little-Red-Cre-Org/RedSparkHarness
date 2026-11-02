@@ -3,7 +3,7 @@ description: "通过标准 ACP 协议驱动持久化的原生 Session。"
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-native-acp
+# @redspark/rsh-native-acp
 
 [English](README.md) | 中文
 

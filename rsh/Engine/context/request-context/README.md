@@ -3,7 +3,7 @@ description: "Provide scoped Native request-context Providers whose messages and
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-request-context
+# @redspark/rsh-request-context
 
 English | [中文](README.zh.md)
 
@@ -38,7 +38,7 @@ Add the Provider to the profile's installation list. It accepts no configuration
 {
   "formatVersion": 1,
   "installations": [
-    { "id": "request-context", "plugin": "@deepseek-ai/dsh-request-context", "scope": "root" }
+    { "id": "request-context", "plugin": "@redspark/rsh-request-context", "scope": "root" }
   ]
 }
 ```

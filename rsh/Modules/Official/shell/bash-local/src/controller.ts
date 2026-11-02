@@ -1,10 +1,10 @@
 /** Local Bash shell policy over the shared managed process controller. */
-import type { ShellExecSpec, ShellProcess } from '@deepseek-ai/dsh-shell/native'
-import type { SubprocessOperations } from '@deepseek-ai/dsh-subprocess/native'
+import type { ShellExecSpec, ShellProcess } from '@redspark/rsh-shell/native'
+import type { SubprocessOperations } from '@redspark/rsh-subprocess/native'
 import {
   LocalShellController, assertServiceableConfig, resolveConfig as resolveLocalConfig,
   type Config as LocalConfig, type ResolvedConfig as ResolvedLocalConfig,
-} from '@deepseek-ai/dsh-shell-process-local'
+} from '@redspark/rsh-shell-process-local'
 
 /** Terminal defaults applied before caller and trusted DSH environment. */
 export const ENV_OVERRIDES = {

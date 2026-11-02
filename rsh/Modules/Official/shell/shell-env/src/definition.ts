@@ -1,6 +1,6 @@
 /** Native managed shell-environment capability shared by Providers and Consumers. */
-import type { NativeToolExecution } from '@deepseek-ai/dsh-native-tools'
-import type { DshEnvironment, DshEnvironmentKey } from '@deepseek-ai/dsh-shell/native'
+import type { NativeToolExecution } from '@redspark/rsh-native-tools'
+import type { DshEnvironment, DshEnvironmentKey } from '@redspark/rsh-shell/native'
 
 /** Model-visible metadata for one managed environment variable. */
 export interface ShellEnvVariable {
@@ -51,6 +51,6 @@ export interface ShellEnvironment<Execution> {
   list(): ShellEnvVariableInfo[]
 }
 
-declare module '@deepseek-ai/dsh-native-runtime' {
+declare module '@redspark/rsh-native-runtime' {
   interface NativeServices { shellEnv: ShellEnvironment<NativeToolExecution> }
 }

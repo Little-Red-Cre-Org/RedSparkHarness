@@ -4,19 +4,19 @@
  * holds this package's 'root' row in this compilation unit, but consumers
  * merge keys in; the rule fires on the narrow-map view, not on real
  * redundancy. */
-import { Service } from '@deepseek-ai/cordis'
-import type { Context } from '@deepseek-ai/cordis'
-import type { SlotCore } from '@deepseek-ai/dsh-client-ui-slots'
+import { Service } from '@redspark/cordis'
+import type { Context } from '@redspark/cordis'
+import type { SlotCore } from '@redspark/rsh-client-ui-slots'
 import type {
   LiveSlotNode, LocaleFace, OwnerOf, SlotMap, SlotRenderer, SlotScope, SlotScopeAdapter,
   RootStandardSourceContribution, ScopedStandardSourceBinding, SlotSpec,
   StoredEntry,
-} from '@deepseek-ai/dsh-client-ui-slots'
+} from '@redspark/rsh-client-ui-slots'
 import { SlotRuntime, type SlotInjectionEffect } from '../slot-runtime.ts'
 
 export type { RootOwnerProps } from '../slot-runtime.ts'
 
-declare module '@deepseek-ai/cordis' {
+declare module '@redspark/cordis' {
   interface Events {
     /**
      * A slot declaration or registration set changed.

@@ -2,8 +2,8 @@
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import type { ComponentProps } from 'react'
 import { afterEach, expect, it, vi } from 'vitest'
-import Schema from '@deepseek-ai/schemastery'
-import type { NativeSessionClient, NativeSettingsDescriptor } from '@deepseek-ai/dsh-client-native-session/native'
+import Schema from '@redspark/schemastery'
+import type { NativeSessionClient, NativeSettingsDescriptor } from '@redspark/rsh-client-native-session/native'
 import { en } from '../src/locales.ts'
 import { ModelsSettingsPage } from '../src/models-settings-page.tsx'
 

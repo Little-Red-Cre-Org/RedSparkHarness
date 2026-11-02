@@ -21,11 +21,11 @@
  *   see `client/native-dispatch.ts` for the Native equivalent.
  */
 
-import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
-import type { SessionId } from '@deepseek-ai/dsh-session/types'
-import type { SnapshotStore } from '@deepseek-ai/dsh-client-store'
-import type {} from '@deepseek-ai/dsh-client-ui-renderer/native'
-import type {} from '@deepseek-ai/dsh-client-ui-session/native'
+import type { NativePlugin } from '@redspark/rsh-native-runtime'
+import type { SessionId } from '@redspark/rsh-session/types'
+import type { SnapshotStore } from '@redspark/rsh-client-store'
+import type {} from '@redspark/rsh-client-ui-renderer/native'
+import type {} from '@redspark/rsh-client-ui-session/native'
 import type { InputDispatch } from './client/native-dispatch.ts'
 import { InputTriggerController } from './client/controller.ts'
 import type { MenuState, TriggerHit } from './core/contract.ts'
@@ -106,7 +106,7 @@ export interface NativeInputTriggerService {
   dispose(): void
 }
 
-declare module '@deepseek-ai/dsh-native-runtime' {
+declare module '@redspark/rsh-native-runtime' {
   interface NativeServices {
     /** Trigger detection, candidate menu and pick routing for Native Clients. */
     clientNativeInputTrigger: NativeInputTriggerService
@@ -286,7 +286,7 @@ export function createNativeInputTrigger(
 /** Native trigger pipeline Provider for independently installed Client modules. */
 export const plugin: NativePlugin = {
   apiVersion: 1,
-  name: '@deepseek-ai/dsh-client-ui-input-trigger',
+  name: '@redspark/rsh-client-ui-input-trigger',
   targets: ['client'],
   requires: ['clientNativeConversation'],
   provides: ['clientNativeInputTrigger'],

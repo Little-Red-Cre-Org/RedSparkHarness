@@ -3,7 +3,7 @@ description: "面向用户与维护者的会话本地持久提醒说明：schedu
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-schedule
+# @redspark/rsh-schedule
 
 [English](README.md) | 中文
 
@@ -46,7 +46,7 @@ Cordis overlay 安装在加载后创建的根 Agent 上。Native profile 可以�
 ```json
 {
   "id": "schedules",
-  "plugin": "@deepseek-ai/dsh-schedule",
+  "plugin": "@redspark/rsh-schedule",
   "scope": "root"
 }
 ```
@@ -79,9 +79,9 @@ Native profile 必须提供 `activeSessions` 和 `tools`；省略 `config` 或�
 
 包有独立的 Cordis 与 Native Host 入口。`src/index.ts` 保留 Cordis overlay，要求 agent、session、tool 和 persistence 服务，并安装在插件加载后创建的根 Agent 上。`src/native.ts` 要求 `activeSessions` 和 `tools`，附加到现有和未来的确切根 Session owner，并拒绝来自委托 Agent 或其他 Session 的调用。Cordis 与 invariant 入口拥有仅供 Cordis 使用的 peers；因此 Native-only 消费者无需安装这些可选 peers。两个入口复用同一持久事件 fold 与串行管理操作；任何入口都不会安装到 child Agent。
 
-Time-context 不是 Schedule 的依赖。官方 Web overlay 挂载 `@deepseek-ai/dsh-time-context`，让模型能够按浏览器请求本地时区解释自然语言；但模型仍必须向 `schedule_create` 传入显式偏移量或 `time_zone`；Schedule 绝不会从模型上下文导入或推断该值。
+Time-context 不是 Schedule 的依赖。官方 Web overlay 挂载 `@redspark/rsh-time-context`，让模型能够按浏览器请求本地时区解释自然语言；但模型仍必须向 `schedule_create` 传入显式偏移量或 `time_zone`；Schedule 绝不会从模型上下文导入或推断该值。
 
-Session projection 是可选能力。`ctx.sessionProjections` 存在时，插件会注册严格的 `schedule` 单元并公开完整的活动 `ScheduleRecord[]`；不带注册表的 headless 组合仍保留相同工具与 runtime。浏览器安全的记录词汇可从纯类型导出 `@deepseek-ai/dsh-schedule/client` 获取。随附 Web bundle 通过 disabled row 解析 `ui-schedule`，显式 Schedule overlay 再与 Host Schedule 服务一起启用该 row。
+Session projection 是可选能力。`ctx.sessionProjections` 存在时，插件会注册严格的 `schedule` 单元并公开完整的活动 `ScheduleRecord[]`；不带注册表的 headless 组合仍保留相同工具与 runtime。浏览器安全的记录词汇可从纯类型导出 `@redspark/rsh-schedule/client` 获取。随附 Web bundle 通过 disabled row 解析 `ui-schedule`，显式 Schedule overlay 再与 Host Schedule 服务一起启用该 row。
 
 ### 设计理念
 

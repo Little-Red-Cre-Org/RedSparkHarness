@@ -1,13 +1,13 @@
 /**
  * Session-visible workspace instruction state and dynamic reconciliation.
  *
- * @module @deepseek-ai/dsh-agent-instructions/state
+ * @module @redspark/rsh-agent-instructions/state
  */
 
-import { createUserMessage } from '@deepseek-ai/dsh-llm/native'
-import type { Message } from '@deepseek-ai/dsh-llm/native'
-import type { Session, UserMessage } from '@deepseek-ai/dsh-session/native'
-import type { FileSystemOperations as FileSystem, FsVersion } from '@deepseek-ai/dsh-fs/native'
+import { createUserMessage } from '@redspark/rsh-llm/native'
+import type { Message } from '@redspark/rsh-llm/native'
+import type { Session, UserMessage } from '@redspark/rsh-session/native'
+import type { FileSystemOperations as FileSystem, FsVersion } from '@redspark/rsh-fs/native'
 import type { ResolvedConfig } from './config.ts'
 import { instructionContentSha1, trimmedInstructionDigest } from './digest.ts'
 import {
@@ -44,7 +44,7 @@ export interface AgentInstructionSource {
   changes: AgentInstructionChange[]
 }
 
-declare module '@deepseek-ai/dsh-llm/message' {
+declare module '@redspark/rsh-llm/message' {
   interface MessageSourceMap {
     'agent-instructions': AgentInstructionSource
   }

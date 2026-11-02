@@ -1,7 +1,7 @@
 # Install this package before adding its patch to a Web/Desktop profile.
 - insert:
     - id: task-scheduler
-      name: '@deepseek-ai/dsh-task-scheduler'
+      name: '@redspark/rsh-task-scheduler'
       config:
         path: !!js dshHomePath('task-scheduler.sqlite')
         pollMs: 1000

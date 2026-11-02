@@ -7,23 +7,23 @@
  * projection pair through the standard-kit `useProjection`; zero client-side
  * plan state.
  */
-import type {} from '@deepseek-ai/dsh-api-remotes/client'
-import type { Context as ClientContext } from '@deepseek-ai/cordis'
-import type { SessionId } from '@deepseek-ai/dsh-session/types'
+import type {} from '@redspark/rsh-api-remotes/client'
+import type { Context as ClientContext } from '@redspark/cordis'
+import type { SessionId } from '@redspark/rsh-session/types'
 // Type-only: pulls the ui-conversation SlotMap merge (the input.plan seat).
-import type {} from '@deepseek-ai/dsh-client-ui-conversation/client'
+import type {} from '@redspark/rsh-client-ui-conversation/client'
 // Type-only: pulls the locale plugin's Context merge (ctx.locale).
-import type {} from '@deepseek-ai/dsh-client-locale/client'
+import type {} from '@redspark/rsh-client-locale/client'
 // Type-only: pulls the `plan` SessionProjectionMap merge for useProjection.
-import type {} from '@deepseek-ai/dsh-plan-mode/client'
-import type {} from '@deepseek-ai/dsh-client-ui-renderer/client'
-import type {} from '@deepseek-ai/dsh-client-ui-session/client'
+import type {} from '@redspark/rsh-plan-mode/client'
+import type {} from '@redspark/rsh-client-ui-renderer/client'
+import type {} from '@redspark/rsh-client-ui-session/client'
 import { PlanChip } from './PlanModeControl.tsx'
 import { en, zh, type PlanKey } from './locales.ts'
 
 export type { PlanKey } from './locales.ts'
 
-declare module '@deepseek-ai/dsh-client-ui-slots' {
+declare module '@redspark/rsh-client-ui-slots' {
   interface LocaleNamespaceMap {
     /** The composer plan chip's copy. */
     plan: PlanKey

@@ -6,21 +6,21 @@ import { basename, dirname, join, resolve } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { execa } from 'execa'
 import { expect, it } from 'vitest'
-import { JsonlSessionBackend } from '@deepseek-ai/dsh-session-persistence-jsonl'
-import { SESSION_FORMAT_VERSION } from '@deepseek-ai/dsh-session/native'
-import { deriveReplayScript, parseSessionLog } from '@deepseek-ai/dsh-llm-replay'
+import { JsonlSessionBackend } from '@redspark/rsh-session-persistence-jsonl'
+import { SESSION_FORMAT_VERSION } from '@redspark/rsh-session/native'
+import { deriveReplayScript, parseSessionLog } from '@redspark/rsh-llm-replay'
 import { formatSystemPromptSnapshot, formatToolSchemasSnapshot, normalizedSystemPrompts, normalizedToolSchemas,
-  normalizeSessionSnapshot, redactSessionSnapshotIds, sessionFixtureName, sessionFixtureNames } from '@deepseek-ai/dsh-session-snapshot'
+  normalizeSessionSnapshot, redactSessionSnapshotIds, sessionFixtureName, sessionFixtureNames } from '@redspark/rsh-session-snapshot'
 import { shippedNativeProfileComposition } from '../../rsh/Programs/CLI/src/native-profile-template.ts'
 import { normalizeWorkspacePaths } from './external-operation/fixtures/workspace-paths.mjs'
 
 const root = fileURLToPath(new URL('../../', import.meta.url))
 const scenario = join(root, 'snapshots/native-headless/ptc-external-cancel')
 const fixtureOutput = join(scenario, sessionFixtureName(0, SESSION_FORMAT_VERSION))
-const installedRoot = process.env.DSH_PTC_EXTERNAL_CANCEL_INSTALLED_ROOT === undefined
-  ? undefined : resolve(process.env.DSH_PTC_EXTERNAL_CANCEL_INSTALLED_ROOT)
+const installedRoot = process.env.RSH_PTC_EXTERNAL_CANCEL_INSTALLED_ROOT === undefined
+  ? undefined : resolve(process.env.RSH_PTC_EXTERNAL_CANCEL_INSTALLED_ROOT)
 const bin = installedRoot === undefined ? join(root, 'rsh/Programs/CLI/lib/bin.js')
-  : join(installedRoot, 'node_modules/@deepseek-ai/dsh/lib/bin.js')
+  : join(installedRoot, 'node_modules/@redspark/dsh/lib/bin.js')
 const contextProbe = pathToFileURL(join(root, 'rsh/Programs/CLI/tests/fixtures/deny-cordis-context-register.mjs')).href
 const task = 'Delegate a nested task through the external child and cancel it during the nested request.'
 
@@ -52,12 +52,12 @@ function installFixturePackage(profileModules: string, packageName: string, sour
 function startCli(home: string, task: string) {
   return execa(process.execPath, [
     '--import', contextProbe, bin, '--profile', 'native-headless', task,
-  ], { env: { ...process.env, DSH_HOME: home }, reject: false, timeout: 45_000 })
+  ], { env: { ...process.env, RSH_HOME: home }, reject: false, timeout: 45_000 })
 }
 
 it('records and cold-replays PTC cancellation through a captured external Responses generation', async () => {
   if (!existsSync(bin)) throw new Error('build the shipped dsh CLI before running ptc-external-cancel snapshot')
-  const mode = process.env.DSH_SNAPSHOT
+  const mode = process.env.RSH_SNAPSHOT
   const fixtureNames = readdirSync(scenario).filter(name => name.startsWith('session') && name.endsWith('.jsonl'))
   const selectedFixture = fixtureNames.length === 0 ? undefined : sessionFixtureNames(fixtureNames)[0]
   const fixture = selectedFixture === undefined ? fixtureOutput : join(scenario, selectedFixture)
@@ -93,7 +93,7 @@ it('records and cold-replays PTC cancellation through a captured external Respon
       mkdirSync(home)
       mkdirSync(profile, { recursive: true })
       mkdirSync(workspace)
-      mkdirSync(join(profileModules, '@deepseek-ai'), { recursive: true })
+      mkdirSync(join(profileModules, '@redspark'), { recursive: true })
       writeFileSync(join(profile, 'package.json'), JSON.stringify({ name: 'native-ptc-external-cancel-profile', private: true,
         dsh: { profile: { runtime: 'native', config: 'rsh.profile.json' } } }))
 
@@ -115,9 +115,9 @@ it('records and cold-replays PTC cancellation through a captured external Respon
         ['dsh-code-runtime-process-sandbox', 'rsh/Modules/Official/code-runtime/code-runtime-process-sandbox'],
         ['dsh-tool-code-runtime', 'rsh/Modules/Official/code-runtime/tool-code-runtime'],
       ] as const) {
-        const link = join(profileModules, '@deepseek-ai', name)
+        const link = join(profileModules, '@redspark', name)
         const source = installedRoot === undefined ? join(root, path)
-          : join(installedRoot, 'node_modules/@deepseek-ai', name)
+          : join(installedRoot, 'node_modules/@redspark', name)
         if (!existsSync(source)) throw new Error(`ptc-external-cancel: missing runtime package ${source}`)
         symlinkSync(source, link, 'junction')
         links.push(link)
@@ -139,7 +139,7 @@ it('records and cold-replays PTC cancellation through a captured external Respon
         if (row.id === 'subagents') return { ...row, config: { providerName: 'ptc-cancel-fixture' } }
         if (row.id === 'storage') return { ...row, config: { root: sessions, compression: 'none' } }
         if (row.id === 'sandbox-policy') return { ...row, config: { mode: 'workspace-write', workspaceRoot: workspace } }
-        if (row.id === 'fs') return { ...row, plugin: '@deepseek-ai/dsh-fs-local', config: { cwd: workspace } }
+        if (row.id === 'fs') return { ...row, plugin: '@redspark/rsh-fs-local', config: { cwd: workspace } }
         if (row.id === 'pi-ai') return { ...row, plugin: 'native-ptc-external-cancel-model',
           config: { audit, signalMode: signal === undefined ? 'handler-only' : 'parent-os-signal',
             ...(rootScript === undefined ? {} : { rootScript }),
@@ -150,9 +150,9 @@ it('records and cold-replays PTC cancellation through a captured external Respon
       if (subagentIndex < 0) throw new Error('native-headless template omitted NativeSubagent')
       installations.splice(subagentIndex, 0, { id: 'ptc-cancel-driver', plugin: 'native-ptc-external-cancel-driver', scope: 'root',
         config: { audit, ...(operationScript === undefined ? {} : { operationScript }) } })
-      installations.push({ id: 'code-tool', plugin: '@deepseek-ai/dsh-tool-code-runtime', scope: 'root',
+      installations.push({ id: 'code-tool', plugin: '@redspark/rsh-tool-code-runtime', scope: 'root',
         config: { sdkPrompt: true, maxParallelSubCalls: 2 } })
-      installations.push({ id: 'subagent-tool', plugin: '@deepseek-ai/dsh-tool-subagent', scope: 'root',
+      installations.push({ id: 'subagent-tool', plugin: '@redspark/rsh-tool-subagent', scope: 'root',
         config: { toolName: 'subagent', maxDepth: 2 } })
       writeFileSync(join(profile, 'rsh.profile.json'), JSON.stringify({ ...composition, installations }))
 

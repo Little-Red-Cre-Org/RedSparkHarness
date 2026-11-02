@@ -1,21 +1,21 @@
 /** Browser Remote bridge for human-guided authorization flows. */
 
 import { randomUUID } from 'node:crypto'
-import { Context } from '@deepseek-ai/cordis'
+import { Context } from '@redspark/cordis'
 import {
   AuthorizationDeclinedError,
   AuthorizationError,
-} from '@deepseek-ai/dsh-authorization'
-import type { AuthorizationService } from '@deepseek-ai/dsh-authorization'
+} from '@redspark/rsh-authorization'
+import type { AuthorizationService } from '@redspark/rsh-authorization'
 import type {
   AuthorizationEntry,
   AuthorizationNotice,
   AuthorizationPrompt,
-} from '@deepseek-ai/dsh-authorization/types'
-import { parseCredentialKey } from '@deepseek-ai/dsh-credentials'
-import type { CredentialProvider } from '@deepseek-ai/dsh-credentials'
-import type { CredentialKey } from '@deepseek-ai/dsh-credentials/types'
-import { Remote, RemoteError, TypertRemoteService } from '@deepseek-ai/dsh-typert-protocol'
+} from '@redspark/rsh-authorization/types'
+import { parseCredentialKey } from '@redspark/rsh-credentials'
+import type { CredentialProvider } from '@redspark/rsh-credentials'
+import type { CredentialKey } from '@redspark/rsh-credentials/types'
+import { Remote, RemoteError, TypertRemoteService } from '@redspark/rsh-typert-protocol'
 import type {
   AuthorizationAttemptId,
   AuthorizationEntryView,
@@ -40,7 +40,7 @@ export interface AuthorizationControllerConfig {
   readonly keys: readonly string[]
 }
 
-declare module '@deepseek-ai/cordis' {
+declare module '@redspark/cordis' {
   interface Context {
     /** Host owner of the `authorization` Remote namespace. */
     authorizationController: AuthorizationController

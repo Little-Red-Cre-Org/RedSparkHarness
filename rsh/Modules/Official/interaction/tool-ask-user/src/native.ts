@@ -1,9 +1,9 @@
 /** Native model-facing questions over the selected human interaction Definition. */
-import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
-import type { JsonSchemaNode } from '@deepseek-ai/dsh-native-tools/json-schema'
-export type {} from '@deepseek-ai/dsh-native-tools/native'
-export type {} from '@deepseek-ai/dsh-user-questions/native'
-import type { AskUserQuestionOption } from '@deepseek-ai/dsh-user-questions/native'
+import type { NativePlugin } from '@redspark/rsh-native-runtime'
+import type { JsonSchemaNode } from '@redspark/rsh-native-tools/json-schema'
+export type {} from '@redspark/rsh-native-tools/native'
+export type {} from '@redspark/rsh-user-questions/native'
+import type { AskUserQuestionOption } from '@redspark/rsh-user-questions/native'
 
 interface Arguments {
   readonly questions: {

@@ -3,7 +3,7 @@ description: "面向组合作者与能力消费方的子进程服务（`ctx.subp
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-subprocess
+# @redspark/rsh-subprocess
 
 [English](README.md) | 中文
 
@@ -36,8 +36,8 @@ kind: "package-reference"
 每个组合由唯一一个提供方注册 `ctx.subprocess`；把它与经由它 spawn 的消费方放在一起加载——bash 执行器、LSP 主机、PTY shell 后端或进程外 subagent 后端。加载第二个提供方会快速失败（每个上下文只有一个服务，这是 Cordis 的标准行为）。
 
 ```yaml
-- name: '@deepseek-ai/dsh-subprocess-local'
-- name: '@deepseek-ai/dsh-bash-local'
+- name: '@redspark/rsh-subprocess-local'
+- name: '@redspark/rsh-bash-local'
 ```
 
 ### 启动受管进程
@@ -74,7 +74,7 @@ const output = handle.collected.stdout?.readFrom(0)
 
 ### 每个子进程起步时的环境
 
-普通 subprocess 请求使用 scrub-overlay 模式：形似凭据的名称与环境中的 `DSH_*` 事实都会被清除，再应用显式条目；显式的 `undefined` 墓碑值可移除一个普通环境项。Child connection 也可选择 `envMode: 'replace'`，此时子进程只接收提供的环境条目，不继承或清理 ambient 环境。
+普通 subprocess 请求使用 scrub-overlay 模式：形似凭据的名称与环境中的 `RSH_*` 事实都会被清除，再应用显式条目；显式的 `undefined` 墓碑值可移除一个普通环境项。Child connection 也可选择 `envMode: 'replace'`，此时子进程只接收提供的环境条目，不继承或清理 ambient 环境。
 
 ### 可能出错的地方
 
@@ -101,7 +101,7 @@ const output = handle.collected.stdout?.readFrom(0)
 | [`src/index.ts`](src/index.ts) | Cordis 服务入口：抽象 `SubprocessRuntime`、`ctx.subprocess` 注册和共享的 `scrubbedParentEnv` 清除 |
 | [`src/native.ts`](src/native.ts) | 无框架依赖的 `SubprocessOperations` 与 `ChildConnectionDefinition` 服务契约 |
 | [`src/connection.ts`](src/connection.ts) | 子进程连接的 EOF、提供方终止及受管范围释放 |
-| [`src/types.ts`](src/types.ts) | 词汇：spawn/connection spec、环境模式、stdio 句柄、读取器、结果、`DSH_*` 命名空间 |
+| [`src/types.ts`](src/types.ts) | 词汇：spawn/connection spec、环境模式、stdio 句柄、读取器、结果、`RSH_*` 命名空间 |
 | — | 进程观测和 OS 信号由 Provider 拥有；连接消费方拥有协议关闭与宽限期数值。 |
 
 ### 数据模型与流程
@@ -121,7 +121,7 @@ spawn 会立即返回活动句柄，而不公开目标身份。`done` 独立报�
 
 当包级约定不够用时阅读以下页面。它们从穷尽式类型参考逐步进入各提供方，以及 seam 背后的决策证据。
 
-- [子进程子系统](../../../Docs/subsystems/subprocess.zh.md)——spawn spec、输出读取器、结果与完整的 `DSH_*` 环境。
+- [子进程子系统](../../../Docs/subsystems/subprocess.zh.md)——spawn spec、输出读取器、结果与完整的 `RSH_*` 环境。
 - [dsh-subprocess-local](../subprocess-local/README.zh.md)——实现本约定的本地宿主提供方。
 - [dsh-subprocess-e2b](../../../Modules/Official/e2b/subprocess-e2b/README.zh.md)——同一 seam 的远程 E2B 提供方。
 - [dsh-bash-local](../../../Modules/Official/shell/bash-local/README.zh.md)——最大的消费方：经由本服务运行 bash 命令。

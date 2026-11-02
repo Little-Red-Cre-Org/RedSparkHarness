@@ -14,24 +14,24 @@ import type {
   InboxTarget,
   PreStepDecision,
   RequestErrorAction,
-} from '@deepseek-ai/dsh-agent'
-import { agentEvents, assembleContextFor } from '@deepseek-ai/dsh-agent'
-import type { GenerateOptions, LlmCallConfig, Message, PreparedLlmCall } from '@deepseek-ai/dsh-llm'
+} from '@redspark/rsh-agent'
+import { agentEvents, assembleContextFor } from '@redspark/rsh-agent'
+import type { GenerateOptions, LlmCallConfig, Message, PreparedLlmCall } from '@redspark/rsh-llm'
 import {
   LlmError,
   createAssistantMessage,
   errorChain,
   markAgentLoopRequest,
-} from '@deepseek-ai/dsh-llm'
-import { deepFreeze } from '@deepseek-ai/dsh-util-values'
-import type { Scope } from '@deepseek-ai/dsh-scope'
-import { createScope } from '@deepseek-ai/dsh-scope'
-import type { EpochHeader, RequestContext, Session, SessionId, TurnEndReason, UserMessage } from '@deepseek-ai/dsh-session'
-import { canonicalHeader, headerEquals } from '@deepseek-ai/dsh-session'
-import { joinContextSections, renderContextSections, renderPrompt } from '@deepseek-ai/dsh-system-prompt'
-import type { PromptAssembly } from '@deepseek-ai/dsh-system-prompt'
-import type {} from '@deepseek-ai/dsh-session-projection'
-import type { Context } from '@deepseek-ai/cordis'
+} from '@redspark/rsh-llm'
+import { deepFreeze } from '@redspark/rsh-util-values'
+import type { Scope } from '@redspark/rsh-scope'
+import { createScope } from '@redspark/rsh-scope'
+import type { EpochHeader, RequestContext, Session, SessionId, TurnEndReason, UserMessage } from '@redspark/rsh-session'
+import { canonicalHeader, headerEquals } from '@redspark/rsh-session'
+import { joinContextSections, renderContextSections, renderPrompt } from '@redspark/rsh-system-prompt'
+import type { PromptAssembly } from '@redspark/rsh-system-prompt'
+import type {} from '@redspark/rsh-session-projection'
+import type { Context } from '@redspark/cordis'
 import { ReactLoopInbox } from './inbox.ts'
 import { RuntimeContextProjection } from './runtime-context.ts'
 import { AssistantStreamAttempt } from './assistant-stream.ts'

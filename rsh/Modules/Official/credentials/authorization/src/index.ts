@@ -23,11 +23,11 @@
  * })
  * ```
  *
- * @module @deepseek-ai/dsh-authorization
+ * @module @redspark/rsh-authorization
  */
 
-import { Context, Service } from '@deepseek-ai/cordis'
-import type { CredentialKey } from '@deepseek-ai/dsh-credentials'
+import { Context, Service } from '@redspark/cordis'
+import type { CredentialKey } from '@redspark/rsh-credentials'
 
 import { AuthorizationDeclinedError, AuthorizationError, isSafeDiagnostic } from './errors.ts'
 import type {
@@ -42,7 +42,7 @@ export type {
   AuthorizationStatus,
 } from './types.ts'
 
-declare module '@deepseek-ai/cordis' {
+declare module '@redspark/cordis' {
   interface Context {
     authorization: AuthorizationService
   }

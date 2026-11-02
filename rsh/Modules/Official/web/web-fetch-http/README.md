@@ -3,7 +3,7 @@ description: "The anonymous public HTTP(S) fetch backend for ctx.web: how deploy
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-web-fetch-http
+# @redspark/rsh-web-fetch-http
 
 English | [中文](README.zh.md)
 
@@ -36,8 +36,8 @@ Choose this backend when a deployment must fetch public pages with bounded outpu
 Load the web service and the provider; configurable limits have safe defaults and validate at plugin construction, so an invalid value fails loudly instead of building a provider with nonsensical caps. The URL security limit is fixed at 2,048 characters.
 
 ```yaml
-- name: '@deepseek-ai/dsh-web'
-- name: '@deepseek-ai/dsh-web-fetch-http'
+- name: '@redspark/rsh-web'
+- name: '@redspark/rsh-web-fetch-http'
 ```
 
 | Field | Default | Meaning |
@@ -46,7 +46,7 @@ Load the web service and the provider; configurable limits have safe defaults an
 | `maxBodyChars` | `100,000` | Maximum decoded body length in characters |
 | `timeoutMs` | `30,000` | Fetch timeout — a resource backstop, not the model-facing tool budget |
 | `maxRedirects` | `5` | Maximum same-origin redirect hops (`0` follows none) |
-| `userAgent` | `deepseek-harness/…` | `User-Agent` header sent on every request |
+| `userAgent` | `redspark-harness/…` | `User-Agent` header sent on every request |
 
 The generated [configuration catalog](../../../../Docs/config-catalog.md#deepseek-aidsh-web-fetch-http) is the exhaustive source for every accepted field and its JSDoc.
 

@@ -6,10 +6,10 @@
  * session and a workspace path while a tab carries a `dsh-resource://file/`
  * session address, so this module also owns that translation.
  */
-import type { RemoteResult } from '@deepseek-ai/dsh-api-remotes/client'
-import type { SessionId } from '@deepseek-ai/dsh-session/types'
-import type { WorkspaceFileBytes, WorkspaceFileRange, WorkspaceFileText } from '@deepseek-ai/dsh-api-workspace-files/types'
-import { parseFileAddress } from '@deepseek-ai/dsh-util-workspace-path'
+import type { RemoteResult } from '@redspark/rsh-api-remotes/client'
+import type { SessionId } from '@redspark/rsh-session/types'
+import type { WorkspaceFileBytes, WorkspaceFileRange, WorkspaceFileText } from '@redspark/rsh-api-workspace-files/types'
+import { parseFileAddress } from '@redspark/rsh-util-workspace-path'
 
 /** The slice of the Client Remote this package calls. */
 export interface WorkspaceFilesReadRemote {

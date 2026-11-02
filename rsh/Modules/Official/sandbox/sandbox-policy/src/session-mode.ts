@@ -18,9 +18,9 @@
  * @module dsh-sandbox-policy/session-mode
  */
 
-import type { Session } from '@deepseek-ai/dsh-session'
-import type { SandboxMode } from '@deepseek-ai/dsh-sandbox/native-types'
-import type {} from '@deepseek-ai/dsh-sandbox/native-types'
+import type { Session } from '@redspark/rsh-session'
+import type { SandboxMode } from '@redspark/rsh-sandbox/native-types'
+import type {} from '@redspark/rsh-sandbox/native-types'
 
 /** Every {@link SandboxMode}, for option advertisement and runtime validation of untrusted mode strings. */
 export const SANDBOX_MODES: readonly SandboxMode[] = ['read-only', 'workspace-write', 'danger-full-access']

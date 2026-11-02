@@ -3,7 +3,7 @@ description: "Target-neutral 对话装配与浏览器 shell：事件和视图注
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-client-ui-conversation
+# @redspark/rsh-client-ui-conversation
 
 [English](README.md) | 中文
 
@@ -37,7 +37,7 @@ target package 通过 declaration merge 扩展 snapshot 与 Location data map，
 <a id="native-target-types"></a>
 ## Native target 类型
 
-实现 Conversation target 的 Native Client 包从 `@deepseek-ai/dsh-client-ui-conversation/native-types` 导入共享事件、节点、提示词、View 与图片渲染类型。该入口只提供类型声明，不生成运行时代码。
+实现 Conversation target 的 Native Client 包从 `@redspark/rsh-client-ui-conversation/native-types` 导入共享事件、节点、提示词、View 与图片渲染类型。该入口只提供类型声明，不生成运行时代码。
 
 <a id="shell-and-standard-props"></a>
 ## Shell 与标准 props
@@ -84,9 +84,9 @@ interface ComposerChainProps {
 业务包仅可在一个 Remote waterfall request pending 期间安装 entry：
 
 ```tsx
-import type { ComposerChainProps } from '@deepseek-ai/dsh-client-ui-conversation/client'
-import type { ChainSelect, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
-import type { SessionId } from '@deepseek-ai/dsh-session/types'
+import type { ComposerChainProps } from '@redspark/rsh-client-ui-conversation/client'
+import type { ChainSelect, PropsRuntime } from '@redspark/rsh-client-ui-slots'
+import type { SessionId } from '@redspark/rsh-session/types'
 
 interface Request {
   readonly sessionId: SessionId

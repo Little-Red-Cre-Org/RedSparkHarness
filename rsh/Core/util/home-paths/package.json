@@ -1,5 +1,5 @@
 {
-  "name": "@deepseek-ai/dsh-home-paths",
+  "name": "@redspark/rsh-home-paths",
   "description": "Shared filesystem path helpers for the RedSpark Harness",
   "version": "1.0.0",
   "publishConfig": {

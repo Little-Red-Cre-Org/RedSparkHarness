@@ -1,2 +1,2 @@
-export { apiKeyFailure } from '@deepseek-ai/dsh-client-ui-primitives'
-export type { ApiKeyFailureKey } from '@deepseek-ai/dsh-client-ui-primitives'
+export { apiKeyFailure } from '@redspark/rsh-client-ui-primitives'
+export type { ApiKeyFailureKey } from '@redspark/rsh-client-ui-primitives'

@@ -3,7 +3,7 @@ description: "仅用于开发环境的浏览器客户端插件热重载：重建
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-client-hmr
+# @redspark/rsh-client-hmr
 
 [English](README.md) | 中文
 

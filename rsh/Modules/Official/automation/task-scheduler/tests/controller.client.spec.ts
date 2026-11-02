@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { SessionId } from '@deepseek-ai/dsh-session'
+import { SessionId } from '@redspark/rsh-session'
 import { createSchedulerController, type SchedulerApi } from '../src/client/controller.ts'
 import type { SchedulerSnapshot } from '../src/gui-types.ts'
 

@@ -50,7 +50,7 @@ class RunResult:
     notifications: list[Notification]
 
 
-class DeepSeekHarness:
+class RedSparkHarness:
     """Reusable synchronous SDK for running RedSpark Harness agent turns.
 
     The runtime subprocess starts lazily and remains owned by this instance
@@ -94,7 +94,7 @@ class DeepSeekHarness:
         self._initialized = False
         self._initialize_result: InitializeResponse | None = None
 
-    def __enter__(self) -> "DeepSeekHarness":
+    def __enter__(self) -> "RedSparkHarness":
         self.start()
         return self
 
@@ -146,7 +146,7 @@ class DeepSeekHarness:
 
 
 class Session:
-    def __init__(self, harness: DeepSeekHarness, session_id: str) -> None:
+    def __init__(self, harness: RedSparkHarness, session_id: str) -> None:
         self.harness = harness
         self.id = session_id
 

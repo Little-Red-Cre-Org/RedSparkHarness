@@ -4,15 +4,15 @@
  * collected stdio, and one terminal-process primitive. Command defaulting,
  * shell semantics, deadlines, protocol framing, terminal readiness, and
  * presentation belong to consumers. The local implementation lives in
- * `@deepseek-ai/dsh-subprocess-local`.
- * @module @deepseek-ai/dsh-subprocess
+ * `@redspark/rsh-subprocess-local`.
+ * @module @redspark/rsh-subprocess
  */
 
-import { Context, Service } from '@deepseek-ai/cordis'
+import { Context, Service } from '@redspark/cordis'
 import type { SubprocessHandle, SubprocessOperations, SubprocessSpawnSpec } from './types.ts'
 import type { SubprocessTerminalHandle, SubprocessTerminalSpawnSpec } from './types.ts'
 
-export { DSH_ENV_PREFIX } from './types.ts'
+export { RSH_ENV_PREFIX } from './types.ts'
 export { scrubbedParentEnv, SENSITIVE_ENV_PATTERN } from './environment.ts'
 export type {
   CollectedOutput,
@@ -39,7 +39,7 @@ export type {
   SubprocessTerminalSpawnSpec,
 } from './types.ts'
 
-declare module '@deepseek-ai/cordis' {
+declare module '@redspark/cordis' {
   interface Context {
     subprocess: SubprocessRuntime
   }

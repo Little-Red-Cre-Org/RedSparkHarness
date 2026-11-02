@@ -16,7 +16,7 @@ from pathlib import Path
 
 import pytest
 
-from deepseek_harness import DeepSeekHarness, HarnessClient, HarnessConfig
+from deepseek_harness import RedSparkHarness, HarnessClient, HarnessConfig
 from deepseek_harness.errors import JsonRpcError, TransportClosedError
 from deepseek_harness_runtime import (
     RUNTIME_MODE_ENV_VAR,
@@ -25,7 +25,7 @@ from deepseek_harness_runtime import (
 )
 
 _MODES = ("exe", "node")
-_LEGACY_BUNDLES = ("@deepseek-ai/dsh-base", "@deepseek-ai/dsh-sdk-app")
+_LEGACY_BUNDLES = ("@redspark/rsh-base", "@redspark/rsh-sdk-app")
 
 
 def _select_mode(mode: str, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -67,8 +67,8 @@ def _client(
                 # The lazily mounted adapter requires a key even without a model call.
                 "DEEPSEEK_API_KEY": "sk-dummy-for-boot",
                 "DEEPSEEK_BASE_URL": "http://127.0.0.1:9",
-                "DSH_PERMISSION_MODE": "danger-full-access",
-                "DSH_TELEMETRY_DISABLED": "1",
+                "RSH_PERMISSION_MODE": "danger-full-access",
+                "RSH_TELEMETRY_DISABLED": "1",
             },
             request_timeout_seconds=120,
         )
@@ -83,7 +83,7 @@ def test_bundled_runtime_boots_the_sdk_profile(
         init = client.initialize(provider="deepseek-official", cwd=str(tmp_path), model="deepseek-v4-flash")
 
     assert init.serverInfo is not None
-    assert init.serverInfo.name == "deepseek-harness-sdk-runtime"
+    assert init.serverInfo.name == "redspark-harness-sdk-runtime"
     profile = json.loads((tmp_path / "home" / "profiles" / "sdk" / "package.json").read_text())
     assert profile["dsh"]["profile"]["runtime"] == "native"
     assert profile["dsh"]["profile"]["config"] == "rsh.profile.json"
@@ -102,12 +102,12 @@ def test_python_sdk_applies_an_ordered_profile_patch(
         "id": "app",
         "config": {"systemPrompt": "Python SDK ordered patch marker.", "maxSteps": 8},
     }]}))
-    harness = DeepSeekHarness(
+    harness = RedSparkHarness(
         model="deepseek-v4-flash",
         cwd=str(tmp_path),
         dsh_home=str(tmp_path / "home"),
         patches=(str(patch),),
-        env={"DSH_PERMISSION_MODE": "danger-full-access"},
+        env={"RSH_PERMISSION_MODE": "danger-full-access"},
         api_key="sk-dummy-for-boot",
         base_url="http://127.0.0.1:9",
         request_timeout_seconds=120,
@@ -128,13 +128,13 @@ def test_bundled_runtime_surfaces_unbundled_plugin_failure(
         "name": "dsh-profile-legacy-sdk",
         "private": True,
         "dsh": {"profile": {"runtime": "legacy", "bundles": [
-            "@deepseek-ai/dsh-base", "@deepseek-ai/dsh-sdk-app",
+            "@redspark/rsh-base", "@redspark/rsh-sdk-app",
         ]}},
     }))
     (profile_dir / "cordis.patch.yml").write_text("[]\n")
     patch = tmp_path / "missing.patch.yml"
     patch.write_text(json.dumps([{
-        "insert": [{"id": "missing", "name": "@deepseek-ai/dsh-does-not-exist"}],
+        "insert": [{"id": "missing", "name": "@redspark/rsh-does-not-exist"}],
     }]))
 
     client = _client(tmp_path, mode, monkeypatch, patch, profile="legacy-sdk")
@@ -145,4 +145,4 @@ def test_bundled_runtime_surfaces_unbundled_plugin_failure(
     finally:
         client.close()
 
-    assert "@deepseek-ai/dsh-does-not-exist" in str(excinfo.value)
+    assert "@redspark/rsh-does-not-exist" in str(excinfo.value)

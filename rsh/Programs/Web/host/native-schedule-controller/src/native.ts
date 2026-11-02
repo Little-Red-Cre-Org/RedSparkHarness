@@ -1,9 +1,9 @@
 /** Authenticated read-only browser access to Native task schedules. */
 import { z } from 'zod'
-import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
-import type {} from '@deepseek-ai/dsh-client-connection/native-host'
-import type { NativeTaskSchedulerOperations } from '@deepseek-ai/dsh-task-scheduler/native'
-import type { NativeScheduleFrame, NativeScheduledJob } from '@deepseek-ai/dsh-client-native-session/schedule-types'
+import type { NativePlugin } from '@redspark/rsh-native-runtime'
+import type {} from '@redspark/rsh-client-connection/native-host'
+import type { NativeTaskSchedulerOperations } from '@redspark/rsh-task-scheduler/native'
+import type { NativeScheduleFrame, NativeScheduledJob } from '@redspark/rsh-client-native-session/schedule-types'
 
 const emptyRequest = z.strictObject({})
 const scheduleEndpoints = new Set(['schedules/list'])
@@ -115,7 +115,7 @@ class NativeScheduleController {
 /** Native Web schedule endpoint Consumer over the existing scheduler and Connection. */
 export const plugin: NativePlugin = {
   apiVersion: 1,
-  name: '@deepseek-ai/dsh-native-schedule-controller',
+  name: '@redspark/rsh-native-schedule-controller',
   targets: ['host'],
   requires: ['hostConnection', 'taskScheduler'],
   optional: [],

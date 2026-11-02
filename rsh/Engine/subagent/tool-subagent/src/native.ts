@@ -1,11 +1,11 @@
 /** Model Consumer of the selected native Subagent Provider. */
-import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
-import type { ContentBlock } from '@deepseek-ai/dsh-llm/native'
-import { ReasoningEffortId } from '@deepseek-ai/dsh-llm/native'
+import type { NativePlugin } from '@redspark/rsh-native-runtime'
+import type { ContentBlock } from '@redspark/rsh-llm/native'
+import { ReasoningEffortId } from '@redspark/rsh-llm/native'
 import type { NativeExternalSubagentApprovalRequest, NativeSubagentOptions, NativeSubagentResult,
-  NativeExternalSubagentResult, NativeSubagentBackground, NativeSubagentContinuation } from '@deepseek-ai/dsh-native-subagent'
-import type { NativeToolExecution, NativeValueToolContribution } from '@deepseek-ai/dsh-native-tools'
-import type {} from '@deepseek-ai/dsh-native-tool-jobs'
+  NativeExternalSubagentResult, NativeSubagentBackground, NativeSubagentContinuation } from '@redspark/rsh-native-subagent'
+import type { NativeToolExecution, NativeValueToolContribution } from '@redspark/rsh-native-tools'
+import type {} from '@redspark/rsh-native-tool-jobs'
 
 interface Config { readonly toolName: string; readonly options: NativeSubagentOptions; readonly backgroundMode: 'one-shot' | 'continuable' }
 
@@ -64,7 +64,7 @@ function resolveConfig(input: unknown): Config {
 
 /** Native delegation with explicit one-shot or continuable deployment. */
 export const plugin: NativePlugin = {
-  apiVersion: 1, name: '@deepseek-ai/dsh-tool-subagent', targets: ['host'],
+  apiVersion: 1, name: '@redspark/rsh-tool-subagent', targets: ['host'],
   requires: ['tools', 'subagents'], optional: ['jobs', 'jobControls', 'subagentControls'], provides: [],
   resolve(input) {
     const config = resolveConfig(input)

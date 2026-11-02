@@ -1,8 +1,8 @@
 /** First-party semantic text extraction for session-query consumers. */
 
-import type { SessionEvent } from '@deepseek-ai/dsh-session/native'
+import type { SessionEvent } from '@redspark/rsh-session/native'
 // Type-only: includes the first-party todo event consumed below.
-import type {} from '@deepseek-ai/dsh-tool-todo/native'
+import type {} from '@redspark/rsh-tool-todo/native'
 
 /**
  * Extract searchable semantic text from one first-party session event.

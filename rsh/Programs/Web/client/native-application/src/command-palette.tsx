@@ -20,7 +20,7 @@
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
-import { Menu } from '@deepseek-ai/dsh-client-ui-primitives'
+import { Menu } from '@redspark/rsh-client-ui-primitives'
 import css from './command-palette.module.css'
 import type { CommandChoice } from './command-completion.ts'
 import {

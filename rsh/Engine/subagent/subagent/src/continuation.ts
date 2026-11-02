@@ -10,19 +10,19 @@
  * execution. No continuable path creates a Task or an intermediate
  * result-bearing wrapper.
  *
- * @module @deepseek-ai/dsh-subagent
+ * @module @redspark/rsh-subagent
  */
 
 import { randomUUID } from 'node:crypto'
-import type { Context } from '@deepseek-ai/cordis'
-import type { Agent } from '@deepseek-ai/dsh-agent'
-import { brandString } from '@deepseek-ai/dsh-brand'
-import { ReasoningEffortId, contentHasImage, createUserMessage } from '@deepseek-ai/dsh-llm'
-import type { ContentBlock, MessageId, MessageSource } from '@deepseek-ai/dsh-llm'
-import { SessionLogOffset } from '@deepseek-ai/dsh-session'
-import type { SessionId } from '@deepseek-ai/dsh-session'
-import type { SessionPersistence } from '@deepseek-ai/dsh-session-persistence'
-import type { SessionObservation, SessionQueryOperations } from '@deepseek-ai/dsh-session-query/native'
+import type { Context } from '@redspark/cordis'
+import type { Agent } from '@redspark/rsh-agent'
+import { brandString } from '@redspark/rsh-brand'
+import { ReasoningEffortId, contentHasImage, createUserMessage } from '@redspark/rsh-llm'
+import type { ContentBlock, MessageId, MessageSource } from '@redspark/rsh-llm'
+import { SessionLogOffset } from '@redspark/rsh-session'
+import type { SessionId } from '@redspark/rsh-session'
+import type { SessionPersistence } from '@redspark/rsh-session-persistence'
+import type { SessionObservation, SessionQueryOperations } from '@redspark/rsh-session-query/native'
 import {
   childSessionMeta,
   captureDelegatedPolicyOverrides,
@@ -545,7 +545,7 @@ export class SubagentContinuationManager {
     const query = this.ctx.get('sessionQuery') as Pick<SessionQueryOperations, 'observeSession'> | undefined
     if (query === undefined) {
       throw new SubagentError(
-        'continuable subagents require session query (load @deepseek-ai/dsh-session-query)',
+        'continuable subagents require session query (load @redspark/rsh-session-query)',
         'CONTINUATION_UNAVAILABLE',
       )
     }

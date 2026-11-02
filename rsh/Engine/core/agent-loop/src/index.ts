@@ -2,14 +2,14 @@
  * Concrete agent-loop plugin: creates scoped ReactLoopAgents, publishes them
  * through the agent/session registries, and owns their ordered teardown.
  *
- * @module @deepseek-ai/dsh-agent-loop
+ * @module @redspark/rsh-agent-loop
  */
 
-import { Context, FiberState, Service } from '@deepseek-ai/cordis'
+import { Context, FiberState, Service } from '@redspark/cordis'
 import { randomUUID } from 'node:crypto'
-import z from '@deepseek-ai/schemastery'
-import { brandString } from '@deepseek-ai/dsh-brand'
-import { emitAgentEvent } from '@deepseek-ai/dsh-agent'
+import z from '@redspark/schemastery'
+import { brandString } from '@redspark/rsh-brand'
+import { emitAgentEvent } from '@redspark/rsh-agent'
 import type {
   Agent,
   AgentFactory,
@@ -19,17 +19,17 @@ import type {
   CreateAgentOptions,
   ResumeAgentOptions,
   SessionStartSource,
-} from '@deepseek-ai/dsh-agent'
-import { turnBoundaryProjectionDefinition } from '@deepseek-ai/dsh-native-agent/turn-boundary'
-export { turnBoundaryProjectionDefinition } from '@deepseek-ai/dsh-native-agent/turn-boundary'
-import { errorChain, ReasoningEffortId } from '@deepseek-ai/dsh-llm'
-import { interruptedTurnClosers, SessionLogOffset, SessionPreparation } from '@deepseek-ai/dsh-session'
-import type { Session, SessionHeader, SessionId } from '@deepseek-ai/dsh-session'
-import type {} from '@deepseek-ai/dsh-system-prompt'
-import type {} from '@deepseek-ai/dsh-tools'
-import type {} from '@deepseek-ai/dsh-session-projection'
-import { SessionPersistenceNotFoundError } from '@deepseek-ai/dsh-session-persistence'
-import type { SessionHandle, SessionPersistence } from '@deepseek-ai/dsh-session-persistence'
+} from '@redspark/rsh-agent'
+import { turnBoundaryProjectionDefinition } from '@redspark/rsh-native-agent/turn-boundary'
+export { turnBoundaryProjectionDefinition } from '@redspark/rsh-native-agent/turn-boundary'
+import { errorChain, ReasoningEffortId } from '@redspark/rsh-llm'
+import { interruptedTurnClosers, SessionLogOffset, SessionPreparation } from '@redspark/rsh-session'
+import type { Session, SessionHeader, SessionId } from '@redspark/rsh-session'
+import type {} from '@redspark/rsh-system-prompt'
+import type {} from '@redspark/rsh-tools'
+import type {} from '@redspark/rsh-session-projection'
+import { SessionPersistenceNotFoundError } from '@redspark/rsh-session-persistence'
+import type { SessionHandle, SessionPersistence } from '@redspark/rsh-session-persistence'
 import { ReactLoopAgent } from './agent.ts'
 import { DEFAULT_MAX_PARALLEL_TOOL_CALLS } from './constants.ts'
 import { retainSettingsOwner } from './settings-owner.ts'
@@ -181,7 +181,7 @@ interface PreparedAgent {
   dispose(): Promise<void>
 }
 
-declare module '@deepseek-ai/cordis' {
+declare module '@redspark/cordis' {
   interface Context {
     agentLoop: AgentLoop
     /**

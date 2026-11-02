@@ -18,7 +18,7 @@ import {
   IconRefreshOutline16, IconTrashOutline16, IconTriangleRightFill14,
 } from '../icons/index.tsx'
 import type { StateDotState } from '../StateDot.tsx'
-import { abbreviateHomePath } from '@deepseek-ai/dsh-util-workspace-path'
+import { abbreviateHomePath } from '@redspark/rsh-util-workspace-path'
 import type { SessionSearchRow, SessionRowNode, WorkspaceGroupRow, WorkspaceRowTranslate } from './types.ts'
 import css from './Rows.module.css'
 

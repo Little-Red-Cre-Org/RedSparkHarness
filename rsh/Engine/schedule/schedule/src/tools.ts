@@ -1,13 +1,13 @@
 /**
  * Agent-scoped Schedule management tools over the durable session fold.
- * @module @deepseek-ai/dsh-schedule
+ * @module @redspark/rsh-schedule
  */
 
-import type { Context } from '@deepseek-ai/cordis'
-import type { Agent } from '@deepseek-ai/dsh-agent'
-import type { ContentBlock } from '@deepseek-ai/dsh-llm'
-import { defineTool } from '@deepseek-ai/dsh-tools'
-import type { GenericCallView } from '@deepseek-ai/dsh-tools'
+import type { Context } from '@redspark/cordis'
+import type { Agent } from '@redspark/rsh-agent'
+import type { ContentBlock } from '@redspark/rsh-llm'
+import { defineTool } from '@redspark/rsh-tools'
+import type { GenericCallView } from '@redspark/rsh-tools'
 import { MIN_EVERY_INTERVAL_SECONDS } from './domain.ts'
 import { flushSchedulePersistence } from './persistence.ts'
 import { createSchedule, deleteSchedule, listSchedules } from './operations.ts'

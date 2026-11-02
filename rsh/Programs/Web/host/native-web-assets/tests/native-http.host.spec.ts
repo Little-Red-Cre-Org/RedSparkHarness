@@ -2,7 +2,7 @@ import { once } from 'node:events'
 import { request as httpRequest, type IncomingMessage, type ServerResponse } from 'node:http'
 import { connect } from 'node:net'
 import { expect, it } from 'vitest'
-import { HttpRouteTable } from '@deepseek-ai/dsh-http-routes'
+import { HttpRouteTable } from '@redspark/rsh-http-routes'
 import { listenNativeHttpHost, type NativeConnectionFetchHandler, type NativeConnectionHandle, type NativeHttpBridge } from '../src/native-http.ts'
 
 function responseBody(

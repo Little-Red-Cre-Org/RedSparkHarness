@@ -5,12 +5,12 @@
  * narration rule, `/plan` input interpretation, and the reviewed exit. Each
  * runtime supplies only its own session reads, durable append, and delivery.
  *
- * @module @deepseek-ai/dsh-plan-mode/selection
+ * @module @redspark/rsh-plan-mode/selection
  */
 
-import { createUserMessage } from '@deepseek-ai/dsh-llm/native'
-import type { UserMessage } from '@deepseek-ai/dsh-llm/native'
-import type { AskUserQuestionAnswer, AskUserQuestionItem } from '@deepseek-ai/dsh-user-questions/protocol'
+import { createUserMessage } from '@redspark/rsh-llm/native'
+import type { UserMessage } from '@redspark/rsh-llm/native'
+import type { AskUserQuestionAnswer, AskUserQuestionItem } from '@redspark/rsh-user-questions/protocol'
 import {
   assertPlanApproved, assertPlanHeading, EXIT_PLAN_MODE, NO_REVIEW_CHANNEL_MESSAGE, PLAN_NOTICE_PLUGIN,
   PLAN_OFF_ATTACHMENTS_TEXT, planReviewQuestion, REVIEW_DISMISSED_MESSAGE, type PlanSelectionOutcome,

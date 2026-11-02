@@ -1,6 +1,6 @@
-import { Context } from '@deepseek-ai/cordis'
-import AgentRegistry, { agentEvents, type Agent, type PreStepDecision } from '@deepseek-ai/dsh-agent'
-import { mountAgentLoopTestDependencies, mountAgentLoopTestHarness, unsupportedInbox } from '@deepseek-ai/dsh-agent-loop-testkit'
+import { Context } from '@redspark/cordis'
+import AgentRegistry, { agentEvents, type Agent, type PreStepDecision } from '@redspark/rsh-agent'
+import { mountAgentLoopTestDependencies, mountAgentLoopTestHarness, unsupportedInbox } from '@redspark/rsh-agent-loop-testkit'
 import {
   createUserMessage,
   LlmAdapter,
@@ -8,30 +8,30 @@ import {
   type GenerateOptions,
   type LlmResolvedModelInfo,
   type StreamChunk,
-} from '@deepseek-ai/dsh-llm'
-import { SESSION_FORMAT_VERSION, Session, SessionId, type UserMessage } from '@deepseek-ai/dsh-session'
-import * as ShellEnv from '@deepseek-ai/dsh-shell-env'
-import SkillRegistry from '@deepseek-ai/dsh-skill'
-import SystemPrompt from '@deepseek-ai/dsh-system-prompt'
-import * as ToolSkill from '@deepseek-ai/dsh-tool-skill'
-import ToolRuntime from '@deepseek-ai/dsh-tools'
+} from '@redspark/rsh-llm'
+import { SESSION_FORMAT_VERSION, Session, SessionId, type UserMessage } from '@redspark/rsh-session'
+import * as ShellEnv from '@redspark/rsh-shell-env'
+import SkillRegistry from '@redspark/rsh-skill'
+import SystemPrompt from '@redspark/rsh-system-prompt'
+import * as ToolSkill from '@redspark/rsh-tool-skill'
+import ToolRuntime from '@redspark/rsh-tools'
 import { describe, expect, it } from 'vitest'
-import * as Archify from '@deepseek-ai/dsh-archify'
+import * as Archify from '@redspark/rsh-archify'
 import { ARCHIFY_SKILL_DIRECTORY_ENV } from '../src/shared.ts'
-import { NativeHost, NativeScope, resolveInstallation } from '@deepseek-ai/dsh-native-runtime'
-import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
-import { plugin as nativeAgentPlugin } from '@deepseek-ai/dsh-native-agent/native'
-import { plugin as nativeToolsPlugin } from '@deepseek-ai/dsh-native-tools/native'
-import { plugin as nativeArchifyPlugin } from '@deepseek-ai/dsh-archify/native'
-import { plugin as nativeSkillRegistryPlugin } from '@deepseek-ai/dsh-skill/native'
-import type { NativeSkillInvocations, NativeSkills } from '@deepseek-ai/dsh-skill/native'
-import { plugin as nativeToolSkillPlugin } from '@deepseek-ai/dsh-tool-skill/native'
-import { plugin as nativeShellEnvPlugin } from '@deepseek-ai/dsh-shell-env/native'
-import type { ShellEnvironment } from '@deepseek-ai/dsh-shell-env/definition'
-import type { NativeToolExecution } from '@deepseek-ai/dsh-native-tools'
-import { plugin as nativeRequestContextPlugin } from '@deepseek-ai/dsh-request-context/native'
-import { NativeRequestContextRegistry } from '@deepseek-ai/dsh-request-context'
-import { NativeRequestContextProviderId, type NativeRequestContextProvider, type NativeRequestContexts } from '@deepseek-ai/dsh-request-context-definition'
+import { NativeHost, NativeScope, resolveInstallation } from '@redspark/rsh-native-runtime'
+import type { NativePlugin } from '@redspark/rsh-native-runtime'
+import { plugin as nativeAgentPlugin } from '@redspark/rsh-native-agent/native'
+import { plugin as nativeToolsPlugin } from '@redspark/rsh-native-tools/native'
+import { plugin as nativeArchifyPlugin } from '@redspark/rsh-archify/native'
+import { plugin as nativeSkillRegistryPlugin } from '@redspark/rsh-skill/native'
+import type { NativeSkillInvocations, NativeSkills } from '@redspark/rsh-skill/native'
+import { plugin as nativeToolSkillPlugin } from '@redspark/rsh-tool-skill/native'
+import { plugin as nativeShellEnvPlugin } from '@redspark/rsh-shell-env/native'
+import type { ShellEnvironment } from '@redspark/rsh-shell-env/definition'
+import type { NativeToolExecution } from '@redspark/rsh-native-tools'
+import { plugin as nativeRequestContextPlugin } from '@redspark/rsh-request-context/native'
+import { NativeRequestContextRegistry } from '@redspark/rsh-request-context'
+import { NativeRequestContextProviderId, type NativeRequestContextProvider, type NativeRequestContexts } from '@redspark/rsh-request-context-definition'
 
 const OFF = ReasoningEffortId('off')
 const HIGH = ReasoningEffortId('high')
@@ -232,9 +232,9 @@ describe('dsh-archify', () => {
       })])
       const definition = await ctx.skills.get('archify', { cwd: '/workspace' })
       expect(definition?.content).toContain('node bin/archify.mjs deliver')
-      expect(definition?.content).toContain('DSH_ARCHIFY_SKILL_DIR')
+      expect(definition?.content).toContain('RSH_ARCHIFY_SKILL_DIR')
       expect(ctx.shellEnv.collect({} as never)).toEqual(expect.objectContaining({
-        DSH_ARCHIFY_SKILL_DIR: expect.any(String) as unknown,
+        RSH_ARCHIFY_SKILL_DIR: expect.any(String) as unknown,
       }))
     } finally {
       await ctx.fiber.dispose()

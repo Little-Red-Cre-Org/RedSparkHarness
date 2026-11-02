@@ -12,8 +12,8 @@
  */
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import clsx from 'clsx'
-import { ConnectionIndicator, SettingsPanel } from '@deepseek-ai/dsh-client-ui-primitives'
-import type { ConnectionIndicatorState } from '@deepseek-ai/dsh-client-ui-primitives'
+import { ConnectionIndicator, SettingsPanel } from '@redspark/rsh-client-ui-primitives'
+import type { ConnectionIndicatorState } from '@redspark/rsh-client-ui-primitives'
 import type { SettingsRootComponentProps } from './shell-contract.ts'
 import css from './SettingsRoot.module.css'
 

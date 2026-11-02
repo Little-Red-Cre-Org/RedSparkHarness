@@ -11,10 +11,10 @@ import { hexToRgb, rgbToHex } from './utils.js';
 
 /**
  * Resolve the terminal background color, or `null` when unknown.
- * `DSH_TUI_BG` forces a value (theme testing).
+ * `RSH_TUI_BG` forces a value (theme testing).
  */
 export function probeTerminalBg(timeoutMs = 300) {
-  const forced = process.env.DSH_TUI_BG;
+  const forced = process.env.RSH_TUI_BG;
   if (forced) {
     const rgb = hexToRgb(forced);
     return Promise.resolve(rgb ? rgbToHex(rgb) : null);

@@ -3,13 +3,13 @@ description: "面向模型的 bash 工具，供选择、配置或排查一次性
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-tool-bash
+# @redspark/rsh-tool-bash
 
 [English](README.md) | 中文
 
 ## 概述
 
-`dsh-tool-bash` 让 agent 运行一次性 `bash` 命令，并查看 stdout、stderr 与退出状态。每次调用都使用全新 shell，并收到受管 `DSH_*` 事实。沙箱升权需要更宽策略、理由和用户批准。
+`dsh-tool-bash` 让 agent 运行一次性 `bash` 命令，并查看 stdout、stderr 与退出状态。每次调用都使用全新 shell，并收到受管 `RSH_*` 事实。沙箱升权需要更宽策略、理由和用户批准。
 
 `./native` 入口通过原生 shell 执行前台命令；安装原生任务服务后，也支持由 Agent 持有的后台任务。它在为单次调用应用更宽策略前请求应用审批。
 
@@ -40,13 +40,13 @@ kind: "package-reference"
 常用路径是执行器提供方、环境注册表与本工具；当 agent 需要后台运行命令时，再添加任务运行时。
 
 ```yaml
-- name: '@deepseek-ai/dsh-bash-local'
-- name: '@deepseek-ai/dsh-shell-env'
-- name: '@deepseek-ai/dsh-tool-bash'
+- name: '@redspark/rsh-bash-local'
+- name: '@redspark/rsh-shell-env'
+- name: '@redspark/rsh-tool-bash'
 
 # Optional: background jobs
-- name: '@deepseek-ai/dsh-jobs-local'
-- name: '@deepseek-ai/dsh-tool-jobs'
+- name: '@redspark/rsh-jobs-local'
+- name: '@redspark/rsh-tool-jobs'
 ```
 
 唯一的配置字段用于开关后台支持。
@@ -71,7 +71,7 @@ kind: "package-reference"
 
 ### 可能出什么问题
 
-没有执行器提供方的组合永远不会激活该工具。没有任务运行时的后台调用会以 `background jobs unavailable: load @deepseek-ai/dsh-jobs and @deepseek-ai/dsh-tool-jobs` 失败；没有沙箱执行器时的 `sandbox_permissions` 会以 `sandbox_permissions is not available in this composition (no sandboxing executor to escalate)` 失败。`enableRunInBackground: false` 会移除该参数，并在执行时拒绝强制后台调用。
+没有执行器提供方的组合永远不会激活该工具。没有任务运行时的后台调用会以 `background jobs unavailable: load @redspark/rsh-jobs and @redspark/rsh-tool-jobs` 失败；没有沙箱执行器时的 `sandbox_permissions` 会以 `sandbox_permissions is not available in this composition (no sandboxing executor to escalate)` 失败。`enableRunInBackground: false` 会移除该参数，并在执行时拒绝强制后台调用。
 
 -----
 
@@ -118,7 +118,7 @@ kind: "package-reference"
 
 - [shell 包映射](../README.zh.md)——bash 能力家族及其角色。
 - [Bash 执行器子系统](../../../../Docs/subsystems/shell.zh.md)——请求／spec 词汇、结果与后台进程。
-- [shell-env](../shell-env/README.zh.md)——每次调用都会收到的受管 `DSH_*` 环境。
+- [shell-env](../shell-env/README.zh.md)——每次调用都会收到的受管 `RSH_*` 环境。
 - [tool-jobs](../../../../Engine/jobs/tool-jobs/README.zh.md)——后台运行的 `job_output`、`job_list` 与 `job_kill` 控制。
 - [沙箱 Agent Note](../../../../../.agents/notes/implemented/feature/2026-07-06-sandbox.zh.md)——升权与模式切换的理由。
 - [生成的工具目录](../../../../Docs/tool-catalog.zh.md#deepseek-aidsh-tool-bash)——`bash` 参数 schema 的确切内容。
@@ -198,7 +198,7 @@ renderer 输出依数据而定的 stdout 尾部，再输出可选的 `[stderr]` 
 
 #### 模型看到什么
 
-验证与策略失败统一为 `Error: <message>`。本包的稳定消息包括 `invalid command: expected a non-empty string`、`invalid description: expected a non-empty string`、`invalid timeoutMs: expected a positive number, got <value>`、升权配对失败、`run_in_background is disabled for this deployment (enableRunInBackground: false)`、`background jobs unavailable: load @deepseek-ai/dsh-jobs and @deepseek-ai/dsh-tool-jobs`、`sandbox_permissions is not available in this composition (no sandboxing executor to escalate)`、审批不可用／拒绝／取消变体，以及 `tool call aborted`。
+验证与策略失败统一为 `Error: <message>`。本包的稳定消息包括 `invalid command: expected a non-empty string`、`invalid description: expected a non-empty string`、`invalid timeoutMs: expected a positive number, got <value>`、升权配对失败、`run_in_background is disabled for this deployment (enableRunInBackground: false)`、`background jobs unavailable: load @redspark/rsh-jobs and @redspark/rsh-tool-jobs`、`sandbox_permissions is not available in this composition (no sandboxing executor to escalate)`、审批不可用／拒绝／取消变体，以及 `tool call aborted`。
 
 #### Token 影响
 

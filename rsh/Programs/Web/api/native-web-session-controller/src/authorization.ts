@@ -1,10 +1,10 @@
 /** Allowlisted browser operations for native credential authorization. */
 import { z } from 'zod'
-import { parseCredentialKey, type CredentialKey, type NativeCredentials } from '@deepseek-ai/dsh-credentials/native'
-import type { AuthorizationPromptId, NativeAuthorization, NativeAuthorizationAttempt } from '@deepseek-ai/dsh-authorization/native'
-import { AuthorizationError } from '@deepseek-ai/dsh-authorization/native'
-import type { ConnectionRpcResult } from '@deepseek-ai/dsh-client-connection/native-host'
-import type { NativeAccounts } from '@deepseek-ai/dsh-llm-pi-ai/native'
+import { parseCredentialKey, type CredentialKey, type NativeCredentials } from '@redspark/rsh-credentials/native'
+import type { AuthorizationPromptId, NativeAuthorization, NativeAuthorizationAttempt } from '@redspark/rsh-authorization/native'
+import { AuthorizationError } from '@redspark/rsh-authorization/native'
+import type { ConnectionRpcResult } from '@redspark/rsh-client-connection/native-host'
+import type { NativeAccounts } from '@redspark/rsh-llm-pi-ai/native'
 
 const listRequest = z.strictObject({})
 const beginRequest = z.strictObject({ key: z.string(), method: z.string().optional() })

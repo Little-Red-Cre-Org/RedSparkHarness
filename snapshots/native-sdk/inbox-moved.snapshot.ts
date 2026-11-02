@@ -6,13 +6,13 @@ import { fileURLToPath } from 'node:url'
 import { execa } from 'execa'
 import { createServer, type Server } from 'node:http'
 import { expect, it } from 'vitest'
-import { DeepSeekHarness, type HarnessNotification } from '@deepseek-ai/dsh-sdk-client'
-import { parseSessionLog } from '@deepseek-ai/dsh-llm-replay'
-import { SESSION_FORMAT_VERSION, type SessionEvent } from '@deepseek-ai/dsh-session/native'
+import { RedSparkHarness, type HarnessNotification } from '@redspark/rsh-sdk-client'
+import { parseSessionLog } from '@redspark/rsh-llm-replay'
+import { SESSION_FORMAT_VERSION, type SessionEvent } from '@redspark/rsh-session/native'
 import { shippedNativeProfileComposition } from '../../rsh/Programs/CLI/src/native-profile-template.ts'
 import { formatSystemPromptSnapshot, formatToolSchemasSnapshot, normalizedSystemPrompts, normalizedToolSchemas,
   normalizeSessionSnapshot, parseSessionFixtureName, redactSessionSnapshotIds, sessionFixtureName,
-  sessionFixtureNames } from '@deepseek-ai/dsh-session-snapshot'
+  sessionFixtureNames } from '@redspark/rsh-session-snapshot'
 import { assertWorkspaceOutsideTemp, outsideTempWorkspaceParent } from '../../rsh/Scripts/snapshot-workspace-parent.ts'
 
 const root = fileURLToPath(new URL('../../', import.meta.url))
@@ -83,7 +83,7 @@ function sessionLog(sessions: string, selectedId: string): string {
 }
 
 it('projects real Native Inbox edits and moves through both SDKs and process-cold recovery', async () => {
-  const mode = process.env.DSH_SNAPSHOT
+  const mode = process.env.RSH_SNAPSHOT
   const existingNames = readdirSync(scenario).filter(name => parseSessionFixtureName(name) !== undefined)
   const selectedName = existingNames.length === 0 ? undefined : sessionFixtureNames(existingNames)[0]
   const selectedFixture = selectedName === undefined ? undefined : join(scenario, selectedName)
@@ -172,7 +172,7 @@ it('projects real Native Inbox edits and moves through both SDKs and process-col
 
     let first: CarrierRun
     let recovery: CarrierRun
-    if (process.env.DSH_NATIVE_SDK_PYTHON !== undefined) {
+    if (process.env.RSH_NATIVE_SDK_PYTHON !== undefined) {
       const launcher = join(home, process.platform === 'win32' ? 'dsh.cmd' : 'dsh')
       const cli = join(root, 'rsh/Programs/CLI/lib/bin.js')
       writeFileSync(launcher, process.platform === 'win32'
@@ -182,7 +182,7 @@ it('projects real Native Inbox edits and moves through both SDKs and process-col
         const { chmodSync } = await import('node:fs')
         chmodSync(launcher, 0o700)
       }
-      const result = await execa(process.env.DSH_NATIVE_SDK_PYTHON,
+      const result = await execa(process.env.RSH_NATIVE_SDK_PYTHON,
         [join(scenario, 'client.py'), launcher, home, workspace, modelPatch, sessionId, firstTask, coldTask], {
           env: { ...process.env, PYTHONPATH: join(root, 'rsh/Programs/SDK/python/sdk/src'), NATIVE_INBOX_FIXTURE_KEY: 'fixture-key' },
           timeout: 30_000,
@@ -193,11 +193,11 @@ it('projects real Native Inbox edits and moves through both SDKs and process-col
     } else {
       const options = { profile: 'native-sdk' as const, dshBin: join(root, 'rsh/Programs/CLI/lib/bin.js'), dshHome: home,
         patches: [modelPatch], cwd: workspace, provider: 'fixture', model: 'fixture-model',
-        env: { ...process.env, NATIVE_INBOX_FIXTURE_KEY: 'fixture-key', DSH_TELEMETRY_DISABLED: '1' }, requestTimeoutMs: 20_000 }
-      const initial = new DeepSeekHarness(options)
+        env: { ...process.env, NATIVE_INBOX_FIXTURE_KEY: 'fixture-key', RSH_TELEMETRY_DISABLED: '1' }, requestTimeoutMs: 20_000 }
+      const initial = new RedSparkHarness(options)
       try { first = await initial.session(sessionId).run(firstTask) }
       finally { await initial.close() }
-      const cold = new DeepSeekHarness(options)
+      const cold = new RedSparkHarness(options)
       try { recovery = await cold.session(sessionId).run(coldTask) }
       finally { await cold.close() }
     }

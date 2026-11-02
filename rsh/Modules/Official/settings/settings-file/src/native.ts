@@ -1,13 +1,13 @@
 /** Native file-backed settings Provider. */
-import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
+import type { NativePlugin } from '@redspark/rsh-native-runtime'
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { dirname, extname, join, resolve } from 'node:path'
 import { Document, parseDocument } from 'yaml'
 import { patchNode } from './yaml-patch.ts'
 import { watch as watchFile } from 'chokidar'
-import { NativeSettings } from '@deepseek-ai/dsh-settings/native'
-import type { NativeSettingsSection } from '@deepseek-ai/dsh-settings-definition/native'
-import type {} from '@deepseek-ai/dsh-settings-definition/native'
+import { NativeSettings } from '@redspark/rsh-settings/native'
+import type { NativeSettingsSection } from '@redspark/rsh-settings-definition/native'
+import type {} from '@redspark/rsh-settings-definition/native'
 
 interface NativeConfig {
   path?: string
@@ -46,7 +46,7 @@ export function resolveNativeSettingsConfig(input: unknown): NativeConfig {
 /** Native file-backed settings Provider selected by native Host profiles. */
 export const plugin: NativePlugin = {
   apiVersion: 1,
-  name: '@deepseek-ai/dsh-settings-file',
+  name: '@redspark/rsh-settings-file',
   targets: ['host'],
   requires: [],
   provides: ['settings'],
@@ -62,8 +62,8 @@ export const plugin: NativePlugin = {
     const debounceMs = config.debounceMs ?? 100
     return async (context) => {
       const [{ withFileLock, writeFileAtomic }, { resolveDshHome }] = await Promise.all([
-        import('@deepseek-ai/dsh-atomic-write'),
-        import('@deepseek-ai/dsh-home-paths'),
+        import('@redspark/rsh-atomic-write'),
+        import('@redspark/rsh-home-paths'),
       ])
       const filename = configuredFilename ?? resolve(join(resolveDshHome(config.dshHome), 'settings.yaml'))
       let closed = false

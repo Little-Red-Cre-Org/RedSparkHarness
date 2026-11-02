@@ -3,10 +3,10 @@
  * {@link ../index.ts | NativeCodeRuntime} and what it gets back. Pure types — no
  * runtime code lives here.
  *
- * @module @deepseek-ai/dsh-code-runtime-definition/types
+ * @module @redspark/rsh-code-runtime-definition/types
  */
 
-import type { Session } from '@deepseek-ai/dsh-session/native'
+import type { Session } from '@redspark/rsh-session/native'
 
 /**
  * One host-side function exposed to the program as an async callable. The

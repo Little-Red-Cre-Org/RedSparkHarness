@@ -1,6 +1,6 @@
 /** Bounded, admission-owned SSE presentation; the Program retains execution ownership. */
-import type { NativeSessionFollowFrame } from '@deepseek-ai/dsh-client-native-session/follow-types'
-import type { SessionEvent, SessionId } from '@deepseek-ai/dsh-session/types'
+import type { NativeSessionFollowFrame } from '@redspark/rsh-client-native-session/follow-types'
+import type { SessionEvent, SessionId } from '@redspark/rsh-session/types'
 
 /** One turn's ordered output, retained only until its exact follower reads or detaches. */
 export class NativeSessionFeed {

@@ -3,7 +3,7 @@ description: "按 preset cordis.yml 文件进行按会话的 agent（智能体�
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-agent-presets
+# @redspark/rsh-agent-presets
 
 [English](README.md) | 中文
 
@@ -34,7 +34,7 @@ kind: "package-reference"
 原生 CLI 先扫描随包交付的 preset 根目录，再扫描 `<dshHome>/.agent-presets`；重复 id 由优先级更高的根目录胜出。每个 preset 目录可包含共享的 `preset.yml` 显示元数据和 `agent.native.json` 组装文件。原生文件使用版本 1；每项包含 `id`、`plugin`，以及可选的 `config` 和 `disabled`。CLI 会将每项分配到 preset 的子 scope，且不会读取 `agent.cordis.yml`。
 
 ```json
-{ "formatVersion": 1, "installations": [ { "id": "tools", "plugin": "@deepseek-ai/dsh-native-tools", "config": {} } ] }
+{ "formatVersion": 1, "installations": [ { "id": "tools", "plugin": "@redspark/rsh-native-tools", "config": {} } ] }
 ```
 
 缺少 `agent.native.json` 的目录显示为 `needs-migration`；文件无效、启用的插件包无法由 profile 解析，或启用行要求的服务 profile 未提供时显示为 `invalid`。Registry 的 `catalog()` 会重新扫描 Host 持有的根目录，并返回默认值以及不含目录路径或安装项的目录显示信息、信任级别和状态摘要。`read()` 返回目录元数据与原始组装文件文本；profile 独有的常驻组装没有文件内容。`copy()` 会将已就绪目录及其资源复制到第一个用户根目录，保留描述、替换显示名、移除排序位置，并收紧复制后文件权限。`delete()` 与 `directory()` 只解析用户目录；随包交付的目录保持只读。CLI 会将根目录路径仅提供给 Host Registry。
@@ -54,7 +54,7 @@ kind: "package-reference"
 插件需要一个 `default` preset id，并在 `roots` 中扫描 preset：
 
 ```yaml
-- name: '@deepseek-ai/dsh-agent-presets'
+- name: '@redspark/rsh-agent-presets'
   config:
     default: standard
     roots:

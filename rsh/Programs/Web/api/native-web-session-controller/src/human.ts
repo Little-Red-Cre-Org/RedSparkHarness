@@ -1,10 +1,10 @@
 /** Bounded Web presentations owned by existing approval and question Providers. */
 import { randomUUID } from 'node:crypto'
-import { brandString } from '@deepseek-ai/dsh-brand'
-import type { NativeAgent } from '@deepseek-ai/dsh-native-agent'
-import type { NativeApprovalAnswererRequest, NativeApprovalAnswererResult } from '@deepseek-ai/dsh-approval-definition'
-import { parseUserQuestionAnswer, UserQuestionError, type NativeAdmittedUserQuestionRequest, type AskUserQuestionAnswer } from '@deepseek-ai/dsh-user-questions/native'
-import type { NativeWebHumanPrompt, NativeWebHumanId } from '@deepseek-ai/dsh-client-native-session/human'
+import { brandString } from '@redspark/rsh-brand'
+import type { NativeAgent } from '@redspark/rsh-native-agent'
+import type { NativeApprovalAnswererRequest, NativeApprovalAnswererResult } from '@redspark/rsh-approval-definition'
+import { parseUserQuestionAnswer, UserQuestionError, type NativeAdmittedUserQuestionRequest, type AskUserQuestionAnswer } from '@redspark/rsh-user-questions/native'
+import type { NativeWebHumanPrompt, NativeWebHumanId } from '@redspark/rsh-client-native-session/human'
 import type { NativeSessionFeed } from './follow.ts'
 
 interface Pending {

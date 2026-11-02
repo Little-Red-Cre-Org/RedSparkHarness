@@ -1,10 +1,10 @@
 /** Cordis-free Native preparation for durable cross-session snapshots. */
 
-import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
-import type { Session } from '@deepseek-ai/dsh-session/native'
-import type { NativeSessionQueryOperations } from '@deepseek-ai/dsh-session-query/native'
-import type { SpillOperations } from '@deepseek-ai/dsh-spill/native'
-import type { UserMessage } from '@deepseek-ai/dsh-llm/native'
+import type { NativePlugin } from '@redspark/rsh-native-runtime'
+import type { Session } from '@redspark/rsh-session/native'
+import type { NativeSessionQueryOperations } from '@redspark/rsh-session-query/native'
+import type { SpillOperations } from '@redspark/rsh-spill/native'
+import type { UserMessage } from '@redspark/rsh-llm/native'
 import { DEFAULT_MAX_REFERENCE_BYTES, MAX_REFERENCES, SessionReferenceError } from './config.ts'
 import { prepareReferenceInput, prepareReferencedMessage, settleAll } from './prepared-context.ts'
 import { parseSessionReferenceText } from './uri.ts'
@@ -19,7 +19,7 @@ export interface NativeSessionReferenceOperations {
   prepare(session: Session, inputs: readonly UserMessage[], signal: AbortSignal): Promise<readonly UserMessage[]>
 }
 
-declare module '@deepseek-ai/dsh-native-runtime' {
+declare module '@redspark/rsh-native-runtime' {
   interface NativeServices { sessionReference: NativeSessionReferenceOperations }
 }
 
@@ -88,7 +88,7 @@ function nativeConfig(input: unknown): NativeConfig {
 /** Stateless Native session-reference Provider over the selected query and spill services. */
 export const plugin: NativePlugin = {
   apiVersion: 1,
-  name: '@deepseek-ai/dsh-session-reference',
+  name: '@redspark/rsh-session-reference',
   targets: ['host'],
   requires: ['sessionQuery'],
   optional: ['spillStore'],

@@ -11,10 +11,10 @@ import { tmpdir } from 'node:os'
 import { isAbsolute, join, relative, resolve as resolvePath } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { ReasoningEffortId } from '@deepseek-ai/dsh-llm'
-import type { ApprovalRequestParams } from '@deepseek-ai/dsh-sdk-protocol'
+import { ReasoningEffortId } from '@redspark/rsh-llm'
+import type { ApprovalRequestParams } from '@redspark/rsh-sdk-protocol'
 import {
-  DeepSeekHarness,
+  RedSparkHarness,
   HarnessClient,
   HarnessSession,
   JsonRpcResponseError,
@@ -56,7 +56,7 @@ function textBlocks(text: string): { type: 'text'; text: string }[] {
   return [{ type: 'text', text }]
 }
 
-function harnessWith(env: Record<string, string> = {}, extra: LaunchOverrides = {}): DeepSeekHarness {
+function harnessWith(env: Record<string, string> = {}, extra: LaunchOverrides = {}): RedSparkHarness {
   const harness = createProcessDeepSeekHarness(fakeLaunch(env, extra))
   cleanups.push(() => harness.close())
   return harness
@@ -68,7 +68,7 @@ async function tempDir(prefix: string): Promise<string> {
   return dir
 }
 
-describe('DeepSeekHarness', () => {
+describe('RedSparkHarness', () => {
   it.each([
     { scenario: 'approved once', late: false, expected: 'allowed-once' },
     { scenario: 'late approval after close', late: true, expected: 'cancelled' },
@@ -162,7 +162,7 @@ describe('DeepSeekHarness', () => {
           async * [Symbol.asyncIterator]() {},
         }),
       },
-    } as unknown as DeepSeekHarness
+    } as unknown as RedSparkHarness
 
     const result = await new HarnessSession(harness, 'owned').run('go')
 
@@ -347,7 +347,7 @@ describe('DeepSeekHarness', () => {
   })
 
   it('supports await using disposal', async () => {
-    let captured: DeepSeekHarness
+    let captured: RedSparkHarness
     {
       await using harness = createProcessDeepSeekHarness(fakeLaunch())
       captured = harness
@@ -362,8 +362,8 @@ describe('DeepSeekHarness', () => {
     const publicEntry = new URL('../src/index.ts', import.meta.url).href
     const probe = [
       "import assert from 'node:assert/strict'",
-      `const { DeepSeekHarness, HarnessClient } = await import(${JSON.stringify(publicEntry)})`,
-      'const harness = new DeepSeekHarness()',
+      `const { RedSparkHarness, HarnessClient } = await import(${JSON.stringify(publicEntry)})`,
+      'const harness = new RedSparkHarness()',
       'assert.ok(harness.client instanceof HarnessClient)',
       'await harness.close()',
     ].join('\n')
@@ -547,7 +547,7 @@ describe('HarnessClient', () => {
 
     // A bare unbounded request with omitted params sends `{}` on the wire.
     const identity = await client.request('initialize') as { serverInfo: { name: string } }
-    expect(identity.serverInfo.name).toBe('deepseek-harness-sdk-runtime')
+    expect(identity.serverInfo.name).toBe('redspark-harness-sdk-runtime')
 
     // Async iteration consumes queued items and then parks.
     const collected: string[] = []

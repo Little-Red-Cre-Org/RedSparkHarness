@@ -1,7 +1,7 @@
 /** Session-local model selection over the Program's existing active owner. */
-import type { LlmCallConfig, UserMessage } from '@deepseek-ai/dsh-llm/native'
-import type { NativeActiveSessionOwner } from '@deepseek-ai/dsh-native-session-execution'
-import type {} from '@deepseek-ai/dsh-native-runtime'
+import type { LlmCallConfig, UserMessage } from '@redspark/rsh-llm/native'
+import type { NativeActiveSessionOwner } from '@redspark/rsh-native-session-execution'
+import type {} from '@redspark/rsh-native-runtime'
 import type { NativeModelSelectionState, NativeModelSelectionRequest, NativeModelSelectionReceipt } from './types.ts'
 
 /** One frozen step route and the durable model-visible notice the Program must append. */
@@ -40,6 +40,6 @@ export interface NativeModelSelectionOperations {
   capture(owner: NativeActiveSessionOwner, defaults: LlmCallConfig, signal: AbortSignal): Promise<NativeModelSelectionSnapshot>
 }
 
-declare module '@deepseek-ai/dsh-native-runtime' {
+declare module '@redspark/rsh-native-runtime' {
   interface NativeServices { modelSelection: NativeModelSelectionOperations }
 }

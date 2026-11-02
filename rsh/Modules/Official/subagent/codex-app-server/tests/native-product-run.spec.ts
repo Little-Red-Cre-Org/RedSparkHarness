@@ -2,7 +2,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from 'node:f
 import { tmpdir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
 import { expect, it } from 'vitest'
-import { createUserMessage } from '@deepseek-ai/dsh-llm/native'
+import { createUserMessage } from '@redspark/rsh-llm/native'
 import type {
   NativeExternalJsonValue,
   NativeExternalModelAttemptLease,
@@ -12,10 +12,10 @@ import type {
   NativeExternalSubagentModelOperations,
   NativeExternalToolCallGrant,
   NativeExternalToolSettlement,
-} from '@deepseek-ai/dsh-native-subagent/native'
-import type { ChildConnectionDefinition } from '@deepseek-ai/dsh-subprocess/native'
-import type { SubprocessEnvironmentMode } from '@deepseek-ai/dsh-subprocess/native'
-import { createLocalChildConnectionProvider } from '@deepseek-ai/dsh-subprocess-local/child-connection'
+} from '@redspark/rsh-native-subagent/native'
+import type { ChildConnectionDefinition } from '@redspark/rsh-subprocess/native'
+import type { SubprocessEnvironmentMode } from '@redspark/rsh-subprocess/native'
+import { createLocalChildConnectionProvider } from '@redspark/rsh-subprocess-local/child-connection'
 import { startNativeCodexProductRun } from '../src/native-product-run.ts'
 import type { NativeResponsesTransportResponse } from '../src/responses-gateway.ts'
 
@@ -233,7 +233,7 @@ it('runs pinned Codex through its isolated authenticated gateway and logs the fo
     if (process.platform === 'win32') {
       expect(childEnv?.SystemRoot).toBe(process.env.SystemRoot ?? process.env.SYSTEMROOT)
     }
-    const token = childEnv?.DSH_NATIVE_GATEWAY_TOKEN
+    const token = childEnv?.RSH_NATIVE_GATEWAY_TOKEN
     expect(token).toBeTruthy()
     if (token === undefined) throw new Error('Codex child did not receive the gateway token')
 

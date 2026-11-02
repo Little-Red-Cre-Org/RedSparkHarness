@@ -8,7 +8,7 @@ import { applyNativeProfilePatches, nativeProfileReloadMode, parseNativeProfileC
 const base = {
   formatVersion: 1,
   scopes: [{ id: 'agent', parent: 'root' }, { id: 'root' }],
-  installations: [{ id: 'storage', plugin: '@deepseek-ai/dsh-fs-local', scope: 'agent', config: { cwd: 'first' } }],
+  installations: [{ id: 'storage', plugin: '@redspark/rsh-fs-local', scope: 'agent', config: { cwd: 'first' } }],
 }
 
 it('resolves declared scopes and replaces complete plugin config in ordered JSON overlays', () => {

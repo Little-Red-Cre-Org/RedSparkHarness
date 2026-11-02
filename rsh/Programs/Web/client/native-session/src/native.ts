@@ -3,11 +3,11 @@ import { nativeWebHumanSchema, type NativeWebHumanAnswer, type NativeWebHumanId,
 export type { NativeWebHumanAnswer, NativeWebHumanId, NativeWebHumanPrompt } from './human.ts'
 import { EventSourceParserStream } from 'eventsource-parser/stream'
 import { z } from 'zod'
-import { brandString, type Branded } from '@deepseek-ai/dsh-brand'
-import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
-import type {} from '@deepseek-ai/dsh-client-connection/native'
-import type { ClientConnectionRpc } from '@deepseek-ai/dsh-client-connection/native'
-import type { SessionId, SessionHeader, SessionEvent, SessionEventMap } from '@deepseek-ai/dsh-session/types'
+import { brandString, type Branded } from '@redspark/rsh-brand'
+import type { NativePlugin } from '@redspark/rsh-native-runtime'
+import type {} from '@redspark/rsh-client-connection/native'
+import type { ClientConnectionRpc } from '@redspark/rsh-client-connection/native'
+import type { SessionId, SessionHeader, SessionEvent, SessionEventMap } from '@redspark/rsh-session/types'
 import type {
   WorkspaceDirectoryListing,
   WorkspaceFileBytes,
@@ -15,23 +15,23 @@ import type {
   WorkspaceFileStat,
   WorkspaceFileText,
   WorkspaceFileWatchFrame,
-} from '@deepseek-ai/dsh-api-workspace-files/native-types'
-import { SESSION_FORMAT_VERSION } from '@deepseek-ai/dsh-session/types'
-import { SessionSeq } from '@deepseek-ai/dsh-session/types'
-import { parseSessionEvent } from '@deepseek-ai/dsh-session/event-validation'
+} from '@redspark/rsh-api-workspace-files/native-types'
+import { SESSION_FORMAT_VERSION } from '@redspark/rsh-session/types'
+import { SessionSeq } from '@redspark/rsh-session/types'
+import { parseSessionEvent } from '@redspark/rsh-session/event-validation'
 import { nativeModelControlsSchema, type NativeModelControls } from './model-controls.ts'
 import { nativeModeControlsSchema, nativePermissionControlsSchema, nativePlanModeSelectionSchema,
   type NativeModeControls, type NativePermissionControls, type NativePlanModeSelection } from './composer-controls.ts'
 export type { NativeModeControls, NativePermissionControls, NativePlanModeSelection } from './composer-controls.ts'
-import type { NativeModelSelectionRequest } from '@deepseek-ai/dsh-native-model-selection/types'
-import type { NativeAgentPresetSelectionRequest } from '@deepseek-ai/dsh-agent-presets/selection'
-import { FEEDBACK_CATEGORIES, type SessionFeedbackRecordRequest, type SessionFeedbackRecordResult } from '@deepseek-ai/dsh-command-feedback/types'
+import type { NativeModelSelectionRequest } from '@redspark/rsh-native-model-selection/types'
+import type { NativeAgentPresetSelectionRequest } from '@redspark/rsh-agent-presets/selection'
+import { FEEDBACK_CATEGORIES, type SessionFeedbackRecordRequest, type SessionFeedbackRecordResult } from '@redspark/rsh-command-feedback/types'
 import type {
   MessageFeedbackDeleteRequest, MessageFeedbackDeleteResult, MessageFeedbackListRequest,
   MessageFeedbackItem, MessageFeedbackListResult, MessageFeedbackPutRequest, MessageFeedbackPutResult,
-} from '@deepseek-ai/dsh-message-feedback/types'
-import type { CommandDescriptor, CommandExecution } from '@deepseek-ai/dsh-commands/facts'
-import type { AuthorizationFrame, AuthorizationMethod } from '@deepseek-ai/dsh-authorization/types'
+} from '@redspark/rsh-message-feedback/types'
+import type { CommandDescriptor, CommandExecution } from '@redspark/rsh-commands/facts'
+import type { AuthorizationFrame, AuthorizationMethod } from '@redspark/rsh-authorization/types'
 import { createNativeWorkspaceClients } from './workspaces.ts'
 import { NativeSessionRpcError } from './rpc-error.ts'
 export { NativeSessionRpcError } from './rpc-error.ts'
@@ -73,7 +73,7 @@ interface NativeFileUploadGlobal {
 /** Original durable image identity from the Session message protocol. */
 export type NativeSessionImage = Extract<SessionEventMap['user/message']['content'][number], { type: 'image' }>['attachment']
 
-declare module '@deepseek-ai/dsh-native-runtime' {
+declare module '@redspark/rsh-native-runtime' {
   interface NativeServices {
     /** Native Session RPC Consumer selected by the browser composition. */
     clientNativeSession: NativeSessionClient
@@ -1930,7 +1930,7 @@ function createNativeWorkspaceFilesClient(rpc: ClientConnectionRpc, config: Nati
 
 /** Native browser installation that shares the Connection Provider's owned transport. */
 export const plugin: NativePlugin = {
-  apiVersion: 1, name: '@deepseek-ai/dsh-client-native-session', targets: ['client'],
+  apiVersion: 1, name: '@redspark/rsh-client-native-session', targets: ['client'],
   requires: ['clientConnection'], provides: ['clientNativeSession', 'clientNativeSchedule', 'clientNativeWorkspace', 'clientNativeDirectoryPicker',
     'clientNativeWorkspaceFiles', 'clientNativeSessionJobs'],
   resolve(input) {

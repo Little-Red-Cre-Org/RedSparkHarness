@@ -1,6 +1,6 @@
 /** Authenticated SSE transport for Native Session-list invalidations. */
-import type { SessionId } from '@deepseek-ai/dsh-session/types'
-import type { NativeSessionListItem } from '@deepseek-ai/dsh-client-native-session/list-types'
+import type { SessionId } from '@redspark/rsh-session/types'
+import type { NativeSessionListItem } from '@redspark/rsh-client-native-session/list-types'
 
 class SessionListChangeQueue implements AsyncIterator<SessionId> {
   private readonly values: SessionId[] = []

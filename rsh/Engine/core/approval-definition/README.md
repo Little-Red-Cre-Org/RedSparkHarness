@@ -3,7 +3,7 @@ description: "Share native approval contracts and Cordis-free legacy audit types
 kind: "package-library"
 ---
 
-# @deepseek-ai/dsh-approval-definition
+# @redspark/rsh-approval-definition
 
 English | [中文](README.zh.md)
 
@@ -33,8 +33,8 @@ Native approval Providers and applications import the root service contract. `co
 The root and legacy entries keep `native-approval/*` records separate from the compatibility `approval/*` records. A caller must use the contract for its selected Provider; this package does not convert one history into the other.
 
 ```ts
-import type { Agent } from '@deepseek-ai/dsh-agent'
-import type { ApprovalServiceDefinition } from '@deepseek-ai/dsh-approval-definition/legacy'
+import type { Agent } from '@redspark/rsh-agent'
+import type { ApprovalServiceDefinition } from '@redspark/rsh-approval-definition/legacy'
 
 type CordisApproval = ApprovalServiceDefinition<Agent>
 ```

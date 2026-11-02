@@ -302,9 +302,9 @@ def write_advanced_profile_patch(root: Path, name: str, sessions: Path) -> Path:
             },
         },
         {"insert": [
-            {"id": "code-runtime", "name": "@deepseek-ai/dsh-code-runtime-worker-thread"},
-            {"id": "cordis-host-runner", "name": "@deepseek-ai/dsh-cordis-host-runner"},
-            {"id": "cordis-tool", "name": "@deepseek-ai/dsh-tool-cordis"},
+            {"id": "code-runtime", "name": "@redspark/rsh-code-runtime-worker-thread"},
+            {"id": "cordis-host-runner", "name": "@redspark/rsh-cordis-host-runner"},
+            {"id": "cordis-tool", "name": "@redspark/rsh-tool-cordis"},
         ]},
     ])
 
@@ -315,7 +315,7 @@ def ensure_legacy_sdk_profile(executable: Path | None, dsh_home: Path, cwd: Path
     result = subprocess.run(
         [str(dsh), "--profile", "legacy-sdk", "--from-default-profile", "sdk", "--help"],
         cwd=cwd,
-        env={**os.environ, "DSH_HOME": str(dsh_home)},
+        env={**os.environ, "RSH_HOME": str(dsh_home)},
         text=True,
         capture_output=True,
         check=False,
@@ -332,7 +332,7 @@ def write_mcp_patch(root: Path, sessions: Path, server_script: Path) -> Path:
     return write_profile_patch(root, "mcp.patch.yml", sessions, [{
         "insert": [{
             "id": "mcp-fixture",
-            "name": "@deepseek-ai/dsh-mcp-client",
+            "name": "@redspark/rsh-mcp-client",
             "config": {
                 "serverName": "fixture",
                 "transport": "stdio",
@@ -974,22 +974,22 @@ def assert_installed_wheel_environment() -> Path:
         raise AssertionError("installed-wheel smoke must run inside a virtual environment")
     if "PYTHONPATH" in os.environ:
         raise AssertionError("installed-wheel smoke requires PYTHONPATH to be unset")
-    if "DSH_RUNTIME_MODE" in os.environ:
-        raise AssertionError("installed-wheel smoke requires DSH_RUNTIME_MODE to be unset")
+    if "RSH_RUNTIME_MODE" in os.environ:
+        raise AssertionError("installed-wheel smoke requires RSH_RUNTIME_MODE to be unset")
 
     repo_root = Path(__file__).resolve().parents[2]
     cwd = Path.cwd().resolve()
     if cwd.is_relative_to(repo_root):
         raise AssertionError(f"installed-wheel smoke must run outside the repository, got {cwd}")
 
-    sdk_version = importlib.metadata.version("deepseek-harness-sdk")
-    runtime_version = importlib.metadata.version("deepseek-harness-runtime-bin")
+    sdk_version = importlib.metadata.version("redspark-harness-sdk")
+    runtime_version = importlib.metadata.version("redspark-harness-runtime-bin")
     if sdk_version != runtime_version:
         raise AssertionError(
             f"installed SDK/runtime versions differ: {sdk_version} != {runtime_version}"
         )
-    expected_runtime_requirement = f"deepseek-harness-runtime-bin=={sdk_version}"
-    requirements = importlib.metadata.requires("deepseek-harness-sdk") or []
+    expected_runtime_requirement = f"redspark-harness-runtime-bin=={sdk_version}"
+    requirements = importlib.metadata.requires("redspark-harness-sdk") or []
     if expected_runtime_requirement not in requirements:
         raise AssertionError(
             f"installed SDK does not require {expected_runtime_requirement}: {requirements}"
@@ -1014,7 +1014,7 @@ def assert_installed_wheel_environment() -> Path:
     runtime_package = imported["deepseek_harness_runtime"].parent
     if not executable.is_relative_to(runtime_package):
         raise AssertionError(f"bundled runtime came from outside the installed runtime wheel: {executable}")
-    runtime_files = importlib.metadata.files("deepseek-harness-runtime-bin") or []
+    runtime_files = importlib.metadata.files("redspark-harness-runtime-bin") or []
     if not any(Path(file).name == executable.name for file in runtime_files):
         raise AssertionError(f"runtime executable is absent from installed distribution records: {executable}")
     return executable
@@ -1022,7 +1022,7 @@ def assert_installed_wheel_environment() -> Path:
 
 def smoke_sdk_live() -> None:
     """Run a real-model, tool-using two-turn task through installed wheels."""
-    from deepseek_harness import DeepSeekHarness
+    from deepseek_harness import RedSparkHarness
 
     api_key = os.environ.get("DEEPSEEK_API_KEY")
     base_url = os.environ.get("DEEPSEEK_BASE_URL")
@@ -1043,14 +1043,14 @@ def smoke_sdk_live() -> None:
             f"content {LIVE_API_SENTINEL}, with no newline or byte-order mark. "
             f"Then reply with exactly {LIVE_API_SENTINEL}.\n{marker}"
         )
-        with DeepSeekHarness(
+        with RedSparkHarness(
             provider="deepseek-official",
             model="deepseek-v4-flash",
             cwd=str(root),
             dsh_home=str(dsh_home),
             env={
-                "DSH_PERMISSION_MODE": "danger-full-access",
-                "DSH_TELEMETRY_DISABLED": "1",
+                "RSH_PERMISSION_MODE": "danger-full-access",
+                "RSH_TELEMETRY_DISABLED": "1",
             },
             api_key=api_key,
             base_url=base_url,
@@ -1134,20 +1134,20 @@ def safe_turn_end(value: object) -> object:
 
 
 def smoke_sdk_default(base_url: str) -> None:
-    from deepseek_harness import DeepSeekHarness
+    from deepseek_harness import RedSparkHarness
 
     with tempfile.TemporaryDirectory(prefix="dsh-sdk-default-") as temporary:
         root = Path(temporary).resolve()
         dsh_home = root / "home"
         sessions = dsh_home / "sessions"
-        with DeepSeekHarness(
+        with RedSparkHarness(
             provider="deepseek-official",
             model="smoke-model",
             cwd=str(root),
             dsh_home=str(dsh_home),
             env={
-                "DSH_PERMISSION_MODE": "danger-full-access",
-                "DSH_TELEMETRY_DISABLED": "1",
+                "RSH_PERMISSION_MODE": "danger-full-access",
+                "RSH_TELEMETRY_DISABLED": "1",
             },
             api_key="sk-keyless-smoke",
             base_url=base_url,
@@ -1220,7 +1220,7 @@ def native_public_inputs(records: list[dict[str, object]], expected: tuple[str, 
 def initialize_installed_native_profile(executable: Path, home: Path, cwd: Path,
                                          installations: list[dict[str, object]]) -> Path:
     """Create the shipped native-sdk profile with the installed runtime before adding user plugins."""
-    env = {**os.environ, "DSH_HOME": str(home), "DSH_TELEMETRY_DISABLED": "1"}
+    env = {**os.environ, "RSH_HOME": str(home), "RSH_TELEMETRY_DISABLED": "1"}
     result = subprocess.run(
         [str(executable), "--profile", "native-sdk", "--dump-config"],
         cwd=cwd, env=env, capture_output=True, text=True, timeout=30, check=False,
@@ -1279,17 +1279,17 @@ def write_native_sdk_model_patch(path: Path, cwd: Path, sessions: Path, base_url
 def run_installed_native_turn(home: Path, cwd: Path, patch: Path, session_id: str, task: str,
                               executable: Path):
     """Run one Native SDK turn through the installed Python package's bundled executable."""
-    from deepseek_harness import DeepSeekHarness
+    from deepseek_harness import RedSparkHarness
 
-    with DeepSeekHarness(
+    with RedSparkHarness(
         provider="fixture",
         model="fixture-model",
         cwd=str(cwd),
         dsh_home=str(home),
         profile="native-sdk",
         patches=(str(patch),),
-        env={"NATIVE_SDK_FIXTURE_KEY": "fixture-key", "DSH_TELEMETRY_DISABLED": "1",
-             "DSH_PERMISSION_MODE": "danger-full-access"},
+        env={"NATIVE_SDK_FIXTURE_KEY": "fixture-key", "RSH_TELEMETRY_DISABLED": "1",
+             "RSH_PERMISSION_MODE": "danger-full-access"},
         request_timeout_seconds=60,
     ) as harness:
         result = harness.start_session(session_id).run(task)
@@ -1457,11 +1457,11 @@ def smoke_sdk_native_skills(base_url: str, executable: Path, reference: dict[str
             encoding="utf-8",
         )
         initialize_installed_native_profile(executable, home, cwd, [
-            {"id": "request-context", "plugin": "@deepseek-ai/dsh-request-context", "scope": "root"},
-            {"id": "skills", "plugin": "@deepseek-ai/dsh-skill", "scope": "root"},
-            {"id": "skill-filesystem", "plugin": "@deepseek-ai/dsh-skill-filesystem", "scope": "root",
+            {"id": "request-context", "plugin": "@redspark/rsh-request-context", "scope": "root"},
+            {"id": "skills", "plugin": "@redspark/rsh-skill", "scope": "root"},
+            {"id": "skill-filesystem", "plugin": "@redspark/rsh-skill-filesystem", "scope": "root",
              "config": {"agentsHome": str(home), "dshHome": str(home), "watch": False}},
-            {"id": "tool-skill", "plugin": "@deepseek-ai/dsh-tool-skill", "scope": "root"},
+            {"id": "tool-skill", "plugin": "@redspark/rsh-tool-skill", "scope": "root"},
         ])
         patch = root / "native.patch.json"
         write_native_sdk_model_patch(patch, cwd, sessions, base_url, "You are a Native Skills fixture.")
@@ -1522,7 +1522,7 @@ def smoke_sdk_native_skills(base_url: str, executable: Path, reference: dict[str
 def smoke_sdk_native_staged_files(base_url: str, executable: Path,
                                   reference: dict[str, object]) -> None:
     """Exercise staged-file receipts, builtin access, denial, and cold recovery in installed wheels."""
-    from deepseek_harness import DeepSeekHarness
+    from deepseek_harness import RedSparkHarness
 
     global NATIVE_STAGED_FILES_GATE
     records = reference["records"]
@@ -1595,12 +1595,12 @@ def smoke_sdk_native_staged_files(base_url: str, executable: Path,
         started, release = threading.Event(), threading.Event()
         NATIVE_STAGED_FILES_GATE = (started, release)
         try:
-            with ThreadPoolExecutor(max_workers=1) as executor, DeepSeekHarness(
+            with ThreadPoolExecutor(max_workers=1) as executor, RedSparkHarness(
                 provider="fixture", model="fixture-model", cwd=str(cwd), dsh_home=str(home),
                 profile="native-sdk", patches=(str(patch),), allowed_tools=("read_file", "write_file"),
                 workspace_write_root=str(cwd),
-                env={"NATIVE_SDK_FIXTURE_KEY": "fixture-key", "DSH_TELEMETRY_DISABLED": "1",
-                     "DSH_PERMISSION_MODE": "workspace-write"},
+                env={"NATIVE_SDK_FIXTURE_KEY": "fixture-key", "RSH_TELEMETRY_DISABLED": "1",
+                     "RSH_PERMISSION_MODE": "workspace-write"},
                 request_timeout_seconds=90,
             ) as harness:
                 try:
@@ -1746,8 +1746,8 @@ def smoke_sdk_native_external(base_url: str, executable: Path, reference: dict[s
         profile = initialize_installed_native_profile(executable, home, cwd, [
             {"id": "external-driver", "plugin": "native-sdk-installed-external-driver", "scope": "root",
              "config": driver_config},
-            {"id": "policy", "plugin": "@deepseek-ai/dsh-fs-observation-policy", "scope": "root"},
-            {"id": "file-tools", "plugin": "@deepseek-ai/dsh-tool-fs", "scope": "root"},
+            {"id": "policy", "plugin": "@redspark/rsh-fs-observation-policy", "scope": "root"},
+            {"id": "file-tools", "plugin": "@redspark/rsh-tool-fs", "scope": "root"},
         ])
         write_installed_profile_plugin(profile, "native-sdk-installed-external-driver",
                                        NATIVE_SDK_EXTERNAL_DRIVER, [], ["externalSubagentDriver"])
@@ -1908,7 +1908,7 @@ def smoke_sdk_native_inbox(base_url: str, executable: Path, reference: dict[str,
 
 
 def smoke_sdk_custom(base_url: str, executable: Path) -> None:
-    from deepseek_harness import DeepSeekHarness
+    from deepseek_harness import RedSparkHarness
 
     with tempfile.TemporaryDirectory(prefix="dsh-sdk-custom-") as temporary:
         root = Path(temporary).resolve()
@@ -1916,7 +1916,7 @@ def smoke_sdk_custom(base_url: str, executable: Path) -> None:
         sessions = dsh_home / "sessions"
         ensure_legacy_sdk_profile(executable, dsh_home, root)
         patch = write_advanced_profile_patch(root, "custom.patch.yml", sessions)
-        with DeepSeekHarness(
+        with RedSparkHarness(
             provider="deepseek-official",
             model="smoke-model",
             cwd=str(root),
@@ -1925,8 +1925,8 @@ def smoke_sdk_custom(base_url: str, executable: Path) -> None:
             profile="legacy-sdk",
             patches=(str(patch),),
             env={
-                "DSH_PERMISSION_MODE": "danger-full-access",
-                "DSH_TELEMETRY_DISABLED": "1",
+                "RSH_PERMISSION_MODE": "danger-full-access",
+                "RSH_TELEMETRY_DISABLED": "1",
             },
             api_key="sk-keyless-smoke",
             base_url=base_url,
@@ -2038,7 +2038,7 @@ def smoke_sdk_minimal(
     base_url: str, executable: Path, update_snapshots: bool, *, in_history: bool = False,
 ) -> None:
     """Exercise the shipped standalone minimal profile through the packaged executable."""
-    from deepseek_harness import DeepSeekHarness
+    from deepseek_harness import RedSparkHarness
 
     # One mock model serves every scenario of a run, so the snapshot takes this turn's slice.
     first_request = len(MockModelHandler.requests)
@@ -2059,7 +2059,7 @@ def smoke_sdk_minimal(
                 }]},
             ]))
             patches = (str(patch),)
-        with DeepSeekHarness(
+        with RedSparkHarness(
             provider="deepseek-official",
             model="smoke-model",
             cwd=str(root),
@@ -2094,7 +2094,7 @@ def smoke_sdk_minimal(
 
 def smoke_sdk_fs_search(base_url: str, executable: Path) -> None:
     """Exercise real grep and glob spawns through the packaged executable."""
-    from deepseek_harness import DeepSeekHarness
+    from deepseek_harness import RedSparkHarness
 
     with tempfile.TemporaryDirectory(prefix="dsh-sdk-fs-search-") as temporary:
         root = Path(temporary).resolve()
@@ -2106,7 +2106,7 @@ def smoke_sdk_fs_search(base_url: str, executable: Path) -> None:
             {"id": "skill-filesystem", "disabled": True},
             {"id": "tool-fs-search", "config": {"sampleOverCapGlobResults": False}},
         ])
-        with DeepSeekHarness(
+        with RedSparkHarness(
             provider="deepseek-official",
             model="smoke-model",
             cwd=str(root),
@@ -2115,8 +2115,8 @@ def smoke_sdk_fs_search(base_url: str, executable: Path) -> None:
             profile="legacy-sdk",
             patches=(str(patch),),
             env={
-                "DSH_PERMISSION_MODE": "danger-full-access",
-                "DSH_TELEMETRY_DISABLED": "1",
+                "RSH_PERMISSION_MODE": "danger-full-access",
+                "RSH_TELEMETRY_DISABLED": "1",
             },
             api_key="sk-keyless-smoke",
             base_url=base_url,
@@ -2130,7 +2130,7 @@ def smoke_sdk_fs_search(base_url: str, executable: Path) -> None:
 
 def smoke_sdk_spawn_node(base_url: str, executable: Path) -> None:
     """A shell command starting with `node` must reach the machine's Node, not the executable."""
-    from deepseek_harness import DeepSeekHarness
+    from deepseek_harness import RedSparkHarness
 
     with tempfile.TemporaryDirectory(prefix="dsh-sdk-spawn-node-") as temporary:
         root = Path(temporary).resolve()
@@ -2138,7 +2138,7 @@ def smoke_sdk_spawn_node(base_url: str, executable: Path) -> None:
         sessions = dsh_home / "sessions"
         ensure_legacy_sdk_profile(executable, dsh_home, root)
         patch = write_profile_patch(root, "spawn-node.patch.yml", sessions, [])
-        with DeepSeekHarness(
+        with RedSparkHarness(
             provider="deepseek-official",
             model="smoke-model",
             cwd=str(root),
@@ -2147,8 +2147,8 @@ def smoke_sdk_spawn_node(base_url: str, executable: Path) -> None:
             profile="legacy-sdk",
             patches=(str(patch),),
             env={
-                "DSH_PERMISSION_MODE": "danger-full-access",
-                "DSH_TELEMETRY_DISABLED": "1",
+                "RSH_PERMISSION_MODE": "danger-full-access",
+                "RSH_TELEMETRY_DISABLED": "1",
             },
             api_key="sk-keyless-smoke",
             base_url=base_url,
@@ -2162,7 +2162,7 @@ def smoke_sdk_spawn_node(base_url: str, executable: Path) -> None:
 
 def smoke_sdk_mcp(base_url: str, executable: Path | None) -> None:
     """Discover and call an external stdio MCP tool through the packaged client."""
-    from deepseek_harness import DeepSeekHarness
+    from deepseek_harness import RedSparkHarness
 
     with tempfile.TemporaryDirectory(prefix="dsh-sdk-mcp-") as temporary:
         root = Path(temporary).resolve()
@@ -2173,7 +2173,7 @@ def smoke_sdk_mcp(base_url: str, executable: Path | None) -> None:
         ensure_legacy_sdk_profile(executable, dsh_home, root)
         patch = write_mcp_patch(root, sessions, server_script)
         discovery_log = server_script.with_suffix(".log")
-        with DeepSeekHarness(
+        with RedSparkHarness(
             provider="deepseek-official",
             model="smoke-model",
             cwd=str(root),
@@ -2182,8 +2182,8 @@ def smoke_sdk_mcp(base_url: str, executable: Path | None) -> None:
             profile="legacy-sdk",
             patches=(str(patch),),
             env={
-                "DSH_PERMISSION_MODE": "danger-full-access",
-                "DSH_TELEMETRY_DISABLED": "1",
+                "RSH_PERMISSION_MODE": "danger-full-access",
+                "RSH_TELEMETRY_DISABLED": "1",
             },
             api_key="sk-keyless-smoke",
             base_url=base_url,
@@ -2203,7 +2203,7 @@ def smoke_sdk_mcp(base_url: str, executable: Path | None) -> None:
 
 def smoke_sdk_profile_plugin(base_url: str) -> None:
     """Install an external bundle through Python's dsh command and load it in the SDK."""
-    from deepseek_harness import DeepSeekHarness
+    from deepseek_harness import RedSparkHarness
 
     with tempfile.TemporaryDirectory(prefix="dsh-sdk-profile-plugin-") as temporary:
         root = Path(temporary).resolve()
@@ -2216,11 +2216,11 @@ def smoke_sdk_profile_plugin(base_url: str) -> None:
             "private": True,
             "type": "module",
             "exports": "./index.js",
-            "peerDependencies": {"@deepseek-ai/cordis": "*"},
+            "peerDependencies": {"@redspark/cordis": "*"},
             "dsh": {"bundle": {"patch": "./cordis.patch.yml"}},
         }, indent=2))
         (plugin / "index.js").write_text(
-            "import { Context } from '@deepseek-ai/cordis'\n"
+            "import { Context } from '@redspark/cordis'\n"
             "export const name = 'python-sdk-blackbox-plugin'\n"
             "export const inject = ['systemPrompt']\n"
             "export function apply(ctx) {\n"
@@ -2237,7 +2237,7 @@ def smoke_sdk_profile_plugin(base_url: str) -> None:
         }], indent=2))
 
         dsh = Path(sysconfig.get_path("scripts")) / ("dsh.exe" if IS_WINDOWS else "dsh")
-        environment = {**os.environ, "DSH_HOME": str(dsh_home)}
+        environment = {**os.environ, "RSH_HOME": str(dsh_home)}
         initialized = subprocess.run(
             [str(dsh), "--profile", "legacy-sdk", "--from-default-profile", "sdk", "--help"],
             cwd=root,
@@ -2272,15 +2272,15 @@ def smoke_sdk_profile_plugin(base_url: str) -> None:
         if "dsh-python-blackbox-plugin" not in manifest["dsh"]["profile"]["bundles"]:
             raise AssertionError(f"dsh plugin did not activate the external bundle: {manifest}")
 
-        harness = DeepSeekHarness(
+        harness = RedSparkHarness(
             provider="deepseek-official",
             model="smoke-model",
             cwd=str(root),
             dsh_home=str(dsh_home),
             profile="legacy-sdk",
             env={
-                "DSH_PERMISSION_MODE": "danger-full-access",
-                "DSH_TELEMETRY_DISABLED": "1",
+                "RSH_PERMISSION_MODE": "danger-full-access",
+                "RSH_TELEMETRY_DISABLED": "1",
             },
             api_key="sk-keyless-smoke",
             base_url=base_url,
@@ -2300,7 +2300,7 @@ def smoke_sdk_profile_plugin(base_url: str) -> None:
 
 def smoke_sdk_snapshot(base_url: str, executable: Path, update_snapshots: bool) -> None:
     """Drive and compare the advanced SDK/executable behavioral snapshot."""
-    from deepseek_harness import DeepSeekHarness
+    from deepseek_harness import RedSparkHarness
 
     with tempfile.TemporaryDirectory(prefix="dsh-sdk-snapshot-") as temporary:
         root = Path(temporary).resolve()
@@ -2314,13 +2314,13 @@ def smoke_sdk_snapshot(base_url: str, executable: Path, update_snapshots: bool) 
             ).as_uri(), "config": {
                 "parentSessionId": SNAPSHOT_SESSION_ID, "prompt": SNAPSHOT_WORKFLOW_CHILD_PROMPT,
             }},
-            {"id": "snapshot-message-feedback", "name": "@deepseek-ai/dsh-message-feedback",
+            {"id": "snapshot-message-feedback", "name": "@redspark/rsh-message-feedback",
              "config": {"maxNoteBytes": 1024}},
             {"id": "snapshot-feedback-producer", "name": (
                 Path(__file__).resolve().parents[2] / "snapshots/sdk/text-turn/feedback-producer.mjs"
             ).as_uri()},
         ]}])
-        with DeepSeekHarness(
+        with RedSparkHarness(
             provider="deepseek-official",
             model="smoke-model",
             cwd=str(root),
@@ -2329,8 +2329,8 @@ def smoke_sdk_snapshot(base_url: str, executable: Path, update_snapshots: bool) 
             profile="legacy-sdk",
             patches=(str(patch), str(feedback_patch)),
             env={
-                "DSH_PERMISSION_MODE": "danger-full-access",
-                "DSH_TELEMETRY_DISABLED": "1",
+                "RSH_PERMISSION_MODE": "danger-full-access",
+                "RSH_TELEMETRY_DISABLED": "1",
             },
             api_key="sk-keyless-smoke",
             base_url=base_url,
@@ -2374,7 +2374,7 @@ def smoke_sdk_snapshot(base_url: str, executable: Path, update_snapshots: bool) 
 
 def smoke_sdk_restart_snapshot(base_url: str, executable: Path, update_snapshots: bool) -> None:
     """Snapshot two isolated sessions across complete SDK runtime restarts."""
-    from deepseek_harness import DeepSeekHarness
+    from deepseek_harness import RedSparkHarness
 
     with tempfile.TemporaryDirectory(prefix="dsh-sdk-restart-") as temporary:
         root = Path(temporary).resolve()
@@ -2385,7 +2385,7 @@ def smoke_sdk_restart_snapshot(base_url: str, executable: Path, update_snapshots
         first_request = len(MockModelHandler.requests)
 
         def run(prompt: str, session_id: str) -> "RunResult":
-            with DeepSeekHarness(
+            with RedSparkHarness(
                 provider="deepseek-official",
                 model="smoke-model",
                 cwd=str(root),
@@ -2394,8 +2394,8 @@ def smoke_sdk_restart_snapshot(base_url: str, executable: Path, update_snapshots
                 profile="legacy-sdk",
                 patches=(str(patch),),
                 env={
-                    "DSH_PERMISSION_MODE": "danger-full-access",
-                    "DSH_TELEMETRY_DISABLED": "1",
+                    "RSH_PERMISSION_MODE": "danger-full-access",
+                    "RSH_TELEMETRY_DISABLED": "1",
                 },
                 api_key="sk-keyless-smoke",
                 base_url=base_url,
@@ -2448,9 +2448,9 @@ def smoke_direct(base_url: str, executable: Path) -> None:
         patch = write_profile_patch(root, "direct.patch.yml", sessions, [])
         environment = {
             **os.environ,
-            "DSH_HOME": str(dsh_home),
-            "DSH_PERMISSION_MODE": "danger-full-access",
-            "DSH_TELEMETRY_DISABLED": "1",
+            "RSH_HOME": str(dsh_home),
+            "RSH_PERMISSION_MODE": "danger-full-access",
+            "RSH_TELEMETRY_DISABLED": "1",
             "DEEPSEEK_API_KEY": "sk-keyless-smoke",
             "DEEPSEEK_BASE_URL": base_url,
         }
@@ -2488,13 +2488,13 @@ def smoke_packaged_runner(executable: Path) -> None:
         target_script = (
             "import os,sys; "
             "ok = (os.getcwd() == os.environ['PACKAGED_RUNNER_EXPECTED_CWD'] "
-            "and os.environ.get('DSH_SUBPROCESS_RUNNER') == 'target-collision-restored'); "
+            "and os.environ.get('RSH_SUBPROCESS_RUNNER') == 'target-collision-restored'); "
             "sys.exit(7 if ok else 9)"
         )
         if not IS_WINDOWS:
             request_path = root / "launch-request.json"
             target_env = dict(os.environ)
-            target_env["DSH_SUBPROCESS_RUNNER"] = "target-collision-restored"
+            target_env["RSH_SUBPROCESS_RUNNER"] = "target-collision-restored"
             target_env["PACKAGED_RUNNER_EXPECTED_CWD"] = str(root)
             request_path.write_text(
                 json.dumps({"cwd": str(root), "env": target_env}),
@@ -2502,7 +2502,7 @@ def smoke_packaged_runner(executable: Path) -> None:
             )
             request_path.chmod(0o600)
             environment = dict(os.environ)
-            environment["DSH_SUBPROCESS_RUNNER"] = str(request_path)
+            environment["RSH_SUBPROCESS_RUNNER"] = str(request_path)
             result = subprocess.run(
                 [str(executable), "--", sys.executable, "-c", target_script],
                 cwd=root,
@@ -2528,7 +2528,7 @@ def smoke_packaged_runner(executable: Path) -> None:
 const [runtime, target, cwd, targetScript] = process.argv.slice(2)
 const child = spawn(runtime, ['--', target, '-c', targetScript], {
   cwd,
-  env: { ...process.env, DSH_SUBPROCESS_RUNNER: 'windows' },
+  env: { ...process.env, RSH_SUBPROCESS_RUNNER: 'windows' },
   stdio: ['ignore', 'ignore', 'ignore', 'ipc', 'pipe', 'pipe', 'pipe'],
 })
 const messages = []
@@ -2546,7 +2546,7 @@ const result = await new Promise((resolve, reject) => {
       cwd,
       env: {
         ...process.env,
-        DSH_SUBPROCESS_RUNNER: 'target-collision-restored',
+        RSH_SUBPROCESS_RUNNER: 'target-collision-restored',
         PACKAGED_RUNNER_EXPECTED_CWD: cwd,
       },
     }, error => { if (error) reject(error) })

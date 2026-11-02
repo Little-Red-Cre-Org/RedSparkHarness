@@ -1,6 +1,6 @@
-import type { Context } from '@deepseek-ai/cordis'
-import { SessionId } from '@deepseek-ai/dsh-session'
-import type { SubagentPromptRequestId } from '@deepseek-ai/dsh-subagent'
+import type { Context } from '@redspark/cordis'
+import { SessionId } from '@redspark/rsh-session'
+import type { SubagentPromptRequestId } from '@redspark/rsh-subagent'
 
 export const name = 'subagent-durability-failure'
 export const inject = ['agents', 'sessionPersistence', 'subagents']
@@ -13,7 +13,7 @@ export const inject = ['agents', 'sessionPersistence', 'subagents']
  *
  *  - `PLACEHOLDER_CHILD_ID` in a scripted `send_message` is remapped to the real
  *    child so both follow-ups queue onto the same live inbox in FIFO order.
- *  - Under `DSH_SNAPSHOT_HUMAN_STEER`, a browser-authored prompt steers the
+ *  - Under `RSH_SNAPSHOT_HUMAN_STEER`, a browser-authored prompt steers the
  *    continuable child before its first step, recording the shared next-step
  *    inbox path without adding a model tool.
  *  - The unknown-id `send_message` (`UNKNOWN_CHILD_ID`) resolves through a
@@ -22,7 +22,7 @@ export const inject = ['agents', 'sessionPersistence', 'subagents']
  *  - The child's final continuation turn fails its durability checkpoint with a
  *    fixed message, so the scenario proves child-first disposal survives a failed
  *    last flush.
- *  - Under `DSH_SUBAGENT_PUBLISHED_FAILURE`, a one-shot child's first
+ *  - Under `RSH_SUBAGENT_PUBLISHED_FAILURE`, a one-shot child's first
  *    follow-up fails after publication, so its model prompt never runs; its
  *    published handle then also fails disposal, so the parent observes both
  *    independent failures.
@@ -37,8 +37,8 @@ export function apply(ctx: Context): void {
   const followupsAccepted = Promise.withResolvers<undefined>()
   const parentTurnClosed = Promise.withResolvers<undefined>()
   let parentClosed = false
-  const publishedFailure = process.env.DSH_SUBAGENT_PUBLISHED_FAILURE === '1'
-  const humanSteer = process.env.DSH_SNAPSHOT_HUMAN_STEER === '1'
+  const publishedFailure = process.env.RSH_SUBAGENT_PUBLISHED_FAILURE === '1'
+  const humanSteer = process.env.RSH_SNAPSHOT_HUMAN_STEER === '1'
   const persistence = ctx.sessionPersistence
   const stat = persistence.stat.bind(persistence)
   const agents = ctx.agents

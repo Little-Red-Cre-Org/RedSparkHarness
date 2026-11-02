@@ -3,7 +3,7 @@ description: "Native profiles can assemble ordered, reversible system-prompt sec
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-native-prompt
+# @redspark/rsh-native-prompt
 
 English | [中文](README.zh.md)
 

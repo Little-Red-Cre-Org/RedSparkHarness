@@ -10,12 +10,12 @@ import {
   type SessionHeader,
   type SessionLogOffset as SessionLogOffsetType,
   type SessionSeq as SessionSeqType,
-} from '@deepseek-ai/dsh-session'
+} from '@redspark/rsh-session'
 import {
   eventLines, generationLogFilename, projectKey, toHeaderLine,
-} from '@deepseek-ai/dsh-session-persistence-jsonl/src/format.ts'
-import { projectionCacheDomainSpec } from '@deepseek-ai/dsh-session-projection-cache'
-import { snapshotSubagentDescriptor } from '@deepseek-ai/dsh-subagent'
+} from '@redspark/rsh-session-persistence-jsonl/src/format.ts'
+import { projectionCacheDomainSpec } from '@redspark/rsh-session-projection-cache'
+import { snapshotSubagentDescriptor } from '@redspark/rsh-subagent'
 
 /** Root copied by the preview image's repository adapter. */
 export const VFS_EXAMPLE_ROOT = fileURLToPath(new URL('./fixtures/vfs-example', import.meta.url))

@@ -3,7 +3,7 @@
  * (a file-tree root, a database file) and exposes operation groups over it.
  * This module defines the normative contract text for backend implementers; the shared
  * conformance suite in `tests/contract.ts` checks every rule.
- * @module @deepseek-ai/dsh-storage/src/backend
+ * @module @redspark/rsh-storage/src/backend
  */
 
 export { StorageError } from './error.ts'

@@ -1,5 +1,5 @@
 /** Captured Responses transport operations from one prepared model generation. */
-import type { ReasoningEffortId } from '@deepseek-ai/dsh-llm/native'
+import type { ReasoningEffortId } from '@redspark/rsh-llm/native'
 
 /** Immutable JSON accepted by the captured provider's complete Responses request projector. */
 export type NativeResponsesJsonValue = null | boolean | number | string
@@ -83,7 +83,7 @@ export interface NativeResponsesOperationCapture {
   readonly generation: NativeResponsesPreparedGeneration
 }
 
-declare module '@deepseek-ai/dsh-llm/native' {
+declare module '@redspark/rsh-llm/native' {
   interface PreparedAdapterCall {
     /** Provider-owned Responses operations captured with this exact model generation. */
     readonly nativeResponses?: NativeResponsesGenerationCapture

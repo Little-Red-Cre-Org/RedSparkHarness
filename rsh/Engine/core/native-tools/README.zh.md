@@ -3,7 +3,7 @@ description: "原生 profile 可接收可撤销的工具贡献，同时应用仍
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-native-tools
+# @redspark/rsh-native-tools
 
 [English](README.md) | 中文
 

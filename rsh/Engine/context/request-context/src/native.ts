@@ -1,11 +1,11 @@
 /** Native Host Provider for the request-context contribution registry. */
-import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
+import type { NativePlugin } from '@redspark/rsh-native-runtime'
 import { NativeRequestContextRegistry } from './index.ts'
 
 /** Provide one scoped request-context registry for a Native Host realm. */
 export const plugin: NativePlugin = {
   apiVersion: 1,
-  name: '@deepseek-ai/dsh-request-context',
+  name: '@redspark/rsh-request-context',
   targets: ['host'],
   requires: [],
   provides: ['requestContexts'],

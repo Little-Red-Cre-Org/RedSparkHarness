@@ -3,7 +3,7 @@ description: "The local PowerShell executor for deployments and maintainers choo
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-pwsh-local
+# @redspark/rsh-pwsh-local
 
 English | [中文](README.zh.md)
 
@@ -37,7 +37,7 @@ Load the executor with the budgets you want; every field has a default, so the s
 
 ```yaml
 - id: bash
-  name: '@deepseek-ai/dsh-pwsh-local'
+  name: '@redspark/rsh-pwsh-local'
   config:
     cwd: C:\path\to\workspace
     timeoutMs: 120000
@@ -105,7 +105,7 @@ A call runs through three steps: `resolve()` fills `workdir`/`timeoutMs`/`stdout
 ### Invariants and ownership
 
 - The `graceMs` budget must be positive, finite, and no greater than `MAX_TIMER_DELAY_MS` so Node can represent it with one timer; invalid values are refused where they are written.
-- Environment layering is fixed: terminal overrides first, then the caller's `env`, then the trusted `dshEnv` snapshot last; the subprocess service scrubs ambient credentials and inherited `DSH_*` names independently.
+- Environment layering is fixed: terminal overrides first, then the caller's `env`, then the trusted `dshEnv` snapshot last; the subprocess service scrubs ambient credentials and inherited `RSH_*` names independently.
 - Executable resolution is a pure function of `(configured, env, platform)` and re-probes the filesystem only when the stored `pwshPath` differs from the one the current executable was resolved from.
 - A background process belongs to the subprocess service: it survives an executor-only reload and is killed and joined when the service disposes.
 

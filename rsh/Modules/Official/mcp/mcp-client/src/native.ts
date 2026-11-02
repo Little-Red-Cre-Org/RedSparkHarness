@@ -1,15 +1,15 @@
 /** Native MCP installation over the shared connection supervisor and protocol bridge. */
-import type { NativeContext, NativePlugin, NativeScope, ResourceOwner } from '@deepseek-ai/dsh-native-runtime'
-import type { NativeToolExecution, NativeToolRegistry } from '@deepseek-ai/dsh-native-tools'
-import type { AttachmentOperations } from '@deepseek-ai/dsh-attachment/native'
-import type { NativeModel } from '@deepseek-ai/dsh-native-model-execution'
-export type {} from '@deepseek-ai/dsh-native-tools/native'
-export type {} from '@deepseek-ai/dsh-attachment/native'
-export type {} from '@deepseek-ai/dsh-native-model-execution/native'
+import type { NativeContext, NativePlugin, NativeScope, ResourceOwner } from '@redspark/rsh-native-runtime'
+import type { NativeToolExecution, NativeToolRegistry } from '@redspark/rsh-native-tools'
+import type { AttachmentOperations } from '@redspark/rsh-attachment/native'
+import type { NativeModel } from '@redspark/rsh-native-model-execution'
+export type {} from '@redspark/rsh-native-tools/native'
+export type {} from '@redspark/rsh-attachment/native'
+export type {} from '@redspark/rsh-native-model-execution/native'
 import type { Config } from './types.ts'
 import { resolveReconnectPolicy, startConnection, type McpConnectionPorts } from './connection-core.ts'
 import { syncTools } from './tool-core.ts'
-import { MAX_TIMER_DELAY_MS } from '@deepseek-ai/dsh-timeout'
+import { MAX_TIMER_DELAY_MS } from '@redspark/rsh-timeout'
 export type { Config, StdioConfig, StreamableHttpConfig, McpResult } from './types.ts'
 
 const namespaces = new WeakMap<object, Map<NativeScope, Set<string>>>()
@@ -134,7 +134,7 @@ export async function installNativeMcpClient(context: NativeMcpClientPorts, conf
 }
 
 /** Selected native MCP transport installer; no model loop or Session writer is created. */
-export const plugin: NativePlugin = { apiVersion: 1, name: '@deepseek-ai/dsh-mcp-client', targets: ['host'],
+export const plugin: NativePlugin = { apiVersion: 1, name: '@redspark/rsh-mcp-client', targets: ['host'],
   requires: ['tools'], optional: ['attachments', 'model'], provides: [],
   resolve(input) {
     const config = resolveNativeMcpConfig(input)

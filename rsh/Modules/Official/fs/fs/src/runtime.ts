@@ -1,7 +1,7 @@
 /** Loader adapter for filesystem plugins declared with RSH runtime roles. */
 
-import type { Plugin } from '@deepseek-ai/cordis'
-import { adaptCordisPlugin } from '@deepseek-ai/dsh-plugin-host'
+import type { Plugin } from '@redspark/cordis'
+import { adaptCordisPlugin } from '@redspark/rsh-plugin-host'
 
 /** One filesystem package's declared RSH role. */
 export interface FilesystemPluginDescriptor {

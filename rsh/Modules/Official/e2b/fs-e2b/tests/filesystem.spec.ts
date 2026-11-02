@@ -1,16 +1,16 @@
 import { Buffer } from 'node:buffer'
 import { dirname, posix } from 'node:path'
-import { Context } from '@deepseek-ai/cordis'
+import { Context } from '@redspark/cordis'
 import {
   CommandExitError,
   FileNotFoundError,
   FileType,
   type EntryInfo,
   type Sandbox,
-} from '@deepseek-ai/dsh-e2b'
-import type E2BRuntime from '@deepseek-ai/dsh-e2b'
-import { FsTargetKey, FsVersion } from '@deepseek-ai/dsh-fs'
-import E2BFileSystem from '@deepseek-ai/dsh-fs-e2b'
+} from '@redspark/rsh-e2b'
+import type E2BRuntime from '@redspark/rsh-e2b'
+import { FsTargetKey, FsVersion } from '@redspark/rsh-fs'
+import E2BFileSystem from '@redspark/rsh-fs-e2b'
 import { describe, expect, it, vi } from 'vitest'
 
 interface RemoteNode {

@@ -2,7 +2,7 @@
 
 [English](adding-a-package.md) | 中文
 
-为新建 `@deepseek-ai/dsh-<name>` 包提供的逐文件清单。本清单以 bash 和适配器这两个包为模板进行验证；如果清单与模板有出入，请在此修正。
+为新建 `@redspark/rsh-<name>` 包提供的逐文件清单。本清单以 bash 和适配器这两个包为模板进行验证；如果清单与模板有出入，请在此修正。
 
 ## 1. 创建包
 
@@ -22,7 +22,7 @@
 
 当包的角色匹配时，从[包映射](../../README.zh.md)中选择已有分组。本文的 `<group-path>` 表示该分组相对于仓库根目录的路径，`<package-path>` 表示 `<group-path>/<pkg>`；它们在 `rsh/` 下的深度并不固定。允许新建分组，但分组只是纯容器：没有 `package.json`，没有源文件，包恰好位于其下一层。
 
-package.json 不变式（由 `pnpm run constraints` / `rsh/Scripts/check-workspace-constraints.ts` 强制执行）：`private: true`，`version` 与根 `package.json` 一致，`type: module`，`main: "lib/index.js"`，`types: "lib/types/index.d.ts"`，`exports["."].types: "./lib/types/index.d.ts"`，`exports["."].default: "./lib/index.js"`，`@deepseek-ai/cordis` 同时出现在 peerDependencies 和 devDependencies 中（相同范围）。每个 dsh 对等依赖（peer dependency）都要在 devDependencies 中镜像。`@deepseek-ai/schemastery` 放在 `dependencies` 中（它是运行时校验器），与 agent-loop 保持一致。`files` 列表精确包含 `lib/index.js`、`lib/types/**/*.d.ts` 以及门禁认可的包专用运行时产物；发布 `./invariant` 的包还要包含 `lib/invariant.js`。如果包的运行时 export 指向输出树，还要包含 `lib/types/**/*.js`。不要发布 `src`、声明映射、JS map 或陈旧的根声明文件。带有 `bin` 的 CLI 应用包在 `files` 中将 `lib/bin.js` 紧跟在 `lib/index.js` 之后。
+package.json 不变式（由 `pnpm run constraints` / `rsh/Scripts/check-workspace-constraints.ts` 强制执行）：`private: true`，`version` 与根 `package.json` 一致，`type: module`，`main: "lib/index.js"`，`types: "lib/types/index.d.ts"`，`exports["."].types: "./lib/types/index.d.ts"`，`exports["."].default: "./lib/index.js"`，`@redspark/cordis` 同时出现在 peerDependencies 和 devDependencies 中（相同范围）。每个 dsh 对等依赖（peer dependency）都要在 devDependencies 中镜像。`@redspark/schemastery` 放在 `dependencies` 中（它是运行时校验器），与 agent-loop 保持一致。`files` 列表精确包含 `lib/index.js`、`lib/types/**/*.d.ts` 以及门禁认可的包专用运行时产物；发布 `./invariant` 的包还要包含 `lib/invariant.js`。如果包的运行时 export 指向输出树，还要包含 `lib/types/**/*.js`。不要发布 `src`、声明映射、JS map 或陈旧的根声明文件。带有 `bin` 的 CLI 应用包在 `files` 中将 `lib/bin.js` 紧跟在 `lib/index.js` 之后。
 
 包内的相对导入在源码中使用显式 `.ts` 后缀（例如 `export * from './types.ts'`）。编译器在输出的 JS 中将其重写为 `.js`，在声明文件中保留显式 `.ts` 后缀；标准的 NodeNext/Node16 TypeScript 消费方会将其解析到同目录的 `.d.ts` 文件。
 
@@ -30,7 +30,7 @@ package.json 不变式（由 `pnpm run constraints` / `rsh/Scripts/check-workspa
 
 | 文件 | 变更 |
 |---|---|
-| `tsconfig.base.json` | 如果分组尚未被覆盖，则为 `@deepseek-ai/dsh-*` 添加 `./<group-path>/*/src` 候选路径；包名与目录名不同的包需要显式别名 |
+| `tsconfig.base.json` | 如果分组尚未被覆盖，则为 `@redspark/rsh-*` 添加 `./<group-path>/*/src` 候选路径；包名与目录名不同的包需要显式别名 |
 | `tsconfig.host.json`（Host 包）或 `tsconfig.client.json`（Client 包） | 在 `references` 中添加 `{ "path": "./<package-path>" }`——普通包恰好属于一个 aggregate，绝不两个都加。`api/remotes` 因 Host 生成约定与 Client 消费约定之间存在顺序依赖而使用仓库专属拆分，新增包不得仿照（[布局](../development.zh.md#typescript-project-layout)） |
 | `package.json`、`pnpm-workspace.yaml` 和 `rsh/Scripts/workspace-manifest-globs.ts` | 确认 npm、pnpm 和源码清单均覆盖该分组；如果现有规则未覆盖，则添加对应匹配规则 |
 

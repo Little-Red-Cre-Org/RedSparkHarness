@@ -1,5 +1,5 @@
 /** Hierarchical visibility and installation-owned asynchronous cleanup. */
-import { brandString, type Branded } from '@deepseek-ai/dsh-brand'
+import { brandString, type Branded } from '@redspark/rsh-brand'
 
 /** Release one owned resource; completion means the resource is quiescent. */
 export type Disposer = () => void | Promise<void>

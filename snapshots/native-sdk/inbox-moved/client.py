@@ -3,7 +3,7 @@
 import json
 import sys
 
-from deepseek_harness import DeepSeekHarness, DeepSeekHarnessConfig
+from deepseek_harness import RedSparkHarness, DeepSeekHarnessConfig
 
 launcher, home, workspace, model_patch, session_id, task, recovery_task = sys.argv[1:]
 config = DeepSeekHarnessConfig(
@@ -15,7 +15,7 @@ config = DeepSeekHarnessConfig(
     provider="fixture",
     model="fixture-model",
     request_timeout_seconds=20,
-    env={"NATIVE_INBOX_FIXTURE_KEY": "fixture-key", "DSH_TELEMETRY_DISABLED": "1"},
+    env={"NATIVE_INBOX_FIXTURE_KEY": "fixture-key", "RSH_TELEMETRY_DISABLED": "1"},
 )
 
 
@@ -27,10 +27,10 @@ def serialize(result):
     }
 
 
-with DeepSeekHarness(config) as first:
+with RedSparkHarness(config) as first:
     initial = serialize(first.start_session(session_id).run(task))
 
-with DeepSeekHarness(config) as cold:
+with RedSparkHarness(config) as cold:
     restored = serialize(cold.start_session(session_id).run(recovery_task))
 
 print(json.dumps({"first": initial, "recovery": restored}))

@@ -1,6 +1,6 @@
 /** Profile settings validated before terminal or execution resources are acquired. */
 import { z } from 'zod'
-import { resolveNativeHeadlessConfig, type Config as TurnConfig } from '@deepseek-ai/dsh-native-headless/native'
+import { resolveNativeHeadlessConfig, type Config as TurnConfig } from '@redspark/rsh-native-headless/native'
 
 /** Explicit terminal appearance and limits alongside shared native turn settings. */
 export interface Config extends TurnConfig {

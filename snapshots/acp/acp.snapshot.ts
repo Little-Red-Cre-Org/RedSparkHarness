@@ -8,7 +8,7 @@ import {
   parseSnapshotManifest,
   type Scenario,
   type SnapshotSuiteOptions,
-} from '@deepseek-ai/dsh-session-snapshot'
+} from '@redspark/rsh-session-snapshot'
 
 const corpusDir = fileURLToPath(new URL('./', import.meta.url))
 
@@ -19,7 +19,7 @@ function snapshotMode(value: string | undefined): SnapshotSuiteOptions['mode'] {
     case 'replay': return 'replay'
     case 'record': return 'record'
     case 'refresh': return 'refresh'
-    default: throw new Error(`unknown DSH_SNAPSHOT mode: ${value}`)
+    default: throw new Error(`unknown RSH_SNAPSHOT mode: ${value}`)
   }
 }
 
@@ -72,7 +72,7 @@ const scenarios: Scenario[] = controllerCases.map((controller) => {
       : {
           env: {
             ...manifest.environment,
-            ...(manifest.permission === undefined ? {} : { DSH_PERMISSION_MODE: manifest.permission }),
+            ...(manifest.permission === undefined ? {} : { RSH_PERMISSION_MODE: manifest.permission }),
           },
         },
   }
@@ -89,5 +89,5 @@ defineAcpSnapshotSuite({
   },
   snapshotsDir: corpusDir,
   scenarios,
-  mode: snapshotMode(process.env.DSH_SNAPSHOT),
+  mode: snapshotMode(process.env.RSH_SNAPSHOT),
 })

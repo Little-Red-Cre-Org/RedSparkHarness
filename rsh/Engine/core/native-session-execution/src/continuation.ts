@@ -1,7 +1,7 @@
 /** Continuable Session execution supplied by the selected Program owner. */
-import type { NativeAgent, InboxTarget } from '@deepseek-ai/dsh-native-agent'
-import type { MessageId, UserMessage } from '@deepseek-ai/dsh-llm/native'
-import type { SessionEvent, SessionHeader, SessionId } from '@deepseek-ai/dsh-session/native'
+import type { NativeAgent, InboxTarget } from '@redspark/rsh-native-agent'
+import type { MessageId, UserMessage } from '@redspark/rsh-llm/native'
+import type { SessionEvent, SessionHeader, SessionId } from '@redspark/rsh-session/native'
 import type { NativeSessionConfiguration, NativeSessionDelegation, NativeSessionTurnResult } from './index.ts'
 import type { NativeActiveSessionOwner } from './active-session.ts'
 

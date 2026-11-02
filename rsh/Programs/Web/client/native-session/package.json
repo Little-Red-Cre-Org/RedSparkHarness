@@ -1,5 +1,5 @@
 {
-  "name": "@deepseek-ai/dsh-client-native-session",
+  "name": "@redspark/rsh-client-native-session",
   "description": "Native Web Session client lifecycle",
   "version": "1.0.0",
   "publishConfig": {
@@ -92,26 +92,26 @@
   "dependencies": {
     "eventsource-parser": "^3.1.0",
     "zod": "^4.4.3",
-    "@deepseek-ai/dsh-native-runtime": "workspace:^",
-    "@deepseek-ai/dsh-client-connection": "workspace:^",
-    "@deepseek-ai/dsh-native-model-selection": "workspace:^",
-    "@deepseek-ai/dsh-agent-presets": "workspace:^",
-    "@deepseek-ai/dsh-brand": "workspace:^",
-    "@deepseek-ai/dsh-commands": "workspace:^",
-    "@deepseek-ai/dsh-authorization": "workspace:^",
-    "@deepseek-ai/dsh-api-workspace-files": "workspace:^",
-    "@deepseek-ai/dsh-command-feedback": "workspace:^",
-    "@deepseek-ai/dsh-message-feedback": "workspace:^"
+    "@redspark/rsh-native-runtime": "workspace:^",
+    "@redspark/rsh-client-connection": "workspace:^",
+    "@redspark/rsh-native-model-selection": "workspace:^",
+    "@redspark/rsh-agent-presets": "workspace:^",
+    "@redspark/rsh-brand": "workspace:^",
+    "@redspark/rsh-commands": "workspace:^",
+    "@redspark/rsh-authorization": "workspace:^",
+    "@redspark/rsh-api-workspace-files": "workspace:^",
+    "@redspark/rsh-command-feedback": "workspace:^",
+    "@redspark/rsh-message-feedback": "workspace:^"
   },
   "scripts": {
     "bundle": "tsdown"
   },
   "peerDependencies": {
-    "@deepseek-ai/dsh-session": "workspace:^"
+    "@redspark/rsh-session": "workspace:^"
   },
   "devDependencies": {
-    "@deepseek-ai/dsh-llm": "workspace:^",
-    "@deepseek-ai/dsh-session": "workspace:^",
-    "@deepseek-ai/dsh-workspace-definition": "workspace:^"
+    "@redspark/rsh-llm": "workspace:^",
+    "@redspark/rsh-session": "workspace:^",
+    "@redspark/rsh-workspace-definition": "workspace:^"
   }
 }

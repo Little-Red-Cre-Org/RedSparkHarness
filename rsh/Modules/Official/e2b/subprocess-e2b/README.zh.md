@@ -3,7 +3,7 @@ description: "共享远程沙箱内的 shell 命令与终端：agent（智能体
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-subprocess-e2b
+# @redspark/rsh-subprocess-e2b
 
 [English](README.md) | 中文
 
@@ -97,7 +97,7 @@ agent 可以在沙箱中打开交互式终端、发送输入、读取输出，�
 
 ### 环境边界
 
-一次受信任的控制 shell 探测会从 passwd 条目解析沙箱用户的登录主目录，以 base64 ASCII 传输沙箱环境，再进行一次严格 UTF-8 解码；随后包装层移除环境中的 `DSH_*` 与形似凭据的名称（`*KEY*`、`*SECRET*`、`*TOKEN*`），并把每个有效的 `spec.env` 条目恢复为调用方显式选择。空名称、`=` 与违反 NUL 分帧规则的条目会在启动前被拒绝；在用户 profile 脚本运行前，此后的命令与 PTY 登录 shell 会获得位于根目录下、全新随机生成的 `HOME`，并为每个被清理的环境变量名设置空值覆盖。私有环境文件在使用后会被删除。
+一次受信任的控制 shell 探测会从 passwd 条目解析沙箱用户的登录主目录，以 base64 ASCII 传输沙箱环境，再进行一次严格 UTF-8 解码；随后包装层移除环境中的 `RSH_*` 与形似凭据的名称（`*KEY*`、`*SECRET*`、`*TOKEN*`），并把每个有效的 `spec.env` 条目恢复为调用方显式选择。空名称、`=` 与违反 NUL 分帧规则的条目会在启动前被拒绝；在用户 profile 脚本运行前，此后的命令与 PTY 登录 shell 会获得位于根目录下、全新随机生成的 `HOME`，并为每个被清理的环境变量名设置空值覆盖。私有环境文件在使用后会被删除。
 
 ### 输出处理
 

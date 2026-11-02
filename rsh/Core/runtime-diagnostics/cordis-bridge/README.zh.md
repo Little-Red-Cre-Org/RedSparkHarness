@@ -3,7 +3,7 @@ description: "Native 激活可以创建一个 Cordis 上下文，并翻译插件
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-cordis-bridge
+# @redspark/rsh-cordis-bridge
 
 [English](README.md) | 中文
 
@@ -23,7 +23,7 @@ kind: "package-reference"
 
 `hostCordisPlugin` 接收 Cordis 插件、它的配置，以及它可以读取的服务对象。`nativePluginForCordis` 把这个宿主包装成 Native 插件。`requires` 必须与包的 native 清单一致。
 
-该包拥有 Cordis 上下文，但不拥有服务。调用方翻译自己的 Cordis 插件所读的 Native 服务，并把翻译后的集合交给宿主；`@deepseek-ai/dsh-native-persona` 发布 persona 的翻译。
+该包拥有 Cordis 上下文，但不拥有服务。调用方翻译自己的 Cordis 插件所读的 Native 服务，并把翻译后的集合交给宿主；`@redspark/rsh-native-persona` 发布 persona 的翻译。
 
 <a id="model-experience"></a>
 ## 模型体验

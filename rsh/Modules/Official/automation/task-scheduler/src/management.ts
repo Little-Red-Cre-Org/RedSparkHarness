@@ -1,8 +1,8 @@
 /** Shared admission used by the model tool and the human-facing GUI. */
-import type { Context } from '@deepseek-ai/cordis'
-import type { Agent } from '@deepseek-ai/dsh-agent'
-import type {} from '@deepseek-ai/dsh-agent-presets'
-import type {} from '@deepseek-ai/dsh-permission-presets'
+import type { Context } from '@redspark/cordis'
+import type { Agent } from '@redspark/rsh-agent'
+import type {} from '@redspark/rsh-agent-presets'
+import type {} from '@redspark/rsh-permission-presets'
 import type { TaskStore } from './store.ts'
 import type { Task } from './types.ts'
 import type { CreateTaskRequest } from './gui-types.ts'

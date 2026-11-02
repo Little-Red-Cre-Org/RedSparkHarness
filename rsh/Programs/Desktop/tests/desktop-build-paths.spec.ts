@@ -45,13 +45,13 @@ describe('desktop build paths', () => {
 
   it('resolves environment overrides and rejects unsupported targets', () => {
     expect(resolveDesktopBuildTarget({
-      DSH_DESKTOP_TARGET_PLATFORM: 'darwin',
-      DSH_DESKTOP_TARGET_ARCH: 'x64',
+      RSH_DESKTOP_TARGET_PLATFORM: 'darwin',
+      RSH_DESKTOP_TARGET_ARCH: 'x64',
     }, 'darwin', 'arm64')).toBe('mac-x64')
     expect(resolveDesktopBuildTarget({}, 'win32', 'x64')).toBe('win-x64')
     expect(resolveDesktopBuildAssembly({})).toBe('native')
-    expect(resolveDesktopBuildAssembly({ DSH_DESKTOP_ASSEMBLY: 'compatibility' })).toBe('compatibility')
-    expect(() => resolveDesktopBuildAssembly({ DSH_DESKTOP_ASSEMBLY: 'unknown' })).toThrow(/unsupported assembly/u)
+    expect(resolveDesktopBuildAssembly({ RSH_DESKTOP_ASSEMBLY: 'compatibility' })).toBe('compatibility')
+    expect(() => resolveDesktopBuildAssembly({ RSH_DESKTOP_ASSEMBLY: 'unknown' })).toThrow(/unsupported assembly/u)
     expect(() => resolveDesktopBuildTarget({}, 'linux', 'x64')).toThrow(/unsupported target/u)
     expect(() => desktopTargetBuildPaths('linux-x64' as 'mac-x64')).toThrow(/unsupported target/u)
   })

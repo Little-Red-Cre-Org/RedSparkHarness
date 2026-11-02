@@ -1,25 +1,25 @@
 /** Native exact-cut observations over the selected active and durable authorities. */
 
-import { deepFreeze } from '@deepseek-ai/dsh-util-values'
+import { deepFreeze } from '@redspark/rsh-util-values'
 import {
   Session,
   SessionLogOffset,
   snapshotSessionEvent,
-} from '@deepseek-ai/dsh-session/native'
+} from '@redspark/rsh-session/native'
 import type {
   SessionEvent,
   SessionHeader,
   SessionId,
   SessionLogOffset as SessionLogOffsetValue,
-} from '@deepseek-ai/dsh-session/native'
-import type { SessionPersistenceRevision } from '@deepseek-ai/dsh-session-persistence/native'
-import type { NativeSessionProjectionCacheOperations } from '@deepseek-ai/dsh-session-projection-cache/native'
+} from '@redspark/rsh-session/native'
+import type { SessionPersistenceRevision } from '@redspark/rsh-session-persistence/native'
+import type { NativeSessionProjectionCacheOperations } from '@redspark/rsh-session-projection-cache/native'
 import type {
   NativeProjectionObservation,
   NativeSessionProjectionOperations,
   ProjectionCheckpoint,
   ProjectionSnapshot,
-} from '@deepseek-ai/dsh-session-projection/native'
+} from '@redspark/rsh-session-projection/native'
 import { SessionQueryError } from './config.ts'
 import type { NativeSessionQueryLiveSource, NativeSessionQuerySource } from './native-source.ts'
 import { assertSessionHeadersCompatible } from './sources.ts'

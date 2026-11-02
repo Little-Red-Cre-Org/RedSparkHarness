@@ -1,19 +1,19 @@
 /**
  * Service Definition for the user-questions capability seam (`ctx.userQuestions`): a UI-backed service for
  * pausing an agent tool call until the human answers a question. The model-
- * facing tool lives in `@deepseek-ai/dsh-tool-ask-user`; UI packages compose
+ * facing tool lives in `@redspark/rsh-tool-ask-user`; UI packages compose
  * answerers on the Agent-scoped Cordis waterfall.
  *
- * @module @deepseek-ai/dsh-user-questions
+ * @module @redspark/rsh-user-questions
  */
 
-import { Context, Service } from '@deepseek-ai/cordis'
-import type {} from '@deepseek-ai/dsh-agent'
+import { Context, Service } from '@redspark/cordis'
+import type {} from '@redspark/rsh-agent'
 import { UserQuestionError } from './question-error.ts'
 export { UserQuestionError } from './question-error.ts'
-import { scopeTarget } from '@deepseek-ai/dsh-scope'
+import { scopeTarget } from '@redspark/rsh-scope'
 
-declare module '@deepseek-ai/cordis' {
+declare module '@redspark/cordis' {
   interface Context {
     userQuestions: UserQuestionService
   }

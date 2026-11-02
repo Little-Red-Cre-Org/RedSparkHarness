@@ -1,5 +1,5 @@
 /** Framework-free code execution vocabulary shared by its Providers and Consumers. */
-import type {} from '@deepseek-ai/dsh-native-runtime'
+import type {} from '@redspark/rsh-native-runtime'
 
 export type {
   CodeBindingErrorClass,
@@ -57,6 +57,6 @@ export interface NativeCodeRuntime extends CodeRuntimeDefinition {
   dispose(): Promise<void>
 }
 
-declare module '@deepseek-ai/dsh-native-runtime' {
+declare module '@redspark/rsh-native-runtime' {
   interface NativeServices { codeRuntime: NativeCodeRuntime }
 }

@@ -28,7 +28,7 @@ env:
   CF_PROJECT: dsh-build-preview
   # CI runs must never report to the production telemetry endpoint baked into
   # rsh/Programs/CLI/cordis.yml (AppCLIEntry disables the row when set).
-  DSH_TELEMETRY_DISABLED: '1'
+  RSH_TELEMETRY_DISABLED: '1'
 
 jobs:
   preview:
@@ -75,8 +75,8 @@ jobs:
 
       - name: Build the preview page and pack the VFS image
         env:
-          DSH_CLIENT_TITLE: DSH preview pr-${{ github.event.pull_request.number }}
-        run: pnpm --filter @deepseek-ai/dsh-web-compatibility run build:preview
+          RSH_CLIENT_TITLE: DSH preview pr-${{ github.event.pull_request.number }}
+        run: pnpm --filter @redspark/rsh-web-compatibility run build:preview
 
       # Sourcemaps carry complete sources and stay off the deployment platform.
       # index.html is the served page, which cannot boot without a host

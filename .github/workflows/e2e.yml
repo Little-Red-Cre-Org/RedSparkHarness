@@ -49,7 +49,7 @@ permissions:
 env:
   # CI runs must never report to the production telemetry endpoint baked
   # into rsh/Programs/CLI/cordis.yml (AppCLIEntry disables the row when set).
-  DSH_TELEMETRY_DISABLED: '1'
+  RSH_TELEMETRY_DISABLED: '1'
 
 jobs:
   e2e:
@@ -101,7 +101,7 @@ jobs:
           fi
           echo "DEEPSEEK_API_KEY present."
 
-      # The e2e suites boot the example bins in `lib` mode (DSH_EXAMPLE_MODE=lib):
+      # The e2e suites boot the example bins in `lib` mode (RSH_EXAMPLE_MODE=lib):
       # the built artifact under plain Node, resolving plugins through real package
       # exports — the shape a real consumer runs. That requires a prior build.
       - name: Build (lib for the e2e example bins)
@@ -116,6 +116,6 @@ jobs:
         env:
           DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY_EXTERNAL }}
           DEEPSEEK_BASE_URL: https://api.deepseek.com
-          DSH_E2E_MAX_WORKERS: 4
-          DSH_EXAMPLE_MODE: lib
+          RSH_E2E_MAX_WORKERS: 4
+          RSH_EXAMPLE_MODE: lib
         run: pnpm run test:e2e

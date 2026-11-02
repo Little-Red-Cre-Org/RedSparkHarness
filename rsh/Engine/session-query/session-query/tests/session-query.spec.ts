@@ -1,35 +1,35 @@
-import { createUserMessage, createMessage } from '@deepseek-ai/dsh-llm'
+import { createUserMessage, createMessage } from '@redspark/rsh-llm'
 import { describe, expect, it, vi } from 'vitest'
-import { Context, type Fiber } from '@deepseek-ai/cordis'
-import SessionStore, { SessionLogOffset, SessionSeq, SESSION_FORMAT_VERSION, SessionId } from '@deepseek-ai/dsh-session'
-import SessionProjectionRegistry from '@deepseek-ai/dsh-session-projection'
-import { NativeSessionProjectionRegistry } from '@deepseek-ai/dsh-session-projection/native'
-import type { NativeSessionProjectionCacheOperations } from '@deepseek-ai/dsh-session-projection-cache/native'
-import type { SessionEvent, SessionHeader, SessionId as SessionIdType } from '@deepseek-ai/dsh-session'
-import { Session as NativeSession } from '@deepseek-ai/dsh-session/native'
-import type { SessionAppendInput } from '@deepseek-ai/dsh-session/native'
-import type { NativeActiveSessionOperations, NativeActiveSessionOwner } from '@deepseek-ai/dsh-native-session-execution/native'
-import type { NativeContext, NativeServices } from '@deepseek-ai/dsh-native-runtime'
+import { Context, type Fiber } from '@redspark/cordis'
+import SessionStore, { SessionLogOffset, SessionSeq, SESSION_FORMAT_VERSION, SessionId } from '@redspark/rsh-session'
+import SessionProjectionRegistry from '@redspark/rsh-session-projection'
+import { NativeSessionProjectionRegistry } from '@redspark/rsh-session-projection/native'
+import type { NativeSessionProjectionCacheOperations } from '@redspark/rsh-session-projection-cache/native'
+import type { SessionEvent, SessionHeader, SessionId as SessionIdType } from '@redspark/rsh-session'
+import { Session as NativeSession } from '@redspark/rsh-session/native'
+import type { SessionAppendInput } from '@redspark/rsh-session/native'
+import type { NativeActiveSessionOperations, NativeActiveSessionOwner } from '@redspark/rsh-native-session-execution/native'
+import type { NativeContext, NativeServices } from '@redspark/rsh-native-runtime'
 import SessionPersistence, {
   SessionPersistenceCorruptionError,
   SessionPersistenceNotFoundError,
   SessionPersistenceRevision,
   SessionReadOnlyError,
-} from '@deepseek-ai/dsh-session-persistence'
+} from '@redspark/rsh-session-persistence'
 import type {
   SessionAccess,
   SessionHandle,
   SessionHandleReadOptions,
   SessionHandleReadResult,
   SessionPersistenceSnapshot,
-} from '@deepseek-ai/dsh-session-persistence'
-import type { NativeSessionPersistenceOperations } from '@deepseek-ai/dsh-session-persistence/native'
+} from '@redspark/rsh-session-persistence'
+import type { NativeSessionPersistenceOperations } from '@redspark/rsh-session-persistence/native'
 import SessionQueryEngine, {
   SESSION_QUERY_DEFAULT_PERSISTED_INSPECT_CONCURRENCY,
   type SessionEventSurface,
   type SessionQueryErrorCode,
-} from '@deepseek-ai/dsh-session-query'
-import { SessionTitleProviderId, SessionTitleService } from '@deepseek-ai/dsh-session-title'
+} from '@redspark/rsh-session-query'
+import { SessionTitleProviderId, SessionTitleService } from '@redspark/rsh-session-title'
 import { TestSessionQueryEngine } from './test-service.ts'
 import {
   createNativeSessionQueryRuntime,

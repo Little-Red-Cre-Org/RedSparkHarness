@@ -6,7 +6,7 @@ export type * from './projection-types.ts'
  * (repo discipline), so `./client` projects the same single-source content
  * `./types` serves to host consumers — zero duplication.
  *
- * @module @deepseek-ai/dsh-goal/client
+ * @module @redspark/rsh-goal/client
  */
 
 export type * from './types.ts'

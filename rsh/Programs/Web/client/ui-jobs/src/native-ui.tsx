@@ -7,18 +7,18 @@
  */
 
 import { useEffect, useMemo, useRef, useState } from 'react'
-import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
-import type { NativeSessionJob, NativeSessionJobsFrame } from '@deepseek-ai/dsh-client-native-session/jobs-types'
-import type { SnapshotSelectorHook, TranslateNS } from '@deepseek-ai/dsh-client-ui-slots'
-import { createSnapshotStore } from '@deepseek-ai/dsh-client-store'
-import type { SessionId } from '@deepseek-ai/dsh-session/types'
-import type {} from '@deepseek-ai/dsh-client-ui-renderer/native'
-import type {} from '@deepseek-ai/dsh-client-native-session/native'
-import type {} from '@deepseek-ai/dsh-client-locale/native'
-import type {} from '@deepseek-ai/dsh-client-ui-session/native'
+import type { NativePlugin } from '@redspark/rsh-native-runtime'
+import type { NativeSessionJob, NativeSessionJobsFrame } from '@redspark/rsh-client-native-session/jobs-types'
+import type { SnapshotSelectorHook, TranslateNS } from '@redspark/rsh-client-ui-slots'
+import { createSnapshotStore } from '@redspark/rsh-client-store'
+import type { SessionId } from '@redspark/rsh-session/types'
+import type {} from '@redspark/rsh-client-ui-renderer/native'
+import type {} from '@redspark/rsh-client-native-session/native'
+import type {} from '@redspark/rsh-client-locale/native'
+import type {} from '@redspark/rsh-client-ui-session/native'
 import {
   IconChevronDownOutline14, StateDot, useDismissOnOutsidePointer, type StateDotState,
-} from '@deepseek-ai/dsh-client-ui-primitives'
+} from '@redspark/rsh-client-ui-primitives'
 import css from './client/JobListAction.module.css'
 import { NS, en, zh, type JobKey } from './client/locales.ts'
 
@@ -228,7 +228,7 @@ export function NativeJobListAction({ sessionId, useJobs, t }: NativeJobActionPr
 /** Native background-job list: follows the Host feed and contributes the header action. */
 export const plugin: NativePlugin = {
   apiVersion: 1,
-  name: '@deepseek-ai/dsh-client-ui-jobs',
+  name: '@redspark/rsh-client-ui-jobs',
   targets: ['client'],
   requires: ['clientSlots', 'clientLocale', 'clientNativeSessionJobs', 'clientNativeConversation'],
   provides: [],

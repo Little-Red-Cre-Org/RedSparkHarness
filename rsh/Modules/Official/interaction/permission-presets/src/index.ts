@@ -10,39 +10,39 @@
  * @module dsh-permission-presets
  */
 
-import { Context, Service } from '@deepseek-ai/cordis'
-import { CommandDefinitionId } from '@deepseek-ai/dsh-commands/brand'
-import z from '@deepseek-ai/schemastery'
+import { Context, Service } from '@redspark/cordis'
+import { CommandDefinitionId } from '@redspark/rsh-commands/brand'
+import z from '@redspark/schemastery'
 import { z as zod } from 'zod'
-import type { Session, SessionEvent } from '@deepseek-ai/dsh-session'
-import type { SandboxMode } from '@deepseek-ai/dsh-sandbox'
-import { SANDBOX_MODES, setSandboxMode } from '@deepseek-ai/dsh-sandbox-policy'
+import type { Session, SessionEvent } from '@redspark/rsh-session'
+import type { SandboxMode } from '@redspark/rsh-sandbox'
+import { SANDBOX_MODES, setSandboxMode } from '@redspark/rsh-sandbox-policy'
 // Side-effect type import: declaration-merges `ctx.shell` (the capability fact
 // `sandboxMode` this service reads), without a value dependency on the seam.
-import type {} from '@deepseek-ai/dsh-shell'
-import type { ApprovalPolicy } from '@deepseek-ai/dsh-approval-definition/legacy'
-import { APPROVAL_POLICIES, setApprovalPolicy } from '@deepseek-ai/dsh-approval-definition/legacy'
+import type {} from '@redspark/rsh-shell'
+import type { ApprovalPolicy } from '@redspark/rsh-approval-definition/legacy'
+import { APPROVAL_POLICIES, setApprovalPolicy } from '@redspark/rsh-approval-definition/legacy'
 import { CUSTOM_PRESET, defaultPermissionPresets } from './presets.ts'
 import type { PresetSpec } from './presets.ts'
-import type {} from '@deepseek-ai/dsh-user-approval'
-import type {} from '@deepseek-ai/dsh-settings'
-import type {} from '@deepseek-ai/dsh-compat-settings-definition'
+import type {} from '@redspark/rsh-user-approval'
+import type {} from '@redspark/rsh-settings'
+import type {} from '@redspark/rsh-compat-settings-definition'
 // Type-only: resolves the optional projection and command children.
-import type {} from '@deepseek-ai/dsh-session-projection'
-import type {} from '@deepseek-ai/dsh-commands'
+import type {} from '@redspark/rsh-session-projection'
+import type {} from '@redspark/rsh-commands'
 import type { PermissionSelect, PresetOption } from './types.ts'
 
 export type * from './types.ts'
 export type { PresetSpec } from './presets.ts'
 export { CUSTOM_PRESET } from './presets.ts'
 
-declare module '@deepseek-ai/cordis' {
+declare module '@redspark/cordis' {
   interface Context {
     permissionPresets: PermissionPresetService
   }
 }
 
-declare module '@deepseek-ai/dsh-session-projection/types' {
+declare module '@redspark/rsh-session-projection/types' {
   interface SessionProjectionStateMap {
     /** Latest logged permission overrides and constructor-seed provenance. */
     permissions: PermissionProjectionState
@@ -222,7 +222,7 @@ export class PermissionPresetService extends Service {
     // activates only when a command registry is composed.
     ctx.inject(['commands'], (commandCtx) => {
       commandCtx.commands.register({
-        definitionId: CommandDefinitionId('@deepseek-ai/dsh-permission-presets'),
+        definitionId: CommandDefinitionId('@redspark/rsh-permission-presets'),
         name: 'permission',
         description: 'Switch the permission preset (sandbox mode + approval policy)',
         input: { hint: '<preset>' },

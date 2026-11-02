@@ -3,14 +3,14 @@
  * row both the listing and the browser catalog answer with, plus the
  * browser-facing control surface's prompt, receipts, and failures.
  *
- * @module @deepseek-ai/dsh-subagent/control-types
+ * @module @redspark/rsh-subagent/control-types
  */
 
-import type {} from '@deepseek-ai/dsh-typert-protocol/types'
-import type { PromptContentPart } from '@deepseek-ai/dsh-attachment/types'
-import type { Branded } from '@deepseek-ai/dsh-brand'
-import type { MessageId } from '@deepseek-ai/dsh-llm/brand'
-import type { SessionId } from '@deepseek-ai/dsh-session/types'
+import type {} from '@redspark/rsh-typert-protocol/types'
+import type { PromptContentPart } from '@redspark/rsh-attachment/types'
+import type { Branded } from '@redspark/rsh-brand'
+import type { MessageId } from '@redspark/rsh-llm/brand'
+import type { SessionId } from '@redspark/rsh-session/types'
 
 /**
  * Client-minted identity of one browser prompt, persisted on the exact accepted
@@ -129,7 +129,7 @@ export interface SubagentInterruptReceipt {
  * Failure details the control surface answers with. Catalog reads, prompts,
  * and interrupts share this vocabulary with the Client Remote result.
  */
-declare module '@deepseek-ai/dsh-typert-protocol/types' {
+declare module '@redspark/rsh-typert-protocol/types' {
   interface RemoteErrorDetailsMap {
     /** A browser-supplied zone is neither UTC nor a canonical IANA name. */
     'subagent/invalid-time-zone': { readonly value: string }

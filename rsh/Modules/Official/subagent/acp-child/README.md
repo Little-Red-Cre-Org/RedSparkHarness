@@ -3,7 +3,7 @@ description: "Select an opt-in Native external-subagent route over ACP with the 
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-acp-child
+# @redspark/rsh-acp-child
 
 English | [中文](README.zh.md)
 
@@ -38,7 +38,7 @@ Add this installation to a Native profile that has a visible pi-ai model Provide
 ```json
 {
   "id": "acp-child",
-  "plugin": "@deepseek-ai/dsh-acp-child",
+  "plugin": "@redspark/rsh-acp-child",
   "scope": "root",
   "config": { "providerName": "dsh-acp-child" }
 }
@@ -46,7 +46,7 @@ Add this installation to a Native profile that has a visible pi-ai model Provide
 
 | Existing installation | Config field | Value |
 |---|---|---|
-| `subagents` (`@deepseek-ai/dsh-native-subagent`) | `providerName` | `dsh-acp-child` |
+| `subagents` (`@redspark/rsh-native-subagent`) | `providerName` | `dsh-acp-child` |
 | `workflow-worker` (if installed) | `subagentProvider` | `dsh-acp-child` |
 | `ralph-tool` (if installed) | `subagentProvider` | `dsh-acp-child` |
 
@@ -77,13 +77,13 @@ The Service Definition in `src/runtime.ts` describes the selected route, parent 
 | [CLI launcher](../../../../Programs/CLI/src/native-acp-child-runtime-launcher.ts) | Program-owned provider for the fixed child runtime |
 | [CLI profile template](../../../../Programs/CLI/src/native-profile-template.ts) | Fixed `native-acp-dsh-child` composition without recursive child providers |
 
-The CLI launches the same-version `dsh` executable with the fixed `native-acp-dsh-child` profile and a private generated patch. The request carries no executable or arbitrary argv. The child profile omits Native Subagent and workflow providers, so the child cannot start another child. The launcher explicitly injects the selected route credential, requires the canonical child cwd to be within the parent workspace, and creates a private DSH_HOME for that run.
+The CLI launches the same-version `dsh` executable with the fixed `native-acp-dsh-child` profile and a private generated patch. The request carries no executable or arbitrary argv. The child profile omits Native Subagent and workflow providers, so the child cannot start another child. The launcher explicitly injects the selected route credential, requires the canonical child cwd to be within the parent workspace, and creates a private RSH_HOME for that run.
 
 The driver converts text and image prompt blocks to ACP, then requires the child to advertise and accept the exact selected child provider/model, reasoning effort, step/token ceilings, and permission mode. A child that cannot retain the selected route or an equal-or-stricter limit fails before prompt delivery. The result contains opaque ACP text; the driver does not use the Engine `request.model` Responses capability or publish any of the six `subagent/external-operation` facts: `model-request`, `model-response`, `model-failure`, `tool-call`, `tool-result`, and `tool-settlement`.
 
 The child receives only parent-authorized builtin file tools. `write_file` is retained only when the exact child permission request matches the parent approval identity, the parent requires approval, the parent policy is `workspace-write`, and that builtin is admitted; otherwise the child runs with permission mode `deny` and no write tool. When write access is admitted, the canonical `workspaceWriteRoot` must equal the parent's sandbox workspace root. The launcher derives the child policy as `workspace-write` only when that write authority is admitted and otherwise uses `read-only`, then passes it to the shared `dsh-sandbox-local` ProcessSandbox. The child preserves its reported `full` or `partial` enforcement level. This level describes file-effect enforcement, not complete process isolation. The Windows ACL backend reports `partial`: Everyone access and NTFS hard-link aliases remain relevant, and the backend does not constrain reads, network access, or process visibility. If no backend is available or its runner fails, startup fails without an unconfined retry. See [sandbox-local policy and enforcement](../../sandbox/sandbox-local/README.md) and [Windows ACL limits](../../sandbox/sandbox-windows-acl/README.md).
 
-Shutdown closes ACP and child stdio work and settles the complete managed process range before `dispose()` removes the private DSH_HOME. No runtime invariant companion is published because the package has no independent registry or durable identity to compare: Native Subagent owns admission and parent Session writes, while the launcher runtime owns process cleanup, so the package has no `./invariant` export.
+Shutdown closes ACP and child stdio work and settles the complete managed process range before `dispose()` removes the private RSH_HOME. No runtime invariant companion is published because the package has no independent registry or durable identity to compare: Native Subagent owns admission and parent Session writes, while the launcher runtime owns process cleanup, so the package has no `./invariant` export.
 
 </details>
 

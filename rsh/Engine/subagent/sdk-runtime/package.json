@@ -1,5 +1,5 @@
 {
-  "name": "@deepseek-ai/dsh-sdk-runtime",
+  "name": "@redspark/rsh-sdk-runtime",
   "description": "Cordis-free RedSpark Harness SDK protocol runtime and Session API",
   "version": "1.0.0",
   "publishConfig": {
@@ -31,23 +31,23 @@
   ],
   "license": "MIT",
   "dependencies": {
-    "@deepseek-ai/dsh-sdk-protocol": "workspace:^",
-    "@deepseek-ai/dsh-subprocess-local": "workspace:^"
+    "@redspark/rsh-sdk-protocol": "workspace:^",
+    "@redspark/rsh-subprocess-local": "workspace:^"
   },
   "peerDependencies": {
-    "@deepseek-ai/dsh-native-runtime": "workspace:^",
-    "@deepseek-ai/dsh-subprocess": "workspace:^",
-    "@deepseek-ai/dsh-llm": "workspace:^",
-    "@deepseek-ai/dsh-native-subagent": "workspace:^",
-    "@deepseek-ai/dsh-session": "workspace:^",
-    "@deepseek-ai/dsh-sandbox": "workspace:^"
+    "@redspark/rsh-native-runtime": "workspace:^",
+    "@redspark/rsh-subprocess": "workspace:^",
+    "@redspark/rsh-llm": "workspace:^",
+    "@redspark/rsh-native-subagent": "workspace:^",
+    "@redspark/rsh-session": "workspace:^",
+    "@redspark/rsh-sandbox": "workspace:^"
   },
   "devDependencies": {
-    "@deepseek-ai/dsh-native-runtime": "workspace:^",
-    "@deepseek-ai/dsh-subprocess": "workspace:^",
-    "@deepseek-ai/dsh-llm": "workspace:^",
-    "@deepseek-ai/dsh-native-subagent": "workspace:^",
-    "@deepseek-ai/dsh-session": "workspace:^",
-    "@deepseek-ai/dsh-sandbox": "workspace:^"
+    "@redspark/rsh-native-runtime": "workspace:^",
+    "@redspark/rsh-subprocess": "workspace:^",
+    "@redspark/rsh-llm": "workspace:^",
+    "@redspark/rsh-native-subagent": "workspace:^",
+    "@redspark/rsh-session": "workspace:^",
+    "@redspark/rsh-sandbox": "workspace:^"
   }
 }

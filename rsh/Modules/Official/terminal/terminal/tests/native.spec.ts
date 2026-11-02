@@ -1,8 +1,8 @@
 /** Native terminal ownership and unpublished allocation cleanup. */
 import { expect, it } from 'vitest'
-import { NativeAgentId, NativeAgentRegistry, type NativeAgent } from '@deepseek-ai/dsh-native-agent'
-import { NativeScope } from '@deepseek-ai/dsh-native-runtime'
-import type { Session } from '@deepseek-ai/dsh-session/native'
+import { NativeAgentId, NativeAgentRegistry, type NativeAgent } from '@redspark/rsh-native-agent'
+import { NativeScope } from '@redspark/rsh-native-runtime'
+import type { Session } from '@redspark/rsh-session/native'
 import { NativeTerminalRegistry, type NativeTerminalSession } from '../src/native.ts'
 
 it('fences sessions to one Agent and awaits close during Agent release', async () => {

@@ -1,7 +1,7 @@
 /** Native Session feedback capability and its durable-commit observation. */
-import type { NativeActiveSessionOwner } from '@deepseek-ai/dsh-native-session-execution'
-import type { NativePlugin, NativeScope } from '@deepseek-ai/dsh-native-runtime'
-import type { SessionInspection } from '@deepseek-ai/dsh-session-persistence/native'
+import type { NativeActiveSessionOwner } from '@redspark/rsh-native-session-execution'
+import type { NativePlugin, NativeScope } from '@redspark/rsh-native-runtime'
+import type { SessionInspection } from '@redspark/rsh-session-persistence/native'
 import type { FeedbackRecord, SessionFeedbackRecordResult } from './types.ts'
 import type {} from './types.ts'
 
@@ -27,7 +27,7 @@ export interface NativeFeedbackCommit {
   readonly owner?: NativeActiveSessionOwner
 }
 
-declare module '@deepseek-ai/dsh-native-runtime' {
+declare module '@redspark/rsh-native-runtime' {
   interface NativeServices { sessionFeedback: NativeSessionFeedbackOperations }
   interface NativeEvents {
     /** Notify telemetry only after the feedback event is durable. @param commit - committed event and canonical prefix. @mode parallel */

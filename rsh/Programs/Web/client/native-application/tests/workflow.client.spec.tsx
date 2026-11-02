@@ -1,8 +1,8 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, expect, it } from 'vitest'
-import type { SessionEvent, SessionId } from '@deepseek-ai/dsh-session/types'
-import { makeTranslate } from '@deepseek-ai/dsh-client-test-runtime'
+import type { SessionEvent, SessionId } from '@redspark/rsh-session/types'
+import { makeTranslate } from '@redspark/rsh-client-test-runtime'
 import { NativeTranscript, groupNativeTranscriptEvents } from '../src/native-transcript.tsx'
 import { toolCardRecords } from '../src/tool-cards.tsx'
 import { en } from '../src/locales.ts'

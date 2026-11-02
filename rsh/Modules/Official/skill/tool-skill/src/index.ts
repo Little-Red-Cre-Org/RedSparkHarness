@@ -1,16 +1,16 @@
 /**
  * Durable session skill catalog and model-facing `skill` loader tool.
  *
- * @module @deepseek-ai/dsh-tool-skill
+ * @module @redspark/rsh-tool-skill
  */
 
 import { createHash } from 'node:crypto'
-import type { Context } from '@deepseek-ai/cordis'
-import z from '@deepseek-ai/schemastery'
-import type { Agent, PreStepDecision } from '@deepseek-ai/dsh-agent'
-import { defineTool } from '@deepseek-ai/dsh-tools'
-import { createUserMessage } from '@deepseek-ai/dsh-llm'
-import { SessionSeq, type UserMessage } from '@deepseek-ai/dsh-session'
+import type { Context } from '@redspark/cordis'
+import z from '@redspark/schemastery'
+import type { Agent, PreStepDecision } from '@redspark/rsh-agent'
+import { defineTool } from '@redspark/rsh-tools'
+import { createUserMessage } from '@redspark/rsh-llm'
+import { SessionSeq, type UserMessage } from '@redspark/rsh-session'
 import {
   escapeText,
   isModelInvocable,
@@ -19,7 +19,7 @@ import {
   renderSkillContent,
   type SkillInvocationSource,
   type SkillSummary,
-} from '@deepseek-ai/dsh-skill'
+} from '@redspark/rsh-skill'
 import type { SkillCatalogSource } from './types.ts'
 export type { SkillCatalogSource } from './types.ts'
 

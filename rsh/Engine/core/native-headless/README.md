@@ -3,7 +3,7 @@ description: "Native Session execution for explicit filesystem and durable Sessi
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-native-headless
+# @redspark/rsh-native-headless
 
 English | [中文](README.zh.md)
 

@@ -1,9 +1,9 @@
 /**
  * Framework-free configuration of the web tools, shared by the Cordis plugin and native installation.
- * @module @deepseek-ai/dsh-tool-web/config
+ * @module @redspark/rsh-tool-web/config
  */
 
-import z from '@deepseek-ai/schemastery'
+import z from '@redspark/schemastery'
 import { WEB_SEARCH_MAX_QUERIES, WEB_SEARCH_MAX_RESULTS } from './search-core.ts'
 
 /** Default cooperative tool-call timeout budget (ms) for the web tools. */

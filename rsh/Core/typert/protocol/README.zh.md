@@ -3,7 +3,7 @@ description: "共享的 Typert Remote 协议：业务包、生成产物、Host G
 kind: "package-library"
 ---
 
-# @deepseek-ai/dsh-typert-protocol
+# @redspark/rsh-typert-protocol
 
 [English](README.md) | 中文
 
@@ -34,7 +34,7 @@ Cordis 是可选 peer：包根出口为定义 `TypertRemoteService` 导入 Cordi
 业务包用 `@Remote`（当接收者来自作用域 Context 时用 `@RemoteScope(key)`）标记一个公开实例方法，所属服务要么继承 `TypertRemoteService`，要么通过 `bindTypertRemote()` 声明 `typertRemote` 绑定：
 
 ```text
-import { Remote, TypertRemoteService } from '@deepseek-ai/dsh-typert-protocol'
+import { Remote, TypertRemoteService } from '@redspark/rsh-typert-protocol'
 
 export class GoalService extends TypertRemoteService {
   @Remote
@@ -55,9 +55,9 @@ export class GoalService extends TypertRemoteService {
 所有 Remote 失败都由一个类承载：`RemoteError`，携带稳定的 `<domain>/<reason>` 码，以及按该码定型的 details。本包声明通用载体码（`gateway/bad-request`、`gateway/cancelled`、`gateway/internal`），并拥有 `RemoteErrorDetailsMap`——可合并扩展的码表，其他每个包都在自己的抛出点旁扩展它：
 
 ```text
-import type {} from '@deepseek-ai/dsh-typert-protocol/types'
+import type {} from '@redspark/rsh-typert-protocol/types'
 
-declare module '@deepseek-ai/dsh-typert-protocol/types' {
+declare module '@redspark/rsh-typert-protocol/types' {
   interface RemoteErrorDetailsMap {
     'goal/not-found': { readonly goalId: string }
   }
@@ -65,7 +65,7 @@ declare module '@deepseek-ai/dsh-typert-protocol/types' {
 throw new RemoteError('goal/not-found', `goal "${id}" does not exist`, { goalId: id })
 ```
 
-通过拥有原始声明的 `@deepseek-ai/dsh-typert-protocol/types` 扩展 `RemoteErrorDetailsMap`。类型导入先加载该声明再进行扩展；包根入口仅重新导出它。
+通过拥有原始声明的 `@redspark/rsh-typert-protocol/types` 扩展 `RemoteErrorDetailsMap`。类型导入先加载该声明再进行扩展；包根入口仅重新导出它。
 
 拥有方在失败点直接抛出；没有任何包再写错误类家族或出口映射函数。调用方按 `code` 判别——绝不用 `instanceof`——且 `code` 分支无需 cast 即收窄 `details`，因为 `RemoteFailure` 就是 `RemoteError` 实例按码判别的 union。需要识别跨模块或跨 realm 类副本传来的失败时，基础设施调用 `remoteErrorOf(value)`，它读结构标记而不是原型链。
 

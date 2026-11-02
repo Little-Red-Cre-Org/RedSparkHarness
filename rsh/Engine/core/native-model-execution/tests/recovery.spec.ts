@@ -1,7 +1,7 @@
 /** Failed model attempts are offered to installed recovery policies before the step fails. */
 import { describe, expect, it } from 'vitest'
-import { Session, SessionId, SESSION_FORMAT_VERSION, type SessionEvent } from '@deepseek-ai/dsh-session'
-import { LlmAdapter, LlmError, resolveRetryPolicy, type GenerateOptions, type ResolvedRetryPolicy, type StreamChunk } from '@deepseek-ai/dsh-llm/native'
+import { Session, SessionId, SESSION_FORMAT_VERSION, type SessionEvent } from '@redspark/rsh-session'
+import { LlmAdapter, LlmError, resolveRetryPolicy, type GenerateOptions, type ResolvedRetryPolicy, type StreamChunk } from '@redspark/rsh-llm/native'
 import { NativeModelExecution, type NativeModel, type NativeModelRecoveryRequest } from '../src/index.ts'
 import { NativeAdapterModel } from '../src/adapter-model.ts'
 

@@ -7,7 +7,7 @@ import gradientShadowText from './styles/gradient-shadow-text.css?inline'
 import shiki from './styles/shiki.css?inline'
 import redspark from './styles/redspark.css?inline'
 
-const PLUGIN_ID = '@deepseek-ai/dsh-client-ui-theme'
+const PLUGIN_ID = '@redspark/rsh-client-ui-theme'
 
 const STYLES = [
   ['base.css', base],

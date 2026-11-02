@@ -1,19 +1,19 @@
 /** Native Web Host application selected by an explicit profile installation. */
-import { createNativeHostConnectionRegistry } from '@deepseek-ai/dsh-client-connection/native-host'
-import { bridge } from '@deepseek-ai/dsh-client-connection/native-http-bridge'
+import { createNativeHostConnectionRegistry } from '@redspark/rsh-client-connection/native-host'
+import { bridge } from '@redspark/rsh-client-connection/native-http-bridge'
 import {
   createNativeDesktopAssetHandler,
   listenNativeHttpHost,
   prepareNativeClientBundle,
   type NativeHttpHost,
-} from '@deepseek-ai/dsh-native-web-assets'
-import type { NativeApplication, NativeContext, NativePlugin } from '@deepseek-ai/dsh-native-runtime'
-import type {} from '@deepseek-ai/dsh-http-routes/native'
+} from '@redspark/rsh-native-web-assets'
+import type { NativeApplication, NativeContext, NativePlugin } from '@redspark/rsh-native-runtime'
+import type {} from '@redspark/rsh-http-routes/native'
 import { NativeClientReloader } from './client-reload.ts'
 import { createHash } from 'node:crypto'
 import type { NativeWebHostService } from './index.ts'
 
-declare module '@deepseek-ai/dsh-native-runtime' {
+declare module '@redspark/rsh-native-runtime' {
   interface NativeServices {
     /** Bound native Web Host carrier and shared authenticated Connection handle. */
     nativeWebHost: NativeWebHostService
@@ -24,7 +24,7 @@ declare module '@deepseek-ai/dsh-native-runtime' {
 export interface NativeWebHostConfig {
   /** Profile-owned package root containing `rsh.client.json`. */
   readonly projectDir: string
-  /** Installed runtime root containing `@deepseek-ai/dsh-web-frontend`. */
+  /** Installed runtime root containing `@redspark/rsh-web-frontend`. */
   readonly runtimeDir: string
   /** Script installed before the native browser entry runs. */
   readonly transportScript?: string
@@ -119,7 +119,7 @@ export class NativeWebApplication implements NativeApplication {
 /** Native Web Host installation entry for `dsh` profiles. */
 export const plugin: NativePlugin = {
   apiVersion: 1,
-  name: '@deepseek-ai/dsh-native-web-host',
+  name: '@redspark/rsh-native-web-host',
   targets: ['host'],
   requires: ['credentials'],
   provides: ['nativeWebHost', 'hostConnection', 'httpRoutes', 'application'],

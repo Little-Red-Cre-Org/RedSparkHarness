@@ -1,6 +1,6 @@
 /**
  * Framework-free provider selection and source capping shared by the Cordis and native web services.
- * @module @deepseek-ai/dsh-web/selection
+ * @module @redspark/rsh-web/selection
  */
 
 import type { WebSearchResult } from './types.ts'

@@ -38,17 +38,17 @@ describe('reachableStagedPackages', () => {
   it('keeps an optional peer a retained package imports at runtime, but not a legacy Cordis one', () => {
     const nodeModules = staging({
       '@scope/presets': {
-        peerDependencies: { '@scope/scope': '1', '@deepseek-ai/cordis': '1' },
-        peerDependenciesMeta: { '@scope/scope': { optional: true }, '@deepseek-ai/cordis': { optional: true } },
+        peerDependencies: { '@scope/scope': '1', '@redspark/cordis': '1' },
+        peerDependenciesMeta: { '@scope/scope': { optional: true }, '@redspark/cordis': { optional: true } },
       },
       '@scope/scope': {},
-      '@deepseek-ai/cordis': {},
+      '@redspark/cordis': {},
     })
 
     const { reachable } = reachableStagedPackages(readStagedPackages(nodeModules), ['@scope/presets'])
 
     expect(reachable.has('@scope/scope')).toBe(true)
-    expect(reachable.has('@deepseek-ai/cordis')).toBe(false)
+    expect(reachable.has('@redspark/cordis')).toBe(false)
   })
 
   it('does not follow optionalDependencies of a leaf package', () => {
@@ -249,8 +249,8 @@ describe('missingStagedNeighbours', () => {
   it('keeps the same legacy Cordis exemption as the closure walk', () => {
     const nodeModules = staging({
       '@scope/presets': {
-        peerDependencies: { '@deepseek-ai/cordis': '1' },
-        peerDependenciesMeta: { '@deepseek-ai/cordis': { optional: true } },
+        peerDependencies: { '@redspark/cordis': '1' },
+        peerDependenciesMeta: { '@redspark/cordis': { optional: true } },
       },
     })
 
@@ -259,10 +259,10 @@ describe('missingStagedNeighbours', () => {
 
   it('skips packages the caller excluded and neighbours outside the scope', () => {
     const nodeModules = staging({
-      '@deepseek-ai/dsh': { optionalDependencies: { '@deepseek-ai/legacy': '1' } },
+      '@redspark/dsh': { optionalDependencies: { '@redspark/legacy': '1' } },
       '@scope/presets': { dependencies: { 'third-party-payload': '1' } },
     })
 
-    expect(missingStagedNeighbours(nodeModules, ['@deepseek-ai/dsh'])).toEqual([])
+    expect(missingStagedNeighbours(nodeModules, ['@redspark/dsh'])).toEqual([])
   })
 })

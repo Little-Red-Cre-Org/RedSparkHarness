@@ -1,14 +1,14 @@
 /** Native persistent terminal tools with the shared bounded result rendering. */
 import { isAbsolute } from 'node:path'
-import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
-import type { NativeToolExecution, NativeValueToolContribution } from '@deepseek-ai/dsh-native-tools'
-import type {} from '@deepseek-ai/dsh-native-tools/native'
-import type { JsonSchemaNode } from '@deepseek-ai/dsh-native-tools/json-schema'
-import { NativeTerminalId } from '@deepseek-ai/dsh-terminal/native'
-import type {} from '@deepseek-ai/dsh-terminal/native'
-import type {} from '@deepseek-ai/dsh-native-jobs'
-import type {} from '@deepseek-ai/dsh-native-prompt/native'
-import type { TerminalReadResult, TerminalSendResult, TerminalSignal } from '@deepseek-ai/dsh-terminal/protocol'
+import type { NativePlugin } from '@redspark/rsh-native-runtime'
+import type { NativeToolExecution, NativeValueToolContribution } from '@redspark/rsh-native-tools'
+import type {} from '@redspark/rsh-native-tools/native'
+import type { JsonSchemaNode } from '@redspark/rsh-native-tools/json-schema'
+import { NativeTerminalId } from '@redspark/rsh-terminal/native'
+import type {} from '@redspark/rsh-terminal/native'
+import type {} from '@redspark/rsh-native-jobs'
+import type {} from '@redspark/rsh-native-prompt/native'
+import type { TerminalReadResult, TerminalSendResult, TerminalSignal } from '@redspark/rsh-terminal/protocol'
 import { boundTerminalText, renderRead, renderSend } from './render.ts'
 
 function argumentsObject(call: NativeToolExecution, allowed: readonly string[]): Record<string, unknown> {
@@ -59,7 +59,7 @@ function content(text: string) { return { isError: false, content: [{ type: 'tex
 
 /** Install owner-scoped lifecycle and interactive operations; background work uses the selected Jobs Provider. */
 export const plugin: NativePlugin = {
-  apiVersion: 1, name: '@deepseek-ai/dsh-tool-terminal', targets: ['host'],
+  apiVersion: 1, name: '@redspark/rsh-tool-terminal', targets: ['host'],
   requires: ['terminals', 'tools'], optional: ['jobs', 'promptSections'], provides: [],
   resolve(input) {
     if (typeof input !== 'object' || input === null || Array.isArray(input)

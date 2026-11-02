@@ -11,61 +11,61 @@ export const DESKTOP_PACKAGE_SET_FILE = 'desktop-packages.json'
 export const DESKTOP_PACKAGES_DIR = 'desktop-packages'
 
 /** Private package installed beside dsh to boot the Desktop Host process. */
-export const DESKTOP_HOST_PACKAGE = '@deepseek-ai/dsh-desktop-host'
+export const DESKTOP_HOST_PACKAGE = '@redspark/rsh-desktop-host'
 
 /** Compatibility-only Host installed into profiles that select legacy Cordis bundles. */
-export const DESKTOP_COMPATIBILITY_HOST_PACKAGE = '@deepseek-ai/dsh-desktop-host-compatibility'
+export const DESKTOP_COMPATIBILITY_HOST_PACKAGE = '@redspark/rsh-desktop-host-compatibility'
 
 /**
  * Cordis runtime packages the Native assembly ships on purpose.
  *
  * The Cordis *kernel* is a service container, not the legacy Desktop assembly: a Native row can
- * host a Cordis plugin through it (see `@deepseek-ai/dsh-cordis-bridge`) so one plugin ecosystem
+ * host a Cordis plugin through it (see `@redspark/rsh-cordis-bridge`) so one plugin ecosystem
  * serves both runtimes. The loader and bundle packages below stay excluded, because they compose
  * applications rather than host one plugin.
  */
 export const CORDIS_RUNTIME_PACKAGES = [
-  '@deepseek-ai/cordis',
+  '@redspark/cordis',
 ] as const
 
 /** Optional package edges owned only by the legacy Cordis Desktop assembly. */
 export const DESKTOP_COMPATIBILITY_OPTIONAL_DEPENDENCIES = [
-  '@deepseek-ai/cordis-plugin-hmr',
-  '@deepseek-ai/cordis-plugin-include',
-  '@deepseek-ai/cordis-plugin-loader',
-  '@deepseek-ai/cordis-plugin-timer',
-  '@deepseek-ai/dsh-acp-app',
-  '@deepseek-ai/dsh-agent',
-  '@deepseek-ai/dsh-agent-default-model',
-  '@deepseek-ai/dsh-agent-tool-presentation',
-  '@deepseek-ai/dsh-app-boot',
-  '@deepseek-ai/dsh-base',
-  '@deepseek-ai/dsh-client-ui-agent-preset',
-  '@deepseek-ai/dsh-client-ui-cordis',
-  '@deepseek-ai/dsh-cmdline',
-  '@deepseek-ai/dsh-cordis-client-runner',
+  '@redspark/cordis-plugin-hmr',
+  '@redspark/cordis-plugin-include',
+  '@redspark/cordis-plugin-loader',
+  '@redspark/cordis-plugin-timer',
+  '@redspark/rsh-acp-app',
+  '@redspark/rsh-agent',
+  '@redspark/rsh-agent-default-model',
+  '@redspark/rsh-agent-tool-presentation',
+  '@redspark/rsh-app-boot',
+  '@redspark/rsh-base',
+  '@redspark/rsh-client-ui-agent-preset',
+  '@redspark/rsh-client-ui-cordis',
+  '@redspark/rsh-cmdline',
+  '@redspark/rsh-cordis-client-runner',
   DESKTOP_COMPATIBILITY_HOST_PACKAGE,
-  '@deepseek-ai/dsh-headless',
-  '@deepseek-ai/dsh-hooks-claude-code',
-  '@deepseek-ai/dsh-hooks-codex',
-  '@deepseek-ai/dsh-invariants',
-  '@deepseek-ai/dsh-jobs-local',
-  '@deepseek-ai/dsh-rsh',
-  '@deepseek-ai/dsh-sdk-app',
-  '@deepseek-ai/dsh-sdk-minimal',
-  '@deepseek-ai/dsh-time-context',
-  '@deepseek-ai/dsh-tmux-context',
-  '@deepseek-ai/dsh-tool-bash-persistent',
-  '@deepseek-ai/dsh-tool-cordis',
-  '@deepseek-ai/dsh-tool-jobs',
-  '@deepseek-ai/dsh-tool-present',
-  '@deepseek-ai/dsh-tool-pwsh-persistent',
-  '@deepseek-ai/dsh-tool-skill',
-  '@deepseek-ai/dsh-tool-str-replace-editor',
-  '@deepseek-ai/dsh-web-app',
-  '@deepseek-ai/dsh-webhook',
-  '@deepseek-ai/dsh-webhook-github',
-  '@deepseek-ai/dsh-user-question-broker',
+  '@redspark/rsh-headless',
+  '@redspark/rsh-hooks-claude-code',
+  '@redspark/rsh-hooks-codex',
+  '@redspark/rsh-invariants',
+  '@redspark/rsh-jobs-local',
+  '@redspark/rsh-rsh',
+  '@redspark/rsh-sdk-app',
+  '@redspark/rsh-sdk-minimal',
+  '@redspark/rsh-time-context',
+  '@redspark/rsh-tmux-context',
+  '@redspark/rsh-tool-bash-persistent',
+  '@redspark/rsh-tool-cordis',
+  '@redspark/rsh-tool-jobs',
+  '@redspark/rsh-tool-present',
+  '@redspark/rsh-tool-pwsh-persistent',
+  '@redspark/rsh-tool-skill',
+  '@redspark/rsh-tool-str-replace-editor',
+  '@redspark/rsh-web-app',
+  '@redspark/rsh-webhook',
+  '@redspark/rsh-webhook-github',
+  '@redspark/rsh-user-question-broker',
 ] as const
 
 /** Desktop resource assembly selected when preparing one release. */
@@ -104,8 +104,8 @@ const PACKAGE_NAME_PATTERN = /^(?:@[a-z0-9][a-z0-9._~-]*\/[a-z0-9][a-z0-9._~-]*|
 const VERSION_PATTERN = /^[0-9A-Za-z][0-9A-Za-z.+_-]*$/u
 const FILE_PATTERN = /^[a-zA-Z0-9][a-zA-Z0-9._-]*\.tgz$/u
 const INTEGRITY_PATTERN = /^sha512-[A-Za-z0-9+/]+={0,2}$/u
-const DSH_PACKAGE = '@deepseek-ai/dsh'
-const RELEASE_PACKAGES = [DSH_PACKAGE, DESKTOP_HOST_PACKAGE] as const
+const RSH_PACKAGE = '@redspark/dsh'
+const RELEASE_PACKAGES = [RSH_PACKAGE, DESKTOP_HOST_PACKAGE] as const
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
@@ -204,8 +204,8 @@ export function desktopCorePackageOverrides(packageSet: DesktopCorePackageSet): 
 
 /** Return the local direct dependency spec for the dsh package. */
 export function desktopDshPackageSpec(packageSet: DesktopCorePackageSet): string {
-  const record = packageSet.packages.find(entry => entry.name === DSH_PACKAGE)
-  if (record === undefined) throw new Error(`desktop package set: missing ${DSH_PACKAGE}`)
+  const record = packageSet.packages.find(entry => entry.name === RSH_PACKAGE)
+  if (record === undefined) throw new Error(`desktop package set: missing ${RSH_PACKAGE}`)
   return desktopCorePackageSpec(record)
 }
 

@@ -3,10 +3,10 @@
 import { createHash } from 'node:crypto'
 import { readFile, mkdir } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
-import { withFileLock, writeFileAtomic } from '@deepseek-ai/dsh-atomic-write'
-import { resolveDshHome } from '@deepseek-ai/dsh-home-paths'
-import { ImageVariantId } from '@deepseek-ai/dsh-attachment/brand'
-import type { AttachmentId, ImageVariantId as ImageVariantIdType } from '@deepseek-ai/dsh-attachment/brand'
+import { withFileLock, writeFileAtomic } from '@redspark/rsh-atomic-write'
+import { resolveDshHome } from '@redspark/rsh-home-paths'
+import { ImageVariantId } from '@redspark/rsh-attachment/brand'
+import type { AttachmentId, ImageVariantId as ImageVariantIdType } from '@redspark/rsh-attachment/brand'
 import { DeepSeekFileId, DeepSeekFileScope } from './file-id.ts'
 import type { DeepSeekFileId as DeepSeekFileIdType, DeepSeekFileScope as DeepSeekFileScopeType } from './file-id.ts'
 
@@ -114,7 +114,7 @@ export class DeepSeekUploadIndex {
   readonly path: string
 
   /**
-   * @param path - explicit test path; omission uses `DSH_HOME/llm-deepseek/files-v3.json`.
+   * @param path - explicit test path; omission uses `RSH_HOME/llm-deepseek/files-v3.json`.
    */
   constructor(path = join(resolveDshHome(), 'llm-deepseek', 'files-v3.json')) {
     this.path = path

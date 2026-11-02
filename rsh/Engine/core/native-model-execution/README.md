@@ -3,7 +3,7 @@ description: "Native model streaming and durable assistant events for a Session 
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-native-model-execution
+# @redspark/rsh-native-model-execution
 
 English | [中文](README.zh.md)
 

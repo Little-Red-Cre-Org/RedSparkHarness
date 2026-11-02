@@ -1,5 +1,5 @@
 {
-  "name": "@deepseek-ai/dsh-native-approval",
+  "name": "@redspark/rsh-native-approval",
   "description": "Native one-shot tool approval policy and answerer registry",
   "version": "1.0.0",
   "publishConfig": { "access": "public" },
@@ -16,8 +16,8 @@
   "files": ["lib/index.js", "lib/types/**/*.d.ts"],
   "license": "MIT",
   "dependencies": {
-    "@deepseek-ai/dsh-approval-definition": "workspace:^",
-    "@deepseek-ai/dsh-native-agent": "workspace:^",
-    "@deepseek-ai/dsh-native-runtime": "workspace:^"
+    "@redspark/rsh-approval-definition": "workspace:^",
+    "@redspark/rsh-native-agent": "workspace:^",
+    "@redspark/rsh-native-runtime": "workspace:^"
   }
 }

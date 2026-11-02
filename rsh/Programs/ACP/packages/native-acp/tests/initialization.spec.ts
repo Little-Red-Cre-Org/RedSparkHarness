@@ -2,15 +2,15 @@
 import { setImmediate } from 'node:timers/promises'
 import { PassThrough } from 'node:stream'
 import { expect, it } from 'vitest'
-import { NativeHost, NativeScope, resolveInstallation, type NativePlugin } from '@deepseek-ai/dsh-native-runtime'
-import { LlmAdapter, type LlmResolvedModelInfo, type StreamChunk } from '@deepseek-ai/dsh-llm/native'
-import type { NativeActiveSessionOperations } from '@deepseek-ai/dsh-native-session-execution'
-import type { NativeSessionPersistenceOperations } from '@deepseek-ai/dsh-session-persistence/native'
-import type {} from '@deepseek-ai/dsh-session-persistence/native'
+import { NativeHost, NativeScope, resolveInstallation, type NativePlugin } from '@redspark/rsh-native-runtime'
+import { LlmAdapter, type LlmResolvedModelInfo, type StreamChunk } from '@redspark/rsh-llm/native'
+import type { NativeActiveSessionOperations } from '@redspark/rsh-native-session-execution'
+import type { NativeSessionPersistenceOperations } from '@redspark/rsh-session-persistence/native'
+import type {} from '@redspark/rsh-session-persistence/native'
 import { NATIVE_ACP_SUBAGENT_METADATA_KEY, nativeAcpSubagentPolicyMetadata, nativeAcpSubagentServerMetadata,
   nativeAcpSubagentPermissionRequestMetadata, readNativeAcpSubagentClientCapabilities,
   readNativeAcpSubagentPermissionRequest, readNativeAcpSubagentPolicy,
-  readNativeAcpSubagentServerCapabilities } from '@deepseek-ai/dsh-acp-protocol'
+  readNativeAcpSubagentServerCapabilities } from '@redspark/rsh-acp-protocol'
 import { NativeAcpApplication, plugin as nativeAcpPlugin } from '../src/native.ts'
 
 it.each([null, Number.MAX_SAFE_INTEGER + 1])('rejects invalid sessionListPageSize %s', (pageSize) => {
@@ -102,7 +102,7 @@ it('rejects ACP installation before activation without its active Session Provid
     { plugin: nativeAcpPlugin, scope, config: undefined },
   ]
   expect(() => resolveInstallation(requests, 'host'))
-    .toThrow('native-runtime: @deepseek-ai/dsh-native-acp requires missing activeSessions')
+    .toThrow('native-runtime: @redspark/rsh-native-acp requires missing activeSessions')
 })
 
 it('drains model initialization after EOF before releasing its Provider', async () => {

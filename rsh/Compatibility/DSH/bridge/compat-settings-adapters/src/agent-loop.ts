@@ -1,6 +1,6 @@
-import type { Context } from '@deepseek-ai/cordis'
-import type {} from '@deepseek-ai/dsh-compat-settings-definition'
-import type {} from '@deepseek-ai/dsh-agent-loop'
+import type { Context } from '@redspark/cordis'
+import type {} from '@redspark/rsh-compat-settings-definition'
+import type {} from '@redspark/rsh-agent-loop'
 import { validatedSourceCallbacks } from './settings-entry.ts'
 
 /**
@@ -11,8 +11,8 @@ import { validatedSourceCallbacks } from './settings-entry.ts'
  */
 export async function apply(ctx: Context): Promise<void> {
   const [service, settings] = await Promise.all([
-    import('@deepseek-ai/dsh-agent-loop'),
-    import('@deepseek-ai/dsh-agent-loop/compat-settings'),
+    import('@redspark/rsh-agent-loop'),
+    import('@redspark/rsh-agent-loop/compat-settings'),
   ]).catch((cause: unknown) => {
     throw new Error('The selected AgentLoop Settings adapter requires its Engine peer.', { cause })
   })

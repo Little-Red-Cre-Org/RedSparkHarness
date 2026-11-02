@@ -2,20 +2,20 @@
  * Incremental session-log contribution for official DeepSeek LLM API requests.
  * Accepted sequence watermarks live in the canonical log, so restart recovery
  * can conservatively resend uncertain tails without maintaining another store.
- * @module @deepseek-ai/dsh-session-log-deepseek
+ * @module @redspark/rsh-session-log-deepseek
  */
 
-import type { Context } from '@deepseek-ai/cordis'
-import { brandString } from '@deepseek-ai/dsh-brand'
-import type {} from '@deepseek-ai/dsh-deepseek-llm-api-extensions'
-import { SessionLogOffset, SessionSeq } from '@deepseek-ai/dsh-session'
+import type { Context } from '@redspark/cordis'
+import { brandString } from '@redspark/rsh-brand'
+import type {} from '@redspark/rsh-deepseek-llm-api-extensions'
+import { SessionLogOffset, SessionSeq } from '@redspark/rsh-session'
 import type {
   Session,
   SessionEvent,
   SessionId,
   SessionLogOffset as SessionLogOffsetType,
   SessionSeqCursor,
-} from '@deepseek-ai/dsh-session'
+} from '@redspark/rsh-session'
 import { Config } from './config.ts'
 import { foldAcceptedThrough, wireUpload } from './wire.ts'
 

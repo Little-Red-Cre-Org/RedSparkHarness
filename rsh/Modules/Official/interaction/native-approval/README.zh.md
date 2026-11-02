@@ -3,7 +3,7 @@ description: "用于 profile 所有工具决策的原生一次性审批策略与
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-native-approval
+# @redspark/rsh-native-approval
 
 [English](README.md) | 中文
 

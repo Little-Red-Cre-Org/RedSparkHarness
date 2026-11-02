@@ -2,10 +2,10 @@
 /** Native model onboarding: default route first, required-key copy, and a persisted skip. */
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, expect, it, vi } from 'vitest'
-import Schema from '@deepseek-ai/schemastery'
-import type { NativeSessionClient } from '@deepseek-ai/dsh-client-native-session/native'
-import type { NativeLocaleService } from '@deepseek-ai/dsh-client-locale/native'
-import type { NativeThemeService } from '@deepseek-ai/dsh-client-ui-theme/native'
+import Schema from '@redspark/schemastery'
+import type { NativeSessionClient } from '@redspark/rsh-client-native-session/native'
+import type { NativeLocaleService } from '@redspark/rsh-client-locale/native'
+import type { NativeThemeService } from '@redspark/rsh-client-ui-theme/native'
 import { NativeOnboarding } from '../src/onboarding.tsx'
 import { en } from '../src/locales.ts'
 

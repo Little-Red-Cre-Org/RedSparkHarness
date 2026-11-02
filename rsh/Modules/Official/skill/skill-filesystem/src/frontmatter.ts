@@ -1,6 +1,6 @@
 import { parse as parseYaml } from 'yaml'
-import { isSkillName } from '@deepseek-ai/dsh-skill/shared'
-import type { SkillInvocationPolicy } from '@deepseek-ai/dsh-skill/types'
+import { isSkillName } from '@redspark/rsh-skill/shared'
+import type { SkillInvocationPolicy } from '@redspark/rsh-skill/types'
 
 /** Valid skill fields extracted from one Markdown instruction file. */
 export interface ParsedSkillContent {

@@ -4,36 +4,36 @@ import { readFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { expect, it } from 'vitest'
-import { NativeHost, NativeScope, resolveInstallation, type NativeApplication, type NativeContext, type NativePlugin } from '@deepseek-ai/dsh-native-runtime'
-import { plugin as compatRuntimePlugin } from '@deepseek-ai/dsh-compat-dsh-runtime/native'
-import type { CompatDshRuntime } from '@deepseek-ai/dsh-compat-dsh-runtime/native'
-import { SUPPORT_RECORD, validateSupportManifest } from '@deepseek-ai/dsh-compat-dsh-runtime/native'
-import { localFilesystemPlugin } from '@deepseek-ai/dsh-fs-local/native'
-import { FsError, type FileSystemOperations, type FsVersion, type FsWriteIntent } from '@deepseek-ai/dsh-fs/native'
-import type {} from '@deepseek-ai/dsh-fs'
-import { plugin as storagePlugin } from '@deepseek-ai/dsh-session-persistence-jsonl/native'
-import { NativeAgentId, type NativeAgent, type NativeAgentRegistry } from '@deepseek-ai/dsh-native-agent'
-import { plugin as agentPlugin } from '@deepseek-ai/dsh-native-agent/native'
-import { plugin as modelExecutionPlugin } from '@deepseek-ai/dsh-native-model-execution/native'
-import { JsonlSessionBackend } from '@deepseek-ai/dsh-session-persistence-jsonl'
-import { plugin as appPlugin } from '@deepseek-ai/dsh-native-headless/native'
-import { plugin as approvalPlugin } from '@deepseek-ai/dsh-native-approval/native'
-import { plugin as toolsPlugin } from '@deepseek-ai/dsh-native-tools/native'
-import { plugin as nativeToolFsPlugin } from '@deepseek-ai/dsh-tool-fs/native'
-import { plugin as nativePolicyPlugin } from '@deepseek-ai/dsh-fs-observation-policy/native'
-import { plugin as promptPlugin } from '@deepseek-ai/dsh-native-prompt/native'
-import { plugin as sandboxFsPlugin } from '@deepseek-ai/dsh-compat-fs-sandbox/native'
-import { plugin as sandboxPolicyPlugin } from '@deepseek-ai/dsh-native-sandbox-policy/native'
-import { Session, SessionId, SESSION_FORMAT_VERSION } from '@deepseek-ai/dsh-session'
-import { ToolCallId } from '@deepseek-ai/dsh-llm'
-import type { Agent } from '@deepseek-ai/dsh-agent'
-import { plugin as compatPolicyPlugin } from '@deepseek-ai/dsh-compat-fs-policy/native'
-import { plugin as compatFsLocalPlugin } from '@deepseek-ai/dsh-compat-fs-local/native'
-import type { NativeToolRegistry } from '@deepseek-ai/dsh-native-tools'
-import type { NativePromptRegistry } from '@deepseek-ai/dsh-native-prompt'
+import { NativeHost, NativeScope, resolveInstallation, type NativeApplication, type NativeContext, type NativePlugin } from '@redspark/rsh-native-runtime'
+import { plugin as compatRuntimePlugin } from '@redspark/rsh-compat-dsh-runtime/native'
+import type { CompatDshRuntime } from '@redspark/rsh-compat-dsh-runtime/native'
+import { SUPPORT_RECORD, validateSupportManifest } from '@redspark/rsh-compat-dsh-runtime/native'
+import { localFilesystemPlugin } from '@redspark/rsh-fs-local/native'
+import { FsError, type FileSystemOperations, type FsVersion, type FsWriteIntent } from '@redspark/rsh-fs/native'
+import type {} from '@redspark/rsh-fs'
+import { plugin as storagePlugin } from '@redspark/rsh-session-persistence-jsonl/native'
+import { NativeAgentId, type NativeAgent, type NativeAgentRegistry } from '@redspark/rsh-native-agent'
+import { plugin as agentPlugin } from '@redspark/rsh-native-agent/native'
+import { plugin as modelExecutionPlugin } from '@redspark/rsh-native-model-execution/native'
+import { JsonlSessionBackend } from '@redspark/rsh-session-persistence-jsonl'
+import { plugin as appPlugin } from '@redspark/rsh-native-headless/native'
+import { plugin as approvalPlugin } from '@redspark/rsh-native-approval/native'
+import { plugin as toolsPlugin } from '@redspark/rsh-native-tools/native'
+import { plugin as nativeToolFsPlugin } from '@redspark/rsh-tool-fs/native'
+import { plugin as nativePolicyPlugin } from '@redspark/rsh-fs-observation-policy/native'
+import { plugin as promptPlugin } from '@redspark/rsh-native-prompt/native'
+import { plugin as sandboxFsPlugin } from '@redspark/rsh-compat-fs-sandbox/native'
+import { plugin as sandboxPolicyPlugin } from '@redspark/rsh-native-sandbox-policy/native'
+import { Session, SessionId, SESSION_FORMAT_VERSION } from '@redspark/rsh-session'
+import { ToolCallId } from '@redspark/rsh-llm'
+import type { Agent } from '@redspark/rsh-agent'
+import { plugin as compatPolicyPlugin } from '@redspark/rsh-compat-fs-policy/native'
+import { plugin as compatFsLocalPlugin } from '@redspark/rsh-compat-fs-local/native'
+import type { NativeToolRegistry } from '@redspark/rsh-native-tools'
+import type { NativePromptRegistry } from '@redspark/rsh-native-prompt'
 import { MockAdapter, textResponse, toolCallResponse } from '../../../../../Engine/core/agent-loop/tests/mock-adapter.ts'
 import { plugin, validateLegacyToolManifest } from '../src/native.ts'
-import type { NativeApprovalServiceDefinition } from '@deepseek-ai/dsh-approval-definition'
+import type { NativeApprovalServiceDefinition } from '@redspark/rsh-approval-definition'
 
 it('rejects unsupported declarations, config and missing native registries before activation', () => {
   const manifest = JSON.parse(readFileSync(new URL('../../../../../Modules/Official/fs/tool-fs/package.json', import.meta.url), 'utf8')) as Parameters<typeof validateLegacyToolManifest>[0]
@@ -49,8 +49,8 @@ it('rejects unsupported declarations, config and missing native registries befor
 
 it('pins the shared Cordis plugins and their adapter roles to verified releases', () => {
   for (const [packageName, service] of [
-    ['@deepseek-ai/dsh-system-prompt', 'systemPrompt'],
-    ['@deepseek-ai/dsh-tools', 'tools'],
+    ['@redspark/rsh-system-prompt', 'systemPrompt'],
+    ['@redspark/rsh-tools', 'tools'],
   ] as const) {
     const manifest = JSON.parse(readFileSync(new URL(`../../../../../Engine/core/${packageName.endsWith('tools') ? 'tools' : 'system-prompt'}/package.json`, import.meta.url), 'utf8')) as { name: string; version: string }
     expect(() => { validateSupportManifest(packageName, manifest) }).not.toThrow()
@@ -180,10 +180,10 @@ it('bridges legacy tool results and prompt into Native registries, records one r
     if (policyDependency === undefined) throw new Error('missing policy startup dependency')
     expect(diagnostics.find(entry => entry.id === policyDependency.provider)?.name).toBe(compatPolicyPlugin.name)
     expect(tools.schemas().map(schema => schema.name).sort()).toEqual(['edit', 'read', 'write'])
-    expect(activeRuntime.context.pluginHost.get('@deepseek-ai/dsh-system-prompt')).toMatchObject({
+    expect(activeRuntime.context.pluginHost.get('@redspark/rsh-system-prompt')).toMatchObject({
       apiVersion: 1, role: 'adapter', capability: 'dsh-compatibility',
     })
-    expect(activeRuntime.context.pluginHost.get('@deepseek-ai/dsh-tools')).toMatchObject({
+    expect(activeRuntime.context.pluginHost.get('@redspark/rsh-tools')).toMatchObject({
       apiVersion: 1, role: 'adapter', capability: 'dsh-compatibility',
     })
     expect((await prompt.render())).toContain('Use the read tool')
@@ -405,8 +405,8 @@ it('bridges legacy tool results and prompt into Native registries, records one r
     activeEvents.emit(scope, 'fs/observed', target, { kind: 'absent' }, {})
     expect(forwardedObservations).toBe(1)
 
-    await activeRuntime.update('@deepseek-ai/dsh-tool-fs', { readLimit: 1 })
-    expect(activeRuntime.context.loader.resolve('@deepseek-ai/dsh-tool-fs').options.config).toEqual({ readLimit: 1 })
+    await activeRuntime.update('@redspark/rsh-tool-fs', { readLimit: 1 })
+    expect(activeRuntime.context.loader.resolve('@redspark/rsh-tool-fs').options.config).toEqual({ readLimit: 1 })
     expect(tools.schemas().map(schema => schema.name).sort()).toEqual(['edit', 'read', 'write'])
     expect(await prompt.render()).toContain('Use the read tool')
 
@@ -423,7 +423,7 @@ it('bridges legacy tool results and prompt into Native registries, records one r
     try {
       await assemblyEntered.promise
       let disabled = false
-      disabling = activeRuntime.setEnabled('@deepseek-ai/dsh-tool-fs', false).then(() => { disabled = true })
+      disabling = activeRuntime.setEnabled('@redspark/rsh-tool-fs', false).then(() => { disabled = true })
       await new Promise<void>(resolve => setImmediate(resolve))
       expect(disabled).toBe(false)
       releaseAssembly.resolve(undefined)
@@ -432,7 +432,7 @@ it('bridges legacy tool results and prompt into Native registries, records one r
       expect(renderSettled).toBe(true)
       expect(tools.schemas()).toEqual([])
       expect(await prompt.render()).not.toContain('Use the read tool')
-      await activeRuntime.setEnabled('@deepseek-ai/dsh-tool-fs', true)
+      await activeRuntime.setEnabled('@redspark/rsh-tool-fs', true)
       expect(tools.schemas().map(schema => schema.name).sort()).toEqual(['edit', 'read', 'write'])
       expect(await prompt.render()).toContain('Use the read tool')
     } finally {
@@ -466,7 +466,7 @@ it('bridges legacy tool results and prompt into Native registries, records one r
     let disabled = false
     try {
       await readEntered.promise
-      const disabling = activeRuntime.setEnabled('@deepseek-ai/dsh-tool-fs', false).then(() => { disabled = true })
+      const disabling = activeRuntime.setEnabled('@redspark/rsh-tool-fs', false).then(() => { disabled = true })
       await new Promise<void>(resolve => setImmediate(resolve))
       expect(disabled).toBe(false)
       releaseRead.resolve(undefined)
@@ -479,25 +479,25 @@ it('bridges legacy tool results and prompt into Native registries, records one r
     expect(disabled).toBe(true)
     expect(tools.schemas()).toEqual([])
     expect(await prompt.render()).toBe('')
-    await activeRuntime.setEnabled('@deepseek-ai/dsh-tool-fs', true)
+    await activeRuntime.setEnabled('@redspark/rsh-tool-fs', true)
     expect(tools.schemas().map(schema => schema.name).sort()).toEqual(['edit', 'read', 'write'])
     expect(await prompt.render()).toContain('Use the read tool')
-    await activeRuntime.setEnabled('@deepseek-ai/dsh-fs-observation-policy', false)
+    await activeRuntime.setEnabled('@redspark/rsh-fs-observation-policy', false)
     expect(tools.schemas()).toEqual([])
     expect(await prompt.render()).toBe('')
     activeEvents.emit(scope, 'fs/observed', target, { kind: 'absent' }, {})
     expect(forwardedObservations).toBe(1)
-    await activeRuntime.setEnabled('@deepseek-ai/dsh-fs-observation-policy', true)
+    await activeRuntime.setEnabled('@redspark/rsh-fs-observation-policy', true)
     expect(tools.schemas().map(schema => schema.name).sort()).toEqual(['edit', 'read', 'write'])
     expect(await prompt.render()).toContain('Use the read tool')
     activeEvents.emit(scope, 'fs/observed', target, { kind: 'absent' }, {})
     expect(forwardedObservations).toBe(2)
-    await activeRuntime.remove('@deepseek-ai/dsh-fs-observation-policy')
+    await activeRuntime.remove('@redspark/rsh-fs-observation-policy')
     expect(tools.schemas()).toEqual([])
     expect(await prompt.render()).toBe('')
     activeEvents.emit(scope, 'fs/observed', target, { kind: 'absent' }, {})
     expect(forwardedObservations).toBe(2)
-    await activeRuntime.remove('@deepseek-ai/dsh-tool-fs')
+    await activeRuntime.remove('@redspark/rsh-tool-fs')
     expect(tools.schemas()).toEqual([])
     expect(await prompt.render()).toBe('')
     await host.remove(bridge)
@@ -929,7 +929,7 @@ it.each([
 
     if (changeWhilePending) {
       const approvalSignal = await lifecycleApproval.promise
-      disabling = runtime.setEnabled('@deepseek-ai/dsh-tool-fs', false)
+      disabling = runtime.setEnabled('@redspark/rsh-tool-fs', false)
       const aborted = Promise.withResolvers<undefined>()
       if (approvalSignal.aborted) aborted.resolve(undefined)
       else approvalSignal.addEventListener('abort', () => { aborted.resolve(undefined) }, { once: true })
@@ -941,13 +941,13 @@ it.each([
       expect(await readFile(join(workspace, 'sample.txt'), 'utf8')).toBe('after\n')
       await lifecycleAnswererSettled.promise
       await disabling
-      expect(runtime.isEnabled('@deepseek-ai/dsh-tool-fs')).toBe(false)
+      expect(runtime.isEnabled('@redspark/rsh-tool-fs')).toBe(false)
       expect(tools.schemas()).toEqual([])
     }
     await running
     if (changeWhilePending) {
-      await runtime.setEnabled('@deepseek-ai/dsh-tool-fs', true)
-      expect(runtime.isEnabled('@deepseek-ai/dsh-tool-fs')).toBe(true)
+      await runtime.setEnabled('@redspark/rsh-tool-fs', true)
+      expect(runtime.isEnabled('@redspark/rsh-tool-fs')).toBe(true)
       expect(tools.schemas().map(schema => schema.name).sort()).toEqual(['edit', 'read', 'write'])
     }
 

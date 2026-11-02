@@ -1,10 +1,10 @@
 /** Native Workspace Definition and Provider over the existing v2 domain and exact persistence authority. */
 import { z } from 'zod'
-import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
-import type { SessionId } from '@deepseek-ai/dsh-session/native'
-import type { NativeActiveSessionOwner } from '@deepseek-ai/dsh-native-session-execution'
-import type {} from '@deepseek-ai/dsh-storage-domain/native'
-import type {} from '@deepseek-ai/dsh-session-persistence/native'
+import type { NativePlugin } from '@redspark/rsh-native-runtime'
+import type { SessionId } from '@redspark/rsh-session/native'
+import type { NativeActiveSessionOwner } from '@redspark/rsh-native-session-execution'
+import type {} from '@redspark/rsh-storage-domain/native'
+import type {} from '@redspark/rsh-session-persistence/native'
 import { WorkspaceRegistryRuntime } from './runtime.ts'
 
 export { WorkspaceRegistryRuntime } from './runtime.ts'
@@ -34,13 +34,13 @@ export function resolveNativeWorkspaceConfiguration(input: unknown): NativeWorks
   }).strict().parse(input ?? {}))
 }
 
-declare module '@deepseek-ai/dsh-native-runtime' {
+declare module '@redspark/rsh-native-runtime' {
   interface NativeServices { workspaceRegistry: WorkspaceRegistryRuntime }
 }
 
 /** Native Provider retains the shared v2 record, global archive order, and existing domain write queues. */
 export const plugin: NativePlugin = {
-  apiVersion: 1, name: '@deepseek-ai/dsh-workspace', targets: ['host'],
+  apiVersion: 1, name: '@redspark/rsh-workspace', targets: ['host'],
   requires: ['storageDomain', 'sessionPersistence', 'activeSessions'], provides: ['workspaceRegistry'],
   resolve(input) {
     const config = resolveNativeWorkspaceConfiguration(input)

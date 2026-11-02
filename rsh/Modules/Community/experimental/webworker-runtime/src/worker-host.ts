@@ -19,11 +19,11 @@
  * image, so entry mounting, the activation audit, and its diagnostics are the
  * same code the Node deployment runs. Only the module seam and the command line
  * are supplied from here.
- * @module @deepseek-ai/dsh-experimental-webworker-runtime/src/worker-host
+ * @module @redspark/rsh-experimental-webworker-runtime/src/worker-host
  */
 import { setActiveModuleLoader, WorkerModuleLoader, type StaticModuleFactory } from './module-system/module-loader.ts'
-import type { TypertGateway } from '@deepseek-ai/dsh-api-gateway'
-import type { HostConnectionHandle } from '@deepseek-ai/dsh-client-connection'
+import type { TypertGateway } from '@redspark/rsh-api-gateway'
+import type { HostConnectionHandle } from '@redspark/rsh-client-connection'
 import type { AlsCausality } from './polyfill/async-context/als-runtime.ts'
 import { dirname, join } from './module-system/posix-path.ts'
 import { installProcessGlobal } from './node/globals/process.ts'
@@ -102,7 +102,7 @@ export interface WorkerHostOptions {
   readonly cmdlineArgs?: readonly string[]
   /** Port named on the default command line; defaults to {@link DEFAULT_PORT}. */
   readonly port?: number
-  /** Environment for the process shim; `DSH_HOME` defaults to `<root>/home`. */
+  /** Environment for the process shim; `RSH_HOME` defaults to `<root>/home`. */
   readonly env?: Readonly<Record<string, string>>
   /**
    * Image manifest path; defaults to `<root>/config/vfs-manifest.json`. Its
@@ -183,7 +183,7 @@ export function createWorkerHost(options: WorkerHostOptions): WorkerHost {
   const start = async (): Promise<void> => {
     try {
       const home = join(root, IMAGE_HOME_DIRECTORY)
-      installProcessGlobal({ cwd: root, env: { DSH_HOME: home, HOME: home, ...options.env } })
+      installProcessGlobal({ cwd: root, env: { RSH_HOME: home, HOME: home, ...options.env } })
 
       const [bytes, overlays] = await Promise.all([
         readImage(options.image),
@@ -218,7 +218,7 @@ export function createWorkerHost(options: WorkerHostOptions): WorkerHost {
       modules = loader
 
       const require = loader.requireFrom(dirname(configPath))
-      const appBoot = require('@deepseek-ai/dsh-app-boot') as {
+      const appBoot = require('@redspark/rsh-app-boot') as {
         boot(
           binName: string,
           configPath: string,
@@ -226,7 +226,7 @@ export function createWorkerHost(options: WorkerHostOptions): WorkerHost {
           prepare: (ctx: HostContext) => void,
         ): Promise<HostContext>
       }
-      const cmdline = require('@deepseek-ai/dsh-cmdline') as {
+      const cmdline = require('@redspark/rsh-cmdline') as {
         provideCmdline(ctx: unknown, host: { args: readonly string[]; exit: (code: number) => void }): void
       }
 
@@ -302,7 +302,7 @@ export interface LogRenderer {
  * @param require - Image resolver, for cordis's own message renderer.
  */
 export function installLogSink(ctx: HostContext, require: (specifier: string) => unknown): void {
-  const { Logger } = require('@deepseek-ai/cordis') as { Logger: LogRenderer }
+  const { Logger } = require('@redspark/cordis') as { Logger: LogRenderer }
   const exporter: LogExporter = {
     colors: false,
     // cordis compares `exporter.levels ?? logger.level ?? INFO` against the
@@ -375,7 +375,7 @@ function bootPatches(
     rows = JSON.parse(text)
   } else {
     // The roster's `!!js` scalars need Include's own YAML dialect.
-    const include = loader.load(loader.resolve('@deepseek-ai/cordis-plugin-include', root)) as { entryListSchema: unknown }
+    const include = loader.load(loader.resolve('@redspark/cordis-plugin-include', root)) as { entryListSchema: unknown }
     const yaml = loader.load(loader.resolve('js-yaml', root)) as { load(source: string, options: { schema: unknown }): unknown }
     rows = yaml.load(text, { schema: include.entryListSchema })
   }
@@ -412,8 +412,8 @@ function bootPatches(
   // Persistent task scheduling opens node:sqlite, which this browser Worker
   // does not provide. Loader also omits the disabled row's dsh.client face.
   const taskScheduler = find(rows, 'task-scheduler')
-  if (taskScheduler?.name === '@deepseek-ai/dsh-task-scheduler') {
-    patches.push({ id: 'task-scheduler', name: '@deepseek-ai/dsh-task-scheduler', disabled: true })
+  if (taskScheduler?.name === '@redspark/rsh-task-scheduler') {
+    patches.push({ id: 'task-scheduler', name: '@redspark/rsh-task-scheduler', disabled: true })
   }
   return { patches, presetOverlay }
 }

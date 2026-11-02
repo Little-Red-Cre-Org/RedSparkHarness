@@ -21,14 +21,14 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
-import { FiberState } from '@deepseek-ai/cordis'
-import { createNodeBuiltins, REPLACED_PREFIXES } from '@deepseek-ai/dsh-experimental-webworker-runtime/src/node/builtins.ts'
+import { FiberState } from '@redspark/cordis'
+import { createNodeBuiltins, REPLACED_PREFIXES } from '@redspark/rsh-experimental-webworker-runtime/src/node/builtins.ts'
 import {
   setActiveModuleLoader, WorkerModuleLoader,
-} from '@deepseek-ai/dsh-experimental-webworker-runtime/src/module-system/module-loader.ts'
-import { inflateImage } from '@deepseek-ai/dsh-experimental-webworker-runtime/src/storage/image-gzip.ts'
-import { loadVfsImage } from '@deepseek-ai/dsh-experimental-webworker-runtime/src/storage/memory.ts'
-import { setActiveVfs } from '@deepseek-ai/dsh-experimental-webworker-runtime/src/storage/active.ts'
+} from '@redspark/rsh-experimental-webworker-runtime/src/module-system/module-loader.ts'
+import { inflateImage } from '@redspark/rsh-experimental-webworker-runtime/src/storage/image-gzip.ts'
+import { loadVfsImage } from '@redspark/rsh-experimental-webworker-runtime/src/storage/memory.ts'
+import { setActiveVfs } from '@redspark/rsh-experimental-webworker-runtime/src/storage/active.ts'
 import { indexWorkspacePackages, previewFixtures } from '../src/repository.ts'
 import { DEFAULT_ROOT, MANIFEST_PATH, packVfsImage, packVfsOverlay } from '../src/pack.ts'
 
@@ -37,7 +37,7 @@ const repoRoot = fileURLToPath(new URL('../../../../../../', import.meta.url))
 describe('runtime export roots', () => {
   it('skips type-only and stylesheet faces, loads shared client code, and rejects a missing runtime target', async () => {
     const directory = mkdtempSync(join(tmpdir(), 'dsh-export-roots-'))
-    const name = '@deepseek-ai/dsh-http-routes'
+    const name = '@redspark/rsh-http-routes'
     const packageDirectory = join(directory, 'package')
     const packageJson = join(packageDirectory, 'package.json')
     const manifest: { name: string; files: string[]; exports: Record<string, unknown> } = {
@@ -96,7 +96,7 @@ describe('runtime export roots', () => {
   const cordisClientBundle = join(repoRoot, 'rsh/Modules/Official/extensions/ui-cordis/lib/client.js')
   it.skipIf(!existsSync(cordisClientBundle))('keeps the Cordis client module table as a page asset', () => {
     const directory = mkdtempSync(join(tmpdir(), 'dsh-cordis-page-asset-'))
-    const name = '@deepseek-ai/dsh-client-ui-cordis'
+    const name = '@redspark/rsh-client-ui-cordis'
     const packageDirectory = join(directory, 'package')
     const clientDirectory = join(packageDirectory, 'lib')
     const original = readFileSync(cordisClientBundle, 'utf8')
@@ -131,11 +131,11 @@ describe('runtime export roots', () => {
 })
 
 /** A leaf workspace package: real build output, no dependencies to drag in. */
-const SUBJECT = '@deepseek-ai/dsh-timeout'
-const LANDLOCK = '@deepseek-ai/node-addon-system'
+const SUBJECT = '@redspark/rsh-timeout'
+const LANDLOCK = '@redspark/node-addon-system'
 const LANDLOCK_ENTRY = `${LANDLOCK}/landlock-run`
-const PLUGIN_INVENTORY = '@deepseek-ai/dsh-plugin-package-inventory-deepseek'
-const WEB_SERVER = '@deepseek-ai/dsh-host-webserver'
+const PLUGIN_INVENTORY = '@redspark/rsh-plugin-package-inventory-deepseek'
+const WEB_SERVER = '@redspark/rsh-host-webserver'
 
 const workspaces = indexWorkspacePackages(repoRoot)
 

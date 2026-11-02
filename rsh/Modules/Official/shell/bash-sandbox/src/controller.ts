@@ -1,7 +1,7 @@
 /** Bash confinement policy over the shared shell sandbox controller. */
-import type { ShellExecSpec } from '@deepseek-ai/dsh-shell/native'
-import type { ProcessSandbox, SandboxExecutionPolicy, SandboxMode } from '@deepseek-ai/dsh-sandbox/native'
-import { SandboxShellController, type ShellCommands } from '@deepseek-ai/dsh-shell-sandbox-core'
+import type { ShellExecSpec } from '@redspark/rsh-shell/native'
+import type { ProcessSandbox, SandboxExecutionPolicy, SandboxMode } from '@redspark/rsh-sandbox/native'
+import { SandboxShellController, type ShellCommands } from '@redspark/rsh-shell-sandbox-core'
 
 /** Policy provider selected by the active composition. */
 export interface BashPolicy {

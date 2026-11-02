@@ -1,5 +1,5 @@
 /** Workspace registry failures shared by both Providers. */
-import type { SessionId } from '@deepseek-ai/dsh-session/native'
+import type { SessionId } from '@redspark/rsh-session/native'
 import type { WorkspaceId } from './workspace-types.ts'
 
 /**

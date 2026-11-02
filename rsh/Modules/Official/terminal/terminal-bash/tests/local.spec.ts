@@ -3,20 +3,20 @@ import { spawnSync } from 'node:child_process'
 import { tmpdir } from 'node:os'
 import { join, parse } from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
-import { Context } from '@deepseek-ai/cordis'
-import { Session, SessionId } from '@deepseek-ai/dsh-session'
-import AgentRegistry from '@deepseek-ai/dsh-agent'
-import type { Agent } from '@deepseek-ai/dsh-agent'
-import TerminalSessionService from '@deepseek-ai/dsh-terminal'
-import type { TerminalSendOperation } from '@deepseek-ai/dsh-terminal'
-import SandboxProvider from '@deepseek-ai/dsh-sandbox'
-import type { ConfinedArgv, SandboxPolicy } from '@deepseek-ai/dsh-sandbox'
-import SandboxPolicyService from '@deepseek-ai/dsh-sandbox-policy'
-import SessionProjectionRegistry from '@deepseek-ai/dsh-session-projection'
-import LocalSubprocessRuntime from '@deepseek-ai/dsh-subprocess-local'
-import { resolvePwshPath } from '@deepseek-ai/dsh-pwsh-local/src/resolve.ts'
-import * as ptyLocal from '@deepseek-ai/dsh-terminal-bash'
-import { unsupportedInbox } from '@deepseek-ai/dsh-agent-loop-testkit'
+import { Context } from '@redspark/cordis'
+import { Session, SessionId } from '@redspark/rsh-session'
+import AgentRegistry from '@redspark/rsh-agent'
+import type { Agent } from '@redspark/rsh-agent'
+import TerminalSessionService from '@redspark/rsh-terminal'
+import type { TerminalSendOperation } from '@redspark/rsh-terminal'
+import SandboxProvider from '@redspark/rsh-sandbox'
+import type { ConfinedArgv, SandboxPolicy } from '@redspark/rsh-sandbox'
+import SandboxPolicyService from '@redspark/rsh-sandbox-policy'
+import SessionProjectionRegistry from '@redspark/rsh-session-projection'
+import LocalSubprocessRuntime from '@redspark/rsh-subprocess-local'
+import { resolvePwshPath } from '@redspark/rsh-pwsh-local/src/resolve.ts'
+import * as ptyLocal from '@redspark/rsh-terminal-bash'
+import { unsupportedInbox } from '@redspark/rsh-agent-loop-testkit'
 
 const roots: string[] = []
 const contexts: Context[] = []
@@ -137,8 +137,8 @@ function canReadLinuxProcessSyscall(pid: number): boolean {
 // Windows has no bash, and its pwsh counterpart lives in the describe below.
 describe.skipIf(process.platform === 'win32')('terminal-bash real shell', () => {
   it('persists cwd and environment across sends, scrubs secrets, and closes', async () => {
-    const previous = process.env.DSH_TEST_SECRET
-    process.env.DSH_TEST_SECRET = 'must-not-leak'
+    const previous = process.env.RSH_TEST_SECRET
+    process.env.RSH_TEST_SECRET = 'must-not-leak'
     try {
       const { ctx, root, agent } = await harness('danger-full-access')
       const created = await ctx.terminals.spawn(agent, { type: 'shell', name: 'main', cwd: root })
@@ -146,15 +146,15 @@ describe.skipIf(process.platform === 'win32')('terminal-bash real shell', () => 
 
       const first = ctx.terminals.startSend(agent, created.sessionId, { text: 'export KEEP=ok; cd /', submit: true })
       expect((await first.done).waitReason).toBe('stdin_read')
-      const second = ctx.terminals.startSend(agent, created.sessionId, { text: 'printf "cwd=%s keep=%s secret=%s\\n" "$PWD" "$KEEP" "${DSH_TEST_SECRET-unset}"', submit: true })
+      const second = ctx.terminals.startSend(agent, created.sessionId, { text: 'printf "cwd=%s keep=%s secret=%s\\n" "$PWD" "$KEEP" "${RSH_TEST_SECRET-unset}"', submit: true })
       expect((await second.done).viewport).toContain('cwd=/ keep=ok secret=unset')
 
       expect(ctx.terminals.read(agent, created.sessionId, { offset: 0, count: 20 }).text).toContain('cwd=/ keep=ok secret=unset')
       expect(await ctx.terminals.kill(agent, created.sessionId)).toBe(true)
       expect(ctx.terminals.list(agent)).toEqual([])
     } finally {
-      if (previous === undefined) delete process.env.DSH_TEST_SECRET
-      else process.env.DSH_TEST_SECRET = previous
+      if (previous === undefined) delete process.env.RSH_TEST_SECRET
+      else process.env.RSH_TEST_SECRET = previous
     }
   }, 10_000)
 
@@ -321,8 +321,8 @@ const hasPwsh = spawnSync(
 
 describe.skipIf(!hasPwsh)('terminal-bash pwsh real shell', () => {
   it.each([false, true])('bootstraps a persistent pwsh, persists state, and scrubs secrets (hold command: %s)', async (holdCommand) => {
-    const previous = process.env.DSH_TEST_SECRET
-    process.env.DSH_TEST_SECRET = 'must-not-leak'
+    const previous = process.env.RSH_TEST_SECRET
+    process.env.RSH_TEST_SECRET = 'must-not-leak'
     try {
       const { ctx, root, agent } = await harness('danger-full-access', {
         idleSilenceMs: 300,
@@ -343,7 +343,7 @@ describe.skipIf(!hasPwsh)('terminal-bash pwsh real shell', () => {
       })
       expect(['stdin_read', 'inferred_idle']).toContain((await first.done).waitReason)
       const expected = `keep=ok cwd=${parse(root).root} secret=END`
-      const command = "Write-Output ('keep={0} cwd={1} secret={2}END' -f $env:KEEP, (Get-Location).Path, $env:DSH_TEST_SECRET)"
+      const command = "Write-Output ('keep={0} cwd={1} secret={2}END' -f $env:KEEP, (Get-Location).Path, $env:RSH_TEST_SECRET)"
       expect(command).not.toContain(expected)
       const second = ctx.terminals.startSend(agent, created.sessionId, { text: command, submit: true })
       const result = await second.done
@@ -362,8 +362,8 @@ describe.skipIf(!hasPwsh)('terminal-bash pwsh real shell', () => {
       expect(await ctx.terminals.kill(agent, created.sessionId)).toBe(true)
       expect(ctx.terminals.list(agent)).toEqual([])
     } finally {
-      if (previous === undefined) delete process.env.DSH_TEST_SECRET
-      else process.env.DSH_TEST_SECRET = previous
+      if (previous === undefined) delete process.env.RSH_TEST_SECRET
+      else process.env.RSH_TEST_SECRET = previous
     }
   }, 30_000)
 

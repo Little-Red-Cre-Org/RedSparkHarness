@@ -3,7 +3,7 @@ description: "Native Agent registration, scoped lifecycle events, and asynchrono
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-native-agent
+# @redspark/rsh-native-agent
 
 English | [中文](README.zh.md)
 

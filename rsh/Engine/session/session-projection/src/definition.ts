@@ -1,8 +1,8 @@
 /** Shared pure fold Definition used by Cordis and Native projection registries. */
 
-import type { SessionEvent, SessionHeader, SessionLogOffset } from '@deepseek-ai/dsh-session/native'
+import type { SessionEvent, SessionHeader, SessionLogOffset } from '@redspark/rsh-session/native'
 import type { ZodType } from 'zod'
-import type { SessionProjectionMap, SessionProjectionStateMap } from '@deepseek-ai/dsh-session-projection/types'
+import type { SessionProjectionMap, SessionProjectionStateMap } from '@redspark/rsh-session-projection/types'
 
 /**
  * One domain's synchronous projection unit. The registry applies each committed

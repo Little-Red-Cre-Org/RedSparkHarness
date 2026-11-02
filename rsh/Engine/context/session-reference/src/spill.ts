@@ -1,7 +1,7 @@
 /** Full projected transcripts and model-visible spill outcomes for bounded reference previews. */
 
-import type { SessionId } from '@deepseek-ai/dsh-session/native'
-import type { SaveTextSpill, SpillRef } from '@deepseek-ai/dsh-spill/native'
+import type { SessionId } from '@redspark/rsh-session/native'
+import type { SaveTextSpill, SpillRef } from '@redspark/rsh-spill/native'
 import type { ReferencedSessionData, ReferenceRetentionStats } from './projection.ts'
 
 /** Warning shared by inline previews and retrievable full transcripts. */

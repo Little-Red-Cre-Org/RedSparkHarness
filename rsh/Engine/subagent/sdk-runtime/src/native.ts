@@ -1,10 +1,10 @@
 /** Native Host capability for launching the fixed, same-version SDK child runtime. */
 
-import type { ChildConnectionDefinition } from '@deepseek-ai/dsh-subprocess/native'
-import type {} from '@deepseek-ai/dsh-native-runtime'
-import type { SandboxExecutionPolicy, SandboxEnforcement } from '@deepseek-ai/dsh-sandbox/native-types'
-import type { SessionId } from '@deepseek-ai/dsh-session/native'
-import type { ApprovalRequestParams } from '@deepseek-ai/dsh-sdk-protocol'
+import type { ChildConnectionDefinition } from '@redspark/rsh-subprocess/native'
+import type {} from '@redspark/rsh-native-runtime'
+import type { SandboxExecutionPolicy, SandboxEnforcement } from '@redspark/rsh-sandbox/native-types'
+import type { SessionId } from '@redspark/rsh-session/native'
+import type { ApprovalRequestParams } from '@redspark/rsh-sdk-protocol'
 import type { RuntimeProcessOptions } from './types.ts'
 
 /** Decision accepted by the one parent-bound Native SDK approval relay. */
@@ -47,6 +47,6 @@ export interface NativeSdkChildRuntimeLauncher {
   launch(request: NativeSdkChildRuntimeRequest, signal: AbortSignal): Promise<NativeSdkChildRuntime>
 }
 
-declare module '@deepseek-ai/dsh-native-runtime' {
+declare module '@redspark/rsh-native-runtime' {
   interface NativeServices { sdkChildRuntimeLauncher: NativeSdkChildRuntimeLauncher }
 }

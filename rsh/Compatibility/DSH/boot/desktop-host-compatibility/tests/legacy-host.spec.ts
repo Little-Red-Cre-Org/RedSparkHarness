@@ -19,7 +19,7 @@ describe('legacy Desktop Host profile boundary', () => {
     await mkdir(project)
     await writeFile(join(project, 'rsh.client.json'), JSON.stringify({
       formatVersion: 1,
-      installations: [{ id: 'application', plugin: '@deepseek-ai/dsh-client-native-application' }],
+      installations: [{ id: 'application', plugin: '@redspark/rsh-client-native-application' }],
     }))
 
     await expect(createLegacyDesktopRuntime(join(root, 'runtime'), project, false))

@@ -3,7 +3,7 @@ description: "User-facing permission presets for users and maintainers choosing,
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-permission-presets
+# @redspark/rsh-permission-presets
 
 English | [中文](README.zh.md)
 
@@ -27,14 +27,14 @@ Permission presets give users one selector for applying sandbox mode and approva
 
 Choose this service when a deployment wants to offer users one Permissions selector instead of separate sandbox and approval controls. It bundles the knobs; execution and approval keep their own values, so removing the package later leaves the last selection in effect.
 
-Native hosts can compose `@deepseek-ai/dsh-permission-presets/native` explicitly. Its `permissionPresets` capability reads the current matching preset or derived `custom` value and available choices for an exact writable root owner, resolves configured bundles, and applies one through the Program-owned writer, awaiting the durable flush. This entry does not provide the Cordis settings namespace, `/permission` command, or client projection; sandbox and approval Providers enforce the recorded policy values.
+Native hosts can compose `@redspark/rsh-permission-presets/native` explicitly. Its `permissionPresets` capability reads the current matching preset or derived `custom` value and available choices for an exact writable root owner, resolves configured bundles, and applies one through the Program-owned writer, awaiting the durable flush. This entry does not provide the Cordis settings namespace, `/permission` command, or client projection; sandbox and approval Providers enforce the recorded policy values.
 
 ### Configuring presets
 
 The plugin config defines the preset table and the default for fresh sessions. Each preset name bundles one sandbox mode with one approval policy; `name` and `description` are optional client presentation.
 
 ```yaml
-- name: '@deepseek-ai/dsh-permission-presets'
+- name: '@redspark/rsh-permission-presets'
   config:
     presets:
       workspace-write:

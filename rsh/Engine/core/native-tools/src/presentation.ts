@@ -1,8 +1,8 @@
 /** Framework-free file diff vocabulary for Host presenters and Client views.
- * @module @deepseek-ai/dsh-native-tools/presentation
+ * @module @redspark/rsh-native-tools/presentation
  */
 
-import type { ContentBlock } from '@deepseek-ai/dsh-llm/native'
+import type { ContentBlock } from '@redspark/rsh-llm/native'
 
 /** Category a UI may use for a generic tool-call icon or treatment. */
 export type ToolCallKind = 'read' | 'edit' | 'delete' | 'move' | 'search' | 'execute' | 'fetch' | 'other'

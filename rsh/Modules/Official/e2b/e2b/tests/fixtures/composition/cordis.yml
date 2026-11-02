@@ -2,39 +2,39 @@
 # e2b.cwd and sandbox-policy.workspaceRoot must name the same remote directory,
 # which is also bash-local's implicit default workdir.
 - id: e2b
-  name: '@deepseek-ai/dsh-e2b'
+  name: '@redspark/rsh-e2b'
   config:
     cwd: !!js process.cwd()
     timeoutMs: 180000
 
 - id: subprocess-e2b
-  name: '@deepseek-ai/dsh-subprocess-e2b'
+  name: '@redspark/rsh-subprocess-e2b'
 
 - id: bash
-  name: '@deepseek-ai/dsh-bash-local'
+  name: '@redspark/rsh-bash-local'
   config:
     timeoutMs: 30000
 
 - id: fs-e2b
-  name: '@deepseek-ai/dsh-fs-e2b'
+  name: '@redspark/rsh-fs-e2b'
 
 - id: agents
-  name: '@deepseek-ai/dsh-agent'
+  name: '@redspark/rsh-agent'
 
 - id: session-projection
-  name: '@deepseek-ai/dsh-session-projection'
+  name: '@redspark/rsh-session-projection'
 
 - id: sandbox-policy
-  name: '@deepseek-ai/dsh-sandbox-policy'
+  name: '@redspark/rsh-sandbox-policy'
   config:
     mode: danger-full-access
     workspaceRoot: !!js process.cwd()
 
 - id: pty
-  name: '@deepseek-ai/dsh-terminal'
+  name: '@redspark/rsh-terminal'
 
 - id: terminal-bash
-  name: '@deepseek-ai/dsh-terminal-bash'
+  name: '@redspark/rsh-terminal-bash'
   config:
     pollIntervalMs: 25
     exactProbeAfterMs: 150
@@ -44,10 +44,10 @@
     disposeGraceMs: 1000
 
 - id: lsp
-  name: '@deepseek-ai/dsh-lsp'
+  name: '@redspark/rsh-lsp'
 
 - id: lsp-stdio
-  name: '@deepseek-ai/dsh-lsp-stdio'
+  name: '@redspark/rsh-lsp-stdio'
   config:
     servers:
       fixture:

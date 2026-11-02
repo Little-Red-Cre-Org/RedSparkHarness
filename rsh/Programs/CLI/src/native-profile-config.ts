@@ -1,8 +1,8 @@
 /** Strict JSON profile and overlay validation before native plugin discovery. */
 import {
   resolveDshProfileDirectoryExecution, resolveDshProfileExecution, resolveDshHome,
-} from '@deepseek-ai/dsh-home-paths'
-export { validateDshProfileName as validateProfileName } from '@deepseek-ai/dsh-home-paths'
+} from '@redspark/rsh-home-paths'
+export { validateDshProfileName as validateProfileName } from '@redspark/rsh-home-paths'
 
 /** Scope identity and optional parent in a native profile. */
 export interface NativeProfileScope {

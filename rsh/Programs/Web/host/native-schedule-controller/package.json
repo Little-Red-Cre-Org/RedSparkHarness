@@ -1,5 +1,5 @@
 {
-  "name": "@deepseek-ai/dsh-native-schedule-controller",
+  "name": "@redspark/rsh-native-schedule-controller",
   "description": "Native Web scheduled task Host endpoints",
   "version": "1.0.0",
   "publishConfig": { "access": "public" },
@@ -29,13 +29,13 @@
   "files": ["lib/index.js", "lib/native.js", "lib/shared-*.js", "lib/types/**/*.d.ts"],
   "license": "MIT",
   "dependencies": {
-    "@deepseek-ai/dsh-native-runtime": "workspace:^",
-    "@deepseek-ai/dsh-client-connection": "workspace:^",
-    "@deepseek-ai/dsh-task-scheduler": "workspace:^",
+    "@redspark/rsh-native-runtime": "workspace:^",
+    "@redspark/rsh-client-connection": "workspace:^",
+    "@redspark/rsh-task-scheduler": "workspace:^",
     "zod": "^4.4.3"
   },
   "devDependencies": {
-    "@deepseek-ai/dsh-client-native-session": "workspace:^"
+    "@redspark/rsh-client-native-session": "workspace:^"
   },
   "scripts": { "bundle": "tsdown" }
 }

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import type { SessionEvent } from '@deepseek-ai/dsh-session/types'
-import { SessionSeq } from '@deepseek-ai/dsh-session/types'
+import type { SessionEvent } from '@redspark/rsh-session/types'
+import { SessionSeq } from '@redspark/rsh-session/types'
 import { buildTrajectorySnapshot } from '../src/trajectory-session-events.ts'
 import { deriveTrajectoryLayout } from '../src/client/layout.ts'
 import { t } from './locale.client.ts'

@@ -8,4 +8,4 @@ header:
 platform: posix
 permission: read-only
 environment:
-  DSH_SNAPSHOT_MISSING_SANDBOX_RUNNER: '1'
+  RSH_SNAPSHOT_MISSING_SANDBOX_RUNNER: '1'

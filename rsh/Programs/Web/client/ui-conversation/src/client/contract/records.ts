@@ -1,15 +1,15 @@
-import type { ToolResultNode } from '@deepseek-ai/dsh-client-ui-conversation/tool-records'
-export type { ToolResultNode, RunningToolCall, ToolCallBlock } from '@deepseek-ai/dsh-client-ui-conversation/tool-records'
+import type { ToolResultNode } from '@redspark/rsh-client-ui-conversation/tool-records'
+export type { ToolResultNode, RunningToolCall, ToolCallBlock } from '@redspark/rsh-client-ui-conversation/tool-records'
 // Each publication replaces the top-level snapshot while preserving unchanged
 // substructure references. Stable node and location stores make old snapshots
 // live readers rather than time-point views.
 
-import type { CommandId } from '@deepseek-ai/dsh-commands/brand'
-import type { MessageId } from '@deepseek-ai/dsh-llm/brand'
-import type { ContentBlock } from '@deepseek-ai/dsh-llm/types'
-import type { ImageAttachmentRef } from '@deepseek-ai/dsh-attachment/types'
-import type { LlmRetryEventData } from '@deepseek-ai/dsh-llm-retry/types'
-import type { TodoItem } from '@deepseek-ai/dsh-tool-todo/client-native'
+import type { CommandId } from '@redspark/rsh-commands/brand'
+import type { MessageId } from '@redspark/rsh-llm/brand'
+import type { ContentBlock } from '@redspark/rsh-llm/types'
+import type { ImageAttachmentRef } from '@redspark/rsh-attachment/types'
+import type { LlmRetryEventData } from '@redspark/rsh-llm-retry/types'
+import type { TodoItem } from '@redspark/rsh-tool-todo/client-native'
 import type { ContextProvenanceView, KnownContextForm } from './context-provenance.ts'
 export type { TodoItem }
 

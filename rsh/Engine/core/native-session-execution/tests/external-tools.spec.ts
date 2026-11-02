@@ -1,9 +1,9 @@
 /** External tool capture cancellation and settlement ownership. */
 import { expect, it, vi } from 'vitest'
-import { NativeAgentId, NativeAgentRegistry } from '@deepseek-ai/dsh-native-agent'
-import { NativeScope } from '@deepseek-ai/dsh-native-runtime'
-import { Session, SessionId, SESSION_FORMAT_VERSION } from '@deepseek-ai/dsh-session/native'
-import { NativeModelExecution } from '@deepseek-ai/dsh-native-model-execution'
+import { NativeAgentId, NativeAgentRegistry } from '@redspark/rsh-native-agent'
+import { NativeScope } from '@redspark/rsh-native-runtime'
+import { Session, SessionId, SESSION_FORMAT_VERSION } from '@redspark/rsh-session/native'
+import { NativeModelExecution } from '@redspark/rsh-native-model-execution'
 import { NativeSessionExecutionRegistry, type NativeSessionExecutionOwner } from '../src/index.ts'
 
 it('waits for every owner release before rejecting failed registry disposal', async () => {

@@ -34,14 +34,14 @@
     command: !!js process.env.RSI_PROBE_PYTHON
     args: !!js JSON.parse(process.env.RSI_PROBE_ARGS)
     permission: reject
-    env: !!js "({ DSH_HOME: process.env.RSI_PROBE_ISOLATED_HOME, PYTHONPATH: process.env.RSI_PROBE_PYTHONPATH, OPENHANDS_SUPPRESS_BANNER: '1' })"
+    env: !!js "({ RSH_HOME: process.env.RSI_PROBE_ISOLATED_HOME, PYTHONPATH: process.env.RSI_PROBE_PYTHONPATH, OPENHANDS_SUPPRESS_BANNER: '1' })"
 
 - insert:
     # The `headless` profile mounts no agent preset, so it has no preset row to
     # patch: the delegation tool is inserted here instead. A preset-backed
     # profile patches the same row id in its own preset composition instead.
     - id: tool-subagent-rsi
-      name: '@deepseek-ai/dsh-tool-subagent'
+      name: '@redspark/rsh-tool-subagent'
       config:
         provider: acp
         toolName: subagent_rsi

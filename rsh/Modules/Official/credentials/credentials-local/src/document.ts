@@ -2,8 +2,8 @@
 import { stat } from 'node:fs/promises'
 import { join, resolve } from 'node:path'
 import { Document, isMap, isScalar, parseDocument, type YAMLError } from 'yaml'
-import { canonicalizeWatchPath, resolveDshHome } from '@deepseek-ai/dsh-home-paths'
-import { credentialRef, parseCredentialKey, type ApiKeyRecord, type CredentialKey, type CredentialRecord, type CredentialRef } from '@deepseek-ai/dsh-credentials/native'
+import { canonicalizeWatchPath, resolveDshHome } from '@redspark/rsh-home-paths'
+import { credentialRef, parseCredentialKey, type ApiKeyRecord, type CredentialKey, type CredentialRecord, type CredentialRef } from '@redspark/rsh-credentials/native'
 
 /** Basename of the credentials document inside the harness home. */
 export const CREDENTIALS_FILENAME = '.credentials.yaml'
@@ -12,7 +12,7 @@ export const CREDENTIALS_FILENAME = '.credentials.yaml'
 export interface Config {
   /** Credentials document path; defaults to `.credentials.yaml` under the harness home. */
   path?: string
-  /** Harness home used when `path` is omitted; defaults to `$DSH_HOME` or `~/.dsh`. */
+  /** Harness home used when `path` is omitted; defaults to `$RSH_HOME` or `~/.dsh`. */
   dshHome?: string
   /** Watch the document and hot-publish external edits; defaults to true. */
   watch?: boolean

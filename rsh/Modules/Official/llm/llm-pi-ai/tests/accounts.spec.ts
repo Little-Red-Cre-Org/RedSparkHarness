@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import type { NativeCredentials } from '@deepseek-ai/dsh-credentials/native'
-import { credentialKey } from '@deepseek-ai/dsh-credentials/native'
+import type { NativeCredentials } from '@redspark/rsh-credentials/native'
+import { credentialKey } from '@redspark/rsh-credentials/native'
 import { NativeAccountsProvider } from '../src/accounts.ts'
 import { CodexUsageStore } from '../src/rate-limits.ts'
 

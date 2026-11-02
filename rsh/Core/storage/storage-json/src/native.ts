@@ -1,7 +1,7 @@
 /** Native JSON storage registers the shared backend and exposes explicit readiness for domain Consumers. */
 import { z } from 'zod'
-import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
-import type {} from '@deepseek-ai/dsh-storage/native'
+import type { NativePlugin } from '@redspark/rsh-native-runtime'
+import type {} from '@redspark/rsh-storage/native'
 import { JsonStorageBackend } from './backend.ts'
 export { JsonStorageBackend } from './backend.ts'
 
@@ -19,7 +19,7 @@ export function resolveNativeJsonStorageConfig(input: unknown): NativeJsonStorag
 
 /** Provider registration is owned until its accepted unit operations drain. */
 export const plugin: NativePlugin = {
-  apiVersion: 1, name: '@deepseek-ai/dsh-storage-json', targets: ['host'],
+  apiVersion: 1, name: '@redspark/rsh-storage-json', targets: ['host'],
   requires: ['storage'], provides: ['storageBackendsReady'],
   resolve(input) {
     const config = resolveNativeJsonStorageConfig(input)

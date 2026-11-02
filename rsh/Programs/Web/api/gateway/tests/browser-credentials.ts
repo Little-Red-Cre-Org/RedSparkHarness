@@ -1,4 +1,4 @@
-import type { Context } from '@deepseek-ai/cordis'
+import type { Context } from '@redspark/cordis'
 
 /** Provide an in-memory credential-record owner for a mounted Connection plugin. */
 export function provideBrowserCredentials(ctx: Context): void {

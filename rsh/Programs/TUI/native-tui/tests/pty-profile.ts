@@ -5,7 +5,7 @@ import { dirname, join } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { spawn, type IPty } from 'node-pty'
 import { vi } from 'vitest'
-import type { ReplayEntry } from '@deepseek-ai/dsh-llm-replay'
+import type { ReplayEntry } from '@redspark/rsh-llm-replay'
 import { shippedNativeProfileComposition } from '../../../CLI/src/native-profile-template.ts'
 
 const root = fileURLToPath(new URL('../../../../../', import.meta.url))
@@ -118,15 +118,15 @@ export function terminalFixture(cancellation: boolean, script?: readonly ReplayE
   const installations = shipped.installations.filter(row => selected.has(row.id)).map(row => row.id === 'app'
     ? { ...row, config: { ...row.config as object, cwd: workspace, provider: 'fixture', model: 'fixture', maxSteps: humanInteractions ? 5 : 3 } }
     : row.id === 'storage' ? { ...row, config: { root: storage, compression: 'none' } } : row)
-  installations.push({ id: 'fs', plugin: '@deepseek-ai/dsh-fs-local', scope: 'root', config: { cwd: workspace } },
+  installations.push({ id: 'fs', plugin: '@redspark/rsh-fs-local', scope: 'root', config: { cwd: workspace } },
     { id: 'model', plugin: 'fixture-tui-model', scope: 'root' })
   if (presetMode === 'shipped') installations.push({ id: 'help-command-fixture', plugin: 'fixture-tui-help-command', scope: 'root' })
   if (archifySkill) installations.push(
-    { id: 'shell-env', plugin: '@deepseek-ai/dsh-shell-env', scope: 'root' },
-    { id: 'request-context', plugin: '@deepseek-ai/dsh-request-context', scope: 'root' },
-    { id: 'skills', plugin: '@deepseek-ai/dsh-skill', scope: 'root' },
-    ...(manualSkillConsumer ? [{ id: 'tool-skill', plugin: '@deepseek-ai/dsh-tool-skill', scope: 'root' }] : []),
-    { id: 'archify', plugin: '@deepseek-ai/dsh-archify', scope: 'root' },
+    { id: 'shell-env', plugin: '@redspark/rsh-shell-env', scope: 'root' },
+    { id: 'request-context', plugin: '@redspark/rsh-request-context', scope: 'root' },
+    { id: 'skills', plugin: '@redspark/rsh-skill', scope: 'root' },
+    ...(manualSkillConsumer ? [{ id: 'tool-skill', plugin: '@redspark/rsh-tool-skill', scope: 'root' }] : []),
+    { id: 'archify', plugin: '@redspark/rsh-archify', scope: 'root' },
   )
   writeFileSync(join(profile, 'package.json'), JSON.stringify({ name: 'native-tui-fixture', private: true,
     dsh: { profile: { runtime: 'native', config: 'rsh.profile.json' } } }))
@@ -141,7 +141,7 @@ export function terminalFixture(cancellation: boolean, script?: readonly ReplayE
       ))
       // Ink suppresses interactive frames in CI, while this child is an actual PTY session.
       const child = spawn(process.execPath, [join(root, 'rsh/Programs/CLI/lib/bin.js'), '--profile', 'native-tui', ...args], {
-        name: 'xterm-256color', cols: 100, rows: 30, cwd: workspace, env: { ...env, CI: 'false', DSH_HOME: home, FORCE_COLOR: '0' },
+        name: 'xterm-256color', cols: 100, rows: 30, cwd: workspace, env: { ...env, CI: 'false', RSH_HOME: home, FORCE_COLOR: '0' },
       })
       child.onData((data) => { output += data })
       let resolveCompletion!: (event: { exitCode: number }) => void

@@ -1,22 +1,22 @@
 /**
  * Plugin-owned human-command registry shared by interactive UI adapters.
- * @module @deepseek-ai/dsh-commands
+ * @module @redspark/rsh-commands
  */
 
 import { parseCommand } from './parse.ts'
 export { parseCommand } from './parse.ts'
 export type { ParsedCommand } from './parse.ts'
-import { Context } from '@deepseek-ai/cordis'
-import { randomUUID } from '@deepseek-ai/dsh-util-crypto'
-import type { Agent } from '@deepseek-ai/dsh-agent'
-import { AttachmentError, admitEncodedImages } from '@deepseek-ai/dsh-attachment'
-import type { EncodedImageAttachment, FileAttachmentRef, ImageAttachmentRef } from '@deepseek-ai/dsh-attachment/types'
-import type { FileBlock, ImageBlock } from '@deepseek-ai/dsh-llm'
-import { NamedEntries, ScopedLayers } from '@deepseek-ai/dsh-scope'
-import type { ScopeKey, ScopeLayer } from '@deepseek-ai/dsh-scope'
-import { SessionSeq } from '@deepseek-ai/dsh-session'
-import type { Session, SessionEvent, SessionEventMap } from '@deepseek-ai/dsh-session'
-import { TypertRemoteService, Remote } from '@deepseek-ai/dsh-typert-protocol'
+import { Context } from '@redspark/cordis'
+import { randomUUID } from '@redspark/rsh-util-crypto'
+import type { Agent } from '@redspark/rsh-agent'
+import { AttachmentError, admitEncodedImages } from '@redspark/rsh-attachment'
+import type { EncodedImageAttachment, FileAttachmentRef, ImageAttachmentRef } from '@redspark/rsh-attachment/types'
+import type { FileBlock, ImageBlock } from '@redspark/rsh-llm'
+import { NamedEntries, ScopedLayers } from '@redspark/rsh-scope'
+import type { ScopeKey, ScopeLayer } from '@redspark/rsh-scope'
+import { SessionSeq } from '@redspark/rsh-session'
+import type { Session, SessionEvent, SessionEventMap } from '@redspark/rsh-session'
+import { TypertRemoteService, Remote } from '@redspark/rsh-typert-protocol'
 import { CommandId } from './brand.ts'
 import type { CommandDefinitionId } from './brand.ts'
 import type {
@@ -105,7 +105,7 @@ class CommandLayer implements ScopeLayer {
   }
 }
 
-declare module '@deepseek-ai/cordis' {
+declare module '@redspark/cordis' {
   interface Context {
     commands: CommandRuntime
   }

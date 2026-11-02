@@ -1,5 +1,5 @@
 {
-  "name": "@deepseek-ai/dsh-client-ui-primitives",
+  "name": "@redspark/rsh-client-ui-primitives",
   "description": "Pure React atoms for the dsh web UI: controls, icons, markdown, and JSON inspectors (zero cordis)",
   "version": "1.0.0",
   "publishConfig": {
@@ -29,8 +29,8 @@
     "react-dom": "^18.2.0",
     "micromark-util-types": "^2.0.2",
     "@types/mdast": "^4.0.4",
-    "@deepseek-ai/dsh-api-workspace-files": "workspace:^",
-    "@deepseek-ai/dsh-util-workspace-path": "workspace:^"
+    "@redspark/rsh-api-workspace-files": "workspace:^",
+    "@redspark/rsh-util-workspace-path": "workspace:^"
   },
   "files": [
     "lib/index.js",

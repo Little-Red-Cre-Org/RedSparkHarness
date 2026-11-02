@@ -3,7 +3,7 @@ description: "Run model-written TypeScript through a native process sandbox with
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-code-runtime-process-sandbox
+# @redspark/rsh-code-runtime-process-sandbox
 
 English | [中文](README.zh.md)
 

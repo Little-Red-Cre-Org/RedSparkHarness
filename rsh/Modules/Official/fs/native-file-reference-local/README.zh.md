@@ -3,7 +3,7 @@ description: "通过所选文件系统服务提供仅含路径的工作区文件
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-native-file-reference-local
+# @redspark/rsh-native-file-reference-local
 
 [English](README.md) | 中文
 

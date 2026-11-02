@@ -1,11 +1,11 @@
 /**
  * File-reference discovery seam shared by host-backed user interfaces.
  *
- * @module @deepseek-ai/dsh-file-reference
+ * @module @redspark/rsh-file-reference
  */
 
-import { Service, type Context } from '@deepseek-ai/cordis'
-import type { Agent } from '@deepseek-ai/dsh-agent'
+import { Service, type Context } from '@redspark/cordis'
+import type { Agent } from '@redspark/rsh-agent'
 
 import type { FileReferenceCandidate } from './types.ts'
 
@@ -15,7 +15,7 @@ export type { FileReferenceCandidate } from './types.ts'
 export { FILE_REFERENCE_PROMPT } from './prompt.ts'
 export type { NativeFileReferenceOperations } from './native.ts'
 
-declare module '@deepseek-ai/cordis' {
+declare module '@redspark/cordis' {
   interface Context {
     fileReferences: FileReferenceService
   }

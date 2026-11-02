@@ -1,6 +1,6 @@
 /**
  * Portable native plugin installation, scoped services, and owned teardown.
- * @module @deepseek-ai/dsh-native-runtime
+ * @module @redspark/rsh-native-runtime
  */
 
 import type { InstallationDiagnostic, NativeApplication, NativeInstallationId, NativePackageProvenance } from './host.ts'

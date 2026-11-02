@@ -10,10 +10,10 @@
  * Writers run between `start` and `forget`: the owner's `signal` is what ends a
  * bucket's life, and the face stops dispatching once it aborts.
  */
-import { defineStore, type EngineStoreHandle } from '@deepseek-ai/dsh-client-store'
-import type { RemoteFailure } from '@deepseek-ai/dsh-api-remotes/client'
-import type { TabId } from '@deepseek-ai/dsh-client-ui-dockkit'
-import type { WorkspaceDirectoryEntry } from '@deepseek-ai/dsh-api-workspace-files/types'
+import { defineStore, type EngineStoreHandle } from '@redspark/rsh-client-store'
+import type { RemoteFailure } from '@redspark/rsh-api-remotes/client'
+import type { TabId } from '@redspark/rsh-client-ui-dockkit'
+import type { WorkspaceDirectoryEntry } from '@redspark/rsh-api-workspace-files/types'
 
 /**
  * One directory's contents, as one expanded level of the tree.

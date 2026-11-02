@@ -1,7 +1,7 @@
 /** Framework-independent durable pending-message list facts shared by Agent implementations. */
-import type { MessageId, UserMessage } from '@deepseek-ai/dsh-llm/native'
-import type { SessionEvent } from '@deepseek-ai/dsh-session/types'
-import type {} from '@deepseek-ai/dsh-session/types'
+import type { MessageId, UserMessage } from '@redspark/rsh-llm/native'
+import type { SessionEvent } from '@redspark/rsh-session/types'
+import type {} from '@redspark/rsh-session/types'
 
 /** One of the two ordered pending-message lists owned by an agent. */
 export type InboxTarget = 'next-turn' | 'next-step'
@@ -52,7 +52,7 @@ export function foldNativeInboxEvent(state: NativeInboxState, event: SessionEven
   return { 'next-turn': nextTurn, 'next-step': nextStep }
 }
 
-declare module '@deepseek-ai/dsh-session/types' {
+declare module '@redspark/rsh-session/types' {
   interface SessionEventMap {
     /**
      * One normalized mutation of an agent's durable pending-message lists.

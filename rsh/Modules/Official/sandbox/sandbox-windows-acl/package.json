@@ -1,5 +1,5 @@
 {
-  "name": "@deepseek-ai/dsh-sandbox-windows-acl",
+  "name": "@redspark/rsh-sandbox-windows-acl",
   "description": "Windows ACL write-restriction sandbox backend (restricted-token spawn with capability-SID write allowlist) for the RedSpark Harness sandbox seam",
   "version": "1.0.0",
   "publishConfig": {
@@ -33,11 +33,11 @@
   ],
   "license": "MIT",
   "dependencies": {
-    "@deepseek-ai/dsh-win32-process": "workspace:^",
+    "@redspark/rsh-win32-process": "workspace:^",
     "koffi": "3.1.1"
   },
   "devDependencies": {
-    "@deepseek-ai/dsh-pwsh-local": "workspace:^",
-    "@deepseek-ai/dsh-sandbox-local": "workspace:^"
+    "@redspark/rsh-pwsh-local": "workspace:^",
+    "@redspark/rsh-sandbox-local": "workspace:^"
   }
 }

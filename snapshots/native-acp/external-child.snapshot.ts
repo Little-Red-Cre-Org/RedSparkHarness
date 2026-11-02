@@ -7,13 +7,13 @@ import { fileURLToPath } from 'node:url'
 import { expect, it } from 'vitest'
 import { execa } from 'execa'
 import { NATIVE_ACP_SUBAGENT_METADATA_KEY, readNativeAcpSubagentPermissionRequest, readNativeAcpSubagentPolicy,
-  readNativeAcpSubagentServerCapabilities } from '@deepseek-ai/dsh-acp-protocol'
-import { JsonRpcLineTransport } from '@deepseek-ai/dsh-json-rpc-line'
-import { SESSION_FORMAT_VERSION, type SessionEvent } from '@deepseek-ai/dsh-session/native'
-import { parseSessionLog } from '@deepseek-ai/dsh-llm-replay'
+  readNativeAcpSubagentServerCapabilities } from '@redspark/rsh-acp-protocol'
+import { JsonRpcLineTransport } from '@redspark/rsh-json-rpc-line'
+import { SESSION_FORMAT_VERSION, type SessionEvent } from '@redspark/rsh-session/native'
+import { parseSessionLog } from '@redspark/rsh-llm-replay'
 import { captureExpectedWorkspaceSnapshot, captureWorkspaceSnapshot, formatSystemPromptSnapshot,
   formatToolSchemasSnapshot, normalizedSystemPrompts, normalizedToolSchemas, normalizeSessionSnapshot,
-  redactSessionSnapshotIds, sessionFixtureName } from '@deepseek-ai/dsh-session-snapshot'
+  redactSessionSnapshotIds, sessionFixtureName } from '@redspark/rsh-session-snapshot'
 import { ensureShippedNativeProfile } from '../../rsh/Programs/CLI/src/native-profile-template.ts'
 
 const root = fileURLToPath(new URL('../../', import.meta.url))
@@ -86,7 +86,7 @@ function installChildObserver(profileDirectory: string): void {
     '      service.connect = function (spec) {',
     '        const handle = originalConnect.call(this, spec)',
     "        if (!spec.argv.includes('--profile') || !spec.argv.includes('native-acp-dsh-child')) return handle",
-    '        const home = spec.env?.DSH_HOME',
+    '        const home = spec.env?.RSH_HOME',
     '        const record = { argv: spec.argv, cwd: spec.cwd, home, stdin: "", stdout: "", stderr: "",',
     '          inputPending: "", outputPending: "", childSessionId: null, childServerMetadata: null, childSessionMetadata: null,',
     '          childPermissionRequestIds: [], childPermissionRequests: [],',
@@ -157,7 +157,7 @@ function modelResponse(response: import('node:http').ServerResponse, delta: Json
 
 function launchCli(workspace: string, home: string) {
   return execa(process.execPath, [bin, '--profile', 'native-acp'], { cwd: workspace,
-    env: { ...process.env, DSH_HOME: home, DSH_TELEMETRY_DISABLED: '1',
+    env: { ...process.env, RSH_HOME: home, RSH_TELEMETRY_DISABLED: '1',
       NATIVE_ACP_CHILD_FIXTURE_KEY: 'native-acp-child-loopback-key' },
     reject: false, timeout: 60_000, killSignal: 'SIGKILL' })
 }
@@ -173,7 +173,7 @@ function tokenLimit(body: JsonRecord): { field: string; value: unknown } {
 
 it('records a Native ACP parent delegating one approved write to its fixed ACP child', async () => {
   if (!existsSync(bin)) throw new Error('build the shipped dsh CLI before running the Native ACP external-child snapshot')
-  const mode = process.env.DSH_SNAPSHOT
+  const mode = process.env.RSH_SNAPSHOT
   const recorded = existsSync(fixture) ? parseSessionLog(readFileSync(fixture, 'utf8')) : undefined
   if (recorded === undefined && mode !== 'record') throw new Error('Native ACP external-child replay requires its committed Session JSONL')
   const input = recorded?.find(event => event.type === 'user/message' && event.data.source.kind === 'user')
@@ -257,10 +257,10 @@ it('records a Native ACP parent delegating one approved write to its fixed ACP c
     row('pi-ai').config = { providers: { fixture: { apiKeyEnv: 'NATIVE_ACP_CHILD_FIXTURE_KEY', api: 'openai-completions',
       baseURL: `http://127.0.0.1:${address.port}/v1`, models: [{ id: parentModel }, { id: childModel }] } } }
     profile.installations.push(
-      { id: 'sandbox-policy', plugin: '@deepseek-ai/dsh-native-sandbox-policy', scope: 'root',
+      { id: 'sandbox-policy', plugin: '@redspark/rsh-native-sandbox-policy', scope: 'root',
         config: { mode: 'workspace-write', workspaceRoot: workspace } },
-      { id: 'sandbox', plugin: '@deepseek-ai/dsh-sandbox-local', scope: 'root' },
-      { id: 'acp-child', plugin: '@deepseek-ai/dsh-acp-child', scope: 'root', config: { providerName: 'dsh-acp-child', providers: {} } },
+      { id: 'sandbox', plugin: '@redspark/rsh-sandbox-local', scope: 'root' },
+      { id: 'acp-child', plugin: '@redspark/rsh-acp-child', scope: 'root', config: { providerName: 'dsh-acp-child', providers: {} } },
       { id: 'acp-child-observer', plugin: '@fixture/acp-child-observer', scope: 'root',
         config: { observationPath, sessionFileName: sessionFixtureName(0, SESSION_FORMAT_VERSION) } },
     )

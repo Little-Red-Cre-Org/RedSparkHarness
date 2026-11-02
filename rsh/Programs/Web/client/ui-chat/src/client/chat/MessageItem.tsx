@@ -1,10 +1,10 @@
 import { Fragment, memo, useEffect, useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
-import type { PendingSubmission } from '@deepseek-ai/dsh-api-session-controller/client'
-import type { MessageImageSource } from '@deepseek-ai/dsh-client-ui-conversation/client'
+import type { PendingSubmission } from '@redspark/rsh-api-session-controller/client'
+import type { MessageImageSource } from '@redspark/rsh-client-ui-conversation/client'
 import {
   ChatUserMessage, fileExtension, FileTypeIcon, fileSizeText, JsonBlock, projectUserText, StateDot,
-} from '@deepseek-ai/dsh-client-ui-primitives'
+} from '@redspark/rsh-client-ui-primitives'
 import type { ChatNodeOwnerProps, ChatNodeViewProps, ChatViewSlotProps } from '../contract/slots.ts'
 import type { ModelRetryNode, TurnErrorNode, UserMessageNode } from '../contract/snapshot.ts'
 import { CompactionItem } from './CompactionItem.tsx'

@@ -2,17 +2,17 @@
   "formatVersion": 1,
   "scopes": [{ "id": "root" }],
   "installations": [
-    { "id": "app", "plugin": "@deepseek-ai/dsh-native-headless", "scope": "root", "config": { "cwd": "PROFILE_PATCH_REQUIRED", "provider": "mock", "model": "fixture", "systemPrompt": "Use the filesystem tool.", "maxSteps": 3 } },
-    { "id": "agents", "plugin": "@deepseek-ai/dsh-native-agent", "scope": "root" },
-    { "id": "jobs", "plugin": "@deepseek-ai/dsh-native-jobs", "scope": "root" },
-    { "id": "tools", "plugin": "@deepseek-ai/dsh-native-tools", "scope": "root" },
-    { "id": "tool-jobs", "plugin": "@deepseek-ai/dsh-native-tool-jobs", "scope": "root" },
-    { "id": "model-execution", "plugin": "@deepseek-ai/dsh-native-model-execution", "scope": "root" },
-    { "id": "code-runtime", "plugin": "@deepseek-ai/dsh-native-code-runtime", "scope": "root" },
-    { "id": "time-context", "plugin": "@deepseek-ai/dsh-native-time-context", "scope": "root", "config": { "timeZone": "UTC" } },
-    { "id": "storage", "plugin": "@deepseek-ai/dsh-session-persistence-jsonl", "scope": "root", "config": { "root": "PROFILE_PATCH_REQUIRED", "compression": "none" } },
-    { "id": "fs", "plugin": "@deepseek-ai/dsh-fs-local", "scope": "root", "config": { "cwd": "PROFILE_PATCH_REQUIRED" } },
-    { "id": "policy", "plugin": "@deepseek-ai/dsh-fs-observation-policy", "scope": "root" },
+    { "id": "app", "plugin": "@redspark/rsh-native-headless", "scope": "root", "config": { "cwd": "PROFILE_PATCH_REQUIRED", "provider": "mock", "model": "fixture", "systemPrompt": "Use the filesystem tool.", "maxSteps": 3 } },
+    { "id": "agents", "plugin": "@redspark/rsh-native-agent", "scope": "root" },
+    { "id": "jobs", "plugin": "@redspark/rsh-native-jobs", "scope": "root" },
+    { "id": "tools", "plugin": "@redspark/rsh-native-tools", "scope": "root" },
+    { "id": "tool-jobs", "plugin": "@redspark/rsh-native-tool-jobs", "scope": "root" },
+    { "id": "model-execution", "plugin": "@redspark/rsh-native-model-execution", "scope": "root" },
+    { "id": "code-runtime", "plugin": "@redspark/rsh-native-code-runtime", "scope": "root" },
+    { "id": "time-context", "plugin": "@redspark/rsh-native-time-context", "scope": "root", "config": { "timeZone": "UTC" } },
+    { "id": "storage", "plugin": "@redspark/rsh-session-persistence-jsonl", "scope": "root", "config": { "root": "PROFILE_PATCH_REQUIRED", "compression": "none" } },
+    { "id": "fs", "plugin": "@redspark/rsh-fs-local", "scope": "root", "config": { "cwd": "PROFILE_PATCH_REQUIRED" } },
+    { "id": "policy", "plugin": "@redspark/rsh-fs-observation-policy", "scope": "root" },
     { "id": "model", "plugin": "native-fixture-model", "scope": "root" }
   ]
 }

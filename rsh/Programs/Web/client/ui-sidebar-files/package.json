@@ -1,5 +1,5 @@
 {
-  "name": "@deepseek-ai/dsh-client-ui-sidebar-files",
+  "name": "@redspark/rsh-client-ui-sidebar-files",
   "description": "Workspace file tree tab type for the right Sidebar: lazy directory listing over the workspaceFiles Remote namespace, opening files into the Sidebar",
   "version": "1.0.0",
   "publishConfig": {
@@ -28,10 +28,10 @@
   "dsh": {
     "client": {
       "inject": [
-        "@deepseek-ai/dsh-api-workspace-files",
-        "@deepseek-ai/dsh-client-ui-sidebar-right",
-        "@deepseek-ai/dsh-client-ui-session",
-        "@deepseek-ai/dsh-api-remotes"
+        "@redspark/rsh-api-workspace-files",
+        "@redspark/rsh-client-ui-sidebar-right",
+        "@redspark/rsh-client-ui-session",
+        "@redspark/rsh-api-remotes"
       ],
       "platform": "web"
     }
@@ -42,23 +42,23 @@
   },
   "license": "MIT",
   "peerDependencies": {
-    "@deepseek-ai/cordis": "workspace:^"
+    "@redspark/cordis": "workspace:^"
   },
   "devDependencies": {
-    "@deepseek-ai/cordis": "workspace:^",
-    "@deepseek-ai/dsh-api-remotes": "workspace:^",
-    "@deepseek-ai/dsh-api-workspace-files": "workspace:^",
-    "@deepseek-ai/dsh-client-locale": "workspace:^",
-    "@deepseek-ai/dsh-client-store": "workspace:^",
-    "@deepseek-ai/dsh-client-test-runtime": "workspace:^",
-    "@deepseek-ai/dsh-client-ui-dockkit": "workspace:^",
-    "@deepseek-ai/dsh-client-ui-primitives": "workspace:^",
-    "@deepseek-ai/dsh-client-ui-renderer": "workspace:^",
-    "@deepseek-ai/dsh-client-ui-session": "workspace:^",
-    "@deepseek-ai/dsh-client-ui-sidebar-right": "workspace:^",
-    "@deepseek-ai/dsh-client-ui-slots": "workspace:^",
-    "@deepseek-ai/dsh-session": "workspace:^",
-    "@deepseek-ai/dsh-util-workspace-path": "workspace:^",
+    "@redspark/cordis": "workspace:^",
+    "@redspark/rsh-api-remotes": "workspace:^",
+    "@redspark/rsh-api-workspace-files": "workspace:^",
+    "@redspark/rsh-client-locale": "workspace:^",
+    "@redspark/rsh-client-store": "workspace:^",
+    "@redspark/rsh-client-test-runtime": "workspace:^",
+    "@redspark/rsh-client-ui-dockkit": "workspace:^",
+    "@redspark/rsh-client-ui-primitives": "workspace:^",
+    "@redspark/rsh-client-ui-renderer": "workspace:^",
+    "@redspark/rsh-client-ui-session": "workspace:^",
+    "@redspark/rsh-client-ui-sidebar-right": "workspace:^",
+    "@redspark/rsh-client-ui-slots": "workspace:^",
+    "@redspark/rsh-session": "workspace:^",
+    "@redspark/rsh-util-workspace-path": "workspace:^",
     "@testing-library/react": "^16.1.0",
     "@types/react": "~18.3.1",
     "@types/react-dom": "~18.3.0",

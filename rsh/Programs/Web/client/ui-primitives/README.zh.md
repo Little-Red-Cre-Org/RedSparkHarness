@@ -3,7 +3,7 @@ description: "dsh Web 客户端共享的零 Cordis React 组件：控件、Works
 kind: "package-library"
 ---
 
-# @deepseek-ai/dsh-client-ui-primitives
+# @redspark/rsh-client-ui-primitives
 
 [English](README.md) | 中文
 

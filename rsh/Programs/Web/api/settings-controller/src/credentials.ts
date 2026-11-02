@@ -2,14 +2,14 @@
  * Host owner of the `credentials` Remote namespace: the reference half of
  * `ctx.credentials` as a browser configuration page reads and writes it.
  *
- * @module @deepseek-ai/dsh-api-settings-controller/src/credentials.ts
+ * @module @redspark/rsh-api-settings-controller/src/credentials.ts
  */
 
-import { Context } from '@deepseek-ai/cordis'
-import { credentialRef } from '@deepseek-ai/dsh-credentials'
-import type { CredentialProvider } from '@deepseek-ai/dsh-credentials'
-import type { CredentialInfo } from '@deepseek-ai/dsh-credentials/types'
-import { Remote, RemoteError, TypertRemoteService } from '@deepseek-ai/dsh-typert-protocol'
+import { Context } from '@redspark/cordis'
+import { credentialRef } from '@redspark/rsh-credentials'
+import type { CredentialProvider } from '@redspark/rsh-credentials'
+import type { CredentialInfo } from '@redspark/rsh-credentials/types'
+import { Remote, RemoteError, TypertRemoteService } from '@redspark/rsh-typert-protocol'
 import { z } from 'zod'
 
 /**
@@ -50,7 +50,7 @@ function projectCredentialInfo(info: CredentialInfo): CredentialInfo {
   }
 }
 
-declare module '@deepseek-ai/cordis' {
+declare module '@redspark/cordis' {
   interface Context {
     /** Host owner of the `credentials` Remote namespace. */
     credentialsController: CredentialsController
@@ -123,7 +123,7 @@ export class CredentialsController extends TypertRemoteService {
     if (credentials === undefined) {
       throw new RemoteError(
         'gateway/internal',
-        'credentials service is absent: this deployment does not mount a credential provider (e.g. @deepseek-ai/dsh-credentials-local) in its composition',
+        'credentials service is absent: this deployment does not mount a credential provider (e.g. @redspark/rsh-credentials-local) in its composition',
         {},
       )
     }

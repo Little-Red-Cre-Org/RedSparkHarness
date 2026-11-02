@@ -1,7 +1,7 @@
 /** Explicit policy selection and Session workspace resolution. */
 import { resolve } from 'node:path'
 import { expect, it } from 'vitest'
-import { Session, SessionId, SESSION_FORMAT_VERSION } from '@deepseek-ai/dsh-session'
+import { Session, SessionId, SESSION_FORMAT_VERSION } from '@redspark/rsh-session'
 import { NativeSandboxPolicy, resolveConfig } from '../src/index.ts'
 
 it('rejects missing, relative and unsupported policy choices', () => {

@@ -3,7 +3,7 @@ description: "面向模型的工作流工具：运行扇出 subagent 的 JavaScr
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-tool-workflow
+# @redspark/rsh-tool-workflow
 
 [English](README.md) | 中文
 
@@ -46,7 +46,7 @@ kind: "package-reference"
 
 生成的[配置目录](../../../Docs/config-catalog.zh.md#deepseek-aidsh-tool-workflow)是每个受支持字段的穷尽式真源。
 
-Native 组合会挂载 `@deepseek-ai/dsh-tool-workflow/native`，并传入一个在作用域内 Native workflow Definition 可见的 `provider` 名称；worker Provider 需要单独安装。根调用会在返回结果前将运行与子 agent 进度记录到调用方 Session。
+Native 组合会挂载 `@redspark/rsh-tool-workflow/native`，并传入一个在作用域内 Native workflow Definition 可见的 `provider` 名称；worker Provider 需要单独安装。根调用会在返回结果前将运行与子 agent 进度记录到调用方 Session。
 
 -----
 

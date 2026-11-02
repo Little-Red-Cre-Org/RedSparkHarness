@@ -1,9 +1,9 @@
 /** Native-safe turn and step boundary projection shared by query consumers. */
 
 import { z } from 'zod'
-import { SessionSeq } from '@deepseek-ai/dsh-session/native'
-import type { OptionalSessionSeq, SessionEvent, SessionSeq as SessionSeqValue } from '@deepseek-ai/dsh-session/native'
-import type { ProjectionDefinition } from '@deepseek-ai/dsh-session-projection/definition'
+import { SessionSeq } from '@redspark/rsh-session/native'
+import type { OptionalSessionSeq, SessionEvent, SessionSeq as SessionSeqValue } from '@redspark/rsh-session/native'
+import type { ProjectionDefinition } from '@redspark/rsh-session-projection/definition'
 
 /** Turn and step boundaries folded from one agent session log. */
 export interface TurnBoundaryProjection {
@@ -17,7 +17,7 @@ export interface TurnBoundaryProjection {
   readonly lastTurn: number
 }
 
-declare module '@deepseek-ai/dsh-session-projection/types' {
+declare module '@redspark/rsh-session-projection/types' {
   interface SessionProjectionStateMap {
     /** Open turn and most recent step boundaries for agent-session tools. */
     turnBoundary: TurnBoundaryProjection

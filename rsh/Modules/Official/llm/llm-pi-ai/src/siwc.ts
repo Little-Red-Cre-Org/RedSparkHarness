@@ -4,11 +4,11 @@ import { createServer } from 'node:http'
 import type { ServerResponse } from 'node:http'
 import { createHash, randomBytes, randomUUID } from 'node:crypto'
 import { once } from 'node:events'
-import { HarnessError } from '@deepseek-ai/dsh-llm/native'
+import { HarnessError } from '@redspark/rsh-llm/native'
 import { createLocalJWKSet, jwtVerify } from 'jose'
 import type { JSONWebKeySet } from 'jose'
 import type { Credential, OAuthAuth, OAuthCredential, ProviderAuthInteraction } from '@earendil-works/pi-ai'
-import type { CredentialMetadataMigration, CredentialRecord } from '@deepseek-ai/dsh-credentials/native'
+import type { CredentialMetadataMigration, CredentialRecord } from '@redspark/rsh-credentials/native'
 
 const ISSUER = 'https://auth.openai.com'
 const AUTHORIZATION_URL = `${ISSUER}/api/accounts/authorize`

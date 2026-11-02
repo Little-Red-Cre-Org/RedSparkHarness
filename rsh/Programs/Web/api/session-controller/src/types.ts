@@ -1,21 +1,21 @@
 /** Browser-safe request, result, and lifecycle vocabulary for the Session Remote service. */
 
-import type {} from '@deepseek-ai/dsh-typert-protocol/types'
-import type { ModelSelection, ModelSelectionProjectionState, ModelSelectionProjection } from '@deepseek-ai/dsh-native-model-execution/model-selection'
-export type { ModelSelection, ModelSelectionProjectionState, ModelSelectionProjection, ModelReasoningEffort, ModelReasoning, ModelCatalogModel, ModelProviderGroup, ModelCatalogFailure, ModelCatalog } from '@deepseek-ai/dsh-native-model-execution/model-selection'
+import type {} from '@redspark/rsh-typert-protocol/types'
+import type { ModelSelection, ModelSelectionProjectionState, ModelSelectionProjection } from '@redspark/rsh-native-model-execution/model-selection'
+export type { ModelSelection, ModelSelectionProjectionState, ModelSelectionProjection, ModelReasoningEffort, ModelReasoning, ModelCatalogModel, ModelProviderGroup, ModelCatalogFailure, ModelCatalog } from '@redspark/rsh-native-model-execution/model-selection'
 import type {
   AttachmentIdType, ImageAttachmentLimits, ImageAttachmentRef, ImageMediaType,
-} from '@deepseek-ai/dsh-attachment'
-import type { Branded } from '@deepseek-ai/dsh-brand'
-import type { LlmAttemptId, MessageId } from '@deepseek-ai/dsh-llm/brand'
-import type { ContentBlock } from '@deepseek-ai/dsh-llm'
-import type { SessionId, SessionSeqCursor } from '@deepseek-ai/dsh-session/types'
-import type { SessionProjectionMap } from '@deepseek-ai/dsh-session-projection/types'
-import type { JobId } from '@deepseek-ai/dsh-jobs/brand'
-import type { JsonValue } from '@deepseek-ai/dsh-util-values'
-import type { WorkspaceId } from '@deepseek-ai/dsh-workspace/types'
+} from '@redspark/rsh-attachment'
+import type { Branded } from '@redspark/rsh-brand'
+import type { LlmAttemptId, MessageId } from '@redspark/rsh-llm/brand'
+import type { ContentBlock } from '@redspark/rsh-llm'
+import type { SessionId, SessionSeqCursor } from '@redspark/rsh-session/types'
+import type { SessionProjectionMap } from '@redspark/rsh-session-projection/types'
+import type { JobId } from '@redspark/rsh-jobs/brand'
+import type { JsonValue } from '@redspark/rsh-util-values'
+import type { WorkspaceId } from '@redspark/rsh-workspace/types'
 
-declare module '@deepseek-ai/dsh-session-projection/types' {
+declare module '@redspark/rsh-session-projection/types' {
   interface SessionProjectionStateMap {
     /** Host state persisted for cold Session list summaries. */
     sessionListMetadata: SessionListMetadata
@@ -109,7 +109,7 @@ export const SESSION_SEARCH_RESULT_LIMIT = 20
 /** Maximum search snippet length in Unicode code points. */
 export const SESSION_SEARCH_SNIPPET_MAX_CODE_POINTS = 240
 
-declare module '@deepseek-ai/dsh-typert-protocol/types' {
+declare module '@redspark/rsh-typert-protocol/types' {
   interface RemoteErrorDetailsMap {
     'session/model-unavailable': { readonly provider: string; readonly model: string }
     'session/conflict': {
@@ -300,7 +300,7 @@ export interface SessionOpenWorkspacePathValue {
 /** Client-minted prompt identity used to reconcile optimistic and durable messages. */
 export type SessionRequestId = Branded<'session-request-id'>
 
-declare module '@deepseek-ai/dsh-llm/message' {
+declare module '@redspark/rsh-llm/message' {
   interface MessageSourceMap {
     /** Browser prompt correlation and optional Host-validated time zone. */
     'user-rpc': { kind: 'user'; rpcId: SessionRequestId; clientTimeZone?: string }
@@ -497,7 +497,7 @@ export type SessionControlFrame =
   | { readonly type: 'jobs'; readonly sessionId: SessionId; readonly jobs: readonly SessionJob[] }
   | ({ readonly type: 'projection' } & SessionProjectionUpdate)
 
-declare module '@deepseek-ai/cordis' {
+declare module '@redspark/cordis' {
   interface Events {
     /**
      * A Session became visible to Session list consumers.

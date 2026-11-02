@@ -3,7 +3,7 @@ import type { TrajectorySnapshot } from './trajectory-contract.ts'
 
 export type { TrajectorySnapshot } from './trajectory-contract.ts'
 
-declare module '@deepseek-ai/dsh-client-ui-conversation/client' {
+declare module '@redspark/rsh-client-ui-conversation/client' {
   interface ConversationViewSnapshotMap {
     /** Independently assembled data consumed by the Trajectory view. */
     trajectory: TrajectorySnapshot

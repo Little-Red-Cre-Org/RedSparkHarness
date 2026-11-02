@@ -1,7 +1,7 @@
-import { Context } from '@deepseek-ai/cordis'
-import { stubSettingsScope } from '@deepseek-ai/dsh-client-test-runtime'
+import { Context } from '@redspark/cordis'
+import { stubSettingsScope } from '@redspark/rsh-client-test-runtime'
 import { describe, expect, it, vi } from 'vitest'
-import type { SessionId } from '@deepseek-ai/dsh-session/types'
+import type { SessionId } from '@redspark/rsh-session/types'
 import type { PetSettings } from '../src/pet-settings.ts'
 import { PetRuntime, type PetActivity } from '../src/client/runtime.ts'
 

@@ -1,5 +1,5 @@
 {
-  "name": "@deepseek-ai/dsh-web-frontend",
+  "name": "@redspark/rsh-web-frontend",
   "description": "Native Web application entry; dist/ contains the Cordis-free browser application",
   "version": "1.0.0",
   "publishConfig": {
@@ -26,18 +26,18 @@
   },
   "license": "MIT",
   "devDependencies": {
-    "@deepseek-ai/cordis-plugin-group": "workspace:^",
-    "@deepseek-ai/dsh-client-modules": "workspace:^",
-    "@deepseek-ai/dsh-http-routes": "workspace:^",
-    "@deepseek-ai/dsh-http-routes-cordis": "workspace:^",
-    "@deepseek-ai/dsh-client-store": "workspace:^",
-    "@deepseek-ai/dsh-client-ui-dockkit": "workspace:^",
-    "@deepseek-ai/dsh-client-ui-primitives": "workspace:^",
-    "@deepseek-ai/dsh-client-ui-slots": "workspace:^",
-    "@deepseek-ai/dsh-client-web": "workspace:^",
-    "@deepseek-ai/dsh-web-compatibility": "workspace:^",
-    "@deepseek-ai/dsh-cmdline": "workspace:^",
-    "@deepseek-ai/dsh-pwsh-local": "workspace:^",
+    "@redspark/cordis-plugin-group": "workspace:^",
+    "@redspark/rsh-client-modules": "workspace:^",
+    "@redspark/rsh-http-routes": "workspace:^",
+    "@redspark/rsh-http-routes-cordis": "workspace:^",
+    "@redspark/rsh-client-store": "workspace:^",
+    "@redspark/rsh-client-ui-dockkit": "workspace:^",
+    "@redspark/rsh-client-ui-primitives": "workspace:^",
+    "@redspark/rsh-client-ui-slots": "workspace:^",
+    "@redspark/rsh-client-web": "workspace:^",
+    "@redspark/rsh-web-compatibility": "workspace:^",
+    "@redspark/rsh-cmdline": "workspace:^",
+    "@redspark/rsh-pwsh-local": "workspace:^",
     "@types/node": "^22.0.0",
     "@types/react": "~18.3.1",
     "@types/react-dom": "~18.3.0",
@@ -52,7 +52,7 @@
     "vite": "^6.0.0",
     "vitest": "^4.1.8",
     "ws": "8.21.0",
-    "@deepseek-ai/dsh-launch-environment": "workspace:^",
-    "@deepseek-ai/dsh-experimental-webworker-runtime": "workspace:^"
+    "@redspark/rsh-launch-environment": "workspace:^",
+    "@redspark/rsh-experimental-webworker-runtime": "workspace:^"
   }
 }

@@ -1,9 +1,9 @@
 /** Cordis-free goal display and durable Session-event projection. */
 
-import type { SessionEvent } from '@deepseek-ai/dsh-session/types'
-import { IconGoalOutline16 } from '@deepseek-ai/dsh-client-ui-primitives'
-import { foldGoal } from '@deepseek-ai/dsh-goal/projection'
-import type { GoalSnapshot } from '@deepseek-ai/dsh-goal/types'
+import type { SessionEvent } from '@redspark/rsh-session/types'
+import { IconGoalOutline16 } from '@redspark/rsh-client-ui-primitives'
+import { foldGoal } from '@redspark/rsh-goal/projection'
+import type { GoalSnapshot } from '@redspark/rsh-goal/types'
 import type { ReactElement } from 'react'
 import { en, zh } from './client/locales.ts'
 import type { GoalKey } from './client/locales.ts'

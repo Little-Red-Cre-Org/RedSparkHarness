@@ -3,11 +3,11 @@
  * validation, prompt guidance, limits, and presentation, never concrete providers. Enablement
  * controls tool registration; an enabled tool remains visible when its provider is unavailable
  * and fails with a structured error at execution time.
- * @module @deepseek-ai/dsh-tool-web
+ * @module @redspark/rsh-tool-web
  */
 
-import type { Context } from '@deepseek-ai/cordis'
-import type {} from '@deepseek-ai/dsh-web'
+import type { Context } from '@redspark/cordis'
+import type {} from '@redspark/rsh-web'
 import { applyWebSearchTool } from './search.ts'
 import { assertToolWebLimits, type Config, type ResolvedConfig } from './config.ts'
 import { applyWebFetchTool } from './fetch.ts'
@@ -33,7 +33,7 @@ export { Config, DEFAULT_FETCH_MAX_OUTPUT_CHARS, DEFAULT_WEB_TOOL_TIMEOUT_MS } f
  * that wants only one disables the other in config. Each tool's cooperative
  * timeout budget (`fetchTimeoutMs`/`searchTimeoutMs`, default 30000) is resolved
  * here and attached to the tool as `ToolDefinition.timeoutMs` for
- * `@deepseek-ai/dsh-tool-call-timeout-policy` to enforce. The tools' disposers are
+ * `@redspark/rsh-tool-call-timeout-policy` to enforce. The tools' disposers are
  * fiber-scoped (the effect-based registries clean up on dispose), so no manual
  * teardown is needed.
  */

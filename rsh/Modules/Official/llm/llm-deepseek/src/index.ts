@@ -8,19 +8,19 @@
  * anything, while an in-flight stream keeps the facts it started with. The
  * one registration-captured fact — the retry policy — re-registers the route
  * in place when it changes.
- * @module @deepseek-ai/dsh-llm-deepseek
+ * @module @redspark/rsh-llm-deepseek
  */
 
-import type { Context } from '@deepseek-ai/cordis'
-import { assertUsableApiKey, LlmError, resolveImageAttachmentAccess } from '@deepseek-ai/dsh-llm'
-import type {} from '@deepseek-ai/dsh-attachment'
-import type {} from '@deepseek-ai/dsh-credentials'
-import type {} from '@deepseek-ai/dsh-deepseek-llm-api-extensions'
-import type {} from '@deepseek-ai/dsh-fs'
-import { launchEnvironmentOf } from '@deepseek-ai/dsh-launch-environment'
-import type {} from '@deepseek-ai/dsh-compat-settings-definition'
-import { deepEqualJson } from '@deepseek-ai/dsh-util-values'
-import { getOrCreateAnonymousUserId, type AnonymousUserId } from '@deepseek-ai/dsh-anonymous-user-id'
+import type { Context } from '@redspark/cordis'
+import { assertUsableApiKey, LlmError, resolveImageAttachmentAccess } from '@redspark/rsh-llm'
+import type {} from '@redspark/rsh-attachment'
+import type {} from '@redspark/rsh-credentials'
+import type {} from '@redspark/rsh-deepseek-llm-api-extensions'
+import type {} from '@redspark/rsh-fs'
+import { launchEnvironmentOf } from '@redspark/rsh-launch-environment'
+import type {} from '@redspark/rsh-compat-settings-definition'
+import { deepEqualJson } from '@redspark/rsh-util-values'
+import { getOrCreateAnonymousUserId, type AnonymousUserId } from '@redspark/rsh-anonymous-user-id'
 import { DeepSeekAdapter } from './adapter.ts'
 
 export {

@@ -2,19 +2,19 @@
  * Types for the TypeScript SDK client: launch options, notification shapes,
  * and owned activity results.
  *
- * @module @deepseek-ai/dsh-sdk-runtime/types
+ * @module @redspark/rsh-sdk-runtime/types
  */
 
-import type { ContentBlock, ReasoningEffortId } from '@deepseek-ai/dsh-llm/native'
-import type { NativeExternalOperationEvent } from '@deepseek-ai/dsh-native-subagent/native'
+import type { ContentBlock, ReasoningEffortId } from '@redspark/rsh-llm/native'
+import type { NativeExternalOperationEvent } from '@redspark/rsh-native-subagent/native'
 import type {
   ApprovalRequestParams,
   LegacySdkPromptContentBlock,
   NativeSdkPromptContentBlock,
   SessionUploadFileResult,
   SdkPromptContentBlock,
-} from '@deepseek-ai/dsh-sdk-protocol'
-import type { SessionEvent } from '@deepseek-ai/dsh-session/native'
+} from '@redspark/rsh-sdk-protocol'
+import type { SessionEvent } from '@redspark/rsh-session/native'
 
 /** Generic process settings supplied by the selected Program launcher. */
 export interface RuntimeProcessOptions {
@@ -65,7 +65,7 @@ export interface HarnessClientOptions {
    * The complete child environment, read when {@link HarnessClient.start}
    * spawns. `undefined` reads the parent env at that time; passing an object
    * reads that object at spawn and replaces the parent environment entirely, so callers own
-   * credential policy (see `scrubbedParentEnv` in `@deepseek-ai/dsh-subprocess`
+   * credential policy (see `scrubbedParentEnv` in `@redspark/rsh-subprocess`
    * for the shared scrub-then-merge base). The standard Program launcher adds
    * the host `SystemRoot` on Windows when the supplied environment omits it.
    */
@@ -84,7 +84,7 @@ export interface HarnessClientOptions {
   disposeGraceMs?: number
 }
 
-/** Options for the high-level {@link DeepSeekHarness} wrapper. */
+/** Options for the high-level {@link RedSparkHarness} wrapper. */
 export interface DeepSeekHarnessOptions extends HarnessClientOptions {
   /** Workspace cwd recorded on every SDK-created session (default: the process cwd, else `process.cwd()`). */
   cwd?: string

@@ -264,7 +264,7 @@ function expectMergedPair(fixture: Fixture): void {
 
 // Every case in this suite drives real `git` invocations against a scratch
 // repository, so it is bound by process creation rather than by its assertions.
-// The value matches DSH_COVERAGE_TEST_TIMEOUT_MS, which the Windows coverage
+// The value matches RSH_COVERAGE_TEST_TIMEOUT_MS, which the Windows coverage
 // lane passes as --testTimeout: a describe value overrides that flag rather than
 // yielding to it, so a smaller one here lowers what the lane grants every case
 // in this file, none of which carries an allowance of its own. Measurements and

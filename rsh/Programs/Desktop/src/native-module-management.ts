@@ -1,6 +1,6 @@
 /** Native Desktop module-management DTOs and the Electron IPC admission parser. */
 
-import { brandString, type Branded } from '@deepseek-ai/dsh-brand'
+import { brandString, type Branded } from '@redspark/rsh-brand'
 
 /** Execution target selected by one Native Desktop installation row. */
 export type NativeDesktopTarget = 'host' | 'client'

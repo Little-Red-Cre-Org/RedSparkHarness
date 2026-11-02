@@ -1,6 +1,6 @@
 /** Shared model instructions and whole-list normalization. */
 import type { TodoItem } from './todo-types.ts'
-import type { SessionEvent } from '@deepseek-ai/dsh-session/types'
+import type { SessionEvent } from '@redspark/rsh-session/types'
 
 const DESCRIPTION_HEAD =
   'Record and update a structured task list for the current work. Send the ENTIRE '

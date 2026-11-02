@@ -11,7 +11,7 @@
  *
  * ```yaml
  * - id: llm
- *   name: '@deepseek-ai/dsh-llm-pi-ai'
+ *   name: '@redspark/rsh-llm-pi-ai'
  *   config:
  *     providers:
  *       # Catalog route: everything but the credential comes from pi-ai.
@@ -52,18 +52,18 @@
  *               max: ultra
  * ```
  *
- * @module @deepseek-ai/dsh-llm-pi-ai
+ * @module @redspark/rsh-llm-pi-ai
  */
 
-import type { Context } from '@deepseek-ai/cordis'
-import { credentialKeyScope } from '@deepseek-ai/dsh-credentials'
-import { launchEnvironmentOf } from '@deepseek-ai/dsh-launch-environment'
-import { assertUsableApiKey, LlmError, resolveImageAttachmentAccess } from '@deepseek-ai/dsh-llm'
-import type { AdapterRegistrationHandle, DirectoryRegistrationHandle } from '@deepseek-ai/dsh-llm'
-import type {} from '@deepseek-ai/dsh-attachment'
-import type {} from '@deepseek-ai/dsh-fs'
-import type {} from '@deepseek-ai/dsh-compat-settings-definition'
-import { deepEqualJson } from '@deepseek-ai/dsh-util-values'
+import type { Context } from '@redspark/cordis'
+import { credentialKeyScope } from '@redspark/rsh-credentials'
+import { launchEnvironmentOf } from '@redspark/rsh-launch-environment'
+import { assertUsableApiKey, LlmError, resolveImageAttachmentAccess } from '@redspark/rsh-llm'
+import type { AdapterRegistrationHandle, DirectoryRegistrationHandle } from '@redspark/rsh-llm'
+import type {} from '@redspark/rsh-attachment'
+import type {} from '@redspark/rsh-fs'
+import type {} from '@redspark/rsh-compat-settings-definition'
+import { deepEqualJson } from '@redspark/rsh-util-values'
 import { PiAiAdapter } from './adapter.ts'
 import { authContextFrom, credentialStoreFrom, siwcRegistrationStoreFrom } from './auth.ts'
 import { configurableProviderEntries } from './configurable-providers.ts'

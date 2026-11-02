@@ -6,12 +6,12 @@
  * Agent Note:
  * - .agents/notes/implemented/architecture/2026-10-08-native-session-title-and-plan-mode.md
  *
- * @module @deepseek-ai/dsh-session-title-llm/native
+ * @module @redspark/rsh-session-title-llm/native
  */
 
-import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
-import type {} from '@deepseek-ai/dsh-native-model-execution/native'
-import { SessionTitleProviderId, type SessionTitleAutomaticMode } from '@deepseek-ai/dsh-session-title/native'
+import type { NativePlugin } from '@redspark/rsh-native-runtime'
+import type {} from '@redspark/rsh-native-model-execution/native'
+import { SessionTitleProviderId, type SessionTitleAutomaticMode } from '@redspark/rsh-session-title/native'
 import {
   generateSessionTitle,
   resolveSessionTitleLlmConfig,

@@ -1,12 +1,12 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { act, cleanup, createEvent, fireEvent, render, screen, waitFor } from '@testing-library/react'
-import type { WorkspaceId } from '@deepseek-ai/dsh-api-workspace-controller/client'
-import type { SessionId } from '@deepseek-ai/dsh-session/types'
-import { makeTranslate } from '@deepseek-ai/dsh-client-test-runtime'
-import { zh as commonZh } from '@deepseek-ai/dsh-client-locale/src/locales/zh.ts'
-import type { RowDragProps } from '@deepseek-ai/dsh-client-ui-primitives/src/workspace-rows/Rows.tsx'
-import { ProjectRowItem, SearchResultItem, SessionNodeItem } from '@deepseek-ai/dsh-client-ui-primitives/src/workspace-rows/Rows.tsx'
+import type { WorkspaceId } from '@redspark/rsh-api-workspace-controller/client'
+import type { SessionId } from '@redspark/rsh-session/types'
+import { makeTranslate } from '@redspark/rsh-client-test-runtime'
+import { zh as commonZh } from '@redspark/rsh-client-locale/src/locales/zh.ts'
+import type { RowDragProps } from '@redspark/rsh-client-ui-primitives/src/workspace-rows/Rows.tsx'
+import { ProjectRowItem, SearchResultItem, SessionNodeItem } from '@redspark/rsh-client-ui-primitives/src/workspace-rows/Rows.tsx'
 import type { GroupNode, SearchResultNode, SessionNode } from '../src/client/tree.ts'
 import { zh } from '../src/client/locales.ts'
 

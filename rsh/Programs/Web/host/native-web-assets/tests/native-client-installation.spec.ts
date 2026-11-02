@@ -63,9 +63,9 @@ it('defines only public Client environment values and fixes the browser bundle t
   const home = await mkdtemp(join(tmpdir(), 'rsh-native-client-env-'))
   const project = join(home, 'profile'), runtime = join(home, 'runtime')
   const fixture = join(runtime, 'node_modules', 'native-env-fixture')
-  vi.stubEnv('DSH_CLIENT_TITLE', 'Native browser shell')
-  vi.stubEnv('DSH_CLIENT_UNSET', undefined)
-  vi.stubEnv('DSH_HOST_SECRET', 'host-only')
+  vi.stubEnv('RSH_CLIENT_TITLE', 'Native browser shell')
+  vi.stubEnv('RSH_CLIENT_UNSET', undefined)
+  vi.stubEnv('RSH_HOST_SECRET', 'host-only')
   vi.stubEnv('NODE_ENV', 'development')
   try {
     await mkdir(project, { recursive: true })
@@ -76,9 +76,9 @@ it('defines only public Client environment values and fixes the browser bundle t
     }))
     await writeFile(join(fixture, 'native.mjs'), [
       'export const environment = {',
-      '  title: process.env.DSH_CLIENT_TITLE,',
-      '  missing: process.env.DSH_CLIENT_UNSET,',
-      '  secret: process.env.DSH_HOST_SECRET,',
+      '  title: process.env.RSH_CLIENT_TITLE,',
+      '  missing: process.env.RSH_CLIENT_UNSET,',
+      '  secret: process.env.RSH_HOST_SECRET,',
       '  all: process.env,',
       '  nodeEnv: process.env.NODE_ENV,',
       '}',
@@ -115,12 +115,12 @@ it('defines only public Client environment values and fixes the browser bundle t
 it('accepts Client packages hoisted beside the runtime in a flattened install', async () => {
   const home = await mkdtemp(join(tmpdir(), 'rsh-hoisted-client-'))
   const project = join(home, 'profile'), modules = join(home, 'prefix', 'node_modules')
-  const runtime = join(modules, '@deepseek-ai', 'dsh'), client = join(modules, 'hoisted-client')
+  const runtime = join(modules, '@redspark', 'dsh'), client = join(modules, 'hoisted-client')
   try {
     await mkdir(project)
     await mkdir(runtime, { recursive: true })
     await mkdir(client)
-    await writeFile(join(runtime, 'package.json'), JSON.stringify({ name: '@deepseek-ai/dsh' }))
+    await writeFile(join(runtime, 'package.json'), JSON.stringify({ name: '@redspark/dsh' }))
     await writeFile(join(client, 'package.json'), JSON.stringify({
       name: 'hoisted-client', type: 'module', exports: { './native': './native.mjs' },
       dsh: { native: { apiVersion: 1, entry: './native', targets: ['client'], requires: [], optional: [], provides: [] } },

@@ -7,22 +7,22 @@ import { fileURLToPath } from 'node:url'
 import { PassThrough } from 'node:stream'
 import { execa } from 'execa'
 import { expect, it, vi } from 'vitest'
-import { JsonRpcLineTransport } from '@deepseek-ai/dsh-json-rpc-line'
+import { JsonRpcLineTransport } from '@redspark/rsh-json-rpc-line'
 import { startHttpMcpFixture } from '../../../../../Modules/Official/mcp/mcp-client/tests/http-fixture.ts'
-import { NativeHost, NativeScope, resolveInstallation, type NativePlugin } from '@deepseek-ai/dsh-native-runtime'
-import { localFilesystemPlugin } from '@deepseek-ai/dsh-fs-local/native'
-import { plugin as persistencePlugin } from '@deepseek-ai/dsh-session-persistence-jsonl/native'
-import { plugin as agentPlugin } from '@deepseek-ai/dsh-native-agent'
-import { plugin as executionPlugin } from '@deepseek-ai/dsh-native-session-execution'
-import type { NativeActiveSessionOperations, NativeRootExecutionOperations } from '@deepseek-ai/dsh-native-session-execution'
-import { plugin as modelExecutionPlugin } from '@deepseek-ai/dsh-native-model-execution/native'
-import { NativeApprovalRequestId } from '@deepseek-ai/dsh-native-approval'
-import type { NativeApprovalServiceDefinition } from '@deepseek-ai/dsh-approval-definition'
-import type { AttachmentOperations, ImageAttachmentRef } from '@deepseek-ai/dsh-attachment/native'
-import { NATIVE_ACP_SUBAGENT_METADATA_KEY, readNativeAcpSubagentPermissionRequest } from '@deepseek-ai/dsh-acp-protocol'
-import { plugin as approvalPlugin } from '@deepseek-ai/dsh-native-approval/native'
-import { ToolCallId, type StreamChunk } from '@deepseek-ai/dsh-llm/native'
-import { SessionId } from '@deepseek-ai/dsh-session/native'
+import { NativeHost, NativeScope, resolveInstallation, type NativePlugin } from '@redspark/rsh-native-runtime'
+import { localFilesystemPlugin } from '@redspark/rsh-fs-local/native'
+import { plugin as persistencePlugin } from '@redspark/rsh-session-persistence-jsonl/native'
+import { plugin as agentPlugin } from '@redspark/rsh-native-agent'
+import { plugin as executionPlugin } from '@redspark/rsh-native-session-execution'
+import type { NativeActiveSessionOperations, NativeRootExecutionOperations } from '@redspark/rsh-native-session-execution'
+import { plugin as modelExecutionPlugin } from '@redspark/rsh-native-model-execution/native'
+import { NativeApprovalRequestId } from '@redspark/rsh-native-approval'
+import type { NativeApprovalServiceDefinition } from '@redspark/rsh-approval-definition'
+import type { AttachmentOperations, ImageAttachmentRef } from '@redspark/rsh-attachment/native'
+import { NATIVE_ACP_SUBAGENT_METADATA_KEY, readNativeAcpSubagentPermissionRequest } from '@redspark/rsh-acp-protocol'
+import { plugin as approvalPlugin } from '@redspark/rsh-native-approval/native'
+import { ToolCallId, type StreamChunk } from '@redspark/rsh-llm/native'
+import { SessionId } from '@redspark/rsh-session/native'
 import { MockAdapter, textResponse } from '../../../../../Engine/core/agent-loop/tests/mock-adapter.ts'
 import { plugin as carrierPlugin, NativeAcpApplication } from '../src/native.ts'
 
@@ -75,7 +75,7 @@ function modelRequestText(value: unknown): string {
 
 function launchAcp(home: string, patch: string) {
   return execa(process.execPath, [join(root, 'rsh/Programs/CLI/lib/bin.js'), '--profile', 'native-acp', '--patch', patch], {
-    cwd: home, env: { DSH_HOME: home, NATIVE_ACP_FIXTURE_KEY: 'fixture-key', DSH_TELEMETRY_DISABLED: '1' },
+    cwd: home, env: { RSH_HOME: home, NATIVE_ACP_FIXTURE_KEY: 'fixture-key', RSH_TELEMETRY_DISABLED: '1' },
     reject: false, timeout: 30_000, killSignal: 'SIGKILL',
   })
 }

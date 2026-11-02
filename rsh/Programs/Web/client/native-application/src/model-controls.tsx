@@ -3,8 +3,8 @@ import { useEffect, useRef, useState } from 'react'
 import {
   IconChevronDownOutline14, IconCloseFill14, IconShieldOutline16, Menu, ModelPicker, Pill,
   type ModelPickerState,
-} from '@deepseek-ai/dsh-client-ui-primitives'
-import { foldNativeModelSelectionState } from '@deepseek-ai/dsh-native-model-selection/types'
+} from '@redspark/rsh-client-ui-primitives'
+import { foldNativeModelSelectionState } from '@redspark/rsh-native-model-selection/types'
 import type { ConversationLocaleKey } from './locales.ts'
 import type { ConversationSnapshot, NativeConversationController } from './controller.ts'
 import css from './model-controls.module.css'

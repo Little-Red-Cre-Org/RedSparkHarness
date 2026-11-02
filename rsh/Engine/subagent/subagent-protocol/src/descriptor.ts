@@ -21,16 +21,16 @@
  * these stored ceilings and positive tool grants with the exact live parent's
  * current authority.
  *
- * @module @deepseek-ai/dsh-subagent/descriptor
+ * @module @redspark/rsh-subagent/descriptor
  */
 
-import { snapshotJsonValue } from '@deepseek-ai/dsh-util-values'
-import type { SessionEvent } from '@deepseek-ai/dsh-session/native'
-import type { ReasoningEffortId } from '@deepseek-ai/dsh-llm/native'
+import { snapshotJsonValue } from '@redspark/rsh-util-values'
+import type { SessionEvent } from '@redspark/rsh-session/native'
+import type { ReasoningEffortId } from '@redspark/rsh-llm/native'
 /** Versioned descriptor tool visibility values. */
 interface ToolRestriction { readonly allow?: readonly string[]; readonly deny?: readonly string[] }
 
-declare module '@deepseek-ai/dsh-session/types' {
+declare module '@redspark/rsh-session/types' {
   interface SessionEventMap {
     /**
      * Durable identity and lifecycle mode of a session-backed subagent child,

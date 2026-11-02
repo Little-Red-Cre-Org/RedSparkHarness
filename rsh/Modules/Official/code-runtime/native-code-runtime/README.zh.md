@@ -3,7 +3,7 @@ description: "为原生 Host profile 提供不依赖框架的 Worker 线程模�
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-native-code-runtime
+# @redspark/rsh-native-code-runtime
 
 [English](README.md) | 中文
 

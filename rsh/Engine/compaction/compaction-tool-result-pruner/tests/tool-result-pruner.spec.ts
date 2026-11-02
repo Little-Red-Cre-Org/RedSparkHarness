@@ -1,23 +1,23 @@
 import { describe, expect, it } from 'vitest'
-import { Context } from '@deepseek-ai/cordis'
-import { ToolCallId , createMessage, createToolResultMessage } from '@deepseek-ai/dsh-llm'
-import type { ContentBlock } from '@deepseek-ai/dsh-llm'
+import { Context } from '@redspark/cordis'
+import { ToolCallId , createMessage, createToolResultMessage } from '@redspark/rsh-llm'
+import type { ContentBlock } from '@redspark/rsh-llm'
 import SessionStore, {
   Session,
   SessionId,
-} from '@deepseek-ai/dsh-session'
-import type { SurfaceEvent } from '@deepseek-ai/dsh-session'
-import * as SessionInvariant from '@deepseek-ai/dsh-session/invariant'
-import InvariantRegistry from '@deepseek-ai/dsh-invariants'
-import SessionProjectionRegistry from '@deepseek-ai/dsh-session-projection'
-import TokenMeter from '@deepseek-ai/dsh-token-meter'
+} from '@redspark/rsh-session'
+import type { SurfaceEvent } from '@redspark/rsh-session'
+import * as SessionInvariant from '@redspark/rsh-session/invariant'
+import InvariantRegistry from '@redspark/rsh-invariants'
+import SessionProjectionRegistry from '@redspark/rsh-session-projection'
+import TokenMeter from '@redspark/rsh-token-meter'
 import ToolResultPruner, {
   codePointLength,
   DEFAULTS,
   PRUNE_MARKER,
   resolveConfig,
-} from '@deepseek-ai/dsh-compaction-tool-result-pruner'
-import type { ToolResultPruneConfig } from '@deepseek-ai/dsh-compaction-tool-result-pruner'
+} from '@redspark/rsh-compaction-tool-result-pruner'
+import type { ToolResultPruneConfig } from '@redspark/rsh-compaction-tool-result-pruner'
 
 const MODEL = 'test-model'
 const SMALL: ToolResultPruneConfig = {

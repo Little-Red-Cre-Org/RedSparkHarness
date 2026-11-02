@@ -1,7 +1,7 @@
 /** Native plugin settings cards backed by the selected Host's Settings and Credentials actions. */
 import { useCallback, useEffect, useRef, useState, type KeyboardEvent } from 'react'
-import { Button } from '@deepseek-ai/dsh-client-ui-primitives'
-import type { NativeModelControls, NativeSessionClient, NativeSettingsDescriptor } from '@deepseek-ai/dsh-client-native-session/native'
+import { Button } from '@redspark/rsh-client-ui-primitives'
+import type { NativeModelControls, NativeSessionClient, NativeSettingsDescriptor } from '@redspark/rsh-client-native-session/native'
 import type { ConversationLocaleKey } from './locales.ts'
 import { PluginInventoryTab } from './plugin-inventory-tab.tsx'
 import css from './plugins-section.module.css'

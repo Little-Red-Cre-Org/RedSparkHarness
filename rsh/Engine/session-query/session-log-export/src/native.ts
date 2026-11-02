@@ -1,7 +1,7 @@
 /** Native Host provider for the shared session-log archive stream. */
-import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
-import type { NativeActiveSessionOperations } from '@deepseek-ai/dsh-native-session-execution/active-session-protocol'
-import type { SessionId } from '@deepseek-ai/dsh-session/native'
+import type { NativePlugin } from '@redspark/rsh-native-runtime'
+import type { NativeActiveSessionOperations } from '@redspark/rsh-native-session-execution/active-session-protocol'
+import type { SessionId } from '@redspark/rsh-session/native'
 import {
   DEFAULT_SESSION_LOG_COMPRESSION_LEVEL,
   readSessionLogAfterFlush,
@@ -37,7 +37,7 @@ export interface NativeSessionLogExportOperations {
   ): Promise<NativeSessionLogArchive | undefined>
 }
 
-declare module '@deepseek-ai/dsh-native-runtime' {
+declare module '@redspark/rsh-native-runtime' {
   interface NativeServices { sessionLogExport: NativeSessionLogExportOperations }
 }
 
@@ -154,7 +154,7 @@ function createFlushPort(active: NativeActiveSessionOperations): SessionLogArchi
 /** Native Provider selected by a Host composition with the canonical query and storage providers. */
 export const plugin: NativePlugin = {
   apiVersion: 1,
-  name: '@deepseek-ai/dsh-session-log-export',
+  name: '@redspark/rsh-session-log-export',
   targets: ['host'],
   requires: ['sessionQuery', 'sessionPersistence', 'attachments', 'activeSessions'],
   provides: ['sessionLogExport'],

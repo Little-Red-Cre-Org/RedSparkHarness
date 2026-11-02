@@ -1,13 +1,13 @@
 /** Model-facing job controls with real native services and exact Agent ownership. */
 import { describe, expect, it } from 'vitest'
-import { NativeHost, NativeScope, resolveInstallation, type NativePlugin } from '@deepseek-ai/dsh-native-runtime'
-import { NativeAgentId, type NativeAgent, type NativeAgentRegistry } from '@deepseek-ai/dsh-native-agent'
-import { plugin as agentPlugin } from '@deepseek-ai/dsh-native-agent/native'
-import { plugin as jobsPlugin, type NativeJobOutcome, type NativeJobRegistry } from '@deepseek-ai/dsh-native-jobs/native'
-import { plugin as toolsPlugin } from '@deepseek-ai/dsh-native-tools/native'
-import type { NativeToolRegistry } from '@deepseek-ai/dsh-native-tools'
-import { ToolCallId } from '@deepseek-ai/dsh-llm'
-import { Session, SessionId, SESSION_FORMAT_VERSION } from '@deepseek-ai/dsh-session'
+import { NativeHost, NativeScope, resolveInstallation, type NativePlugin } from '@redspark/rsh-native-runtime'
+import { NativeAgentId, type NativeAgent, type NativeAgentRegistry } from '@redspark/rsh-native-agent'
+import { plugin as agentPlugin } from '@redspark/rsh-native-agent/native'
+import { plugin as jobsPlugin, type NativeJobOutcome, type NativeJobRegistry } from '@redspark/rsh-native-jobs/native'
+import { plugin as toolsPlugin } from '@redspark/rsh-native-tools/native'
+import type { NativeToolRegistry } from '@redspark/rsh-native-tools'
+import { ToolCallId } from '@redspark/rsh-llm'
+import { Session, SessionId, SESSION_FORMAT_VERSION } from '@redspark/rsh-session'
 import { plugin as jobToolsPlugin } from '../src/index.ts'
 
 async function fixture(config?: unknown) {

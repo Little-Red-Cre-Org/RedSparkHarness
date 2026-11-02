@@ -3,10 +3,10 @@ import { useEffect, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import {
   Button, IconBrowseOutline16, IconCopyOutline16, IconFolderOpenOutline16, IconTrashOutline16, Modal, Switch, Tag,
-} from '@deepseek-ai/dsh-client-ui-primitives'
+} from '@redspark/rsh-client-ui-primitives'
 import type {
   NativeAgentPresetDocument, NativeAgentPresetList, NativeSessionClient, NativeSettingsDescriptor,
-} from '@deepseek-ai/dsh-client-native-session/native'
+} from '@redspark/rsh-client-native-session/native'
 import type { ConversationLocaleKey } from './locales.ts'
 import css from './agent-presets-section.module.css'
 

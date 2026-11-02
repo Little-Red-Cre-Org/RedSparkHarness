@@ -2,9 +2,9 @@
 import { expect, it, vi } from 'vitest'
 import { existsSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { JsonlSessionBackend } from '@deepseek-ai/dsh-session-persistence-jsonl'
+import { JsonlSessionBackend } from '@redspark/rsh-session-persistence-jsonl'
 import { ARCHIFY_SKILL_DIRECTORY_ENV, archifyShellEnvValues } from '../../../../Modules/Official/skill/archify/src/shared.ts'
-import type { ReplayEntry } from '@deepseek-ai/dsh-llm-replay'
+import type { ReplayEntry } from '@redspark/rsh-llm-replay'
 import { terminalFixture } from './pty-profile.ts'
 
 const answer = 'Archify route reached the model.'

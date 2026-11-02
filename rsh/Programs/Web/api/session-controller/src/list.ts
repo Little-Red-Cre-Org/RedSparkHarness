@@ -1,14 +1,14 @@
 /** Cold-safe Session list and search projection. */
 
-import type { Context } from '@deepseek-ai/cordis'
-import type {} from '@deepseek-ai/dsh-agent-presets'
-import type { ImageAttachmentLimits } from '@deepseek-ai/dsh-attachment'
-import { SessionLogOffset } from '@deepseek-ai/dsh-session'
-import type { Session, SessionEvent, SessionHeader, SessionId } from '@deepseek-ai/dsh-session'
-import type {} from '@deepseek-ai/dsh-session-projection'
-import type {} from '@deepseek-ai/dsh-session-projection-cache'
-import { SessionQueryError, type SessionSearchCursor } from '@deepseek-ai/dsh-session-query'
-import { RemoteError } from '@deepseek-ai/dsh-typert-protocol'
+import type { Context } from '@redspark/cordis'
+import type {} from '@redspark/rsh-agent-presets'
+import type { ImageAttachmentLimits } from '@redspark/rsh-attachment'
+import { SessionLogOffset } from '@redspark/rsh-session'
+import type { Session, SessionEvent, SessionHeader, SessionId } from '@redspark/rsh-session'
+import type {} from '@redspark/rsh-session-projection'
+import type {} from '@redspark/rsh-session-projection-cache'
+import { SessionQueryError, type SessionSearchCursor } from '@redspark/rsh-session-query'
+import { RemoteError } from '@redspark/rsh-typert-protocol'
 import { z } from 'zod'
 import {
   SESSION_SEARCH_RESULT_LIMIT,
@@ -172,7 +172,7 @@ export class ApiSessionList {
     if (provider === undefined) {
       throw new RemoteError(
         'gateway/internal',
-        'session search is unavailable: this deployment does not mount @deepseek-ai/dsh-session-query',
+        'session search is unavailable: this deployment does not mount @redspark/rsh-session-query',
         {},
       )
     }

@@ -3,18 +3,18 @@
  * tools through nested executions scheduled under the native concurrency
  * contract; each sub-dispatch is logged for reconstruction, while only the
  * outer curated result enters model history.
- * @module @deepseek-ai/dsh-tools/src/ptc
+ * @module @redspark/rsh-tools/src/ptc
  */
 
-import { brandString } from '@deepseek-ai/dsh-brand'
-import { createUserMessage, HarnessError } from '@deepseek-ai/dsh-llm'
-import type { ContentBlock, ToolCallId } from '@deepseek-ai/dsh-llm'
+import { brandString } from '@redspark/rsh-brand'
+import { createUserMessage, HarnessError } from '@redspark/rsh-llm'
+import type { ContentBlock, ToolCallId } from '@redspark/rsh-llm'
 import type {
   CodeBindingFunction,
   CodeRunResult,
   CodeRuntimeDefinition,
-} from '@deepseek-ai/dsh-code-runtime-definition'
-import { snapshotJsonValue, type JsonValue } from '@deepseek-ai/dsh-util-values'
+} from '@redspark/rsh-code-runtime-definition'
+import { snapshotJsonValue, type JsonValue } from '@redspark/rsh-util-values'
 import { defineTool, parameterSchemaSpecToJsonSchema } from './schema.ts'
 import { TOOL_RUNTIME_SCHEDULER } from './index.ts'
 import type { PtcDispatchLog, ToolDefinition, ToolExecutionResult, ToolRuntime, ToolRunContext } from './index.ts'

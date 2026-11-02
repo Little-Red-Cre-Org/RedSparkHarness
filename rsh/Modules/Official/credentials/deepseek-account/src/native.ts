@@ -6,10 +6,10 @@ import { createRequire } from 'node:module'
 import { once } from 'node:events'
 import type { AddressInfo } from 'node:net'
 import { z } from 'zod'
-import { credentialKey } from '@deepseek-ai/dsh-credentials/native'
-import type { CredentialKey, CredentialRecord, NativeCredentials } from '@deepseek-ai/dsh-credentials/native'
-import type { NativeContext, NativePlugin } from '@deepseek-ai/dsh-native-runtime'
-import type { AuthorizationFlow, NativeAuthorization } from '@deepseek-ai/dsh-authorization/native'
+import { credentialKey } from '@redspark/rsh-credentials/native'
+import type { CredentialKey, CredentialRecord, NativeCredentials } from '@redspark/rsh-credentials/native'
+import type { NativeContext, NativePlugin } from '@redspark/rsh-native-runtime'
+import type { AuthorizationFlow, NativeAuthorization } from '@redspark/rsh-authorization/native'
 import type { AccountBalanceResult, AccountProfileResult } from './index.ts'
 import { readAccountDetail } from './details.ts'
 import {
@@ -17,7 +17,7 @@ import {
   platformOrigin, requestPlatform,
 } from './protocol.ts'
 
-declare module '@deepseek-ai/dsh-native-runtime' {
+declare module '@redspark/rsh-native-runtime' {
   interface NativeServices { deepseekAccount: DeepSeekAccount }
 }
 
@@ -288,7 +288,7 @@ async function runSignIn(
     }
     const code = deadline.signal.aborted ? 'expired'
       : error instanceof PlatformAuthError ? error.code : 'protocol'
-    const { AuthorizationError } = await import('@deepseek-ai/dsh-authorization/native')
+    const { AuthorizationError } = await import('@redspark/rsh-authorization/native')
     throw new AuthorizationError(`DeepSeek sign-in failed: ${code}`, `DEEPSEEK_SIGN_IN_${code.toUpperCase()}`)
   } finally {
     if (timer !== undefined) clearTimeout(timer)
@@ -366,7 +366,7 @@ function accountService(
 /** Register the native account service and, when available, its browser login flow. */
 export const plugin: NativePlugin = {
   apiVersion: 1,
-  name: '@deepseek-ai/dsh-deepseek-account',
+  name: '@redspark/rsh-deepseek-account',
   targets: ['host'],
   requires: ['credentials'],
   optional: ['authorization'],

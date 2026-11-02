@@ -1,5 +1,5 @@
 /** Framework-free Native Settings service and storage contracts. */
-import type {} from '@deepseek-ai/dsh-native-runtime'
+import type {} from '@redspark/rsh-native-runtime'
 import type { SettingsApplies } from './index.ts'
 import type { SettingsNamespaceInput } from './types.ts'
 export type { SettingsNamespaceInput } from './types.ts'
@@ -135,7 +135,7 @@ export interface NativeSettingsService {
   dispose(): Promise<void>
 }
 
-declare module '@deepseek-ai/dsh-native-runtime' {
+declare module '@redspark/rsh-native-runtime' {
   interface NativeServices {
     settings: NativeSettingsService
   }

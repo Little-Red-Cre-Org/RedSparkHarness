@@ -1,8 +1,8 @@
 /** Native token-meter Definition and Provider over the shared replay estimator. */
-import type { EpochHeader, Session } from '@deepseek-ai/dsh-session/native'
-import type { Message } from '@deepseek-ai/dsh-llm/native'
-import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
-import type {} from '@deepseek-ai/dsh-native-model-execution/native'
+import type { EpochHeader, Session } from '@redspark/rsh-session/native'
+import type { Message } from '@redspark/rsh-llm/native'
+import type { NativePlugin } from '@redspark/rsh-native-runtime'
+import type {} from '@redspark/rsh-native-model-execution/native'
 import type { TokenMeasurement } from './meter-types.ts'
 import { ReplayTokenMeter } from './meter-core.ts'
 
@@ -20,13 +20,13 @@ export interface NativeTokenMeterOperations {
   estimateMessage(message: Message): number
 }
 
-declare module '@deepseek-ai/dsh-native-runtime' {
+declare module '@redspark/rsh-native-runtime' {
   interface NativeServices { tokenMeter: NativeTokenMeterOperations }
 }
 
 /** Install one read-only replay estimator over the selected model's request pricing. */
 export const plugin: NativePlugin = {
-  apiVersion: 1, name: '@deepseek-ai/dsh-token-meter', targets: ['host'],
+  apiVersion: 1, name: '@redspark/rsh-token-meter', targets: ['host'],
   requires: ['model'], provides: ['tokenMeter'],
   resolve(input) {
     if (input !== undefined && (typeof input !== 'object' || input === null || Array.isArray(input) || Object.keys(input).length !== 0)) {

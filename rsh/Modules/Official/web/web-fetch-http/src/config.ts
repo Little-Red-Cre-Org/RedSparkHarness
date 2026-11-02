@@ -1,15 +1,15 @@
 /**
  * Framework-free configuration for the anonymous HTTP(S) fetch provider, shared by its Cordis
  * plugin and native installation.
- * @module @deepseek-ai/dsh-web-fetch-http/config
+ * @module @redspark/rsh-web-fetch-http/config
  */
 
-import z from '@deepseek-ai/schemastery'
-import { MAX_TIMER_DELAY_MS } from '@deepseek-ai/dsh-timeout'
+import z from '@redspark/schemastery'
+import { MAX_TIMER_DELAY_MS } from '@redspark/rsh-timeout'
 import type { HttpFetchLimits } from './provider.ts'
 
 /** Default `User-Agent`: an explicit product agent, never a browser disguise. */
-export const DEFAULT_USER_AGENT = 'deepseek-harness/0.0.1 (+https://github.com/deepseek-ai)'
+export const DEFAULT_USER_AGENT = 'redspark-harness/0.0.1 (+https://github.com/deepseek-ai)'
 
 /** Plugin config: the provider's transport and size limits plus its `User-Agent` (all defaulted). */
 export interface Config {

@@ -3,7 +3,7 @@ description: "Per-session agent composition from preset cordis.yml files, for us
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-agent-presets
+# @redspark/rsh-agent-presets
 
 English | [中文](README.zh.md)
 
@@ -34,7 +34,7 @@ The native entries do not load the optional Loader, Include, atomic-write, home-
 The native CLI scans the shipped preset root before `<dshHome>/.agent-presets`; the first root wins a duplicate id. Each preset folder can hold shared `preset.yml` display metadata and an `agent.native.json` composition. The native file contains version 1 and rows with `id`, `plugin`, optional `config` and optional `disabled`; the CLI assigns each row to the preset's child scope and does not read `agent.cordis.yml`.
 
 ```json
-{ "formatVersion": 1, "installations": [ { "id": "tools", "plugin": "@deepseek-ai/dsh-native-tools", "config": {} } ] }
+{ "formatVersion": 1, "installations": [ { "id": "tools", "plugin": "@redspark/rsh-native-tools", "config": {} } ] }
 ```
 
 A folder without `agent.native.json` appears as `needs-migration`; an invalid file, an enabled plugin package the profile cannot resolve, or an enabled row whose required service the profile does not provide appears as `invalid`. The Registry `catalog()` rescans its Host-owned roots and returns the default and folder display, trust and status summaries without directory paths or installation rows. `read()` returns folder metadata and the raw composition text; profile-only compositions have no file content. `copy()` copies a ready folder and its assets into the first user root, retains its description, replaces its display name, drops its sort order, and tightens copied permissions. `delete()` and `directory()` resolve only user folders; shipped folders remain read-only. The CLI supplies root paths privately to the Host Registry.
@@ -54,7 +54,7 @@ The presets you can choose from come from three sources: the presets shipped ins
 The plugin needs a `default` preset id and scans `roots` for presets:
 
 ```yaml
-- name: '@deepseek-ai/dsh-agent-presets'
+- name: '@redspark/rsh-agent-presets'
   config:
     default: standard
     roots:

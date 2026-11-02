@@ -6,7 +6,7 @@
  * output, each counted in characters and reported per turn and step. The dashboard and the
  * `/context` command both read this state, so the numbers cannot disagree.
  *
- * @module @deepseek-ai/dsh-context-insight/composition
+ * @module @redspark/rsh-context-insight/composition
  */
 
 import { z } from 'zod'

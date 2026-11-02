@@ -31,7 +31,7 @@ describe('Windows token signing', () => {
   it('passes only the validated BAT fields to the signing command interpreter', () => {
     expect(buildWindowsSigningEnvironment({
       SystemRoot: 'C:\\Windows',
-      DSH_DESKTOP_WINDOWS_TOKEN_PIN: 'inherited-token-secret',
+      RSH_DESKTOP_WINDOWS_TOKEN_PIN: 'inherited-token-secret',
       DEEPSEEK_API_KEY: 'api-secret',
       BUILD_PASSWORD: 'build-secret',
     }, {
@@ -43,12 +43,12 @@ describe('Windows token signing', () => {
       keyContainer: 'te-container',
     })).toEqual({
       SystemRoot: 'C:\\Windows',
-      DSH_DESKTOP_WINDOWS_SIGNTOOL: 'C:\\tools\\signtool.exe',
-      DSH_DESKTOP_WINDOWS_CER_FILE: CERTIFICATE_FILE,
-      DSH_DESKTOP_WINDOWS_TOKEN_PIN: 'token-secret!',
-      DSH_DESKTOP_WINDOWS_KEY_CONTAINER: 'te-container',
-      DSH_DESKTOP_WINDOWS_SIGN_TARGET: 'C:\\release\\RedSpark Harness.exe',
-      DSH_DESKTOP_WINDOWS_SIGN_APPEND: '',
+      RSH_DESKTOP_WINDOWS_SIGNTOOL: 'C:\\tools\\signtool.exe',
+      RSH_DESKTOP_WINDOWS_CER_FILE: CERTIFICATE_FILE,
+      RSH_DESKTOP_WINDOWS_TOKEN_PIN: 'token-secret!',
+      RSH_DESKTOP_WINDOWS_KEY_CONTAINER: 'te-container',
+      RSH_DESKTOP_WINDOWS_SIGN_TARGET: 'C:\\release\\RedSpark Harness.exe',
+      RSH_DESKTOP_WINDOWS_SIGN_APPEND: '',
     })
   })
 
@@ -60,7 +60,7 @@ describe('Windows token signing', () => {
       isNest: true,
       tokenPin: 'token-secret!',
       keyContainer: 'te-container',
-    }).DSH_DESKTOP_WINDOWS_SIGN_APPEND).toBe('1')
+    }).RSH_DESKTOP_WINDOWS_SIGN_APPEND).toBe('1')
   })
 
   it('keeps the verified SafeNet command in an ASCII CRLF CMD file', async () => {
@@ -70,8 +70,8 @@ describe('Windows token signing', () => {
     expect(text).toContain('\r\n')
     expect(text.replaceAll('\r\n', '')).not.toContain('\n')
     expect(text).toContain('setlocal DisableDelayedExpansion\r\n')
-    expect(text).toContain('set "DSH_DESKTOP_WINDOWS_CER_FILE="\r\n')
-    expect(text).toContain('set "DSH_DESKTOP_WINDOWS_TOKEN_PIN="\r\n')
+    expect(text).toContain('set "RSH_DESKTOP_WINDOWS_CER_FILE="\r\n')
+    expect(text).toContain('set "RSH_DESKTOP_WINDOWS_TOKEN_PIN="\r\n')
     expect(text).toContain('"%signTool%" sign /v /fd sha256 /f "%certificateFile%" /kc "[{{%tokenPin%}}]=%keyContainer%" /csp "eToken Base Cryptographic Provider" %appendSignature% /tr http://timestamp.digicert.com /td sha256 "%targetFile%"\r\n')
   })
 
@@ -86,13 +86,13 @@ describe('Windows token signing', () => {
       signTool,
       tokenPin: 'token-secret!',
       keyContainer: 'te-container',
-    })).toThrow(/DSH_DESKTOP_WINDOWS_CER_FILE/u)
+    })).toThrow(/RSH_DESKTOP_WINDOWS_CER_FILE/u)
     expect(() => createWindowsTokenSigner({
       certificateFile,
       signTool: undefined,
       tokenPin: 'token-secret!',
       keyContainer: 'te-container',
-    })).toThrow(/DSH_DESKTOP_WINDOWS_SIGNTOOL/u)
+    })).toThrow(/RSH_DESKTOP_WINDOWS_SIGNTOOL/u)
     const signer = createWindowsTokenSigner({
       certificateFile,
       signTool,
@@ -104,13 +104,13 @@ describe('Windows token signing', () => {
         certificateFile,
         signTool,
         tokenPin: 'token-secret!',
-      })).toThrow(/DSH_DESKTOP_WINDOWS_KEY_CONTAINER/u)
+      })).toThrow(/RSH_DESKTOP_WINDOWS_KEY_CONTAINER/u)
       expect(() => createWindowsTokenSigner({
         certificateFile,
         signTool,
         tokenPin: '',
         keyContainer: 'te-container',
-      })).toThrow(/DSH_DESKTOP_WINDOWS_TOKEN_PIN/u)
+      })).toThrow(/RSH_DESKTOP_WINDOWS_TOKEN_PIN/u)
       expect(() => createWindowsTokenSigner({
         certificateFile,
         signTool,
@@ -131,9 +131,9 @@ describe('Windows token signing', () => {
   it('removes inherited credentials and redacts SignTool process failures', () => {
     expect(scrubWindowsSigningEnvironment({
       SystemRoot: 'C:\\Windows',
-      DSH_DESKTOP_WINDOWS_CER_FILE: 'C:\\release\\server.cer',
-      DSH_DESKTOP_WINDOWS_SIGNTOOL: 'C:\\tools\\signtool.exe',
-      DSH_DESKTOP_WINDOWS_TOKEN_PIN: 'token-secret',
+      RSH_DESKTOP_WINDOWS_CER_FILE: 'C:\\release\\server.cer',
+      RSH_DESKTOP_WINDOWS_SIGNTOOL: 'C:\\tools\\signtool.exe',
+      RSH_DESKTOP_WINDOWS_TOKEN_PIN: 'token-secret',
       DEEPSEEK_API_KEY: 'api-secret',
       BUILD_PASSWORD: 'build-secret',
     })).toEqual({ SystemRoot: 'C:\\Windows' })
@@ -176,7 +176,7 @@ describe('Windows token signing', () => {
       platform: 'win32',
       environment: {
         SystemRoot: 'C:\\Windows',
-        DSH_DESKTOP_WINDOWS_TOKEN_PIN: 'token-secret',
+        RSH_DESKTOP_WINDOWS_TOKEN_PIN: 'token-secret',
       },
     })
 

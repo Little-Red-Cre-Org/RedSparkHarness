@@ -299,7 +299,7 @@ interface SkillViewOptions extends SkillLookupOptions {
 }
 ```
 
-注册表只拥有其发现缓存上限。本地提供方拥有文件系统根目录（`dshHome`、`agentsHome`、`customSkillDirs`，以及可选的 `bundledSkillDir`/`DSH_BUNDLED_SKILL_DIR`），以及 watcher 启用、轮询、稳定性、符号链接和项目容量控制。消费方拥有其目录描述上限。确切的默认值和校验规则见自动生成的[插件配置目录](../config-catalog.zh.md)。
+注册表只拥有其发现缓存上限。本地提供方拥有文件系统根目录（`dshHome`、`agentsHome`、`customSkillDirs`，以及可选的 `bundledSkillDir`/`RSH_BUNDLED_SKILL_DIR`），以及 watcher 启用、轮询、稳定性、符号链接和项目容量控制。消费方拥有其目录描述上限。确切的默认值和校验规则见自动生成的[插件配置目录](../config-catalog.zh.md)。
 
 ```ts type-equiv
 /** Skill registry configuration. */
@@ -321,7 +321,7 @@ interface Config {
 
 ## Archify 自动调用
 
-[`@deepseek-ai/dsh-archify` 包](../../Modules/Official/skill/archify/README.zh.md)会从 Cordis 与 Native 两个入口导出此来源类型。它标识从直接用户图表交付需求中选出的 Archify 指令消息。
+[`@redspark/rsh-archify` 包](../../Modules/Official/skill/archify/README.zh.md)会从 Cordis 与 Native 两个入口导出此来源类型。它标识从直接用户图表交付需求中选出的 Archify 指令消息。
 
 ```ts type-equiv
 /** Durable source for one host-selected Archify instruction injection. */

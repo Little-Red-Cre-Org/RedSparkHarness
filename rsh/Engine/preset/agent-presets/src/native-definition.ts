@@ -1,6 +1,6 @@
 /** Native profile-owned standing compositions and Program-owned Agent leases. */
-import type { Branded } from '@deepseek-ai/dsh-brand'
-import type { NativeScope } from '@deepseek-ai/dsh-native-runtime'
+import type { Branded } from '@redspark/rsh-brand'
+import type { NativeScope } from '@redspark/rsh-native-runtime'
 import type { NativeAgentPresetFacts } from './selection.ts'
 import type { NativePresetFolderSummary } from './native-storage.ts'
 
@@ -79,6 +79,6 @@ export interface NativeAgentPresetOperations {
   acquire(preset: NativeResolvedAgentPreset): NativeAgentPresetLease
 }
 
-declare module '@deepseek-ai/dsh-native-runtime' {
+declare module '@redspark/rsh-native-runtime' {
   interface NativeServices { agentPresets: NativeAgentPresetOperations }
 }

@@ -3,7 +3,7 @@ import { WorkspaceTypertGenerator } from '../../../../Core/typert/generator/lib/
 import { writeFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 
-const name = '@deepseek-ai/dsh-task-scheduler'
+const name = '@redspark/rsh-task-scheduler'
 // Analyze only this opt-in package; unrelated non-publishing workspace services are not contributors.
 const reflection = {
   name: 'task-scheduler-remote',

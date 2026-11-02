@@ -1,5 +1,5 @@
 {
-  "name": "@deepseek-ai/dsh-llm",
+  "name": "@redspark/rsh-llm",
   "description": "Provider-neutral LLM service interface for the RedSpark Harness",
   "version": "1.0.0",
   "publishConfig": {
@@ -67,27 +67,27 @@
   ],
   "license": "MIT",
   "peerDependencies": {
-    "@deepseek-ai/cordis": "workspace:^",
-    "@deepseek-ai/dsh-typert-protocol": "workspace:^",
-    "@deepseek-ai/dsh-errors": "workspace:^"
+    "@redspark/cordis": "workspace:^",
+    "@redspark/rsh-typert-protocol": "workspace:^",
+    "@redspark/rsh-errors": "workspace:^"
   },
   "peerDependenciesMeta": {
-    "@deepseek-ai/dsh-typert-protocol": { "optional": true },
-    "@deepseek-ai/cordis": { "optional": true }
+    "@redspark/rsh-typert-protocol": { "optional": true },
+    "@redspark/cordis": { "optional": true }
   },
   "dependencies": {
-    "@deepseek-ai/dsh-attachment": "workspace:^",
-    "@deepseek-ai/dsh-util-crypto": "workspace:^",
-    "@deepseek-ai/schemastery": "workspace:^",
+    "@redspark/rsh-attachment": "workspace:^",
+    "@redspark/rsh-util-crypto": "workspace:^",
+    "@redspark/schemastery": "workspace:^",
     "zod": "^4.4.3",
-    "@deepseek-ai/dsh-timeout": "workspace:^",
-    "@deepseek-ai/dsh-brand": "workspace:^",
-    "@deepseek-ai/dsh-util-values": "workspace:^"
+    "@redspark/rsh-timeout": "workspace:^",
+    "@redspark/rsh-brand": "workspace:^",
+    "@redspark/rsh-util-values": "workspace:^"
   },
   "devDependencies": {
-    "@deepseek-ai/dsh-typert-protocol": "workspace:^",
-    "@deepseek-ai/dsh-invariants": "workspace:^",
-    "@deepseek-ai/cordis": "workspace:^",
-    "@deepseek-ai/dsh-errors": "workspace:^"
+    "@redspark/rsh-typert-protocol": "workspace:^",
+    "@redspark/rsh-invariants": "workspace:^",
+    "@redspark/cordis": "workspace:^",
+    "@redspark/rsh-errors": "workspace:^"
   }
 }

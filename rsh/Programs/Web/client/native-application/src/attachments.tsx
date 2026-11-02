@@ -1,13 +1,13 @@
 /** Native conversation image loading and draft-file presentation. */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { RefObject } from 'react'
-import { AttachmentRail, DropOverlay, ImageLightbox, MessageImage } from '@deepseek-ai/dsh-client-ui-attachment/native'
-import type { AttachmentRailItem, ImageLoader, MessageImageLabels } from '@deepseek-ai/dsh-client-ui-attachment/native'
-import { fileSizeText, IconCloseFill14 } from '@deepseek-ai/dsh-client-ui-primitives'
-import type { TranslateNS } from '@deepseek-ai/dsh-client-ui-slots'
-import type { NativeSessionImage } from '@deepseek-ai/dsh-client-native-session/native'
-import type { NativeModelControls } from '@deepseek-ai/dsh-client-native-session/native'
-import type { SessionId } from '@deepseek-ai/dsh-session/types'
+import { AttachmentRail, DropOverlay, ImageLightbox, MessageImage } from '@redspark/rsh-client-ui-attachment/native'
+import type { AttachmentRailItem, ImageLoader, MessageImageLabels } from '@redspark/rsh-client-ui-attachment/native'
+import { fileSizeText, IconCloseFill14 } from '@redspark/rsh-client-ui-primitives'
+import type { TranslateNS } from '@redspark/rsh-client-ui-slots'
+import type { NativeSessionImage } from '@redspark/rsh-client-native-session/native'
+import type { NativeModelControls } from '@redspark/rsh-client-native-session/native'
+import type { SessionId } from '@redspark/rsh-session/types'
 import css from './attachments.module.css'
 
 type Translate = TranslateNS<'nativeApplication'>

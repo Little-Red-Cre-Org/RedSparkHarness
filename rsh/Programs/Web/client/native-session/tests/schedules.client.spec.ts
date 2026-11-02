@@ -1,9 +1,9 @@
 /** Native schedule Client decodes the selected Host's unary and SSE responses. */
 import { expect, it } from 'vitest'
-import { NativeHost, NativeScope, resolveInstallation, type NativePlugin } from '@deepseek-ai/dsh-native-runtime'
-import type { ClientConnectionRpc } from '@deepseek-ai/dsh-client-connection/native'
-import { createUserMessage, MessageId } from '@deepseek-ai/dsh-llm/native'
-import type { SessionId } from '@deepseek-ai/dsh-session/types'
+import { NativeHost, NativeScope, resolveInstallation, type NativePlugin } from '@redspark/rsh-native-runtime'
+import type { ClientConnectionRpc } from '@redspark/rsh-client-connection/native'
+import { createUserMessage, MessageId } from '@redspark/rsh-llm/native'
+import type { SessionId } from '@redspark/rsh-session/types'
 import type { NativeScheduleFrame, NativeScheduledJob } from '../src/schedule-types.ts'
 import { createNativeSessionClient, nativeSubmissionRequestId, plugin as nativeSessionClient, type NativeSessionClient } from '../src/native.ts'
 

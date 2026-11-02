@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react'
 import { afterEach, expect, it, vi } from 'vitest'
-import type { NativePluginInventory, NativeSessionClient } from '@deepseek-ai/dsh-client-native-session/native'
+import type { NativePluginInventory, NativeSessionClient } from '@redspark/rsh-client-native-session/native'
 import { en } from '../src/locales.ts'
 import { PluginInventoryTab } from '../src/plugin-inventory-tab.tsx'
 
@@ -99,7 +99,7 @@ it('shows a retry after a failed read and renders the returned inventory', async
 it('folds native and storage infrastructure plugins until shown or searched', async () => {
   renderTab(vi.fn<NativeSessionClient['pluginInventoryList']>(async () => ({ entries: [
     ...inventory.entries,
-    { id: 'native-1', name: '@deepseek-ai/dsh-native-agent', scope: inventory.entries[0]!.scope, state: 'ready' },
+    { id: 'native-1', name: '@redspark/rsh-native-agent', scope: inventory.entries[0]!.scope, state: 'ready' },
     { id: 'storage-1', name: 'dsh-storage-local', scope: inventory.entries[0]!.scope, state: 'ready' },
   ] })))
 

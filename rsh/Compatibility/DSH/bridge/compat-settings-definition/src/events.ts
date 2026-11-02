@@ -1,7 +1,7 @@
 /** Cordis event declarations for the compatibility Settings face. */
-import type { SettingsNamespace, SettingsUpdateSource } from '@deepseek-ai/dsh-settings-definition/types'
+import type { SettingsNamespace, SettingsUpdateSource } from '@redspark/rsh-settings-definition/types'
 
-declare module '@deepseek-ai/cordis' {
+declare module '@redspark/cordis' {
   interface Events {
     /**
      * Committed change to one registered namespace's resolved value. Emitted

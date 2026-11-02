@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Command-line entry for dsh.
- * @module @deepseek-ai/dsh/bin
+ * @module @redspark/dsh/bin
  */
 
 /* v8 ignore file -- built-bin acceptance exercises this self-executing dispatch. */
@@ -48,7 +48,7 @@ export async function runCli(): Promise<void> {
       }
       requireCompatibilityRuntime()
       const { runProfile } = await import('./profile-boot.ts')
-      const { loadLayeredEnv } = await import('@deepseek-ai/dsh-launch-environment/layers')
+      const { loadLayeredEnv } = await import('@redspark/rsh-launch-environment/layers')
       await runProfile({
         environment: loadLayeredEnv('dsh'),
         profile: invocation.profile,

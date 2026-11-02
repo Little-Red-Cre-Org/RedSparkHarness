@@ -1,5 +1,5 @@
 {
-  "name": "@deepseek-ai/dsh-session-format-v0-to-v1",
+  "name": "@redspark/rsh-session-format-v0-to-v1",
   "description": "Frozen released-v0 Session codec and identity migration to v1",
   "version": "1.0.0",
   "publishConfig": {
@@ -39,10 +39,10 @@
     }
   },
   "dependencies": {
-    "@deepseek-ai/dsh-session-format": "workspace:^",
-    "@deepseek-ai/dsh-util-values": "workspace:^"
+    "@redspark/rsh-session-format": "workspace:^",
+    "@redspark/rsh-util-values": "workspace:^"
   },
   "devDependencies": {
-    "@deepseek-ai/dsh-session": "workspace:^"
+    "@redspark/rsh-session": "workspace:^"
   }
 }

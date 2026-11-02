@@ -1,8 +1,8 @@
 /** Actual delegation and a separate Program sharing the same selected Providers. */
-import { NativeScope } from '@deepseek-ai/dsh-native-runtime'
-import { createNativeHeadlessApplication, resolveNativeHeadlessConfig } from '@deepseek-ai/dsh-native-headless/native'
-import { createUserMessage } from '@deepseek-ai/dsh-llm/native'
-import { SessionId } from '@deepseek-ai/dsh-session/native'
+import { NativeScope } from '@redspark/rsh-native-runtime'
+import { createNativeHeadlessApplication, resolveNativeHeadlessConfig } from '@redspark/rsh-native-headless/native'
+import { createUserMessage } from '@redspark/rsh-llm/native'
+import { SessionId } from '@redspark/rsh-session/native'
 import { writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { setTimeout } from 'node:timers/promises'

@@ -1,13 +1,13 @@
 /** Native Host Provider for the hidden Archify Skill and automatic request route. */
-import { createUserMessage } from '@deepseek-ai/dsh-llm/native'
-import type { UserMessage } from '@deepseek-ai/dsh-llm/native'
-import type { NativeContext, NativePlugin } from '@deepseek-ai/dsh-native-runtime'
-import type { NativeRequestContextProvider } from '@deepseek-ai/dsh-request-context-definition'
-import { NativeRequestContextProviderId } from '@deepseek-ai/dsh-request-context-definition'
-import type { NativeToolExecution } from '@deepseek-ai/dsh-native-tools'
-import type { ShellEnvContributor } from '@deepseek-ai/dsh-shell-env/definition'
-import type { NativeSkills } from '@deepseek-ai/dsh-skill/native'
-import { isUserInvocable, renderSkillContent } from '@deepseek-ai/dsh-skill/shared'
+import { createUserMessage } from '@redspark/rsh-llm/native'
+import type { UserMessage } from '@redspark/rsh-llm/native'
+import type { NativeContext, NativePlugin } from '@redspark/rsh-native-runtime'
+import type { NativeRequestContextProvider } from '@redspark/rsh-request-context-definition'
+import { NativeRequestContextProviderId } from '@redspark/rsh-request-context-definition'
+import type { NativeToolExecution } from '@redspark/rsh-native-tools'
+import type { ShellEnvContributor } from '@redspark/rsh-shell-env/definition'
+import type { NativeSkills } from '@redspark/rsh-skill/native'
+import { isUserInvocable, renderSkillContent } from '@redspark/rsh-skill/shared'
 import {
   ARCHIFY_SKILL_DIRECTORY_ENV,
   ARCHIFY_SKILL_NAME,
@@ -24,10 +24,10 @@ export type { ArchifyAutoInvocationSource } from './types.ts'
 const REQUEST_CONTEXT_ID = NativeRequestContextProviderId('dsh-archify')
 const REQUEST_CONTEXT_ORDER = 200
 
-/** Cordis-free Host entry for @deepseek-ai/dsh-archify. */
+/** Cordis-free Host entry for @redspark/rsh-archify. */
 export const plugin: NativePlugin = {
   apiVersion: 1,
-  name: '@deepseek-ai/dsh-archify',
+  name: '@redspark/rsh-archify',
   targets: ['host'],
   requires: ['skills', 'shellEnv', 'requestContexts'],
   provides: [],

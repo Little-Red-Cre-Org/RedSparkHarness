@@ -3,10 +3,10 @@
  * hooks run; Windows selects `commandWindows` or its `command_windows` alias when present. Other
  * hook types and `async: true` commands are recorded as skipped. The bridge does not substitute
  * values into command strings.
- * @module @deepseek-ai/dsh-hooks-codex/config
+ * @module @redspark/rsh-hooks-codex/config
  */
 
-import { matcherDiagnostic, type MatcherGroup } from '@deepseek-ai/dsh-hook-protocol'
+import { matcherDiagnostic, type MatcherGroup } from '@redspark/rsh-hook-protocol'
 
 /** Hook event names in the current Codex hooks reference. */
 export const CODEX_EVENTS = [

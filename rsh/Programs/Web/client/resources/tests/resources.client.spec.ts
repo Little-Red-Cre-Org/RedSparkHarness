@@ -5,13 +5,13 @@
  * never by timing.
  */
 import { describe, expect, it, onTestFinished, vi } from 'vitest'
-import { Context } from '@deepseek-ai/cordis'
-import type { RemoteFailure, RemoteResult } from '@deepseek-ai/dsh-typert-protocol'
-import { RemoteError } from '@deepseek-ai/dsh-client-test-runtime'
+import { Context } from '@redspark/cordis'
+import type { RemoteFailure, RemoteResult } from '@redspark/rsh-typert-protocol'
+import { RemoteError } from '@redspark/rsh-client-test-runtime'
 import { protocolOf, RESOURCE_SCHEME, ResourceRegistry } from '../src/client/resources.ts'
 import type { ResourceOpenContext, ResourceProvider } from '../src/client/contract.ts'
 
-declare module '@deepseek-ai/dsh-client-ui-slots' {
+declare module '@redspark/rsh-client-ui-slots' {
   interface ResourceProtocolMap {
     feed: string
     counter: number

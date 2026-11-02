@@ -8,14 +8,14 @@ import {
   createSystemMessage,
   createToolResultMessage,
   createUserMessage,
-} from '@deepseek-ai/dsh-llm'
+} from '@redspark/rsh-llm'
 import {
   SESSION_FORMAT_VERSION,
   Session,
   SessionId,
-} from '@deepseek-ai/dsh-session'
+} from '@redspark/rsh-session'
 // Carries the session/title event declaration into this fixture builder.
-import type {} from '@deepseek-ai/dsh-session-title'
+import type {} from '@redspark/rsh-session-title'
 
 /** Options for one deterministic long-chat fixture. */
 export interface ChatScrollFixtureOptions {
@@ -71,7 +71,7 @@ function appendSystemPrompt(session: Session, turn: number, step: number): void 
     step,
     message: createSystemMessage(
       'Synthetic chat-scroll system prompt.',
-      '@deepseek-ai/dsh-system-prompt',
+      '@redspark/rsh-system-prompt',
     ),
   }, { surfaceOp: 'append' })
 }

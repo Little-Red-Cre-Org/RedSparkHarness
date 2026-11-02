@@ -25,28 +25,28 @@ const root = resolve(import.meta.dirname, '..', '..')
 const WORKSPACE_MANIFEST_GLOB = 'rsh/**/package.json'
 const NON_WORKSPACE_MANIFEST_PARTS = ['/tests/fixtures/', '/Programs/SDK/python/', '/Tests/benchmarks/']
 const vendoredPackages = new Set([
-  '@deepseek-ai/cordis',
-  '@deepseek-ai/cosmokit',
-  '@deepseek-ai/schemastery',
-  '@deepseek-ai/cordis-plugin-loader',
-  '@deepseek-ai/cordis-plugin-include',
-  '@deepseek-ai/cordis-plugin-group',
-  '@deepseek-ai/cordis-plugin-timer',
-  '@deepseek-ai/cordis-plugin-hmr',
-  '@deepseek-ai/cordis-plugin-logger-console',
+  '@redspark/cordis',
+  '@redspark/cosmokit',
+  '@redspark/schemastery',
+  '@redspark/cordis-plugin-loader',
+  '@redspark/cordis-plugin-include',
+  '@redspark/cordis-plugin-group',
+  '@redspark/cordis-plugin-timer',
+  '@redspark/cordis-plugin-hmr',
+  '@redspark/cordis-plugin-logger-console',
 ])
 const publicNativePackages = new Set([
-  '@deepseek-ai/node-addon-system',
-  '@deepseek-ai/node-addon-system-darwin-arm64',
-  '@deepseek-ai/node-addon-system-darwin-x64',
-  '@deepseek-ai/node-addon-system-linux-arm64',
-  '@deepseek-ai/node-addon-system-linux-x64',
+  '@redspark/node-addon-system',
+  '@redspark/node-addon-system-darwin-arm64',
+  '@redspark/node-addon-system-darwin-x64',
+  '@redspark/node-addon-system-linux-arm64',
+  '@redspark/node-addon-system-linux-x64',
 ])
 /** Deliberate source payloads whose exact bytes are part of the package's audit surface. */
 const publicationSourceAllowlist: Readonly<Record<string, readonly string[]>> = {
-  '@deepseek-ai/node-addon-system': ['src/main.c', 'src/flock.c'],
+  '@redspark/node-addon-system': ['src/main.c', 'src/flock.c'],
 }
-const repositoryUrl = 'git+https://github.com/deepseek-harness/deepseek-harness.git'
+const repositoryUrl = 'git+https://github.com/redspark-harness/redspark-harness.git'
 /**
  * Source home the published packages point consumers at. It differs from
  * {@link repositoryUrl}, which the Landlock packages keep because npm resolves
@@ -60,7 +60,7 @@ const publishedRepositoryUrl = 'git+https://github.com/Little-Red-Cre-Org/RedSpa
 /** Packages that participate in the experimental policy. */
 const experimentalPackageDirectory = /^rsh\/Modules\/Community\/experimental\/[^/]+$/
 /** npm namespace reserved for experimental packages. */
-const experimentalPackageNamePrefix = '@deepseek-ai/dsh-experimental-'
+const experimentalPackageNamePrefix = '@redspark/rsh-experimental-'
 /** Ordinary directories whose packages this repository publishes: one release member each. */
 const standardReleaseMemberDirectory = new RegExp('^(?:' + [
   'rsh/Core/vendor/[^/]+',
@@ -84,14 +84,14 @@ const applicationPackageDirectories = new Set([
 ])
 const localArtifactDirs = new Set(['node_modules'])
 const appPackageFiles: Readonly<Record<string, readonly string[]>> = {
-  '@deepseek-ai/dsh': ['lib/*.js', 'lib/types/**/*.d.ts'],
-  '@deepseek-ai/dsh-desktop-host': [
+  '@redspark/dsh': ['lib/*.js', 'lib/types/**/*.d.ts'],
+  '@redspark/rsh-desktop-host': [
     'lib/*.js',
     'lib/types/**/*.d.ts',
   ],
   // Sourcemaps stay out by payload policy; worker preview remains a separate
   // private experimental surface.
-  '@deepseek-ai/dsh-web-frontend': ['dist', '!dist/**/*.map'],
+  '@redspark/rsh-web-frontend': ['dist', '!dist/**/*.map'],
 }
 
 /** The subset of package.json fields this constraint check cares about. */
@@ -165,229 +165,229 @@ function workspaceManifests(): WorkspaceManifest[] {
 }
 
 const packageFileExtras: Readonly<Record<string, readonly string[]>> = {
-  '@deepseek-ai/dsh-desktop-host-compatibility': ['config/desktop.cordis.patch.yml'],
-  '@deepseek-ai/dsh-sdk-child': ['lib/native.js'],
-  '@deepseek-ai/dsh-sdk-runtime': ['lib/native.js'],
-  '@deepseek-ai/dsh-approval-definition': ['lib/legacy.js'],
-  '@deepseek-ai/dsh-command-feedback': ['lib/native.js', 'lib/shared-*.js'],
-  '@deepseek-ai/dsh-http-routes': ['lib/host.js', 'lib/native.js', 'lib/shared-*.js'],
-  '@deepseek-ai/dsh-webhook-github': ['lib/native.js'],
-  '@deepseek-ai/dsh-webhook': ['lib/definition.js', 'lib/native.js', 'lib/shared-*.js'],
-  '@deepseek-ai/dsh-permission-presets': ['lib/native.js', 'lib/native-definition.js', 'lib/shared-*.js'],
-  '@deepseek-ai/dsh-client-ui-slots': ['lib/native.js'],
-  '@deepseek-ai/dsh-commands': ['lib/native.js', 'lib/shared-*.js'],
-  '@deepseek-ai/dsh-goal': ['lib/native.js', 'lib/projection.js', 'lib/shared-*.js'],
-  '@deepseek-ai/dsh-goal-round-driver': ['lib/native.js', 'lib/shared-*.js'],
-  '@deepseek-ai/dsh-tool-goal': ['lib/native.js', 'lib/shared-*.js'],
-  '@deepseek-ai/dsh-command-goal': ['lib/native.js', 'lib/shared-*.js'],
-  '@deepseek-ai/dsh-codex-app-server': ['lib/native.js', 'lib/wire.js', 'lib/shared-*.js'],
-  '@deepseek-ai/dsh-subagent-claude-code': ['lib/native.js', 'lib/shared-*.js'],
-  '@deepseek-ai/dsh-llm-pi-ai': ['lib/native.js', 'lib/shared-*.js'],
-  '@deepseek-ai/dsh-llm-deepseek': ['lib/native.js', 'lib/shared-*.js'],
-  '@deepseek-ai/dsh-deepseek-llm-api-extensions': ['lib/native.js', 'lib/shared-*.js'],
-  '@deepseek-ai/dsh-plugin-package-inventory-deepseek': ['lib/native.js', 'lib/shared-*.js'],
-  '@deepseek-ai/dsh-session-log-deepseek': ['lib/native.js', 'lib/shared-*.js'],
-  '@deepseek-ai/dsh-session-telemetry': ['lib/records.js'],
-  '@deepseek-ai/dsh-cordis-bridge': ['lib/native.js', 'lib/types-*.js'],
-  '@deepseek-ai/dsh-native-persona': ['lib/native.js', 'lib/native-*.js', 'lib/types-*.js'],
-  '@deepseek-ai/dsh-session-telemetry-otel': ['lib/native.js', 'lib/shared-*.js'],
-  '@deepseek-ai/dsh-skill': ['lib/native.js', 'lib/shared.js'],
-  '@deepseek-ai/dsh-skill-filesystem': ['lib/native.js', 'lib/shared-*.js'],
-  '@deepseek-ai/dsh-tool-skill': ['lib/native.js'],
-  '@deepseek-ai/dsh-message-feedback': ['lib/native.js', 'lib/shared-*.js'],
-  '@deepseek-ai/dsh-archify': ['lib/native.js', 'lib/shared-*.js'],
-  '@deepseek-ai/dsh-request-context': ['lib/native.js', 'lib/shared-*.js'],
+  '@redspark/rsh-desktop-host-compatibility': ['config/desktop.cordis.patch.yml'],
+  '@redspark/rsh-sdk-child': ['lib/native.js'],
+  '@redspark/rsh-sdk-runtime': ['lib/native.js'],
+  '@redspark/rsh-approval-definition': ['lib/legacy.js'],
+  '@redspark/rsh-command-feedback': ['lib/native.js', 'lib/shared-*.js'],
+  '@redspark/rsh-http-routes': ['lib/host.js', 'lib/native.js', 'lib/shared-*.js'],
+  '@redspark/rsh-webhook-github': ['lib/native.js'],
+  '@redspark/rsh-webhook': ['lib/definition.js', 'lib/native.js', 'lib/shared-*.js'],
+  '@redspark/rsh-permission-presets': ['lib/native.js', 'lib/native-definition.js', 'lib/shared-*.js'],
+  '@redspark/rsh-client-ui-slots': ['lib/native.js'],
+  '@redspark/rsh-commands': ['lib/native.js', 'lib/shared-*.js'],
+  '@redspark/rsh-goal': ['lib/native.js', 'lib/projection.js', 'lib/shared-*.js'],
+  '@redspark/rsh-goal-round-driver': ['lib/native.js', 'lib/shared-*.js'],
+  '@redspark/rsh-tool-goal': ['lib/native.js', 'lib/shared-*.js'],
+  '@redspark/rsh-command-goal': ['lib/native.js', 'lib/shared-*.js'],
+  '@redspark/rsh-codex-app-server': ['lib/native.js', 'lib/wire.js', 'lib/shared-*.js'],
+  '@redspark/rsh-subagent-claude-code': ['lib/native.js', 'lib/shared-*.js'],
+  '@redspark/rsh-llm-pi-ai': ['lib/native.js', 'lib/shared-*.js'],
+  '@redspark/rsh-llm-deepseek': ['lib/native.js', 'lib/shared-*.js'],
+  '@redspark/rsh-deepseek-llm-api-extensions': ['lib/native.js', 'lib/shared-*.js'],
+  '@redspark/rsh-plugin-package-inventory-deepseek': ['lib/native.js', 'lib/shared-*.js'],
+  '@redspark/rsh-session-log-deepseek': ['lib/native.js', 'lib/shared-*.js'],
+  '@redspark/rsh-session-telemetry': ['lib/records.js'],
+  '@redspark/rsh-cordis-bridge': ['lib/native.js', 'lib/types-*.js'],
+  '@redspark/rsh-native-persona': ['lib/native.js', 'lib/native-*.js', 'lib/types-*.js'],
+  '@redspark/rsh-session-telemetry-otel': ['lib/native.js', 'lib/shared-*.js'],
+  '@redspark/rsh-skill': ['lib/native.js', 'lib/shared.js'],
+  '@redspark/rsh-skill-filesystem': ['lib/native.js', 'lib/shared-*.js'],
+  '@redspark/rsh-tool-skill': ['lib/native.js'],
+  '@redspark/rsh-message-feedback': ['lib/native.js', 'lib/shared-*.js'],
+  '@redspark/rsh-archify': ['lib/native.js', 'lib/shared-*.js'],
+  '@redspark/rsh-request-context': ['lib/native.js', 'lib/shared-*.js'],
   // Statically linked client libraries keep their stylesheets next to the emitted
   // JavaScript, which imports them by relative path: the compile shell runs
   // them through its own CSS pipeline, so the sheets are published artifacts.
   // The glob covers whichever sheets a package emits; sourcemaps stay
   // unpublished, as everywhere else in the repository.
-  '@deepseek-ai/dsh-client-ui-tool': ['lib/native.js', 'lib/tool-renderer.js', 'lib/**/*.css'],
-  '@deepseek-ai/dsh-client-ui-approval': ['lib/native.js', 'lib/**/*.css'],
-  '@deepseek-ai/dsh-client-ui-user-questions': ['lib/native.js', 'lib/**/*.css'],
-  '@deepseek-ai/dsh-client-ui-conversation': ['lib/tool-records.js', 'lib/conversation-copy.js'],
-  '@deepseek-ai/dsh-client-locale': ['lib/dictionary.js', 'lib/native.js'],
-  '@deepseek-ai/dsh-client-ui-primitives': ['lib/**/*.css'],
-  '@deepseek-ai/dsh-client-ui-dockkit': ['lib/**/*.css'],
-  '@deepseek-ai/dsh-client-web': ['lib/boot-page.js', 'lib/**/*.css', 'lib/native-boot.js'],
-  '@deepseek-ai/dsh-web-compatibility': ['dist', '!dist/**/*.map', '!dist/preview.html', '!dist/preview'],
-  '@deepseek-ai/dsh-client-ui-theme': ['lib/native.js', 'lib/theme-contract.js', 'lib/styles'],
-  '@deepseek-ai/dsh-client-ui-sidebar-right': [
+  '@redspark/rsh-client-ui-tool': ['lib/native.js', 'lib/tool-renderer.js', 'lib/**/*.css'],
+  '@redspark/rsh-client-ui-approval': ['lib/native.js', 'lib/**/*.css'],
+  '@redspark/rsh-client-ui-user-questions': ['lib/native.js', 'lib/**/*.css'],
+  '@redspark/rsh-client-ui-conversation': ['lib/tool-records.js', 'lib/conversation-copy.js'],
+  '@redspark/rsh-client-locale': ['lib/dictionary.js', 'lib/native.js'],
+  '@redspark/rsh-client-ui-primitives': ['lib/**/*.css'],
+  '@redspark/rsh-client-ui-dockkit': ['lib/**/*.css'],
+  '@redspark/rsh-client-web': ['lib/boot-page.js', 'lib/**/*.css', 'lib/native-boot.js'],
+  '@redspark/rsh-web-compatibility': ['dist', '!dist/**/*.map', '!dist/preview.html', '!dist/preview'],
+  '@redspark/rsh-client-ui-theme': ['lib/native.js', 'lib/theme-contract.js', 'lib/styles'],
+  '@redspark/rsh-client-ui-sidebar-right': [
     'lib/native.js',
     'lib/native-ui.module.css',
     'lib/native-files.module.css',
   ],
-  '@deepseek-ai/dsh-client-ui-sidebar': ['lib/native.js', 'lib/client/SidebarRoot.module.css'],
-  '@deepseek-ai/dsh-client-ui-session': ['lib/native.js'],
-  '@deepseek-ai/dsh-client-ui-layout': ['lib/native.js', 'lib/client/AppFrame.module.css'],
-  '@deepseek-ai/dsh-client-ui-attachment': ['lib/native.js', 'lib/**/*.css'],
-  '@deepseek-ai/dsh-client-ui-goal': ['lib/native.js', 'lib/**/*.css'],
-  '@deepseek-ai/dsh-client-ui-workflow-run': ['lib/native.js', 'lib/**/*.css'],
-  '@deepseek-ai/dsh-client-ui-trajectory': ['lib/native.js', 'lib/**/*.css'],
-  '@deepseek-ai/dsh-client-ui-message-feedback': ['lib/native.js', 'lib/**/*.css'],
-  '@deepseek-ai/dsh-client-ui-skill': ['lib/native.js', 'lib/**/*.css'],
-  '@deepseek-ai/dsh-client-ui-subagent': ['lib/native.js', 'lib/**/*.css'],
-  '@deepseek-ai/dsh-client-ui-deliverables': ['lib/native.js', 'lib/**/*.css'],
-  '@deepseek-ai/dsh-client-modules': ['lib/native.js'],
+  '@redspark/rsh-client-ui-sidebar': ['lib/native.js', 'lib/client/SidebarRoot.module.css'],
+  '@redspark/rsh-client-ui-session': ['lib/native.js'],
+  '@redspark/rsh-client-ui-layout': ['lib/native.js', 'lib/client/AppFrame.module.css'],
+  '@redspark/rsh-client-ui-attachment': ['lib/native.js', 'lib/**/*.css'],
+  '@redspark/rsh-client-ui-goal': ['lib/native.js', 'lib/**/*.css'],
+  '@redspark/rsh-client-ui-workflow-run': ['lib/native.js', 'lib/**/*.css'],
+  '@redspark/rsh-client-ui-trajectory': ['lib/native.js', 'lib/**/*.css'],
+  '@redspark/rsh-client-ui-message-feedback': ['lib/native.js', 'lib/**/*.css'],
+  '@redspark/rsh-client-ui-skill': ['lib/native.js', 'lib/**/*.css'],
+  '@redspark/rsh-client-ui-subagent': ['lib/native.js', 'lib/**/*.css'],
+  '@redspark/rsh-client-ui-deliverables': ['lib/native.js', 'lib/**/*.css'],
+  '@redspark/rsh-client-modules': ['lib/native.js'],
   // Direct native credential entries share backend bundles where necessary.
-  '@deepseek-ai/dsh-web': ['lib/native.js', 'lib/shared-*.js'],
-  '@deepseek-ai/dsh-web-fetch-http': ['lib/native.js', 'lib/shared-*.js'],
-  '@deepseek-ai/dsh-web-search-deepseek': ['lib/native.js', 'lib/shared-*.js'],
-  '@deepseek-ai/dsh-web-search-exa': ['lib/native.js', 'lib/shared-*.js'],
-  '@deepseek-ai/dsh-web-search-perplexity': ['lib/native.js', 'lib/shared-*.js'],
-  '@deepseek-ai/dsh-tool-web': ['lib/native.js', 'lib/shared-*.js'],
-  '@deepseek-ai/dsh-credentials': ['lib/native.js', 'lib/shared-*.js'],
-  '@deepseek-ai/dsh-authorization': ['lib/native.js', 'lib/shared-*.js'],
-  '@deepseek-ai/dsh-credentials-local': ['lib/native.js', 'lib/backend.js', 'lib/shared-*.js'],
-  '@deepseek-ai/dsh-deepseek-account': ['lib/native.js', 'lib/shared-*.js'],
-  '@deepseek-ai/dsh-task-scheduler': ['lib/native.js', 'lib/shared-*.js'],
-  '@deepseek-ai/dsh-schedule': ['lib/native.js'],
-  '@deepseek-ai/dsh-agent-loop': ['lib/compat-settings.js', 'lib/settings-owner-*.js'],
-  '@deepseek-ai/dsh-agent-default-model': ['lib/compat-settings.js', 'lib/settings-owner-*.js'],
-  '@deepseek-ai/dsh-agent-presets': [
+  '@redspark/rsh-web': ['lib/native.js', 'lib/shared-*.js'],
+  '@redspark/rsh-web-fetch-http': ['lib/native.js', 'lib/shared-*.js'],
+  '@redspark/rsh-web-search-deepseek': ['lib/native.js', 'lib/shared-*.js'],
+  '@redspark/rsh-web-search-exa': ['lib/native.js', 'lib/shared-*.js'],
+  '@redspark/rsh-web-search-perplexity': ['lib/native.js', 'lib/shared-*.js'],
+  '@redspark/rsh-tool-web': ['lib/native.js', 'lib/shared-*.js'],
+  '@redspark/rsh-credentials': ['lib/native.js', 'lib/shared-*.js'],
+  '@redspark/rsh-authorization': ['lib/native.js', 'lib/shared-*.js'],
+  '@redspark/rsh-credentials-local': ['lib/native.js', 'lib/backend.js', 'lib/shared-*.js'],
+  '@redspark/rsh-deepseek-account': ['lib/native.js', 'lib/shared-*.js'],
+  '@redspark/rsh-task-scheduler': ['lib/native.js', 'lib/shared-*.js'],
+  '@redspark/rsh-schedule': ['lib/native.js'],
+  '@redspark/rsh-agent-loop': ['lib/compat-settings.js', 'lib/settings-owner-*.js'],
+  '@redspark/rsh-agent-default-model': ['lib/compat-settings.js', 'lib/settings-owner-*.js'],
+  '@redspark/rsh-agent-presets': [
     'presets', 'lib/native.js', 'lib/selection.js', 'lib/compat-settings.js',
     'lib/settings-owner-*.js', 'lib/shared-*.js',
   ],
-  '@deepseek-ai/dsh-tool-subagent': [
+  '@redspark/rsh-tool-subagent': [
     'lib/model-selection-settings.js', 'lib/compat-settings.js', 'lib/native.js', 'lib/shared-*.js',
   ],
-  '@deepseek-ai/dsh-compat-settings-adapters': [
+  '@redspark/rsh-compat-settings-adapters': [
     'lib/agent-loop.js', 'lib/agent-default-model.js', 'lib/agent-presets.js', 'lib/tool-subagent.js',
     'lib/settings-entry-*.js',
   ],
-  '@deepseek-ai/dsh-settings': ['lib/native.js', 'lib/shared-*.js'],
-  '@deepseek-ai/dsh-settings-definition': ['lib/native.js'],
-  '@deepseek-ai/dsh-compat-settings-definition': ['lib/events.js'],
-  '@deepseek-ai/dsh-settings-file': ['lib/native.js', 'lib/shared-*.js'],
-  '@deepseek-ai/dsh-subprocess': ['lib/native.js', 'lib/shared-*.js'],
-  '@deepseek-ai/dsh-storage': ['lib/native.js', 'lib/shared-*.js'],
-  '@deepseek-ai/dsh-storage-json': ['lib/native.js', 'lib/shared-*.js'],
-  '@deepseek-ai/dsh-storage-domain': ['lib/native.js', 'lib/shared-*.js'],
-  '@deepseek-ai/dsh-launch-environment': ['lib/native.js', 'lib/layers.js', 'lib/shared-*.js'],
-  '@deepseek-ai/dsh-mcp-client': ['lib/native.js', 'lib/types.js', 'lib/acp-config.js', 'lib/shared-*.js'],
+  '@redspark/rsh-settings': ['lib/native.js', 'lib/shared-*.js'],
+  '@redspark/rsh-settings-definition': ['lib/native.js'],
+  '@redspark/rsh-compat-settings-definition': ['lib/events.js'],
+  '@redspark/rsh-settings-file': ['lib/native.js', 'lib/shared-*.js'],
+  '@redspark/rsh-subprocess': ['lib/native.js', 'lib/shared-*.js'],
+  '@redspark/rsh-storage': ['lib/native.js', 'lib/shared-*.js'],
+  '@redspark/rsh-storage-json': ['lib/native.js', 'lib/shared-*.js'],
+  '@redspark/rsh-storage-domain': ['lib/native.js', 'lib/shared-*.js'],
+  '@redspark/rsh-launch-environment': ['lib/native.js', 'lib/layers.js', 'lib/shared-*.js'],
+  '@redspark/rsh-mcp-client': ['lib/native.js', 'lib/types.js', 'lib/acp-config.js', 'lib/shared-*.js'],
   // The CPython side ships as source .py files, published as-is rather than built.
-  '@deepseek-ai/dsh-experimental-code-runtime-python': ['py/**/*.py'],
+  '@redspark/rsh-experimental-code-runtime-python': ['py/**/*.py'],
   // The shipped preset compositions travel inside the roster package.
-  '@deepseek-ai/dsh-agent-preset-standing': ['lib/native.js', 'lib/shared-*.js'],
-  '@deepseek-ai/dsh-plan-mode': ['lib/native.js', 'lib/shared-*.js'],
-  '@deepseek-ai/dsh-session-title': ['lib/native.js', 'lib/shared-*.js'],
-  '@deepseek-ai/dsh-session-title-llm': ['lib/native.js', 'lib/shared-*.js'],
-  '@deepseek-ai/dsh-session-title-first-prompt-llm': ['lib/native.js', 'lib/shared-*.js'],
-  '@deepseek-ai/dsh-session-title-all-prompts-llm': ['lib/native.js', 'lib/shared-*.js'],
-  '@deepseek-ai/dsh-tool-todo': ['lib/native.js', 'lib/shared-*.js', 'lib/client-native.js'],
-  '@deepseek-ai/dsh-workspace': ['lib/native.js', 'lib/shared-*.js'],
+  '@redspark/rsh-agent-preset-standing': ['lib/native.js', 'lib/shared-*.js'],
+  '@redspark/rsh-plan-mode': ['lib/native.js', 'lib/shared-*.js'],
+  '@redspark/rsh-session-title': ['lib/native.js', 'lib/shared-*.js'],
+  '@redspark/rsh-session-title-llm': ['lib/native.js', 'lib/shared-*.js'],
+  '@redspark/rsh-session-title-first-prompt-llm': ['lib/native.js', 'lib/shared-*.js'],
+  '@redspark/rsh-session-title-all-prompts-llm': ['lib/native.js', 'lib/shared-*.js'],
+  '@redspark/rsh-tool-todo': ['lib/native.js', 'lib/shared-*.js', 'lib/client-native.js'],
+  '@redspark/rsh-workspace': ['lib/native.js', 'lib/shared-*.js'],
   // The terminal bundle's entry and runtime export share a generated chunk.
-  '@deepseek-ai/dsh-native-tui': ['lib/native.js', 'lib/shared-*.js'],
-  '@deepseek-ai/dsh-terminal-ui': ['lib/presentation.js', 'lib/utilities.js', 'lib/shared-*.js'],
-  '@deepseek-ai/dsh-rsh': ['lib/runtime.js', 'lib/runtime-*.js'],
+  '@redspark/rsh-native-tui': ['lib/native.js', 'lib/shared-*.js'],
+  '@redspark/rsh-terminal-ui': ['lib/presentation.js', 'lib/utilities.js', 'lib/shared-*.js'],
+  '@redspark/rsh-rsh': ['lib/runtime.js', 'lib/runtime-*.js'],
   // Native filesystem entries share their storage and error implementations
   // across the legacy root and direct native package exports.
-  '@deepseek-ai/dsh-fs': [
+  '@redspark/rsh-fs': [
     'lib/native.js', 'lib/runtime.js', 'lib/operations.js', 'lib/types.js', 'lib/shared-*.js',
   ],
-  '@deepseek-ai/dsh-fs-local': [
+  '@redspark/rsh-fs-local': [
     'lib/native.js', 'lib/backend.js', 'lib/shared-*.js',
   ],
-  '@deepseek-ai/dsh-fs-sandbox': ['lib/native.js', 'lib/shared-*.js', 'lib/types-*.js'],
-  '@deepseek-ai/dsh-sandbox': ['lib/native-types.js', 'lib/native.js', 'lib/roots.js', 'lib/shared-*.js'],
-  '@deepseek-ai/dsh-sandbox-local': ['lib/native.js', 'lib/shared-*.js'],
-  '@deepseek-ai/dsh-user-questions': ['lib/native.js', 'lib/protocol.js', 'lib/broker.js', 'lib/shared-*.js'],
-  '@deepseek-ai/dsh-user-question-broker': ['lib/native.js'],
-  '@deepseek-ai/dsh-tool-ask-user': ['lib/native.js', 'lib/shared-*.js'],
-  '@deepseek-ai/dsh-tool-code-runtime': ['lib/native.js'],
-  '@deepseek-ai/dsh-code-runtime-process-sandbox': ['lib/native.js'],
-  '@deepseek-ai/dsh-fs-observation-policy': ['lib/native.js', 'lib/shared-*.js'],
-  '@deepseek-ai/dsh-tool-fs-search': ['lib/native.js', 'lib/shared-*.js'],
-  '@deepseek-ai/dsh-subagent-protocol': ['lib/descriptor.js', 'lib/assistant-output.js', 'lib/shared-*.js'],
-  '@deepseek-ai/dsh-acp-protocol': ['lib/shared-*.js'],
-  '@deepseek-ai/dsh-acp-child': ['lib/native.js', 'lib/shared-*.js'],
-  '@deepseek-ai/dsh-spill': ['lib/native.js', 'lib/shared-*.js'],
-  '@deepseek-ai/dsh-spill-local': ['lib/native.js', 'lib/shared-*.js'],
-  '@deepseek-ai/dsh-tool-fs': ['lib/native.js', 'lib/read-image-core.js', 'lib/shared-*.js'],
-  '@deepseek-ai/dsh-native-web-session-controller': ['lib/native.js', 'lib/shared-*.js'],
-  '@deepseek-ai/dsh-native-schedule-controller': ['lib/native.js', 'lib/shared-*.js'],
-  '@deepseek-ai/dsh-native-jobs-controller': ['lib/native.js', 'lib/shared-*.js'],
-  '@deepseek-ai/dsh-client-ui-jobs': ['lib/native.js'],
-  '@deepseek-ai/dsh-client-ui-settings-general': ['lib/native.js'],
-  '@deepseek-ai/dsh-client-ui-settings-plugins': ['lib/native.js'],
-  '@deepseek-ai/dsh-client-native-session': [
+  '@redspark/rsh-fs-sandbox': ['lib/native.js', 'lib/shared-*.js', 'lib/types-*.js'],
+  '@redspark/rsh-sandbox': ['lib/native-types.js', 'lib/native.js', 'lib/roots.js', 'lib/shared-*.js'],
+  '@redspark/rsh-sandbox-local': ['lib/native.js', 'lib/shared-*.js'],
+  '@redspark/rsh-user-questions': ['lib/native.js', 'lib/protocol.js', 'lib/broker.js', 'lib/shared-*.js'],
+  '@redspark/rsh-user-question-broker': ['lib/native.js'],
+  '@redspark/rsh-tool-ask-user': ['lib/native.js', 'lib/shared-*.js'],
+  '@redspark/rsh-tool-code-runtime': ['lib/native.js'],
+  '@redspark/rsh-code-runtime-process-sandbox': ['lib/native.js'],
+  '@redspark/rsh-fs-observation-policy': ['lib/native.js', 'lib/shared-*.js'],
+  '@redspark/rsh-tool-fs-search': ['lib/native.js', 'lib/shared-*.js'],
+  '@redspark/rsh-subagent-protocol': ['lib/descriptor.js', 'lib/assistant-output.js', 'lib/shared-*.js'],
+  '@redspark/rsh-acp-protocol': ['lib/shared-*.js'],
+  '@redspark/rsh-acp-child': ['lib/native.js', 'lib/shared-*.js'],
+  '@redspark/rsh-spill': ['lib/native.js', 'lib/shared-*.js'],
+  '@redspark/rsh-spill-local': ['lib/native.js', 'lib/shared-*.js'],
+  '@redspark/rsh-tool-fs': ['lib/native.js', 'lib/read-image-core.js', 'lib/shared-*.js'],
+  '@redspark/rsh-native-web-session-controller': ['lib/native.js', 'lib/shared-*.js'],
+  '@redspark/rsh-native-schedule-controller': ['lib/native.js', 'lib/shared-*.js'],
+  '@redspark/rsh-native-jobs-controller': ['lib/native.js', 'lib/shared-*.js'],
+  '@redspark/rsh-client-ui-jobs': ['lib/native.js'],
+  '@redspark/rsh-client-ui-settings-general': ['lib/native.js'],
+  '@redspark/rsh-client-ui-settings-plugins': ['lib/native.js'],
+  '@redspark/rsh-client-native-session': [
     'lib/native.js', 'lib/list-types.js', 'lib/follow-types.js', 'lib/model-controls.js',
     'lib/human.js', 'lib/workspaces.js', 'lib/schedule-types.js', 'lib/jobs-types.js', 'lib/native-*.js',
     'lib/shared-*.js', 'lib/workspaces-*.js',
   ],
-  '@deepseek-ai/dsh-host-directory-picker-native': ['lib/native-picker.js', 'lib/native-picker-*.js'],
-  '@deepseek-ai/dsh-client-native-application': ['lib/native.js', 'lib/controller.js', 'lib/controller-*.js', 'lib/native-*.js', 'lib/*.css'],
-  '@deepseek-ai/dsh-native-web-host': ['lib/native.js'],
-  '@deepseek-ai/dsh-native-acp': ['lib/native.js', 'lib/shared-*.js'],
-  '@deepseek-ai/dsh-native-sdk-server': ['lib/native.js'],
+  '@redspark/rsh-host-directory-picker-native': ['lib/native-picker.js', 'lib/native-picker-*.js'],
+  '@redspark/rsh-client-native-application': ['lib/native.js', 'lib/controller.js', 'lib/controller-*.js', 'lib/native-*.js', 'lib/*.css'],
+  '@redspark/rsh-native-web-host': ['lib/native.js'],
+  '@redspark/rsh-native-acp': ['lib/native.js', 'lib/shared-*.js'],
+  '@redspark/rsh-native-sdk-server': ['lib/native.js'],
   // Workflow's native Definition, typed source leaves, and worker/Consumer
   // bundles are published alongside the existing Cordis package entry.
-  '@deepseek-ai/dsh-workflow': ['lib/errors.js', 'lib/native.js', 'lib/types.js', 'lib/shared-*.js'],
-  '@deepseek-ai/dsh-workflow-worker-thread': ['lib/native.js', 'lib/shared-*.js'],
-  '@deepseek-ai/dsh-tool-workflow': ['lib/native.js', 'lib/foreground.js', 'lib/shared-*.js'],
-  '@deepseek-ai/dsh-tool-ralph': ['lib/native.js', 'lib/shared-*.js'],
-  '@deepseek-ai/dsh-native-web-assets': ['lib/native-client.js', 'lib/shared-*.js'],
-  '@deepseek-ai/dsh-native-tools': [
+  '@redspark/rsh-workflow': ['lib/errors.js', 'lib/native.js', 'lib/types.js', 'lib/shared-*.js'],
+  '@redspark/rsh-workflow-worker-thread': ['lib/native.js', 'lib/shared-*.js'],
+  '@redspark/rsh-tool-workflow': ['lib/native.js', 'lib/foreground.js', 'lib/shared-*.js'],
+  '@redspark/rsh-tool-ralph': ['lib/native.js', 'lib/shared-*.js'],
+  '@redspark/rsh-native-web-assets': ['lib/native-client.js', 'lib/shared-*.js'],
+  '@redspark/rsh-native-tools': [
     'lib/json-schema.js', 'lib/code-output.js', 'lib/ts-types.js', 'lib/py-types.js',
     'lib/ordered-dispatch.js', 'lib/types.js', 'lib/presentation.js', 'lib/shared-*.js',
   ],
-  '@deepseek-ai/dsh-client-ui-renderer': ['lib/native.js'],
-  '@deepseek-ai/dsh-client-connection': [
+  '@redspark/rsh-client-ui-renderer': ['lib/native.js'],
+  '@redspark/rsh-client-connection': [
     'lib/native.js', 'lib/native-host.js', 'lib/http-bridge.js', 'lib/native-http-bridge.js',
     'lib/host-core-*.js', 'lib/rpc-*.js', 'lib/recovery-config-*.js',
   ],
-  '@deepseek-ai/dsh-agent-instructions': ['lib/native.js', 'lib/shared-*.js'],
-  '@deepseek-ai/dsh-native-headless': ['lib/native.js', 'lib/shared-*.js'],
-  '@deepseek-ai/dsh-native-session-execution': ['lib/root-route.js', 'lib/read-history.js', 'lib/shared-*.js'],
-  '@deepseek-ai/dsh-native-agent': ['lib/inbox.js', 'lib/consumed-work.js', 'lib/turn-boundary.js'],
-  '@deepseek-ai/dsh-session-query-sqlite': ['lib/core.js', 'lib/native.js', 'lib/shared-*.js'],
-  '@deepseek-ai/dsh-session-projection-cache': ['lib/native.js', 'lib/shared-*.js'],
-  '@deepseek-ai/dsh-session-projection': ['lib/native.js', 'lib/shared-*.js'],
-  '@deepseek-ai/dsh-tool-session-query': ['lib/native.js', 'lib/shared-*.js'],
-  '@deepseek-ai/dsh-native-model-execution': ['lib/native.js', 'lib/shared-*.js', 'lib/model-selection.js', 'lib/model-directory.js', 'lib/adapter-directory.js'],
-  '@deepseek-ai/dsh-token-meter': ['lib/native.js', 'lib/shared-*.js'],
-  '@deepseek-ai/dsh-compaction': ['lib/native.js'],
-  '@deepseek-ai/dsh-compaction-basic': ['lib/native.js', 'lib/shared-*.js'],
-  '@deepseek-ai/dsh-compaction-tool-result-pruner': ['lib/native.js', 'lib/shared-*.js'],
-  '@deepseek-ai/dsh-command-compact': ['lib/native.js', 'lib/shared-*.js'],
-  '@deepseek-ai/dsh-llm-retry': ['lib/native.js', 'lib/shared-*.js'],
-  '@deepseek-ai/dsh-tool-call-timeout-policy': ['lib/native.js', 'lib/shared-*.js'],
-  '@deepseek-ai/dsh-repeat-tool-reminder': ['lib/native.js', 'lib/shared-*.js'],
-  '@deepseek-ai/dsh-native-model-selection': ['lib/types.js', 'lib/shared-*.js', 'lib/native.js'],
-  '@deepseek-ai/dsh-shell': ['lib/native.js', 'lib/shared-*.js'],
-  '@deepseek-ai/dsh-shell-env': ['lib/native.js', 'lib/definition.js', 'lib/shared-*.js'],
-  '@deepseek-ai/dsh-bash-local': ['lib/native.js', 'lib/shared-*.js'],
-  '@deepseek-ai/dsh-bash-sandbox': ['lib/native.js', 'lib/shared-*.js'],
-  '@deepseek-ai/dsh-pwsh-local': ['lib/native.js', 'lib/resolve.js', 'lib/shared-*.js'],
-  '@deepseek-ai/dsh-pwsh-sandbox': ['lib/native.js', 'lib/shared-*.js'],
-  '@deepseek-ai/dsh-tool-bash': ['lib/native.js', 'lib/shared-*.js'],
-  '@deepseek-ai/dsh-tool-pwsh': ['lib/native.js', 'lib/shared-*.js'],
-  '@deepseek-ai/dsh-terminal': ['lib/native.js', 'lib/protocol.js', 'lib/error.js', 'lib/shared-*.js'],
-  '@deepseek-ai/dsh-terminal-bash': ['lib/native.js', 'lib/shared-*.js'],
-  '@deepseek-ai/dsh-tool-terminal': ['lib/native.js', 'lib/shared-*.js'],
-  '@deepseek-ai/dsh-native-code-runtime': ['lib/native.js', 'lib/shared-*.js', 'lib/process-child.js'],
-  '@deepseek-ai/dsh-native-time-context': ['lib/native.js', 'lib/types-*.js'],
-  '@deepseek-ai/dsh-native-tmux-context': ['lib/native.js', 'lib/shared-*.js'],
+  '@redspark/rsh-agent-instructions': ['lib/native.js', 'lib/shared-*.js'],
+  '@redspark/rsh-native-headless': ['lib/native.js', 'lib/shared-*.js'],
+  '@redspark/rsh-native-session-execution': ['lib/root-route.js', 'lib/read-history.js', 'lib/shared-*.js'],
+  '@redspark/rsh-native-agent': ['lib/inbox.js', 'lib/consumed-work.js', 'lib/turn-boundary.js'],
+  '@redspark/rsh-session-query-sqlite': ['lib/core.js', 'lib/native.js', 'lib/shared-*.js'],
+  '@redspark/rsh-session-projection-cache': ['lib/native.js', 'lib/shared-*.js'],
+  '@redspark/rsh-session-projection': ['lib/native.js', 'lib/shared-*.js'],
+  '@redspark/rsh-tool-session-query': ['lib/native.js', 'lib/shared-*.js'],
+  '@redspark/rsh-native-model-execution': ['lib/native.js', 'lib/shared-*.js', 'lib/model-selection.js', 'lib/model-directory.js', 'lib/adapter-directory.js'],
+  '@redspark/rsh-token-meter': ['lib/native.js', 'lib/shared-*.js'],
+  '@redspark/rsh-compaction': ['lib/native.js'],
+  '@redspark/rsh-compaction-basic': ['lib/native.js', 'lib/shared-*.js'],
+  '@redspark/rsh-compaction-tool-result-pruner': ['lib/native.js', 'lib/shared-*.js'],
+  '@redspark/rsh-command-compact': ['lib/native.js', 'lib/shared-*.js'],
+  '@redspark/rsh-llm-retry': ['lib/native.js', 'lib/shared-*.js'],
+  '@redspark/rsh-tool-call-timeout-policy': ['lib/native.js', 'lib/shared-*.js'],
+  '@redspark/rsh-repeat-tool-reminder': ['lib/native.js', 'lib/shared-*.js'],
+  '@redspark/rsh-native-model-selection': ['lib/types.js', 'lib/shared-*.js', 'lib/native.js'],
+  '@redspark/rsh-shell': ['lib/native.js', 'lib/shared-*.js'],
+  '@redspark/rsh-shell-env': ['lib/native.js', 'lib/definition.js', 'lib/shared-*.js'],
+  '@redspark/rsh-bash-local': ['lib/native.js', 'lib/shared-*.js'],
+  '@redspark/rsh-bash-sandbox': ['lib/native.js', 'lib/shared-*.js'],
+  '@redspark/rsh-pwsh-local': ['lib/native.js', 'lib/resolve.js', 'lib/shared-*.js'],
+  '@redspark/rsh-pwsh-sandbox': ['lib/native.js', 'lib/shared-*.js'],
+  '@redspark/rsh-tool-bash': ['lib/native.js', 'lib/shared-*.js'],
+  '@redspark/rsh-tool-pwsh': ['lib/native.js', 'lib/shared-*.js'],
+  '@redspark/rsh-terminal': ['lib/native.js', 'lib/protocol.js', 'lib/error.js', 'lib/shared-*.js'],
+  '@redspark/rsh-terminal-bash': ['lib/native.js', 'lib/shared-*.js'],
+  '@redspark/rsh-tool-terminal': ['lib/native.js', 'lib/shared-*.js'],
+  '@redspark/rsh-native-code-runtime': ['lib/native.js', 'lib/shared-*.js', 'lib/process-child.js'],
+  '@redspark/rsh-native-time-context': ['lib/native.js', 'lib/types-*.js'],
+  '@redspark/rsh-native-tmux-context': ['lib/native.js', 'lib/shared-*.js'],
   // Legacy Cordis entries and native values share their pure implementations.
-  '@deepseek-ai/dsh-session': ['lib/native.js', 'lib/event-validation.js'],
-  '@deepseek-ai/dsh-llm': ['lib/native.js', 'lib/shared-*.js'],
-  '@deepseek-ai/dsh-session-persistence': ['lib/native.js', 'lib/deletion.js', 'lib/shared-*.js'],
-  '@deepseek-ai/dsh-session-query': ['lib/native.js', 'lib/shared-*.js'],
-  '@deepseek-ai/dsh-session-reference': ['lib/native.js', 'lib/shared-*.js'],
+  '@redspark/rsh-session': ['lib/native.js', 'lib/event-validation.js'],
+  '@redspark/rsh-llm': ['lib/native.js', 'lib/shared-*.js'],
+  '@redspark/rsh-session-persistence': ['lib/native.js', 'lib/deletion.js', 'lib/shared-*.js'],
+  '@redspark/rsh-session-query': ['lib/native.js', 'lib/shared-*.js'],
+  '@redspark/rsh-session-reference': ['lib/native.js', 'lib/shared-*.js'],
   // The Web Host mounts the default-off settings owner independently of each
   // Agent-scoped delegation-tool instance.
-  '@deepseek-ai/dsh-tool-subagent-control': ['lib/native.js'],
+  '@redspark/rsh-tool-subagent-control': ['lib/native.js'],
   // The JSONL backend resolves its private verification Worker relative to
   // import.meta.url; it is shipped without a public package subpath.
-  '@deepseek-ai/dsh-session-persistence-jsonl': ['lib/worker.cjs', 'lib/native.js', 'lib/native-inspection.js', 'lib/shared-*.js'],
+  '@redspark/rsh-session-persistence-jsonl': ['lib/worker.cjs', 'lib/native.js', 'lib/native-inspection.js', 'lib/shared-*.js'],
   // The argv-prefix runner entry ships beside the lib as its own bundle;
   // sandbox-local resolves it through the package's ./runner export. tsdown
   // also shares its generated FFI code through a hashed runtime chunk.
-  '@deepseek-ai/dsh-sandbox-windows-acl': ['lib/runner.js', 'lib/types-*.js'],
-  '@deepseek-ai/dsh-skill-badge': ['assets'],
+  '@redspark/rsh-sandbox-windows-acl': ['lib/runner.js', 'lib/types-*.js'],
+  '@redspark/rsh-skill-badge': ['assets'],
   // Ordinary native containment ships a path-loaded runner and its shared
   // runner chunk beside the existing node-pty permission repair.
-  '@deepseek-ai/dsh-subprocess-local': [
+  '@redspark/rsh-subprocess-local': [
     'lib/native.js',
     'lib/child-connection.js',
     'lib/shared-*.js',
@@ -398,16 +398,16 @@ const packageFileExtras: Readonly<Record<string, readonly string[]>> = {
   // tsdown shares the repository/pack code between the lib entry and the bin
   // through a hashed chunk. The committed bin.js is the link target pnpm can
   // resolve at install time, before the build produces lib/bin.js.
-  '@deepseek-ai/dsh-experimental-webworker-packer': ['bin.js', 'lib/repository-*.js'],
+  '@redspark/rsh-experimental-webworker-packer': ['bin.js', 'lib/repository-*.js'],
 }
 const packageFileOverrides: Readonly<Record<string, readonly string[]>> = {
   // tsdown emits the SDK client's public entries and shared chunks together.
-  '@deepseek-ai/dsh-sdk-client': ['lib/*.js', 'lib/types/**/*.d.ts'],
+  '@redspark/rsh-sdk-client': ['lib/*.js', 'lib/types/**/*.d.ts'],
   // This package must publish its exact RedSpark research license with its native entries.
-  '@deepseek-ai/dsh-acp-child': [
+  '@redspark/rsh-acp-child': [
     'LICENSE-REDSPARK-RESEARCH.txt', 'lib/index.js', 'lib/native.js', 'lib/shared-*.js', 'lib/types/**/*.d.ts',
   ],
-  '@deepseek-ai/dsh-session-log-export': [
+  '@redspark/rsh-session-log-export': [
     'lib/index.js', 'lib/native.js', 'lib/client.js', 'lib/shared-*.js', 'lib/types/**/*.d.ts',
   ],
 }
@@ -546,18 +546,18 @@ function isDshLibraryDirectory(dir: string): boolean {
 
 /** Require Cordis according to whether a DSH library is native, mixed, or compatibility-only. */
 export function checkCordisPeerPolicy({ dir, manifest }: WorkspaceManifest): string[] {
-  if (!isDshLibraryDirectory(dir) || manifest.name?.startsWith('@deepseek-ai/dsh-') !== true) return []
+  if (!isDshLibraryDirectory(dir) || manifest.name?.startsWith('@redspark/rsh-') !== true) return []
   const label = manifest.name
-  const peer = manifest.peerDependencies?.['@deepseek-ai/cordis']
-  const dev = manifest.devDependencies?.['@deepseek-ai/cordis']
-  const optionalPeer = manifest.peerDependenciesMeta?.['@deepseek-ai/cordis']?.optional
-  const direct = manifest.dependencies?.['@deepseek-ai/cordis']
-    ?? manifest.optionalDependencies?.['@deepseek-ai/cordis']
+  const peer = manifest.peerDependencies?.['@redspark/cordis']
+  const dev = manifest.devDependencies?.['@redspark/cordis']
+  const optionalPeer = manifest.peerDependenciesMeta?.['@redspark/cordis']?.optional
+  const direct = manifest.dependencies?.['@redspark/cordis']
+    ?? manifest.optionalDependencies?.['@redspark/cordis']
   const native = nativePackageDirectories.has(dir)
   const mixed = mixedNativeEntryDirectories.has(dir)
     || mixedNativeLibraryDirectories.has(dir)
     || nativeSafeSourceSubpaths.has(dir)
-  const compatibilityOnlyPeer = nativeCompatibilityOnlyPeers.get(dir)?.includes('@deepseek-ai/cordis') === true
+  const compatibilityOnlyPeer = nativeCompatibilityOnlyPeers.get(dir)?.includes('@redspark/cordis') === true
   const errors: string[] = []
 
   if (native) {
@@ -572,16 +572,16 @@ export function checkCordisPeerPolicy({ dir, manifest }: WorkspaceManifest): str
     if (dev === undefined) errors.push(`${label}: mixed native package must also declare Cordis as a devDependency`)
     if (optionalPeer !== true) errors.push(`${label}: mixed native package must mark the Cordis peer as optional`)
   } else {
-    if (peer === undefined) errors.push(`${label}: @deepseek-ai/cordis must be a peerDependency`)
-    if (dev === undefined) errors.push(`${label}: @deepseek-ai/cordis must also be a devDependency`)
+    if (peer === undefined) errors.push(`${label}: @redspark/cordis must be a peerDependency`)
+    if (dev === undefined) errors.push(`${label}: @redspark/cordis must also be a devDependency`)
     if (optionalPeer === true && !compatibilityOnlyPeer) {
       errors.push(`${label}: compatibility package must keep the Cordis peer required`)
     }
   }
 
-  if (direct !== undefined) errors.push(`${label}: @deepseek-ai/cordis must not be a direct dependency`)
+  if (direct !== undefined) errors.push(`${label}: @redspark/cordis must not be a direct dependency`)
   if (peer !== undefined && dev !== undefined && peer !== dev) {
-    errors.push(`${label}: @deepseek-ai/cordis peer (${peer}) and dev (${dev}) ranges must match`)
+    errors.push(`${label}: @redspark/cordis peer (${peer}) and dev (${dev}) ranges must match`)
   }
   return errors
 }
@@ -601,7 +601,7 @@ export function checkCordisPeerPolicy({ dir, manifest }: WorkspaceManifest): str
  */
 export function checkDshFamilyVersion(manifest: PackageManifest, expected: string | undefined): string | undefined {
   const name = manifest.name
-  if (name !== '@deepseek-ai/dsh' && name?.startsWith('@deepseek-ai/dsh-') !== true) return undefined
+  if (name !== '@redspark/dsh' && name?.startsWith('@redspark/rsh-') !== true) return undefined
   if (manifest.version !== expected) {
     return `${name}: package.json version must match root version ${expected ?? '(missing)'}`
   }
@@ -674,7 +674,7 @@ export function checkWorkspaceManifest({ dir, manifest }: WorkspaceManifest): st
     return errors
   }
 
-  if (manifest.name?.startsWith('@deepseek-ai/')) {
+  if (manifest.name?.startsWith('@redspark/')) {
     const allowedSources = publicationSourceAllowlist[manifest.name] ?? []
     for (const file of manifest.files ?? []) {
       if (isForbiddenPublicationFile(file) && !allowedSources.includes(file)) {
@@ -683,7 +683,7 @@ export function checkWorkspaceManifest({ dir, manifest }: WorkspaceManifest): st
     }
   }
 
-  if (applicationPackageDirectories.has(dir) && dir !== desktopApplicationDirectory && manifest.name?.startsWith('@deepseek-ai/')) {
+  if (applicationPackageDirectories.has(dir) && dir !== desktopApplicationDirectory && manifest.name?.startsWith('@redspark/')) {
     const expectedFiles = appPackageFiles[manifest.name]
     if (expectedFiles === undefined) {
       errors.push(`${label}: app package has no publication files policy`)
@@ -701,7 +701,7 @@ export function checkWorkspaceManifest({ dir, manifest }: WorkspaceManifest): st
     }
   }
 
-  if (isDshLibraryDirectory(dir) && manifest.name?.startsWith('@deepseek-ai/dsh-')) {
+  if (isDshLibraryDirectory(dir) && manifest.name?.startsWith('@redspark/rsh-')) {
     errors.push(...checkCordisPeerPolicy({ dir, manifest }))
     if (manifest.type !== 'module') {
       errors.push(`${label}: package.json must set "type": "module"`)

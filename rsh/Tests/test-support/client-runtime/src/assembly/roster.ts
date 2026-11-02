@@ -3,11 +3,11 @@
  * the plan that annotates one with the rows the test provides itself. `webApp`
  * and `bundleRoster` (`./bundle-roster.ts`) read rosters from the bundle patch
  * files; a spec may also build one inline with {@link ClientRoster.of}.
- * @module @deepseek-ai/dsh-client-test-runtime/src/assembly/roster
+ * @module @redspark/rsh-client-test-runtime/src/assembly/roster
  */
-import type { Context } from '@deepseek-ai/cordis'
-import type { WebBootEntry, WebBootGraph } from '@deepseek-ai/dsh-client-modules/client'
-import { PLATFORM_MODULES } from '@deepseek-ai/dsh-web-compatibility/src/platform.ts'
+import type { Context } from '@redspark/cordis'
+import type { WebBootEntry, WebBootGraph } from '@redspark/rsh-client-modules/client'
+import { PLATFORM_MODULES } from '@redspark/rsh-web-compatibility/src/platform.ts'
 
 /** One browser plugin row as `dsh.client` declares it, keyed by package name. */
 export interface ClientRosterRow {

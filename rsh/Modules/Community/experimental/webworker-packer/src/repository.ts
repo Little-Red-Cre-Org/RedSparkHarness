@@ -5,13 +5,13 @@
  * The library half takes all of this as parameters. Keeping the lookup here is what
  * lets the same library pack a different tree, and what keeps `pack.ts` free of
  * assumptions about pnpm workspaces or the `dsh` CLI.
- * @module @deepseek-ai/dsh-experimental-webworker-packer/src/repository
+ * @module @redspark/rsh-experimental-webworker-packer/src/repository
  */
 import { execFileSync } from 'node:child_process'
 import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, relative } from 'node:path'
-import { DSH_HOME_ENV } from '@deepseek-ai/dsh-home-paths'
+import { RSH_HOME_ENV } from '@redspark/rsh-home-paths'
 import type { ConfigTree, ImageTree, PackResult } from './pack.ts'
 
 /**
@@ -100,7 +100,7 @@ export function indexWorkspacePackages(repoRoot: string): Map<string, string> {
 /**
  * Compose one profile through the real CLI dump path, leaving `!!js`
  * unevaluated. The dump runs against a throwaway Harness home and default
- * layers only, so the image is the shipped profile: the machine's `$DSH_HOME`
+ * layers only, so the image is the shipped profile: the machine's `$RSH_HOME`
  * — its profile manifest with locally installed bundles, and its patch files —
  * would otherwise leak this machine's plugins into the image and break the
  * same-tree-same-bytes guarantee.
@@ -118,7 +118,7 @@ export function composeProfile(repoRoot: string, profile: string, fromDefaultPro
     return execFileSync(
       process.execPath,
       args,
-      { cwd: repoRoot, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024, env: { ...process.env, [DSH_HOME_ENV]: home } },
+      { cwd: repoRoot, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024, env: { ...process.env, [RSH_HOME_ENV]: home } },
     )
   } finally {
     rmSync(home, { recursive: true, force: true })

@@ -1,13 +1,13 @@
 /** Native GitHub ingress admits trusted rule requests through the selected Session authority. */
 import { z } from 'zod'
-import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
-import type { NativeCredentials } from '@deepseek-ai/dsh-credentials/native'
-import { credentialRef } from '@deepseek-ai/dsh-credentials/native'
-import type {} from '@deepseek-ai/dsh-http-routes/native'
-import type {} from '@deepseek-ai/dsh-native-session-execution'
-import type { NativeRootRouteId } from '@deepseek-ai/dsh-native-session-execution/root-route'
-import type { NativeWebhookRuleOperations } from '@deepseek-ai/dsh-webhook/definition'
-import type { VerifiedWebhookDelivery } from '@deepseek-ai/dsh-webhook/types'
+import type { NativePlugin } from '@redspark/rsh-native-runtime'
+import type { NativeCredentials } from '@redspark/rsh-credentials/native'
+import { credentialRef } from '@redspark/rsh-credentials/native'
+import type {} from '@redspark/rsh-http-routes/native'
+import type {} from '@redspark/rsh-native-session-execution'
+import type { NativeRootRouteId } from '@redspark/rsh-native-session-execution/root-route'
+import type { NativeWebhookRuleOperations } from '@redspark/rsh-webhook/definition'
+import type { VerifiedWebhookDelivery } from '@redspark/rsh-webhook/types'
 import { createGitHubWebhookRequestHandler } from './ingress.ts'
 
 /** Explicit route, rotating credential reference, body limit, and authorized root route. */
@@ -41,7 +41,7 @@ export function resolveNativeGitHubWebhookConfig(input: unknown): NativeGitHubWe
 /** Real Native plugin entry selected explicitly by a profile installation. */
 export const plugin: NativePlugin = {
   apiVersion: 1,
-  name: '@deepseek-ai/dsh-webhook-github',
+  name: '@redspark/rsh-webhook-github',
   targets: ['host'],
   requires: ['httpRoutes', 'credentials', 'rootExecution', 'webhookRules'],
   provides: [],

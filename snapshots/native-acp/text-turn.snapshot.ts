@@ -7,12 +7,12 @@ import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { expect, it } from 'vitest'
 import { execa } from 'execa'
-import { NATIVE_ACP_SUBAGENT_METADATA_KEY } from '@deepseek-ai/dsh-acp-protocol'
-import { JsonRpcLineTransport } from '@deepseek-ai/dsh-json-rpc-line'
-import { parseSessionLog } from '@deepseek-ai/dsh-llm-replay'
-import { requestImageHandleText } from '@deepseek-ai/dsh-llm/native'
+import { NATIVE_ACP_SUBAGENT_METADATA_KEY } from '@redspark/rsh-acp-protocol'
+import { JsonRpcLineTransport } from '@redspark/rsh-json-rpc-line'
+import { parseSessionLog } from '@redspark/rsh-llm-replay'
+import { requestImageHandleText } from '@redspark/rsh-llm/native'
 import { formatSystemPromptSnapshot, formatToolSchemasSnapshot, normalizedSystemPrompts, normalizedToolSchemas,
-  normalizeSessionSnapshot, redactSessionSnapshotIds } from '@deepseek-ai/dsh-session-snapshot'
+  normalizeSessionSnapshot, redactSessionSnapshotIds } from '@redspark/rsh-session-snapshot'
 
 const root = fileURLToPath(new URL('../../', import.meta.url))
 const scene = join(root, 'snapshots/native-acp/text-turn')
@@ -66,7 +66,7 @@ it('replays a native ACP turn with exact model input, output and durable Session
         { id: 'fixture-model-next', input: ['text', 'image'], reasoningEfforts: { off: null, high: 'high' } }] } } } },
   ] }))
   const child = execa(process.execPath, [join(root, 'rsh/Programs/CLI/lib/bin.js'), '--profile', 'acp', '--patch', patch], {
-    cwd: workspace, env: { ...process.env, DSH_HOME: home, NATIVE_SDK_FIXTURE_KEY: 'fixture-key', DSH_TELEMETRY_DISABLED: '1' },
+    cwd: workspace, env: { ...process.env, RSH_HOME: home, NATIVE_SDK_FIXTURE_KEY: 'fixture-key', RSH_TELEMETRY_DISABLED: '1' },
     reject: false, timeout: 30_000, killSignal: 'SIGKILL',
   })
   const transport = new JsonRpcLineTransport(child.stdout, child.stdin)
@@ -157,7 +157,7 @@ it('replays a native ACP turn with exact model input, output and durable Session
     if (prompts[0] === undefined || schemas[0] === undefined) throw new Error('native-acp snapshot: request header missing')
     const systemPrompt = formatSystemPromptSnapshot(prompts[0], prompts.slice(1))
     const tools = formatToolSchemasSnapshot(schemas[0], schemas.slice(1))
-    if (process.env.DSH_SNAPSHOT === 'refresh') {
+    if (process.env.RSH_SNAPSHOT === 'refresh') {
       writeFileSync(join(scene, 'protocol.expected.json'), protocol)
       writeFileSync(fixture, normalized)
       writeFileSync(join(scene, 'model-request.expected.json'), modelInput)
@@ -215,7 +215,7 @@ it('replays a native ACP turn with exact model input, output and durable Session
         .replaceAll(JSON.stringify(caption), JSON.stringify(stableCaption)) + '\n',
     }
     for (const [name, expected] of Object.entries(expectations)) {
-      if (process.env.DSH_SNAPSHOT === 'refresh') {
+      if (process.env.RSH_SNAPSHOT === 'refresh') {
         mkdirSync(permissionScene, { recursive: true })
         writeFileSync(join(permissionScene, name), expected)
       } else expect(expected).toBe(readFileSync(join(permissionScene, name), 'utf8'))
@@ -251,7 +251,7 @@ it('replays a native ACP turn with exact model input, output and durable Session
       'tool-schemas.expected.json': formatToolSchemasSnapshot(mcpSchemas[0], mcpSchemas.slice(1)),
     }
     for (const [name, expected] of Object.entries(mcpExpected)) {
-      if (process.env.DSH_SNAPSHOT === 'refresh') {
+      if (process.env.RSH_SNAPSHOT === 'refresh') {
         mkdirSync(mcpScene, { recursive: true })
         writeFileSync(join(mcpScene, name), expected)
       } else expect(expected).toBe(readFileSync(join(mcpScene, name), 'utf8'))

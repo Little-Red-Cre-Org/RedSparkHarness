@@ -1,9 +1,9 @@
 /** Program-owned resident Session storage and durable pending-message projection. */
-import { interruptedTurnClosers, Session, type SessionEvent, type SessionHeader, type TurnEndReason } from '@deepseek-ai/dsh-session/native'
-import type { MessageId, TextBlock, UserMessage } from '@deepseek-ai/dsh-llm/native'
-import type { InboxTarget } from '@deepseek-ai/dsh-native-agent'
-import { foldNativeInboxEvent, type NativeInboxState } from '@deepseek-ai/dsh-native-agent/inbox'
-import type { NativeSessionPersistenceOperations } from '@deepseek-ai/dsh-session-persistence/native'
+import { interruptedTurnClosers, Session, type SessionEvent, type SessionHeader, type TurnEndReason } from '@redspark/rsh-session/native'
+import type { MessageId, TextBlock, UserMessage } from '@redspark/rsh-llm/native'
+import type { InboxTarget } from '@redspark/rsh-native-agent'
+import { foldNativeInboxEvent, type NativeInboxState } from '@redspark/rsh-native-agent/inbox'
+import type { NativeSessionPersistenceOperations } from '@redspark/rsh-session-persistence/native'
 
 type Writer = Awaited<ReturnType<NativeSessionPersistenceOperations['open']>>
 type AppendObserver = (event: SessionEvent) => void

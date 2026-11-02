@@ -1,7 +1,7 @@
 /** Shared durable workspace instruction composition for native and Cordis execution. */
-import type { Session, UserMessage } from '@deepseek-ai/dsh-session/native'
-import { createUserMessage } from '@deepseek-ai/dsh-llm/native'
-import type { FileSystemOperations } from '@deepseek-ai/dsh-fs/native'
+import type { Session, UserMessage } from '@redspark/rsh-session/native'
+import { createUserMessage } from '@redspark/rsh-llm/native'
+import type { FileSystemOperations } from '@redspark/rsh-fs/native'
 import { workspaceBaselineIdentity, type ResolvedConfig } from './config.ts'
 import { findProjectRoot, loadBaselineInstructionSet } from './files.ts'
 import { applyInstructionVersionUpdates, baselineInstructionState, reconcileInstructionContext,

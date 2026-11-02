@@ -2,12 +2,12 @@
 import { type ReactNode } from 'react'
 import { flushSync } from 'react-dom'
 import { createRoot } from 'react-dom/client'
-import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
-export type { NativeClientApplication, NativeClientRenderer } from '@deepseek-ai/dsh-client-ui-slots/native'
+import type { NativePlugin } from '@redspark/rsh-native-runtime'
+export type { NativeClientApplication, NativeClientRenderer } from '@redspark/rsh-client-ui-slots/native'
 import { createSlotRenderer } from './client/scoped-slots.tsx'
 import { SlotRuntime } from './slot-runtime.ts'
 
-declare module '@deepseek-ai/dsh-native-runtime' {
+declare module '@redspark/rsh-native-runtime' {
   interface NativeServices {
     /** Shared React slot runtime used by native Client contributions. */
     clientSlots: SlotRuntime

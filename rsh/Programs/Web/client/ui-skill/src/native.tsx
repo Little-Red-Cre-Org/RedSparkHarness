@@ -11,15 +11,15 @@
  * Everything below the data source is shared with the Cordis renderer: the
  * same card, the same disclosure, the same copy.
  */
-import type { TranslateNS } from '@deepseek-ai/dsh-client-ui-slots'
+import type { TranslateNS } from '@redspark/rsh-client-ui-slots'
 import type { ReactElement } from 'react'
-import { en as commonEn, formatLocaleTemplate, zh as commonZh } from '@deepseek-ai/dsh-client-locale/dictionary'
+import { en as commonEn, formatLocaleTemplate, zh as commonZh } from '@redspark/rsh-client-locale/dictionary'
 import { SkillRow } from './client/SkillRow.tsx'
 import { en, NS, zh, type SkillKey } from './client/locales.ts'
-import type { ToolCallViewProps } from '@deepseek-ai/dsh-client-ui-tool/client'
+import type { ToolCallViewProps } from '@redspark/rsh-client-ui-tool/client'
 
 export { NS, en, zh, type SkillKey } from './client/locales.ts'
-export type { ToolCallBlock, ToolResultNode, RunningToolCall } from '@deepseek-ai/dsh-client-ui-tool/native'
+export type { ToolCallBlock, ToolResultNode, RunningToolCall } from '@redspark/rsh-client-ui-tool/native'
 
 /** Props of the Cordis-free skill tool row: the tool slice arrives from the caller. */
 export interface NativeSkillRowProps {

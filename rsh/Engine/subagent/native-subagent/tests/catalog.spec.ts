@@ -1,15 +1,15 @@
 import { expect, it, vi } from 'vitest'
-import { NativeAgentId, NativeAgentRegistry } from '@deepseek-ai/dsh-native-agent'
-import type { NativeAgent } from '@deepseek-ai/dsh-native-agent'
-import type { NativeContext } from '@deepseek-ai/dsh-native-runtime'
-import { NativeScope } from '@deepseek-ai/dsh-native-runtime'
-import { NativeSessionExecutionRegistry, type NativeSessionContinuations, type NativeSessionDelegation } from '@deepseek-ai/dsh-native-session-execution'
-import { SESSION_FORMAT_VERSION, Session, SessionId, type SessionEvent } from '@deepseek-ai/dsh-session/native'
+import { NativeAgentId, NativeAgentRegistry } from '@redspark/rsh-native-agent'
+import type { NativeAgent } from '@redspark/rsh-native-agent'
+import type { NativeContext } from '@redspark/rsh-native-runtime'
+import { NativeScope } from '@redspark/rsh-native-runtime'
+import { NativeSessionExecutionRegistry, type NativeSessionContinuations, type NativeSessionDelegation } from '@redspark/rsh-native-session-execution'
+import { SESSION_FORMAT_VERSION, Session, SessionId, type SessionEvent } from '@redspark/rsh-session/native'
 import {
   SUBAGENT_DESCRIPTOR_VERSION,
   snapshotSubagentDescriptor,
   type SubagentDelegationContext,
-} from '@deepseek-ai/dsh-subagent-protocol'
+} from '@redspark/rsh-subagent-protocol'
 import { NativeSubagentContinuations } from '../src/continuation.ts'
 import { NativeSpawnSubagents, type NativeSubagentRequest } from '../src/index.ts'
 

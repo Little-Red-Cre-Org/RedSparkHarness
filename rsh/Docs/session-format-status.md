@@ -30,7 +30,7 @@ latestReleasedVersion: 3
 evidenceTag: dsh-v0.1.5-alpha.1
 ```
 
-Evidence: [published release](https://github.com/deepseek-harness/deepseek-harness/releases/tag/dsh-v0.1.5-alpha.1) and [its tagged writer source](https://github.com/deepseek-harness/deepseek-harness/blob/dsh-v0.1.5-alpha.1/packages/core/session/src/types.ts).
+Evidence: [published release](https://github.com/redspark-harness/redspark-harness/releases/tag/dsh-v0.1.5-alpha.1) and [its tagged writer source](https://github.com/redspark-harness/redspark-harness/blob/dsh-v0.1.5-alpha.1/packages/core/session/src/types.ts).
 
 <a id="updating-the-record"></a>
 ## Updating the record

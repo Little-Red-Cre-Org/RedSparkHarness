@@ -1,6 +1,6 @@
 import { join, win32, posix } from 'node:path'
-import { BUNDLED_SKILL_RANK } from '@deepseek-ai/dsh-skill/shared'
-import type { SkillSource } from '@deepseek-ai/dsh-skill/types'
+import { BUNDLED_SKILL_RANK } from '@redspark/rsh-skill/shared'
+import type { SkillSource } from '@redspark/rsh-skill/types'
 import type { ResolvedConfig } from './config.ts'
 
 const PROJECT_DSH_RANK = 100

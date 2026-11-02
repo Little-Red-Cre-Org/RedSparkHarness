@@ -2,9 +2,9 @@
 import { createServer, type Server } from 'node:http'
 import type { AddressInfo } from 'node:net'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { NativeHost, NativeScope, resolveInstallation, type NativePlugin } from '@deepseek-ai/dsh-native-runtime'
-import { createLaunchEnvironmentSnapshot, launchEnvironmentProvider } from '@deepseek-ai/dsh-launch-environment/native'
-import { plugin as webPlugin, type NativeWebOperation, type NativeWebService } from '@deepseek-ai/dsh-web/native'
+import { NativeHost, NativeScope, resolveInstallation, type NativePlugin } from '@redspark/rsh-native-runtime'
+import { createLaunchEnvironmentSnapshot, launchEnvironmentProvider } from '@redspark/rsh-launch-environment/native'
+import { plugin as webPlugin, type NativeWebOperation, type NativeWebService } from '@redspark/rsh-web/native'
 import { publicHttpNetwork } from '../src/network.ts'
 import { plugin } from '../src/native.ts'
 

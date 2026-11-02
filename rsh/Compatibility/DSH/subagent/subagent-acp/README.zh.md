@@ -3,7 +3,7 @@ description: "面向用户与维护者的进程外 ACP（Agent Client Protocol�
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-subagent-acp
+# @redspark/rsh-subagent-acp
 
 [English](README.md) | 中文
 
@@ -46,18 +46,18 @@ kind: "package-reference"
 
 生成的[配置目录](../../../../Docs/config-catalog.zh.md#deepseek-aidsh-subagent-acp)是每个受支持字段及其 JSDoc 的穷尽式真源。
 
-RedSpark Harness 子进程使用产品启动器和一个显式的绝对路径 `DSH_HOME`。隔离的 home 可防止嵌套运行时发现启动者个人的 profile 或凭据；通用 ACP 提供方不会把这一要求强加给非 DSH agent。
+RedSpark Harness 子进程使用产品启动器和一个显式的绝对路径 `RSH_HOME`。隔离的 home 可防止嵌套运行时发现启动者个人的 profile 或凭据；通用 ACP 提供方不会把这一要求强加给非 DSH agent。
 
 ```yaml
 - id: subagent-acp
-  name: '@deepseek-ai/dsh-subagent-acp'
+  name: '@redspark/rsh-subagent-acp'
   config:
     providerName: acp
     command: dsh
     args: ['--profile', 'acp', '--patch', '/absolute/path/to/acp.patch.yml']
     permission: reject
     env:
-      DSH_HOME: /absolute/path/to/isolated-child-home
+      RSH_HOME: /absolute/path/to/isolated-child-home
       DEEPSEEK_API_KEY: !!js process.env.DEEPSEEK_API_KEY
 ```
 

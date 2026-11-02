@@ -1,5 +1,5 @@
 {
-  "name": "@deepseek-ai/dsh-http-routes-cordis",
+  "name": "@redspark/rsh-http-routes-cordis",
   "description": "Cordis compatibility augmentation for the shared HTTP route Definition",
   "version": "1.0.0",
   "publishConfig": { "access": "public" },
@@ -18,10 +18,10 @@
   "files": ["lib/index.js", "lib/types/**/*.d.ts"],
   "license": "MIT",
   "peerDependencies": {
-    "@deepseek-ai/cordis": "workspace:^",
-    "@deepseek-ai/dsh-http-routes": "workspace:^"
+    "@redspark/cordis": "workspace:^",
+    "@redspark/rsh-http-routes": "workspace:^"
   },
   "devDependencies": {
-    "@deepseek-ai/cordis": "workspace:^"
+    "@redspark/cordis": "workspace:^"
   }
 }

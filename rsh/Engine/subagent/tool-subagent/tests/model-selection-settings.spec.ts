@@ -1,25 +1,25 @@
 /** Default-off settings and per-session model-selection decisions. */
 
 import { describe, expect, it, vi } from 'vitest'
-import { Context } from '@deepseek-ai/cordis'
-import { ToolCallId } from '@deepseek-ai/dsh-llm'
-import { Session, SESSION_FORMAT_VERSION, SessionId } from '@deepseek-ai/dsh-session'
-import type { SessionEvent } from '@deepseek-ai/dsh-session'
-import { bindScopeParent, createScope, scopeOf, scopeTarget } from '@deepseek-ai/dsh-scope'
-import { SettingsProvider } from '@deepseek-ai/dsh-settings'
-import type { SettingsNamespace } from '@deepseek-ai/dsh-settings'
-import InvariantRegistry from '@deepseek-ai/dsh-invariants'
-import AgentLoop from '@deepseek-ai/dsh-agent-loop'
-import { mountAgentLoopTestDependencies } from '@deepseek-ai/dsh-agent-loop-testkit'
-import SessionProjectionRegistry from '@deepseek-ai/dsh-session-projection'
-import SubagentRuntime from '@deepseek-ai/dsh-subagent'
-import * as SubagentSpawn from '@deepseek-ai/dsh-subagent-spawn-in-process'
+import { Context } from '@redspark/cordis'
+import { ToolCallId } from '@redspark/rsh-llm'
+import { Session, SESSION_FORMAT_VERSION, SessionId } from '@redspark/rsh-session'
+import type { SessionEvent } from '@redspark/rsh-session'
+import { bindScopeParent, createScope, scopeOf, scopeTarget } from '@redspark/rsh-scope'
+import { SettingsProvider } from '@redspark/rsh-settings'
+import type { SettingsNamespace } from '@redspark/rsh-settings'
+import InvariantRegistry from '@redspark/rsh-invariants'
+import AgentLoop from '@redspark/rsh-agent-loop'
+import { mountAgentLoopTestDependencies } from '@redspark/rsh-agent-loop-testkit'
+import SessionProjectionRegistry from '@redspark/rsh-session-projection'
+import SubagentRuntime from '@redspark/rsh-subagent'
+import * as SubagentSpawn from '@redspark/rsh-subagent-spawn-in-process'
 import * as tool from '../src/compat.ts'
 import * as ToolInvariant from '../src/invariant.ts'
 import SubagentModelSelectionConfig, {
   SUBAGENT_MODEL_SELECTION_SETTINGS_NAMESPACE,
 } from '../src/model-selection-settings.ts'
-import SubagentModelSelectionSettingsAdapter from '@deepseek-ai/dsh-compat-settings-adapters/tool-subagent'
+import SubagentModelSelectionSettingsAdapter from '@redspark/rsh-compat-settings-adapters/tool-subagent'
 import {
   subagentModelSelectionPolicy,
   subagentModelSelectionProjectionDefinition,
@@ -379,7 +379,7 @@ describe('SubagentModelSelectionConfig', () => {
         modelSelectionSettings: true,
         maxDepth: 'provider-managed',
       })
-    }).toThrow('requires @deepseek-ai/dsh-tool-subagent/model-selection-settings')
+    }).toThrow('requires @redspark/rsh-tool-subagent/model-selection-settings')
     await withoutSettings.fiber.dispose()
 
     const withoutAgent = await boot(false)

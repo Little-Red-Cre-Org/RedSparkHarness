@@ -24,15 +24,15 @@ concurrency:
 
 env:
   PRIMARY_NODE_VERSION: '24'
-  DSH_TELEMETRY_DISABLED: '1'
+  RSH_TELEMETRY_DISABLED: '1'
 
 jobs:
   pack:
     name: Pack npm tarballs
     # Persistent runners accept only trusted, credential-free rehearsals.
     runs-on: >-
-      ${{ vars.DSH_CI_FAILOVER_LINUX == 'selfhosted'
-        && github.repository == 'deepseek-harness/deepseek-harness'
+      ${{ vars.RSH_CI_FAILOVER_LINUX == 'selfhosted'
+        && github.repository == 'redspark-harness/redspark-harness'
         && github.actor != 'dependabot[bot]'
         && ((github.event_name == 'push' && github.ref == 'refs/heads/master')
           || (github.event_name == 'pull_request'

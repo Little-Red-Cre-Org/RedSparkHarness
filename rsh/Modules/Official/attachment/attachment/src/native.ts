@@ -1,5 +1,5 @@
 /** Native attachment service Definition without a Cordis service or runtime import. */
-import type {} from '@deepseek-ai/dsh-native-runtime'
+import type {} from '@redspark/rsh-native-runtime'
 import type { AttachmentOperations } from './types.ts'
 
 export type { AttachmentOperations } from './types.ts'
@@ -11,6 +11,6 @@ export type {
   StoredImageAttachment,
 } from './types.ts'
 
-declare module '@deepseek-ai/dsh-native-runtime' {
+declare module '@redspark/rsh-native-runtime' {
   interface NativeServices { attachments: AttachmentOperations }
 }

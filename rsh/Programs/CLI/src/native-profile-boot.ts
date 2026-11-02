@@ -2,16 +2,16 @@
 import { watch, type FSWatcher } from 'node:fs'
 import { basename, dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import type { NativeApplication, NativePlugin } from '@deepseek-ai/dsh-native-runtime'
-import { installProxyFromEnvironment } from '@deepseek-ai/dsh-http-proxy'
-import { loadLayeredEnv } from '@deepseek-ai/dsh-launch-environment/layers'
-import { resolveDshHome } from '@deepseek-ai/dsh-home-paths'
+import type { NativeApplication, NativePlugin } from '@redspark/rsh-native-runtime'
+import { installProxyFromEnvironment } from '@redspark/rsh-http-proxy'
+import { loadLayeredEnv } from '@redspark/rsh-launch-environment/layers'
+import { resolveDshHome } from '@redspark/rsh-home-paths'
 import { loadNativeProfile, readNativeProfile, refuseLegacyPatch, replaceNativeProfile } from './native-profile-loader.ts'
 import { nativeProfileReloadMode } from './native-profile-config.ts'
 import { migrateNativeLegacyConfig } from './native-legacy-config.ts'
 import { createProcessShutdown } from './process-shutdown.ts'
 
-const SDK_CHILD_APPROVAL_RELAY_ENV = 'DSH_NATIVE_SDK_CHILD_APPROVAL_RELAY'
+const SDK_CHILD_APPROVAL_RELAY_ENV = 'RSH_NATIVE_SDK_CHILD_APPROVAL_RELAY'
 
 function watchProfileFiles(files: readonly string[], changed: () => void, failed: (error: Error) => void): () => void {
   const directories = new Map<string, Set<string>>()
@@ -90,7 +90,7 @@ export async function runNativeProfile(options: {
   const onApplication = (selected: NativeApplication): void => { application = selected }
   let carrier: { readonly plugin: NativePlugin; readonly scope: string } | undefined
   if (options.profile === 'native-sdk' && process.env[SDK_CHILD_APPROVAL_RELAY_ENV] === '1') {
-    const { plugin } = await import('@deepseek-ai/dsh-native-approval/native')
+    const { plugin } = await import('@redspark/rsh-native-approval/native')
     carrier = { plugin, scope: 'root' }
   }
   const disposeProxy = await acquireProxy(environment)

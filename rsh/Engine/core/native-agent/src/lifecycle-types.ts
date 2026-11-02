@@ -1,7 +1,7 @@
 /** Native Agent publication and completed-disposal event declarations. */
 import type { NativeAgent } from './index.ts'
 
-declare module '@deepseek-ai/dsh-native-runtime' {
+declare module '@redspark/rsh-native-runtime' {
   interface NativeEvents {
     /** Exact Agent registered before synchronous publication. @mode sync @param agent - newly live identity. */
     'agent/created': { mode: 'sync'; args: [agent: NativeAgent]; result: void }

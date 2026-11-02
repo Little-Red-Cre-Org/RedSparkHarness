@@ -1,5 +1,5 @@
 {
-  "name": "@deepseek-ai/dsh-fs-e2b",
+  "name": "@redspark/rsh-fs-e2b",
   "description": "E2B filesystem implementation for RedSpark Harness",
   "version": "1.0.0",
   "publishConfig": {
@@ -34,13 +34,13 @@
   ],
   "license": "MIT",
   "peerDependencies": {
-    "@deepseek-ai/dsh-e2b": "workspace:^",
-    "@deepseek-ai/dsh-fs": "workspace:^",
-    "@deepseek-ai/cordis": "workspace:^"
+    "@redspark/rsh-e2b": "workspace:^",
+    "@redspark/rsh-fs": "workspace:^",
+    "@redspark/cordis": "workspace:^"
   },
   "devDependencies": {
-    "@deepseek-ai/dsh-e2b": "workspace:^",
-    "@deepseek-ai/dsh-fs": "workspace:^",
-    "@deepseek-ai/cordis": "workspace:^"
+    "@redspark/rsh-e2b": "workspace:^",
+    "@redspark/rsh-fs": "workspace:^",
+    "@redspark/cordis": "workspace:^"
   }
 }

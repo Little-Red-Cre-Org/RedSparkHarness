@@ -3,7 +3,7 @@ import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs'
 import { rm } from 'node:fs/promises'
 import { dirname, join, resolve } from 'node:path'
 import { tmpdir } from 'node:os'
-import type { NativeExternalModelRoute, NativeExternalSubagentModelOperations } from '@deepseek-ai/dsh-native-subagent/native'
+import type { NativeExternalModelRoute, NativeExternalSubagentModelOperations } from '@redspark/rsh-native-subagent/native'
 import type { CodexProductRun, CodexProductRunSpec } from './run.ts'
 import { startCodexProductRun } from './run.ts'
 import type { NativeResponsesForward, NativeResponsesGatewayLimits, NativeResponsesProjectRequest } from './responses-gateway.ts'
@@ -47,7 +47,7 @@ function isolatedConfig(model: string, gatewayUrl: string): string {
     '[model_providers.dsh-native-gateway]',
     'name = "RSH Native Responses Gateway"',
     `base_url = ${tomlString(gatewayUrl)}`,
-    'env_key = "DSH_NATIVE_GATEWAY_TOKEN"',
+    'env_key = "RSH_NATIVE_GATEWAY_TOKEN"',
     'wire_api = "responses"',
     'requires_openai_auth = false',
     '',
@@ -149,7 +149,7 @@ export async function startNativeCodexProductRun(
       HTTPS_PROXY: '',
       ALL_PROXY: '',
       NO_PROXY: '127.0.0.1,localhost',
-      DSH_NATIVE_GATEWAY_TOKEN: requestToken,
+      RSH_NATIVE_GATEWAY_TOKEN: requestToken,
     }
     product = await startCodexProductRun(texts, {
       connection: spec.connection,

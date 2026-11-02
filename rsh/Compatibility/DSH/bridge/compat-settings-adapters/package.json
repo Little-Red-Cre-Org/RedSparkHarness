@@ -1,5 +1,5 @@
 {
-  "name": "@deepseek-ai/dsh-compat-settings-adapters",
+  "name": "@redspark/rsh-compat-settings-adapters",
   "description": "Owner-scoped Cordis adapters for optional Engine Settings sources",
   "version": "1.0.0",
   "publishConfig": { "access": "public" },
@@ -30,25 +30,25 @@
   ],
   "license": "MIT",
   "peerDependencies": {
-    "@deepseek-ai/cordis": "workspace:^",
-    "@deepseek-ai/dsh-compat-settings-definition": "workspace:^",
-    "@deepseek-ai/dsh-agent-loop": "workspace:^",
-    "@deepseek-ai/dsh-agent-default-model": "workspace:^",
-    "@deepseek-ai/dsh-agent-presets": "workspace:^",
-    "@deepseek-ai/dsh-tool-subagent": "workspace:^"
+    "@redspark/cordis": "workspace:^",
+    "@redspark/rsh-compat-settings-definition": "workspace:^",
+    "@redspark/rsh-agent-loop": "workspace:^",
+    "@redspark/rsh-agent-default-model": "workspace:^",
+    "@redspark/rsh-agent-presets": "workspace:^",
+    "@redspark/rsh-tool-subagent": "workspace:^"
   },
   "peerDependenciesMeta": {
-    "@deepseek-ai/dsh-agent-loop": { "optional": true },
-    "@deepseek-ai/dsh-agent-default-model": { "optional": true },
-    "@deepseek-ai/dsh-agent-presets": { "optional": true },
-    "@deepseek-ai/dsh-tool-subagent": { "optional": true }
+    "@redspark/rsh-agent-loop": { "optional": true },
+    "@redspark/rsh-agent-default-model": { "optional": true },
+    "@redspark/rsh-agent-presets": { "optional": true },
+    "@redspark/rsh-tool-subagent": { "optional": true }
   },
   "devDependencies": {
-    "@deepseek-ai/cordis": "workspace:^",
-    "@deepseek-ai/dsh-compat-settings-definition": "workspace:^",
-    "@deepseek-ai/dsh-agent-loop": "workspace:^",
-    "@deepseek-ai/dsh-agent-default-model": "workspace:^",
-    "@deepseek-ai/dsh-agent-presets": "workspace:^",
-    "@deepseek-ai/dsh-tool-subagent": "workspace:^"
+    "@redspark/cordis": "workspace:^",
+    "@redspark/rsh-compat-settings-definition": "workspace:^",
+    "@redspark/rsh-agent-loop": "workspace:^",
+    "@redspark/rsh-agent-default-model": "workspace:^",
+    "@redspark/rsh-agent-presets": "workspace:^",
+    "@redspark/rsh-tool-subagent": "workspace:^"
   }
 }

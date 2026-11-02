@@ -1,6 +1,6 @@
 /** Shared path row for file panes and Session details. */
 import { useLayoutEffect, useRef, type ReactNode } from 'react'
-import { pathPartsOf } from '@deepseek-ai/dsh-util-workspace-path'
+import { pathPartsOf } from '@redspark/rsh-util-workspace-path'
 import css from './SidebarPathBar.module.css'
 
 /**

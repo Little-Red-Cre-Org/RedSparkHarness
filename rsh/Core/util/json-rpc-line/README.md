@@ -3,7 +3,7 @@ description: "Shared newline-delimited JSON-RPC transport over caller-owned Node
 kind: "package-library"
 ---
 
-# @deepseek-ai/dsh-json-rpc-line
+# @redspark/rsh-json-rpc-line
 
 English | [中文](README.zh.md)
 

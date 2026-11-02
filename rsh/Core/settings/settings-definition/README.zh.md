@@ -3,7 +3,7 @@ description: "供设置提供方、API 与消费方共用的 Settings 接口，�
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-settings-definition
+# @redspark/rsh-settings-definition
 
 [English](README.md) | 中文
 
@@ -28,8 +28,8 @@ kind: "package-reference"
 提供方与配置 API 使用根导出中的框架无关 Settings 声明。浏览器消费方使用 `/types`；Native 提供方与消费方使用 `/native`。
 
 ```ts
-import type { SettingsService } from '@deepseek-ai/dsh-settings-definition'
-import type { NativeSettingsService } from '@deepseek-ai/dsh-settings-definition/native'
+import type { SettingsService } from '@redspark/rsh-settings-definition'
+import type { NativeSettingsService } from '@redspark/rsh-settings-definition/native'
 ```
 
 这些导入只在编译期解析类型约定，不会创建 Settings 服务或加载提供方。Cordis 插件使用 [`compat-settings-definition`](../../../Compatibility/DSH/bridge/compat-settings-definition/README.zh.md) 中的 `Context.settings` 声明。

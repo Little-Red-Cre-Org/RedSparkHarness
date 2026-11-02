@@ -6,11 +6,11 @@ import { tmpdir } from 'node:os'
 import { basename, dirname, join, resolve } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { execa } from 'execa'
-import { deriveReplayScript, parseSessionLog } from '@deepseek-ai/dsh-llm-replay'
+import { deriveReplayScript, parseSessionLog } from '@redspark/rsh-llm-replay'
 import { expect, it } from 'vitest'
 import { shippedNativeProfileComposition } from '../../rsh/Programs/CLI/src/native-profile-template.ts'
 import { formatSystemPromptSnapshot, formatToolSchemasSnapshot, normalizeSessionSnapshot, redactSessionSnapshotIds,
-  normalizedSystemPrompts, normalizedToolSchemas } from '@deepseek-ai/dsh-session-snapshot'
+  normalizedSystemPrompts, normalizedToolSchemas } from '@redspark/rsh-session-snapshot'
 
 const root = fileURLToPath(new URL('../../', import.meta.url))
 const scene = join(root, 'snapshots/native-headless/web-tools-native')
@@ -72,7 +72,7 @@ it('runs the shipped native web rows without Cordis or the public network and re
   const audit = join(home, 'audit.jsonl')
   const timeoutAudit = join(home, 'timeout-audit.jsonl')
   const links: string[] = []
-  mkdirSync(join(modules, '@deepseek-ai'), { recursive: true })
+  mkdirSync(join(modules, '@redspark'), { recursive: true })
   mkdirSync(workspace)
   const packages = [
     ['dsh-native-headless', 'rsh/Engine/core/native-headless'], ['dsh-native-agent', 'rsh/Engine/core/native-agent'],
@@ -85,7 +85,7 @@ it('runs the shipped native web rows without Cordis or the public network and re
     ['dsh-web-fetch-http', 'rsh/Modules/Official/web/web-fetch-http'], ['dsh-tool-web', 'rsh/Modules/Official/web/tool-web'],
   ] as const
   for (const [name, path] of packages) {
-    const link = join(modules, '@deepseek-ai', name)
+    const link = join(modules, '@redspark', name)
     symlinkSync(join(root, path), link, 'junction'); links.push(link)
   }
   writeFileSync(join(profile, 'package.json'), JSON.stringify({ name: 'native-headless-profile', private: true,
@@ -101,7 +101,7 @@ it('runs the shipped native web rows without Cordis or the public network and re
     } }
     if (row.id === 'tool-web') return { ...row, config: { fetch: true, searchTimeoutMs: 1000 } }
     if (row.id === 'tools') return { ...row, config: { mode: 'native' } }
-    if (row.id === 'fs') return { ...row, plugin: '@deepseek-ai/dsh-fs-local', config: { cwd: workspace } }
+    if (row.id === 'fs') return { ...row, plugin: '@redspark/rsh-fs-local', config: { cwd: workspace } }
     // Only the endpoint moves to the loopback fixture; the key still resolves through the launch environment.
     if (row.id === 'web-search-deepseek') return { ...row, config: { apiKeyEnv: 'DEEPSEEK_API_KEY', baseURL: searchBase } }
     if (row.id === 'pi-ai') return { id: row.id, scope: row.scope, plugin: 'web-model' }
@@ -116,7 +116,7 @@ it('runs the shipped native web rows without Cordis or the public network and re
   writeFileSync(join(model, 'native.mjs'), `import { appendFileSync } from 'node:fs';
 export const plugin = { apiVersion: 1, name: 'web-model', targets: ['host'], requires: [], provides: ['model'],
  resolve: () => context => { let step = 0; context.provide('model', { async *stream(request) {
-  appendFileSync(process.env.DSH_WEB_TIMEOUT_PROBE ? ${JSON.stringify(timeoutAudit)} : ${JSON.stringify(audit)}, JSON.stringify(request.messages) + '\\n');
+  appendFileSync(process.env.RSH_WEB_TIMEOUT_PROBE ? ${JSON.stringify(timeoutAudit)} : ${JSON.stringify(audit)}, JSON.stringify(request.messages) + '\\n');
   const recorded = ${JSON.stringify(script)};
   const entry = recorded[step++];
   if (entry?.kind !== 'chunks') throw new Error('web-tools-native: replay exhausted');
@@ -126,7 +126,7 @@ export const plugin = { apiVersion: 1, name: 'web-model', targets: ['host'], req
     const child = await execa(process.execPath, ['--import', pathToFileURL(join(root,
       'rsh/Programs/CLI/tests/fixtures/deny-cordis-context-register.mjs')).href,
       join(root, 'rsh/Programs/CLI/lib/bin.js'), '--profile', 'native-headless', task],
-    { env: { ...process.env, DSH_HOME: home, DEEPSEEK_API_KEY: 'snapshot-fixture-key' },
+    { env: { ...process.env, RSH_HOME: home, DEEPSEEK_API_KEY: 'snapshot-fixture-key' },
       reject: false, timeout: 30_000 })
     expect(child.timedOut).toBe(false)
     expect(child.exitCode, child.stderr).toBe(0)
@@ -153,14 +153,14 @@ export const plugin = { apiVersion: 1, name: 'web-model', targets: ['host'], req
       'tool-schemas.expected.json': formatToolSchemasSnapshot(schemas[0]!, schemas.slice(1)),
     }
     for (const [name, text] of Object.entries(outputs)) {
-      if (process.env.DSH_SNAPSHOT === 'refresh') writeFileSync(join(scene, name), text)
+      if (process.env.RSH_SNAPSHOT === 'refresh') writeFileSync(join(scene, name), text)
       else expect(text).toBe(readFileSync(join(scene, name), 'utf8'))
     }
 
     const timeoutChild = await execa(process.execPath, ['--import', pathToFileURL(join(root,
       'rsh/Programs/CLI/tests/fixtures/deny-cordis-context-register.mjs')).href,
       join(root, 'rsh/Programs/CLI/lib/bin.js'), '--profile', 'native-headless', task],
-    { env: { ...process.env, DSH_HOME: home, DEEPSEEK_API_KEY: 'snapshot-fixture-key', DSH_WEB_TIMEOUT_PROBE: '1' },
+    { env: { ...process.env, RSH_HOME: home, DEEPSEEK_API_KEY: 'snapshot-fixture-key', RSH_WEB_TIMEOUT_PROBE: '1' },
       reject: false, timeout: 30_000 })
     expect(timeoutChild.timedOut).toBe(false)
     expect(timeoutChild.exitCode, timeoutChild.stderr).toBe(0)

@@ -2,13 +2,13 @@
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { expect, vi } from 'vitest'
-import { createUserMessage } from '@deepseek-ai/dsh-llm/native'
-import { SessionId } from '@deepseek-ai/dsh-session/native'
-import { parseSessionLog } from '@deepseek-ai/dsh-llm-replay'
+import { createUserMessage } from '@redspark/rsh-llm/native'
+import { SessionId } from '@redspark/rsh-session/native'
+import { parseSessionLog } from '@redspark/rsh-llm-replay'
 import { TerminalController, type TerminalExecution } from '../src/controller.ts'
 import { resolveNativeTuiConfig } from '../src/config.ts'
-import type { NativeAdmittedUserQuestionRequest } from '@deepseek-ai/dsh-user-questions/native'
-import { CommandId } from '@deepseek-ai/dsh-commands/native'
+import type { NativeAdmittedUserQuestionRequest } from '@redspark/rsh-user-questions/native'
+import { CommandId } from '@redspark/rsh-commands/native'
 
 /** Exercise admission, cleanup barriers and restore without allocating a second Session writer.
  * @param workspace - existing fixture workspace for explicit configuration validation.

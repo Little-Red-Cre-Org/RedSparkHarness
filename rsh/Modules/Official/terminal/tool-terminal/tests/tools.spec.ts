@@ -1,20 +1,20 @@
 import { describe, expect, it } from 'vitest'
-import { Context } from '@deepseek-ai/cordis'
-import Loader from '@deepseek-ai/cordis-plugin-loader'
-import { ToolCallId } from '@deepseek-ai/dsh-llm'
-import { Session, SessionId } from '@deepseek-ai/dsh-session'
-import AgentRegistry from '@deepseek-ai/dsh-agent'
-import type { Agent } from '@deepseek-ai/dsh-agent'
-import SystemPrompt from '@deepseek-ai/dsh-system-prompt'
-import ToolRuntime, { renderToolsSdk } from '@deepseek-ai/dsh-tools'
-import type { ToolSdkSchema } from '@deepseek-ai/dsh-tools/src/ts-types.ts'
-import TerminalSessionService, { TerminalSessionId } from '@deepseek-ai/dsh-terminal'
-import type { TerminalBackend, TerminalBackendSession, TerminalSendOperation, TerminalSendRequest, TerminalSessionStatus, TerminalSignal } from '@deepseek-ai/dsh-terminal'
-import LocalJobRegistry from '@deepseek-ai/dsh-jobs-local'
-import * as ToolTasks from '@deepseek-ai/dsh-tool-jobs'
+import { Context } from '@redspark/cordis'
+import Loader from '@redspark/cordis-plugin-loader'
+import { ToolCallId } from '@redspark/rsh-llm'
+import { Session, SessionId } from '@redspark/rsh-session'
+import AgentRegistry from '@redspark/rsh-agent'
+import type { Agent } from '@redspark/rsh-agent'
+import SystemPrompt from '@redspark/rsh-system-prompt'
+import ToolRuntime, { renderToolsSdk } from '@redspark/rsh-tools'
+import type { ToolSdkSchema } from '@redspark/rsh-tools/src/ts-types.ts'
+import TerminalSessionService, { TerminalSessionId } from '@redspark/rsh-terminal'
+import type { TerminalBackend, TerminalBackendSession, TerminalSendOperation, TerminalSendRequest, TerminalSessionStatus, TerminalSignal } from '@redspark/rsh-terminal'
+import LocalJobRegistry from '@redspark/rsh-jobs-local'
+import * as ToolTasks from '@redspark/rsh-tool-jobs'
 import * as ToolPty from '../src/compat.ts'
 import * as ToolTerminalEntry from '../src/index.ts'
-import { unsupportedInbox } from '@deepseek-ai/dsh-agent-loop-testkit'
+import { unsupportedInbox } from '@redspark/rsh-agent-loop-testkit'
 
 function fakeAgent(ctx: Context, rawId: string): Agent {
   const scope = ctx.plugin(() => {})
@@ -143,12 +143,12 @@ describe('tool-terminal foreground API', () => {
     ctx.loader.internal = {
       version: 'v2',
       async import(specifier: string) {
-        if (specifier !== '@deepseek-ai/dsh-tool-terminal') throw new Error(`unexpected Loader import: ${specifier}`)
+        if (specifier !== '@redspark/rsh-tool-terminal') throw new Error(`unexpected Loader import: ${specifier}`)
         return ToolTerminalEntry
       },
     } as unknown as NonNullable<typeof ctx.loader.internal>
 
-    await ctx.loader.create({ name: '@deepseek-ai/dsh-tool-terminal' })
+    await ctx.loader.create({ name: '@redspark/rsh-tool-terminal' })
     await ctx.loader.await()
 
     expect(ctx.tools.get('terminal_open')).toBeDefined()

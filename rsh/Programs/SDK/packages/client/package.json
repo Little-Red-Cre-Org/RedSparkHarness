@@ -1,6 +1,6 @@
 {
-  "name": "@deepseek-ai/dsh-sdk-client",
-  "description": "TypeScript client SDK for driving a RedSpark Harness runtime subprocess over stdio JSON-RPC: the DeepSeekHarness high-level turns API and the lower-level HarnessClient",
+  "name": "@redspark/rsh-sdk-client",
+  "description": "TypeScript client SDK for driving a RedSpark Harness runtime subprocess over stdio JSON-RPC: the RedSparkHarness high-level turns API and the lower-level HarnessClient",
   "version": "1.0.0",
   "publishConfig": {
     "access": "public"
@@ -30,23 +30,23 @@
   ],
   "license": "MIT",
   "dependencies": {
-    "@deepseek-ai/dsh": "workspace:*",
-    "@deepseek-ai/dsh-home-paths": "workspace:^",
-    "@deepseek-ai/dsh-subprocess": "workspace:^",
-    "@deepseek-ai/dsh-sdk-runtime": "workspace:^"
+    "@redspark/dsh": "workspace:*",
+    "@redspark/rsh-home-paths": "workspace:^",
+    "@redspark/rsh-subprocess": "workspace:^",
+    "@redspark/rsh-sdk-runtime": "workspace:^"
   },
   "peerDependencies": {
-    "@deepseek-ai/dsh-llm": "workspace:^",
-    "@deepseek-ai/dsh-sdk-protocol": "workspace:^",
-    "@deepseek-ai/dsh-session": "workspace:^",
-    "@deepseek-ai/dsh-native-runtime": "workspace:^",
-    "@deepseek-ai/dsh-sandbox": "workspace:^"
+    "@redspark/rsh-llm": "workspace:^",
+    "@redspark/rsh-sdk-protocol": "workspace:^",
+    "@redspark/rsh-session": "workspace:^",
+    "@redspark/rsh-native-runtime": "workspace:^",
+    "@redspark/rsh-sandbox": "workspace:^"
   },
   "devDependencies": {
-    "@deepseek-ai/dsh-llm": "workspace:^",
-    "@deepseek-ai/dsh-sdk-protocol": "workspace:^",
-    "@deepseek-ai/dsh-session": "workspace:^",
-    "@deepseek-ai/dsh-native-runtime": "workspace:^",
-    "@deepseek-ai/dsh-sandbox": "workspace:^"
+    "@redspark/rsh-llm": "workspace:^",
+    "@redspark/rsh-sdk-protocol": "workspace:^",
+    "@redspark/rsh-session": "workspace:^",
+    "@redspark/rsh-native-runtime": "workspace:^",
+    "@redspark/rsh-sandbox": "workspace:^"
   }
 }

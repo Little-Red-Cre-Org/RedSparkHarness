@@ -1,7 +1,7 @@
 /** Explicit installation planning and native activation without a framework adapter. */
 import { RuntimeEvents, type EventKey, type EventListener } from './events.ts'
 import { NativeScope, ResourceOwner, type Disposer, type NativeScopeId } from './scope.ts'
-import { brandString, type Branded } from '@deepseek-ai/dsh-brand'
+import { brandString, type Branded } from '@redspark/rsh-brand'
 import type { NativeServices } from './index.ts'
 
 /** Program entry selected by a profile; exit follows its completed resource drain. */

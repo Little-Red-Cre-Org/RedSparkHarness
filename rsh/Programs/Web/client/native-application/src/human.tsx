@@ -1,7 +1,7 @@
 /** Human input cards project pending Host requests without Session write authority. */
-import { NativeApprovalCard } from '@deepseek-ai/dsh-client-ui-approval/native'
-import { NativeQuestionComposer } from '@deepseek-ai/dsh-client-ui-user-questions/native'
-import type { NativeWebHumanPrompt } from '@deepseek-ai/dsh-client-native-session/native'
+import { NativeApprovalCard } from '@redspark/rsh-client-ui-approval/native'
+import { NativeQuestionComposer } from '@redspark/rsh-client-ui-user-questions/native'
+import type { NativeWebHumanPrompt } from '@redspark/rsh-client-native-session/native'
 import type { NativeConversationController } from './controller.ts'
 
 /** Render the Native approval or question presentation with the existing Host answer API.

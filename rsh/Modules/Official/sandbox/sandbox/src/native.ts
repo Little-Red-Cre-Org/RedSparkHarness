@@ -1,6 +1,6 @@
 /** Cordis-free process-confinement types, path rules, and unavailable error. */
-import { HarnessError } from '@deepseek-ai/dsh-errors'
-import type {} from '@deepseek-ai/dsh-native-runtime'
+import { HarnessError } from '@redspark/rsh-errors'
+import type {} from '@redspark/rsh-native-runtime'
 import type { ConfinedArgv, ConfinedSandboxMode, SandboxPolicy } from './native-types.ts'
 
 /** Native service implemented by a process-confinement Provider. */
@@ -40,7 +40,7 @@ export interface ProcessSandboxChildPaths {
   privateHome: string
 }
 
-declare module '@deepseek-ai/dsh-native-runtime' {
+declare module '@redspark/rsh-native-runtime' {
   interface NativeServices {
     /** Selected process-confinement Provider for the current native scope. */
     sandbox: ProcessSandbox

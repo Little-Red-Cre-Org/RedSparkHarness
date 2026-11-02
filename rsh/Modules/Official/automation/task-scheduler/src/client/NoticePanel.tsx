@@ -1,8 +1,8 @@
 /** Always-available sidebar entry and a persistent, actionable reminder dialog. */
 import { useState, type ReactNode } from 'react'
-import { Modal } from '@deepseek-ai/dsh-client-ui-primitives'
-import type { InjectFace, PropsLocale, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
-import type {} from '@deepseek-ai/dsh-client-ui-sidebar/client'
+import { Modal } from '@redspark/rsh-client-ui-primitives'
+import type { InjectFace, PropsLocale, PropsRuntime } from '@redspark/rsh-client-ui-slots'
+import type {} from '@redspark/rsh-client-ui-sidebar/client'
 import type { createNoticeController } from './notices.ts'
 import css from './panel.module.css'
 import { SchedulerPanel, type PanelInjected } from './Panel.tsx'

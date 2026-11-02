@@ -3,7 +3,7 @@ description: "将明确的架构与图表交付需求自动且有上限地路由
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-archify
+# @redspark/rsh-archify
 
 [English](README.md) | 中文
 
@@ -39,7 +39,7 @@ Archify 会把明确的直接用户架构与流程图请求路由到隐藏的固
 
 ```yaml
 - id: archify
-  name: '@deepseek-ai/dsh-archify'
+  name: '@redspark/rsh-archify'
   config:
     autoInvoke: true
 ```
@@ -55,7 +55,7 @@ Archify 会把明确的直接用户架构与流程图请求路由到隐藏的固
 
 ### 可观察的成功与失败
 
-加载后的指令列出已安装的 JSON schema 与示例，并要求在创作前通过 shell 定位资源。`DSH_ARCHIFY_SKILL_DIR` 属于 shell 环境，而非 `run_code` 的 `process.env`。独立可执行的 Bash 与 PowerShell 示例读取包内资源并运行 CLI，同时将候选文件和输出路径保留在用户工作区。委派图表任务时必须携带相同的资源指引。PATH 中没有命令并不代表内置 CLI 不可用。
+加载后的指令列出已安装的 JSON schema 与示例，并要求在创作前通过 shell 定位资源。`RSH_ARCHIFY_SKILL_DIR` 属于 shell 环境，而非 `run_code` 的 `process.env`。独立可执行的 Bash 与 PowerShell 示例读取包内资源并运行 CLI，同时将候选文件和输出路径保留在用户工作区。委派图表任务时必须携带相同的资源指引。PATH 中没有命令并不代表内置 CLI 不可用。
 
 匹配请求会贡献一条 `archify-auto-invocation` 指令消息，并在该步骤让上游正文对模型可见。两个入口的消息来源使用相同公开类型；详见 [Skills 子系统参考](../../../../Docs/subsystems/skills.zh.md#automatic-archify-invocation)。隐藏 Skill 因为禁止模型调用而不会出现在 `dsh-tool-skill` 目录中，Cordis `/archify` 仍允许用户调用。Native TUI composition 也可路由 `/archify`，前提是安装 Archify `./native` 入口和 Native `dsh-tool-skill` consumer；仅导出入口不会改变默认配置。本包不会自行运行 CLI：加载后的指令要求 agent 创建候选文件、校验它、交付 JSON 与 HTML，并对已接受产物调用 `present`。
 
@@ -67,7 +67,7 @@ Archify 会把明确的直接用户架构与流程图请求路由到隐藏的固
 <details>
 <summary>实现细节——点击展开</summary>
 
-两个入口都会注册一个内置 `archify` provider，并仅在去除 frontmatter 后懒读取已安装 `@tt-a1i/archify-dsh@0.1.0` 的 `SKILL.md` 正文。provider 公布 `{ modelInvocable: false, userInvocable: true }`，因此既有直接调用可以加载它，而通用模型目录不能公布它。两个入口都会通过已有 shell 工具以受管理的 `DSH_ARCHIFY_SKILL_DIR` 提供已解析的上游目录；渲染后的指令使用该变量，不会暴露绝对安装路径。
+两个入口都会注册一个内置 `archify` provider，并仅在去除 frontmatter 后懒读取已安装 `@tt-a1i/archify-dsh@0.1.0` 的 `SKILL.md` 正文。provider 公布 `{ modelInvocable: false, userInvocable: true }`，因此既有直接调用可以加载它，而通用模型目录不能公布它。两个入口都会通过已有 shell 工具以受管理的 `RSH_ARCHIFY_SKILL_DIR` 提供已解析的上游目录；渲染后的指令使用该变量，不会暴露绝对安装路径。
 
 Cordis 入口注册在 `agent/pre-step`。它最多完整观察已领取的直接用户消息文本块中的 `maxUserTextChars` 个字符；只要有任何直接用户文本会被截断，即使已观察前缀包含两个短语族，也会放弃自动路由。只有动作短语与图表短语都命中的完整有界观察才会触发，并且直接 `/archify` 手势总会跳过自动加载。命中后会携带 agent scope 与 abort signal 解析胜出的 Skill，再追加带类型 `archify-auto-invocation` 来源的 `createUserMessage`。
 
