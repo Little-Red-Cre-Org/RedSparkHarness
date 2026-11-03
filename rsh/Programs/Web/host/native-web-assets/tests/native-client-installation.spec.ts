@@ -115,7 +115,7 @@ it('defines only public Client environment values and fixes the browser bundle t
 it('accepts Client packages hoisted beside the runtime in a flattened install', async () => {
   const home = await mkdtemp(join(tmpdir(), 'rsh-hoisted-client-'))
   const project = join(home, 'profile'), modules = join(home, 'prefix', 'node_modules')
-  const runtime = join(modules, '@redspark', 'dsh'), client = join(modules, 'hoisted-client')
+  const runtime = join(modules, '@redspark', 'rsh'), client = join(modules, 'hoisted-client')
   try {
     await mkdir(project)
     await mkdir(runtime, { recursive: true })

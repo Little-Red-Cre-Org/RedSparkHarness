@@ -1569,7 +1569,7 @@ export class DesktopProjectManager {
     const environment = loadLayeredEnv('dsh', resetCandidate ? home : profileDirectory, undefined, home)
     await validateNativeLegacyConfig({ profileName: 'desktop', profileDirectory,
       clientPath: join(profileDirectory, 'rsh.client.json'),
-      installAnchor: join(this.runtime.dsh, 'node_modules', '@redspark', 'dsh', 'package.json'),
+      installAnchor: join(this.runtime.dsh, 'node_modules', '@redspark', 'rsh', 'package.json'),
       home, profile, profileDocument, clientDocument, patchFiles: [], environment })
     return candidate ? { environment, compression } : { environment }
   }
@@ -1579,7 +1579,7 @@ export class DesktopProjectManager {
     const profile = readNativeProfile({ profile: 'desktop', profileDir: profileDirectory, patchFiles: [] })
     await migrateNativeLegacyConfig({ profileName: 'desktop', profileDirectory,
       clientPath: join(profileDirectory, 'rsh.client.json'),
-      installAnchor: join(this.runtime.dsh, 'node_modules', '@redspark', 'dsh', 'package.json'),
+      installAnchor: join(this.runtime.dsh, 'node_modules', '@redspark', 'rsh', 'package.json'),
       home, profile, patchFiles: [], environment: environment ?? loadLayeredEnv('dsh', profileDirectory, undefined, home) })
   }
 

@@ -137,7 +137,7 @@ function isDesktopHostCommand(message: unknown): message is DesktopHostCommand {
 }
 
 function rshVersion(runtimeDir: string): string {
-  const value: unknown = JSON.parse(readFileSync(join(runtimeDir, 'node_modules', '@redspark', 'dsh', 'package.json'), 'utf8'))
+  const value: unknown = JSON.parse(readFileSync(join(runtimeDir, 'node_modules', '@redspark', 'rsh', 'package.json'), 'utf8'))
   if (!isRecord(value) || typeof value.version !== 'string') throw new Error('dsh desktop: installed dsh manifest has no version')
   return value.version
 }

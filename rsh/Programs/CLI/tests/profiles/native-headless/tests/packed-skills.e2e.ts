@@ -118,7 +118,7 @@ it.skipIf(PACKED_BIN === undefined || CONSUMER_ROOT === undefined)(
     const installedBin = await realpath(packedBin)
     const binRelative = relative(installedRoot, installedBin)
     expect(binRelative.startsWith(`..${sep}`) || isAbsolute(binRelative)).toBe(false)
-    expect(binRelative.split(sep)).toEqual(['node_modules', '@redspark', 'dsh', 'lib', 'bin.js'])
+    expect(binRelative.split(sep)).toEqual(['node_modules', '@redspark', 'rsh', 'lib', 'bin.js'])
     const consumerRequire = createRequire(join(installedRoot, 'package.json'))
     const sdkClientPath = await realpath(consumerRequire.resolve('@redspark/rsh-sdk-client'))
     await writeFile(join(installedRoot, 'sdk-consumer.ts'), [

@@ -49,7 +49,7 @@ export async function createNativeDesktopRuntime(
   const root = profile.scopes.find(scope => scope.parent === undefined)
   if (root === undefined) throw new Error('dsh desktop: native profile has no root scope')
   const bundleRuntimeDir = allowLinkedPackages
-    ? realpathSync(join(runtimeDir, 'node_modules', '@redspark', 'dsh'))
+    ? realpathSync(join(runtimeDir, 'node_modules', '@redspark', 'rsh'))
     : runtimeDir
   const bundle = await prepareNativeClientBundle(projectDir, bundleRuntimeDir, !allowLinkedPackages)
   if (bundle === undefined) throw new Error('dsh desktop: native Host requires rsh.client.json')

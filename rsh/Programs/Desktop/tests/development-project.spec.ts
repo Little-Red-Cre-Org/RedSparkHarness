@@ -37,11 +37,11 @@ describe('desktop development project', () => {
     mkdirSync(join(cli, 'lib'), { recursive: true })
     mkdirSync(join(host, 'lib'), { recursive: true })
     mkdirSync(join(dependencies, '@scope'), { recursive: true })
-    mkdirSync(join(dependencies, '@redspark', 'dsh'), { recursive: true })
+    mkdirSync(join(dependencies, '@redspark', 'rsh'), { recursive: true })
     writeFileSync(join(cli, 'package.json'), '{"name":"@redspark/rsh","version":"1.2.3"}\n')
     writeFileSync(join(host, 'package.json'), '{"name":"@redspark/rsh-desktop-host","version":"1.2.3"}\n')
     writeFileSync(join(host, 'lib', 'index.js'), '')
-    writeFileSync(join(dependencies, '@redspark', 'dsh', 'package.json'), '{}\n')
+    writeFileSync(join(dependencies, '@redspark', 'rsh', 'package.json'), '{}\n')
     mkdirSync(join(dependencies, 'plain-dependency'))
     writeFileSync(join(dependencies, 'plain-dependency', 'package.json'), '{}\n')
     mkdirSync(join(dependencies, '@scope', 'dependency'))
@@ -55,7 +55,7 @@ describe('desktop development project', () => {
       release: release(),
       home: join(root, 'home'),
     })
-    expect(realpathSync(join(project, 'node_modules', '@redspark', 'dsh'))).toBe(realpathSync(cli))
+    expect(realpathSync(join(project, 'node_modules', '@redspark', 'rsh'))).toBe(realpathSync(cli))
     expect(realpathSync(join(project, 'node_modules', '@redspark', 'rsh-desktop-host'))).toBe(realpathSync(host))
     expect(realpathSync(join(project, 'node_modules', 'plain-dependency')))
       .toBe(realpathSync(join(dependencies, 'plain-dependency')))
