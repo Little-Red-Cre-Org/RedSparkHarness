@@ -104,10 +104,10 @@ class NativeScheduleController {
    * is read, never provoked.
    */
   private project(): readonly NativeScheduledJob[] {
-    const live = new Set(this.scheduler.liveOwners().map(owner => String(owner.session.id)) ?? [])
+    const live = new Set(this.scheduler.liveOwners().map(owner => owner.session.id))
     return this.scheduler.listSchedules().map(view => ({
       ...view,
-      controllable: live.has(String(view.sessionId)),
+      controllable: live.has(view.sessionId),
     }))
   }
 

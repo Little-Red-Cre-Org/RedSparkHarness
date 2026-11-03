@@ -502,7 +502,6 @@ function startDriver(context: NativeContext, config: Config): NativeExternalSuba
         const promptSessionId = sessionId
         let result: Promise<NativeExternalSubagentOutcome> | undefined
         const runPrompt = async (): Promise<NativeExternalSubagentOutcome> => {
-          // oxlint-disable-next-line typescript/no-unnecessary-condition -- Later getter calls reuse this cached prompt result.
           if (result !== undefined) return result
           promptStarted = true
           const promptWork = track(promptConnection.agent.request(

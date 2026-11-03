@@ -90,7 +90,7 @@ it('delegates the query to the exact root owner and forwards only path and kind'
     { path: 'src', kind: 'directory' },
   ]
   const list = vi.fn(async (_agent: unknown, _session: unknown, _query: string, _signal: AbortSignal) => candidates)
-  const fileReferences = { list } as unknown as NativeFileReferenceOperations
+  const fileReferences: NativeFileReferenceOperations = { list }
   const { service, owner } = serviceFor(workspace, id, fs, fileReferences)
   try {
     await expect(value(service.handle('session/files/search',
@@ -117,7 +117,7 @@ it('refuses to search when the Session has no attached root owner', async () => 
   const id = SessionId('search-detached')
   const fs = new LocalFileSystemBackend(resolveLocalFilesystemConfig({ cwd: workspace }))
   const list = vi.fn(async () => [] as FileReferenceCandidate[])
-  const { service } = serviceFor(workspace, id, fs, { list } as unknown as NativeFileReferenceOperations)
+  const { service } = serviceFor(workspace, id, fs, { list })
   try {
     // Search a Session id the attached owner does not hold: the endpoint reports a
     // business failure rather than answering from another Session's workspace.
@@ -141,7 +141,7 @@ it('passes the query through unchanged so a parent-escaping mention never widens
   const fs = new LocalFileSystemBackend(resolveLocalFilesystemConfig({ cwd: workspace }))
   const list = vi.fn(async (_agent: unknown, _session: unknown, _query: string,
     _signal: AbortSignal): Promise<FileReferenceCandidate[]> => [])
-  const { service } = serviceFor(workspace, id, fs, { list } as unknown as NativeFileReferenceOperations)
+  const { service } = serviceFor(workspace, id, fs, { list })
   try {
     // Containment is the file-reference Provider's job: its reader resolves every
     // listing through the injected `fs` and drops anything `contains` rejects.

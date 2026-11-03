@@ -39,7 +39,7 @@ async function boot(options: {
       calls.push({ id, state })
       options.change?.(id, state)
       // The real store refuses a plan that is not owned by the acting Session.
-      if (!liveSessions.has(String(owner.session.id))) throw new Error('task not found in this session')
+      if (!liveSessions.has(owner.session.id)) throw new Error('task not found in this session')
       return {}
     },
   }
@@ -71,12 +71,16 @@ async function boot(options: {
   ], 'host'))
   await host.start()
   if (dispatch === undefined || fetchSchedule === undefined) throw new Error('Native schedule routes were not installed')
+  // Bound to locals so the narrowing survives the object literal instead of
+  // being re-asserted at the property.
+  const installedDispatch = dispatch
+  const installedFetch = fetchSchedule
   return {
     host,
     calls,
     listeners,
-    dispatch: dispatch as (endpoint: string, payload: unknown, signal: AbortSignal) => Promise<unknown>,
-    fetchSchedule: fetchSchedule as (request: Request) => Promise<Response>,
+    dispatch: installedDispatch,
+    fetchSchedule: installedFetch,
   }
 }
 
