@@ -27,7 +27,7 @@ function positiveIntFromEnv(name: string, fallback: number): number {
   return value
 }
 
-const e2eMaxWorkers = positiveIntFromEnv('DSH_E2E_MAX_WORKERS', DEFAULT_E2E_MAX_WORKERS)
+const e2eMaxWorkers = positiveIntFromEnv('RSH_E2E_MAX_WORKERS', DEFAULT_E2E_MAX_WORKERS)
 
 export default defineConfig({
   // Same resolution note as vitest.config.ts: bare workspace names resolve
@@ -60,7 +60,7 @@ export default defineConfig({
     retry: 2,
     // Run files in a bounded pool: enough lower-level parallelism to keep CI
     // and local with-key runs moving, while leaving a resource knob for shared
-    // API quotas (`DSH_E2E_MAX_WORKERS=1` restores serial execution).
+    // API quotas (`RSH_E2E_MAX_WORKERS=1` restores serial execution).
     fileParallelism: e2eMaxWorkers > 1,
     maxWorkers: e2eMaxWorkers,
   },

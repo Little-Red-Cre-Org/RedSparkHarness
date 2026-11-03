@@ -1,7 +1,7 @@
 /** Props-only rows for a lazily loaded Session workspace file tree. */
 import type { ReactNode } from 'react'
 import clsx from 'clsx'
-import type { WorkspaceDirectoryEntry } from '@deepseek-ai/dsh-api-workspace-files/native-types'
+import type { WorkspaceDirectoryEntry } from '@redspark/rsh-api-workspace-files/native-types'
 import { FileTypeIcon, classifyFileType } from './FileTypeIcon.tsx'
 import { IconFolderClose16, IconFolderOpen16 } from './icons/index.tsx'
 import css from './WorkspaceFileTreeRows.module.css'

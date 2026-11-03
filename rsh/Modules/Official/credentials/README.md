@@ -40,7 +40,7 @@ Start with the subsystem reference for the shared vocabulary, then the capabilit
 
 - [Credentials subsystem reference](../../../Docs/subsystems/credentials.md) — `CredentialRef` and `CredentialKey`, per-operation resolution, UI-safe `CredentialInfo`, authorization flows, and the generated Cordis surface.
 - [Capability seams](../../../Docs/capability-seams.md) — the Service Definition / Service Provider / Consumer split this family follows.
-- [Generated configuration catalog](../../../Docs/config-catalog.md#deepseek-aidsh-credentials-local) — every accepted field of the local store.
+- [Generated configuration catalog](../../../Docs/config-catalog.md#redsparkrsh-credentials-local) — every accepted field of the local store.
 
 <a id="dev-note"></a>
 ## Dev Note

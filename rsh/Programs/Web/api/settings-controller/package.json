@@ -1,5 +1,5 @@
 {
-  "name": "@deepseek-ai/dsh-api-settings-controller",
+  "name": "@redspark/rsh-api-settings-controller",
   "description": "Remote owner for settings, credentials, and human-guided authorization surfaces",
   "version": "1.0.0",
   "publishConfig": {
@@ -44,33 +44,33 @@
   ],
   "license": "MIT",
   "dependencies": {
-    "@deepseek-ai/dsh-compat-settings-definition": "workspace:^",
-    "@deepseek-ai/dsh-settings-definition": "workspace:^",
-    "@deepseek-ai/schemastery": "workspace:^",
+    "@redspark/rsh-compat-settings-definition": "workspace:^",
+    "@redspark/rsh-settings-definition": "workspace:^",
+    "@redspark/schemastery": "workspace:^",
     "zod": "^4.4.3"
   },
   "peerDependencies": {
-    "@deepseek-ai/cordis": "workspace:^",
-    "@deepseek-ai/dsh-agent-presets": "workspace:^",
-    "@deepseek-ai/dsh-authorization": "workspace:^",
-    "@deepseek-ai/dsh-brand": "workspace:^",
-    "@deepseek-ai/dsh-credentials": "workspace:^",
-    "@deepseek-ai/dsh-native-command": "workspace:^",
-    "@deepseek-ai/dsh-session": "workspace:^",
-    "@deepseek-ai/dsh-settings": "workspace:^",
-    "@deepseek-ai/dsh-typert-protocol": "workspace:^"
+    "@redspark/cordis": "workspace:^",
+    "@redspark/rsh-agent-presets": "workspace:^",
+    "@redspark/rsh-authorization": "workspace:^",
+    "@redspark/rsh-brand": "workspace:^",
+    "@redspark/rsh-credentials": "workspace:^",
+    "@redspark/rsh-native-command": "workspace:^",
+    "@redspark/rsh-session": "workspace:^",
+    "@redspark/rsh-settings": "workspace:^",
+    "@redspark/rsh-typert-protocol": "workspace:^"
   },
   "devDependencies": {
-    "@deepseek-ai/cordis": "workspace:^",
-    "@deepseek-ai/dsh-agent-presets": "workspace:^",
-    "@deepseek-ai/dsh-authorization": "workspace:^",
-    "@deepseek-ai/dsh-brand": "workspace:^",
-    "@deepseek-ai/dsh-compat-settings-definition": "workspace:^",
-    "@deepseek-ai/dsh-credentials": "workspace:^",
-    "@deepseek-ai/dsh-native-command": "workspace:^",
-    "@deepseek-ai/dsh-session": "workspace:^",
-    "@deepseek-ai/dsh-settings": "workspace:^",
-    "@deepseek-ai/dsh-settings-definition": "workspace:^",
-    "@deepseek-ai/dsh-typert-protocol": "workspace:^"
+    "@redspark/cordis": "workspace:^",
+    "@redspark/rsh-agent-presets": "workspace:^",
+    "@redspark/rsh-authorization": "workspace:^",
+    "@redspark/rsh-brand": "workspace:^",
+    "@redspark/rsh-compat-settings-definition": "workspace:^",
+    "@redspark/rsh-credentials": "workspace:^",
+    "@redspark/rsh-native-command": "workspace:^",
+    "@redspark/rsh-session": "workspace:^",
+    "@redspark/rsh-settings": "workspace:^",
+    "@redspark/rsh-settings-definition": "workspace:^",
+    "@redspark/rsh-typert-protocol": "workspace:^"
   }
 }

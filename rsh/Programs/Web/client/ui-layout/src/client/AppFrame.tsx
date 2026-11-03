@@ -18,7 +18,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import type { ReactNode } from 'react'
 import type {
   PropsLocale, PropsRenderSlots, PropsStore, SnapshotSelectorHook,
-} from '@deepseek-ai/dsh-client-ui-slots'
+} from '@redspark/rsh-client-ui-slots'
 import type { PanelInfo } from './service.ts'
 import type { SessionTitleSource } from './DocumentTitle.tsx'
 import { computeColumns, RIGHTBAR_DEFAULT_RATIO, SIDEBAR_AUTO_COLLAPSE, SIDEBAR_DEFAULT } from './columns.ts'
@@ -127,14 +127,14 @@ function DragHandle(props: { side: 'sidebar' | 'rightbar'; left: number; onStart
 
 /** The three-column frame (see module doc). */
 export function AppFrame(props: AppFrameProps) {
-  const productTitle = process.env.DSH_CLIENT_TITLE ?? props.t('brand.localBuild')
+  const productTitle = process.env.RSH_CLIENT_TITLE ?? props.t('brand.localBuild')
   return <AppFrameBody {...props}
     documentTitle={<DocumentTitle productTitle={productTitle} useSessions={props.useSessions} usePanelInfo={props.usePanelInfo} />} />
 }
 
 /** Native root frame variant with its own Host-owned title projection. */
 export function NativeAppFrame({ useCurrentSessionTitle, ...props }: NativeAppFrameProps) {
-  const productTitle = process.env.DSH_CLIENT_TITLE ?? props.t('brand.localBuild')
+  const productTitle = process.env.RSH_CLIENT_TITLE ?? props.t('brand.localBuild')
   return <AppFrameBody {...props}
     documentTitle={<DocumentTitle productTitle={productTitle} useCurrentSessionTitle={useCurrentSessionTitle}
       usePanelInfo={props.usePanelInfo} />} />

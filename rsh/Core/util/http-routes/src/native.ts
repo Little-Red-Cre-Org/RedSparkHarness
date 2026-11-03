@@ -1,9 +1,9 @@
 /** Cordis-free Native Host route registry and listener capability. */
 
-import type {} from '@deepseek-ai/dsh-native-runtime'
+import type {} from '@redspark/rsh-native-runtime'
 import type { HttpRouteListener } from './host.ts'
 
-declare module '@deepseek-ai/dsh-native-runtime' {
+declare module '@redspark/rsh-native-runtime' {
   interface NativeServices { httpRoutes: HttpRouteListener }
 }
 

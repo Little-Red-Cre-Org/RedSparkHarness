@@ -3,24 +3,24 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { afterEach, describe, expect, it } from 'vitest'
-import { Context } from '@deepseek-ai/cordis'
-import Loader from '@deepseek-ai/cordis-plugin-loader'
-import Include from '@deepseek-ai/cordis-plugin-include'
-import { ToolCallId } from '@deepseek-ai/dsh-llm'
-import { SESSION_FORMAT_VERSION, Session, SessionId } from '@deepseek-ai/dsh-session'
-import AgentRegistry from '@deepseek-ai/dsh-agent'
-import type { Agent } from '@deepseek-ai/dsh-agent'
-import TerminalSessionService from '@deepseek-ai/dsh-terminal'
-import * as TerminalLocal from '@deepseek-ai/dsh-terminal-bash'
-import SandboxProvider from '@deepseek-ai/dsh-sandbox'
-import type { ConfinedArgv, SandboxPolicy } from '@deepseek-ai/dsh-sandbox'
-import SandboxPolicyService from '@deepseek-ai/dsh-sandbox-policy'
-import SessionProjectionRegistry from '@deepseek-ai/dsh-session-projection'
-import LocalSubprocessRuntime from '@deepseek-ai/dsh-subprocess-local'
-import SystemPrompt from '@deepseek-ai/dsh-system-prompt'
-import ToolRuntime from '@deepseek-ai/dsh-tools'
-import * as ToolBashPersistent from '@deepseek-ai/dsh-tool-bash-persistent'
-import { unsupportedInbox } from '@deepseek-ai/dsh-agent-loop-testkit'
+import { Context } from '@redspark/cordis'
+import Loader from '@redspark/cordis-plugin-loader'
+import Include from '@redspark/cordis-plugin-include'
+import { ToolCallId } from '@redspark/rsh-llm'
+import { SESSION_FORMAT_VERSION, Session, SessionId } from '@redspark/rsh-session'
+import AgentRegistry from '@redspark/rsh-agent'
+import type { Agent } from '@redspark/rsh-agent'
+import TerminalSessionService from '@redspark/rsh-terminal'
+import * as TerminalLocal from '@redspark/rsh-terminal-bash'
+import SandboxProvider from '@redspark/rsh-sandbox'
+import type { ConfinedArgv, SandboxPolicy } from '@redspark/rsh-sandbox'
+import SandboxPolicyService from '@redspark/rsh-sandbox-policy'
+import SessionProjectionRegistry from '@redspark/rsh-session-projection'
+import LocalSubprocessRuntime from '@redspark/rsh-subprocess-local'
+import SystemPrompt from '@redspark/rsh-system-prompt'
+import ToolRuntime from '@redspark/rsh-tools'
+import * as ToolBashPersistent from '@redspark/rsh-tool-bash-persistent'
+import { unsupportedInbox } from '@redspark/rsh-agent-loop-testkit'
 
 let root: string | undefined
 let context: Context | undefined
@@ -74,18 +74,18 @@ suite('persistent Bash through a real cordis.yml Loader composition', () => {
     root = await mkdtemp(join(tmpdir(), 'dsh-persistent-bash-loader-'))
     const configPath = join(root, 'cordis.yml')
     await writeFile(configPath, [
-      "- name: '@deepseek-ai/dsh-agent'",
-      "- name: '@deepseek-ai/dsh-system-prompt'",
-      "- name: '@deepseek-ai/dsh-tools'",
-      "- name: '@deepseek-ai/dsh-terminal'",
-      "- name: '@deepseek-ai/dsh-test-sandbox'",
-      "- name: '@deepseek-ai/dsh-session-projection'",
-      "- name: '@deepseek-ai/dsh-sandbox-policy'",
+      "- name: '@redspark/rsh-agent'",
+      "- name: '@redspark/rsh-system-prompt'",
+      "- name: '@redspark/rsh-tools'",
+      "- name: '@redspark/rsh-terminal'",
+      "- name: '@redspark/rsh-test-sandbox'",
+      "- name: '@redspark/rsh-session-projection'",
+      "- name: '@redspark/rsh-sandbox-policy'",
       '  config:',
       '    mode: danger-full-access',
       `    workspaceRoot: ${JSON.stringify(root)}`,
-      "- name: '@deepseek-ai/dsh-subprocess-local'",
-      "- name: '@deepseek-ai/dsh-terminal-bash'",
+      "- name: '@redspark/rsh-subprocess-local'",
+      "- name: '@redspark/rsh-terminal-bash'",
       '  config:',
       '    pollIntervalMs: 10',
       '    exactProbeAfterMs: 20',
@@ -97,7 +97,7 @@ suite('persistent Bash through a real cordis.yml Loader composition', () => {
       '    scrollbackLines: 20000',
       '    timeoutMs: 2000',
       '    disposeGraceMs: 500',
-      "- name: '@deepseek-ai/dsh-tool-bash-persistent'",
+      "- name: '@redspark/rsh-tool-bash-persistent'",
       '  config:',
       '    timeoutMs: 5000',
       '',
@@ -108,16 +108,16 @@ suite('persistent Bash through a real cordis.yml Loader composition', () => {
     await context.plugin(Loader)
     context.loader.builtins.include = Include
     const modules = new Map<string, unknown>([
-      ['@deepseek-ai/dsh-agent', AgentRegistry],
-      ['@deepseek-ai/dsh-system-prompt', SystemPrompt],
-      ['@deepseek-ai/dsh-tools', ToolRuntime],
-      ['@deepseek-ai/dsh-terminal', TerminalSessionService],
-      ['@deepseek-ai/dsh-test-sandbox', PassthroughSandbox],
-      ['@deepseek-ai/dsh-session-projection', SessionProjectionRegistry],
-      ['@deepseek-ai/dsh-sandbox-policy', SandboxPolicyService],
-      ['@deepseek-ai/dsh-subprocess-local', LocalSubprocessRuntime],
-      ['@deepseek-ai/dsh-terminal-bash', TerminalLocal],
-      ['@deepseek-ai/dsh-tool-bash-persistent', ToolBashPersistent],
+      ['@redspark/rsh-agent', AgentRegistry],
+      ['@redspark/rsh-system-prompt', SystemPrompt],
+      ['@redspark/rsh-tools', ToolRuntime],
+      ['@redspark/rsh-terminal', TerminalSessionService],
+      ['@redspark/rsh-test-sandbox', PassthroughSandbox],
+      ['@redspark/rsh-session-projection', SessionProjectionRegistry],
+      ['@redspark/rsh-sandbox-policy', SandboxPolicyService],
+      ['@redspark/rsh-subprocess-local', LocalSubprocessRuntime],
+      ['@redspark/rsh-terminal-bash', TerminalLocal],
+      ['@redspark/rsh-tool-bash-persistent', ToolBashPersistent],
     ])
     context.loader.internal = {
       version: 'v2',
@@ -143,14 +143,14 @@ suite('persistent Bash through a real cordis.yml Loader composition', () => {
     await execute('state', 'export KEEP=loader; mkdir -p nested; cd nested')
     const observed = text(await execute('observe', 'printf "cwd=%s keep=%s\\n" "$PWD" "$KEEP"'))
     expect(observed).toContain(`cwd=${join(root, 'nested')} keep=loader`)
-    expect(observed).not.toContain('DSH_PERSISTENT_BASH')
+    expect(observed).not.toContain('RSH_PERSISTENT_BASH')
 
     const multiline = text(await execute(
       'multiline',
       'value="line one"\nprintf "%s:%s\\n" "$value" "it\'s fine"',
     ))
     expect(multiline).toBe("line one:it's fine\n[Command finished with exit code 0]")
-    expect(multiline).not.toContain('DSH_PERSISTENT_BASH')
+    expect(multiline).not.toContain('RSH_PERSISTENT_BASH')
 
     const heredoc = text(await execute(
       'heredoc',

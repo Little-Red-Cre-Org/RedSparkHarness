@@ -5,12 +5,12 @@
  * observed-state policy stay in consumer and policy plugins; `editText`
  * remains here so version check, literal match, and rewrite share one critical
  * section.
- * @module @deepseek-ai/dsh-fs
+ * @module @redspark/rsh-fs
  */
 
-import { Context, Service } from '@deepseek-ai/cordis'
+import { Context, Service } from '@redspark/cordis'
 import { FileSystemOperations } from './operations.ts'
-import type { SandboxExecutionPolicy } from '@deepseek-ai/dsh-sandbox'
+import type { SandboxExecutionPolicy } from '@redspark/rsh-sandbox'
 import type {
   FsDirEntry,
   FsEditOutcome,
@@ -46,7 +46,7 @@ export type {
   FsWriteOutcome,
 } from './types.ts'
 
-declare module '@deepseek-ai/cordis' {
+declare module '@redspark/cordis' {
   interface Context {
     fs: FileSystem
   }

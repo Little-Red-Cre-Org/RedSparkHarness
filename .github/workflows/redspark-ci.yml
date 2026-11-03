@@ -15,9 +15,9 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  DSH_TELEMETRY_DISABLED: '1'
-  DSH_GATE_CONCURRENCY: '2'
-  DSH_OXLINT_THREADS: '2'
+  RSH_TELEMETRY_DISABLED: '1'
+  RSH_GATE_CONCURRENCY: '2'
+  RSH_OXLINT_THREADS: '2'
 
 jobs:
   client:
@@ -109,7 +109,7 @@ jobs:
           rsh/Modules/Official/sandbox/sandbox-local/tests/child-process-bwrap.e2e.ts
           && pnpm exec vitest run --config vitest.snapshot.config.ts snapshots/sdk/sdk.snapshot.ts
         env:
-          DSH_REQUIRE_BWRAP_E2E: '1'
+          RSH_REQUIRE_BWRAP_E2E: '1'
       - name: Windows SDK child operator path regression
         if: runner.os == 'Windows'
         run: >-
@@ -123,13 +123,13 @@ jobs:
           snapshots/native-sdk/skills.snapshot.ts
           snapshots/native-sdk/archify.snapshot.ts
         env:
-          DSH_NATIVE_SDK_PYTHON: ${{ steps.sdk-python.outputs.python }}
+          RSH_NATIVE_SDK_PYTHON: ${{ steps.sdk-python.outputs.python }}
       - name: RSH terminal regressions
-        run: pnpm --filter @deepseek-ai/dsh-rsh test
+        run: pnpm --filter @redspark/rsh-rsh test
       - name: RSH profile smoke
         run: pnpm exec vitest run --config vitest.expected.config.ts rsh/Programs/CLI/tests/profiles/rsh/rsh.expected.e2e.ts
         env:
-          DSH_EXAMPLE_MODE: lib
+          RSH_EXAMPLE_MODE: lib
       - name: Client tests (no API credentials)
         run: pnpm run test:gui --maxWorkers=2
 
@@ -166,7 +166,21 @@ jobs:
         run: pnpm run release:pack --family dsh --out dist/npm --concurrency 4
       - name: Pack vendored framework for consumer verification
         run: pnpm run release:pack --family vendor --out dist/npm-vendor
-      - name: Pack Landlock entry for consumer verification
+      - name: Install musl toolchain for the packed system binaries
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -yq musl-tools
+      - name: Pack the system binaries and Landlock entry for consumer verification
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          pnpm --dir rsh/Core/native/system run build:ts
+          pnpm --dir rsh/Core/native/system run build:native
+          node rsh/Core/native/system/scripts/pack-release.mjs "$PWD/dist/npm-landlock" --current-platform-only
+      - name: Pack the Landlock entry for consumer verification
+        if: runner.os != 'Linux'
         run: |
           pnpm --dir rsh/Core/native/system run build:ts
           pnpm --dir rsh/Core/native/system/packages/entry pack --pack-destination "$PWD/dist/npm-landlock"
@@ -194,4 +208,4 @@ jobs:
         if: runner.os == 'Windows'
         run: pnpm exec vitest run --config vitest.snapshot.config.ts snapshots/native-sdk/text-turn.snapshot.ts
         env:
-          DSH_NATIVE_SDK_PYTHON: ${{ steps.sdk-python.outputs.python }}
+          RSH_NATIVE_SDK_PYTHON: ${{ steps.sdk-python.outputs.python }}

@@ -42,11 +42,11 @@ const PYTHON_RUNTIME_MANIFEST = 'rsh/Programs/SDK/python/sdk-runtime/package.jso
  * Its own manifest declares the full legacy superset, so it is retained as a leaf rather than
  * walked; the runtime closure supplies every peer it needs.
  */
-const CLI_MANIFEST_PACKAGE = '@deepseek-ai/dsh'
+const CLI_MANIFEST_PACKAGE = '@redspark/rsh'
 const CLI_MANIFEST = 'rsh/Programs/CLI/package.json'
 const NATIVE_CLI_ROOT_IMPORTS = [
-  ['rsh/Programs/CLI/src/bin.ts', '@deepseek-ai/dsh-app-boot', '@deepseek-ai/dsh-launch-environment/layers'],
-  ['rsh/Compatibility/DSH/bundle/web-app/src/index.ts', '@deepseek-ai/dsh-subprocess', '@deepseek-ai/dsh-subprocess/native'],
+  ['rsh/Programs/CLI/src/bin.ts', '@redspark/rsh-app-boot', '@redspark/rsh-launch-environment/layers'],
+  ['rsh/Compatibility/DSH/bundle/web-app/src/index.ts', '@redspark/rsh-subprocess', '@redspark/rsh-subprocess/native'],
 ] as const
 type RuntimeClosureTarget = 'python-runtime' | 'native-cli'
 
@@ -317,7 +317,7 @@ async function nativeCliRootImportViolations(root: string): Promise<string[]> {
 }
 
 function isCordisPackage(packageName: string): boolean {
-  return packageName.startsWith('@deepseek-ai/cordis')
+  return packageName.startsWith('@redspark/cordis')
 }
 
 async function missingPresetPlugins(

@@ -1,5 +1,5 @@
 {
-  "name": "@deepseek-ai/dsh-native-sandbox-policy",
+  "name": "@redspark/rsh-native-sandbox-policy",
   "description": "Explicit native filesystem sandbox policy per Session",
   "version": "1.0.0",
   "publishConfig": { "access": "public" },
@@ -16,8 +16,8 @@
   "files": ["lib/index.js", "lib/types/**/*.d.ts"],
   "license": "MIT",
   "dependencies": {
-    "@deepseek-ai/dsh-native-runtime": "workspace:^",
-    "@deepseek-ai/dsh-session": "workspace:^",
-    "@deepseek-ai/dsh-sandbox": "workspace:^"
+    "@redspark/rsh-native-runtime": "workspace:^",
+    "@redspark/rsh-session": "workspace:^",
+    "@redspark/rsh-sandbox": "workspace:^"
   }
 }

@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, expect, it } from 'vitest'
-import type { SessionEvent } from '@deepseek-ai/dsh-session/types'
+import type { SessionEvent } from '@redspark/rsh-session/types'
 import { NativeWorkflowRunPanel, workflowRunsFromSessionEvents } from '../src/native.ts'
 
 afterEach(cleanup)

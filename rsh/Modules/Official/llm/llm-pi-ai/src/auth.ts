@@ -1,7 +1,7 @@
 /** Cordis auth facade over the shared credential and launch-environment implementation. */
-import type { Context } from '@deepseek-ai/cordis'
+import type { Context } from '@redspark/cordis'
 import type { AuthContext, CredentialStore } from '@earendil-works/pi-ai'
-import { launchEnvironmentOf } from '@deepseek-ai/dsh-launch-environment'
+import { launchEnvironmentOf } from '@redspark/rsh-launch-environment'
 import {
   authContextFrom as createAuthContext,
   credentialStoreFrom as createCredentialStore,

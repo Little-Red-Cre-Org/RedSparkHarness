@@ -1,5 +1,5 @@
 {
-  "name": "@deepseek-ai/dsh-system-prompt",
+  "name": "@redspark/rsh-system-prompt",
   "description": "System prompt assembly registry for the RedSpark Harness",
   "version": "1.0.0",
   "publishConfig": {
@@ -32,18 +32,18 @@
   ],
   "license": "MIT",
   "peerDependencies": {
-    "@deepseek-ai/dsh-invariants": "workspace:^",
-    "@deepseek-ai/dsh-llm": "workspace:^",
-    "@deepseek-ai/dsh-scope": "workspace:^",
-    "@deepseek-ai/cordis": "workspace:^"
+    "@redspark/rsh-invariants": "workspace:^",
+    "@redspark/rsh-llm": "workspace:^",
+    "@redspark/rsh-scope": "workspace:^",
+    "@redspark/cordis": "workspace:^"
   },
   "dependencies": {
-    "@deepseek-ai/schemastery": "workspace:^"
+    "@redspark/schemastery": "workspace:^"
   },
   "devDependencies": {
-    "@deepseek-ai/dsh-invariants": "workspace:^",
-    "@deepseek-ai/dsh-llm": "workspace:^",
-    "@deepseek-ai/dsh-scope": "workspace:^",
-    "@deepseek-ai/cordis": "workspace:^"
+    "@redspark/rsh-invariants": "workspace:^",
+    "@redspark/rsh-llm": "workspace:^",
+    "@redspark/rsh-scope": "workspace:^",
+    "@redspark/cordis": "workspace:^"
   }
 }

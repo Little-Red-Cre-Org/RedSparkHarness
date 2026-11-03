@@ -33,16 +33,16 @@ async function fixture(linked: readonly string[] = [], options: {
   const workspace = join(root, 'workspace')
   await Promise.all([mkdir(project), mkdir(runtime), mkdir(cli, { recursive: true })])
   await writeFile(join(workspace, 'pnpm-workspace.yaml'), 'packages: []\n')
-  await writeFile(join(cli, 'package.json'), JSON.stringify({ name: '@deepseek-ai/dsh', version: '1.0.0', type: 'module' }))
+  await writeFile(join(cli, 'package.json'), JSON.stringify({ name: '@redspark/rsh', version: '1.0.0', type: 'module' }))
   await writeFile(join(runtime, 'package.json'), '{}')
-  await mkdir(join(runtime, 'node_modules', '@deepseek-ai'), { recursive: true })
-  const dshLink = join(runtime, 'node_modules', '@deepseek-ai', 'dsh')
+  await mkdir(join(runtime, 'node_modules', '@redspark'), { recursive: true })
+  const dshLink = join(runtime, 'node_modules', '@redspark', 'rsh')
   await symlink(cli, dshLink, process.platform === 'win32' ? 'junction' : 'dir')
   links.push(dshLink)
-  const frontend = join(runtime, 'node_modules', '@deepseek-ai', 'dsh-web-frontend')
+  const frontend = join(runtime, 'node_modules', '@redspark', 'rsh-web-frontend')
   await mkdir(join(frontend, 'dist'), { recursive: true })
   await writeFile(join(frontend, 'package.json'), JSON.stringify({
-    name: '@deepseek-ai/dsh-web-frontend',
+    name: '@redspark/rsh-web-frontend',
     exports: { './dist/index.html': './dist/index.html' },
   }))
   await writeFile(join(frontend, 'dist', 'index.html'), '<!doctype html><html><head></head><body>native fixture</body></html>')
@@ -58,7 +58,7 @@ async function fixture(linked: readonly string[] = [], options: {
       id: 'profile-provider', plugin: '@fixture/dsh-profile-provider', scope: 'root',
       ...(options.disabledProfileProvider === true ? { disabled: true } : {}),
     }]),
-    ...(options.presetProvider === undefined ? [] : [{ id: 'presets', plugin: '@deepseek-ai/dsh-agent-presets', scope: 'root' }]),
+    ...(options.presetProvider === undefined ? [] : [{ id: 'presets', plugin: '@redspark/rsh-agent-presets', scope: 'root' }]),
   ]
   await writeFile(join(project, 'rsh.profile.json'), JSON.stringify({
     formatVersion: 1,
@@ -105,14 +105,14 @@ async function fixture(linked: readonly string[] = [], options: {
   if (options.presetProvider !== undefined) {
     packages.push(
       {
-        name: '@deepseek-ai/dsh-agent-presets',
+        name: '@redspark/rsh-agent-presets',
         manifest: { apiVersion: 1, entry: './native', targets: ['host'], requires: [], provides: [] },
-        source: 'export const plugin = { apiVersion: 1, name: "@deepseek-ai/dsh-agent-presets", targets: ["host"], requires: [], provides: [], resolve: () => () => {} };\n',
+        source: 'export const plugin = { apiVersion: 1, name: "@redspark/rsh-agent-presets", targets: ["host"], requires: [], provides: [], resolve: () => () => {} };\n',
       },
       {
-        name: '@deepseek-ai/dsh-agent-preset-standing',
+        name: '@redspark/rsh-agent-preset-standing',
         manifest: { apiVersion: 1, entry: './native', targets: ['host'], requires: [], provides: [] },
-        source: 'export const plugin = { apiVersion: 1, name: "@deepseek-ai/dsh-agent-preset-standing", targets: ["host"], requires: [], provides: [], resolve: () => () => {} };\n',
+        source: 'export const plugin = { apiVersion: 1, name: "@redspark/rsh-agent-preset-standing", targets: ["host"], requires: [], provides: [], resolve: () => () => {} };\n',
       },
       {
         name: '@fixture/dsh-preset-provider',
@@ -183,7 +183,7 @@ it.each(['hostConnection', 'application'] as const)('ignores a disabled profile 
 
 it.each(['hostConnection', 'application'] as const)('rejects preset-provided %s before installation planning', async (service) => {
   const { project, runtime, home } = await fixture([], { presetProvider: service })
-  vi.stubEnv('DSH_HOME', home)
+  vi.stubEnv('RSH_HOME', home)
   try {
     await expect(runDesktopHost(runtime, project, async () => {})).rejects.toMatchObject({
       message: 'dsh desktop: native profile cannot select another application or Connection carrier',

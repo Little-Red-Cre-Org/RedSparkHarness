@@ -3,7 +3,7 @@ description: "The authorization flow registry for users and maintainers who obta
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-authorization
+# @redspark/rsh-authorization
 
 English | [中文](README.zh.md)
 
@@ -36,9 +36,9 @@ Use it whenever a credential can only be obtained by talking to a human — an O
 Your plugin declares one flow per credential it holds, keyed by the `<scope>/<id>` credential record the flow writes — the scope names your plugin, the id names one credential it owns:
 
 ```ts
-import type { Context } from '@deepseek-ai/cordis'
-import type { AuthorizationSession } from '@deepseek-ai/dsh-authorization'
-import { credentialKey } from '@deepseek-ai/dsh-credentials'
+import type { Context } from '@redspark/cordis'
+import type { AuthorizationSession } from '@redspark/rsh-authorization'
+import { credentialKey } from '@redspark/rsh-credentials'
 
 declare const ctx: Context
 declare const exchangeCode: (code: string, signal: AbortSignal) => Promise<{ token: string }>
@@ -70,7 +70,7 @@ A surface runs one attempt per credential at a time. The interaction travels wit
 
 ### Native Host entry
 
-Native Host compositions import `plugin` from `@deepseek-ai/dsh-authorization/native` and install it with a credentials Provider. `NativeAuthorization` returns an attempt whose `frames()` replays the conversation for reconnecting surfaces. Cancellation, flow removal, and Provider disposal wait for `run()` and its accepted credential writes to finish before releasing the key.
+Native Host compositions import `plugin` from `@redspark/rsh-authorization/native` and install it with a credentials Provider. `NativeAuthorization` returns an attempt whose `frames()` replays the conversation for reconnecting surfaces. Cancellation, flow removal, and Provider disposal wait for `run()` and its accepted credential writes to finish before releasing the key.
 
 ### What can go wrong
 

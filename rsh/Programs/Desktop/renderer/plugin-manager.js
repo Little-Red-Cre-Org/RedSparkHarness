@@ -1,5 +1,5 @@
 // Native consumers follow the reviewed facade; the backend owns package and composition admission.
-const api = window.dshDesktop
+const api = window.rshDesktop
 // The Host disableAll required closure omits these Client shell registrations.
 const coreClientIds = new Set(['layout', 'session-presentation'])
 

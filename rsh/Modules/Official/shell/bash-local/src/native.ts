@@ -1,19 +1,19 @@
 /** Native local Bash Provider over the shared managed subprocess controller. */
-import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
-import type { ShellOperations } from '@deepseek-ai/dsh-shell/native'
-import type {} from '@deepseek-ai/dsh-subprocess/native'
+import type { NativePlugin } from '@redspark/rsh-native-runtime'
+import type { ShellOperations } from '@redspark/rsh-shell/native'
+import type {} from '@redspark/rsh-subprocess/native'
 import { LocalBashController, resolveConfig } from './controller.ts'
 
 export { LocalBashController, resolveConfig } from './controller.ts'
 
-declare module '@deepseek-ai/dsh-native-runtime' {
+declare module '@redspark/rsh-native-runtime' {
   interface NativeServices { shell: ShellOperations }
 }
 
 /** Install the local executor with fully resolved execution budgets. */
 export const plugin: NativePlugin = {
   apiVersion: 1,
-  name: '@deepseek-ai/dsh-bash-local',
+  name: '@redspark/rsh-bash-local',
   targets: ['host'],
   requires: ['subprocess'],
   provides: ['shell'],

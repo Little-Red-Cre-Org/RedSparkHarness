@@ -2,10 +2,10 @@
  * Host-only start request. The shared live-run handle and durable vocabulary
  * remain in `./types` so native and Client consumers avoid the Agent type.
  *
- * @module @deepseek-ai/dsh-workflow
+ * @module @redspark/rsh-workflow
  */
 
-import type { Agent } from '@deepseek-ai/dsh-agent'
+import type { Agent } from '@redspark/rsh-agent'
 import type { WorkflowMeta } from './types.ts'
 
 export type { WorkflowRun } from './types.ts'

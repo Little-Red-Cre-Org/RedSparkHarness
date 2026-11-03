@@ -1,5 +1,5 @@
-import type { ToolCallId } from '@deepseek-ai/dsh-llm/native'
-import type { SessionSeq } from '@deepseek-ai/dsh-session/types'
+import type { ToolCallId } from '@redspark/rsh-llm/native'
+import type { SessionSeq } from '@redspark/rsh-session/types'
 
 /** Character-budget policy for deterministic tool-result pruning. */
 export interface ToolResultPruneConfig {

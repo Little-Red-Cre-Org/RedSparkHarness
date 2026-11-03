@@ -12,25 +12,25 @@ import { isAbsolute, join } from 'node:path'
 import {
   SESSION_FORMAT_VERSION,
   SessionLogOffset,
-} from '@deepseek-ai/dsh-session/native'
+} from '@redspark/rsh-session/native'
 import type {
   SessionEvent,
   SessionHeader,
   SessionId,
   SessionLogOffset as SessionLogOffsetType,
-} from '@deepseek-ai/dsh-session/native'
-import { SessionFormatUnsupportedMigrationError } from '@deepseek-ai/dsh-session-format'
-import type { SessionFormatEvent } from '@deepseek-ai/dsh-session-format'
-import type { SessionFormatRecovery, SessionFormatRestore } from '@deepseek-ai/dsh-session-format'
-import { sessionFormatCatalog } from '@deepseek-ai/dsh-session-format-catalog'
-import { assertV3RowAdmission } from '@deepseek-ai/dsh-session-format-v2-to-v3'
+} from '@redspark/rsh-session/native'
+import { SessionFormatUnsupportedMigrationError } from '@redspark/rsh-session-format'
+import type { SessionFormatEvent } from '@redspark/rsh-session-format'
+import type { SessionFormatRecovery, SessionFormatRestore } from '@redspark/rsh-session-format'
+import { sessionFormatCatalog } from '@redspark/rsh-session-format-catalog'
+import { assertV3RowAdmission } from '@redspark/rsh-session-format-v2-to-v3'
 import { generationLogFilename, type JsonlCompression } from './generation-format.ts'
 import { logSuffix, parseGenerationLogFilename } from './generation-format.ts'
 import {
   SessionFormatUnsupportedError,
   sessionFormatVersionRefusal,
   type SessionStorageMetadata,
-} from '@deepseek-ai/dsh-session-persistence/native'
+} from '@redspark/rsh-session-persistence/native'
 
 export { generationLogFilename, logSuffix, parseGenerationLogFilename }
 export type { JsonlCompression }

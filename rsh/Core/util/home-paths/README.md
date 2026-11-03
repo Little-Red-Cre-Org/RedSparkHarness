@@ -3,13 +3,13 @@ description: "Shared resolution of the RedSpark Harness home and user-data paths
 kind: "package-library"
 ---
 
-# @deepseek-ai/dsh-home-paths
+# @redspark/rsh-home-paths
 
 English | [中文](README.zh.md)
 
 ## Summary
 
-`@deepseek-ai/dsh-home-paths` lets package authors resolve one RedSpark Harness data root and derive child paths from it. An explicit path wins over `$DSH_HOME`, which wins over `~/.dsh`; blank environment values are ignored. Its public helpers can render the root without revealing an absolute machine path, expand only bare or current-user tilde forms, and canonicalize watch targets whose final components do not yet exist. Use it as a direct library dependency, not through `cordis.yml`.
+`@redspark/rsh-home-paths` lets package authors resolve one RedSpark Harness data root and derive child paths from it. An explicit path wins over `$RSH_HOME`, which wins over `~/.redspark`; blank environment values are ignored. Its public helpers can render the root without revealing an absolute machine path, expand only bare or current-user tilde forms, and canonicalize watch targets whose final components do not yet exist. Use it as a direct library dependency, not through `cordis.yml`.
 
 ## Table of Contents
 
@@ -29,22 +29,22 @@ Use these helpers wherever a package must agree with the rest of the harness abo
 ### Resolving the home
 
 ```ts
-import { resolveDshHome, dshHomePath, dshCachePath } from '@deepseek-ai/dsh-home-paths'
+import { resolveRshHome, rshHomePath, rshCachePath } from '@redspark/rsh-home-paths'
 
-const home = resolveDshHome()                // configured path, else $DSH_HOME, else ~/.dsh
-const settings = dshHomePath('settings')     // join one child onto the resolved home
-const cache = dshCachePath('models')         // $DSH_HOME/cache/models, default ~/.dsh/cache/models
+const home = resolveRshHome()                // configured path, else $RSH_HOME, else ~/.redspark
+const settings = rshHomePath('settings')     // join one child onto the resolved home
+const cache = rshCachePath('models')         // $RSH_HOME/cache/models, default ~/.redspark/cache/models
 ```
 
-An explicit configured path has the highest precedence, then `$DSH_HOME`, then the default `~/.dsh`. An empty or whitespace-only `$DSH_HOME` is treated as unset, so a blank override never resolves the home to the current working directory.
+An explicit configured path has the highest precedence, then `$RSH_HOME`, then the default `~/.redspark`. An empty or whitespace-only `$RSH_HOME` is treated as unset, so a blank override never resolves the home to the current working directory.
 
-`dshCachePath(...segments)` derives paths from the resolved home's `cache` directory. With no segments it returns the cache directory itself. Pass an initial options object, `dshCachePath({ dshHome: home }, ...segments)`, to use an explicit configured home with the same precedence and tilde expansion. It returns an absolute path without creating directories.
+`rshCachePath(...segments)` derives paths from the resolved home's `cache` directory. With no segments it returns the cache directory itself. Pass an initial options object, `rshCachePath({ rshHome: home }, ...segments)`, to use an explicit configured home with the same precedence and tilde expansion. It returns an absolute path without creating directories.
 
-`resolveDshProfileExecution(name, home)` reads the selected profile's `package.json` and returns its declared runtime and reload mode. A missing manifest selects legacy execution; an existing manifest must declare `runtime: 'native'` with `config: 'rsh.profile.json'`, or declare `bundles: [...]` for legacy execution. `runtime: 'legacy'` cannot declare native config fields. The parser reads without writing and rejects an existing manifest that declares neither runtime nor bundles. The CLI and SDK share this parser so source launch decisions match CLI startup; see the [native configuration migration reference](../../../Docs/native-config-migration.md) for the full rules.
+`resolveRshProfileExecution(name, home)` reads the selected profile's `package.json` and returns its declared runtime and reload mode. A missing manifest selects legacy execution; an existing manifest must declare `runtime: 'native'` with `config: 'rsh.profile.json'`, or declare `bundles: [...]` for legacy execution. `runtime: 'legacy'` cannot declare native config fields. The parser reads without writing and rejects an existing manifest that declares neither runtime nor bundles. The CLI and SDK share this parser so source launch decisions match CLI startup; see the [native configuration migration reference](../../../Docs/native-config-migration.md) for the full rules.
 
 ### Displaying a home
 
-For user-facing paths, render the root symbolically rather than as a machine path: the default home displays as `~/.dsh` and any configured home displays as `$DSH_HOME`. The display form never leaks an absolute machine path.
+For user-facing paths, render the root symbolically rather than as a machine path: the default home displays as `~/.redspark` and any configured home displays as `$RSH_HOME`. The display form never leaks an absolute machine path.
 
 ### Expanding user paths
 
@@ -74,7 +74,7 @@ The package is built on one principle: all harness user data lives under one roo
 
 ### Resolution rules
 
-`resolveDshHome` reads the explicit override, then `$DSH_HOME`, then falls back to the operating-system home joined with `.dsh`. The chosen value is tilde-expanded and normalized to an absolute path; `dshHomePath` joins child segments with Node's platform path rules. `dshHomeDisplay` compares the resolved path against the default root and returns the symbolic label, so a configured home never leaks its absolute path.
+`resolveRshHome` reads the explicit override, then `$RSH_HOME`, then falls back to the operating-system home joined with `.redspark`. The chosen value is tilde-expanded and normalized to an absolute path; `rshHomePath` joins child segments with Node's platform path rules. `dshHomeDisplay` compares the resolved path against the default root and returns the symbolic label, so a configured home never leaks its absolute path.
 
 ### Canonicalization mechanics
 
@@ -90,7 +90,7 @@ The package is built on one principle: all harness user data lives under one roo
 Read these pages when you need the launcher or the consumers that depend on a single home root.
 
 - [Boot package](../../../Compatibility/DSH/boot/app-boot/README.md) — the launcher that resolves the home before any plugin mounts.
-- [Shell environment](../../../Modules/Official/shell/shell-env/README.md) — how `DSH_HOME` reaches model shell calls.
+- [Shell environment](../../../Modules/Official/shell/shell-env/README.md) — how `RSH_HOME` reaches model shell calls.
 - [Anonymous user id](../../identity/anonymous-user-id/README.md) — a stored identity file under the resolved home.
 
 -----

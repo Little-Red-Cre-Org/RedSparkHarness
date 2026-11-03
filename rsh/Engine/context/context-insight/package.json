@@ -1,5 +1,5 @@
 {
-  "name": "@deepseek-ai/dsh-context-insight",
+  "name": "@redspark/rsh-context-insight",
   "description": "Native context composition, request history and activity projections, with the /context command",
   "version": "1.0.0",
   "publishConfig": {
@@ -30,15 +30,15 @@
     "zod": "^4.4.3"
   },
   "peerDependencies": {
-    "@deepseek-ai/dsh-commands": "workspace:^",
-    "@deepseek-ai/dsh-native-runtime": "workspace:^",
-    "@deepseek-ai/dsh-session": "workspace:^",
-    "@deepseek-ai/dsh-session-projection": "workspace:^"
+    "@redspark/rsh-commands": "workspace:^",
+    "@redspark/rsh-native-runtime": "workspace:^",
+    "@redspark/rsh-session": "workspace:^",
+    "@redspark/rsh-session-projection": "workspace:^"
   },
   "devDependencies": {
-    "@deepseek-ai/dsh-commands": "workspace:^",
-    "@deepseek-ai/dsh-native-runtime": "workspace:^",
-    "@deepseek-ai/dsh-session": "workspace:^",
-    "@deepseek-ai/dsh-session-projection": "workspace:^"
+    "@redspark/rsh-commands": "workspace:^",
+    "@redspark/rsh-native-runtime": "workspace:^",
+    "@redspark/rsh-session": "workspace:^",
+    "@redspark/rsh-session-projection": "workspace:^"
   }
 }

@@ -3,7 +3,7 @@ description: "Shared native process lifecycle for Bash and PowerShell shell Prov
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-shell-process-local
+# @redspark/rsh-shell-process-local
 
 English | [中文](README.zh.md)
 
@@ -20,7 +20,7 @@ This Cordis-free library owns request budget resolution, managed subprocess laun
 
 ## Configuration
 
-`resolveConfig(input, label, extraFields)` validates positive finite execution budgets and rejects unknown fields. A Provider supplies a `ShellDialect` and a managed `subprocess` service to `LocalShellController`. The controller sends caller environment after dialect defaults and trusted `dshEnv` last. Foreground runs return timeout and cancellation facts independently; background handles settle after managed process completion.
+`resolveConfig(input, label, extraFields)` validates positive finite execution budgets and rejects unknown fields. A Provider supplies a `ShellDialect` and a managed `subprocess` service to `LocalShellController`. The controller sends caller environment after dialect defaults and trusted `rshEnv` last. Foreground runs return timeout and cancellation facts independently; background handles settle after managed process completion.
 
 No invariant companion is published because subprocess ownership and completion are enforced by the provider service, and request budgets are validated before constructing a controller.
 

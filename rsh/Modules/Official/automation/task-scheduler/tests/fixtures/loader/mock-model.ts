@@ -1,6 +1,6 @@
-import type { Context } from '@deepseek-ai/cordis'
+import type { Context } from '@redspark/cordis'
 import { MockAdapter, textResponse, toolCallResponse } from '../../../../../../../Engine/core/agent-loop/tests/mock-adapter.ts'
-import type {} from '@deepseek-ai/dsh-goal'
+import type {} from '@redspark/rsh-goal'
 export const name = 'scheduler-test-model'
 export const inject = ['llm', 'goals', 'agents']
 export function apply(ctx: Context): void {

@@ -1,15 +1,15 @@
 /** Session-log download command and Host-owned streaming route. */
 
-import type { Context } from '@deepseek-ai/cordis'
-import type { CommandDefinitionId } from '@deepseek-ai/dsh-commands/brand'
-import Schema from '@deepseek-ai/schemastery'
-import { brandString } from '@deepseek-ai/dsh-brand'
-import type {} from '@deepseek-ai/dsh-attachment'
-import type { CommandResult } from '@deepseek-ai/dsh-commands'
-import type { AttachmentStore } from '@deepseek-ai/dsh-attachment'
-import type { SessionEvent, SessionHeader, SessionId, SessionStore } from '@deepseek-ai/dsh-session'
-import type { SessionPersistence } from '@deepseek-ai/dsh-session-persistence'
-import type { SessionQueryOperations } from '@deepseek-ai/dsh-session-query/native'
+import type { Context } from '@redspark/cordis'
+import type { CommandDefinitionId } from '@redspark/rsh-commands/brand'
+import Schema from '@redspark/schemastery'
+import { brandString } from '@redspark/rsh-brand'
+import type {} from '@redspark/rsh-attachment'
+import type { CommandResult } from '@redspark/rsh-commands'
+import type { AttachmentStore } from '@redspark/rsh-attachment'
+import type { SessionEvent, SessionHeader, SessionId, SessionStore } from '@redspark/rsh-session'
+import type { SessionPersistence } from '@redspark/rsh-session-persistence'
+import type { SessionQueryOperations } from '@redspark/rsh-session-query/native'
 import {
   DEFAULT_SESSION_LOG_COMPRESSION_LEVEL as DEFAULT_COMPRESSION_LEVEL_FROM_ARCHIVE,
   readSessionLogAfterFlush,
@@ -217,7 +217,7 @@ const REQUESTED: CommandResult = {
  */
 export function apply(ctx: Context, config: Config = {}): void {
   ctx.effect(() => ctx.commands.register({
-    definitionId: brandString<CommandDefinitionId>('@deepseek-ai/dsh-session-log-export'),
+    definitionId: brandString<CommandDefinitionId>('@redspark/rsh-session-log-export'),
     name: 'export',
     description: 'Download this Session log as a ZIP archive',
     handler: invocation => Promise.resolve(invocation.rawInput.trim() === ''

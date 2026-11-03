@@ -5,24 +5,24 @@
  * Background policy is selected by this plugin's configuration: one-shot
  * calls own a plain Task, while continuable calls use
  * `ctx.subagents.startContinuable()`.
- * @module @deepseek-ai/dsh-tool-subagent
+ * @module @redspark/rsh-tool-subagent
  */
 
-import type { Context } from '@deepseek-ai/cordis'
-import { scopeChainOf, scopeOf } from '@deepseek-ai/dsh-scope'
-import { defineTool } from '@deepseek-ai/dsh-tools'
-import type { Agent } from '@deepseek-ai/dsh-agent'
-import type { ContentBlock } from '@deepseek-ai/dsh-llm'
-import type { JsonValue } from '@deepseek-ai/dsh-util-values'
-import { SessionSeq } from '@deepseek-ai/dsh-session'
-import type { Session } from '@deepseek-ai/dsh-session'
+import type { Context } from '@redspark/cordis'
+import { scopeChainOf, scopeOf } from '@redspark/rsh-scope'
+import { defineTool } from '@redspark/rsh-tools'
+import type { Agent } from '@redspark/rsh-agent'
+import type { ContentBlock } from '@redspark/rsh-llm'
+import type { JsonValue } from '@redspark/rsh-util-values'
+import { SessionSeq } from '@redspark/rsh-session'
+import type { Session } from '@redspark/rsh-session'
 import {
   assertSubagentMaxDepth,
   parentAgentOptionsForDelegation,
   settleRun,
-} from '@deepseek-ai/dsh-subagent'
-import type { SubagentProvider, SubagentResult, SubagentRun } from '@deepseek-ai/dsh-subagent'
-import type { JobOutcome } from '@deepseek-ai/dsh-jobs'
+} from '@redspark/rsh-subagent'
+import type { SubagentProvider, SubagentResult, SubagentRun } from '@redspark/rsh-subagent'
+import type { JobOutcome } from '@redspark/rsh-jobs'
 import type { Config as ToolConfig } from './config.ts'
 export { Config } from './config.ts'
 import {
@@ -452,7 +452,7 @@ export function apply(ctx: Context, config: ToolConfig, session?: Session): void
             }
             const jobs = runtimeCtx.get('jobs')
             if (jobs === undefined) {
-              throw new Error('background jobs unavailable: load @deepseek-ai/dsh-jobs and @deepseek-ai/dsh-tool-jobs')
+              throw new Error('background jobs unavailable: load @redspark/rsh-jobs and @redspark/rsh-tool-jobs')
             }
             // One-shot background child: job preflight finishes before the
             // starter can spawn, and the task-owned signal covers startup.
@@ -529,7 +529,7 @@ export function apply(ctx: Context, config: ToolConfig, session?: Session): void
   if (settings === undefined) {
     throw new Error(
       'tool-subagent: `modelSelectionSettings` requires '
-      + '@deepseek-ai/dsh-tool-subagent/model-selection-settings in the Host scope',
+      + '@redspark/rsh-tool-subagent/model-selection-settings in the Host scope',
     )
   }
   const selectForSession = (target: Session): ModelSelectionPolicy | undefined => {

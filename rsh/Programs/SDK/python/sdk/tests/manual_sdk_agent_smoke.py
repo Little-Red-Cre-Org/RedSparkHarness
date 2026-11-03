@@ -15,7 +15,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
 
-from deepseek_harness import DeepSeekHarness
+from redspark_harness import RedSparkHarness
 
 
 class MockCompletionHandler(BaseHTTPRequestHandler):
@@ -42,8 +42,8 @@ class MockCompletionHandler(BaseHTTPRequestHandler):
 
 
 def run_smoke(repo_root: Path, keep_sessions: bool) -> None:
-    dsh_home = Path(tempfile.mkdtemp(prefix="dsh-sdk-smoke-home-"))
-    session_root = dsh_home / "sessions"
+    rsh_home = Path(tempfile.mkdtemp(prefix="dsh-sdk-smoke-home-"))
+    session_root = rsh_home / "sessions"
     runtime_entry = repo_root / "rsh/Programs/CLI/src/bin.ts"
     server = ThreadingHTTPServer(("127.0.0.1", 0), MockCompletionHandler)
     thread = threading.Thread(target=server.serve_forever, name="mock-openai-compatible-server", daemon=True)
@@ -51,11 +51,11 @@ def run_smoke(repo_root: Path, keep_sessions: bool) -> None:
     base_url = f"http://127.0.0.1:{server.server_address[1]}"
 
     print(f"repo_root={repo_root}")
-    print(f"dsh_home={dsh_home}")
+    print(f"rsh_home={rsh_home}")
     print(f"mock_base_url={base_url}")
 
     try:
-        with DeepSeekHarness(
+        with RedSparkHarness(
             model="sdk-smoke-model",
             cwd=str(repo_root / "rsh/Programs/SDK/python/sdk"),
             runtime_cwd=str(repo_root),
@@ -68,9 +68,9 @@ def run_smoke(repo_root: Path, keep_sessions: bool) -> None:
                 "sdk",
             ),
             env={
-                "DSH_HOME": str(dsh_home),
-                "DSH_PERMISSION_MODE": "danger-full-access",
-                "DSH_TELEMETRY_DISABLED": "1",
+                "RSH_HOME": str(rsh_home),
+                "RSH_PERMISSION_MODE": "danger-full-access",
+                "RSH_TELEMETRY_DISABLED": "1",
                 "DEEPSEEK_BASE_URL": base_url,
                 "DEEPSEEK_API_KEY": "sdk-smoke-key",
             },
@@ -100,9 +100,9 @@ def run_smoke(repo_root: Path, keep_sessions: bool) -> None:
         server.server_close()
 
     if keep_sessions:
-        print(f"kept_dsh_home={dsh_home}")
+        print(f"kept_dsh_home={rsh_home}")
     else:
-        shutil.rmtree(dsh_home)
+        shutil.rmtree(rsh_home)
         print("removed temporary dsh home")
 
 
@@ -112,7 +112,7 @@ def main() -> None:
         "--repo-root",
         type=Path,
         default=Path(__file__).resolve().parents[6],
-        help="Path to the deepseek-harness checkout.",
+        help="Path to the redspark-harness checkout.",
     )
     parser.add_argument("--keep-sessions", action="store_true")
     args = parser.parse_args()

@@ -1,5 +1,5 @@
 {
-  "name": "@deepseek-ai/dsh-native-jobs",
+  "name": "@redspark/rsh-native-jobs",
   "description": "Native Agent-owned background job registry",
   "version": "1.0.0",
   "publishConfig": { "access": "public" },
@@ -16,9 +16,9 @@
   "files": ["lib/index.js", "lib/types/**/*.d.ts"],
   "license": "MIT",
   "dependencies": {
-    "@deepseek-ai/dsh-output-retention": "workspace:^",
-    "@deepseek-ai/dsh-brand": "workspace:^",
-    "@deepseek-ai/dsh-native-agent": "workspace:^",
-    "@deepseek-ai/dsh-native-runtime": "workspace:^"
+    "@redspark/rsh-output-retention": "workspace:^",
+    "@redspark/rsh-brand": "workspace:^",
+    "@redspark/rsh-native-agent": "workspace:^",
+    "@redspark/rsh-native-runtime": "workspace:^"
   }
 }

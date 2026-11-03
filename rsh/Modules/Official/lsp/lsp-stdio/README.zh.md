@@ -3,7 +3,7 @@ description: "ctx.lsp 的 stdio 语言服务器提供方：配置好的服务器
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-lsp-stdio
+# @redspark/rsh-lsp-stdio
 
 [English](README.md) | 中文
 
@@ -32,10 +32,10 @@ kind: "package-reference"
 `servers` 记录把每个稳定的提供方 id 映射到一条服务器命令。提供方会在清理 credential 后于加载时解析每个可执行文件，因此一个坏配置项会阻止所有提供方注册；进程在第一次匹配查询时惰性启动。
 
 ```yaml
-- name: '@deepseek-ai/dsh-fs-local'
-- name: '@deepseek-ai/dsh-subprocess-local'
-- name: '@deepseek-ai/dsh-lsp'
-- name: '@deepseek-ai/dsh-lsp-stdio'
+- name: '@redspark/rsh-fs-local'
+- name: '@redspark/rsh-subprocess-local'
+- name: '@redspark/rsh-lsp'
+- name: '@redspark/rsh-lsp-stdio'
   config:
     servers:
       typescript:
@@ -43,7 +43,7 @@ kind: "package-reference"
         args: ['--stdio']
         extensionToLanguage:
           '.ts': typescript
-- name: '@deepseek-ai/dsh-tool-lsp'
+- name: '@redspark/rsh-tool-lsp'
 ```
 
 | 字段 | 默认值 | 含义 |
@@ -51,7 +51,7 @@ kind: "package-reference"
 | `command` | 必填 | 要 spawn 的可执行文件——绝对路径，或在加载时从子进程 PATH 解析；不使用 shell 启动 |
 | `extensionToLanguage` | 必填 | 小写、以点开头的扩展名 → LSP language id（例如 `{ '.ts': 'typescript' }`） |
 | `args` | `[]` | 传给可执行文件的参数 |
-| `env` | `{}` | 合并到已清理 credential 的环境之上的额外 env；匹配 `KEY`／`PASSWORD`／`SECRET`／`TOKEN` 的变量以及所有 `DSH_*` 名称不会被转发 |
+| `env` | `{}` | 合并到已清理 credential 的环境之上的额外 env；匹配 `KEY`／`PASSWORD`／`SECRET`／`TOKEN` 的变量以及所有 `RSH_*` 名称不会被转发 |
 | `initializationOptions` | `null` | 转发给服务器的静态 `initialize` 选项 |
 | `configuration` | `null` | 每个 `workspace/configuration` 配置项的静态答案 |
 | `maxMessageBytes` | `16000000` | 从服务器接受的单条 framed 消息最大大小 |
@@ -60,7 +60,7 @@ kind: "package-reference"
 | `shutdownTimeoutMs` | `5000` | 升级前用于优雅 `shutdown`／`exit` 的预算 |
 | `killGraceMs` | `2000` | 请求取消及 SIGTERM→SIGKILL 升级的宽限期 |
 
-`servers` 必须至少包含一个配置项，每个 id 都必须非空；定时器预算必须是 Node 定时器范围内的正整数，字节上限必须为正。生成的[配置目录](../../../../Docs/config-catalog.zh.md#deepseek-aidsh-lsp-stdio)是每个受支持字段的穷尽式真源。
+`servers` 必须至少包含一个配置项，每个 id 都必须非空；定时器预算必须是 Node 定时器范围内的正整数，字节上限必须为正。生成的[配置目录](../../../../Docs/config-catalog.zh.md#redsparkrsh-lsp-stdio)是每个受支持字段的穷尽式真源。
 
 ### 查询做什么
 

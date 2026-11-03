@@ -2,11 +2,11 @@
  * Wire-safe authorization types import the credential-key brand through the
  * Cordis-free Native entry; type-only imports keep runtime code out of browser
  * type chains.
- * @module @deepseek-ai/dsh-authorization/types
+ * @module @redspark/rsh-authorization/types
  */
 
-import type { Branded } from '@deepseek-ai/dsh-brand'
-import type { CredentialKey } from '@deepseek-ai/dsh-credentials/native'
+import type { Branded } from '@redspark/rsh-brand'
+import type { CredentialKey } from '@redspark/rsh-credentials/native'
 
 /** One way a flow can obtain its credential, named by the flow that offers it. */
 export interface AuthorizationMethod {

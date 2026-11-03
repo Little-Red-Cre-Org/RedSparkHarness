@@ -10,7 +10,7 @@ import { afterEach, describe, expect, it } from 'vitest'
 
 const repoRoot = fileURLToPath(new URL('../../../../../../', import.meta.url))
 const probeModule = fileURLToPath(new URL('./fixtures/skill-probe.mjs', import.meta.url))
-const dshBin = join(repoRoot, 'rsh', 'Programs', 'CLI', 'src', 'bin.ts')
+const rshBin = join(repoRoot, 'rsh', 'Programs', 'CLI', 'src', 'bin.ts')
 const tsxEsm = pathToFileURL(createRequire(join(repoRoot, 'package.json')).resolve('tsx/esm')).href
 const cleanups: Array<() => Promise<unknown>> = []
 
@@ -25,15 +25,15 @@ function runCli(
   args: readonly string[],
   extraEnv: Readonly<NodeJS.ProcessEnv> = {},
 ): { status: number | null; stdout: string; stderr: string } {
-  const result = spawnSync(process.execPath, ['--import', tsxEsm, dshBin, ...args], {
+  const result = spawnSync(process.execPath, ['--import', tsxEsm, rshBin, ...args], {
     cwd,
     encoding: 'utf8',
     timeout: 90_000,
     env: {
       ...process.env,
-      DSH_HOME: home,
-      DSH_AGENTS_HOME: join(home, 'agents'),
-      DSH_TELEMETRY_DISABLED: '1',
+      RSH_HOME: home,
+      RSH_AGENTS_HOME: join(home, 'agents'),
+      RSH_TELEMETRY_DISABLED: '1',
       ARCHIFY_UPDATE_CHECK_DISABLED: '1',
       npm_config_update_notifier: 'false',
       TSX_TSCONFIG_PATH: join(repoRoot, 'tsconfig.json'),
@@ -68,7 +68,7 @@ describe('Archify legacy profile composition', () => {
     ])
     expect(dump.status, dump.stderr || dump.stdout).toBe(0)
     expect(dump.stdout).toContain('id: archify')
-    expect(dump.stdout).toContain("name: '@deepseek-ai/dsh-archify'")
+    expect(dump.stdout).toContain("name: '@redspark/rsh-archify'")
 
     const booted = runCli(
       workspace,

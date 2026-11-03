@@ -1,7 +1,7 @@
 /** Shared human Goal parser and direct UI output. */
-import { brandString } from '@deepseek-ai/dsh-brand'
-import type { CommandResult } from '@deepseek-ai/dsh-commands/facts'
-import type { GoalPhase, GoalRef, GoalView } from '@deepseek-ai/dsh-goal/types'
+import { brandString } from '@redspark/rsh-brand'
+import type { CommandResult } from '@redspark/rsh-commands/facts'
+import type { GoalPhase, GoalRef, GoalView } from '@redspark/rsh-goal/types'
 
 /** Human Goal command grammar help. */
 export const USAGE = 'Usage: /goal [<objective>|clear|edit <objective>|pause|resume]'

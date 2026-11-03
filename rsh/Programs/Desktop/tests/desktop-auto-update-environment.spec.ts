@@ -32,14 +32,14 @@ describe('desktop auto-update environment', () => {
 
   it('selects the production URL for packages and bucket for uploads', () => {
     expect(resolveDesktopAutoUpdateConfig({
-      DSH_DESKTOP_AUTO_UPDATE_ENV: 'production',
+      RSH_DESKTOP_AUTO_UPDATE_ENV: 'production',
     }, 'win32', 'x64')).toMatchObject({
       environment: 'production',
       target: 'win-x64',
       publicUrl: 'https://download.deepseek.com/_/harness/desktop/stable/win-x64/',
     })
     expect(resolveDesktopUploadConfig({
-      DSH_DESKTOP_AUTO_UPDATE_ENV: 'production',
+      RSH_DESKTOP_AUTO_UPDATE_ENV: 'production',
       DOWNLOAD_PROD_COS_BUCKET: 'production-download-bucket',
     }, 'win32', 'x64')).toMatchObject({
       bucket: 'production-download-bucket',
@@ -58,7 +58,7 @@ describe('desktop auto-update environment', () => {
       DOWNLOAD_TEST_ORIGIN: 'https://desktop-updates.example.com',
     }, 'darwin', 'arm64')).toThrow(/DOWNLOAD_TEST_COS_BUCKET/u)
     expect(() => resolveDesktopUploadConfig({
-      DSH_DESKTOP_AUTO_UPDATE_ENV: 'production',
+      RSH_DESKTOP_AUTO_UPDATE_ENV: 'production',
     }, 'win32', 'x64')).toThrow(/DOWNLOAD_PROD_COS_BUCKET/u)
   })
 
@@ -73,7 +73,7 @@ describe('desktop auto-update environment', () => {
 
   it('rejects unknown deployments and targets', () => {
     expect(() => resolveDesktopAutoUpdateEnvironment({
-      DSH_DESKTOP_AUTO_UPDATE_ENV: 'staging',
+      RSH_DESKTOP_AUTO_UPDATE_ENV: 'staging',
     })).toThrow(/test.*production/u)
     expect(() => resolveDesktopAutoUpdateTarget('linux', 'x64')).toThrow(/unsupported target/u)
     expect(() => desktopBuildRecordFilename('linux-x64' as 'mac-arm64')).toThrow(/unsupported target/u)

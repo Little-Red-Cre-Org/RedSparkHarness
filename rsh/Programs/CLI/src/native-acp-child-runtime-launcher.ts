@@ -5,14 +5,14 @@ import { lstat, mkdtemp, realpath, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
-import { disposeChildConnection } from '@deepseek-ai/dsh-subprocess/native'
-import type { ChildConnectionDefinition } from '@deepseek-ai/dsh-subprocess/native'
-import { scrubbedParentEnv } from '@deepseek-ai/dsh-subprocess/native'
-import type { SandboxPolicy } from '@deepseek-ai/dsh-sandbox/native'
+import type { NativePlugin } from '@redspark/rsh-native-runtime'
+import { disposeChildConnection } from '@redspark/rsh-subprocess/native'
+import type { ChildConnectionDefinition } from '@redspark/rsh-subprocess/native'
+import { scrubbedParentEnv } from '@redspark/rsh-subprocess/native'
+import type { SandboxPolicy } from '@redspark/rsh-sandbox/native'
 import type {
   NativeAcpChildRuntime, NativeAcpChildRuntimeLauncher, NativeAcpChildRuntimeRequest,
-} from '@deepseek-ai/dsh-acp-child/native'
+} from '@redspark/rsh-acp-child/native'
 
 interface CliManifest {
   readonly bin?: unknown
@@ -25,7 +25,7 @@ interface FixedChildProcess {
 }
 
 function fixedChildProcess(request: NativeAcpChildRuntimeRequest, cwd: string, home: string, overlay: string): FixedChildProcess {
-  const manifestPath = fileURLToPath(import.meta.resolve('@deepseek-ai/dsh/package.json'))
+  const manifestPath = fileURLToPath(import.meta.resolve('@redspark/rsh/package.json'))
   const packageRoot = dirname(manifestPath)
   const manifest = JSON.parse(readFileSync(manifestPath, 'utf8')) as CliManifest
   const bin = typeof manifest.bin === 'object' && manifest.bin !== null
@@ -55,7 +55,7 @@ function fixedChildProcess(request: NativeAcpChildRuntimeRequest, cwd: string, h
   return {
     argv: [process.execPath, ...nodeArgs, '--profile', 'native-acp-dsh-child', '--patch', overlay],
     cwd,
-    env: { ...env, ...sourceEnvironment, DSH_HOME: resolve(home) },
+    env: { ...env, ...sourceEnvironment, RSH_HOME: resolve(home) },
   }
 }
 
@@ -106,7 +106,7 @@ async function removePrivateHome(path: string, root: string): Promise<void> {
 /** Install the fixed same-version launcher capability into a native Host. */
 export const nativeAcpChildRuntimeLauncher: NativePlugin = {
   apiVersion: 1,
-  name: '@deepseek-ai/dsh-acp-child-runtime-launcher',
+  name: '@redspark/rsh-acp-child-runtime-launcher',
   targets: ['host'],
   requires: ['childConnection', 'sandbox'],
   provides: ['acpChildRuntimeLauncher'],

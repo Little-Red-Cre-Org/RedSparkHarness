@@ -1,5 +1,5 @@
 {
-  "name": "@deepseek-ai/dsh-session-turn-outline",
+  "name": "@redspark/rsh-session-turn-outline",
   "description": "Whole-log turn outline projection (turnOutline) for the RedSpark Harness",
   "version": "1.0.0",
   "publishConfig": {
@@ -36,20 +36,20 @@
   ],
   "license": "MIT",
   "peerDependencies": {
-    "@deepseek-ai/cordis": "workspace:^",
-    "@deepseek-ai/dsh-llm": "workspace:^",
-    "@deepseek-ai/dsh-session": "workspace:^",
-    "@deepseek-ai/dsh-session-projection": "workspace:^"
+    "@redspark/cordis": "workspace:^",
+    "@redspark/rsh-llm": "workspace:^",
+    "@redspark/rsh-session": "workspace:^",
+    "@redspark/rsh-session-projection": "workspace:^"
   },
   "dependencies": {
     "zod": "^4.4.3"
   },
   "devDependencies": {
-    "@deepseek-ai/cordis": "workspace:^",
-    "@deepseek-ai/cordis-plugin-include": "workspace:^",
-    "@deepseek-ai/cordis-plugin-loader": "workspace:^",
-    "@deepseek-ai/dsh-llm": "workspace:^",
-    "@deepseek-ai/dsh-session": "workspace:^",
-    "@deepseek-ai/dsh-session-projection": "workspace:^"
+    "@redspark/cordis": "workspace:^",
+    "@redspark/cordis-plugin-include": "workspace:^",
+    "@redspark/cordis-plugin-loader": "workspace:^",
+    "@redspark/rsh-llm": "workspace:^",
+    "@redspark/rsh-session": "workspace:^",
+    "@redspark/rsh-session-projection": "workspace:^"
   }
 }

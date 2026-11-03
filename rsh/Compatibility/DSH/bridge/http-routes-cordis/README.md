@@ -3,13 +3,13 @@ description: "Provides the Cordis Context and event declarations for the selecte
 kind: "package-library"
 ---
 
-# @deepseek-ai/dsh-http-routes-cordis
+# @redspark/rsh-http-routes-cordis
 
 English | [中文](README.zh.md)
 
 ## Summary
 
-`@deepseek-ai/dsh-http-routes-cordis` carries the Cordis compatibility contract for `ctx.webServer` and `webserver/index-inject`. Cordis consumers import it where they read the WebServer service or its injection event. The bridge exposes legacy Web route names and WebServer configuration types over the framework-neutral route definitions in `@deepseek-ai/dsh-http-routes`; it neither listens nor dispatches requests.
+`@redspark/rsh-http-routes-cordis` carries the Cordis compatibility contract for `ctx.webServer` and `webserver/index-inject`. Cordis consumers import it where they read the WebServer service or its injection event. The bridge exposes legacy Web route names and WebServer configuration types over the framework-neutral route definitions in `@redspark/rsh-http-routes`; it neither listens nor dispatches requests.
 
 ## Table of Contents
 
@@ -32,8 +32,8 @@ Import this bridge in a Cordis program that consumes the WebServer service or co
 ### Entry point
 
 ```text
-import type {} from '@deepseek-ai/dsh-http-routes-cordis'
-import type { Context } from '@deepseek-ai/cordis'
+import type {} from '@redspark/rsh-http-routes-cordis'
+import type { Context } from '@redspark/cordis'
 
 declare const ctx: Context
 const removeRoute = ctx.webServer.register(route)

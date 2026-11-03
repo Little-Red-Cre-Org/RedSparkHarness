@@ -6,11 +6,11 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { expect, it } from 'vitest'
-import { DeepSeekHarness, type HarnessNotification } from '@deepseek-ai/dsh-sdk-client'
-import { parseSessionLog } from '@deepseek-ai/dsh-llm-replay'
+import { RedSparkHarness, type HarnessNotification } from '@redspark/rsh-sdk-client'
+import { parseSessionLog } from '@redspark/rsh-llm-replay'
 import { shippedNativeProfileComposition } from '../../rsh/Programs/CLI/src/native-profile-template.ts'
 import { formatSystemPromptSnapshot, formatToolSchemasSnapshot, normalizedSystemPrompts, normalizedToolSchemas,
-  normalizeSessionSnapshot, redactSessionSnapshotIds } from '@deepseek-ai/dsh-session-snapshot'
+  normalizeSessionSnapshot, redactSessionSnapshotIds } from '@redspark/rsh-session-snapshot'
 
 const root = fileURLToPath(new URL('../../', import.meta.url))
 const scene = join(root, 'snapshots/native-sdk/text-turn')
@@ -192,10 +192,10 @@ it('replays a native SDK turn with exact model input, output and durable Session
     dsh: { profile: { runtime: 'native', config: 'rsh.profile.json' } } }))
   writeFileSync(join(profile, 'rsh.profile.json'), JSON.stringify({ ...composition, installations: [
     ...composition.installations,
-    { id: 'fixture-approval', plugin: '@deepseek-ai/dsh-native-approval', scope: 'root', config: { policy: 'ask' } },
+    { id: 'fixture-approval', plugin: '@redspark/rsh-native-approval', scope: 'root', config: { policy: 'ask' } },
     { id: 'descendants', scope: 'root', plugin: 'fixture-sdk-descendants',
       config: { settlementReadyUrl: `http://127.0.0.1:${address.port}/settlement-ready` } },
-    { id: 'continuable-tool', scope: 'root', plugin: '@deepseek-ai/dsh-tool-subagent', config: {
+    { id: 'continuable-tool', scope: 'root', plugin: '@redspark/rsh-tool-subagent', config: {
       toolName: 'continuable_subagent', backgroundMode: 'continuable', maxDepth: 1, maxSteps: 2, maxTokens: 128,
       persona: 'Only the continuable child receives this persona.', toolFilter: { deny: ['fixture_delegate_child'] },
     } },
@@ -208,19 +208,19 @@ it('replays a native SDK turn with exact model input, output and durable Session
     { id: 'pi-ai', config: { providers: { fixture: { apiKeyEnv: 'NATIVE_SDK_FIXTURE_KEY', api: 'openai-completions',
       baseURL: `http://127.0.0.1:${address.port}/v1`, models: [{ id: 'fixture-model', input: ['text', 'image'] }] } } } },
   ] }))
-  const harness = new DeepSeekHarness({ dshBin: join(root, 'rsh/Programs/CLI/lib/bin.js'),
-    dshHome: home, patches: [patch], cwd: workspace, provider: 'fixture', model: 'fixture-model',
-    env: { ...process.env, NATIVE_SDK_FIXTURE_KEY: 'fixture-key', DSH_TELEMETRY_DISABLED: '1' },
+  const harness = new RedSparkHarness({ rshBin: join(root, 'rsh/Programs/CLI/lib/bin.js'),
+    rshHome: home, patches: [patch], cwd: workspace, provider: 'fixture', model: 'fixture-model',
+    env: { ...process.env, NATIVE_SDK_FIXTURE_KEY: 'fixture-key', RSH_TELEMETRY_DISABLED: '1' },
     requestTimeoutMs: 20_000 })
   try {
     let result
-    if (process.env.DSH_NATIVE_SDK_PYTHON !== undefined) {
+    if (process.env.RSH_NATIVE_SDK_PYTHON !== undefined) {
       const launcher = join(home, process.platform === 'win32' ? 'dsh.cmd' : 'dsh')
       writeFileSync(launcher, process.platform === 'win32'
         ? `@echo off\r\n"${process.execPath}" "${join(root, 'rsh/Programs/CLI/lib/bin.js')}" %*\r\n`
         : `#!/bin/sh\nexec "${process.execPath}" "${join(root, 'rsh/Programs/CLI/lib/bin.js')}" "$@"\n`)
       if (process.platform !== 'win32') chmodSync(launcher, 0o700)
-      const python = await execa(process.env.DSH_NATIVE_SDK_PYTHON, [join(scene, 'client.py'), launcher, home, workspace, patch, task], {
+      const python = await execa(process.env.RSH_NATIVE_SDK_PYTHON, [join(scene, 'client.py'), launcher, home, workspace, patch, task], {
         env: { ...process.env, PYTHONPATH: join(root, 'rsh/Programs/SDK/python/sdk/src'), NATIVE_SDK_FIXTURE_KEY: 'fixture-key' },
         timeout: 30000,
       })
@@ -247,7 +247,7 @@ it('replays a native SDK turn with exact model input, output and durable Session
         && event.data.inserted.some(message => message.id === steering))).toBe(true)
       await expect(session.steer('settled steering')).rejects.toThrow()
       await harness.close()
-      const resumed = new DeepSeekHarness({ ...harness.client.options, cwd: workspace, provider: 'fixture', model: 'fixture-model' })
+      const resumed = new RedSparkHarness({ ...harness.client.options, cwd: workspace, provider: 'fixture', model: 'fixture-model' })
       try {
         result = await resumed.run('finish after cancellation', { sessionId: 'sdk-recorded-turn' })
         const source = resumed.session('sdk-recorded-turn')
@@ -260,7 +260,7 @@ it('replays a native SDK turn with exact model input, output and durable Session
         expect(requests).toHaveLength(2)
       }
       finally { await resumed.close() }
-      const forked = new DeepSeekHarness({ ...harness.client.options, cwd: workspace, provider: 'fixture', model: 'fixture-model' })
+      const forked = new RedSparkHarness({ ...harness.client.options, cwd: workspace, provider: 'fixture', model: 'fixture-model' })
       try {
         const session = forked.session('sdk-recorded-fork')
         const data = readFileSync(join(scene, 'image.png')).toString('base64')
@@ -270,7 +270,7 @@ it('replays a native SDK turn with exact model input, output and durable Session
         result = await session.run([{ type: 'text', text: 'finish the cold fork' }, { type: 'image', data, mimeType: 'image/png' }])
       }
       finally { await forked.close() }
-      const restored = new DeepSeekHarness({ ...harness.client.options, cwd: workspace, provider: 'fixture', model: 'fixture-model' })
+      const restored = new RedSparkHarness({ ...harness.client.options, cwd: workspace, provider: 'fixture', model: 'fixture-model' })
       try {
         result = await restored.session('sdk-recorded-fork').run('retain the image')
         result = await restored.session('sdk-recorded-fork').run('delegate a native child')
@@ -341,7 +341,7 @@ it('replays a native SDK turn with exact model input, output and durable Session
       }
       finally { await restored.close() }
       let continuationId: string | undefined
-      const recovered = new DeepSeekHarness({ ...harness.client.options, cwd: workspace, provider: 'fixture', model: 'fixture-model' })
+      const recovered = new RedSparkHarness({ ...harness.client.options, cwd: workspace, provider: 'fixture', model: 'fixture-model' })
       try {
         const resumed = await recovered.session('sdk-recorded-fork').run('recover after child cancellation')
         expect(resumed.finalResponse).toBe(reply)
@@ -394,7 +394,7 @@ it('replays a native SDK turn with exact model input, output and durable Session
 
       }
       finally { await recovered.close() }
-      const cold = new DeepSeekHarness({ ...harness.client.options, cwd: workspace, provider: 'fixture', model: 'fixture-model' })
+      const cold = new RedSparkHarness({ ...harness.client.options, cwd: workspace, provider: 'fixture', model: 'fixture-model' })
       try {
         const session = cold.session('sdk-recorded-fork')
         const tree = cold.client.subscribeSessionTree(session.id)
@@ -429,7 +429,7 @@ it('replays a native SDK turn with exact model input, output and durable Session
         } finally { tree.close() }
       } finally { await cold.close() }
 
-      const catalog = new DeepSeekHarness({ ...harness.client.options, cwd: workspace, provider: 'fixture', model: 'fixture-model' })
+      const catalog = new RedSparkHarness({ ...harness.client.options, cwd: workspace, provider: 'fixture', model: 'fixture-model' })
       try {
         const listed = await catalog.session('sdk-recorded-turn').run('catalog descendants through fork')
         const content = listed.events.find(event => event.type === 'tool/result')?.data.message.content[0]
@@ -500,7 +500,7 @@ it('replays a native SDK turn with exact model input, output and durable Session
     const continuationFixture = join(scene, 'session.6.v3.jsonl')
     const normalizedContinuation = normalizeSessionSnapshot(redactSessionSnapshotIds([continuationLog])[0] ?? continuationLog,
       { cwd: workspace, cwdAliases, sessionIds: [] }, { identityMode: 'preserve' })
-    if (process.env.DSH_SNAPSHOT === 'refresh') writeFileSync(continuationFixture, normalizedContinuation)
+    if (process.env.RSH_SNAPSHOT === 'refresh') writeFileSync(continuationFixture, normalizedContinuation)
     else expect(normalizedContinuation).toBe(readFileSync(continuationFixture, 'utf8'))
     const failedChildLog = logs.find(log => childTask(log, 'fail production child'))
     if (failedChildLog === undefined) throw new Error('native-sdk snapshot: failed child missing')
@@ -508,7 +508,7 @@ it('replays a native SDK turn with exact model input, output and durable Session
     const normalizedFailed = normalizeSessionSnapshot(redactSessionSnapshotIds([failedChildLog])[0] ?? failedChildLog,
       { cwd: workspace, cwdAliases, sessionIds: [] }, { identityMode: 'preserve' })
     const failedFixture = join(scene, 'session.4.v3.jsonl')
-    if (process.env.DSH_SNAPSHOT === 'refresh') writeFileSync(failedFixture, normalizedFailed)
+    if (process.env.RSH_SNAPSHOT === 'refresh') writeFileSync(failedFixture, normalizedFailed)
     else expect(normalizedFailed).toBe(readFileSync(failedFixture, 'utf8'))
     const backgroundLog = logs.find(log => childTask(log, 'hold background child'))
     if (backgroundLog === undefined) throw new Error('native-sdk snapshot: background child missing')
@@ -516,7 +516,7 @@ it('replays a native SDK turn with exact model input, output and durable Session
     const normalizedBackground = normalizeSessionSnapshot(redactSessionSnapshotIds([backgroundLog])[0] ?? backgroundLog,
       { cwd: workspace, cwdAliases, sessionIds: [] }, { identityMode: 'preserve' })
     const backgroundFixture = join(scene, 'session.5.v3.jsonl')
-    if (process.env.DSH_SNAPSHOT === 'refresh') writeFileSync(backgroundFixture, normalizedBackground)
+    if (process.env.RSH_SNAPSHOT === 'refresh') writeFileSync(backgroundFixture, normalizedBackground)
     else expect(normalizedBackground).toBe(readFileSync(backgroundFixture, 'utf8'))
     const cancelledChildLog = logs.find(log => childTask(log, 'hold production child'))
     if (cancelledChildLog === undefined) throw new Error('native-sdk snapshot: cancelled child missing')
@@ -524,7 +524,7 @@ it('replays a native SDK turn with exact model input, output and durable Session
     const normalizedCancelled = normalizeSessionSnapshot(redactSessionSnapshotIds([cancelledChildLog])[0] ?? cancelledChildLog,
       { cwd: workspace, cwdAliases, sessionIds: [] }, { identityMode: 'preserve' })
     const cancelledFixture = join(scene, 'session.3.v3.jsonl')
-    if (process.env.DSH_SNAPSHOT === 'refresh') writeFileSync(cancelledFixture, normalizedCancelled)
+    if (process.env.RSH_SNAPSHOT === 'refresh') writeFileSync(cancelledFixture, normalizedCancelled)
     else expect(normalizedCancelled).toBe(readFileSync(cancelledFixture, 'utf8'))
     const productionRaw = findLog(String(spawned))
     const productionEvents = parseSessionLog(productionRaw)
@@ -544,14 +544,14 @@ it('replays a native SDK turn with exact model input, output and durable Session
     const productionFixture = join(scene, 'session.2.v3.jsonl')
     const normalizedProduction = normalizeSessionSnapshot(redactSessionSnapshotIds([productionRaw])[0] ?? productionRaw,
       { cwd: workspace, cwdAliases, sessionIds: [] }, { identityMode: 'preserve' })
-    if (process.env.DSH_SNAPSHOT === 'refresh') writeFileSync(productionFixture, normalizedProduction)
+    if (process.env.RSH_SNAPSHOT === 'refresh') writeFileSync(productionFixture, normalizedProduction)
     else expect(normalizedProduction).toBe(readFileSync(productionFixture, 'utf8'))
     const childRaw = findLog('sdk-recorded-child')
     expect(JSON.parse(childRaw.split('\n')[0] ?? '{}')).toMatchObject({ parentSession: 'sdk-recorded-fork', origin: 'subagent' })
     const normalizedChild = normalizeSessionSnapshot(redactSessionSnapshotIds([childRaw])[0] ?? childRaw,
       { cwd: workspace, cwdAliases, sessionIds: [] }, { identityMode: 'preserve' })
     const childFixture = join(scene, 'session.1.v3.jsonl')
-    if (process.env.DSH_SNAPSHOT === 'refresh') writeFileSync(childFixture, normalizedChild)
+    if (process.env.RSH_SNAPSHOT === 'refresh') writeFileSync(childFixture, normalizedChild)
     else expect(normalizedChild).toBe(readFileSync(childFixture, 'utf8'))
     const context = { cwd: workspace, cwdAliases, sessionIds: [] }
     const catalogChildId = (JSON.parse(continuationLog.split('\n')[0] ?? '{}') as { id: string }).id
@@ -578,7 +578,7 @@ it('replays a native SDK turn with exact model input, output and durable Session
     if (prompts[0] === undefined || schemas[0] === undefined) throw new Error('native-sdk snapshot: request header missing')
     const systemPrompt = formatSystemPromptSnapshot(prompts[0], prompts.slice(1))
     const tools = formatToolSchemasSnapshot(schemas[0], schemas.slice(1))
-    if (process.env.DSH_SNAPSHOT === 'refresh') {
+    if (process.env.RSH_SNAPSHOT === 'refresh') {
       writeFileSync(fixture, normalized)
       writeFileSync(join(scene, 'fork-session.v3.jsonl'), normalizedFork)
       writeFileSync(join(scene, 'fork-model-request.expected.json'), forkModelInput)

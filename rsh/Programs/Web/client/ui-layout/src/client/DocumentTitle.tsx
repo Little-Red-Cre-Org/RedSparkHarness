@@ -1,6 +1,6 @@
 /** Browser title selection follows the active main panel without subscribing the frame. */
 import { useEffect } from 'react'
-import type { SnapshotSelectorHook } from '@deepseek-ai/dsh-client-ui-slots'
+import type { SnapshotSelectorHook } from '@redspark/rsh-client-ui-slots'
 import type { PanelInfo } from './service.ts'
 
 /** Session list facts needed by the compatibility title projection. */

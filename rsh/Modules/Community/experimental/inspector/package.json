@@ -1,5 +1,5 @@
 {
-  "name": "@deepseek-ai/dsh-experimental-inspector",
+  "name": "@redspark/rsh-experimental-inspector",
   "description": "Experimental cross-realm CDP hub for Host debugging and Client Runtime inspection",
   "version": "1.0.0",
   "private": true,
@@ -37,25 +37,25 @@
   ],
   "license": "MIT",
   "dependencies": {
-    "@deepseek-ai/dsh-brand": "workspace:^",
-    "@deepseek-ai/dsh-util-crypto": "workspace:^",
-    "@deepseek-ai/schemastery": "workspace:^",
+    "@redspark/rsh-brand": "workspace:^",
+    "@redspark/rsh-util-crypto": "workspace:^",
+    "@redspark/schemastery": "workspace:^",
     "ws": "^8.21.0"
   },
   "peerDependencies": {
-    "@deepseek-ai/cordis": "workspace:^",
-    "@deepseek-ai/cordis-plugin-loader": "workspace:^",
-    "@deepseek-ai/dsh-client-modules": "workspace:^",
-    "@deepseek-ai/dsh-http-routes": "workspace:^",
-    "@deepseek-ai/dsh-http-routes-cordis": "workspace:^"
+    "@redspark/cordis": "workspace:^",
+    "@redspark/cordis-plugin-loader": "workspace:^",
+    "@redspark/rsh-client-modules": "workspace:^",
+    "@redspark/rsh-http-routes": "workspace:^",
+    "@redspark/rsh-http-routes-cordis": "workspace:^"
   },
   "devDependencies": {
-    "@deepseek-ai/cordis": "workspace:^",
-    "@deepseek-ai/cordis-plugin-include": "workspace:^",
-    "@deepseek-ai/cordis-plugin-loader": "workspace:^",
-    "@deepseek-ai/dsh-host-webserver": "workspace:^",
-    "@deepseek-ai/dsh-http-routes": "workspace:^",
-    "@deepseek-ai/dsh-http-routes-cordis": "workspace:^",
+    "@redspark/cordis": "workspace:^",
+    "@redspark/cordis-plugin-include": "workspace:^",
+    "@redspark/cordis-plugin-loader": "workspace:^",
+    "@redspark/rsh-host-webserver": "workspace:^",
+    "@redspark/rsh-http-routes": "workspace:^",
+    "@redspark/rsh-http-routes-cordis": "workspace:^",
     "@types/ws": "^8.18.1",
     "playwright": "^1.49.0",
     "tsx": "^4.19.2"

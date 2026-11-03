@@ -1,23 +1,23 @@
 /** Native Subagent Definition and in-process spawn Provider. */
 import { randomUUID } from 'node:crypto'
-import type { NativeAgent } from '@deepseek-ai/dsh-native-agent'
-import type { NativePlugin, NativeContext } from '@deepseek-ai/dsh-native-runtime'
+import type { NativeAgent } from '@redspark/rsh-native-agent'
+import type { NativePlugin, NativeContext } from '@redspark/rsh-native-runtime'
 import { createUserMessage, type ContentBlock, type ReasoningEffortId, type StreamChunk, type MessageId,
-  type ToolCallId } from '@deepseek-ai/dsh-llm/native'
-import { SessionId, type Session, type TurnEndReason } from '@deepseek-ai/dsh-session/native'
+  type ToolCallId } from '@redspark/rsh-llm/native'
+import { SessionId, type Session, type TurnEndReason } from '@redspark/rsh-session/native'
 import { NativeSubagentContinuations } from './continuation.ts'
 import type { NativeActiveSessionOwner, NativeDelegationSetup,
-  NativeSessionConfiguration } from '@deepseek-ai/dsh-native-session-execution'
-import type { NativeJobId, NativeJobRegistry } from '@deepseek-ai/dsh-native-jobs'
-import type { NativeToolDelegationContext, NativeToolRestriction } from '@deepseek-ai/dsh-native-tools/types'
-import { assertObjectJsonSchema, type ObjectJsonSchema } from '@deepseek-ai/dsh-native-tools/json-schema'
-import { AssistantOutputFold, snapshotSubagentDescriptor, SUBAGENT_DELEGATION_CONTEXT } from '@deepseek-ai/dsh-subagent-protocol'
+  NativeSessionConfiguration } from '@redspark/rsh-native-session-execution'
+import type { NativeJobId, NativeJobRegistry } from '@redspark/rsh-native-jobs'
+import type { NativeToolDelegationContext, NativeToolRestriction } from '@redspark/rsh-native-tools/types'
+import { assertObjectJsonSchema, type ObjectJsonSchema } from '@redspark/rsh-native-tools/json-schema'
+import { AssistantOutputFold, snapshotSubagentDescriptor, SUBAGENT_DELEGATION_CONTEXT } from '@redspark/rsh-subagent-protocol'
 import { attachNativeStructuredOutput, type NativeStructuredAttachment } from './structured.ts'
-import type {} from '@deepseek-ai/dsh-native-prompt'
-import type {} from '@deepseek-ai/dsh-native-tools'
-import type { NativeExternalToolOperations, NativeToolRegistry } from '@deepseek-ai/dsh-native-tools'
-import type { NativeResponsesPreparedGeneration } from '@deepseek-ai/dsh-native-model-execution/responses-transport'
-import type { NativeResponsesTransport } from '@deepseek-ai/dsh-native-model-execution/responses-transport'
+import type {} from '@redspark/rsh-native-prompt'
+import type {} from '@redspark/rsh-native-tools'
+import type { NativeExternalToolOperations, NativeToolRegistry } from '@redspark/rsh-native-tools'
+import type { NativeResponsesPreparedGeneration } from '@redspark/rsh-native-model-execution/responses-transport'
+import type { NativeResponsesTransport } from '@redspark/rsh-native-model-execution/responses-transport'
 import type { NativeExternalSubagentDriver, NativeExternalSubagentFinishedEvent, NativeExternalSubagentId,
   NativeExternalSubagentApprovalOutcome, NativeExternalSubagentApprovalRelay, NativeExternalSubagentApprovalRequest,
   NativeExternalSubagentApprovalRequester, NativeExternalSubagentOutcome, NativeExternalSubagentRequest, NativeExternalSubagentResult,
@@ -30,7 +30,7 @@ import { issueNativeExternalModelAttemptLease, issueNativeExternalToolCallGrant 
 export type * from './external-driver.ts'
 export { serializeNativeExternalJson } from './external-driver.ts'
 
-declare module '@deepseek-ai/dsh-native-tools' {
+declare module '@redspark/rsh-native-tools' {
   interface NativeToolExecution {
     /** Exact external operation generation available only to nested subagent resolution. */
     readonly responsesGeneration?: NativeResponsesPreparedGeneration
@@ -238,7 +238,7 @@ export interface NativeSubagentOperations {
   interrupt(request: NativeSubagentControlRequest): void
 }
 
-declare module '@deepseek-ai/dsh-native-runtime' {
+declare module '@redspark/rsh-native-runtime' {
   interface NativeServices {
     subagents: NativeSubagentOperations
     subagentControls: NativeSubagentControlTools
@@ -1373,7 +1373,7 @@ function isCancellation(error: unknown, reason: unknown): boolean {
 
 /** Native in-process spawn Provider; deployment selects its advertised name. */
 export const plugin: NativePlugin = {
-  apiVersion: 1, name: '@deepseek-ai/dsh-native-subagent', targets: ['host'],
+  apiVersion: 1, name: '@redspark/rsh-native-subagent', targets: ['host'],
   requires: ['sessionExecution', 'activeSessions', 'promptSections'], optional: ['tools', 'jobs', 'externalSubagentDriver'], provides: ['subagents'],
   resolve(input) {
     if (typeof input !== 'object' || input === null || Array.isArray(input)) throw new Error('native-subagent: configuration must be an object')

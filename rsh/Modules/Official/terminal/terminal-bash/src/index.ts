@@ -1,18 +1,18 @@
 /**
  * Persistent shell PTY backend over the subprocess terminal primitive, shared
  * sandbox policy, bounded output, and provider-owned session cleanup.
- * @module @deepseek-ai/dsh-terminal-bash
+ * @module @redspark/rsh-terminal-bash
  */
 
-import { Context } from '@deepseek-ai/cordis'
-import type { Agent } from '@deepseek-ai/dsh-agent'
-import type { Session, SessionEvent } from '@deepseek-ai/dsh-session'
-import { TerminalBackendCleanupError } from '@deepseek-ai/dsh-terminal'
-import type { TerminalBackend, TerminalBackendSpawnSpec } from '@deepseek-ai/dsh-terminal'
-import type { SubprocessTerminalHandle, SubprocessTerminalSpawnSpec } from '@deepseek-ai/dsh-subprocess'
-import type { SandboxExecutionPolicy } from '@deepseek-ai/dsh-sandbox'
-import type {} from '@deepseek-ai/dsh-sandbox-policy'
-import type {} from '@deepseek-ai/dsh-session-projection'
+import { Context } from '@redspark/cordis'
+import type { Agent } from '@redspark/rsh-agent'
+import type { Session, SessionEvent } from '@redspark/rsh-session'
+import { TerminalBackendCleanupError } from '@redspark/rsh-terminal'
+import type { TerminalBackend, TerminalBackendSpawnSpec } from '@redspark/rsh-terminal'
+import type { SubprocessTerminalHandle, SubprocessTerminalSpawnSpec } from '@redspark/rsh-subprocess'
+import type { SandboxExecutionPolicy } from '@redspark/rsh-sandbox'
+import type {} from '@redspark/rsh-sandbox-policy'
+import type {} from '@redspark/rsh-session-projection'
 import { type Config, type ResolvedConfig, resolveConfig, validateConfig } from './config.ts'
 import { LocalPtySession } from './session.ts'
 import { childEnvironment, startupSession } from './startup.ts'

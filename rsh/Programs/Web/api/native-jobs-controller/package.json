@@ -1,5 +1,5 @@
 {
-    "name":  "@deepseek-ai/dsh-native-jobs-controller",
+    "name":  "@redspark/rsh-native-jobs-controller",
     "description":  "Native Web background-job Host endpoints",
     "version":  "1.0.0",
     "publishConfig":  {
@@ -52,20 +52,20 @@
               ],
     "license":  "MIT",
     "dependencies":  {
-                         "@deepseek-ai/dsh-native-runtime":  "workspace:^",
-                         "@deepseek-ai/dsh-client-connection":  "workspace:^",
-                         "@deepseek-ai/dsh-native-agent":  "workspace:^",
-                         "@deepseek-ai/dsh-native-jobs":  "workspace:^",
+                         "@redspark/rsh-native-runtime":  "workspace:^",
+                         "@redspark/rsh-client-connection":  "workspace:^",
+                         "@redspark/rsh-native-agent":  "workspace:^",
+                         "@redspark/rsh-native-jobs":  "workspace:^",
                          "zod":  "^4.4.3"
                      },
     "devDependencies":  {
-                            "@deepseek-ai/dsh-client-native-session":  "workspace:^",
-                            "@deepseek-ai/cordis":  "workspace:^"
+                            "@redspark/rsh-client-native-session":  "workspace:^",
+                            "@redspark/cordis":  "workspace:^"
                         },
     "scripts":  {
                     "bundle":  "tsdown"
                 },
     "peerDependencies":  {
-                             "@deepseek-ai/cordis":  "workspace:^"
+                             "@redspark/cordis":  "workspace:^"
                          }
 }

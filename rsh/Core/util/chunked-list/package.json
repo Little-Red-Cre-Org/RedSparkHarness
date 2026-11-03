@@ -1,5 +1,5 @@
 {
-  "name": "@deepseek-ai/dsh-chunked-list",
+  "name": "@redspark/rsh-chunked-list",
   "description": "Persistent append-only chunked lists with bounded copying and JSON checkpoint validation",
   "version": "1.0.0",
   "publishConfig": {

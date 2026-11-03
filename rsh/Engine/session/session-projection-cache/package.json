@@ -1,5 +1,5 @@
 {
-  "name": "@deepseek-ai/dsh-session-projection-cache",
+  "name": "@redspark/rsh-session-projection-cache",
   "description": "Persisted projection cache (ctx.sessionProjectionCache): durable per-session checkpoint records on the session_projcache storage domain (per-record layout), throttled write-behind, and the cached listing read",
   "version": "1.0.0",
   "publishConfig": {
@@ -33,36 +33,36 @@
   ],
   "license": "MIT",
   "dependencies": {
-    "@deepseek-ai/dsh-util-values": "workspace:^",
-    "@deepseek-ai/schemastery": "workspace:^",
+    "@redspark/rsh-util-values": "workspace:^",
+    "@redspark/schemastery": "workspace:^",
     "zod": "^4.4.3"
   },
   "peerDependencies": {
-    "@deepseek-ai/cordis": "workspace:^",
-    "@deepseek-ai/dsh-session": "workspace:^",
-    "@deepseek-ai/dsh-session-projection": "workspace:^",
-    "@deepseek-ai/dsh-storage-domain": "workspace:^",
-    "@deepseek-ai/dsh-native-runtime": "workspace:^",
-    "@deepseek-ai/dsh-native-session-execution": "workspace:^"
+    "@redspark/cordis": "workspace:^",
+    "@redspark/rsh-session": "workspace:^",
+    "@redspark/rsh-session-projection": "workspace:^",
+    "@redspark/rsh-storage-domain": "workspace:^",
+    "@redspark/rsh-native-runtime": "workspace:^",
+    "@redspark/rsh-native-session-execution": "workspace:^"
   },
   "devDependencies": {
-    "@deepseek-ai/cordis": "workspace:^",
-    "@deepseek-ai/dsh-session": "workspace:^",
-    "@deepseek-ai/dsh-session-projection": "workspace:^",
-    "@deepseek-ai/dsh-storage": "workspace:^",
-    "@deepseek-ai/dsh-storage-domain": "workspace:^",
-    "@deepseek-ai/dsh-storage-json": "workspace:^",
-    "@deepseek-ai/dsh-native-runtime": "workspace:^",
-    "@deepseek-ai/dsh-native-session-execution": "workspace:^"
+    "@redspark/cordis": "workspace:^",
+    "@redspark/rsh-session": "workspace:^",
+    "@redspark/rsh-session-projection": "workspace:^",
+    "@redspark/rsh-storage": "workspace:^",
+    "@redspark/rsh-storage-domain": "workspace:^",
+    "@redspark/rsh-storage-json": "workspace:^",
+    "@redspark/rsh-native-runtime": "workspace:^",
+    "@redspark/rsh-native-session-execution": "workspace:^"
   },
   "peerDependenciesMeta": {
-    "@deepseek-ai/dsh-native-runtime": {
+    "@redspark/rsh-native-runtime": {
       "optional": true
     },
-    "@deepseek-ai/dsh-native-session-execution": {
+    "@redspark/rsh-native-session-execution": {
       "optional": true
     },
-    "@deepseek-ai/cordis": {
+    "@redspark/cordis": {
       "optional": true
     }
   },

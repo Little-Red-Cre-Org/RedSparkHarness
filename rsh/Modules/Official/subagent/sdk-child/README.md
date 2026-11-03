@@ -3,7 +3,7 @@ description: "Native Subagent adapter that runs one child through the standard d
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-sdk-child
+# @redspark/rsh-sdk-child
 
 English | [中文](README.zh.md)
 
@@ -25,7 +25,7 @@ This Native Module supplies the `dsh-sdk` external Subagent route. For each admi
 <a id="use-this-package"></a>
 ## Use this package
 
-Use the explicit `native-sdk-dsh-child` profile to opt in. The existing `native-sdk` profile and its `spawn` default do not change. This profile selects the sandboxing filesystem, Native sandbox policy, and local process-sandbox Provider, then mounts this Module and the fixed launcher carrier. Its launcher creates a fresh, randomly named DSH_HOME under the OS temporary directory and removes only that directory after the managed process range is quiescent. It copies only the chosen pi-ai provider profile into that home. The child receives the selected provider credential resolved through the Host credential Provider; it does not inherit the parent environment wholesale or read stored OAuth/API-key records. The selected profile must name an explicit `apiKeyEnv`.
+Use the explicit `native-sdk-dsh-child` profile to opt in. The existing `native-sdk` profile and its `spawn` default do not change. This profile selects the sandboxing filesystem, Native sandbox policy, and local process-sandbox Provider, then mounts this Module and the fixed launcher carrier. Its launcher creates a fresh, randomly named RSH_HOME under the OS temporary directory and removes only that directory after the managed process range is quiescent. It copies only the chosen pi-ai provider profile into that home. The child receives the selected provider credential resolved through the Host credential Provider; it does not inherit the parent environment wholesale or read stored OAuth/API-key records. The selected profile must name an explicit `apiKeyEnv`.
 
 The child process uses the exact parent Session cwd. Its model-visible file grants come only from parent Native Headless builtins; a custom Plugin tool with the same name grants no child builtin. Child reads remain bounded to cwd. A child receives `write_file` only when the parent snapshot grants that builtin, the parent requires approval, the snapshot supplies a workspace-write root, and the `dsh-sdk` driver holds the approval callback bound to the admitted owner, epoch, and turn. The fixed launcher then installs Native Approval with `ask` only in that private child composition. The child request is correlated by operation, request, Session, and tool-call identities; the parent authority alone records asked/decided events and may answer `allowed-once`. Cancellation or owner retirement drains the relay and rejects late decisions. The process sandbox separately confines filesystem effects; its backend also has its documented temporary-directory behavior, and Windows enforcement is reported as partial where applicable, not as a full OS boundary.
 

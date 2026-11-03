@@ -1,5 +1,5 @@
 {
-  "name": "@deepseek-ai/dsh-desktop-host-compatibility",
+  "name": "@redspark/rsh-desktop-host-compatibility",
   "description": "Explicit Cordis Desktop Host assembly for profiles that select legacy bundles",
   "version": "1.0.0",
   "private": true,
@@ -21,28 +21,28 @@
     "build": "tsc -b && tsdown"
   },
   "dependencies": {
-    "@deepseek-ai/cordis-plugin-include": "workspace:^",
-    "@deepseek-ai/dsh-app-boot": "workspace:^",
-    "@deepseek-ai/dsh-cmdline": "workspace:^",
-    "@deepseek-ai/dsh-web-compatibility": "workspace:^"
+    "@redspark/cordis-plugin-include": "workspace:^",
+    "@redspark/rsh-app-boot": "workspace:^",
+    "@redspark/rsh-cmdline": "workspace:^",
+    "@redspark/rsh-web-compatibility": "workspace:^"
   },
   "peerDependencies": {
-    "@deepseek-ai/cordis": "workspace:^",
-    "@deepseek-ai/dsh-api-gateway": "workspace:^",
-    "@deepseek-ai/dsh-client-connection": "workspace:^",
-    "@deepseek-ai/dsh-client-modules": "workspace:^",
-    "@deepseek-ai/dsh-http-routes": "workspace:^",
-    "@deepseek-ai/dsh-http-routes-cordis": "workspace:^",
-    "@deepseek-ai/dsh-launch-environment": "workspace:^"
+    "@redspark/cordis": "workspace:^",
+    "@redspark/rsh-api-gateway": "workspace:^",
+    "@redspark/rsh-client-connection": "workspace:^",
+    "@redspark/rsh-client-modules": "workspace:^",
+    "@redspark/rsh-http-routes": "workspace:^",
+    "@redspark/rsh-http-routes-cordis": "workspace:^",
+    "@redspark/rsh-launch-environment": "workspace:^"
   },
   "devDependencies": {
-    "@deepseek-ai/cordis": "workspace:^",
-    "@deepseek-ai/dsh-api-gateway": "workspace:^",
-    "@deepseek-ai/dsh-client-connection": "workspace:^",
-    "@deepseek-ai/dsh-client-modules": "workspace:^",
-    "@deepseek-ai/dsh-http-routes": "workspace:^",
-    "@deepseek-ai/dsh-http-routes-cordis": "workspace:^",
-    "@deepseek-ai/dsh-launch-environment": "workspace:^"
+    "@redspark/cordis": "workspace:^",
+    "@redspark/rsh-api-gateway": "workspace:^",
+    "@redspark/rsh-client-connection": "workspace:^",
+    "@redspark/rsh-client-modules": "workspace:^",
+    "@redspark/rsh-http-routes": "workspace:^",
+    "@redspark/rsh-http-routes-cordis": "workspace:^",
+    "@redspark/rsh-launch-environment": "workspace:^"
   },
   "exports": {
     ".": {

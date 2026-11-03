@@ -1,9 +1,9 @@
 /** Native Agent-owned jobs through a real native Host. */
 import { describe, expect, it, vi } from 'vitest'
-import { NativeHost, NativeScope, resolveInstallation, type NativePlugin } from '@deepseek-ai/dsh-native-runtime'
-import { NativeAgentId, type NativeAgent, type NativeAgentRegistry } from '@deepseek-ai/dsh-native-agent'
+import { NativeHost, NativeScope, resolveInstallation, type NativePlugin } from '@redspark/rsh-native-runtime'
+import { NativeAgentId, type NativeAgent, type NativeAgentRegistry } from '@redspark/rsh-native-agent'
 import { NativeJobId, type NativeJobOutcome, type NativeJobRegistry } from '../src/index.ts'
-import { plugin as agentPlugin } from '@deepseek-ai/dsh-native-agent/native'
+import { plugin as agentPlugin } from '@redspark/rsh-native-agent/native'
 import { plugin as jobsPlugin } from '../src/index.ts'
 
 async function fixture(config?: unknown): Promise<{

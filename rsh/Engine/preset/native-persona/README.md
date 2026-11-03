@@ -3,7 +3,7 @@ description: "The Native standard preset can run the shipped Cordis persona plug
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-native-persona
+# @redspark/rsh-native-persona
 
 English | [中文](README.zh.md)
 

@@ -3,22 +3,22 @@
 import type {
   TeamMemberView as TeamRosterMember,
   TeamView,
-} from '@deepseek-ai/dsh-experimental-agent-team/client'
-import type {} from '@deepseek-ai/dsh-experimental-agent-team/remote'
-import type { Context as ClientContext } from '@deepseek-ai/cordis'
-import type {} from '@deepseek-ai/dsh-api-remotes/client'
-import type {} from '@deepseek-ai/dsh-api-session-controller/client'
-import type { SessionId } from '@deepseek-ai/dsh-session/types'
-import type {} from '@deepseek-ai/dsh-client-ui-conversation/client'
-import type {} from '@deepseek-ai/dsh-client-locale/client'
-import type {} from '@deepseek-ai/dsh-client-ui-renderer/client'
-import type { TypertRemoteContribution } from '@deepseek-ai/dsh-typert-protocol'
+} from '@redspark/rsh-experimental-agent-team/client'
+import type {} from '@redspark/rsh-experimental-agent-team/remote'
+import type { Context as ClientContext } from '@redspark/cordis'
+import type {} from '@redspark/rsh-api-remotes/client'
+import type {} from '@redspark/rsh-api-session-controller/client'
+import type { SessionId } from '@redspark/rsh-session/types'
+import type {} from '@redspark/rsh-client-ui-conversation/client'
+import type {} from '@redspark/rsh-client-locale/client'
+import type {} from '@redspark/rsh-client-ui-renderer/client'
+import type { TypertRemoteContribution } from '@redspark/rsh-typert-protocol'
 import {
   TeamAction, type TeamActionInjected, type TeamActionResult, type TeamTaskActionResult,
 } from './TeamAction.tsx'
 import { en, NS, zh, type TeamKey } from './locales.ts'
 
-declare module '@deepseek-ai/dsh-client-ui-slots' {
+declare module '@redspark/rsh-client-ui-slots' {
   interface LocaleNamespaceMap {
     /** Agent Teams roster and task-board copy. */
     'agent-team': TeamKey

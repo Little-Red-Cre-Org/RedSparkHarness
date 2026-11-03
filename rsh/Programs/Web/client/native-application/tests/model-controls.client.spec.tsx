@@ -4,8 +4,8 @@ import { useSyncExternalStore } from 'react'
 import { afterEach, expect, it, vi } from 'vitest'
 import type {
   NativeModeControls, NativePermissionControls, NativeSessionClient,
-} from '@deepseek-ai/dsh-client-native-session/native'
-import { SESSION_FORMAT_VERSION, type SessionId } from '@deepseek-ai/dsh-session/types'
+} from '@redspark/rsh-client-native-session/native'
+import { SESSION_FORMAT_VERSION, type SessionId } from '@redspark/rsh-session/types'
 import { NativeConversationController, type ConversationSnapshot } from '../src/controller.ts'
 import type { ConversationLocaleKey } from '../src/locales.ts'
 import { ConversationModeLabel, ModelControls, ModelPickerControl } from '../src/model-controls.tsx'

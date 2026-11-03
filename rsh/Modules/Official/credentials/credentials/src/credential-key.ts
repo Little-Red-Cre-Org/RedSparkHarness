@@ -1,5 +1,5 @@
 /** Framework-independent credential reference and record-key constructors. */
-import { brandString } from '@deepseek-ai/dsh-brand'
+import { brandString } from '@redspark/rsh-brand'
 import type { CredentialKey, CredentialRef } from './native-types.ts'
 
 const REF_PATTERN = /^[A-Za-z_][A-Za-z0-9_]*$/

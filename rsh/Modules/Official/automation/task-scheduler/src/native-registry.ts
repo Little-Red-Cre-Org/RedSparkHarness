@@ -1,11 +1,11 @@
 /** Native task management and root execution over the shared SQLite plan authority. */
-import { SessionId } from '@deepseek-ai/dsh-session/native'
-import { createUserMessage } from '@deepseek-ai/dsh-llm/native'
-import type { NativeAgent, NativeAgentRegistry } from '@deepseek-ai/dsh-native-agent'
-import type { NativeActiveSessionOperations, NativeActiveSessionOwner, NativeRootExecutionOperations, NativeRootRouteId } from '@deepseek-ai/dsh-native-session-execution'
-import type { GoalRef, GoalView } from '@deepseek-ai/dsh-goal/types'
+import { SessionId } from '@redspark/rsh-session/native'
+import { createUserMessage } from '@redspark/rsh-llm/native'
+import type { NativeAgent, NativeAgentRegistry } from '@redspark/rsh-native-agent'
+import type { NativeActiveSessionOperations, NativeActiveSessionOwner, NativeRootExecutionOperations, NativeRootRouteId } from '@redspark/rsh-native-session-execution'
+import type { GoalRef, GoalView } from '@redspark/rsh-goal/types'
 import type { NativeScheduledGoalAdmission, NativeScheduledGoalAdmissionLease, NativeScheduledGoalExecutor,
-  NativeScheduledGoalHost } from '@deepseek-ai/dsh-goal/native'
+  NativeScheduledGoalHost } from '@redspark/rsh-goal/native'
 import type { CreateTaskRequest } from './gui-types.ts'
 import type { NativeTaskScheduleView, NativeTaskSchedulerOperations } from './native-types.ts'
 import { SchedulerEngine } from './engine.ts'
@@ -126,8 +126,15 @@ export class NativeTaskSchedulerRegistry implements NativeTaskSchedulerOperation
         schedule: task.everySeconds === undefined ? task.at : `${task.at}; every ${task.everySeconds}s`,
         timeZone: taskTimeZone(task.at),
         ...(task.nextAt === null ? {} : { nextRunAt: task.nextAt }),
-        ...(lastRun === undefined ? {} : { lastRunAt: lastRun.startedAt }) }]
+        ...(lastRun === undefined ? {} : { lastRunAt: lastRun.startedAt }),
+        // Omitted when the durable row has no kind, so a reader can tell
+        // "unknown producer" from "known scheduled plan" instead of guessing.
+        ...(task.kind === undefined ? {} : { kind: task.kind }) }]
     })
+  }
+  /** @inheritdoc */
+  liveOwners(): readonly NativeActiveSessionOwner[] {
+    return this.owners.owners()
   }
   /** @inheritdoc */
   onSchedulesChanged(listener: () => void): () => void {

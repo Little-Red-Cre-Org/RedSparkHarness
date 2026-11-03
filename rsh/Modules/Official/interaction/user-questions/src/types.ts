@@ -1,7 +1,7 @@
-/** Client-safe question, answer, and event types. @module @deepseek-ai/dsh-user-questions/types */
+/** Client-safe question, answer, and event types. @module @redspark/rsh-user-questions/types */
 
-import type { Scoped } from '@deepseek-ai/dsh-scope'
-import type { Agent } from '@deepseek-ai/dsh-agent/types'
+import type { Scoped } from '@redspark/rsh-scope'
+import type { Agent } from '@redspark/rsh-agent/types'
 
 import type { AskUserQuestionAnswer, AskUserQuestionItem } from './protocol.ts'
 export * from './protocol.ts'
@@ -16,12 +16,12 @@ export interface AskUserQuestionRequestEvent {
   signal?: AbortSignal
 }
 
-declare module '@deepseek-ai/cordis' {
+declare module '@redspark/cordis' {
   interface Events {
     /**
      * Ask composed answerers for structured user input. Return an answer to
      * claim the request or call `next()` to delegate. Scope-filtered dispatch
-     * (`@deepseek-ai/dsh-scope`): agent-scoped listeners receive only that agent.
+     * (`@redspark/rsh-scope`): agent-scoped listeners receive only that agent.
      * @param request - pending user-question request.
      * @mode waterfall
      */

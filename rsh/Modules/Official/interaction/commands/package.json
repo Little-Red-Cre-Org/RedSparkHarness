@@ -1,5 +1,5 @@
 {
-  "name": "@deepseek-ai/dsh-commands",
+  "name": "@redspark/rsh-commands",
   "description": "Plugin-owned human command registry for RedSpark Harness UIs",
   "version": "1.0.0",
   "publishConfig": {
@@ -63,51 +63,51 @@
   ],
   "license": "MIT",
   "peerDependencies": {
-    "@deepseek-ai/dsh-agent": "workspace:^",
-    "@deepseek-ai/dsh-attachment": "workspace:^",
-    "@deepseek-ai/dsh-invariants": "workspace:^",
-    "@deepseek-ai/dsh-scope": "workspace:^",
-    "@deepseek-ai/dsh-typert-protocol": "workspace:^",
-    "@deepseek-ai/cordis": "workspace:^"
+    "@redspark/rsh-agent": "workspace:^",
+    "@redspark/rsh-attachment": "workspace:^",
+    "@redspark/rsh-invariants": "workspace:^",
+    "@redspark/rsh-scope": "workspace:^",
+    "@redspark/rsh-typert-protocol": "workspace:^",
+    "@redspark/cordis": "workspace:^"
   },
   "dependencies": {
-    "@deepseek-ai/dsh-util-crypto": "workspace:^",
+    "@redspark/rsh-util-crypto": "workspace:^",
     "zod": "^4.4.3",
-    "@deepseek-ai/dsh-native-runtime": "workspace:^",
-    "@deepseek-ai/dsh-native-agent": "workspace:^",
-    "@deepseek-ai/dsh-native-session-execution": "workspace:^",
-    "@deepseek-ai/dsh-llm": "workspace:^",
-    "@deepseek-ai/dsh-session": "workspace:^",
-    "@deepseek-ai/dsh-brand": "workspace:^"
+    "@redspark/rsh-native-runtime": "workspace:^",
+    "@redspark/rsh-native-agent": "workspace:^",
+    "@redspark/rsh-native-session-execution": "workspace:^",
+    "@redspark/rsh-llm": "workspace:^",
+    "@redspark/rsh-session": "workspace:^",
+    "@redspark/rsh-brand": "workspace:^"
   },
   "devDependencies": {
-    "@deepseek-ai/dsh-agent": "workspace:^",
-    "@deepseek-ai/dsh-attachment": "workspace:^",
-    "@deepseek-ai/dsh-brand": "workspace:^",
-    "@deepseek-ai/dsh-invariants": "workspace:^",
-    "@deepseek-ai/dsh-llm": "workspace:^",
-    "@deepseek-ai/dsh-scope": "workspace:^",
-    "@deepseek-ai/dsh-session": "workspace:^",
-    "@deepseek-ai/dsh-typert-protocol": "workspace:^",
-    "@deepseek-ai/cordis": "workspace:^"
+    "@redspark/rsh-agent": "workspace:^",
+    "@redspark/rsh-attachment": "workspace:^",
+    "@redspark/rsh-brand": "workspace:^",
+    "@redspark/rsh-invariants": "workspace:^",
+    "@redspark/rsh-llm": "workspace:^",
+    "@redspark/rsh-scope": "workspace:^",
+    "@redspark/rsh-session": "workspace:^",
+    "@redspark/rsh-typert-protocol": "workspace:^",
+    "@redspark/cordis": "workspace:^"
   },
   "peerDependenciesMeta": {
-    "@deepseek-ai/dsh-agent": {
+    "@redspark/rsh-agent": {
       "optional": true
     },
-    "@deepseek-ai/dsh-attachment": {
+    "@redspark/rsh-attachment": {
       "optional": true
     },
-    "@deepseek-ai/dsh-invariants": {
+    "@redspark/rsh-invariants": {
       "optional": true
     },
-    "@deepseek-ai/dsh-scope": {
+    "@redspark/rsh-scope": {
       "optional": true
     },
-    "@deepseek-ai/dsh-typert-protocol": {
+    "@redspark/rsh-typert-protocol": {
       "optional": true
     },
-    "@deepseek-ai/cordis": {
+    "@redspark/cordis": {
       "optional": true
     }
   },

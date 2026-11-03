@@ -6,13 +6,13 @@
  * user roots, parses YAML frontmatter, and loads bodies through `ctx.fs` when a
  * filesystem service is present.
  *
- * @module @deepseek-ai/dsh-skill-filesystem
+ * @module @redspark/rsh-skill-filesystem
  */
 
 import { access, readdir, readFile, realpath, stat } from 'node:fs/promises'
 import { dirname, join, resolve } from 'node:path'
-import type { Context } from '@deepseek-ai/cordis'
-import type { FileSystem, FsDirEntry, FsTarget } from '@deepseek-ai/dsh-fs'
+import type { Context } from '@redspark/cordis'
+import type { FileSystem, FsDirEntry, FsTarget } from '@redspark/rsh-fs'
 import {
   type SkillCandidate,
   type SkillDefinition,
@@ -20,7 +20,7 @@ import {
   type SkillProvider,
   type SkillProviderControl,
   type SkillProviderObservation,
-} from '@deepseek-ai/dsh-skill'
+} from '@redspark/rsh-skill'
 import { parseSkillContent } from './frontmatter.ts'
 import type { ParsedSkillContent } from './frontmatter.ts'
 import { buildSkillRoots, type SkillRoot } from './roots.ts'

@@ -1,5 +1,5 @@
 {
-  "name": "@deepseek-ai/dsh-experimental-agent-team",
+  "name": "@redspark/rsh-experimental-agent-team",
   "description": "Implicit-root Agent Teams roster, durable peer mailbox, and shared task DAG",
   "version": "1.0.0",
   "publishConfig": {
@@ -53,36 +53,36 @@
   ],
   "license": "MIT",
   "dependencies": {
-    "@deepseek-ai/dsh-brand": "workspace:^",
-    "@deepseek-ai/schemastery": "workspace:^",
+    "@redspark/rsh-brand": "workspace:^",
+    "@redspark/schemastery": "workspace:^",
     "zod": "^4.4.3"
   },
   "peerDependencies": {
-    "@deepseek-ai/cordis": "workspace:^",
-    "@deepseek-ai/dsh-agent": "workspace:^",
-    "@deepseek-ai/dsh-invariants": "workspace:^",
-    "@deepseek-ai/dsh-llm": "workspace:^",
-    "@deepseek-ai/dsh-session": "workspace:^",
-    "@deepseek-ai/dsh-session-persistence": "workspace:^",
-    "@deepseek-ai/dsh-session-projection": "workspace:^",
-    "@deepseek-ai/dsh-subagent": "workspace:^",
-    "@deepseek-ai/dsh-typert-protocol": "workspace:^"
+    "@redspark/cordis": "workspace:^",
+    "@redspark/rsh-agent": "workspace:^",
+    "@redspark/rsh-invariants": "workspace:^",
+    "@redspark/rsh-llm": "workspace:^",
+    "@redspark/rsh-session": "workspace:^",
+    "@redspark/rsh-session-persistence": "workspace:^",
+    "@redspark/rsh-session-projection": "workspace:^",
+    "@redspark/rsh-subagent": "workspace:^",
+    "@redspark/rsh-typert-protocol": "workspace:^"
   },
   "devDependencies": {
-    "@deepseek-ai/cordis": "workspace:^",
-    "@deepseek-ai/dsh-agent": "workspace:^",
-    "@deepseek-ai/dsh-agent-loop": "workspace:^",
-    "@deepseek-ai/dsh-agent-loop-testkit": "workspace:^",
-    "@deepseek-ai/dsh-invariants": "workspace:^",
-    "@deepseek-ai/dsh-llm": "workspace:^",
-    "@deepseek-ai/dsh-session": "workspace:^",
-    "@deepseek-ai/dsh-session-persistence": "workspace:^",
-    "@deepseek-ai/dsh-session-persistence-jsonl": "workspace:^",
-    "@deepseek-ai/dsh-session-projection": "workspace:^",
-    "@deepseek-ai/dsh-session-query": "workspace:^",
-    "@deepseek-ai/dsh-subagent": "workspace:^",
-    "@deepseek-ai/dsh-subagent-fork-in-process": "workspace:^",
-    "@deepseek-ai/dsh-subagent-spawn-in-process": "workspace:^",
-    "@deepseek-ai/dsh-typert-protocol": "workspace:^"
+    "@redspark/cordis": "workspace:^",
+    "@redspark/rsh-agent": "workspace:^",
+    "@redspark/rsh-agent-loop": "workspace:^",
+    "@redspark/rsh-agent-loop-testkit": "workspace:^",
+    "@redspark/rsh-invariants": "workspace:^",
+    "@redspark/rsh-llm": "workspace:^",
+    "@redspark/rsh-session": "workspace:^",
+    "@redspark/rsh-session-persistence": "workspace:^",
+    "@redspark/rsh-session-persistence-jsonl": "workspace:^",
+    "@redspark/rsh-session-projection": "workspace:^",
+    "@redspark/rsh-session-query": "workspace:^",
+    "@redspark/rsh-subagent": "workspace:^",
+    "@redspark/rsh-subagent-fork-in-process": "workspace:^",
+    "@redspark/rsh-subagent-spawn-in-process": "workspace:^",
+    "@redspark/rsh-typert-protocol": "workspace:^"
   }
 }

@@ -17,5 +17,5 @@ kind: "package-group"
 
 | 包 | 用途 |
 |---|---|
-| [`subagent-dsh-sdk/`](subagent-dsh-sdk/README.zh.md) | 兼容版 `ctx.subagents` Cordis 提供方，用于单独的 SDK profile 子运行时 |
+| [`subagent-rsh-sdk/`](subagent-rsh-sdk/README.zh.md) | 兼容版 `ctx.subagents` Cordis 提供方，用于单独的 SDK profile 子运行时 |
 | [`subagent-acp/`](subagent-acp/README.zh.md) | 兼容版 `ctx.subagents` Cordis 提供方，用于进程外 ACP 子运行时 |

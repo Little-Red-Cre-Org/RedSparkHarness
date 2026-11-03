@@ -4,12 +4,12 @@
  * product methods, current thread/turn association, unattended approval
  * responses, and terminal-answer selection.
  *
- * @module @deepseek-ai/dsh-codex-app-server/wire
+ * @module @redspark/rsh-codex-app-server/wire
  */
 
 import type { Readable, Writable } from 'node:stream'
-import { JsonRpcLineTransport } from '@deepseek-ai/dsh-json-rpc-line'
-import type { NativeExternalToolSettlement } from '@deepseek-ai/dsh-native-subagent/native'
+import { JsonRpcLineTransport } from '@redspark/rsh-json-rpc-line'
+import type { NativeExternalToolSettlement } from '@redspark/rsh-native-subagent/native'
 import type { CodexConcludingToolReply, NativeCodexToolBridge } from './native-tool-bridge.ts'
 import type { CodexPermissionMode } from './types.ts'
 
@@ -299,7 +299,7 @@ export class CodexAppServerWire {
   async initialize(signal: AbortSignal): Promise<void> {
     object(await this.guarded(this.transport.request('initialize', {
       clientInfo: {
-        name: 'deepseek-harness',
+        name: 'redspark-harness',
         title: 'RedSpark Harness',
         version: '0.0.1',
       },

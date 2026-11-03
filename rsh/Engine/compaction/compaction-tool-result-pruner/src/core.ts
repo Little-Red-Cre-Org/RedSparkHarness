@@ -4,11 +4,11 @@
  * shadow-price protocol for one stable surface snapshot.
  */
 
-import { freezeMessage } from '@deepseek-ai/dsh-llm/native'
-import type { ContentBlock, Message } from '@deepseek-ai/dsh-llm/native'
-import type { Session, SessionEvent, SessionSeq, ToolResultMessage } from '@deepseek-ai/dsh-session/native'
+import { freezeMessage } from '@redspark/rsh-llm/native'
+import type { ContentBlock, Message } from '@redspark/rsh-llm/native'
+import type { Session, SessionEvent, SessionSeq, ToolResultMessage } from '@redspark/rsh-session/native'
 // Type-only: the `compaction/*` SessionEventMap merges (the shadow-price event).
-import type {} from '@deepseek-ai/dsh-compaction/native'
+import type {} from '@redspark/rsh-compaction/native'
 import { codePointLength, PRUNE_MARKER } from './config.ts'
 import type { PrunedEntry, PruneResult, ResolvedConfig } from './types.ts'
 

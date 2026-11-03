@@ -66,7 +66,7 @@ async function checkPty() {
 
 /** Exercise the packaged POSIX lock binding and its explicit Windows rejection. */
 async function checkFlock() {
-  const { tryLockExclusive } = requireRuntime('@deepseek-ai/node-addon-system/flock')
+  const { tryLockExclusive } = requireRuntime('@redspark/node-addon-system/flock')
   const file = join(scratch, 'session.lock')
   const fd = openSync(file, 'wx', 0o600)
   let held = true

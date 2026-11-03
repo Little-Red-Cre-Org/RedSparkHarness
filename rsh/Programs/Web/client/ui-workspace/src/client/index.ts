@@ -8,21 +8,21 @@
  * client half (see the contract module doc). Export discipline:
  * rsh/Programs/Web/client/AGENTS.md.
  */
-import type { Context } from '@deepseek-ai/cordis'
-import type { RemoteHostFacts } from '@deepseek-ai/dsh-api-remotes/client'
-import type { ISessions } from '@deepseek-ai/dsh-api-session-controller/client'
-import type { IWorkspaces, WorkspaceSnapshot } from '@deepseek-ai/dsh-api-workspace-controller/client'
-import type { HostObservable, SnapshotSelectorHook } from '@deepseek-ai/dsh-client-ui-slots'
+import type { Context } from '@redspark/cordis'
+import type { RemoteHostFacts } from '@redspark/rsh-api-remotes/client'
+import type { ISessions } from '@redspark/rsh-api-session-controller/client'
+import type { IWorkspaces, WorkspaceSnapshot } from '@redspark/rsh-api-workspace-controller/client'
+import type { HostObservable, SnapshotSelectorHook } from '@redspark/rsh-client-ui-slots'
 // Type-only: pulls the Controller service merges.
-import type {} from '@deepseek-ai/dsh-api-session-controller/client'
-import type {} from '@deepseek-ai/dsh-api-workspace-controller/client'
+import type {} from '@redspark/rsh-api-session-controller/client'
+import type {} from '@redspark/rsh-api-workspace-controller/client'
 // Type-only: pulls the locale plugin's Context merge (ctx.locale).
-import type {} from '@deepseek-ai/dsh-client-locale/client'
+import type {} from '@redspark/rsh-client-locale/client'
 // Type-only: pulls the SlotRegistry service merge (ctx.slots).
-import type {} from '@deepseek-ai/dsh-client-ui-renderer/client'
-import type {} from '@deepseek-ai/dsh-client-ui-layout/client'
+import type {} from '@redspark/rsh-client-ui-renderer/client'
+import type {} from '@redspark/rsh-client-ui-layout/client'
 // Type-only: pulls the Session root standard-hook merge.
-import type {} from '@deepseek-ai/dsh-client-ui-session/client'
+import type {} from '@redspark/rsh-client-ui-session/client'
 import type { WorkspaceBrowserInjected, WorkspacePickerInjected } from './contract/slots.ts'
 import { UiWorkspaceService } from './navigation.ts'
 import { createWorkspaceViewStore } from './stores.ts'
@@ -37,7 +37,7 @@ export type {
 } from './contract/slots.ts'
 export type { WorkspaceKey } from './locales.ts'
 
-declare module '@deepseek-ai/dsh-client-ui-slots' {
+declare module '@redspark/rsh-client-ui-slots' {
   interface GlobalStandardProps {
     /** Selector hook over the pure Workspace Controller snapshot. */
     useWorkspaces: SnapshotSelectorHook<WorkspaceSnapshot>

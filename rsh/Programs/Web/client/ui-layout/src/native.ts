@@ -1,17 +1,17 @@
 /** Optional Native Client AppFrame installer over the shared SlotRuntime. */
-import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
-import type { HostObservable } from '@deepseek-ai/dsh-client-ui-slots'
-import type {} from '@deepseek-ai/dsh-client-ui-renderer/native'
-import type {} from '@deepseek-ai/dsh-client-ui-session/native'
-import type {} from '@deepseek-ai/dsh-client-locale/native'
-import type {} from '@deepseek-ai/dsh-client-ui-theme/native'
+import type { NativePlugin } from '@redspark/rsh-native-runtime'
+import type { HostObservable } from '@redspark/rsh-client-ui-slots'
+import type {} from '@redspark/rsh-client-ui-renderer/native'
+import type {} from '@redspark/rsh-client-ui-session/native'
+import type {} from '@redspark/rsh-client-locale/native'
+import type {} from '@redspark/rsh-client-ui-theme/native'
 import { NativeAppFrame } from './client/AppFrame.tsx'
 import { createLayoutStore, type LayoutInfo } from './client/stores.ts'
 import { LayoutController, type ILayout } from './client/service.ts'
 import type { PanelInfo } from './client/service.ts'
 import { ThemePresenter } from './client/theme-presenter.ts'
 
-declare module '@deepseek-ai/dsh-client-ui-slots' {
+declare module '@redspark/rsh-client-ui-slots' {
   interface SlotMap {
     sidebar: { kind: 'single'; scope: 'root'; owner: { collapsed: boolean; width: number } }
     main: { kind: 'keyed'; scope: 'root' }
@@ -30,7 +30,7 @@ export interface NativeLayoutService extends ILayout {
   isRightbarShown(): boolean
 }
 
-declare module '@deepseek-ai/dsh-native-runtime' {
+declare module '@redspark/rsh-native-runtime' {
   interface NativeServices {
     /** AppFrame geometry and navigation actions. */
     clientNativeLayout: NativeLayoutService
@@ -40,7 +40,7 @@ declare module '@deepseek-ai/dsh-native-runtime' {
 /** Three-column Native AppFrame, composed only through native SlotRuntime registrations. */
 export const plugin: NativePlugin = {
   apiVersion: 1,
-  name: '@deepseek-ai/dsh-client-ui-layout',
+  name: '@redspark/rsh-client-ui-layout',
   targets: ['client'],
   requires: ['clientSlots', 'clientLocale', 'clientNativeTheme', 'clientNativeSessionPresentation'],
   provides: ['clientNativeLayout'],

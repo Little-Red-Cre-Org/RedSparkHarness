@@ -1,11 +1,11 @@
 import { expectTypeOf, it } from 'vitest'
-import type { SubagentStopReason as ServiceStopReason } from '@deepseek-ai/dsh-subagent'
+import type { SubagentStopReason as ServiceStopReason } from '@redspark/rsh-subagent'
 import type {
   SubagentStopReason,
   SubagentStopReasonMap,
-} from '@deepseek-ai/dsh-subagent-protocol'
+} from '@redspark/rsh-subagent-protocol'
 
-declare module '@deepseek-ai/dsh-subagent-protocol' {
+declare module '@redspark/rsh-subagent-protocol' {
   interface SubagentStopReasonMap {
     'provider-specific': 'provider-specific'
   }

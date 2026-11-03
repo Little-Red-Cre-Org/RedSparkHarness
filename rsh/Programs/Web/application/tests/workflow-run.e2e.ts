@@ -8,7 +8,7 @@ import { fileURLToPath } from 'node:url'
 import type { Browser, Page } from 'playwright'
 import { chromium } from 'playwright'
 import { afterAll, beforeAll, describe, expect, it, onTestFailed, onTestFinished } from 'vitest'
-import type { Session, SessionEvent, SessionId } from '@deepseek-ai/dsh-session'
+import type { Session, SessionEvent, SessionId } from '@redspark/rsh-session'
 import {
   assertFixtureInventory, captureStableAria, compareOrRefreshGolden,
   fixtureUserPrompts, launchWebScaffold, watchConsole, webSnapshotMode,
@@ -220,7 +220,7 @@ describe.skipIf(MODE === 'record')('web e2e: durable workflow run in Chat', () =
     expect(tripwire.pageErrors).toEqual([])
     expect(tripwire.warnings).toEqual([])
     await assertFixtureInventory(SNAPSHOT_DIR, ['ui-live.expected.md', 'ui.expected.md'])
-    const evidence = process.env.DSH_CORDIS_WORKFLOW_EVIDENCE
+    const evidence = process.env.RSH_CORDIS_WORKFLOW_EVIDENCE
     if (evidence !== undefined) {
       await mkdir(evidence, { recursive: true })
       await page.screenshot({ path: join(evidence, 'cordis-workflow-history.png'), fullPage: true })

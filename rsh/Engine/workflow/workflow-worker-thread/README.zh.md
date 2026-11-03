@@ -3,7 +3,7 @@ description: "worker-thread 工作流引擎：在宿主事件循环之外执行�
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-workflow-worker-thread
+# @redspark/rsh-workflow-worker-thread
 
 [English](README.md) | 中文
 
@@ -32,8 +32,8 @@ kind: "package-reference"
 加载本引擎即注册 `ctx.workflowEngine`；在其上添加 `dsh-tool-workflow` 会把 `workflow` 工具交给模型。每个配置字段都是可选的：
 
 ```yaml
-- name: '@deepseek-ai/dsh-workflow-worker-thread'
-- name: '@deepseek-ai/dsh-tool-workflow'
+- name: '@redspark/rsh-workflow-worker-thread'
+- name: '@redspark/rsh-tool-workflow'
 ```
 
 | 字段 | 默认值 | 含义 |
@@ -45,11 +45,11 @@ kind: "package-reference"
 | `syncTimeoutMs` | `5000` | 脚本最初同步片段的 VM 超时时间，单位为毫秒。 |
 | `disposeGraceMs` | `5000` | 旧 Provider 强制结算运行并终止 worker 前的期限。 |
 
-负责该引擎的消费方可以为一次运行设置 `WorkflowStartRequest.subagentProvider` 与 `WorkflowStartRequest.maxTotalAgents`——这是引擎级策略，不是脚本钩子；普通 `workflow` 工具两者都不设置，单次运行的子 agent 总数上限可以降低、但绝不能提高已配置的上限。生成的[配置目录](../../../Docs/config-catalog.zh.md#deepseek-aidsh-workflow-worker-thread)是每个受支持字段的穷尽式真源。
+负责该引擎的消费方可以为一次运行设置 `WorkflowStartRequest.subagentProvider` 与 `WorkflowStartRequest.maxTotalAgents`——这是引擎级策略，不是脚本钩子；普通 `workflow` 工具两者都不设置，单次运行的子 agent 总数上限可以降低、但绝不能提高已配置的上限。生成的[配置目录](../../../Docs/config-catalog.zh.md#redsparkrsh-workflow-worker-thread)是每个受支持字段的穷尽式真源。
 
 ### Native profile 配置
 
-Native profile 会把 `@deepseek-ai/dsh-workflow-worker-thread/native` 安装为选定的 `workflow` Provider。worker 经由 NativeSubagent Definition 委派，并要求配置的 provider 名称与已安装 Provider 一致。Native 配置会在安装 Provider 前完成解析：
+Native profile 会把 `@redspark/rsh-workflow-worker-thread/native` 安装为选定的 `workflow` Provider。worker 经由 NativeSubagent Definition 委派，并要求配置的 provider 名称与已安装 Provider 一致。Native 配置会在安装 Provider 前完成解析：
 
 | 字段 | 默认值 | 含义 |
 |---|---|---|

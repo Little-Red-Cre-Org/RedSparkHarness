@@ -2,7 +2,7 @@
 
 English | [中文](feedback.zh.md)
 
-[`@deepseek-ai/dsh-message-feedback`](../../Modules/Official/feedback/message-feedback) owns editable feedback for individual assistant messages. The canonical Session log stores `feedback/message-put` and `feedback/message-delete`; the immutable Session-level remark remains `feedback/record`, owned by [`@deepseek-ai/dsh-command-feedback`](../../Modules/Official/feedback/command-feedback) together with the `FeedbackCategory` taxonomy both kinds of feedback file under. All three are log-only events that never enter model context.
+[`@redspark/rsh-message-feedback`](../../Modules/Official/feedback/message-feedback) owns editable feedback for individual assistant messages. The canonical Session log stores `feedback/message-put` and `feedback/message-delete`; the immutable Session-level remark remains `feedback/record`, owned by [`@redspark/rsh-command-feedback`](../../Modules/Official/feedback/command-feedback) together with the `FeedbackCategory` taxonomy both kinds of feedback file under. All three are log-only events that never enter model context.
 
 Source: [`rsh/Modules/Official/feedback/message-feedback/src/types.ts`](../../Modules/Official/feedback/message-feedback/src/types.ts)
 
@@ -295,7 +295,7 @@ When explicitly enabled, [`session-log-deepseek`](../../Modules/Official/llm/ses
 
 ## Web surface
 
-[`@deepseek-ai/dsh-client-ui-message-feedback`](../../Programs/Web/client/ui-message-feedback) is the browser consumer. `@deepseek-ai/dsh-api-remotes` mounts the generated `messageFeedback` and `sessionFeedback` contributions, so the plugin calls `ctx.remote.messageFeedback` and `ctx.remote.sessionFeedback` and never touches the transport.
+[`@redspark/rsh-client-ui-message-feedback`](../../Programs/Web/client/ui-message-feedback) is the browser consumer. `@redspark/rsh-api-remotes` mounts the generated `messageFeedback` and `sessionFeedback` contributions, so the plugin calls `ctx.remote.messageFeedback` and `ctx.remote.sessionFeedback` and never touches the transport.
 
 The controls are the `feedback` entry (order 10) of the `conversation.chat.assistant-actions` list slot, which `ui-conversation` declares and renders inside the finalized assistant message's IconActions row. `AssistantMessageNode` carries the optional `messageId` from the `assistant/message` event. The field is absent on interruption-frozen partials, and the render site skips the slot when it is absent. The strip renders once per turn, on the closing assistant message: the Host accepts every append-origin step message as a target, but earlier steps of a multi-step turn render tool rows rather than a rateable body, so the UI exposes a narrower set than the Host contract allows.
 

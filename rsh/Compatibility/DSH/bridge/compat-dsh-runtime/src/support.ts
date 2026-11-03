@@ -11,18 +11,18 @@ const FAMILY_VERSION = '1.0.0'
 
 /** Exact package releases and adapter declarations supported by this Host composition. */
 export const SUPPORT_RECORD = {
-  '@deepseek-ai/cordis': { version: '4.0.2', api: 'cordis-plugin-host' },
-  '@deepseek-ai/cordis-plugin-loader': { version: '1.0.3', api: 'cordis-entry-tree' },
-  '@deepseek-ai/dsh-fs-local': { version: FAMILY_VERSION, apiVersion: 1, role: 'provider', capability: 'filesystem' },
-  '@deepseek-ai/dsh-fs-observation-policy': { version: FAMILY_VERSION, apiVersion: 1, role: 'policy', capability: 'filesystem' },
-  '@deepseek-ai/dsh-fs-sandbox': { version: FAMILY_VERSION, apiVersion: 1, role: 'provider', capability: 'filesystem' },
-  '@deepseek-ai/dsh-tool-fs': { version: FAMILY_VERSION, apiVersion: 1, role: 'consumer', capability: 'filesystem' },
+  '@redspark/cordis': { version: '4.0.2', api: 'cordis-plugin-host' },
+  '@redspark/cordis-plugin-loader': { version: '1.0.3', api: 'cordis-entry-tree' },
+  '@redspark/rsh-fs-local': { version: FAMILY_VERSION, apiVersion: 1, role: 'provider', capability: 'filesystem' },
+  '@redspark/rsh-fs-observation-policy': { version: FAMILY_VERSION, apiVersion: 1, role: 'policy', capability: 'filesystem' },
+  '@redspark/rsh-fs-sandbox': { version: FAMILY_VERSION, apiVersion: 1, role: 'provider', capability: 'filesystem' },
+  '@redspark/rsh-tool-fs': { version: FAMILY_VERSION, apiVersion: 1, role: 'consumer', capability: 'filesystem' },
   // These packages expose Cordis plugins, not dsh.runtime metadata. The role and
   // capability below describe the RSH adapter descriptor passed to plugin-host.
-  '@deepseek-ai/dsh-system-prompt': {
+  '@redspark/rsh-system-prompt': {
     version: FAMILY_VERSION, api: 'cordis-plugin', role: 'adapter', capability: 'dsh-compatibility', service: 'systemPrompt',
   },
-  '@deepseek-ai/dsh-tools': {
+  '@redspark/rsh-tools': {
     version: FAMILY_VERSION, api: 'cordis-plugin', role: 'adapter', capability: 'dsh-compatibility', service: 'tools',
   },
 } as const

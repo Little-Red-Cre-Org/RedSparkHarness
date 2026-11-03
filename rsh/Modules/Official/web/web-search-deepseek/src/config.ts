@@ -1,13 +1,13 @@
 /**
  * Framework-free configuration for the DeepSeek search provider, shared by its Cordis plugin and
  * native installation.
- * @module @deepseek-ai/dsh-web-search-deepseek/config
+ * @module @redspark/rsh-web-search-deepseek/config
  */
 
-import z from '@deepseek-ai/schemastery'
-import { credentialRef, type NativeCredentials } from '@deepseek-ai/dsh-credentials/native'
-import type { LaunchEnvironmentSnapshot } from '@deepseek-ai/dsh-launch-environment/native'
-import type { NativeToolExecution } from '@deepseek-ai/dsh-native-tools'
+import z from '@redspark/schemastery'
+import { credentialRef, type NativeCredentials } from '@redspark/rsh-credentials/native'
+import type { LaunchEnvironmentSnapshot } from '@redspark/rsh-launch-environment/native'
+import type { NativeToolExecution } from '@redspark/rsh-native-tools'
 import {
   DEEPSEEK_DEFAULT_API_VERSION,
   DEEPSEEK_DEFAULT_BASE_URL,

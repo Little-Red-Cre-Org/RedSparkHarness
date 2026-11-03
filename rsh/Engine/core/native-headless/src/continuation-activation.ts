@@ -1,8 +1,8 @@
 /** Resident child turn scheduling around the selected Program driver and durable Session owner. */
-import type { NativeAgentExecution } from '@deepseek-ai/dsh-native-agent'
-import type { MessageId, UserMessage } from '@deepseek-ai/dsh-llm/native'
-import type { NativeSessionTurnResult } from '@deepseek-ai/dsh-native-session-execution'
-import type { InboxTarget } from '@deepseek-ai/dsh-native-agent'
+import type { NativeAgentExecution } from '@redspark/rsh-native-agent'
+import type { MessageId, UserMessage } from '@redspark/rsh-llm/native'
+import type { NativeSessionTurnResult } from '@redspark/rsh-native-session-execution'
+import type { InboxTarget } from '@redspark/rsh-native-agent'
 import type { NativeContinuationSession } from './continuation-session.ts'
 
 /** One invocation of the existing Program turn driver, using the retained Session writer. */

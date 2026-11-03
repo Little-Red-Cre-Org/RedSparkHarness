@@ -1,6 +1,6 @@
 {
-  "name": "@deepseek-ai/dsh-attachment-local",
-  "description": "Private content-addressed DSH_HOME attachment storage",
+  "name": "@redspark/rsh-attachment-local",
+  "description": "Private content-addressed RSH_HOME attachment storage",
   "version": "1.0.0",
   "publishConfig": {
     "access": "public"
@@ -34,22 +34,22 @@
   "files": ["lib/index.js", "lib/types/**/*.js", "lib/types/**/*.d.ts"],
   "license": "MIT",
   "peerDependencies": {
-    "@deepseek-ai/dsh-attachment": "workspace:^",
-    "@deepseek-ai/dsh-home-paths": "workspace:^",
-    "@deepseek-ai/dsh-native-runtime": "workspace:^",
-    "@deepseek-ai/cordis": "workspace:^"
+    "@redspark/rsh-attachment": "workspace:^",
+    "@redspark/rsh-home-paths": "workspace:^",
+    "@redspark/rsh-native-runtime": "workspace:^",
+    "@redspark/cordis": "workspace:^"
   },
   "peerDependenciesMeta": {
-    "@deepseek-ai/cordis": { "optional": true }
+    "@redspark/cordis": { "optional": true }
   },
   "dependencies": {
-    "@deepseek-ai/schemastery": "workspace:^",
+    "@redspark/schemastery": "workspace:^",
     "sharp": "^0.35.5"
   },
   "devDependencies": {
-    "@deepseek-ai/dsh-attachment": "workspace:^",
-    "@deepseek-ai/dsh-home-paths": "workspace:^",
-    "@deepseek-ai/dsh-native-runtime": "workspace:^",
-    "@deepseek-ai/cordis": "workspace:^"
+    "@redspark/rsh-attachment": "workspace:^",
+    "@redspark/rsh-home-paths": "workspace:^",
+    "@redspark/rsh-native-runtime": "workspace:^",
+    "@redspark/cordis": "workspace:^"
   }
 }

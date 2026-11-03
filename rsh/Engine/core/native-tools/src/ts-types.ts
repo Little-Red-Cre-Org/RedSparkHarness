@@ -3,10 +3,10 @@
  * text the model programs against (the `tools:sdk` prompt section). Sibling of
  * `json-schema.ts` — `schemas()` (native function calling) and this module (the generated
  * `declare const tools` API) are two projections of the same store.
- * @module @deepseek-ai/dsh-native-tools/sdk-typescript
+ * @module @redspark/rsh-native-tools/sdk-typescript
  */
 
-import type { ToolSchema } from '@deepseek-ai/dsh-llm/native'
+import type { ToolSchema } from '@redspark/rsh-llm/native'
 import { assertSupportedJsonSchema } from './json-schema.ts'
 import type { JsonSchemaNode, JsonSchemaScalar } from './json-schema.ts'
 /** Tool SDK projection accepting either typed JSON Schema or a raw wire schema. */

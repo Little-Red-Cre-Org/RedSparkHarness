@@ -5,12 +5,12 @@ import { dirname, join } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { execa } from 'execa'
 import { expect, it } from 'vitest'
-import { createUserMessage } from '@deepseek-ai/dsh-llm/native'
-import { SESSION_FORMAT_VERSION, SessionId, SessionSeq } from '@deepseek-ai/dsh-session/native'
-import { deriveReplayScript, parseSessionLog } from '@deepseek-ai/dsh-llm-replay'
-import { JsonlSessionBackend } from '@deepseek-ai/dsh-session-persistence-jsonl'
+import { createUserMessage } from '@redspark/rsh-llm/native'
+import { SESSION_FORMAT_VERSION, SessionId, SessionSeq } from '@redspark/rsh-session/native'
+import { deriveReplayScript, parseSessionLog } from '@redspark/rsh-llm-replay'
+import { JsonlSessionBackend } from '@redspark/rsh-session-persistence-jsonl'
 import { formatSystemPromptSnapshot, formatToolSchemasSnapshot, normalizeSessionSnapshot, redactSessionSnapshotIds,
-  normalizedSystemPrompts, normalizedToolSchemas, sessionFixtureName } from '@deepseek-ai/dsh-session-snapshot'
+  normalizedSystemPrompts, normalizedToolSchemas, sessionFixtureName } from '@redspark/rsh-session-snapshot'
 import { formatSessionReferenceMention } from '../../rsh/Engine/context/session-reference/src/uri.ts'
 import { toolCallResponse, textResponse } from '../../rsh/Engine/core/agent-loop/tests/mock-adapter.ts'
 import { ensureShippedNativeProfile, shippedNativeProfileComposition } from '../../rsh/Programs/CLI/src/native-profile-template.ts'
@@ -89,7 +89,7 @@ function initialEntries() {
 }
 
 it('replays real workflow children and a committed structured report through dsh', async () => {
-  const saved = process.env.DSH_SNAPSHOT === 'refresh' ? undefined : fixtureEntries()
+  const saved = process.env.RSH_SNAPSHOT === 'refresh' ? undefined : fixtureEntries()
   const responses = saved ?? initialEntries()
   const home = mkdtempSync(join(tmpdir(), 'dsh-workflow-native-'))
   const profile = join(home, 'profiles/native-headless')
@@ -100,7 +100,7 @@ it('replays real workflow children and a committed structured report through dsh
   const links: string[] = []
   try {
     ensureShippedNativeProfile('native-headless', home)
-    mkdirSync(join(modules, '@deepseek-ai'), { recursive: true })
+    mkdirSync(join(modules, '@redspark'), { recursive: true })
     mkdirSync(workspace)
     mkdirSync(sessions)
     await seedReferenceSession(sessions)
@@ -130,7 +130,7 @@ it('replays real workflow children and a committed structured report through dsh
       ['native-file-reference-local', 'rsh/Modules/Official/fs/native-file-reference-local'],
     ] as const
     for (const [name, path] of packages) {
-      const link = join(modules, '@deepseek-ai', `dsh-${name}`)
+      const link = join(modules, '@redspark', `dsh-${name}`)
       symlinkSync(join(root, path), link, 'junction')
       links.push(link)
     }
@@ -180,7 +180,7 @@ it('replays real workflow children and a committed structured report through dsh
       if (!selected.has(row.id)) return { ...row, disabled: true }
       if (row.id === 'app') return { ...row, config: { provider: 'fixture', model: 'native-workflow',
         systemPrompt: 'Use the requested orchestration tool.', maxSteps: 4, cwd: workspace } }
-      if (row.id === 'fs') return { ...row, plugin: '@deepseek-ai/dsh-fs-local', config: { cwd: workspace } }
+      if (row.id === 'fs') return { ...row, plugin: '@redspark/rsh-fs-local', config: { cwd: workspace } }
       if (row.id === 'storage') return { ...row, config: { root: sessions, compression: 'none' } }
       if (row.id === 'pi-ai') return { ...row, plugin: 'workflow-fixture-model', config: responses }
       return row
@@ -190,7 +190,7 @@ it('replays real workflow children and a committed structured report through dsh
     const child = await execa(process.execPath, ['--import', pathToFileURL(join(root,
       'rsh/Programs/CLI/tests/fixtures/deny-cordis-context-register.mjs')).href,
       join(root, 'rsh/Programs/CLI/lib/bin.js'), '--profile', 'native-headless', responses.task],
-    { env: { ...process.env, DSH_HOME: home }, reject: false, timeout: 60_000 })
+    { env: { ...process.env, RSH_HOME: home }, reject: false, timeout: 60_000 })
     expect(child.exitCode, child.stderr).toBe(0)
     expect(child.stdout).toContain('Workflow and Ralph reports completed.')
 
@@ -251,7 +251,7 @@ it('replays real workflow children and a committed structured report through dsh
       [join(scene, 'system-prompt.expected.md'), formatSystemPromptSnapshot(promptSnapshots[0], promptSnapshots.slice(1))] as const,
       [join(scene, 'tool-schemas.expected.json'), formatToolSchemasSnapshot(schemaSnapshots[0], schemaSnapshots.slice(1))] as const,
     ]
-    if (process.env.DSH_SNAPSHOT === 'refresh') {
+    if (process.env.RSH_SNAPSHOT === 'refresh') {
       for (const [path, content] of outputs) writeFileSync(path, content)
     } else {
       for (const [path, content] of outputs) expect(content).toBe(readFileSync(path, 'utf8'))
@@ -277,7 +277,7 @@ it('replays real workflow children and a committed structured report through dsh
     const parallelProcess = await execa(process.execPath, ['--import', pathToFileURL(join(root,
       'rsh/Programs/CLI/tests/fixtures/deny-cordis-context-register.mjs')).href,
       join(root, 'rsh/Programs/CLI/lib/bin.js'), '--profile', 'native-headless', parallelResponses.task],
-    { env: { ...process.env, DSH_HOME: home }, reject: false, timeout: 60_000 })
+    { env: { ...process.env, RSH_HOME: home }, reject: false, timeout: 60_000 })
     expect(parallelProcess.exitCode, parallelProcess.stderr).toBe(0)
     const allSessions = readdirSync(sessions, { recursive: true })
       .filter(name => String(name).endsWith(sessionFixtureName(0, SESSION_FORMAT_VERSION)))

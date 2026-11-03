@@ -1,8 +1,8 @@
 /** Native worker-thread execution through the framework-free Host provider. */
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
-import { NativeHost, NativeScope, parseNativeEntryManifest, resolveInstallation, validateNativePluginEntry, type NativePlugin } from '@deepseek-ai/dsh-native-runtime'
-import { Session, SessionId, SESSION_FORMAT_VERSION } from '@deepseek-ai/dsh-session/native'
+import { NativeHost, NativeScope, parseNativeEntryManifest, resolveInstallation, validateNativePluginEntry, type NativePlugin } from '@redspark/rsh-native-runtime'
+import { Session, SessionId, SESSION_FORMAT_VERSION } from '@redspark/rsh-session/native'
 import { NativeWorkerThreadCodeRuntime, resolveNativeWorkerThreadConfig, type NativeCodeRuntime } from '../src/index.ts'
 import { plugin } from '../src/native.ts'
 

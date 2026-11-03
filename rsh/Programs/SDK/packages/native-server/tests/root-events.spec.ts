@@ -1,9 +1,9 @@
 /** Native SDK root events stay live after the foreground turn and drain at shutdown. */
 import { PassThrough } from 'node:stream'
 import { expect, it } from 'vitest'
-import { NativeScope, type NativeContext } from '@deepseek-ai/dsh-native-runtime'
-import type { NativeHeadlessApplication } from '@deepseek-ai/dsh-native-headless/native'
-import type { SessionEvent } from '@deepseek-ai/dsh-session/native'
+import { NativeScope, type NativeContext } from '@redspark/rsh-native-runtime'
+import type { NativeHeadlessApplication } from '@redspark/rsh-native-headless/native'
+import type { SessionEvent } from '@redspark/rsh-session/native'
 import { NativeSdkApplication } from '../src/native.ts'
 
 function isRecord(value: unknown): value is Record<string, unknown> {

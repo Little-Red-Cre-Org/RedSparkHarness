@@ -5,12 +5,12 @@ import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { execa } from 'execa'
 import { expect, it } from 'vitest'
-import { JsonlSessionBackend } from '@deepseek-ai/dsh-session-persistence-jsonl'
-import { SESSION_FORMAT_VERSION } from '@deepseek-ai/dsh-session'
+import { JsonlSessionBackend } from '@redspark/rsh-session-persistence-jsonl'
+import { SESSION_FORMAT_VERSION } from '@redspark/rsh-session'
 import {
   formatSystemPromptSnapshot, formatToolSchemasSnapshot, normalizeSessionSnapshot, redactSessionSnapshotIds,
   normalizedSystemPrompts, normalizedToolSchemas, sessionFixtureName,
-} from '@deepseek-ai/dsh-session-snapshot'
+} from '@redspark/rsh-session-snapshot'
 import { ensureShippedNativeProfile, shippedNativeProfileComposition } from '../../rsh/Programs/CLI/src/native-profile-template.ts'
 
 const root = fileURLToPath(new URL('../../', import.meta.url))
@@ -87,7 +87,7 @@ it('records shipped native Goal creation, cold restore, explicit resume, and com
   const audit = join(home, 'model-requests.jsonl')
   const patchPath = join(home, 'goal.patch.json')
   const modules = join(profileDir, 'node_modules/native-goal-model')
-  const packageModules = join(profileDir, 'node_modules/@deepseek-ai')
+  const packageModules = join(profileDir, 'node_modules/@redspark')
   const workspace = join(home, 'work')
   const links: string[] = []
   mkdirSync(workspace, { recursive: true })
@@ -109,7 +109,7 @@ it('records shipped native Goal creation, cold restore, explicit resume, and com
     const shipped = shippedNativeProfileComposition(home, 'native-headless')
     const goalRows = shipped.installations.filter(row => ['goal', 'goal-round-driver', 'tool-goal'].includes(row.id))
     expect(goalRows.map(row => row.plugin)).toEqual([
-      '@deepseek-ai/dsh-goal', '@deepseek-ai/dsh-goal-round-driver', '@deepseek-ai/dsh-tool-goal',
+      '@redspark/rsh-goal', '@redspark/rsh-goal-round-driver', '@redspark/rsh-tool-goal',
     ])
     const selectedIds = new Set(['app', 'agents', 'session-execution', 'goal', 'goal-round-driver', 'tools', 'prompt',
       'tool-goal', 'model-execution', 'storage'])
@@ -121,7 +121,7 @@ it('records shipped native Goal creation, cold restore, explicit resume, and com
       if (row.id === 'storage') return { ...row, config: { root: sessions, compression: 'none' } }
       return row
     })
-    installations.push({ id: 'fs', plugin: '@deepseek-ai/dsh-fs-local', scope: 'root', config: { cwd: workspace } })
+    installations.push({ id: 'fs', plugin: '@redspark/rsh-fs-local', scope: 'root', config: { cwd: workspace } })
     installations.push({ id: 'model', plugin: 'native-goal-model', scope: 'root', config: { audit, mode: 'block' } })
     writeFileSync(join(profileDir, 'rsh.profile.json'), JSON.stringify({ ...shipped, installations }, null, 2))
     mkdirSync(modules, { recursive: true })
@@ -132,7 +132,7 @@ it('records shipped native Goal creation, cold restore, explicit resume, and com
     writeFileSync(join(modules, 'native.mjs'), goalModel())
 
     const invoke = (args: string[]) => execa(process.execPath, [bin, '--profile', 'native-headless', '--patch', patchPath, ...args], {
-      env: { ...process.env, DSH_HOME: home, DSH_TELEMETRY_DISABLED: '1' }, reject: false, timeout: 30_000,
+      env: { ...process.env, RSH_HOME: home, RSH_TELEMETRY_DISABLED: '1' }, reject: false, timeout: 30_000,
     })
     const writeMode = (mode: 'block' | 'resume') => writeFileSync(patchPath, JSON.stringify({ formatVersion: 1,
       installations: [{ id: 'model', config: { audit, mode } }] }))
@@ -199,7 +199,7 @@ it('records shipped native Goal creation, cold restore, explicit resume, and com
     if (promptRows[0] === undefined || schemaRows[0] === undefined) throw new Error('Goal profile omitted its model request header')
     const prompt = formatSystemPromptSnapshot(promptRows[0], promptRows.slice(1))
     const schemas = formatToolSchemasSnapshot(schemaRows[0], schemaRows.slice(1))
-    if (process.env.DSH_SNAPSHOT === 'refresh') {
+    if (process.env.RSH_SNAPSHOT === 'refresh') {
       mkdirSync(scenario, { recursive: true })
       writeFileSync(snapshotPath, normalized)
       writeFileSync(join(scenario, 'system-prompt.expected.md'), prompt)

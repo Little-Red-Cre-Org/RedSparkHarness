@@ -1,7 +1,7 @@
 /** One retained Markdown renderer over the document owner's accumulated text. */
 import type { ReactNode } from 'react'
-import type { PropsLocale } from '@deepseek-ai/dsh-client-ui-slots'
-import { WorkspaceMarkdownPreview } from '@deepseek-ai/dsh-client-ui-primitives'
+import type { PropsLocale } from '@redspark/rsh-client-ui-slots'
+import { WorkspaceMarkdownPreview } from '@redspark/rsh-client-ui-primitives'
 import type { DocumentPreviewProps } from '../document/contract.ts'
 import type {} from './locales.ts'
 

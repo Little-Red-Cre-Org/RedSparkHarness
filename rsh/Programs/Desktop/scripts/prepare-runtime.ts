@@ -21,8 +21,8 @@ type RuntimePlatform = 'darwin' | 'linux' | 'win'
 type RuntimeArch = 'arm64' | 'x64'
 
 function target(): { platform: RuntimePlatform; arch: RuntimeArch } {
-  const rawPlatform = process.env.DSH_DESKTOP_TARGET_PLATFORM ?? process.env.npm_config_platform ?? process.platform
-  const rawArch = process.env.DSH_DESKTOP_TARGET_ARCH ?? process.env.npm_config_arch ?? process.arch
+  const rawPlatform = process.env.RSH_DESKTOP_TARGET_PLATFORM ?? process.env.npm_config_platform ?? process.platform
+  const rawArch = process.env.RSH_DESKTOP_TARGET_ARCH ?? process.env.npm_config_arch ?? process.arch
   const platform = rawPlatform === 'win32' ? 'win' : rawPlatform
   if (platform !== 'darwin' && platform !== 'linux' && platform !== 'win') {
     throw new Error(`desktop runtime: unsupported platform ${rawPlatform}`)
@@ -94,9 +94,9 @@ function preparePnpm(): string {
 
 async function main(): Promise<void> {
   const { platform, arch } = target()
-  const bashSource = process.env.DSH_DESKTOP_BASH_DIR
+  const bashSource = process.env.RSH_DESKTOP_BASH_DIR
   if (platform === 'win' && (bashSource === undefined || bashSource === '')) {
-    throw new Error('desktop runtime: DSH_DESKTOP_BASH_DIR must name a prepared Windows Bash distribution')
+    throw new Error('desktop runtime: RSH_DESKTOP_BASH_DIR must name a prepared Windows Bash distribution')
   }
   mkdirSync(DOWNLOAD_ROOT, { recursive: true })
   mkdirSync(RUNTIME_ROOT, { recursive: true })

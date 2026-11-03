@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
+import type { NativePlugin } from '@redspark/rsh-native-runtime'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { bootNativeClientEntry } from '../src/native-entry.ts'
 

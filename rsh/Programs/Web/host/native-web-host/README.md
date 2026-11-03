@@ -3,7 +3,7 @@ description: "Run a selected Cordis-free Web Client profile behind an authentica
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-native-web-host
+# @redspark/rsh-native-web-host
 
 English | [中文](README.zh.md)
 
@@ -27,7 +27,7 @@ No runtime invariant companion is published because the carrier's authoritative 
 <a id="configuration"></a>
 ## Configuration
 
-The native profile selects this package with `projectDir` and `runtimeDir`. `projectDir` contains `rsh.client.json`; `runtimeDir` contains the installed `@deepseek-ai/dsh-web-frontend` distribution and selected native Client packages. The optional `transportScript`, listener `host` and `port`, request-size cap, trusted authorities, browser-cookie lifetime, and `clientReload` mode are validated before activation. `clientReload: live` watches the profile file, rebuilds a complete candidate, and publishes it through the authenticated `/api/native-client/reload` route only after bundling succeeds. The listener binds loopback with an OS-assigned port by default and the application prints a tokenized URL before waiting for NativeHost shutdown.
+The native profile selects this package with `projectDir` and `runtimeDir`. `projectDir` contains `rsh.client.json`; `runtimeDir` contains the installed `@redspark/rsh-web-frontend` distribution and selected native Client packages. The optional `transportScript`, listener `host` and `port`, request-size cap, trusted authorities, browser-cookie lifetime, and `clientReload` mode are validated before activation. `clientReload: live` watches the profile file, rebuilds a complete candidate, and publishes it through the authenticated `/api/native-client/reload` route only after bundling succeeds. The listener binds loopback with an OS-assigned port by default and the application prints a tokenized URL before waiting for NativeHost shutdown.
 
 <a id="understand-the-implementation"></a>
 ## Understand the implementation

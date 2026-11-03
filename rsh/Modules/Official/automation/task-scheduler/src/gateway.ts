@@ -1,10 +1,10 @@
 /** Human-facing task management over the existing authenticated Remote carrier. */
-import type { Context } from '@deepseek-ai/cordis'
-import type {} from '@deepseek-ai/dsh-goal'
-import type { Agent } from '@deepseek-ai/dsh-agent'
-import { SessionId } from '@deepseek-ai/dsh-session'
-import type {} from '@deepseek-ai/dsh-session-title'
-import { Remote, TypertRemoteService } from '@deepseek-ai/dsh-typert-protocol'
+import type { Context } from '@redspark/cordis'
+import type {} from '@redspark/rsh-goal'
+import type { Agent } from '@redspark/rsh-agent'
+import { SessionId } from '@redspark/rsh-session'
+import type {} from '@redspark/rsh-session-title'
+import { Remote, TypertRemoteService } from '@redspark/rsh-typert-protocol'
 import { z } from 'zod'
 import type { TaskStore } from './store.ts'
 import type { SchedulerOptions } from './types.ts'
@@ -13,7 +13,7 @@ import { removeReminderRecord } from './reminder-journal.ts'
 import { createOwnedTask } from './management.ts'
 import { reminderStartTime } from './history.ts'
 
-declare module '@deepseek-ai/cordis' {
+declare module '@redspark/cordis' {
   interface Context {
     taskScheduler: TaskSchedulerGateway
   }

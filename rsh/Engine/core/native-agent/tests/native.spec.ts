@@ -1,6 +1,6 @@
 /** Native Agent lifecycle and initiator behavior through a real native Host. */
 import { describe, expect, it } from 'vitest'
-import { NativeHost, NativeScope, resolveInstallation, type NativePlugin } from '@deepseek-ai/dsh-native-runtime'
+import { NativeHost, NativeScope, resolveInstallation, type NativePlugin } from '@redspark/rsh-native-runtime'
 import { NativeAgentId, type NativeAgent, type NativeAgentRegistry } from '../src/index.ts'
 import { plugin as agentPlugin } from '../src/index.ts'
 

@@ -1,7 +1,7 @@
 /** Native management of persisted scheduled work and personal reminders in one selected Program route. */
-import type { NativeActiveSessionOwner } from '@deepseek-ai/dsh-native-session-execution'
-import type { NativeScheduledGoalHost } from '@deepseek-ai/dsh-goal/native'
-import type { SessionId } from '@deepseek-ai/dsh-session/types'
+import type { NativeActiveSessionOwner } from '@redspark/rsh-native-session-execution'
+import type { NativeScheduledGoalHost } from '@redspark/rsh-goal/native'
+import type { SessionId } from '@redspark/rsh-session/types'
 import type { CreateTaskRequest } from './gui-types.ts'
 import type { Run, Task, TaskId } from './types.ts'
 
@@ -26,6 +26,17 @@ export interface NativeTaskSchedulerOperations {
    * @returns Active, paused, or failed plans without their prompts or execution configuration.
    */
   listSchedules(): readonly NativeTaskScheduleView[]
+  /**
+   * Enumerate the currently live owners this scheduler may act for.
+   *
+   * `change` needs an exact `NativeActiveSessionOwner`, so a caller that starts
+   * from a plan id has to resolve one first. Reading the snapshot is the only
+   * supported way: it neither creates nor wakes an owner, so an absent Session
+   * stays absent and the caller can report the plan as not controllable instead
+   * of failing at the last moment.
+   * @returns detached owner references for currently active Sessions.
+   */
+  liveOwners(): readonly NativeActiveSessionOwner[]
   /**
    * Subscribe to committed plan or run changes that can alter `listSchedules()`.
    * @param listener - called after a SQLite transaction commits.
@@ -60,9 +71,19 @@ export interface NativeTaskScheduleView {
   readonly timeZone: string
   readonly nextRunAt?: number
   readonly lastRunAt?: number
+  /**
+   * Which producer owns this plan. Optional because durable rows written before
+   * the field existed carry none, and a required field would make the whole list
+   * unreadable for exactly those users.
+   *
+   * A reader needs it to decide what it may offer: a `goal` plan can only be
+   * resumed from inside an explicit human turn, so a list screen must not show
+   * a resume control for one.
+   */
+  readonly kind?: 'goal' | 'scheduled' | undefined
 }
 
-declare module '@deepseek-ai/dsh-native-runtime' {
+declare module '@redspark/rsh-native-runtime' {
   interface NativeServices {
     taskScheduler: NativeTaskSchedulerOperations
     scheduledGoalHost: NativeScheduledGoalHost

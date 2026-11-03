@@ -1,14 +1,14 @@
 /**
  * Cordis adapter for the managed local Bash controller. Settings own the
  * current budget source; subprocess owns background process teardown.
- * @module @deepseek-ai/dsh-bash-local
+ * @module @redspark/rsh-bash-local
  */
-import { Context } from '@deepseek-ai/cordis'
-import z from '@deepseek-ai/schemastery'
-import { SHELL_SETTINGS_NAMESPACE, ShellExecutor } from '@deepseek-ai/dsh-shell'
-import type { ShellExecRequest, ShellExecSpec, ShellProcess, ShellRunResult } from '@deepseek-ai/dsh-shell'
-import type {} from '@deepseek-ai/dsh-subprocess'
-import type {} from '@deepseek-ai/dsh-compat-settings-definition'
+import { Context } from '@redspark/cordis'
+import z from '@redspark/schemastery'
+import { SHELL_SETTINGS_NAMESPACE, ShellExecutor } from '@redspark/rsh-shell'
+import type { ShellExecRequest, ShellExecSpec, ShellProcess, ShellRunResult } from '@redspark/rsh-shell'
+import type {} from '@redspark/rsh-subprocess'
+import type {} from '@redspark/rsh-compat-settings-definition'
 import { LocalBashController, assertServiceableBashConfig, resolveConfig } from './controller.ts'
 import type { Config, ResolvedConfig } from './controller.ts'
 

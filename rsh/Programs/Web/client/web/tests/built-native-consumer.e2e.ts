@@ -32,7 +32,7 @@ function pnpm(args: string[], cwd: string, timeout: number): string {
     : run(executable, args, cwd, timeout)
 }
 
-describe.skipIf(process.env.DSH_EXAMPLE_MODE !== 'lib')('packed native browser consumer', () => {
+describe.skipIf(process.env.RSH_EXAMPLE_MODE !== 'lib')('packed native browser consumer', () => {
   it('installs, imports, and typechecks without Cordis', ({ task }) => {
     const output = mkdtempSync(join(tmpdir(), 'dsh-native-client-consumer-'))
     try {
@@ -48,7 +48,7 @@ describe.skipIf(process.env.DSH_EXAMPLE_MODE !== 'lib')('packed native browser c
       }
       const closure = new Map<string, WorkspacePackage>()
       for (const name of [
-        '@deepseek-ai/dsh-client-modules', '@deepseek-ai/dsh-client-web', '@deepseek-ai/dsh-client-store',
+        '@redspark/rsh-client-modules', '@redspark/rsh-client-web', '@redspark/rsh-client-store',
       ]) {
         for (const pkg of packedWorkspaceClosure(name, workspacePackages)) closure.set(pkg.name, pkg)
       }
@@ -66,8 +66,8 @@ describe.skipIf(process.env.DSH_EXAMPLE_MODE !== 'lib')('packed native browser c
         timeout: task.timeout,
         env: { ...process.env, NODE_OPTIONS: undefined, NODE_PATH: undefined },
       })
-      expect(existsSync(join(output, 'node_modules/@deepseek-ai/cordis'))).toBe(false)
-      const webManifest = JSON.parse(readFileSync(join(output, 'node_modules/@deepseek-ai/dsh-client-web/package.json'), 'utf8')) as {
+      expect(existsSync(join(output, 'node_modules/@redspark/cordis'))).toBe(false)
+      const webManifest = JSON.parse(readFileSync(join(output, 'node_modules/@redspark/rsh-client-web/package.json'), 'utf8')) as {
         dependencies?: Record<string, string>
         devDependencies?: Record<string, string>
         optionalDependencies?: Record<string, string>
@@ -79,23 +79,23 @@ describe.skipIf(process.env.DSH_EXAMPLE_MODE !== 'lib')('packed native browser c
         ...Object.keys(webManifest.devDependencies ?? {}),
         ...Object.keys(webManifest.optionalDependencies ?? {}),
         ...Object.keys(webManifest.peerDependencies ?? {}),
-      ]).not.toContain('@deepseek-ai/cordis')
+      ]).not.toContain('@redspark/cordis')
       expect(webManifest.exports?.['./base.css']).toBe('./lib/base.css')
-      expect(existsSync(join(output, 'node_modules/@deepseek-ai/dsh-client-web/lib/base.css'))).toBe(true)
+      expect(existsSync(join(output, 'node_modules/@redspark/rsh-client-web/lib/base.css'))).toBe(true)
 
       const source = `
         import { registerHooks } from 'node:module'
         registerHooks({ resolve(specifier, context, nextResolve) {
-          if (specifier === '@deepseek-ai/cordis' || specifier.startsWith('@deepseek-ai/cordis/')) {
+          if (specifier === '@redspark/cordis' || specifier.startsWith('@redspark/cordis/')) {
             throw Error('Cordis imported by ' + context.parentURL)
           }
           return nextResolve(specifier, context)
         } })
         const [modules, web, native, store] = await Promise.all([
-          import('@deepseek-ai/dsh-client-modules/native'),
-          import('@deepseek-ai/dsh-client-web'),
-          import('@deepseek-ai/dsh-client-web/native'),
-          import('@deepseek-ai/dsh-client-store'),
+          import('@redspark/rsh-client-modules/native'),
+          import('@redspark/rsh-client-web'),
+          import('@redspark/rsh-client-web/native'),
+          import('@redspark/rsh-client-store'),
         ])
         if (
           typeof modules.ClientModuleSystem !== 'function' ||
@@ -110,11 +110,11 @@ describe.skipIf(process.env.DSH_EXAMPLE_MODE !== 'lib')('packed native browser c
       `
       run(process.execPath, ['--input-type=module', '-e', source], output, task.timeout)
       writeFileSync(join(output, 'consumer.mts'), `
-        import { ClientModuleSystem } from '@deepseek-ai/dsh-client-modules/native'
-        import { bootNativeClient as bootFromRoot } from '@deepseek-ai/dsh-client-web'
-        import { bootNativeClient, type NativeClientBootOptions } from '@deepseek-ai/dsh-client-web/native'
-        import type { NativeClientBootWire } from '@deepseek-ai/dsh-client-web/native-wire'
-        import { createSnapshotStore } from '@deepseek-ai/dsh-client-store'
+        import { ClientModuleSystem } from '@redspark/rsh-client-modules/native'
+        import { bootNativeClient as bootFromRoot } from '@redspark/rsh-client-web'
+        import { bootNativeClient, type NativeClientBootOptions } from '@redspark/rsh-client-web/native'
+        import type { NativeClientBootWire } from '@redspark/rsh-client-web/native-wire'
+        import { createSnapshotStore } from '@redspark/rsh-client-store'
         declare const options: NativeClientBootOptions
         declare const wire: NativeClientBootWire
         void ClientModuleSystem

@@ -1,5 +1,5 @@
 {
-  "name": "@deepseek-ai/dsh-api-session-controller",
+  "name": "@redspark/rsh-api-session-controller",
   "description": "Session Remote commands, cold reads, and live control transport",
   "version": "1.0.0",
   "publishConfig": {
@@ -47,11 +47,11 @@
   "dsh": {
     "client": {
       "external": [
-        "@deepseek-ai/dsh-api-gateway/client"
+        "@redspark/rsh-api-gateway/client"
       ],
       "inject": [
-        "@deepseek-ai/dsh-api-gateway",
-        "@deepseek-ai/dsh-client-file-upload"
+        "@redspark/rsh-api-gateway",
+        "@redspark/rsh-client-file-upload"
       ],
       "platform": "web"
     }
@@ -72,99 +72,99 @@
   ],
   "license": "MIT",
   "dependencies": {
-    "@deepseek-ai/dsh-brand": "workspace:^",
-    "@deepseek-ai/dsh-deque": "workspace:^",
-    "@deepseek-ai/schemastery": "workspace:^",
+    "@redspark/rsh-brand": "workspace:^",
+    "@redspark/rsh-deque": "workspace:^",
+    "@redspark/schemastery": "workspace:^",
     "mime-types": "^3.0.2",
     "zod": "^4.4.3",
-    "@deepseek-ai/dsh-native-model-execution": "workspace:^"
+    "@redspark/rsh-native-model-execution": "workspace:^"
   },
   "peerDependencies": {
-    "@deepseek-ai/cordis": "workspace:^",
-    "@deepseek-ai/dsh-agent": "workspace:^",
-    "@deepseek-ai/dsh-agent-default-model": "workspace:^",
-    "@deepseek-ai/dsh-agent-presets": "workspace:^",
-    "@deepseek-ai/dsh-api-gateway": "workspace:^",
-    "@deepseek-ai/dsh-attachment": "workspace:^",
-    "@deepseek-ai/dsh-client-connection": "workspace:^",
-    "@deepseek-ai/dsh-client-file-upload": "workspace:^",
-    "@deepseek-ai/dsh-commands": "workspace:^",
-    "@deepseek-ai/dsh-file-reference": "workspace:^",
-    "@deepseek-ai/dsh-fs": "workspace:^",
-    "@deepseek-ai/dsh-jobs": "workspace:^",
-    "@deepseek-ai/dsh-llm": "workspace:^",
-    "@deepseek-ai/dsh-native-command": "workspace:^",
-    "@deepseek-ai/dsh-scope": "workspace:^",
-    "@deepseek-ai/dsh-session": "workspace:^",
-    "@deepseek-ai/dsh-session-persistence": "workspace:^",
-    "@deepseek-ai/dsh-session-projection": "workspace:^",
-    "@deepseek-ai/dsh-session-projection-cache": "workspace:^",
-    "@deepseek-ai/dsh-session-query": "workspace:^",
-    "@deepseek-ai/dsh-session-title": "workspace:^",
-    "@deepseek-ai/dsh-skill": "workspace:^",
-    "@deepseek-ai/dsh-subagent": "workspace:^",
-    "@deepseek-ai/dsh-typert-protocol": "workspace:^",
-    "@deepseek-ai/dsh-typert-registry": "workspace:^",
-    "@deepseek-ai/dsh-util-time": "workspace:^",
-    "@deepseek-ai/dsh-util-values": "workspace:^",
-    "@deepseek-ai/dsh-util-workspace-path": "workspace:^",
-    "@deepseek-ai/dsh-workspace": "workspace:^"
+    "@redspark/cordis": "workspace:^",
+    "@redspark/rsh-agent": "workspace:^",
+    "@redspark/rsh-agent-default-model": "workspace:^",
+    "@redspark/rsh-agent-presets": "workspace:^",
+    "@redspark/rsh-api-gateway": "workspace:^",
+    "@redspark/rsh-attachment": "workspace:^",
+    "@redspark/rsh-client-connection": "workspace:^",
+    "@redspark/rsh-client-file-upload": "workspace:^",
+    "@redspark/rsh-commands": "workspace:^",
+    "@redspark/rsh-file-reference": "workspace:^",
+    "@redspark/rsh-fs": "workspace:^",
+    "@redspark/rsh-jobs": "workspace:^",
+    "@redspark/rsh-llm": "workspace:^",
+    "@redspark/rsh-native-command": "workspace:^",
+    "@redspark/rsh-scope": "workspace:^",
+    "@redspark/rsh-session": "workspace:^",
+    "@redspark/rsh-session-persistence": "workspace:^",
+    "@redspark/rsh-session-projection": "workspace:^",
+    "@redspark/rsh-session-projection-cache": "workspace:^",
+    "@redspark/rsh-session-query": "workspace:^",
+    "@redspark/rsh-session-title": "workspace:^",
+    "@redspark/rsh-skill": "workspace:^",
+    "@redspark/rsh-subagent": "workspace:^",
+    "@redspark/rsh-typert-protocol": "workspace:^",
+    "@redspark/rsh-typert-registry": "workspace:^",
+    "@redspark/rsh-util-time": "workspace:^",
+    "@redspark/rsh-util-values": "workspace:^",
+    "@redspark/rsh-util-workspace-path": "workspace:^",
+    "@redspark/rsh-workspace": "workspace:^"
   },
   "peerDependenciesMeta": {
-    "@deepseek-ai/cordis": {
+    "@redspark/cordis": {
       "optional": true
     },
-    "@deepseek-ai/dsh-jobs": {
+    "@redspark/rsh-jobs": {
       "optional": true
     },
-    "@deepseek-ai/dsh-session-persistence": {
+    "@redspark/rsh-session-persistence": {
       "optional": true
     },
-    "@deepseek-ai/dsh-session-projection-cache": {
+    "@redspark/rsh-session-projection-cache": {
       "optional": true
     }
   },
   "devDependencies": {
-    "@deepseek-ai/cordis": "workspace:^",
-    "@deepseek-ai/dsh-agent": "workspace:^",
-    "@deepseek-ai/dsh-agent-default-model": "workspace:^",
-    "@deepseek-ai/dsh-agent-loop": "workspace:^",
-    "@deepseek-ai/dsh-agent-loop-testkit": "workspace:^",
-    "@deepseek-ai/dsh-agent-presets": "workspace:^",
-    "@deepseek-ai/dsh-api-gateway": "workspace:^",
-    "@deepseek-ai/dsh-attachment": "workspace:^",
-    "@deepseek-ai/dsh-client-connection": "workspace:^",
-    "@deepseek-ai/dsh-client-file-upload": "workspace:^",
-    "@deepseek-ai/dsh-client-store": "workspace:^",
-    "@deepseek-ai/dsh-client-test-runtime": "workspace:^",
-    "@deepseek-ai/dsh-commands": "workspace:^",
-    "@deepseek-ai/dsh-file-reference": "workspace:^",
-    "@deepseek-ai/dsh-fs": "workspace:^",
-    "@deepseek-ai/dsh-fs-local": "workspace:^",
-    "@deepseek-ai/dsh-jobs": "workspace:^",
-    "@deepseek-ai/dsh-llm": "workspace:^",
-    "@deepseek-ai/dsh-native-command": "workspace:^",
-    "@deepseek-ai/dsh-permission-presets": "workspace:^",
-    "@deepseek-ai/dsh-remote-mock": "workspace:^",
-    "@deepseek-ai/dsh-scope": "workspace:^",
-    "@deepseek-ai/dsh-session": "workspace:^",
-    "@deepseek-ai/dsh-session-persistence": "workspace:^",
-    "@deepseek-ai/dsh-session-projection": "workspace:^",
-    "@deepseek-ai/dsh-session-projection-cache": "workspace:^",
-    "@deepseek-ai/dsh-session-query": "workspace:^",
-    "@deepseek-ai/dsh-session-title": "workspace:^",
-    "@deepseek-ai/dsh-skill": "workspace:^",
-    "@deepseek-ai/dsh-storage": "workspace:^",
-    "@deepseek-ai/dsh-storage-domain": "workspace:^",
-    "@deepseek-ai/dsh-storage-json": "workspace:^",
-    "@deepseek-ai/dsh-subagent": "workspace:^",
-    "@deepseek-ai/dsh-typert-protocol": "workspace:^",
-    "@deepseek-ai/dsh-typert-registry": "workspace:^",
-    "@deepseek-ai/dsh-util-crypto": "workspace:^",
-    "@deepseek-ai/dsh-util-time": "workspace:^",
-    "@deepseek-ai/dsh-util-values": "workspace:^",
-    "@deepseek-ai/dsh-util-workspace-path": "workspace:^",
-    "@deepseek-ai/dsh-workspace": "workspace:^",
+    "@redspark/cordis": "workspace:^",
+    "@redspark/rsh-agent": "workspace:^",
+    "@redspark/rsh-agent-default-model": "workspace:^",
+    "@redspark/rsh-agent-loop": "workspace:^",
+    "@redspark/rsh-agent-loop-testkit": "workspace:^",
+    "@redspark/rsh-agent-presets": "workspace:^",
+    "@redspark/rsh-api-gateway": "workspace:^",
+    "@redspark/rsh-attachment": "workspace:^",
+    "@redspark/rsh-client-connection": "workspace:^",
+    "@redspark/rsh-client-file-upload": "workspace:^",
+    "@redspark/rsh-client-store": "workspace:^",
+    "@redspark/rsh-client-test-runtime": "workspace:^",
+    "@redspark/rsh-commands": "workspace:^",
+    "@redspark/rsh-file-reference": "workspace:^",
+    "@redspark/rsh-fs": "workspace:^",
+    "@redspark/rsh-fs-local": "workspace:^",
+    "@redspark/rsh-jobs": "workspace:^",
+    "@redspark/rsh-llm": "workspace:^",
+    "@redspark/rsh-native-command": "workspace:^",
+    "@redspark/rsh-permission-presets": "workspace:^",
+    "@redspark/rsh-remote-mock": "workspace:^",
+    "@redspark/rsh-scope": "workspace:^",
+    "@redspark/rsh-session": "workspace:^",
+    "@redspark/rsh-session-persistence": "workspace:^",
+    "@redspark/rsh-session-projection": "workspace:^",
+    "@redspark/rsh-session-projection-cache": "workspace:^",
+    "@redspark/rsh-session-query": "workspace:^",
+    "@redspark/rsh-session-title": "workspace:^",
+    "@redspark/rsh-skill": "workspace:^",
+    "@redspark/rsh-storage": "workspace:^",
+    "@redspark/rsh-storage-domain": "workspace:^",
+    "@redspark/rsh-storage-json": "workspace:^",
+    "@redspark/rsh-subagent": "workspace:^",
+    "@redspark/rsh-typert-protocol": "workspace:^",
+    "@redspark/rsh-typert-registry": "workspace:^",
+    "@redspark/rsh-util-crypto": "workspace:^",
+    "@redspark/rsh-util-time": "workspace:^",
+    "@redspark/rsh-util-values": "workspace:^",
+    "@redspark/rsh-util-workspace-path": "workspace:^",
+    "@redspark/rsh-workspace": "workspace:^",
     "@types/mime-types": "^3.0.1"
   }
 }

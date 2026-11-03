@@ -9,11 +9,11 @@
  * `ctx.remote.messageFeedback` / `ctx.remote.sessionFeedback` and the Native
  * build binds to `clientNativeSession`. One object layer therefore serves both
  * clients with the same compare-and-set semantics.
- * @module @deepseek-ai/dsh-client-ui-message-feedback/client/surface
+ * @module @redspark/rsh-client-ui-message-feedback/client/surface
  */
 
-import type { SessionId } from '@deepseek-ai/dsh-session/types'
-import type { FeedbackRecord, SessionFeedbackRecordRequest, SessionFeedbackRecordResult } from '@deepseek-ai/dsh-command-feedback/types'
+import type { SessionId } from '@redspark/rsh-session/types'
+import type { FeedbackRecord, SessionFeedbackRecordRequest, SessionFeedbackRecordResult } from '@redspark/rsh-command-feedback/types'
 import {
   MessageFeedbackController, describe,
   type MessageFeedbackActionFailure,

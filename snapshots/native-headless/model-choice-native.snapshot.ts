@@ -7,12 +7,12 @@ import { fileURLToPath, pathToFileURL } from 'node:url'
 import { zstdDecompressSync } from 'node:zlib'
 import { execa } from 'execa'
 import { expect, it } from 'vitest'
-import { JsonlSessionBackend } from '@deepseek-ai/dsh-session-persistence-jsonl'
-import type { SessionId } from '@deepseek-ai/dsh-session/native'
-import { deriveReplayScript, parseSessionLog } from '@deepseek-ai/dsh-llm-replay'
-import { ToolCallId, type ContentBlock } from '@deepseek-ai/dsh-llm/native'
+import { JsonlSessionBackend } from '@redspark/rsh-session-persistence-jsonl'
+import type { SessionId } from '@redspark/rsh-session/native'
+import { deriveReplayScript, parseSessionLog } from '@redspark/rsh-llm-replay'
+import { ToolCallId, type ContentBlock } from '@redspark/rsh-llm/native'
 import { formatSystemPromptSnapshot, formatToolSchemasSnapshot, normalizedSystemPrompts, normalizedToolSchemas,
-  normalizeSessionSnapshot, redactSessionSnapshotIds } from '@deepseek-ai/dsh-session-snapshot'
+  normalizeSessionSnapshot, redactSessionSnapshotIds } from '@redspark/rsh-session-snapshot'
 
 const root = fileURLToPath(new URL('../../', import.meta.url))
 
@@ -100,7 +100,7 @@ async function withModelChoiceRunner(replies: ContentBlock[][],
     const profile = join(selectedHome, 'profiles/native-model-choice')
     const workspace = join(selectedHome, 'workspace')
     const sessions = join(selectedHome, 'sessions')
-    const modules = join(profile, 'node_modules/@deepseek-ai')
+    const modules = join(profile, 'node_modules/@redspark')
     mkdirSync(workspace, { recursive: true })
     mkdirSync(modules, { recursive: true })
     writeFileSync(join(workspace, 'fixture.txt'), 'Durable model selection fixture.\n')
@@ -151,8 +151,8 @@ async function withModelChoiceRunner(replies: ContentBlock[][],
             if (childInstallations.has(installation.id)) installation.scope = 'consumer'
           }
           nativeProfile.installations.push(
-            { id: 'authorization', plugin: '@deepseek-ai/dsh-authorization', scope: 'consumer' },
-            { id: 'deepseek-account', plugin: '@deepseek-ai/dsh-deepseek-account', scope: 'consumer',
+            { id: 'authorization', plugin: '@redspark/rsh-authorization', scope: 'consumer' },
+            { id: 'deepseek-account', plugin: '@redspark/rsh-deepseek-account', scope: 'consumer',
               config: { inferenceOrigin: 'http://127.0.0.1:' + address.port } },
             { id: 'credential-notification-fixture', plugin: 'native-credential-notification-fixture', scope: 'consumer',
               config: { accountDestination: 'http://127.0.0.1:' + address.port + '/anthropic' } },
@@ -163,7 +163,7 @@ async function withModelChoiceRunner(replies: ContentBlock[][],
           { id: 'app', config: { cwd: workspace, provider: 'selection-fixture', model: patch.defaultModel,
             systemPrompt: patch.systemPrompt ?? 'Read fixture.txt, then continue with the selected model.', maxSteps: 3 } },
           { id: 'fs', config: { cwd: workspace } }, { id: 'storage', config: { root: sessions, compression: 'none' } },
-          { id: 'credentials', config: { dshHome: selectedHome, watch: false } },
+          { id: 'credentials', config: { rshHome: selectedHome, watch: false } },
           { id: 'model', config: { providers: {
             'selection-fixture': { baseURL: 'http://127.0.0.1:' + address.port + '/v1',
               apiKeyEnv: 'MODEL_CHOICE_KEY', api: 'openai-completions', compat: { maxTokensField: 'max_tokens' }, models: [
@@ -182,7 +182,7 @@ async function withModelChoiceRunner(replies: ContentBlock[][],
         const result = await execa(process.execPath, [
           '--import', pathToFileURL(join(root, 'rsh/Programs/CLI/tests/fixtures/deny-cordis-context-register.mjs')).href,
           join(root, 'rsh/Programs/CLI/lib/bin.js'), '--profile', 'native-model-choice', '--patch', patch, ...args,
-        ], { env: { ...process.env, DSH_HOME: selectedHome, MODEL_CHOICE_KEY: 'model-choice-key' }, reject: false, timeout: 30_000 })
+        ], { env: { ...process.env, RSH_HOME: selectedHome, MODEL_CHOICE_KEY: 'model-choice-key' }, reject: false, timeout: 30_000 })
         return { ...result.exitCode === undefined ? {} : { exitCode: result.exitCode }, stderr: result.stderr, stdout: result.stdout }
       },
     }
@@ -203,7 +203,7 @@ function assertModelChoiceSnapshot(scene: string, raw: string, workspace: string
   if (prompts[0] === undefined || schemas[0] === undefined) throw new Error(`${scene}: missing request header`)
   const prompt = formatSystemPromptSnapshot(prompts[0], prompts.slice(1))
   const tools = formatToolSchemasSnapshot(schemas[0], schemas.slice(1))
-  if (process.env.DSH_SNAPSHOT === 'refresh') {
+  if (process.env.RSH_SNAPSHOT === 'refresh') {
     writeFileSync(expected, normalized)
     writeFileSync(join(scene, 'system-prompt.expected.md'), prompt)
     writeFileSync(join(scene, 'tool-schemas.expected.json'), tools)
@@ -313,7 +313,7 @@ it('restores the recorded model route when a cold resume defaults to another mod
   const scene = join(root, 'snapshots/native-headless/model-history-native')
   const expected = join(scene, 'session.v3.jsonl')
   const recorded = existsSync(expected) ? parseSessionLog(readFileSync(expected, 'utf8')) : undefined
-  if (recorded === undefined && process.env.DSH_SNAPSHOT !== 'refresh') {
+  if (recorded === undefined && process.env.RSH_SNAPSHOT !== 'refresh') {
     throw new Error('model-history-native: canonical Session is required outside refresh')
   }
   let tasks: readonly [string, string]

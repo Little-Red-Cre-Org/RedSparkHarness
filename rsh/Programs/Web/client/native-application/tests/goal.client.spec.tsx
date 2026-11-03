@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import type { SessionEvent } from '@deepseek-ai/dsh-session/types'
+import type { SessionEvent } from '@redspark/rsh-session/types'
 import { render, screen } from '@testing-library/react'
 import { expect, it } from 'vitest'
 import { NativeSessionGoal } from '../src/goal.tsx'

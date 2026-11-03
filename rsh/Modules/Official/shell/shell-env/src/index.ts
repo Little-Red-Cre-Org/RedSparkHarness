@@ -1,20 +1,20 @@
 /**
  * Tool-independent shell environment plugin: owns the `ctx.shellEnv` registry of
- * trusted, per-execution `DSH_*` variables consumed by the model-facing shell
+ * trusted, per-execution `RSH_*` variables consumed by the model-facing shell
  * tools (`dsh-tool-bash`, `dsh-tool-pwsh`). Built-in shell facts are owned by
  * the registry itself while plugins can register additional, enumerable facts
  * with effect-scoped disposal.
  *
- * @module @deepseek-ai/dsh-shell-env
+ * @module @redspark/rsh-shell-env
  */
 
-import { Service, type Context } from '@deepseek-ai/cordis'
-import z from '@deepseek-ai/schemastery'
-import type { DshEnvironment, DshEnvironmentKey } from '@deepseek-ai/dsh-shell/native'
-import type { ToolExecution } from '@deepseek-ai/dsh-tools'
+import { Service, type Context } from '@redspark/cordis'
+import z from '@redspark/schemastery'
+import type { RshEnvironment, RshEnvironmentKey } from '@redspark/rsh-shell/native'
+import type { ToolExecution } from '@redspark/rsh-tools'
 import { ShellEnvController } from './controller.ts'
 
-declare module '@deepseek-ai/cordis' {
+declare module '@redspark/cordis' {
   interface Context {
     shellEnv: ShellEnvRegistry
   }
@@ -25,16 +25,16 @@ export const inject: string[] = []
 
 /** Plugin config (all optional — the built-in facts resolve without defaults). */
 export interface Config {
-  /** RedSpark Harness home directory exposed as `DSH_HOME`; defaults to `$DSH_HOME` or `~/.dsh`. */
-  dshHome?: string
+  /** RedSpark Harness home directory exposed as `RSH_HOME`; defaults to `$RSH_HOME` or `~/.dsh`. */
+  rshHome?: string
 }
 
 /** Runtime configuration schema for the shell-env plugin. */
 export const Config: z<Config> = z.object({
-  dshHome: z.string(),
+  rshHome: z.string(),
 })
 
-/** Model-visible metadata for one managed `DSH_*` environment variable. */
+/** Model-visible metadata for one managed `RSH_*` environment variable. */
 export interface BashEnvVariable {
   /** Concise description of the environment fact represented by the variable. */
   description: string
@@ -44,27 +44,27 @@ export interface BashEnvVariable {
 export interface BashEnvContributor {
   /** Stable contributor name used in diagnostics and duplicate detection. */
   name: string
-  /** Complete set of `DSH_*` keys this contributor may return. */
-  variables: Readonly<Record<DshEnvironmentKey, BashEnvVariable>>
+  /** Complete set of `RSH_*` keys this contributor may return. */
+  variables: Readonly<Record<RshEnvironmentKey, BashEnvVariable>>
   /**
    * Resolve this contributor's available values for one tool execution.
    * @param execution - the shell tool execution and its optional calling agent.
    * @returns a partial map containing only keys declared in {@link variables}.
    */
-  resolve(execution: ToolExecution): Readonly<Partial<Record<DshEnvironmentKey, string>>>
+  resolve(execution: ToolExecution): Readonly<Partial<Record<RshEnvironmentKey, string>>>
 }
 
 /** An enumerable declaration returned by {@link ShellEnvRegistry.list}. */
 export interface BashEnvVariableInfo extends BashEnvVariable {
   /** Contributor that owns the variable. */
   contributor: string
-  /** Declared `DSH_*` environment variable name. */
-  key: DshEnvironmentKey
+  /** Declared `RSH_*` environment variable name. */
+  key: RshEnvironmentKey
 }
 
 /**
- * Registry (`ctx.shellEnv`) for trusted, per-execution `DSH_*` variables.
- * The namespace is rebuilt for every model shell call: ambient `DSH_*` values
+ * Registry (`ctx.shellEnv`) for trusted, per-execution `RSH_*` variables.
+ * The namespace is rebuilt for every model shell call: ambient `RSH_*` values
  * are discarded by the executor, then the registry's current snapshot is
  * injected. Built-in shell facts remain owned by the registry itself while
  * plugins can register additional, enumerable facts with effect-scoped
@@ -79,7 +79,7 @@ export class ShellEnvRegistry extends Service {
    */
   constructor(ctx: Context, config: Config = {}) {
     super(ctx, 'shellEnv')
-    this.controller = new ShellEnvController(config.dshHome, execution => execution.agent?.session.header.id)
+    this.controller = new ShellEnvController(config.rshHome, execution => execution.agent?.session.header.id)
   }
 
   /**
@@ -96,11 +96,11 @@ export class ShellEnvRegistry extends Service {
   }
 
   /**
-   * Build the trusted `DSH_*` snapshot for one shell tool execution.
+   * Build the trusted `RSH_*` snapshot for one shell tool execution.
    * @param execution - the current tool execution.
    * @returns an immutable environment overlay containing built-ins and current contributions.
    */
-  collect(execution: ToolExecution): DshEnvironment {
+  collect(execution: ToolExecution): RshEnvironment {
     return this.controller.collect(execution)
   }
 

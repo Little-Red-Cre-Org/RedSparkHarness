@@ -3,7 +3,7 @@ description: "Shell Provider 共用的原生隔离与结果分类。"
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-shell-sandbox-core
+# @redspark/rsh-shell-sandbox-core
 
 [English](README.md) | 中文
 

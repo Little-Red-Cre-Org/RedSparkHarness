@@ -2,13 +2,13 @@
  * Model-facing literal edit, unique-match by default. It obtains an optional guard from the
  * single intent slot, calls `ctx.fs.editText` without a separate stat, then records the observed
  * version; no policy means an unconditional atomic edit.
- * @module @deepseek-ai/dsh-tool-fs/src/edit
+ * @module @redspark/rsh-tool-fs/src/edit
  */
 
-import type { Context } from '@deepseek-ai/cordis'
-import { defineTool } from '@deepseek-ai/dsh-tools'
-import type { DiffCallView, DiffResultView, ToolResult } from '@deepseek-ai/dsh-tools'
-import type {} from '@deepseek-ai/dsh-fs'
+import type { Context } from '@redspark/cordis'
+import { defineTool } from '@redspark/rsh-tools'
+import type { DiffCallView, DiffResultView, ToolResult } from '@redspark/rsh-tools'
+import type {} from '@redspark/rsh-fs'
 import { diffsFromMeta } from './diff.ts'
 import { diffPresentationMeta } from './presentation-meta.ts'
 import { remediateFsError } from './error.ts'

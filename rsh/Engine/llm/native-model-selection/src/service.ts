@@ -1,11 +1,11 @@
 /** Model intent admission and step snapshots without independent Session storage. */
 import { createUserMessage, boundContextSummary, ReasoningEffortId, resolveCallConfigWithModel,
-  type LlmCallConfig, type LlmResolvedModelInfo } from '@deepseek-ai/dsh-llm/native'
-import type { NativeAgentRegistry } from '@deepseek-ai/dsh-native-agent'
-import type { NativeActiveSessionOperations, NativeActiveSessionOwner } from '@deepseek-ai/dsh-native-session-execution'
-import type { NativeModelDirectory } from '@deepseek-ai/dsh-native-model-execution/model-directory'
-import type { ModelSelection } from '@deepseek-ai/dsh-native-model-execution/model-selection'
-import { deepFreeze } from '@deepseek-ai/dsh-util-values'
+  type LlmCallConfig, type LlmResolvedModelInfo } from '@redspark/rsh-llm/native'
+import type { NativeAgentRegistry } from '@redspark/rsh-native-agent'
+import type { NativeActiveSessionOperations, NativeActiveSessionOwner } from '@redspark/rsh-native-session-execution'
+import type { NativeModelDirectory } from '@redspark/rsh-native-model-execution/model-directory'
+import type { ModelSelection } from '@redspark/rsh-native-model-execution/model-selection'
+import { deepFreeze } from '@redspark/rsh-util-values'
 import type { NativeModelSelectionOperations, NativeModelSelectionSnapshot } from './definition.ts'
 import type { NativeModelSelectionState, NativeModelSelectionRequest, NativeModelSelectionReceipt } from './types.ts'
 import { foldNativeModelSelectionState as stateOf } from './types.ts'

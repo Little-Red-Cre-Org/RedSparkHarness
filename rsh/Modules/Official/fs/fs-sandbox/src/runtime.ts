@@ -1,6 +1,6 @@
 /** RSH loader adapter for the sandbox-enforcing filesystem Provider. */
 
-import { adaptFilesystemPlugin } from '@deepseek-ai/dsh-fs'
+import { adaptFilesystemPlugin } from '@redspark/rsh-fs'
 import SandboxedFileSystem from './index.ts'
 
 /**
@@ -8,7 +8,7 @@ import SandboxedFileSystem from './index.ts'
  * @returns the adapted Cordis plugin entry.
  */
 export default adaptFilesystemPlugin({
-  packageName: '@deepseek-ai/dsh-fs-sandbox',
+  packageName: '@redspark/rsh-fs-sandbox',
   apiVersion: 1,
   role: 'provider',
   capability: 'filesystem',

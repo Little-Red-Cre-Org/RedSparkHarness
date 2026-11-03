@@ -1,11 +1,11 @@
 import type { ReactNode } from 'react'
 import {
   IconApiOutline14, IconBrowseOutline16, IconCodeOutline16, IconEditOutline16, IconSearchOutline16, IconSparkle16,
-} from '@deepseek-ai/dsh-client-ui-primitives'
+} from '@redspark/rsh-client-ui-primitives'
 import type { ToolCallOwnerProps } from '../../../tool-renderer-types.ts'
-import type { TranslateNS } from '@deepseek-ai/dsh-client-ui-slots'
-import type {} from '@deepseek-ai/dsh-client-ui-conversation/conversation-copy'
-import type {} from '@deepseek-ai/dsh-client-locale/dictionary'
+import type { TranslateNS } from '@redspark/rsh-client-ui-slots'
+import type {} from '@redspark/rsh-client-ui-conversation/conversation-copy'
+import type {} from '@redspark/rsh-client-locale/dictionary'
 import { readCardModel } from '../models/read-card-model.ts'
 import { diffCardModel } from '../models/diff-card-model.ts'
 import { searchCardModel } from '../models/search-card-model.ts'

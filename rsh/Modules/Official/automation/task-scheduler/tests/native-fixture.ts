@@ -1,34 +1,34 @@
 /** Shared actual native Host composition for scheduled work and route lifecycle tests. */
 import { mkdtemp, rm } from 'node:fs/promises'
-import type { NativeSessionPersistenceOperations } from '@deepseek-ai/dsh-session-persistence/native'
+import type { NativeSessionPersistenceOperations } from '@redspark/rsh-session-persistence/native'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
-import { NativeHost, NativeScope, resolveInstallation, type InstallationRequest, type NativePlugin } from '@deepseek-ai/dsh-native-runtime'
-import { localFilesystemPlugin } from '@deepseek-ai/dsh-fs-local/native'
-import { ReasoningEffortId } from '@deepseek-ai/dsh-llm/native'
-import type { LlmModelReasoningInfo } from '@deepseek-ai/dsh-llm'
-import { plugin as storagePlugin } from '@deepseek-ai/dsh-session-persistence-jsonl/native'
-import { plugin as agentPlugin, type NativeAgentRegistry } from '@deepseek-ai/dsh-native-agent'
+import { NativeHost, NativeScope, resolveInstallation, type InstallationRequest, type NativePlugin } from '@redspark/rsh-native-runtime'
+import { localFilesystemPlugin } from '@redspark/rsh-fs-local/native'
+import { ReasoningEffortId } from '@redspark/rsh-llm/native'
+import type { LlmModelReasoningInfo } from '@redspark/rsh-llm'
+import { plugin as storagePlugin } from '@redspark/rsh-session-persistence-jsonl/native'
+import { plugin as agentPlugin, type NativeAgentRegistry } from '@redspark/rsh-native-agent'
 
 import { plugin as executionPlugin, type NativeSessionExecutionOperations, type NativeActiveSessionOperations,
-  type NativeRootExecutionOperations } from '@deepseek-ai/dsh-native-session-execution'
+  type NativeRootExecutionOperations } from '@redspark/rsh-native-session-execution'
 
-import { plugin as modelExecutionPlugin } from '@deepseek-ai/dsh-native-model-execution/native'
-import { plugin as toolsPlugin } from '@deepseek-ai/dsh-native-tools/native'
-import type { NativeToolRegistry } from '@deepseek-ai/dsh-native-tools'
+import { plugin as modelExecutionPlugin } from '@redspark/rsh-native-model-execution/native'
+import { plugin as toolsPlugin } from '@redspark/rsh-native-tools/native'
+import type { NativeToolRegistry } from '@redspark/rsh-native-tools'
 
-import { plugin as promptPlugin } from '@deepseek-ai/dsh-native-prompt/native'
-import { plugin as goalsPlugin, type NativeGoalOperations, type NativeScheduledGoalHost } from '@deepseek-ai/dsh-goal/native'
-import { plugin as goalDriverPlugin, type NativeGoalContinuationOperations } from '@deepseek-ai/dsh-goal-round-driver/native'
-import { plugin as goalToolsPlugin } from '@deepseek-ai/dsh-tool-goal/native'
+import { plugin as promptPlugin } from '@redspark/rsh-native-prompt/native'
+import { plugin as goalsPlugin, type NativeGoalOperations, type NativeScheduledGoalHost } from '@redspark/rsh-goal/native'
+import { plugin as goalDriverPlugin, type NativeGoalContinuationOperations } from '@redspark/rsh-goal-round-driver/native'
+import { plugin as goalToolsPlugin } from '@redspark/rsh-tool-goal/native'
 import { MockAdapter } from '../../../../../Engine/core/agent-loop/tests/mock-adapter.ts'
 
 import { plugin as schedulePlugin } from '../src/native.ts'
 import { NativeTaskSchedulerRegistry } from '../src/native-registry.ts'
 
 import type { NativeTaskSchedulerOperations } from '../src/native-types.ts'
-import { NativeHeadlessApplication, plugin as appPlugin } from '@deepseek-ai/dsh-native-headless/native'
+import { NativeHeadlessApplication, plugin as appPlugin } from '@redspark/rsh-native-headless/native'
 
 /**
  * Start the real native Host with a scripted model Provider.

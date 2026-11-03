@@ -1,13 +1,13 @@
 /** Cordis-free exact session reads over the selected Native authorities. */
 
 import { z } from 'zod'
-import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
-import { SessionSeq, snapshotSessionEvent } from '@deepseek-ai/dsh-session/native'
-import type { SessionId } from '@deepseek-ai/dsh-session/native'
-import type { NativeSessionProjectionCacheOperations } from '@deepseek-ai/dsh-session-projection-cache/native'
-import type { NativeSessionProjectionOperations } from '@deepseek-ai/dsh-session-projection/native'
-import { turnBoundaryProjectionDefinition } from '@deepseek-ai/dsh-native-agent/turn-boundary'
-import { foldSessionTitle, type SessionTitleSnapshot } from '@deepseek-ai/dsh-session-title/native'
+import type { NativePlugin } from '@redspark/rsh-native-runtime'
+import { SessionSeq, snapshotSessionEvent } from '@redspark/rsh-session/native'
+import type { SessionId } from '@redspark/rsh-session/native'
+import type { NativeSessionProjectionCacheOperations } from '@redspark/rsh-session-projection-cache/native'
+import type { NativeSessionProjectionOperations } from '@redspark/rsh-session-projection/native'
+import { turnBoundaryProjectionDefinition } from '@redspark/rsh-native-agent/turn-boundary'
+import { foldSessionTitle, type SessionTitleSnapshot } from '@redspark/rsh-session-title/native'
 import { SessionQueryError, type Config, SESSION_QUERY_DEFAULT_PERSISTED_INSPECT_CONCURRENCY, SESSION_QUERY_DEFAULT_PREPARED_SESSION_CACHE_SIZE, SESSION_QUERY_READ_WINDOW_MAX } from './config.ts'
 import type { SessionQueryOperations } from './definition.ts'
 import { buildSessionEventSearchDocuments } from './documents.ts'
@@ -60,7 +60,7 @@ export { eventRecords, traceEvent, traceSession } from './tracing.ts'
 export { createNativeSessionQuerySource } from './native-source.ts'
 export type { NativeSessionQuerySource, NativeSessionQueryLiveSource, NativeSessionQueryPersistenceSource } from './native-source.ts'
 
-declare module '@deepseek-ai/dsh-native-runtime' {
+declare module '@redspark/rsh-native-runtime' {
   interface NativeServices { sessionQuery: SessionQueryOperations }
 }
 
@@ -312,7 +312,7 @@ class NativeSessionQuery implements SessionQueryOperations {
   }
 }
 
-function foldTitle(events: readonly import('@deepseek-ai/dsh-session/native').SessionEvent[]): Pick<SessionTitleObservation, 'title'> {
+function foldTitle(events: readonly import('@redspark/rsh-session/native').SessionEvent[]): Pick<SessionTitleObservation, 'title'> {
   const title = foldSessionTitle(events)
   return title === undefined ? {} : { title }
 }
@@ -332,7 +332,7 @@ function searchDisabled(): SessionQueryError {
 /** Native exact-read Provider; a full-text backend may replace it as the sole `sessionQuery` Provider. */
 export const plugin: NativePlugin = {
   apiVersion: 1,
-  name: '@deepseek-ai/dsh-session-query',
+  name: '@redspark/rsh-session-query',
   targets: ['host'],
   requires: ['activeSessions'],
   optional: ['sessionPersistence', 'sessionProjections', 'sessionProjectionCache'],

@@ -17,24 +17,24 @@ import type {
   SDKMessage,
   SDKSystemMessage,
 } from '@anthropic-ai/claude-agent-sdk'
-import { Context } from '@deepseek-ai/cordis'
+import { Context } from '@redspark/cordis'
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
-import type { Agent } from '@deepseek-ai/dsh-agent'
-import type { NativeContext } from '@deepseek-ai/dsh-native-runtime'
+import type { Agent } from '@redspark/rsh-agent'
+import type { NativeContext } from '@redspark/rsh-native-runtime'
 import type {
   NativeExternalSubagentDriver,
   NativeExternalSubagentModelOperations,
   NativeExternalSubagentRequest,
-} from '@deepseek-ai/dsh-native-subagent/native'
-import type { SessionId } from '@deepseek-ai/dsh-session'
-import SubagentRuntime from '@deepseek-ai/dsh-subagent'
-import SessionProjectionRegistry from '@deepseek-ai/dsh-session-projection'
+} from '@redspark/rsh-native-subagent/native'
+import type { SessionId } from '@redspark/rsh-session'
+import SubagentRuntime from '@redspark/rsh-subagent'
+import SessionProjectionRegistry from '@redspark/rsh-session-projection'
 import type {
   SubprocessHandle,
   SubprocessOutcome,
   SubprocessSpawnSpec,
-} from '@deepseek-ai/dsh-subprocess'
-import LocalSubprocessRuntime from '@deepseek-ai/dsh-subprocess-local'
+} from '@redspark/rsh-subprocess'
+import LocalSubprocessRuntime from '@redspark/rsh-subprocess-local'
 import * as claudeCode from '../src/index.ts'
 import { plugin as nativeClaudeCode } from '../src/native.ts'
 import type { ClaudeCodePermissionMode } from '../src/run.ts'

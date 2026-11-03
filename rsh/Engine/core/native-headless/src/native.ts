@@ -1,74 +1,74 @@
 /** Native headless Agent authority over the existing Session and filesystem interfaces. */
 import { createHash, randomUUID } from 'node:crypto'
 import { isDeepStrictEqual } from 'node:util'
-import type { NativeModelSelectionOperations } from '@deepseek-ai/dsh-native-model-selection/native'
-import { brandString } from '@deepseek-ai/dsh-brand'
-import { ResourceOwner } from '@deepseek-ai/dsh-native-runtime'
-import type { NativeAgentExecution, InboxTarget } from '@deepseek-ai/dsh-native-agent'
-import type { NativeAgentPresetOperations, NativeAgentPresetLease } from '@deepseek-ai/dsh-agent-presets/native'
-import { foldNativeAgentPresetFacts, type NativeAgentPresetSelectionRequest, type NativeAgentPresetFacts } from '@deepseek-ai/dsh-agent-presets/selection'
-import type { WorkspaceRegistryRuntime } from '@deepseek-ai/dsh-workspace/native'
+import type { NativeModelSelectionOperations } from '@redspark/rsh-native-model-selection/native'
+import { brandString } from '@redspark/rsh-brand'
+import { ResourceOwner } from '@redspark/rsh-native-runtime'
+import type { NativeAgentExecution, InboxTarget } from '@redspark/rsh-native-agent'
+import type { NativeAgentPresetOperations, NativeAgentPresetLease } from '@redspark/rsh-agent-presets/native'
+import { foldNativeAgentPresetFacts, type NativeAgentPresetSelectionRequest, type NativeAgentPresetFacts } from '@redspark/rsh-agent-presets/selection'
+import type { WorkspaceRegistryRuntime } from '@redspark/rsh-workspace/native'
 import type { NativeSessionConfiguration, NativeSessionDelegation, NativeSessionExecutionOperations,
   NativeActiveSessionOperations, NativeActiveSessionOwner, NativeRootSessionOperations, NativeProgramInteractionOwner,
   NativeRootExecutionOperations, NativeRootRoute, NativeRootRouteId, NativeRootForkRequest,
   NativeResponsesPreparedGeneration, NativeStagedFileAdmission, NativeStagedFileBlock,
-  NativeStagedFileReceipt, NativeStagedFileReceiptId } from '@deepseek-ai/dsh-native-session-execution'
-import { nativeSessionExecutionPolicy } from '@deepseek-ai/dsh-native-session-execution'
-import type { NativeStepAdmissionCommitCheck } from '@deepseek-ai/dsh-native-session-execution'
-import type { NativeSessionOwnerApproval } from '@deepseek-ai/dsh-native-session-execution'
-import type {} from '@deepseek-ai/dsh-native-session-execution/native'
+  NativeStagedFileReceipt, NativeStagedFileReceiptId } from '@redspark/rsh-native-session-execution'
+import { nativeSessionExecutionPolicy } from '@redspark/rsh-native-session-execution'
+import type { NativeStepAdmissionCommitCheck } from '@redspark/rsh-native-session-execution'
+import type { NativeSessionOwnerApproval } from '@redspark/rsh-native-session-execution'
+import type {} from '@redspark/rsh-native-session-execution/native'
 import { NativeContinuationSession } from './continuation-session.ts'
 import { NativeContinuationRuntime } from './continuation-runtime.ts'
 import { NativeContinuationActivation } from './continuation-activation.ts'
 import { NativeProgramActiveSession } from './continuation-active-session.ts'
 import { NativeWorkspaceRoutes, resolveWorkspaceRouteConfiguration, type NativeWorkspaceRouteConfiguration } from './workspace-routes.ts'
-import { SessionPersistenceNotFoundError, type SessionDeletionId, type SessionDeletionReceipt } from '@deepseek-ai/dsh-session-persistence/native'
-import { SessionLogOffset } from '@deepseek-ai/dsh-session/native'
-import type { StreamChunk, MessageId, LlmCallConfig } from '@deepseek-ai/dsh-llm/native'
+import { SessionPersistenceNotFoundError, type SessionDeletionId, type SessionDeletionReceipt } from '@redspark/rsh-session-persistence/native'
+import { SessionLogOffset } from '@redspark/rsh-session/native'
+import type { StreamChunk, MessageId, LlmCallConfig } from '@redspark/rsh-llm/native'
 import { isAbsolute, resolve } from 'node:path'
-import { NativeScope, type NativeApplication, type NativeContext, type NativePlugin } from '@deepseek-ai/dsh-native-runtime'
-import type {} from '@deepseek-ai/dsh-fs/native'
-import type {} from '@deepseek-ai/dsh-attachment/native'
-import type { AttachmentOperations, FileAttachmentRef, ImageAttachmentRef, StoredImageAttachment } from '@deepseek-ai/dsh-attachment/native'
-import { FsError, type FsTarget, type FsWriteIntent } from '@deepseek-ai/dsh-fs/native'
-import type {} from '@deepseek-ai/dsh-session-persistence/native'
-import type {} from '@deepseek-ai/dsh-native-tools/native'
-import type {} from '@deepseek-ai/dsh-native-prompt/native'
-import type {} from '@deepseek-ai/dsh-native-agent/native'
-import type {} from '@deepseek-ai/dsh-native-time-context/native'
-import type {} from '@deepseek-ai/dsh-tmux-context-definition'
-import type {} from '@deepseek-ai/dsh-native-model-execution/native'
-import type { NativeModelExecution, NativePreparedModelStep } from '@deepseek-ai/dsh-native-model-execution'
-import type { NativeResponsesRoute } from '@deepseek-ai/dsh-native-model-execution/responses-transport'
+import { NativeScope, type NativeApplication, type NativeContext, type NativePlugin } from '@redspark/rsh-native-runtime'
+import type {} from '@redspark/rsh-fs/native'
+import type {} from '@redspark/rsh-attachment/native'
+import type { AttachmentOperations, FileAttachmentRef, ImageAttachmentRef, StoredImageAttachment } from '@redspark/rsh-attachment/native'
+import { FsError, type FsTarget, type FsWriteIntent } from '@redspark/rsh-fs/native'
+import type {} from '@redspark/rsh-session-persistence/native'
+import type {} from '@redspark/rsh-native-tools/native'
+import type {} from '@redspark/rsh-native-prompt/native'
+import type {} from '@redspark/rsh-native-agent/native'
+import type {} from '@redspark/rsh-native-time-context/native'
+import type {} from '@redspark/rsh-tmux-context-definition'
+import type {} from '@redspark/rsh-native-model-execution/native'
+import type { NativeModelExecution, NativePreparedModelStep } from '@redspark/rsh-native-model-execution'
+import type { NativeResponsesRoute } from '@redspark/rsh-native-model-execution/responses-transport'
 import type { NativeExternalToolCall, NativeExternalToolInvocation, NativeExternalToolOperations,
   NativeToolApprovalRequest, NativeToolDelegationContext, NativeToolExecution, NativeToolExecutionSnapshot,
-  NativeToolRegistry, NativeToolResult, ToolSdkSchema } from '@deepseek-ai/dsh-native-tools'
-import type { NativePromptRegistry } from '@deepseek-ai/dsh-native-prompt'
-import { interpolatePromptText } from '@deepseek-ai/dsh-native-prompt'
-import { NativeAgentId, type NativeAgent, type NativeAgentRegistry } from '@deepseek-ai/dsh-native-agent'
-import type {} from '@deepseek-ai/dsh-native-sandbox-policy/native'
-import type { NativeSandboxPolicy } from '@deepseek-ai/dsh-native-sandbox-policy'
+  NativeToolRegistry, NativeToolResult, ToolSdkSchema } from '@redspark/rsh-native-tools'
+import type { NativePromptRegistry } from '@redspark/rsh-native-prompt'
+import { interpolatePromptText } from '@redspark/rsh-native-prompt'
+import { NativeAgentId, type NativeAgent, type NativeAgentRegistry } from '@redspark/rsh-native-agent'
+import type {} from '@redspark/rsh-native-sandbox-policy/native'
+import type { NativeSandboxPolicy } from '@redspark/rsh-native-sandbox-policy'
 import {
   NativeApprovalRequestId,
   sessionApprovalPolicy,
   type NativeApprovalOutcome,
   type NativeApprovalServiceDefinition,
   type NativeApprovalSessionGrant,
-} from '@deepseek-ai/dsh-approval-definition'
-import type { NativeCodeRuntime } from '@deepseek-ai/dsh-code-runtime-definition'
-import type { NativeAgentInstructions } from '@deepseek-ai/dsh-agent-instructions/native'
-import type { NativeRequestContexts } from '@deepseek-ai/dsh-request-context-definition'
-import type { NativeTimeContext } from '@deepseek-ai/dsh-native-time-context'
-import type { NativeTmuxContext } from '@deepseek-ai/dsh-tmux-context-definition'
+} from '@redspark/rsh-approval-definition'
+import type { NativeCodeRuntime } from '@redspark/rsh-code-runtime-definition'
+import type { NativeAgentInstructions } from '@redspark/rsh-agent-instructions/native'
+import type { NativeRequestContexts } from '@redspark/rsh-request-context-definition'
+import type { NativeTimeContext } from '@redspark/rsh-native-time-context'
+import type { NativeTmuxContext } from '@redspark/rsh-tmux-context-definition'
 import {
   ReasoningEffortId, HarnessError, createSystemMessage, createToolResultMessage, createUserMessage,
   callConfigEquals, fileAttachmentsIn, projectFilesToText, type ContentBlock, type GenerateOptions, type ToolCallBlock, type ToolSchema,
   type UserMessage,
-} from '@deepseek-ai/dsh-llm/native'
+} from '@redspark/rsh-llm/native'
 import { interruptedTurnClosers, SESSION_FORMAT_VERSION, Session, SessionId, SessionSeq,
-  type SessionEvent, type SessionHeader, type TurnEndCancelCause } from '@deepseek-ai/dsh-session/native'
-import { deepFreeze, type JsonValue } from '@deepseek-ai/dsh-util-values'
-import type { NativeSessionPersistenceOperations } from '@deepseek-ai/dsh-session-persistence/native'
+  type SessionEvent, type SessionHeader, type TurnEndCancelCause } from '@redspark/rsh-session/native'
+import { deepFreeze, type JsonValue } from '@redspark/rsh-util-values'
+import type { NativeSessionPersistenceOperations } from '@redspark/rsh-session-persistence/native'
 
 interface NativeRootForkSeed {
   readonly source: SessionId
@@ -477,7 +477,7 @@ export class NativeHeadlessApplication implements NativeApplication {
 
   constructor(
     private readonly context: NativeContext,
-    private readonly fs: import('@deepseek-ai/dsh-fs/native').FileSystemOperations,
+    private readonly fs: import('@redspark/rsh-fs/native').FileSystemOperations,
     private readonly storage: NativeSessionPersistenceOperations,
     private readonly modelExecution: NativeModelExecution,
     private readonly config: ResolvedConfig,
@@ -1377,7 +1377,7 @@ export class NativeHeadlessApplication implements NativeApplication {
           }
         }
         track(session.append('turn/start', { turn }))
-        let reason: import('@deepseek-ai/dsh-session/native').TurnEndReason = { kind: 'completed' }
+        let reason: import('@redspark/rsh-session/native').TurnEndReason = { kind: 'completed' }
         try {
           const prepare = async () => {
             const defaults = invocation === 'root' ? this.rootDefaults(config) : config
@@ -3094,7 +3094,7 @@ export function createNativeHeadlessApplication(context: NativeContext, config: 
 
 /** Native application entry loaded only after profile manifests are checked. */
 export const plugin: NativePlugin = {
-  apiVersion: 1, name: '@deepseek-ai/dsh-native-headless', targets: ['host'],
+  apiVersion: 1, name: '@redspark/rsh-native-headless', targets: ['host'],
   requires: ['fs', 'sessionPersistence', 'modelExecution', 'agents'],
   optional: ['tools', 'promptSections', 'sandboxPolicy', 'approval', 'codeRuntime', 'timeContext', 'tmuxContext', 'sessionExecution', 'activeSessions', 'modelSelection', 'agentPresets', 'workspaceRegistry', 'agentInstructions', 'attachments', 'requestContexts'],
   provides: ['application', 'rootExecution'],

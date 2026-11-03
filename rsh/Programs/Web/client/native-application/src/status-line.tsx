@@ -1,8 +1,8 @@
 /** Compact usage summary derived from the selected Session's loaded events. */
-import type { SessionEvent } from '@deepseek-ai/dsh-session/types'
-import { assistantStreamFirstTokenTime } from '@deepseek-ai/dsh-llm/assistant-stream'
-import type { TranslateNS } from '@deepseek-ai/dsh-client-ui-slots'
-import type { NativeLocaleSnapshot } from '@deepseek-ai/dsh-client-locale/native'
+import type { SessionEvent } from '@redspark/rsh-session/types'
+import { assistantStreamFirstTokenTime } from '@redspark/rsh-llm/assistant-stream'
+import type { TranslateNS } from '@redspark/rsh-client-ui-slots'
+import type { NativeLocaleSnapshot } from '@redspark/rsh-client-locale/native'
 import css from './conversation.module.css'
 
 type Translate = TranslateNS<'nativeApplication'>

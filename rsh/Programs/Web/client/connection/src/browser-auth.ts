@@ -1,8 +1,8 @@
 /** Browser-session authentication for the Host Connection carrier. */
 
 import { createHash, createHmac, randomBytes, timingSafeEqual } from 'node:crypto'
-import { brandString } from '@deepseek-ai/dsh-brand'
-import type { CredentialKey, CredentialRecord, NativeCredentials } from '@deepseek-ai/dsh-credentials/native'
+import { brandString } from '@redspark/rsh-brand'
+import type { CredentialKey, CredentialRecord, NativeCredentials } from '@redspark/rsh-credentials/native'
 import type {
   ConnectionIndexRequest,
   ConnectionIndexResponse,

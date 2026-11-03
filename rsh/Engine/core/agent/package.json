@@ -1,5 +1,5 @@
 {
-  "name": "@deepseek-ai/dsh-agent",
+  "name": "@redspark/rsh-agent",
   "description": "Agent interface, registry, initiator scope, and event vocabulary for the RedSpark Harness",
   "version": "1.0.0",
   "publishConfig": {
@@ -37,28 +37,28 @@
   ],
   "license": "MIT",
   "peerDependencies": {
-    "@deepseek-ai/dsh-invariants": "workspace:^",
-    "@deepseek-ai/dsh-llm": "workspace:^",
-    "@deepseek-ai/dsh-scope": "workspace:^",
-    "@deepseek-ai/dsh-session": "workspace:^",
-    "@deepseek-ai/dsh-session-projection": "workspace:^",
-    "@deepseek-ai/dsh-system-prompt": "workspace:^",
-    "@deepseek-ai/dsh-typert-protocol": "workspace:^",
-    "@deepseek-ai/dsh-util-values": "workspace:^",
-    "@deepseek-ai/cordis": "workspace:^",
-    "@deepseek-ai/dsh-native-agent": "workspace:^"
+    "@redspark/rsh-invariants": "workspace:^",
+    "@redspark/rsh-llm": "workspace:^",
+    "@redspark/rsh-scope": "workspace:^",
+    "@redspark/rsh-session": "workspace:^",
+    "@redspark/rsh-session-projection": "workspace:^",
+    "@redspark/rsh-system-prompt": "workspace:^",
+    "@redspark/rsh-typert-protocol": "workspace:^",
+    "@redspark/rsh-util-values": "workspace:^",
+    "@redspark/cordis": "workspace:^",
+    "@redspark/rsh-native-agent": "workspace:^"
   },
   "devDependencies": {
-    "@deepseek-ai/dsh-invariants": "workspace:^",
-    "@deepseek-ai/dsh-llm": "workspace:^",
-    "@deepseek-ai/dsh-scope": "workspace:^",
-    "@deepseek-ai/dsh-session": "workspace:^",
-    "@deepseek-ai/dsh-session-projection": "workspace:^",
-    "@deepseek-ai/dsh-system-prompt": "workspace:^",
-    "@deepseek-ai/dsh-typert-protocol": "workspace:^",
-    "@deepseek-ai/dsh-typert-registry": "workspace:^",
-    "@deepseek-ai/dsh-util-values": "workspace:^",
-    "@deepseek-ai/cordis": "workspace:^",
-    "@deepseek-ai/dsh-native-agent": "workspace:^"
+    "@redspark/rsh-invariants": "workspace:^",
+    "@redspark/rsh-llm": "workspace:^",
+    "@redspark/rsh-scope": "workspace:^",
+    "@redspark/rsh-session": "workspace:^",
+    "@redspark/rsh-session-projection": "workspace:^",
+    "@redspark/rsh-system-prompt": "workspace:^",
+    "@redspark/rsh-typert-protocol": "workspace:^",
+    "@redspark/rsh-typert-registry": "workspace:^",
+    "@redspark/rsh-util-values": "workspace:^",
+    "@redspark/cordis": "workspace:^",
+    "@redspark/rsh-native-agent": "workspace:^"
   }
 }

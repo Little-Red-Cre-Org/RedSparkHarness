@@ -3,7 +3,7 @@ description: "RSH 插件角色注册表与 Cordis 生命周期适配器。"
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-plugin-host
+# @redspark/rsh-plugin-host
 
 [English](README.md) | 中文
 
@@ -28,9 +28,9 @@ kind: "package-reference"
 
 ```yaml
 - id: plugin-host
-  name: '@deepseek-ai/dsh-plugin-host'
+  name: '@redspark/rsh-plugin-host'
 - id: fs-observation-policy
-  name: '@deepseek-ai/dsh-fs-observation-policy/runtime'
+  name: '@redspark/rsh-fs-observation-policy/runtime'
 ```
 
 描述符的 `packageName`、`role` 和 `capability` 会在旧插件启动前验证。重复的活动包名会导致挂载失败；模块 HMR（热模块替换）期间，替换适配器会等到正在释放的旧适配器及其子 fiber 完成清理后，才占用该包名。适配插件并不沙箱化它：同进程 Cordis 插件仍是可信代码，并按自己的 `inject` 声明获得 Context 访问权限。

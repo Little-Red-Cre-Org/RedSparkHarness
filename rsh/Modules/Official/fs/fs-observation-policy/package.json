@@ -1,5 +1,5 @@
 {
-  "name": "@deepseek-ai/dsh-fs-observation-policy",
+  "name": "@redspark/rsh-fs-observation-policy",
   "description": "File-context policy plugin for the RedSpark Harness — observed-state, read-before-edit, and version-guarded write/edit added over the ctx.fs provider seam through the fs/* event gate (no service API)",
   "version": "1.0.0",
   "publishConfig": {
@@ -52,20 +52,20 @@
   ],
   "license": "MIT",
   "peerDependencies": {
-    "@deepseek-ai/dsh-fs": "workspace:^",
-    "@deepseek-ai/dsh-plugin-host": "workspace:^",
-    "@deepseek-ai/cordis": "workspace:^"
+    "@redspark/rsh-fs": "workspace:^",
+    "@redspark/rsh-plugin-host": "workspace:^",
+    "@redspark/cordis": "workspace:^"
   },
   "peerDependenciesMeta": {
-    "@deepseek-ai/cordis": { "optional": true },
-    "@deepseek-ai/dsh-plugin-host": { "optional": true }
+    "@redspark/cordis": { "optional": true },
+    "@redspark/rsh-plugin-host": { "optional": true }
   },
   "dependencies": {
-    "@deepseek-ai/dsh-native-runtime": "workspace:^"
+    "@redspark/rsh-native-runtime": "workspace:^"
   },
   "devDependencies": {
-    "@deepseek-ai/dsh-fs": "workspace:^",
-    "@deepseek-ai/dsh-llm": "workspace:^",
-    "@deepseek-ai/cordis": "workspace:^"
+    "@redspark/rsh-fs": "workspace:^",
+    "@redspark/rsh-llm": "workspace:^",
+    "@redspark/cordis": "workspace:^"
   }
 }

@@ -1,7 +1,7 @@
 /** Shared props-only approval card presentation. */
-import { Button } from '@deepseek-ai/dsh-client-ui-primitives'
+import { Button } from '@redspark/rsh-client-ui-primitives'
 import type { ReactNode } from 'react'
-import type { TranslateNS } from '@deepseek-ai/dsh-client-ui-slots'
+import type { TranslateNS } from '@redspark/rsh-client-ui-slots'
 import css from './client/ApprovalPanel.module.css'
 
 /** Render an approval request with decisions supplied by its owner.

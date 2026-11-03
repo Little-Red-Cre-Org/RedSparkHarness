@@ -2,12 +2,12 @@
  * Cordis-free compaction Definition for native Providers and Consumers. The
  * durable `compaction/*` events, checkpoint source and manual failure classes
  * are the same values the Cordis Service Definition exports.
- * @module @deepseek-ai/dsh-compaction/native
+ * @module @redspark/rsh-compaction/native
  */
 
-import type { CommandId } from '@deepseek-ai/dsh-commands/brand'
-import type {} from '@deepseek-ai/dsh-native-runtime'
-import type { Session } from '@deepseek-ai/dsh-session/native'
+import type { CommandId } from '@redspark/rsh-commands/brand'
+import type {} from '@redspark/rsh-native-runtime'
+import type { Session } from '@redspark/rsh-session/native'
 import type { CompactionTrigger } from './errors.ts'
 import type { CompactionResult } from './types.ts'
 
@@ -65,6 +65,6 @@ export interface NativeCompactionOperations {
   compactNow(owner: NativeCompactionOwner, signal: AbortSignal, sourceCommandId?: CommandId): Promise<CompactionResult | null>
 }
 
-declare module '@deepseek-ai/dsh-native-runtime' {
+declare module '@redspark/rsh-native-runtime' {
   interface NativeServices { compaction: NativeCompactionOperations }
 }

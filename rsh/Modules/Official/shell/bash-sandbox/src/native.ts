@@ -1,16 +1,16 @@
 /** Native sandboxing Bash Provider over the shared command controller. */
-import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
-import type {} from '@deepseek-ai/dsh-subprocess/native'
-import type {} from '@deepseek-ai/dsh-sandbox/native'
-import type {} from '@deepseek-ai/dsh-native-sandbox-policy/native'
-export type {} from '@deepseek-ai/dsh-bash-local/native'
-import { LocalBashController, resolveConfig } from '@deepseek-ai/dsh-bash-local/native'
+import type { NativePlugin } from '@redspark/rsh-native-runtime'
+import type {} from '@redspark/rsh-subprocess/native'
+import type {} from '@redspark/rsh-sandbox/native'
+import type {} from '@redspark/rsh-native-sandbox-policy/native'
+export type {} from '@redspark/rsh-bash-local/native'
+import { LocalBashController, resolveConfig } from '@redspark/rsh-bash-local/native'
 import { SandboxBashController } from './controller.ts'
 
 /** Install a shell only when process, runner, and policy providers are present. */
 export const plugin: NativePlugin = {
   apiVersion: 1,
-  name: '@deepseek-ai/dsh-bash-sandbox',
+  name: '@redspark/rsh-bash-sandbox',
   targets: ['host'],
   requires: ['subprocess', 'sandbox', 'sandboxPolicy'],
   provides: ['shell'],

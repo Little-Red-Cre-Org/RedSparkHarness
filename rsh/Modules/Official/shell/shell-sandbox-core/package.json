@@ -1,5 +1,5 @@
 {
-  "name": "@deepseek-ai/dsh-shell-sandbox-core",
+  "name": "@redspark/rsh-shell-sandbox-core",
   "description": "Cordis-free confinement and result classification shared by shell dialects",
   "version": "1.0.0",
   "publishConfig": { "access": "public" },
@@ -19,7 +19,7 @@
   "files": ["lib/index.js", "lib/types/**/*.d.ts"],
   "license": "MIT",
   "dependencies": {
-    "@deepseek-ai/dsh-shell": "workspace:^",
-    "@deepseek-ai/dsh-sandbox": "workspace:^"
+    "@redspark/rsh-shell": "workspace:^",
+    "@redspark/rsh-sandbox": "workspace:^"
   }
 }

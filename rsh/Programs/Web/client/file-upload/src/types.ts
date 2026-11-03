@@ -1,7 +1,7 @@
 /** Browser-safe request and receipt types for staged file uploads. */
 
-import type { FileAttachmentRef } from '@deepseek-ai/dsh-attachment/types'
-import type { Branded } from '@deepseek-ai/dsh-brand'
+import type { FileAttachmentRef } from '@redspark/rsh-attachment/types'
+import type { Branded } from '@redspark/rsh-brand'
 
 /** Canonical encoded upload accepted by the Remote fallback. */
 export interface EncodedFileUploadRequest {

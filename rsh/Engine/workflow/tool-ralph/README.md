@@ -3,7 +3,7 @@ description: "The model-facing ralph tool: a fixed foreground fresh-agent loop t
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-tool-ralph
+# @redspark/rsh-tool-ralph
 
 English | [中文](README.zh.md)
 
@@ -44,9 +44,9 @@ Each child receives only the immutable objective, its current round and cap, a s
 | `maxHandoffChars` | `16384` | Maximum serialized characters in one round report. |
 | `maxResultChars` | `16384` | Maximum characters in the complete successful parent result. |
 
-The generated [configuration catalog](../../../Docs/config-catalog.md#deepseek-aidsh-tool-ralph) is the exhaustive source for every accepted Cordis field. In Cordis compositions, the selected provider must support structured output and report `inheritsParentContext: false`; Native profiles instead select `workflowProvider` and `subagentProvider` explicitly and require the Native Tools registry for the structured report call.
+The generated [configuration catalog](../../../Docs/config-catalog.md#redsparkrsh-tool-ralph) is the exhaustive source for every accepted Cordis field. In Cordis compositions, the selected provider must support structured output and report `inheritsParentContext: false`; Native profiles instead select `workflowProvider` and `subagentProvider` explicitly and require the Native Tools registry for the structured report call.
 
-Native profiles mount `@deepseek-ai/dsh-tool-ralph/native`; shipped compositions select the `worker-thread` workflow Provider and `spawn` NativeSubagent Provider. Ralph remains a foreground Consumer of the shared Workflow Definition and Subagent execution authority.
+Native profiles mount `@redspark/rsh-tool-ralph/native`; shipped compositions select the `worker-thread` workflow Provider and `spawn` NativeSubagent Provider. Ralph remains a foreground Consumer of the shared Workflow Definition and Subagent execution authority.
 
 -----
 
@@ -131,7 +131,7 @@ Prefix-stable while the plugin scope and guidance text are unchanged. Activation
 
 #### What the model sees
 
-The generated [`ralph` schema](../../../Docs/tool-catalog.md#deepseek-aidsh-tool-ralph) exposes one required `objective` string and one optional `maxRounds` number. Provider choice, handoff size, report schema, workflow script, and orchestration behavior are deployment-owned and absent from the call schema.
+The generated [`ralph` schema](../../../Docs/tool-catalog.md#redsparkrsh-tool-ralph) exposes one required `objective` string and one optional `maxRounds` number. Provider choice, handoff size, report schema, workflow script, and orchestration behavior are deployment-owned and absent from the call schema.
 
 #### Token effect
 

@@ -15,14 +15,14 @@
  * header and system prompt is checked against the composed pin, so
  * session-dependent composition must declare a separate class instead of
  * escaping coverage.
- * @module @deepseek-ai/dsh-session-snapshot/suite
+ * @module @redspark/rsh-session-snapshot/suite
  */
 
 import { readFile, readdir, writeFile } from 'node:fs/promises'
 import { existsSync } from 'node:fs'
 import { join } from 'node:path'
-import { isSurfaceEligibleType } from '@deepseek-ai/dsh-session/surface'
-import { SESSION_FORMAT_VERSION } from '@deepseek-ai/dsh-session'
+import { isSurfaceEligibleType } from '@redspark/rsh-session/surface'
+import { SESSION_FORMAT_VERSION } from '@redspark/rsh-session'
 import { describe, expect, it } from 'vitest'
 import { type AgentUnderTest, type HarvestedLog, type InputScript, runScenario } from './harness.ts'
 import {
@@ -271,7 +271,7 @@ export interface SnapshotSuiteOptions {
    * `recorded` scenarios' fixtures and refreshes the Vitest expected outputs under
    * `--update`), or `refresh` (keyless replay that rewrites stdout expected outputs and
    * comparable session fixtures from the replay run). The caller derives this
-   * from `$DSH_SNAPSHOT` — env reading stays outside this library.
+   * from `$RSH_SNAPSHOT` — env reading stays outside this library.
    */
   mode: 'replay' | 'record' | 'refresh'
   /**

@@ -1,8 +1,8 @@
 /** Cordis-only service and event augmentations for selected HTTP Providers. */
 
-import type { IndexInjection } from '@deepseek-ai/dsh-http-routes/client'
-import type { HttpRoute, HttpRouteListener, HttpUpgradeRoute } from '@deepseek-ai/dsh-http-routes/host'
-import type {} from '@deepseek-ai/cordis'
+import type { IndexInjection } from '@redspark/rsh-http-routes/client'
+import type { HttpRoute, HttpRouteListener, HttpUpgradeRoute } from '@redspark/rsh-http-routes/host'
+import type {} from '@redspark/cordis'
 
 /** Cordis Web listener service retained by the compatibility Provider. */
 export interface HttpWebServer extends HttpRouteListener {
@@ -62,7 +62,7 @@ export type WebRouteKind = HttpRoute['kind']
 /** Legacy name for the selected Cordis WebServer configuration. */
 export type WebServerConfig = HttpWebServerConfig
 
-declare module '@deepseek-ai/cordis' {
+declare module '@redspark/cordis' {
   interface Context {
     webServer: HttpWebServer
   }

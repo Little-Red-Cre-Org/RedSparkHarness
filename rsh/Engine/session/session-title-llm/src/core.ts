@@ -4,20 +4,20 @@
  * pre-dispatch request record, JSON framing, the deadline, stream assembly,
  * and output validation.
  *
- * @module @deepseek-ai/dsh-session-title-llm/core
+ * @module @redspark/rsh-session-title-llm/core
  */
 
-import { createUserMessage, BlockAssembler } from '@deepseek-ai/dsh-llm/native'
-import type { FinishReason, GenerateOptions, Message, StreamChunk } from '@deepseek-ai/dsh-llm/native'
-import { deadline, MAX_TIMER_DELAY_MS } from '@deepseek-ai/dsh-timeout'
-import { deepFreeze } from '@deepseek-ai/dsh-util-values'
-import type { SessionId, SessionSeq } from '@deepseek-ai/dsh-session/types'
-import { normalizeSessionTitle } from '@deepseek-ai/dsh-session-title/normalize'
+import { createUserMessage, BlockAssembler } from '@redspark/rsh-llm/native'
+import type { FinishReason, GenerateOptions, Message, StreamChunk } from '@redspark/rsh-llm/native'
+import { deadline, MAX_TIMER_DELAY_MS } from '@redspark/rsh-timeout'
+import { deepFreeze } from '@redspark/rsh-util-values'
+import type { SessionId, SessionSeq } from '@redspark/rsh-session/types'
+import { normalizeSessionTitle } from '@redspark/rsh-session-title/normalize'
 import type {
   SessionTitleModelProvenance,
   SessionTitleProviderId,
   SessionTitleUserMessage,
-} from '@deepseek-ai/dsh-session-title/types'
+} from '@redspark/rsh-session-title/types'
 
 /** Exact model-visible request recorded before one auxiliary title dispatch. */
 export interface SessionTitleLlmRequestEventData {
@@ -35,7 +35,7 @@ export interface SessionTitleLlmRequestEventData {
   readonly maxTokens?: number
 }
 
-declare module '@deepseek-ai/dsh-session/types' {
+declare module '@redspark/rsh-session/types' {
   interface SessionEventMap {
     /** Log-only pre-dispatch record of one session-title model request. */
     'session/title-llm-request': SessionTitleLlmRequestEventData

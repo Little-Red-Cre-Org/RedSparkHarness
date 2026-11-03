@@ -1,5 +1,5 @@
 import { expect, it } from 'vitest'
-import type { ClientConnectionRpc } from '@deepseek-ai/dsh-client-connection/native'
+import type { ClientConnectionRpc } from '@redspark/rsh-client-connection/native'
 import { createNativeWorkspaceClients } from '../src/workspaces.ts'
 
 it('closes while a workspace follow iterator is parked at a yielded frame', async () => {

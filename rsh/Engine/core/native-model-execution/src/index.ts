@@ -1,8 +1,8 @@
 /** Native model execution and Session recording for a single Agent step. */
 import { AssistantStreamAccumulator, BlockAssembler, createAssistantMessage, normalizeLlmFailure,
-  resolveCallConfigWithModel, resolveRetryPolicy, callConfigEquals, type LlmCallConfig, type LlmFailure, type LlmImageRequestPricing, type PreparedAdapterCall, type LlmResolvedModelInfo, type ReasoningEffortId, type ResolvedRetryPolicy, type FinishReason, type GenerateOptions, type Message, type StreamChunk } from '@deepseek-ai/dsh-llm/native'
-import { deepFreeze } from '@deepseek-ai/dsh-util-values'
-import { type Session, type SessionEvent } from '@deepseek-ai/dsh-session/native'
+  resolveCallConfigWithModel, resolveRetryPolicy, callConfigEquals, type LlmCallConfig, type LlmFailure, type LlmImageRequestPricing, type PreparedAdapterCall, type LlmResolvedModelInfo, type ReasoningEffortId, type ResolvedRetryPolicy, type FinishReason, type GenerateOptions, type Message, type StreamChunk } from '@redspark/rsh-llm/native'
+import { deepFreeze } from '@redspark/rsh-util-values'
+import { type Session, type SessionEvent } from '@redspark/rsh-session/native'
 import type { NativeResponsesGenerationCapture, NativeResponsesOperationCapture, NativeResponsesPreparedGeneration,
   NativeResponsesRoute, NativeResponsesTransport } from './responses-transport.ts'
 export type { NativeResponsesGenerationCapture, NativeResponsesJsonValue, NativeResponsesRoute,

@@ -1,7 +1,7 @@
 /** Cordis tool registration over the shared MCP protocol and image projection. */
-import type { Context } from '@deepseek-ai/cordis'
-import type { AttachmentStore } from '@deepseek-ai/dsh-attachment'
-import type { ToolExecution } from '@deepseek-ai/dsh-tools'
+import type { Context } from '@redspark/cordis'
+import type { AttachmentStore } from '@redspark/rsh-attachment'
+import type { ToolExecution } from '@redspark/rsh-tools'
 import { syncTools as syncSharedTools, type ToolBridgeOptions, type ToolDisposers } from './tool-core.ts'
 import type { Client } from '@modelcontextprotocol/sdk/client/index.js'
 export { publicToolName } from './tool-core.ts'

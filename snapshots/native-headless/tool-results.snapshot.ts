@@ -5,13 +5,13 @@ import { join } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { execa } from 'execa'
 import { expect, it } from 'vitest'
-import { JsonlSessionBackend } from '@deepseek-ai/dsh-session-persistence-jsonl'
-import { SESSION_FORMAT_VERSION } from '@deepseek-ai/dsh-session/native'
-import { deriveReplayScript, parseSessionLog } from '@deepseek-ai/dsh-llm-replay'
+import { JsonlSessionBackend } from '@redspark/rsh-session-persistence-jsonl'
+import { SESSION_FORMAT_VERSION } from '@redspark/rsh-session/native'
+import { deriveReplayScript, parseSessionLog } from '@redspark/rsh-llm-replay'
 import {
   formatSystemPromptSnapshot, formatToolSchemasSnapshot, normalizeSessionSnapshot, redactSessionSnapshotIds,
   normalizedSystemPrompts, normalizedToolSchemas, sessionFixtureName,
-} from '@deepseek-ai/dsh-session-snapshot'
+} from '@redspark/rsh-session-snapshot'
 
 const root = fileURLToPath(new URL('../../', import.meta.url))
 const scenario = join(root, 'snapshots/native-headless/tool-results')
@@ -32,23 +32,23 @@ it('records mode-selected tool results, extra model input and whole-batch conclu
   const patch = join(home, 'tool-results.patch.json')
   const modules = join(profileDir, 'node_modules')
   mkdirSync(workspace, { recursive: true })
-  mkdirSync(join(modules, '@deepseek-ai'), { recursive: true })
+  mkdirSync(join(modules, '@redspark'), { recursive: true })
   copyFileSync(join(profile, 'package.json'), join(profileDir, 'package.json'))
   copyFileSync(join(profile, 'rsh.profile.json'), join(profileDir, 'rsh.profile.json'))
   for (const [name, path] of [
-    ['dsh-native-headless', 'rsh/Engine/core/native-headless'],
-    ['dsh-native-agent', 'rsh/Engine/core/native-agent'],
-    ['dsh-native-tools', 'rsh/Engine/core/native-tools'],
-    ['dsh-native-model-execution', 'rsh/Engine/core/native-model-execution'],
-    ['dsh-session-persistence-jsonl', 'rsh/Engine/session/session-persistence-jsonl'],
-    ['dsh-fs-local', 'rsh/Modules/Official/fs/fs-local'],
-    ['dsh-fs-observation-policy', 'rsh/Modules/Official/fs/fs-observation-policy'],
-    ['dsh-llm', 'rsh/Engine/llm/llm'],
-  ] as const) symlinkSync(join(root, path), join(modules, '@deepseek-ai', name), 'junction')
+    ['rsh-native-headless', 'rsh/Engine/core/native-headless'],
+    ['rsh-native-agent', 'rsh/Engine/core/native-agent'],
+    ['rsh-native-tools', 'rsh/Engine/core/native-tools'],
+    ['rsh-native-model-execution', 'rsh/Engine/core/native-model-execution'],
+    ['rsh-session-persistence-jsonl', 'rsh/Engine/session/session-persistence-jsonl'],
+    ['rsh-fs-local', 'rsh/Modules/Official/fs/fs-local'],
+    ['rsh-fs-observation-policy', 'rsh/Modules/Official/fs/fs-observation-policy'],
+    ['rsh-llm', 'rsh/Engine/llm/llm'],
+  ] as const) symlinkSync(join(root, path), join(modules, '@redspark', name), 'junction')
   const modelDir = join(modules, 'native-fixture-model')
   mkdirSync(modelDir)
   writeFileSync(join(modelDir, 'package.json'), JSON.stringify({
-    name: 'native-fixture-model', version: '0.0.0', type: 'module', dependencies: { '@deepseek-ai/dsh-llm': '*' },
+    name: 'native-fixture-model', version: '0.0.0', type: 'module', dependencies: { '@redspark/rsh-llm': '*' },
     exports: { './native': './native.mjs', './package.json': './package.json' },
     dsh: { native: { apiVersion: 1, entry: './native', targets: ['host'], requires: ['tools'], optional: [], provides: ['model'] } },
   }))
@@ -65,7 +65,7 @@ it('records mode-selected tool results, extra model input and whole-batch conclu
     const child = await execa(process.execPath, [
       '--import', pathToFileURL(join(root, 'rsh/Programs/CLI/tests/fixtures/deny-cordis-context-register.mjs')).href,
       join(root, 'rsh/Programs/CLI/lib/bin.js'), '--profile', 'native-headless', '--patch', patch, task,
-    ], { env: { ...process.env, DSH_HOME: home }, reject: false, timeout: 30_000 })
+    ], { env: { ...process.env, RSH_HOME: home }, reject: false, timeout: 30_000 })
     expect(child.exitCode, child.stderr).toBe(0)
     const auditRows = readFileSync(audit, 'utf8').trim().split('\n').map(line => JSON.parse(line) as Record<string, unknown>)
     const requests = auditRows.filter(row => row.kind === 'model')
@@ -114,7 +114,7 @@ it('records mode-selected tool results, extra model input and whole-batch conclu
     if (prompts[0] === undefined || schemas[0] === undefined) throw new Error('tool-results: missing request header')
     const prompt = formatSystemPromptSnapshot(prompts[0], prompts.slice(1))
     const tools = formatToolSchemasSnapshot(schemas[0], schemas.slice(1))
-    if (process.env.DSH_SNAPSHOT === 'refresh') {
+    if (process.env.RSH_SNAPSHOT === 'refresh') {
       writeFileSync(fixturePath, normalized)
       writeFileSync(join(scenario, 'system-prompt.expected.md'), prompt)
       writeFileSync(join(scenario, 'tool-schemas.expected.json'), tools)

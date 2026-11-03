@@ -3,7 +3,7 @@ description: "Webhook rule runtime for maintainers registering trusted external-
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-webhook
+# @redspark/rsh-webhook
 
 English | [中文](README.zh.md)
 
@@ -43,7 +43,7 @@ The Cordis compatibility provider keeps its existing `Agent.followup()` commit p
 <a id="composition"></a>
 ## Composition
 
-Load the Cordis provider on the Web Host plane after Agents, model defaults, agent presets, permission presets, titles, and the Workspace registry. User-authored rule plugins inject `webhookRuntime` and yield the disposer returned by `register()` through their own effect. Native compositions load `@deepseek-ai/dsh-webhook/native` with the selected `rootExecution`, Workspace registry, Agent preset and permission preset Providers, recoverable Session deletion, and dynamic `workspaceRoutes` enabled on that root. Explicit model requests additionally require model selection and model directory Providers.
+Load the Cordis provider on the Web Host plane after Agents, model defaults, agent presets, permission presets, titles, and the Workspace registry. User-authored rule plugins inject `webhookRuntime` and yield the disposer returned by `register()` through their own effect. Native compositions load `@redspark/rsh-webhook/native` with the selected `rootExecution`, Workspace registry, Agent preset and permission preset Providers, recoverable Session deletion, and dynamic `workspaceRoutes` enabled on that root. Explicit model requests additionally require model selection and model directory Providers.
 
 The package root is the Cordis compatibility provider. Only its Cordis and legacy-only Agent helper peers are marked optional; a Cordis profile must provide them, and the workspace CLI profile declares them explicitly. Native runtime and public declaration peers remain required at package level, including peers used only for types. The `dsh.native` service `requires` and `optional` lists describe Provider capabilities separately from package installation requirements. Native consumers can import the neutral `./definition` contract without installing Cordis, while consumers of `./native` must install its declared peers. Missing required peers fail during module resolution. Native Web supports the complete rule-to-Session path when its root has dynamic Workspace creation configured. The current SDK facade does not expose that creation capability, so the Native provider rejects that composition during installation; ACP facade support remains pending its separate integration.
 

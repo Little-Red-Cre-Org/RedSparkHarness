@@ -3,7 +3,7 @@ description: "Native one-shot approval policy and answerer registry for profile-
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-native-approval
+# @redspark/rsh-native-approval
 
 English | [中文](README.zh.md)
 

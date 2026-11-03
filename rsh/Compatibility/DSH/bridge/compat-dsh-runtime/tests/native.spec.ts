@@ -1,24 +1,24 @@
 /** Native-owned activation, rollback, and removal of the optional Cordis runtime. */
-import { NativeHost, NativeScope, resolveInstallation, type NativePlugin } from '@deepseek-ai/dsh-native-runtime'
+import { NativeHost, NativeScope, resolveInstallation, type NativePlugin } from '@redspark/rsh-native-runtime'
 import { expect, it } from 'vitest'
-import { plugin, validateCordisManifest, validateLoaderManifest, type CompatDshRuntime } from '../src/native.ts'
+import { plugin, validateCordisManifest, validateLoaderManifest, type CompatRshRuntime } from '../src/native.ts'
 
 it('rejects unknown host config and unsupported Cordis versions before activation', () => {
   expect(() => plugin.resolve({ enabled: true })).toThrow('configuration must be empty')
-  const cordisManifest = { name: '@deepseek-ai/cordis', version: '4.0.2' }
+  const cordisManifest = { name: '@redspark/cordis', version: '4.0.2' }
   for (const version of ['3.9.0', 4, '4.foo', '4.1.0', '4.0.2-beta.1']) {
-    expect(() => { validateCordisManifest({ ...cordisManifest, version }) }).toThrow('unsupported @deepseek-ai/cordis version')
+    expect(() => { validateCordisManifest({ ...cordisManifest, version }) }).toThrow('unsupported @redspark/cordis version')
   }
   expect(() => { validateCordisManifest(cordisManifest) }).not.toThrow()
-  expect(() => { validateCordisManifest({ ...cordisManifest, name: '@deepseek-ai/other' }) }).toThrow('package name')
-  const loaderManifest = { name: '@deepseek-ai/cordis-plugin-loader', version: '1.0.3' }
+  expect(() => { validateCordisManifest({ ...cordisManifest, name: '@redspark/other' }) }).toThrow('package name')
+  const loaderManifest = { name: '@redspark/cordis-plugin-loader', version: '1.0.3' }
   expect(() => { validateLoaderManifest(loaderManifest) }).not.toThrow()
-  expect(() => { validateLoaderManifest({ ...loaderManifest, version: '1.0.4' }) }).toThrow('unsupported @deepseek-ai/cordis-plugin-loader version')
+  expect(() => { validateLoaderManifest({ ...loaderManifest, version: '1.0.4' }) }).toThrow('unsupported @redspark/cordis-plugin-loader version')
 })
 
 it('mounts only allowlisted DSH plugins and awaits their removal without stopping other mounts', async () => {
   const scope = new NativeScope()
-  let runtime: CompatDshRuntime | undefined
+  let runtime: CompatRshRuntime | undefined
   let disposeFirst: (() => Promise<void>) | undefined
   let signalTeardownStarted: (() => void) | undefined
   let finishTeardown: (() => void) | undefined
@@ -28,10 +28,10 @@ it('mounts only allowlisted DSH plugins and awaits their removal without stoppin
   const teardownGate = new Promise<void>((resolve) => { finishTeardown = resolve })
   const firstDisposed = new Promise<void>((resolve) => { markFirstDisposed = resolve })
   const mountedPlugin: NativePlugin = {
-    apiVersion: 1, name: 'compat-mount-consumer', targets: ['host'], requires: ['compatDshRuntime'], provides: [],
+    apiVersion: 1, name: 'compat-mount-consumer', targets: ['host'], requires: ['compatRshRuntime'], provides: [],
     resolve: () => async (context) => {
-      const compat = context.require('compatDshRuntime')
-      const mount = compat.mount('@deepseek-ai/dsh-fs-local', (legacy) => {
+      const compat = context.require('compatRshRuntime')
+      const mount = compat.mount('@redspark/rsh-fs-local', (legacy) => {
         legacy.provide('compatTest', 'mounted')
         legacy.fiber.effect(() => async () => {
           signalTeardownStarted?.()
@@ -40,7 +40,7 @@ it('mounts only allowlisted DSH plugins and awaits their removal without stoppin
           markFirstDisposed?.()
         })
       })
-      const second = compat.mount('@deepseek-ai/dsh-fs-sandbox', (legacy) => {
+      const second = compat.mount('@redspark/rsh-fs-sandbox', (legacy) => {
         legacy.provide('compatSecond', 'mounted')
       })
       context.own(() => mount.dispose())
@@ -109,18 +109,18 @@ it('mounts only allowlisted DSH plugins and awaits their removal without stoppin
 it('rolls back a partially activated legacy plugin and releases its Cordis resources', async () => {
   const scope = new NativeScope()
   let disposed = 0
-  let runtime: CompatDshRuntime | undefined
+  let runtime: CompatRshRuntime | undefined
   let failedError: unknown
   const failing: NativePlugin = {
-    apiVersion: 1, name: 'compat-mount-failure', targets: ['host'], requires: ['compatDshRuntime'], provides: [],
+    apiVersion: 1, name: 'compat-mount-failure', targets: ['host'], requires: ['compatRshRuntime'], provides: [],
     resolve: () => async (context) => {
-      const compat = context.require('compatDshRuntime')
-      const mount = compat.mount('@deepseek-ai/dsh-fs-observation-policy', async (legacy) => {
+      const compat = context.require('compatRshRuntime')
+      const mount = compat.mount('@redspark/rsh-fs-observation-policy', async (legacy) => {
         legacy.effect(() => () => { disposed += 1 })
         await Promise.resolve()
         throw new Error('fixture activation failure')
       })
-      const survivor = compat.mount('@deepseek-ai/dsh-fs-local', (legacy) => {
+      const survivor = compat.mount('@redspark/rsh-fs-local', (legacy) => {
         legacy.provide('compatSurvivor', 'mounted')
       })
       context.own(() => mount.dispose())
@@ -137,36 +137,36 @@ it('rolls back a partially activated legacy plugin and releases its Cordis resou
   expect(failedError).toMatchObject({ cause: { message: 'fixture activation failure' } })
   expect(disposed).toBe(1)
   if (runtime === undefined) throw new Error('missing compatibility runtime')
-  expect(runtime.context.loader.store['@deepseek-ai/dsh-fs-observation-policy']).toBeUndefined()
-  expect(runtime.context.pluginHost.get('@deepseek-ai/dsh-fs-observation-policy')).toBeUndefined()
+  expect(runtime.context.loader.store['@redspark/rsh-fs-observation-policy']).toBeUndefined()
+  expect(runtime.context.pluginHost.get('@redspark/rsh-fs-observation-policy')).toBeUndefined()
   expect(runtime.context.get('compatSurvivor')).toBe('mounted')
-  await runtime.update('@deepseek-ai/dsh-fs-local', { enabledForTest: true })
-  await runtime.setEnabled('@deepseek-ai/dsh-fs-local', false)
+  await runtime.update('@redspark/rsh-fs-local', { enabledForTest: true })
+  await runtime.setEnabled('@redspark/rsh-fs-local', false)
   expect(runtime.context.get('compatSurvivor')).toBeUndefined()
-  await runtime.setEnabled('@deepseek-ai/dsh-fs-local', true)
+  await runtime.setEnabled('@redspark/rsh-fs-local', true)
   expect(runtime.context.get('compatSurvivor')).toBe('mounted')
-  await runtime.remove('@deepseek-ai/dsh-fs-local')
+  await runtime.remove('@redspark/rsh-fs-local')
   expect(runtime.context.get('compatSurvivor')).toBeUndefined()
   await host.stop()
 })
 
 it.each(['suspend', 'resume'] as const)('recovers mount lifecycle after participant %s failure', async (phase) => {
   const scope = new NativeScope()
-  let runtime: CompatDshRuntime | undefined
+  let runtime: CompatRshRuntime | undefined
   const capture: NativePlugin = {
     apiVersion: 1,
     name: 'compat-lifecycle-capture',
     targets: ['host'],
-    requires: ['compatDshRuntime'],
+    requires: ['compatRshRuntime'],
     provides: [],
-    resolve: () => (native) => { runtime = native.require('compatDshRuntime') },
+    resolve: () => (native) => { runtime = native.require('compatRshRuntime') },
   }
   const host = new NativeHost(resolveInstallation([
     { plugin, scope, config: undefined }, { plugin: capture, scope, config: undefined },
   ], 'host'))
   await host.start()
   if (runtime === undefined) throw new Error('missing compatibility runtime')
-  const name = '@deepseek-ai/dsh-fs-local'
+  const name = '@redspark/rsh-fs-local'
   let rejectResume = phase === 'resume'
   let failCleanupSuspend = false
   const unregister = runtime.registerLifecycleParticipant({

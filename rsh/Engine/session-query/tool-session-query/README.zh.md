@@ -3,7 +3,7 @@ description: "面向 agent（智能体）开发者与维护者、经工作区授
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-tool-session-query
+# @redspark/rsh-tool-session-query
 
 [English](README.md) | 中文
 
@@ -40,7 +40,7 @@ Native CLI 用户可以选择内置的 `native-headless-query` profile。它会�
 | `maxSearchResults` | `100` | 一次搜索调用返回的最大已授权命中数 |
 | `searchTimeoutMs` | `30000` | 附加到两个全文搜索工具的协作式截止时间 |
 
-生成的[配置目录](../../../Docs/config-catalog.zh.md#deepseek-aidsh-tool-session-query)是每个受支持字段及其 JSDoc 的穷尽式真源。
+生成的[配置目录](../../../Docs/config-catalog.zh.md#redsparkrsh-tool-session-query)是每个受支持字段及其 JSDoc 的穷尽式真源。
 
 ### 模型可以做什么
 
@@ -56,7 +56,7 @@ Native CLI 用户可以选择内置的 `native-headless-query` profile。它会�
 
 ### 失败与恢复
 
-每个可信查询服务调用都经过一个错误净化器：调用方取消被精确保留，语料库与提供方诊断进入内部日志，不安全或不可打印的失败回退到固定 `SESSION_QUERY_TOOL_FAILED` 代码与消息。本地参数校验与授权错误保留精确的工具自有消息（目标在调用方工作区之外时为 `SESSION_QUERY_TOOL_UNAUTHORIZED`）。本包不执行字节或字符截断，也不导入 spill 后端；需要限制内联输出的部署应挂载 `@deepseek-ai/dsh-spill-policy`，它可以在保留完整结果的同时替换过大的已渲染文本。
+每个可信查询服务调用都经过一个错误净化器：调用方取消被精确保留，语料库与提供方诊断进入内部日志，不安全或不可打印的失败回退到固定 `SESSION_QUERY_TOOL_FAILED` 代码与消息。本地参数校验与授权错误保留精确的工具自有消息（目标在调用方工作区之外时为 `SESSION_QUERY_TOOL_UNAUTHORIZED`）。本包不执行字节或字符截断，也不导入 spill 后端；需要限制内联输出的部署应挂载 `@redspark/rsh-spill-policy`，它可以在保留完整结果的同时替换过大的已渲染文本。
 
 -----
 
@@ -91,7 +91,7 @@ Native CLI 用户可以选择内置的 `native-headless-query` profile。它会�
 | [`src/workspace-access.ts`](src/workspace-access.ts) | 调用方身份、工作区授权、标题访问、血缘投影 |
 | [`src/service-boundary.ts`](src/service-boundary.ts) | 可信调用与模型安全错误转换 |
 | [`src/operations.ts`](src/operations.ts) | 五个操作工作流 |
-| [`src/presentation.ts`](src/presentation.ts) | 文本结果渲染与工具调用卡片，类型来自 `@deepseek-ai/dsh-native-tools/presentation` |
+| [`src/presentation.ts`](src/presentation.ts) | 文本结果渲染与工具调用卡片，类型来自 `@redspark/rsh-native-tools/presentation` |
 
 ### 操作流程
 
@@ -106,7 +106,7 @@ Native CLI 用户可以选择内置的 `native-headless-query` profile。它会�
 
 当包级约定不够用时阅读以下页面。它们从工具表面逐步进入底层服务、schema 目录与设计证据。
 
-- [生成的工具目录](../../../Docs/tool-catalog.zh.md#deepseek-aidsh-tool-session-query)——模型看到的五个工具 schema。
+- [生成的工具目录](../../../Docs/tool-catalog.zh.md#redsparkrsh-tool-session-query)——模型看到的五个工具 schema。
 - [dsh-session-query](../session-query/README.zh.md)——这些工具调用的服务。
 - [dsh-session-query-sqlite](../session-query-sqlite/README.zh.md)——两个搜索工具背后的全文后端。
 - [会话查询子系统参考](../../../Docs/subsystems/session-query.zh.md)——工具之下的类型级约定。
@@ -141,7 +141,7 @@ Use session_search to find relevant work from prior sessions, or session_event_s
 
 #### 模型看到什么
 
-模型会看到生成的 [`session_search`、`session_event_search`、`session_trace`、`session_event_trace` 与 `session_event_read` schema](../../../Docs/tool-catalog.zh.md#deepseek-aidsh-tool-session-query)。搜索过滤器会增加固定 schema token，而游标、工作区路径、输出分页与模型可控结果上限仍不存在。
+模型会看到生成的 [`session_search`、`session_event_search`、`session_trace`、`session_event_trace` 与 `session_event_read` schema](../../../Docs/tool-catalog.zh.md#redsparkrsh-tool-session-query)。搜索过滤器会增加固定 schema token，而游标、工作区路径、输出分页与模型可控结果上限仍不存在。
 
 #### Token 影响
 

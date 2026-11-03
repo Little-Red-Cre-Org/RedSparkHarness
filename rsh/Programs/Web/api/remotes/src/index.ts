@@ -1,33 +1,33 @@
 /** Host BFF entry and Loader shell for the Remote contribution assembly. */
 
 import { homedir } from 'node:os'
-import type { Context } from '@deepseek-ai/cordis'
-import type { Agent } from '@deepseek-ai/dsh-agent'
+import type { Context } from '@redspark/cordis'
+import type { Agent } from '@redspark/rsh-agent'
 import type {
   TypertRemoteEventDispatch,
   TypertRemoteEventInvocation,
   TypertRemoteEventOutcome,
   TypertRemoteEventSource,
-} from '@deepseek-ai/dsh-api-gateway'
-import { Deque } from '@deepseek-ai/dsh-deque'
-import { carrierKeyOf } from '@deepseek-ai/dsh-scope'
-import { isJsonValue, type JsonValue } from '@deepseek-ai/dsh-util-values'
+} from '@redspark/rsh-api-gateway'
+import { Deque } from '@redspark/rsh-deque'
+import { carrierKeyOf } from '@redspark/rsh-scope'
+import { isJsonValue, type JsonValue } from '@redspark/rsh-util-values'
 import { API_REMOTE_FORWARDED_EVENTS } from './remote-events.ts'
 
 // The owner packages' client-safe `./types` exports carry the cordis `Events`
 // declarations for every allowlisted event. Pulling them into this face is what
 // makes the shape assertion below judge real signatures rather than an empty
 // event vocabulary.
-import type {} from '@deepseek-ai/dsh-commands/types'
-import type {} from '@deepseek-ai/dsh-cordis-host-runner/types'
-import type {} from '@deepseek-ai/dsh-credentials/types'
-import type {} from '@deepseek-ai/dsh-goal/types'
-import type {} from '@deepseek-ai/dsh-llm/types'
-import type {} from '@deepseek-ai/dsh-agent-presets/types'
-import type {} from '@deepseek-ai/dsh-compat-settings-definition/events'
-import type {} from '@deepseek-ai/dsh-user-approval'
-import type {} from '@deepseek-ai/dsh-user-questions'
-export type {} from '@deepseek-ai/dsh-api-session-controller/types'
+import type {} from '@redspark/rsh-commands/types'
+import type {} from '@redspark/rsh-cordis-host-runner/types'
+import type {} from '@redspark/rsh-credentials/types'
+import type {} from '@redspark/rsh-goal/types'
+import type {} from '@redspark/rsh-llm/types'
+import type {} from '@redspark/rsh-agent-presets/types'
+import type {} from '@redspark/rsh-compat-settings-definition/events'
+import type {} from '@redspark/rsh-user-approval'
+import type {} from '@redspark/rsh-user-questions'
+export type {} from '@redspark/rsh-api-session-controller/types'
 
 export { API_REMOTE_FORWARDED_EVENTS } from './remote-events.ts'
 export type { ApiRemoteForwardedEvent } from './types.ts'

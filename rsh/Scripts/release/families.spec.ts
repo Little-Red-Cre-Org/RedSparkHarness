@@ -29,7 +29,7 @@ function write(path: string, content: string): void {
 function buildFixture(environment: Record<string, string>): string {
   const root = mkdtempSync(join(tmpdir(), 'dsh-release-build-'))
   roots.push(root)
-  write(join(root, 'package.json'), `${JSON.stringify({ version: environment.DSH_CLIENT_VERSION ?? '0.0.1' })}\n`)
+  write(join(root, 'package.json'), `${JSON.stringify({ version: environment.RSH_CLIENT_VERSION ?? '0.0.1' })}\n`)
   write(join(root, 'rsh/Programs/Web/application/dist/index.html'), '<main></main>')
   write(join(root, 'rsh/Programs/Web/client/example/lib/client.js'), 'module.exports = {}\n')
   writeClientBuildRecord(root, environment)
@@ -44,9 +44,9 @@ afterEach(() => {
 describe('release families', () => {
   it('includes the nested Web application in the dsh publish set', () => {
     const members = releaseFamily('dsh').members(resolve(import.meta.dirname, '../../..'))
-    expect(members.find(entry => entry.name === '@deepseek-ai/dsh-web-frontend')?.directory)
+    expect(members.find(entry => entry.name === '@redspark/rsh-web-frontend')?.directory)
       .toBe('rsh/Programs/Web/application')
-    expect(members.find(entry => entry.name === '@deepseek-ai/dsh-settings-definition')?.directory)
+    expect(members.find(entry => entry.name === '@redspark/rsh-settings-definition')?.directory)
       .toBe('rsh/Core/settings/settings-definition')
   })
 
@@ -56,13 +56,13 @@ describe('release families', () => {
     expect(members
       .filter(member => member.directory.startsWith('rsh/Modules/Community/experimental/'))
       .map(member => member.name)).toEqual([
-      '@deepseek-ai/dsh-experimental-agent-team-profile',
-      '@deepseek-ai/dsh-experimental-agent-team-web-profile',
-      '@deepseek-ai/dsh-experimental-agent-team',
-      '@deepseek-ai/dsh-experimental-client-ui-agent-team',
-      '@deepseek-ai/dsh-experimental-tool-agent-team',
+      '@redspark/rsh-experimental-agent-team-profile',
+      '@redspark/rsh-experimental-agent-team-web-profile',
+      '@redspark/rsh-experimental-agent-team',
+      '@redspark/rsh-experimental-client-ui-agent-team',
+      '@redspark/rsh-experimental-tool-agent-team',
     ])
-    expect(members.map(member => member.name)).not.toContain('@deepseek-ai/dsh-experimental-inspector')
+    expect(members.map(member => member.name)).not.toContain('@redspark/rsh-experimental-inspector')
   })
 
   it('refuses two directories that publish one package identity', () => {
@@ -70,22 +70,22 @@ describe('release families', () => {
     roots.push(root)
     for (const directory of ['rsh/Programs/Alpha', 'rsh/Programs/Beta']) {
       write(join(root, directory, 'package.json'), `${JSON.stringify({
-        name: '@deepseek-ai/dsh-duplicated', version: '1.0.0', description: 'one identity',
+        name: '@redspark/rsh-duplicated', version: '1.0.0', description: 'one identity',
       })}\n`)
     }
 
     expect(() => releaseFamily('dsh').members(root))
-      .toThrow('@deepseek-ai/dsh-duplicated appears twice in release family dsh')
+      .toThrow('@redspark/rsh-duplicated appears twice in release family dsh')
   })
 
   it('refuses a version split across one package identity', () => {
     const root = mkdtempSync(join(tmpdir(), 'dsh-release-versions-'))
     roots.push(root)
     write(join(root, 'rsh/Programs/Alpha/package.json'), `${JSON.stringify({
-      name: '@deepseek-ai/dsh-alpha', version: '1.0.0', description: 'alpha',
+      name: '@redspark/rsh-alpha', version: '1.0.0', description: 'alpha',
     })}\n`)
     write(join(root, 'rsh/Programs/Beta/package.json'), `${JSON.stringify({
-      name: '@deepseek-ai/dsh-beta', version: '2.0.0', description: 'beta',
+      name: '@redspark/rsh-beta', version: '2.0.0', description: 'beta',
     })}\n`)
 
     const family = releaseFamily('dsh')
@@ -96,10 +96,10 @@ describe('release families', () => {
   it('excludes private applications from the publish set', () => {
     const root = mkdtempSync(join(tmpdir(), 'dsh-release-private-'))
     roots.push(root)
-    write(join(root, 'rsh/Programs/public/package.json'), '{"name":"@deepseek-ai/dsh-public","version":"0.0.1"}\n')
-    write(join(root, 'rsh/Programs/private/package.json'), '{"name":"@deepseek-ai/dsh-private","version":"0.0.1","private":true}\n')
+    write(join(root, 'rsh/Programs/public/package.json'), '{"name":"@redspark/rsh-public","version":"0.0.1"}\n')
+    write(join(root, 'rsh/Programs/private/package.json'), '{"name":"@redspark/rsh-private","version":"0.0.1","private":true}\n')
 
-    expect(releaseFamily('dsh').members(root).map(entry => entry.name)).toEqual(['@deepseek-ai/dsh-public'])
+    expect(releaseFamily('dsh').members(root).map(entry => entry.name)).toEqual(['@redspark/rsh-public'])
   })
 
   it('bumps private dsh workspaces without adding release tags', () => {
@@ -119,7 +119,7 @@ describe('release families', () => {
     }
 
     const dsh = releaseFamily('dsh')
-    const published = member('rsh/Engine/core/published', '@deepseek-ai/dsh-published')
+    const published = member('rsh/Engine/core/published', '@redspark/rsh-published')
     const { planned } = planShared(dsh, root, [published], '0.0.2')
 
     expect(planned.map(entry => ({ path: entry.manifestPath, tag: entry.tag }))).toEqual([
@@ -138,7 +138,7 @@ describe('release families', () => {
       write(join(root, 'package.json'), '{"version":"0.0.1"}\n')
 
       const dsh = releaseFamily('dsh')
-      const published = member('rsh/Engine/core/published', '@deepseek-ai/dsh-published')
+      const published = member('rsh/Engine/core/published', '@redspark/rsh-published')
       const plan = planShared(dsh, root, [published], version)
 
       expect(plan.version).toBe(version)
@@ -149,8 +149,8 @@ describe('release families', () => {
   it('names one tag for the whole dsh family and one per vendored package', () => {
     const dsh = releaseFamily('dsh')
     const vendor = releaseFamily('vendor')
-    const cli = member('rsh/Programs/CLI', '@deepseek-ai/dsh')
-    const cordis = { ...member('rsh/Core/vendor/cordis', '@deepseek-ai/cordis'), version: '4.0.1' }
+    const cli = member('rsh/Programs/CLI', '@redspark/rsh')
+    const cordis = { ...member('rsh/Core/vendor/cordis', '@redspark/cordis'), version: '4.0.1' }
 
     expect(dsh.tagFor(cli)).toBe('dsh-v0.0.1')
     expect(vendor.tagFor(cordis)).toBe('vendor-cordis-v4.0.1')
@@ -174,7 +174,7 @@ describe('release families', () => {
 
   it('rejects a family whose members disagree on the shared version', () => {
     const dsh = releaseFamily('dsh')
-    const members = [member('rsh/Programs/CLI', '@deepseek-ai/dsh'), { ...member('rsh/Programs/Web/application', '@deepseek-ai/dsh-web-frontend'), version: '0.0.2' }]
+    const members = [member('rsh/Programs/CLI', '@redspark/rsh'), { ...member('rsh/Programs/Web/application', '@redspark/rsh-web-frontend'), version: '0.0.2' }]
 
     expect(() => { dsh.verifyVersions(members) }).toThrow(/must share one version/)
     expect(() => { dsh.verifyVersions([members[0]!]) }).not.toThrow()
@@ -183,8 +183,8 @@ describe('release families', () => {
   it('accepts independent vendored versions and rejects an unpublishable one', () => {
     const vendor = releaseFamily('vendor')
     const members = [
-      { ...member('rsh/Core/vendor/cordis', '@deepseek-ai/cordis'), version: '4.0.1' },
-      { ...member('rsh/Core/vendor/cosmokit', '@deepseek-ai/cosmokit'), version: '1.8.2' },
+      { ...member('rsh/Core/vendor/cordis', '@redspark/cordis'), version: '4.0.1' },
+      { ...member('rsh/Core/vendor/cosmokit', '@redspark/cosmokit'), version: '1.8.2' },
     ]
 
     expect(() => { vendor.verifyVersions(members) }).not.toThrow()
@@ -195,14 +195,14 @@ describe('release families', () => {
     const dsh = releaseFamily('dsh')
     const vendor = releaseFamily('vendor')
     const officialEnvironment = officialClientBuildEnvironment(resolve(import.meta.dirname, '../../..'))
-    vi.stubEnv('DSH_CLIENT_COMMIT_HASH', officialEnvironment.DSH_CLIENT_COMMIT_HASH)
+    vi.stubEnv('RSH_CLIENT_COMMIT_HASH', officialEnvironment.RSH_CLIENT_COMMIT_HASH)
     const official = buildFixture(officialEnvironment)
     const defaultBuild = buildFixture({})
     const missing = join(defaultBuild, 'missing')
-    write(join(missing, 'package.json'), `${JSON.stringify({ version: officialEnvironment.DSH_CLIENT_VERSION })}\n`)
+    write(join(missing, 'package.json'), `${JSON.stringify({ version: officialEnvironment.RSH_CLIENT_VERSION })}\n`)
 
     expect(() => { dsh.verifyBuildArtifacts(official) }).not.toThrow()
-    expect(() => { dsh.verifyBuildArtifacts(defaultBuild) }).toThrow(/DSH_CLIENT_TITLE/)
+    expect(() => { dsh.verifyBuildArtifacts(defaultBuild) }).toThrow(/RSH_CLIENT_TITLE/)
     expect(() => { dsh.verifyBuildArtifacts(missing) }).toThrow(/record.*missing/)
     expect(() => { vendor.verifyBuildArtifacts(missing) }).not.toThrow()
 
@@ -213,23 +213,23 @@ describe('release families', () => {
   it('publishes a dependency before its consumer, and orders ties by name', () => {
     const dsh = releaseFamily('dsh')
     const members = [
-      member('rsh/a/consumer', '@deepseek-ai/dsh-consumer', { dependencies: { '@deepseek-ai/dsh-library': 'workspace:^' } }),
-      member('rsh/a/library', '@deepseek-ai/dsh-library'),
-      member('rsh/a/zebra', '@deepseek-ai/dsh-zebra'),
+      member('rsh/a/consumer', '@redspark/rsh-consumer', { dependencies: { '@redspark/rsh-library': 'workspace:^' } }),
+      member('rsh/a/library', '@redspark/rsh-library'),
+      member('rsh/a/zebra', '@redspark/rsh-zebra'),
     ]
 
     expect(dsh.publishOrder(members).order.map(entry => entry.name)).toEqual([
-      '@deepseek-ai/dsh-library',
-      '@deepseek-ai/dsh-consumer',
-      '@deepseek-ai/dsh-zebra',
+      '@redspark/rsh-library',
+      '@redspark/rsh-consumer',
+      '@redspark/rsh-zebra',
     ])
   })
 
   it('reports a runtime dependency cycle instead of emitting an arbitrary order', () => {
     const dsh = releaseFamily('dsh')
     const members = [
-      member('rsh/a/left', '@deepseek-ai/dsh-left', { dependencies: { '@deepseek-ai/dsh-right': 'workspace:^' } }),
-      member('rsh/a/right', '@deepseek-ai/dsh-right', { dependencies: { '@deepseek-ai/dsh-left': 'workspace:^' } }),
+      member('rsh/a/left', '@redspark/rsh-left', { dependencies: { '@redspark/rsh-right': 'workspace:^' } }),
+      member('rsh/a/right', '@redspark/rsh-right', { dependencies: { '@redspark/rsh-left': 'workspace:^' } }),
     ]
 
     expect(() => { dsh.publishOrder(members) }).toThrow(/dependency cycle/)
@@ -238,44 +238,44 @@ describe('release families', () => {
   it('publishes a peer before its consumer', () => {
     const dsh = releaseFamily('dsh')
     const members = [
-      member('rsh/a/consumer', '@deepseek-ai/dsh-consumer', { peerDependencies: { '@deepseek-ai/dsh-zebra': 'workspace:^' } }),
-      member('rsh/a/zebra', '@deepseek-ai/dsh-zebra'),
+      member('rsh/a/consumer', '@redspark/rsh-consumer', { peerDependencies: { '@redspark/rsh-zebra': 'workspace:^' } }),
+      member('rsh/a/zebra', '@redspark/rsh-zebra'),
     ]
 
     // Name order alone would place the consumer first; the peer edge moves it.
     expect(dsh.publishOrder(members).order.map(entry => entry.name)).toEqual([
-      '@deepseek-ai/dsh-zebra',
-      '@deepseek-ai/dsh-consumer',
+      '@redspark/rsh-zebra',
+      '@redspark/rsh-consumer',
     ])
   })
 
   it('orders around a peer cycle rather than refusing to publish, and reports the edge it dropped', () => {
     const dsh = releaseFamily('dsh')
     const members = [
-      member('rsh/a/left', '@deepseek-ai/dsh-left', { peerDependencies: { '@deepseek-ai/dsh-right': 'workspace:^' } }),
-      member('rsh/a/right', '@deepseek-ai/dsh-right', { peerDependencies: { '@deepseek-ai/dsh-left': 'workspace:^' } }),
+      member('rsh/a/left', '@redspark/rsh-left', { peerDependencies: { '@redspark/rsh-right': 'workspace:^' } }),
+      member('rsh/a/right', '@redspark/rsh-right', { peerDependencies: { '@redspark/rsh-left': 'workspace:^' } }),
     ]
 
     // Sibling peer ordering may cycle, so one ordering preference is omitted
     // while both manifest declarations remain intact.
     const plan = dsh.publishOrder(members)
     expect(plan.order.map(entry => entry.name)).toEqual([
-      '@deepseek-ai/dsh-right',
-      '@deepseek-ai/dsh-left',
+      '@redspark/rsh-right',
+      '@redspark/rsh-left',
     ])
     // One of the two edges has to give, and which one it is belongs in the log.
     expect(plan.droppedPeerEdges).toEqual([
-      { consumer: '@deepseek-ai/dsh-right', peer: '@deepseek-ai/dsh-left' },
+      { consumer: '@redspark/rsh-right', peer: '@redspark/rsh-left' },
     ])
   })
 
   it('honours an install edge even when a peer cycle surrounds it', () => {
     const dsh = releaseFamily('dsh')
     const members = [
-      member('rsh/a/base', '@deepseek-ai/dsh-base', { peerDependencies: { '@deepseek-ai/dsh-consumer': 'workspace:^' } }),
-      member('rsh/a/consumer', '@deepseek-ai/dsh-consumer', {
-        dependencies: { '@deepseek-ai/dsh-base': 'workspace:^' },
-        peerDependencies: { '@deepseek-ai/dsh-base': 'workspace:^' },
+      member('rsh/a/base', '@redspark/rsh-base', { peerDependencies: { '@redspark/rsh-consumer': 'workspace:^' } }),
+      member('rsh/a/consumer', '@redspark/rsh-consumer', {
+        dependencies: { '@redspark/rsh-base': 'workspace:^' },
+        peerDependencies: { '@redspark/rsh-base': 'workspace:^' },
       }),
     ]
 
@@ -283,53 +283,53 @@ describe('release families', () => {
     // preference is the one omitted. The matching peer edge is already satisfied.
     const plan = dsh.publishOrder(members)
     expect(plan.order.map(entry => entry.name)).toEqual([
-      '@deepseek-ai/dsh-base',
-      '@deepseek-ai/dsh-consumer',
+      '@redspark/rsh-base',
+      '@redspark/rsh-consumer',
     ])
     expect(plan.droppedPeerEdges).toEqual([
-      { consumer: '@deepseek-ai/dsh-base', peer: '@deepseek-ai/dsh-consumer' },
+      { consumer: '@redspark/rsh-base', peer: '@redspark/rsh-consumer' },
     ])
   })
 
   it('drops the peer preference that closes a cycle around an install edge', () => {
     const dsh = releaseFamily('dsh')
     const members = [
-      member('rsh/a/alpha', '@deepseek-ai/dsh-alpha', { peerDependencies: { '@deepseek-ai/dsh-bravo': 'workspace:^' } }),
-      member('rsh/a/bravo', '@deepseek-ai/dsh-bravo', { peerDependencies: { '@deepseek-ai/dsh-charlie': 'workspace:^' } }),
-      member('rsh/a/charlie', '@deepseek-ai/dsh-charlie', { dependencies: { '@deepseek-ai/dsh-alpha': 'workspace:^' } }),
+      member('rsh/a/alpha', '@redspark/rsh-alpha', { peerDependencies: { '@redspark/rsh-bravo': 'workspace:^' } }),
+      member('rsh/a/bravo', '@redspark/rsh-bravo', { peerDependencies: { '@redspark/rsh-charlie': 'workspace:^' } }),
+      member('rsh/a/charlie', '@redspark/rsh-charlie', { dependencies: { '@redspark/rsh-alpha': 'workspace:^' } }),
     ]
 
     const plan = dsh.publishOrder(members)
     expect(plan.order.map(entry => entry.name)).toEqual([
-      '@deepseek-ai/dsh-bravo',
-      '@deepseek-ai/dsh-alpha',
-      '@deepseek-ai/dsh-charlie',
+      '@redspark/rsh-bravo',
+      '@redspark/rsh-alpha',
+      '@redspark/rsh-charlie',
     ])
     expect(plan.droppedPeerEdges).toEqual([
-      { consumer: '@deepseek-ai/dsh-bravo', peer: '@deepseek-ai/dsh-charlie' },
+      { consumer: '@redspark/rsh-bravo', peer: '@redspark/rsh-charlie' },
     ])
   })
 
   it('ignores devDependencies when ordering', () => {
     const dsh = releaseFamily('dsh')
     const members = [
-      member('rsh/a/alpha', '@deepseek-ai/dsh-alpha', { devDependencies: { '@deepseek-ai/dsh-zebra': 'workspace:^' } }),
-      member('rsh/a/zebra', '@deepseek-ai/dsh-zebra'),
+      member('rsh/a/alpha', '@redspark/rsh-alpha', { devDependencies: { '@redspark/rsh-zebra': 'workspace:^' } }),
+      member('rsh/a/zebra', '@redspark/rsh-zebra'),
     ]
 
     // A dev dependency is absent from the published package, so it must not move
     // the consumer behind it.
     expect(dsh.publishOrder(members).order.map(entry => entry.name)).toEqual([
-      '@deepseek-ai/dsh-alpha',
-      '@deepseek-ai/dsh-zebra',
+      '@redspark/rsh-alpha',
+      '@redspark/rsh-zebra',
     ])
   })
 
   it('applies the harness payload policy to dsh and keeps upstream payloads for vendored packages', () => {
     const dsh = releaseFamily('dsh')
     const vendor = releaseFamily('vendor')
-    const harness = member('rsh/a/library', '@deepseek-ai/dsh-library')
-    const vendored = member('rsh/Core/vendor/cordis', '@deepseek-ai/cordis')
+    const harness = member('rsh/a/library', '@redspark/rsh-library')
+    const vendored = member('rsh/Core/vendor/cordis', '@redspark/cordis')
 
     expect(() => { dsh.validatePayload(harness, ['package/lib/index.js', 'package/src/index.ts']) })
       .toThrow(/publishes source file/)
@@ -338,7 +338,7 @@ describe('release families', () => {
   })
 
   it('drives the installed entry only for the family that publishes one', () => {
-    expect(releaseFamily('dsh').installedEntry).toEqual({ packageName: '@deepseek-ai/dsh', binPath: 'lib/bin.js' })
+    expect(releaseFamily('dsh').installedEntry).toEqual({ packageName: '@redspark/rsh', binPath: 'lib/bin.js' })
     expect(releaseFamily('vendor').installedEntry).toBeUndefined()
   })
 
@@ -399,10 +399,10 @@ describe('version precedence', () => {
 })
 
 describe('payload change judgement', () => {
-  const sourceShipping = member('rsh/Core/vendor/cosmokit', '@deepseek-ai/cosmokit', {
+  const sourceShipping = member('rsh/Core/vendor/cosmokit', '@redspark/cosmokit', {
     files: ['lib/index.js', 'lib/types/**/*.d.ts', 'src'],
   })
-  const buildOutputOnly = member('rsh/Core/vendor/cordis', '@deepseek-ai/cordis', {
+  const buildOutputOnly = member('rsh/Core/vendor/cordis', '@redspark/cordis', {
     files: ['lib/index.js', 'lib/types/**/*.d.ts', 'bin.js'],
   })
 
@@ -427,7 +427,7 @@ describe('payload change judgement', () => {
     // unnecessary patch bump, while under-reporting fails the next publish on a
     // version whose bytes moved.
     expect(reachesPayload(sourceShipping, 'rsh/Core/vendor/cosmokit/README.i18n.yaml')).toBe(true)
-    expect(reachesPayload(member('rsh/a/library', '@deepseek-ai/dsh-library', { files: ['lib/index.js'] }),
+    expect(reachesPayload(member('rsh/a/library', '@redspark/rsh-library', { files: ['lib/index.js'] }),
       'rsh/a/library/tests/library.spec.ts')).toBe(false)
   })
 })

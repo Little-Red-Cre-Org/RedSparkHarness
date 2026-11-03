@@ -17,7 +17,7 @@ mkdir -p scratch-plugin/src
 In Harness, a plugin is a TypeScript module that exports an `apply` function. The framework calls `apply` when loading the plugin and passes a `ctx` context object through which the plugin registers capabilities:
 
 ```ts
-import type { Context } from '@deepseek-ai/cordis'
+import type { Context } from '@redspark/cordis'
 
 export const name = 'my-plugin'
 
@@ -33,7 +33,7 @@ That is the complete configuration.
 Create `scratch-plugin/src/my-plugin.ts`:
 
 ```ts
-import type { Context } from '@deepseek-ai/cordis'
+import type { Context } from '@redspark/cordis'
 
 export const name = 'hello-plugin'
 
@@ -45,12 +45,12 @@ export function apply(ctx: Context) {
 
 ## Register it in cordis.yml
 
-Run `pwd` from the repository root, then create `scratch-plugin/cordis.yml` as a Web overlay that inserts the local plugin. Replace `/absolute/path/to/deepseek-harness` below with the printed path:
+Run `pwd` from the repository root, then create `scratch-plugin/cordis.yml` as a Web overlay that inserts the local plugin. Replace `/absolute/path/to/redspark-harness` below with the printed path:
 
 ```yaml
 - insert:
     - id: hello
-      name: '/absolute/path/to/deepseek-harness/scratch-plugin/src/my-plugin.ts'
+      name: '/absolute/path/to/redspark-harness/scratch-plugin/src/my-plugin.ts'
 ```
 
 The plugin path must be absolute. A patch file contributes configuration but does not change the profile directory from which the loader resolves module paths.
@@ -70,7 +70,7 @@ Anything registered through `ctx`—event listeners, tools, or timers—is clean
 For a resource that needs explicit cleanup, such as a network connection, use `ctx.effect()` to provide its disposer:
 
 ```ts
-import type { Context } from '@deepseek-ai/cordis'
+import type { Context } from '@redspark/cordis'
 
 export function apply(ctx: Context) {
   ctx.effect(() => {
@@ -89,7 +89,7 @@ export function apply(ctx: Context) {
 If the plugin consumes another service such as `tools` or `llm`, declare it in `inject`:
 
 ```ts ignore-check
-import type { Context } from '@deepseek-ai/cordis'
+import type { Context } from '@redspark/cordis'
 
 export const name = 'my-tool-plugin'
 export const inject = ['tools']
@@ -109,7 +109,7 @@ In addition to a function module, a plugin can use object or class form.
 ### Object form
 
 ```ts
-import type { Context } from '@deepseek-ai/cordis'
+import type { Context } from '@redspark/cordis'
 
 export default {
   name: 'my-plugin',
@@ -123,7 +123,7 @@ export default {
 ### Class form
 
 ```ts
-import { Service, type Context } from '@deepseek-ai/cordis'
+import { Service, type Context } from '@redspark/cordis'
 
 export default class MyService extends Service {
   static inject = ['tools']

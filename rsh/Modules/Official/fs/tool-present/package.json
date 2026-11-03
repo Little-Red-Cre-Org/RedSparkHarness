@@ -1,5 +1,5 @@
 {
-  "name": "@deepseek-ai/dsh-tool-present",
+  "name": "@redspark/rsh-tool-present",
   "description": "Explicit workspace file delivery declarations for the RedSpark Harness",
   "version": "1.0.0",
   "publishConfig": {
@@ -39,29 +39,29 @@
     "lib/types/**/*.d.ts"
   ],
   "dependencies": {
-    "@deepseek-ai/schemastery": "workspace:^"
+    "@redspark/schemastery": "workspace:^"
   },
   "peerDependencies": {
-    "@deepseek-ai/cordis": "workspace:^",
-    "@deepseek-ai/dsh-agent": "workspace:^",
-    "@deepseek-ai/dsh-fs": "workspace:^",
-    "@deepseek-ai/dsh-llm": "workspace:^",
-    "@deepseek-ai/dsh-session": "workspace:^",
-    "@deepseek-ai/dsh-session-projection": "workspace:^",
-    "@deepseek-ai/dsh-tools": "workspace:^"
+    "@redspark/cordis": "workspace:^",
+    "@redspark/rsh-agent": "workspace:^",
+    "@redspark/rsh-fs": "workspace:^",
+    "@redspark/rsh-llm": "workspace:^",
+    "@redspark/rsh-session": "workspace:^",
+    "@redspark/rsh-session-projection": "workspace:^",
+    "@redspark/rsh-tools": "workspace:^"
   },
   "devDependencies": {
-    "@deepseek-ai/cordis": "workspace:^",
-    "@deepseek-ai/dsh-agent": "workspace:^",
-    "@deepseek-ai/dsh-fs": "workspace:^",
-    "@deepseek-ai/dsh-llm": "workspace:^",
-    "@deepseek-ai/dsh-session": "workspace:^",
-    "@deepseek-ai/dsh-session-projection": "workspace:^",
-    "@deepseek-ai/dsh-tools": "workspace:^",
-    "@deepseek-ai/dsh-agent-loop": "workspace:^",
-    "@deepseek-ai/dsh-agent-loop-testkit": "workspace:^",
-    "@deepseek-ai/dsh-fs-local": "workspace:^",
-    "@deepseek-ai/dsh-system-prompt": "workspace:^",
-    "@deepseek-ai/dsh-scope": "workspace:^"
+    "@redspark/cordis": "workspace:^",
+    "@redspark/rsh-agent": "workspace:^",
+    "@redspark/rsh-fs": "workspace:^",
+    "@redspark/rsh-llm": "workspace:^",
+    "@redspark/rsh-session": "workspace:^",
+    "@redspark/rsh-session-projection": "workspace:^",
+    "@redspark/rsh-tools": "workspace:^",
+    "@redspark/rsh-agent-loop": "workspace:^",
+    "@redspark/rsh-agent-loop-testkit": "workspace:^",
+    "@redspark/rsh-fs-local": "workspace:^",
+    "@redspark/rsh-system-prompt": "workspace:^",
+    "@redspark/rsh-scope": "workspace:^"
   }
 }

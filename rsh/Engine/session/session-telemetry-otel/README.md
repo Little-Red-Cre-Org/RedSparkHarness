@@ -3,7 +3,7 @@ description: "OpenTelemetry session-telemetry backend for deployments choosing a
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-session-telemetry-otel
+# @redspark/rsh-session-telemetry-otel
 
 English | [中文](README.zh.md)
 
@@ -27,7 +27,7 @@ English | [中文](README.zh.md)
 
 Mount this plugin when a deployment should export session records through OpenTelemetry logs. Choose a mode, give the exporter an endpoint, and decide whether to mount redaction rules on the seam.
 
-Native Hosts select the package's `./native` entry in an explicit profile; shipped Native profile templates do not install it. The Native entry requires `launchEnvironment`, defaults to `FEEDBACK_ONLY`, and requires `exporter.url` unless config or the process hard-off disables it. A non-empty process `DSH_TELEMETRY_DISABLED` value forces `DISABLED` regardless of plugin config.
+Native Hosts select the package's `./native` entry in an explicit profile; shipped Native profile templates do not install it. The Native entry requires `launchEnvironment`, defaults to `FEEDBACK_ONLY`, and requires `exporter.url` unless config or the process hard-off disables it. A non-empty process `RSH_TELEMETRY_DISABLED` value forces `DISABLED` regardless of plugin config.
 
 ### Modes
 
@@ -46,7 +46,7 @@ Uploading modes require an exporter URL and accept the SDK option blocks verbati
 
 ```yaml
 - id: sessionTelemetry-otel
-  name: '@deepseek-ai/dsh-session-telemetry-otel'
+  name: '@redspark/rsh-session-telemetry-otel'
   config:
     mode: FEEDBACK_ONLY       # optional; defaults to FEEDBACK_ONLY
     shutdownTimeoutMillis: 3000 # optional; defaults to 3000
@@ -90,7 +90,7 @@ This section explains the backend's composition; the observable behavior is full
 
 ### Design concept
 
-The backend is a thin adapter over the OTel JS SDK: it owns feedback authorization, resource identity, and an outer shutdown deadline. Canonical ledger records use the `@deepseek-ai/dsh-session-telemetry-otel` instrumentation scope; this backend captures no operational records. Resource identity carries `service.name`/`service.version` from `dsh-llm`'s `APP_IDENTITY` plus the anonymous `user.id` (from `$DSH_HOME/.anonymous-user-id`), once per export batch rather than per record.
+The backend is a thin adapter over the OTel JS SDK: it owns feedback authorization, resource identity, and an outer shutdown deadline. Canonical ledger records use the `@redspark/rsh-session-telemetry-otel` instrumentation scope; this backend captures no operational records. Resource identity carries `service.name`/`service.version` from `dsh-llm`'s `APP_IDENTITY` plus the anonymous `user.id` (from `$RSH_HOME/.anonymous-user-id`), once per export batch rather than per record.
 
 ### Source map
 
@@ -119,7 +119,7 @@ Read these pages when the backend contract is not enough. They move from the sea
 - [Session telemetry seam](../session-telemetry/README.md) — the capture contract, record vocabulary, and redaction waterfall.
 - [Session telemetry subsystem](../../../Docs/subsystems/session-telemetry.md) — the capability split and type declarations.
 - [Anonymous user identity](../../../Core/identity/anonymous-user-id/README.md) — the id reported as the OTel Resource `user.id`.
-- [Generated configuration catalog](../../../Docs/config-catalog.md#deepseek-aidsh-session-telemetry-otel) — every accepted config field and its source declaration.
+- [Generated configuration catalog](../../../Docs/config-catalog.md#redsparkrsh-session-telemetry-otel) — every accepted config field and its source declaration.
 
 -----
 

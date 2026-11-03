@@ -6,17 +6,17 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { expect, it } from 'vitest'
-import { DeepSeekHarness, type HarnessNotification, type RunResult } from '@deepseek-ai/dsh-sdk-client'
-import type { ScheduleId } from '@deepseek-ai/dsh-schedule/client'
-import { parseSessionLog } from '@deepseek-ai/dsh-llm-replay'
-import { Session, SessionId, SessionLogOffset, type SessionEvent } from '@deepseek-ai/dsh-session/native'
-import { JsonlSessionBackend } from '@deepseek-ai/dsh-session-persistence-jsonl'
-import { deadline } from '@deepseek-ai/dsh-timeout'
+import { RedSparkHarness, type HarnessNotification, type RunResult } from '@redspark/rsh-sdk-client'
+import type { ScheduleId } from '@redspark/rsh-schedule/client'
+import { parseSessionLog } from '@redspark/rsh-llm-replay'
+import { Session, SessionId, SessionLogOffset, type SessionEvent } from '@redspark/rsh-session/native'
+import { JsonlSessionBackend } from '@redspark/rsh-session-persistence-jsonl'
+import { deadline } from '@redspark/rsh-timeout'
 import { shippedNativeProfileComposition } from '../../rsh/Programs/CLI/src/native-profile-template.ts'
 import {
   formatSystemPromptSnapshot, formatToolSchemasSnapshot, normalizedSystemPrompts, normalizedToolSchemas,
   normalizeSessionSnapshot, redactSessionSnapshotIds,
-} from '@deepseek-ai/dsh-session-snapshot'
+} from '@redspark/rsh-session-snapshot'
 
 const root = fileURLToPath(new URL('../../', import.meta.url))
 const scenario = join(root, 'snapshots/native-sdk/scheduled-root-origin')
@@ -119,9 +119,9 @@ it('reuses durable workspace instructions and a due reminder across a cold-resto
   const startTickets: Array<'start' | 'cancel'> = []
   let stage = 'prepare native SDK scheduled-origin fixture'
   let home: string | undefined
-  let waiting: DeepSeekHarness | undefined
-  let initializing: DeepSeekHarness | undefined
-  let restored: DeepSeekHarness | undefined
+  let waiting: RedSparkHarness | undefined
+  let initializing: RedSparkHarness | undefined
+  let restored: RedSparkHarness | undefined
   let pythonCompletion: Promise<{ readonly ok: true; readonly stdout: string } | { readonly ok: false; readonly error: unknown }> | undefined
   let primaryFailure: unknown
   const report = () => ({ stage, owners, requests: requests.length, readinessFailures, serverFailures })
@@ -274,9 +274,9 @@ it('reuses durable workspace instructions and a due reminder across a cold-resto
       dsh: { profile: { runtime: 'native', config: 'rsh.profile.json' } } }))
     writeFileSync(join(profile, 'rsh.profile.json'), JSON.stringify({ ...composition, installations: [
       ...composition.installations,
-      { id: 'task-scheduler', plugin: '@deepseek-ai/dsh-task-scheduler', scope: 'root',
+      { id: 'task-scheduler', plugin: '@redspark/rsh-task-scheduler', scope: 'root',
         config: { path: join(home, 'profiles', 'native-sdk', 'task-scheduler.sqlite') } },
-      { id: 'schedule', plugin: '@deepseek-ai/dsh-schedule', scope: 'root' },
+      { id: 'schedule', plugin: '@redspark/rsh-schedule', scope: 'root' },
       { id: 'fixture-sdk-scheduled-origin', plugin: 'fixture-sdk-scheduled-origin', scope: 'root',
         config: { controlUrl, sessionId } },
     ] }))
@@ -286,14 +286,14 @@ it('reuses durable workspace instructions and a due reminder across a cold-resto
       { id: 'pi-ai', config: { providers: { fixture: { apiKeyEnv: 'NATIVE_SDK_FIXTURE_KEY', api: 'openai-completions',
         baseURL: `${controlUrl}/v1`, models: [{ id: 'fixture-model', input: ['text'] }] } } } },
     ] }))
-    const options = { profile: 'native-sdk', dshBin: join(root, 'rsh/Programs/CLI/lib/bin.js'), dshHome: home,
+    const options = { profile: 'native-sdk', rshBin: join(root, 'rsh/Programs/CLI/lib/bin.js'), rshHome: home,
       patches: [patch], cwd: workspace,
       provider: 'fixture', model: 'fixture-model',
-      env: { ...process.env, NATIVE_SDK_FIXTURE_KEY: 'fixture-key', DSH_TELEMETRY_DISABLED: '1' }, requestTimeoutMs: 20_000 }
+      env: { ...process.env, NATIVE_SDK_FIXTURE_KEY: 'fixture-key', RSH_TELEMETRY_DISABLED: '1' }, requestTimeoutMs: 20_000 }
     const serializeRun = (result: RunResult) => ({ finalResponse: result.finalResponse, events: result.events,
       notifications: result.notifications })
     let run: ReturnType<typeof serializeRun>
-    if (process.env.DSH_NATIVE_SDK_PYTHON !== undefined) {
+    if (process.env.RSH_NATIVE_SDK_PYTHON !== undefined) {
       updateStage('start Python SDK and initialize the native SDK server')
       const launcher = join(home, process.platform === 'win32' ? 'dsh.cmd' : 'dsh')
       writeFileSync(launcher, process.platform === 'win32'
@@ -301,7 +301,7 @@ it('reuses durable workspace instructions and a due reminder across a cold-resto
         : `#!/bin/sh\nexec "${process.execPath}" "${join(root, 'rsh/Programs/CLI/lib/bin.js')}" "$@"\n`)
       if (process.platform !== 'win32') chmodSync(launcher, 0o700)
       updateStage('start SDK without initialize and verify readiness cancellation')
-      pythonCompletion = execa(process.env.DSH_NATIVE_SDK_PYTHON, [join(root, 'snapshots/native-sdk/text-turn/client.py'),
+      pythonCompletion = execa(process.env.RSH_NATIVE_SDK_PYTHON, [join(root, 'snapshots/native-sdk/text-turn/client.py'),
         launcher, home, workspace, patch, firstPrompt, prompt, 'scheduled-origin'], {
         env: { ...process.env, PYTHONPATH: join(root, 'rsh/Programs/SDK/python/sdk/src'),
           NATIVE_SDK_FIXTURE_KEY: 'fixture-key', NATIVE_SDK_SCHEDULED_ORIGIN_CONTROL_URL: controlUrl }, timeout: 45_000,
@@ -322,7 +322,7 @@ it('reuses durable workspace instructions and a due reminder across a cold-resto
       run = output.run
     } else {
       updateStage('start SDK without initialize and verify readiness cancellation')
-      waiting = new DeepSeekHarness(options)
+      waiting = new RedSparkHarness(options)
       waiting.client.start()
       expect(await get('/await-origin-plugin-loaded')).toBe('ready')
       await post('/start-origin')
@@ -336,7 +336,7 @@ it('reuses durable workspace instructions and a due reminder across a cold-resto
       expect(owners).toHaveLength(0)
       expect(requests).toHaveLength(0)
       updateStage('initialize the native SDK server before scheduled-root maintenance')
-      initializing = new DeepSeekHarness(options)
+      initializing = new RedSparkHarness(options)
       await waitFor('SDK initialize', initializing.start(), report)
       updateStage('admit one scheduled root through the real Program maintenance route')
       await post('/start-origin')
@@ -351,7 +351,7 @@ it('reuses durable workspace instructions and a due reminder across a cold-resto
       updateStage('persist one overdue reminder between SDK Host processes')
       await seedOverdueSchedule(sessions)
       updateStage('cold restore the same scheduled root through a fresh public SDK prompt')
-      restored = new DeepSeekHarness(options)
+      restored = new RedSparkHarness(options)
       const result = await waitFor('cold restored SDK prompt settles',
         restored.session(sessionId).run(prompt), report)
       run = serializeRun(result)
@@ -511,9 +511,9 @@ it('reuses durable workspace instructions and a due reminder across a cold-resto
     if (prompts[0] === undefined || schemas[0] === undefined) {
       throw new Error('native SDK scheduled-origin: model request header missing')
     }
-    const evidencePath = process.env.DSH_SCHEDULED_ORIGIN_EVIDENCE_PATH
+    const evidencePath = process.env.RSH_SCHEDULED_ORIGIN_EVIDENCE_PATH
     if (evidencePath !== undefined) writeFileSync(evidencePath, JSON.stringify({
-      language: process.env.DSH_NATIVE_SDK_PYTHON === undefined ? 'typescript' : 'python',
+      language: process.env.RSH_NATIVE_SDK_PYTHON === undefined ? 'typescript' : 'python',
       readinessFailures,
       owners,
       originPluginPids,
@@ -528,7 +528,7 @@ it('reuses durable workspace instructions and a due reminder across a cold-resto
       { input: prompt, source: 'user', outcome: 'completed', taskScheduleToolVisible: false, scheduleToolsVisible: true },
       { input: schedulePrompt, source: 'schedule', outcome: 'completed', taskScheduleToolVisible: false, scheduleToolsVisible: true },
     ], null, 2)}\n`
-    if (process.env.DSH_SNAPSHOT === 'refresh') {
+    if (process.env.RSH_SNAPSHOT === 'refresh') {
       writeFileSync(fixture, normalized)
       writeFileSync(join(scenario, 'system-prompt.expected.md'), promptSnapshot)
       writeFileSync(join(scenario, 'tool-schemas.expected.json'), schemaSnapshot)

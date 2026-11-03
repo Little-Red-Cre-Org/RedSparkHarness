@@ -192,8 +192,8 @@ export function collectNativeDependencyViolations(root: string): string[] {
     const manifest = JSON.parse(readFileSync(resolve(root, dir, 'package.json'), 'utf8')) as Record<string, unknown>
     for (const field of ['dependencies', 'devDependencies', 'peerDependencies', 'optionalDependencies']) {
       for (const name of Object.keys(manifest[field] as Record<string, unknown> | undefined ?? {})) {
-        if (name === '@deepseek-ai/cordis' || name.startsWith('@deepseek-ai/cordis-')
-          || (name.startsWith('@deepseek-ai/dsh-') && !names.has(name))) {
+        if (name === '@redspark/cordis' || name.startsWith('@redspark/cordis-')
+          || (name.startsWith('@redspark/rsh-') && !names.has(name))) {
           errors.add(`${dir}: ${field}.${name} is outside the admitted native graph`)
         }
       }
@@ -272,8 +272,8 @@ export function collectNativeDependencyViolations(root: string): string[] {
       if (specifier.startsWith('node:')) return true
       const hostingReferences = cordisHostingNativeReferences.get(sourceOwner)
       if (hostingReferences?.includes(specifier) === true) return true
-      if (specifier === '@deepseek-ai/cordis' || specifier.startsWith('@deepseek-ai/cordis/')) return false
-      if (specifier.startsWith('@deepseek-ai/cordis-plugin-')) return false
+      if (specifier === '@redspark/cordis' || specifier.startsWith('@redspark/cordis/')) return false
+      if (specifier.startsWith('@redspark/cordis-plugin-')) return false
       if (stylesheetReferenceAllowed(sourceOwner, sourceFile, specifier)) return true
       const resolved = ts.resolveModuleName(specifier, sourceFile, options, ts.sys).resolvedModule
       if (resolved === undefined) return false

@@ -1,5 +1,5 @@
 {
-  "name": "@deepseek-ai/dsh-scope",
+  "name": "@redspark/rsh-scope",
   "description": "Scoped-context registration primitive (scope tags, scope-filtered event dispatch) for the RedSpark Harness",
   "version": "1.0.0",
   "publishConfig": {
@@ -32,11 +32,11 @@
   ],
   "license": "MIT",
   "peerDependencies": {
-    "@deepseek-ai/dsh-invariants": "workspace:^",
-    "@deepseek-ai/cordis": "workspace:^"
+    "@redspark/rsh-invariants": "workspace:^",
+    "@redspark/cordis": "workspace:^"
   },
   "devDependencies": {
-    "@deepseek-ai/dsh-invariants": "workspace:^",
-    "@deepseek-ai/cordis": "workspace:^"
+    "@redspark/rsh-invariants": "workspace:^",
+    "@redspark/cordis": "workspace:^"
   }
 }

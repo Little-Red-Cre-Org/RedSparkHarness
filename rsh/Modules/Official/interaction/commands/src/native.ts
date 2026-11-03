@@ -1,8 +1,8 @@
 /** Scoped native human command Provider using the Program's single durable writer. */
 import { randomUUID } from 'node:crypto'
-import { NativeContributions, type NativePlugin, type NativeScope } from '@deepseek-ai/dsh-native-runtime'
-import type { NativeAgentRegistry } from '@deepseek-ai/dsh-native-agent'
-import type { NativeActiveSessionOperations, NativeActiveSessionOwner } from '@deepseek-ai/dsh-native-session-execution'
+import { NativeContributions, type NativePlugin, type NativeScope } from '@redspark/rsh-native-runtime'
+import type { NativeAgentRegistry } from '@redspark/rsh-native-agent'
+import type { NativeActiveSessionOperations, NativeActiveSessionOwner } from '@redspark/rsh-native-session-execution'
 import { CommandId } from './brand.ts'
 import { parseCommand } from './parse.ts'
 import type { CommandDescriptor, CommandExecution, CommandResult } from './facts.ts'
@@ -155,7 +155,7 @@ export class NativeCommandRegistry implements NativeCommandOperations {
 
 /** Native command Provider, selected independently of UI and model capabilities. */
 export const plugin: NativePlugin = {
-  apiVersion: 1, name: '@deepseek-ai/dsh-commands', targets: ['host'],
+  apiVersion: 1, name: '@redspark/rsh-commands', targets: ['host'],
   requires: ['agents', 'activeSessions'], provides: ['commands'],
   resolve(input) {
     if (input !== undefined && (input === null || typeof input !== 'object' || Array.isArray(input) || Object.keys(input).length !== 0)) {

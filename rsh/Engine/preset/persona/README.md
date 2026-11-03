@@ -3,7 +3,7 @@ description: "The composable persona row presets mount to give one agent its own
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-persona
+# @redspark/rsh-persona
 
 English | [中文](README.zh.md)
 
@@ -30,7 +30,7 @@ Mount this row inside a preset composition to give that preset's sessions their 
 ### Configuration
 
 ```yaml
-- name: '@deepseek-ai/dsh-persona'
+- name: '@redspark/rsh-persona'
   config:
     prefix: You are a terse systems engineer who answers in short commands.
 ```
@@ -42,7 +42,7 @@ Mount this row inside a preset composition to give that preset's sessions their 
 | `complete` | `false` | Use only the rendered prefix as the system prompt; ignore the suffix |
 | `includeRuntimeContext` | `true` | Include dynamic runtime-context snapshots for this agent scope; false suppresses every context contribution without disabling its owning services |
 
-The generated [configuration catalog](../../../Docs/config-catalog.md#deepseek-aidsh-persona) is the exhaustive source for every accepted field and its JSDoc.
+The generated [configuration catalog](../../../Docs/config-catalog.md#redsparkrsh-persona) is the exhaustive source for every accepted field and its JSDoc.
 
 ### Persona behavior
 
@@ -86,7 +86,7 @@ Read these pages when the package-level contract is not enough; they move from t
 
 - [agent-presets package](../agent-presets/README.md) — the preset composition this row mounts into.
 - [System prompt subsystem](../../../Docs/subsystems/system-prompt.md) — sections, assembly, and the persona slot this row shadows.
-- [Generated configuration catalog](../../../Docs/config-catalog.md#deepseek-aidsh-persona) — every accepted config field and its source declaration.
+- [Generated configuration catalog](../../../Docs/config-catalog.md#redsparkrsh-persona) — every accepted config field and its source declaration.
 
 -----
 

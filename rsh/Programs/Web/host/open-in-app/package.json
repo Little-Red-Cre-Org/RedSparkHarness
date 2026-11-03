@@ -1,5 +1,5 @@
 {
-  "name": "@deepseek-ai/dsh-host-open-in-app",
+  "name": "@redspark/rsh-host-open-in-app",
   "description": "Host half of open-in-app: resolved application catalog, icons, and the launch endpoint as three webServer routes",
   "version": "1.0.0",
   "publishConfig": {
@@ -36,21 +36,21 @@
   },
   "license": "MIT",
   "dependencies": {
-    "@deepseek-ai/dsh-launch-environment": "workspace:^",
-    "@deepseek-ai/dsh-native-command": "workspace:^",
-    "@deepseek-ai/dsh-subprocess": "workspace:^",
-    "@deepseek-ai/schemastery": "workspace:^"
+    "@redspark/rsh-launch-environment": "workspace:^",
+    "@redspark/rsh-native-command": "workspace:^",
+    "@redspark/rsh-subprocess": "workspace:^",
+    "@redspark/schemastery": "workspace:^"
   },
   "peerDependencies": {
-    "@deepseek-ai/cordis": "workspace:^",
-    "@deepseek-ai/dsh-http-routes": "workspace:^",
-    "@deepseek-ai/dsh-http-routes-cordis": "workspace:^"
+    "@redspark/cordis": "workspace:^",
+    "@redspark/rsh-http-routes": "workspace:^",
+    "@redspark/rsh-http-routes-cordis": "workspace:^"
   },
   "devDependencies": {
-    "@deepseek-ai/cordis": "workspace:^",
-    "@deepseek-ai/cordis-plugin-loader": "workspace:^",
-    "@deepseek-ai/dsh-host-webserver": "workspace:^",
-    "@deepseek-ai/dsh-http-routes": "workspace:^",
-    "@deepseek-ai/dsh-http-routes-cordis": "workspace:^"
+    "@redspark/cordis": "workspace:^",
+    "@redspark/cordis-plugin-loader": "workspace:^",
+    "@redspark/rsh-host-webserver": "workspace:^",
+    "@redspark/rsh-http-routes": "workspace:^",
+    "@redspark/rsh-http-routes-cordis": "workspace:^"
   }
 }

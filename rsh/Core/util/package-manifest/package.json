@@ -1,5 +1,5 @@
 {
-  "name": "@deepseek-ai/dsh-package-manifest",
+  "name": "@redspark/rsh-package-manifest",
   "description": "Shared type declarations for package.json.dsh configuration fields",
   "version": "1.0.0",
   "publishConfig": {

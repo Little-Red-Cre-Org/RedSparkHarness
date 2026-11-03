@@ -1,6 +1,6 @@
 /** Localized presentation for conversation failures with their original detail. */
-import { Button } from '@deepseek-ai/dsh-client-ui-primitives'
-import type { TranslateNS } from '@deepseek-ai/dsh-client-ui-slots'
+import { Button } from '@redspark/rsh-client-ui-primitives'
+import type { TranslateNS } from '@redspark/rsh-client-ui-slots'
 
 type Translate = TranslateNS<'nativeApplication'>
 

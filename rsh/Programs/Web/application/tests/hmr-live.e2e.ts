@@ -6,10 +6,10 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { chromium } from 'playwright'
 import { expect, it } from 'vitest'
-import { Context } from '@deepseek-ai/cordis'
-import type { Fiber } from '@deepseek-ai/cordis'
-import LocalSubprocessRuntime from '@deepseek-ai/dsh-subprocess-local'
-import type { SubprocessHandle, SubprocessSpawnSpec } from '@deepseek-ai/dsh-subprocess'
+import { Context } from '@redspark/cordis'
+import type { Fiber } from '@redspark/cordis'
+import LocalSubprocessRuntime from '@redspark/rsh-subprocess-local'
+import type { SubprocessHandle, SubprocessSpawnSpec } from '@redspark/rsh-subprocess'
 import { readClientBuildRecord } from '../../../../Scripts/client-build-environment.ts'
 import { WORKSPACE_MANIFEST_GLOBS } from '../../../../Scripts/workspace-manifest-globs.ts'
 import { newEnglishPage, REPO_ROOT } from './support.ts'
@@ -125,7 +125,7 @@ it('hot-reloads a real client-plugin source edit without refreshing the page', a
       world,
       {
         DEEPSEEK_API_KEY: 'keyless-hmr-no-call',
-        DSH_HOME: join(world, '.dsh'),
+        RSH_HOME: join(world, '.dsh'),
       },
     ))
     const baseUrl = await waitForOutput(host, /dsh web: (http:\/\/[^\s]+)/, 'built dsh web')
@@ -139,13 +139,13 @@ it('hot-reloads a real client-plugin source edit without refreshing the page', a
       // In-page code: an import would not survive serialization, and the page
       // entropy source available in every context is getRandomValues.
       const identity = Array.from(crypto.getRandomValues(new Uint8Array(8)), byte => byte.toString(16).padStart(2, '0')).join('')
-      Object.defineProperty(window, '__dshHmrPageIdentity', { value: identity })
+      Object.defineProperty(window, '__rshHmrPageIdentity', { value: identity })
       return identity
     })
 
     await writeFile(sourcePath, updatedSource)
     await page.getByText(newText, { exact: true }).waitFor({ timeout: 30_000 })
-    expect(await page.evaluate(() => (window as Window & { __dshHmrPageIdentity?: string }).__dshHmrPageIdentity))
+    expect(await page.evaluate(() => (window as Window & { __rshHmrPageIdentity?: string }).__rshHmrPageIdentity))
       .toBe(pageIdentity)
     expect(pageErrors).toEqual([])
   } catch (error) {

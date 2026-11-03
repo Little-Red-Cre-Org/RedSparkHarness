@@ -3,7 +3,7 @@ description: "Run a legacy Cordis browser shell that uses the existing Client mo
 kind: "package-library"
 ---
 
-# @deepseek-ai/dsh-web-compatibility
+# @redspark/rsh-web-compatibility
 
 English | [中文](README.zh.md)
 
@@ -29,7 +29,7 @@ DesktopHost consumes this package when a product must serve the compatibility pa
 
 ### When to use it
 
-Use the compatibility page for an existing Host that selects Cordis plugins through the Client module table. Use `@deepseek-ai/dsh-web-frontend` when the Host supplies Native module selection and wants a Cordis-free page.
+Use the compatibility page for an existing Host that selects Cordis plugins through the Client module table. Use `@redspark/rsh-web-frontend` when the Host supplies Native module selection and wants a Cordis-free page.
 
 ### Entry point
 
@@ -37,15 +37,15 @@ The smallest import creates the browser entry; the Host provides its mount point
 
 ```ts ignore-check
 // Client-only entry: the Host aggregate cannot compile this package's Client declarations.
-import { AppWebEntry } from '@deepseek-ai/dsh-web-compatibility'
+import { AppWebEntry } from '@redspark/rsh-web-compatibility'
 
 const entry = new AppWebEntry(document.getElementById('root')!)
 void entry.run()
 ```
 
-`run()` resolves after the application mounts or the boot page reports a failure. A Host that embeds this entry in a separate page must import `@deepseek-ai/dsh-client-web/base.css` from its browser entry.
+`run()` resolves after the application mounts or the boot page reports a failure. A Host that embeds this entry in a separate page must import `@redspark/rsh-client-web/base.css` from its browser entry.
 
-Run `pnpm --filter @deepseek-ai/dsh-web-compatibility run build` to build `dist/index.html`. Run `pnpm --filter @deepseek-ai/dsh-web-compatibility run build:preview` to build the worker preview. `pnpm run build:web` builds the Native and compatibility distributions in sequence.
+Run `pnpm --filter @redspark/rsh-web-compatibility run build` to build `dist/index.html`. Run `pnpm --filter @redspark/rsh-web-compatibility run build:preview` to build the worker preview. `pnpm run build:web` builds the Native and compatibility distributions in sequence.
 
 -----
 

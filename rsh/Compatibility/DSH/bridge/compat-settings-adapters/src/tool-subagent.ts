@@ -1,6 +1,6 @@
-import type { Context } from '@deepseek-ai/cordis'
-import type {} from '@deepseek-ai/dsh-compat-settings-definition'
-import type {} from '@deepseek-ai/dsh-tool-subagent'
+import type { Context } from '@redspark/cordis'
+import type {} from '@redspark/rsh-compat-settings-definition'
+import type {} from '@redspark/rsh-tool-subagent'
 import { validatedSourceCallbacks } from './settings-entry.ts'
 
 /**
@@ -11,8 +11,8 @@ import { validatedSourceCallbacks } from './settings-entry.ts'
  */
 export async function apply(ctx: Context): Promise<void> {
   const [service, settings] = await Promise.all([
-    import('@deepseek-ai/dsh-tool-subagent/model-selection-settings'),
-    import('@deepseek-ai/dsh-tool-subagent/compat-settings'),
+    import('@redspark/rsh-tool-subagent/model-selection-settings'),
+    import('@redspark/rsh-tool-subagent/compat-settings'),
   ]).catch((cause: unknown) => {
     throw new Error('The selected subagent Settings adapter requires its Engine peer.', { cause })
   })

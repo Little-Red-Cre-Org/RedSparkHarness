@@ -5,7 +5,7 @@ import { RunTiming } from '../src/client/RunTiming.tsx'
 import { zh, type SchedulerKey } from '../src/client/locales.ts'
 import type { Run } from '../src/types.ts'
 import type { SchedulerSnapshot } from '../src/gui-types.ts'
-import { brandString } from '@deepseek-ai/dsh-brand'
+import { brandString } from '@redspark/rsh-brand'
 
 afterEach(cleanup)
 const t = (key: SchedulerKey): string => zh[key]

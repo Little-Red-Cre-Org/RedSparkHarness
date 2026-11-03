@@ -1,5 +1,5 @@
 {
-  "name": "@deepseek-ai/dsh-desktop-host",
+  "name": "@redspark/rsh-desktop-host",
   "description": "Private upstream-Node host process for the Electron desktop application",
   "version": "1.0.0",
   "private": true,
@@ -11,14 +11,14 @@
     "lib/types/**/*.d.ts"
   ],
   "dependencies": {
-    "@deepseek-ai/dsh": "workspace:^",
-    "@deepseek-ai/dsh-client-connection": "workspace:^",
-    "@deepseek-ai/dsh-native-web-assets": "workspace:^",
-    "@deepseek-ai/dsh-native-runtime": "workspace:^",
-    "@deepseek-ai/dsh-native-web-session-controller": "workspace:^"
+    "@redspark/rsh": "workspace:^",
+    "@redspark/rsh-client-connection": "workspace:^",
+    "@redspark/rsh-native-web-assets": "workspace:^",
+    "@redspark/rsh-native-runtime": "workspace:^",
+    "@redspark/rsh-native-web-session-controller": "workspace:^"
   },
   "optionalDependencies": {
-    "@deepseek-ai/dsh-desktop-host-compatibility": "workspace:^"
+    "@redspark/rsh-desktop-host-compatibility": "workspace:^"
   },
   "exports": {
     "./native-host": {

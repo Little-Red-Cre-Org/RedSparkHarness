@@ -3,7 +3,7 @@ description: "Records what a Session's context is made of and how it grew, as th
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-context-insight
+# @redspark/rsh-context-insight
 
 English | [中文](README.zh.md)
 

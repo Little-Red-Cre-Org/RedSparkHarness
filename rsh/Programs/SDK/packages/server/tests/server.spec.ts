@@ -1,21 +1,21 @@
-import { createUserMessage, LlmAdapter, ReasoningEffortId } from '@deepseek-ai/dsh-llm'
-import type { GenerateOptions, LlmResolvedModelInfo, StreamChunk } from '@deepseek-ai/dsh-llm'
+import { createUserMessage, LlmAdapter, ReasoningEffortId } from '@redspark/rsh-llm'
+import type { GenerateOptions, LlmResolvedModelInfo, StreamChunk } from '@redspark/rsh-llm'
 import { createServer } from 'node:http'
 import type { IncomingMessage, Server, ServerResponse } from 'node:http'
 import { mkdtemp, rm } from 'node:fs/promises'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { Context } from '@deepseek-ai/cordis'
-import AgentRegistry, { type Agent, type AgentHandle } from '@deepseek-ai/dsh-agent'
-import AgentLoop from '@deepseek-ai/dsh-agent-loop'
-import { mountAgentLoopTestDependencies } from '@deepseek-ai/dsh-agent-loop-testkit'
+import { Context } from '@redspark/cordis'
+import AgentRegistry, { type Agent, type AgentHandle } from '@redspark/rsh-agent'
+import AgentLoop from '@redspark/rsh-agent-loop'
+import { mountAgentLoopTestDependencies } from '@redspark/rsh-agent-loop-testkit'
 
-import SessionStore, { SessionId } from '@deepseek-ai/dsh-session'
-import JsonlSessionPersistence from '@deepseek-ai/dsh-session-persistence-jsonl'
-import * as LlmDeepSeek from '@deepseek-ai/dsh-llm-deepseek'
-import SubagentRuntime, { type SubagentResult, type SubagentRunEndInfo } from '@deepseek-ai/dsh-subagent'
-import type { JsonRpcTransportPeer, NativeStagedFileReceiptId } from '@deepseek-ai/dsh-sdk-protocol'
+import SessionStore, { SessionId } from '@redspark/rsh-session'
+import JsonlSessionPersistence from '@redspark/rsh-session-persistence-jsonl'
+import * as LlmDeepSeek from '@redspark/rsh-llm-deepseek'
+import SubagentRuntime, { type SubagentResult, type SubagentRunEndInfo } from '@redspark/rsh-subagent'
+import type { JsonRpcTransportPeer, NativeStagedFileReceiptId } from '@redspark/rsh-sdk-protocol'
 import { HarnessSdkJsonRpcServer } from '../src/index.ts'
 
 class FakeTransport implements JsonRpcTransportPeer {
@@ -129,7 +129,7 @@ describe('HarnessSdkJsonRpcServer', () => {
         reasoningEffort: 'max',
         maxTokens: 321,
       }) as { serverInfo: { name: string } }
-      expect(init.serverInfo.name).toBe('deepseek-harness-sdk-runtime')
+      expect(init.serverInfo.name).toBe('redspark-harness-sdk-runtime')
 
       const receipt = await server.handleRequest('session/prompt', {
         sessionId: 'main',

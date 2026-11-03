@@ -1,5 +1,5 @@
 {
-  "name": "@deepseek-ai/dsh-tool-subagent",
+  "name": "@redspark/rsh-tool-subagent",
   "description": "Model-facing subagent delegation tool over the ctx.subagents seam",
   "version": "1.0.0",
   "publishConfig": {
@@ -48,47 +48,47 @@
   ],
   "license": "MIT",
   "peerDependencies": {
-    "@deepseek-ai/dsh-agent": "workspace:^",
-    "@deepseek-ai/dsh-invariants": "workspace:^",
-    "@deepseek-ai/dsh-session": "workspace:^",
-    "@deepseek-ai/dsh-session-projection": "workspace:^",
-    "@deepseek-ai/dsh-scope": "workspace:^",
-    "@deepseek-ai/dsh-subagent": "workspace:^",
-    "@deepseek-ai/dsh-system-prompt": "workspace:^",
-    "@deepseek-ai/dsh-jobs": "workspace:^",
-    "@deepseek-ai/dsh-tools": "workspace:^",
-    "@deepseek-ai/cordis": "workspace:^"
+    "@redspark/rsh-agent": "workspace:^",
+    "@redspark/rsh-invariants": "workspace:^",
+    "@redspark/rsh-session": "workspace:^",
+    "@redspark/rsh-session-projection": "workspace:^",
+    "@redspark/rsh-scope": "workspace:^",
+    "@redspark/rsh-subagent": "workspace:^",
+    "@redspark/rsh-system-prompt": "workspace:^",
+    "@redspark/rsh-jobs": "workspace:^",
+    "@redspark/rsh-tools": "workspace:^",
+    "@redspark/cordis": "workspace:^"
   },
   "dependencies": {
-    "@deepseek-ai/schemastery": "workspace:^",
+    "@redspark/schemastery": "workspace:^",
     "zod": "^4.4.3",
-    "@deepseek-ai/dsh-native-subagent": "workspace:^",
-    "@deepseek-ai/dsh-native-runtime": "workspace:^",
-    "@deepseek-ai/dsh-native-tools": "workspace:^",
-    "@deepseek-ai/dsh-llm": "workspace:^",
-    "@deepseek-ai/dsh-util-values": "workspace:^",
-    "@deepseek-ai/dsh-native-tool-jobs": "workspace:^",
-    "@deepseek-ai/dsh-native-jobs": "workspace:^"
+    "@redspark/rsh-native-subagent": "workspace:^",
+    "@redspark/rsh-native-runtime": "workspace:^",
+    "@redspark/rsh-native-tools": "workspace:^",
+    "@redspark/rsh-llm": "workspace:^",
+    "@redspark/rsh-util-values": "workspace:^",
+    "@redspark/rsh-native-tool-jobs": "workspace:^",
+    "@redspark/rsh-native-jobs": "workspace:^"
   },
   "devDependencies": {
-    "@deepseek-ai/cordis-plugin-loader": "workspace:^",
-    "@deepseek-ai/dsh-agent": "workspace:^",
-    "@deepseek-ai/dsh-invariants": "workspace:^",
-    "@deepseek-ai/dsh-session": "workspace:^",
-    "@deepseek-ai/dsh-scope": "workspace:^",
-    "@deepseek-ai/dsh-session-persistence": "workspace:^",
-    "@deepseek-ai/dsh-session-persistence-jsonl": "workspace:^",
-    "@deepseek-ai/dsh-settings": "workspace:^",
-    "@deepseek-ai/dsh-compat-settings-adapters": "workspace:^",
-    "@deepseek-ai/dsh-subagent": "workspace:^",
-    "@deepseek-ai/dsh-subagent-spawn-in-process": "workspace:^",
-    "@deepseek-ai/dsh-system-prompt": "workspace:^",
-    "@deepseek-ai/dsh-jobs": "workspace:^",
-    "@deepseek-ai/dsh-jobs-local": "workspace:^",
-    "@deepseek-ai/dsh-tool-jobs": "workspace:^",
-    "@deepseek-ai/dsh-tools": "workspace:^",
-    "@deepseek-ai/cordis": "workspace:^",
-    "@deepseek-ai/dsh-session-projection": "workspace:^"
+    "@redspark/cordis-plugin-loader": "workspace:^",
+    "@redspark/rsh-agent": "workspace:^",
+    "@redspark/rsh-invariants": "workspace:^",
+    "@redspark/rsh-session": "workspace:^",
+    "@redspark/rsh-scope": "workspace:^",
+    "@redspark/rsh-session-persistence": "workspace:^",
+    "@redspark/rsh-session-persistence-jsonl": "workspace:^",
+    "@redspark/rsh-settings": "workspace:^",
+    "@redspark/rsh-compat-settings-adapters": "workspace:^",
+    "@redspark/rsh-subagent": "workspace:^",
+    "@redspark/rsh-subagent-spawn-in-process": "workspace:^",
+    "@redspark/rsh-system-prompt": "workspace:^",
+    "@redspark/rsh-jobs": "workspace:^",
+    "@redspark/rsh-jobs-local": "workspace:^",
+    "@redspark/rsh-tool-jobs": "workspace:^",
+    "@redspark/rsh-tools": "workspace:^",
+    "@redspark/cordis": "workspace:^",
+    "@redspark/rsh-session-projection": "workspace:^"
   },
   "dsh": {
     "native": {
@@ -110,34 +110,34 @@
     }
   },
   "peerDependenciesMeta": {
-    "@deepseek-ai/dsh-agent": {
+    "@redspark/rsh-agent": {
       "optional": true
     },
-    "@deepseek-ai/dsh-invariants": {
+    "@redspark/rsh-invariants": {
       "optional": true
     },
-    "@deepseek-ai/dsh-session": {
+    "@redspark/rsh-session": {
       "optional": true
     },
-    "@deepseek-ai/dsh-session-projection": {
+    "@redspark/rsh-session-projection": {
       "optional": true
     },
-    "@deepseek-ai/dsh-scope": {
+    "@redspark/rsh-scope": {
       "optional": true
     },
-    "@deepseek-ai/dsh-subagent": {
+    "@redspark/rsh-subagent": {
       "optional": true
     },
-    "@deepseek-ai/dsh-system-prompt": {
+    "@redspark/rsh-system-prompt": {
       "optional": true
     },
-    "@deepseek-ai/dsh-jobs": {
+    "@redspark/rsh-jobs": {
       "optional": true
     },
-    "@deepseek-ai/dsh-tools": {
+    "@redspark/rsh-tools": {
       "optional": true
     },
-    "@deepseek-ai/cordis": {
+    "@redspark/cordis": {
       "optional": true
     }
   }

@@ -1,5 +1,5 @@
 import { once } from 'node:events'
-import { Context } from '@deepseek-ai/cordis'
+import { Context } from '@redspark/cordis'
 import {
   CommandExitError,
   FileNotFoundError,
@@ -7,10 +7,10 @@ import {
   type CommandHandle,
   type CommandResult,
   type Sandbox,
-} from '@deepseek-ai/dsh-e2b'
-import type E2BRuntime from '@deepseek-ai/dsh-e2b'
-import type { SubprocessSpawnSpec } from '@deepseek-ai/dsh-subprocess'
-import E2BSubprocessRuntime from '@deepseek-ai/dsh-subprocess-e2b'
+} from '@redspark/rsh-e2b'
+import type E2BRuntime from '@redspark/rsh-e2b'
+import type { SubprocessSpawnSpec } from '@redspark/rsh-subprocess'
+import E2BSubprocessRuntime from '@redspark/rsh-subprocess-e2b'
 import { E2BBase64Decoder, E2B_OUTPUT_COMPLETE_FRAME, E2BOutputReader } from '../src/output.ts'
 import { E2BSubprocessHandle } from '../src/process.ts'
 import { describe, expect, it, vi } from 'vitest'
@@ -395,7 +395,7 @@ describe('E2BSubprocessHandle', () => {
         'FOO-BAR': 'hyphen-value',
         '--split-string': 'literal-value',
         DEEPSEEK_API_KEY: 'explicit-secret',
-        DSH_MODE: 'test',
+        RSH_MODE: 'test',
         // The seam's tombstone: an explicit undefined removes the ambient entry.
         KEEP: undefined,
       },
@@ -411,26 +411,26 @@ describe('E2BSubprocessHandle', () => {
     expect(controlEnvs).toEqual({
       TERM: 'dumb',
       NPM_TOKEN: '',
-      DSH_STALE: '',
+      RSH_STALE: '',
       HOME: controlEnvs?.HOME,
     })
-    const command = fake.commandsSeen.find(value => value.includes('exec "$dsh_e2b_env_bin" -i'))!
-    expect(command).toContain('"$dsh_e2b_setsid" --wait -- "$dsh_e2b_bash" -c')
+    const command = fake.commandsSeen.find(value => value.includes('exec "$rsh_e2b_env_bin" -i'))!
+    expect(command).toContain('"$rsh_e2b_setsid" --wait -- "$rsh_e2b_bash" -c')
     expect(command).not.toContain('DEEPSEEK_API_KEY')
-    expect(command).not.toContain('DSH_MODE')
+    expect(command).not.toContain('RSH_MODE')
     expect(command).not.toContain('FOO-BAR')
     expect(command).not.toContain('explicit-secret')
     expect(command).not.toContain('hyphen-value')
-    expect(command).not.toContain('${!dsh_e2b_name}')
+    expect(command).not.toContain('${!rsh_e2b_name}')
     const environmentProbe = fake.commandsSeen.find(value => value.includes('env -0 | base64'))
     expect(environmentProbe).toContain('getent passwd "$(id -u)"')
-    expect(environmentProbe).toContain('test -n "$dsh_e2b_home" -a -d "$dsh_e2b_home"')
+    expect(environmentProbe).toContain('test -n "$rsh_e2b_home" -a -d "$rsh_e2b_home"')
     expect(environmentProbe).not.toContain('"$PWD"')
     expect(command).toContain('mapfile -d')
-    expect(command).toContain('dsh_e2b_node="$(command -v node)"')
-    expect(command).toContain('"$dsh_e2b_env_bin" -i "$dsh_e2b_node" -e')
-    expect(command).toContain('"$dsh_e2b_env_bin" -i -- "${dsh_e2b_env[@]}" "$@"')
-    expect(command).toContain('exec "$dsh_e2b_env_bin" -i -- "${dsh_e2b_env[@]}"')
+    expect(command).toContain('rsh_e2b_node="$(command -v node)"')
+    expect(command).toContain('"$rsh_e2b_env_bin" -i "$rsh_e2b_node" -e')
+    expect(command).toContain('"$rsh_e2b_env_bin" -i -- "${rsh_e2b_env[@]}" "$@"')
+    expect(command).toContain('exec "$rsh_e2b_env_bin" -i -- "${rsh_e2b_env[@]}"')
     expect(command).toContain('>&2 2>/dev/null')
     expect(command).not.toContain('2>/dev/null >&2')
     expect(command).toContain('base64')
@@ -762,10 +762,10 @@ describe('E2BSubprocessHandle', () => {
     await handle.done
     expect(handle.collected.stdout!.readFrom(0)).toEqual({ text: 'cd', nextOffset: 4, lossy: true })
     expect(fake.removed).toContain('/runtime/oversize/stdout.log')
-    const command = fake.commandsSeen.find(value => value.includes('dsh_e2b_tee='))!
-    expect(command).toContain('"$dsh_e2b_head" -c 3')
+    const command = fake.commandsSeen.find(value => value.includes('rsh_e2b_tee='))!
+    expect(command).toContain('"$rsh_e2b_head" -c 3')
     expect(command).toContain('/runtime/oversize/stdout.log')
-    expect(command).toContain('"$dsh_e2b_tee" --output-error=warn-nopipe')
+    expect(command).toContain('"$rsh_e2b_tee" --output-error=warn-nopipe')
     expect(command).not.toContain('tee -a')
   })
 

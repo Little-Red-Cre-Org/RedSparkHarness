@@ -4,4 +4,4 @@ export {
   PORTABLE_RESERVED_WORDS,
   RESERVED_BINDING_GLOBALS,
   RESERVED_ERROR_MEMBERS,
-} from '@deepseek-ai/dsh-code-runtime-definition'
+} from '@redspark/rsh-code-runtime-definition'

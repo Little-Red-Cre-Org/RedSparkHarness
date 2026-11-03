@@ -1,20 +1,20 @@
 /**
  * Basic replay-aware compaction backend.
  *
- * @module @deepseek-ai/dsh-compaction-basic
+ * @module @redspark/rsh-compaction-basic
  */
 
-import { Context } from '@deepseek-ai/cordis'
-import z from '@deepseek-ai/schemastery'
-import { CompactionEngine, ManualCompactionError } from '@deepseek-ai/dsh-compaction'
-import type { CompactionResult, CompactionTrigger } from '@deepseek-ai/dsh-compaction'
-import type {} from '@deepseek-ai/dsh-token-meter'
-import type { Session, SessionSeq } from '@deepseek-ai/dsh-session'
-import { CONTEXT_WINDOW_EXCEEDED_CODE } from '@deepseek-ai/dsh-llm'
-import type { Agent, PreStepDecision } from '@deepseek-ai/dsh-agent'
-import type { CommandId } from '@deepseek-ai/dsh-commands/brand'
+import { Context } from '@redspark/cordis'
+import z from '@redspark/schemastery'
+import { CompactionEngine, ManualCompactionError } from '@redspark/rsh-compaction'
+import type { CompactionResult, CompactionTrigger } from '@redspark/rsh-compaction'
+import type {} from '@redspark/rsh-token-meter'
+import type { Session, SessionSeq } from '@redspark/rsh-session'
+import { CONTEXT_WINDOW_EXCEEDED_CODE } from '@redspark/rsh-llm'
+import type { Agent, PreStepDecision } from '@redspark/rsh-agent'
+import type { CommandId } from '@redspark/rsh-commands/brand'
 // Type-only: makes the optional sibling service available to `ctx.get()`.
-import type {} from '@deepseek-ai/dsh-compaction-tool-result-pruner'
+import type {} from '@redspark/rsh-compaction-tool-result-pruner'
 import { resolveConfig, resolveTargetPolicy } from './config.ts'
 import {
   compactForStepPressure,

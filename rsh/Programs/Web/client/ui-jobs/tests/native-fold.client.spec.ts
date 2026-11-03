@@ -1,8 +1,8 @@
 /** Native job-list fold: every frame kind must land in the right Session bucket. */
 import { describe, expect, it } from 'vitest'
 import { applyJobsFrame } from '../src/native-ui.tsx'
-import type { NativeSessionJob, NativeSessionJobsFrame } from '@deepseek-ai/dsh-client-native-session/jobs-types'
-import type { SessionId } from '@deepseek-ai/dsh-session/types'
+import type { NativeSessionJob, NativeSessionJobsFrame } from '@redspark/rsh-client-native-session/jobs-types'
+import type { SessionId } from '@redspark/rsh-session/types'
 
 /** Build one row with only the fields the fold reads. */
 function job(id: string, sessionId: string, over: Partial<NativeSessionJob> = {}): NativeSessionJob {

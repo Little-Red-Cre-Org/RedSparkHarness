@@ -11,9 +11,9 @@
  * Everything below the data source is shared with the Cordis renderers: the
  * same chips, the same disclosure, the same file cards and copy.
  */
-import type { TranslateNS } from '@deepseek-ai/dsh-client-ui-slots'
+import type { TranslateNS } from '@redspark/rsh-client-ui-slots'
 import type { ReactElement } from 'react'
-import { en as commonEn, formatLocaleTemplate, zh as commonZh } from '@deepseek-ai/dsh-client-locale/dictionary'
+import { en as commonEn, formatLocaleTemplate, zh as commonZh } from '@redspark/rsh-client-locale/dictionary'
 import { PresentRow } from './client/PresentRow.tsx'
 import { PresentedFileCard } from './client/PresentedFileCard.tsx'
 import { ProducedFiles } from './client/ProducedFiles.tsx'
@@ -21,13 +21,13 @@ import type { PresentedOpenPhase } from './client/present-open.ts'
 import type { PresentedPath } from './client/turn-deliverables.ts'
 import { en, NS, zh, type DeliverablesKey } from './client/locales.ts'
 import type { PresentedAction, PresentedHost } from './presented.ts'
-import type { ToolCallViewProps } from '@deepseek-ai/dsh-client-ui-tool/client'
+import type { ToolCallViewProps } from '@redspark/rsh-client-ui-tool/client'
 
 export { NS, en, zh, type DeliverablesKey } from './client/locales.ts'
 export type { PresentedOpenPhase } from './client/present-open.ts'
 export type { PresentedPath } from './client/turn-deliverables.ts'
 export type { PresentedAction, PresentedHost } from './presented.ts'
-export type { ToolCallBlock, ToolResultNode, RunningToolCall } from '@deepseek-ai/dsh-client-ui-tool/native'
+export type { ToolCallBlock, ToolResultNode, RunningToolCall } from '@redspark/rsh-client-ui-tool/native'
 
 /** Props of the changed-files row: selector-matched paths arrive from the caller. */
 export interface NativeProducedFilesProps {

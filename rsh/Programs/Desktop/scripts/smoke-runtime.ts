@@ -19,11 +19,11 @@ export async function smokeDesktopRuntime(root: string, node: string, runtime: D
     ? join(dirname(node), '..', 'bash', 'usr', 'bin') : undefined, process.env)
   const home = mkdtempSync(join(tmpdir(), 'dsh-desktop-smoke-'))
   const profile = join(home, 'profiles', 'desktop')
-  const host = new DesktopHostProcess(node, root, profile, undefined, { ...environment, DSH_HOME: home })
+  const host = new DesktopHostProcess(node, root, profile, undefined, { ...environment, RSH_HOME: home })
   try {
     createNativeDesktopProfile(profile, home, process.platform, {}, 'none')
     const ready = await host.start()
-    if (ready.dshVersion !== runtime.release.version) throw new Error('desktop runtime: Host reported another dsh release')
+    if (ready.rshVersion !== runtime.release.version) throw new Error('desktop runtime: Host reported another dsh release')
     const response = await host.fetch(new Request('dsh-app://app/'))
     if (response.status !== 200 || !(await response.text()).includes('<html')) {
       throw new Error('desktop runtime: packaged frontend smoke failed')

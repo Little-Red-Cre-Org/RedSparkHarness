@@ -3,7 +3,7 @@ description: "子进程服务的本地宿主提供方：在宿主机器上运行
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-subprocess-local
+# @redspark/rsh-subprocess-local
 
 [English](README.md) | 中文
 
@@ -35,8 +35,8 @@ kind: "package-reference"
 在与消费方相同的组合中加载本提供方。它没有任何配置字段：每项选择都随 spawn 请求到达，因此随部署变化的决策留在调用方的配置里。
 
 ```yaml
-- name: '@deepseek-ai/dsh-subprocess-local'
-- name: '@deepseek-ai/dsh-bash-local'
+- name: '@redspark/rsh-subprocess-local'
+- name: '@redspark/rsh-bash-local'
 ```
 
 ### 解析可执行文件
@@ -113,7 +113,7 @@ spill 文件以 `0600` 权限、`O_EXCL` 与随机名称在 `0700` 每进程目�
 
 当提供方级约定不够用时阅读以下页面。它们从穷尽式类型参考逐步进入抽象约定，以及宿主机制背后的决策。
 
-- [子进程子系统](../../../Docs/subsystems/subprocess.zh.md)——spawn spec、输出读取器、结果与完整的 `DSH_*` 环境。
+- [子进程子系统](../../../Docs/subsystems/subprocess.zh.md)——spawn spec、输出读取器、结果与完整的 `RSH_*` 环境。
 - [dsh-subprocess](../subprocess/README.zh.md)——本提供方实现的抽象约定。
 - [dsh-bash-local](../../../Modules/Official/shell/bash-local/README.zh.md)——最大的消费方及其请求的具体 stdio 形态。
 - [subprocess seam Agent Note](../../../../.agents/notes/archived/architecture/2026-07-26-subprocess-seam.md)——进程部分为何成为独立的 seam。

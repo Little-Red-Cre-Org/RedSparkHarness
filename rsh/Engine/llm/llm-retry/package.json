@@ -1,5 +1,5 @@
 {
-  "name": "@deepseek-ai/dsh-llm-retry",
+  "name": "@redspark/rsh-llm-retry",
   "description": "Provider-routed LLM request retry policy for the RedSpark Harness",
   "version": "1.0.0",
   "publishConfig": {
@@ -56,59 +56,59 @@
   ],
   "license": "MIT",
   "peerDependencies": {
-    "@deepseek-ai/dsh-brand": "workspace:^",
-    "@deepseek-ai/dsh-agent": "workspace:^",
-    "@deepseek-ai/dsh-invariants": "workspace:^",
-    "@deepseek-ai/dsh-llm": "workspace:^",
-    "@deepseek-ai/dsh-session": "workspace:^",
-    "@deepseek-ai/dsh-timeout": "workspace:^",
-    "@deepseek-ai/cordis": "workspace:^",
-    "@deepseek-ai/dsh-session-projection": "workspace:^",
-    "@deepseek-ai/dsh-native-runtime": "workspace:^",
-    "@deepseek-ai/dsh-native-model-execution": "workspace:^"
+    "@redspark/rsh-brand": "workspace:^",
+    "@redspark/rsh-agent": "workspace:^",
+    "@redspark/rsh-invariants": "workspace:^",
+    "@redspark/rsh-llm": "workspace:^",
+    "@redspark/rsh-session": "workspace:^",
+    "@redspark/rsh-timeout": "workspace:^",
+    "@redspark/cordis": "workspace:^",
+    "@redspark/rsh-session-projection": "workspace:^",
+    "@redspark/rsh-native-runtime": "workspace:^",
+    "@redspark/rsh-native-model-execution": "workspace:^"
   },
   "dependencies": {
-    "@deepseek-ai/schemastery": "workspace:^",
+    "@redspark/schemastery": "workspace:^",
     "zod": "^4.4.3"
   },
   "devDependencies": {
-    "@deepseek-ai/dsh-brand": "workspace:^",
-    "@deepseek-ai/cordis-plugin-include": "workspace:^",
-    "@deepseek-ai/cordis-plugin-loader": "workspace:^",
-    "@deepseek-ai/dsh-agent": "workspace:^",
-    "@deepseek-ai/dsh-agent-loop": "workspace:^",
-    "@deepseek-ai/dsh-agent-loop-testkit": "workspace:^",
-    "@deepseek-ai/dsh-invariants": "workspace:^",
-    "@deepseek-ai/dsh-llm": "workspace:^",
-    "@deepseek-ai/dsh-llm-deepseek": "workspace:^",
-    "@deepseek-ai/dsh-llm-mock-server": "workspace:^",
-    "@deepseek-ai/dsh-session": "workspace:^",
-    "@deepseek-ai/dsh-session-projection": "workspace:^",
-    "@deepseek-ai/dsh-session-persistence-jsonl": "workspace:^",
-    "@deepseek-ai/dsh-system-prompt": "workspace:^",
-    "@deepseek-ai/dsh-timeout": "workspace:^",
-    "@deepseek-ai/dsh-tools": "workspace:^",
-    "@deepseek-ai/cordis": "workspace:^",
-    "@deepseek-ai/dsh-native-runtime": "workspace:^",
-    "@deepseek-ai/dsh-native-model-execution": "workspace:^"
+    "@redspark/rsh-brand": "workspace:^",
+    "@redspark/cordis-plugin-include": "workspace:^",
+    "@redspark/cordis-plugin-loader": "workspace:^",
+    "@redspark/rsh-agent": "workspace:^",
+    "@redspark/rsh-agent-loop": "workspace:^",
+    "@redspark/rsh-agent-loop-testkit": "workspace:^",
+    "@redspark/rsh-invariants": "workspace:^",
+    "@redspark/rsh-llm": "workspace:^",
+    "@redspark/rsh-llm-deepseek": "workspace:^",
+    "@redspark/rsh-llm-mock-server": "workspace:^",
+    "@redspark/rsh-session": "workspace:^",
+    "@redspark/rsh-session-projection": "workspace:^",
+    "@redspark/rsh-session-persistence-jsonl": "workspace:^",
+    "@redspark/rsh-system-prompt": "workspace:^",
+    "@redspark/rsh-timeout": "workspace:^",
+    "@redspark/rsh-tools": "workspace:^",
+    "@redspark/cordis": "workspace:^",
+    "@redspark/rsh-native-runtime": "workspace:^",
+    "@redspark/rsh-native-model-execution": "workspace:^"
   },
   "peerDependenciesMeta": {
-    "@deepseek-ai/dsh-agent": {
+    "@redspark/rsh-agent": {
       "optional": true
     },
-    "@deepseek-ai/dsh-invariants": {
+    "@redspark/rsh-invariants": {
       "optional": true
     },
-    "@deepseek-ai/cordis": {
+    "@redspark/cordis": {
       "optional": true
     },
-    "@deepseek-ai/dsh-session-projection": {
+    "@redspark/rsh-session-projection": {
       "optional": true
     },
-    "@deepseek-ai/dsh-native-runtime": {
+    "@redspark/rsh-native-runtime": {
       "optional": true
     },
-    "@deepseek-ai/dsh-native-model-execution": {
+    "@redspark/rsh-native-model-execution": {
       "optional": true
     }
   }

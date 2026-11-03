@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { Context } from '@deepseek-ai/cordis'
+import { Context } from '@redspark/cordis'
 import SystemPrompt, {
   AssembleContext, PromptAssembly, renderContextSnapshot, renderPrompt,
-} from '@deepseek-ai/dsh-system-prompt'
-import type { PromptContextOrderName, PromptSectionOrderName } from '@deepseek-ai/dsh-system-prompt'
+} from '@redspark/rsh-system-prompt'
+import type { PromptContextOrderName, PromptSectionOrderName } from '@redspark/rsh-system-prompt'
 
 /**
  * Every assembly carries the plugin's own built-ins — `harness:identity`

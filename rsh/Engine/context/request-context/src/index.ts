@@ -1,13 +1,13 @@
 /** Cordis-free Native Provider for durable model-request context. */
-import { NativeContributions, type NativeScope } from '@deepseek-ai/dsh-native-runtime'
-import type { UserMessage } from '@deepseek-ai/dsh-llm/native'
+import { NativeContributions, type NativeScope } from '@redspark/rsh-native-runtime'
+import type { UserMessage } from '@redspark/rsh-llm/native'
 import type {
   NativeRequestContextAcceptance,
   NativeRequestContextProvider,
   NativeRequestContextRegistration,
   NativeRequestContextRequest,
   NativeRequestContexts,
-} from '@deepseek-ai/dsh-request-context-definition'
+} from '@redspark/rsh-request-context-definition'
 
 interface ProviderEntry {
   readonly provider: NativeRequestContextProvider

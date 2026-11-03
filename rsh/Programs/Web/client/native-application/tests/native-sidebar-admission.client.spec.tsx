@@ -2,15 +2,15 @@
 /** Sidebar Session admission against newer navigation, cancelled trust prompts, and a late Workspace baseline. */
 import { cleanup, fireEvent, screen, waitFor } from '@testing-library/react'
 import { afterEach, expect, it, vi } from 'vitest'
-import { NativeHost, NativeScope, resolveInstallation, type NativePlugin } from '@deepseek-ai/dsh-native-runtime'
-import { SESSION_FORMAT_VERSION, SessionSeq, type SessionHeader, type SessionId } from '@deepseek-ai/dsh-session/types'
+import { NativeHost, NativeScope, resolveInstallation, type NativePlugin } from '@redspark/rsh-native-runtime'
+import { SESSION_FORMAT_VERSION, SessionSeq, type SessionHeader, type SessionId } from '@redspark/rsh-session/types'
 import type {
   NativePendingSubmission, NativeSubmissionsSnapshot, NativeScheduleClient, NativeSessionClient,
   NativeSessionListFrame, NativeSessionListItem, NativeSettingsEvent,
-} from '@deepseek-ai/dsh-client-native-session/native'
+} from '@redspark/rsh-client-native-session/native'
 import type {
   NativeDirectoryPickerClient, NativeWorkspace, NativeWorkspaceBaseline, NativeWorkspaceClient, NativeWorkspaceFrame,
-} from '@deepseek-ai/dsh-client-native-session/workspaces'
+} from '@redspark/rsh-client-native-session/workspaces'
 import { plugin as application } from '../src/native.ts'
 import { plugin as locale } from '../../locale/src/native.ts'
 import { plugin as renderer } from '../../ui-renderer/src/native.ts'
@@ -69,6 +69,11 @@ const sessionProvider = (
   resolve: () => (context) => {
     const schedules: NativeScheduleClient = {
       list: async () => [],
+      // The schedule catalog is read-only in this shell, so the change verbs
+      // exist to satisfy the client contract; they are never reached here.
+      pause: async () => [],
+      resume: async () => [],
+      delete: async () => [],
       follow: async function* () { yield { type: 'baseline', jobs: [] } },
     }
     context.provide('clientNativeSession', client)
@@ -104,7 +109,7 @@ afterEach(() => {
   cleanup()
   document.body.replaceChildren()
   localStorage.clear()
-  document.head.querySelectorAll('style[data-plugin="@deepseek-ai/dsh-client-ui-theme"], meta[name="theme-color"]')
+  document.head.querySelectorAll('style[data-plugin="@redspark/rsh-client-ui-theme"], meta[name="theme-color"]')
     .forEach((element) => { element.remove() })
   document.documentElement.removeAttribute('lang')
   document.documentElement.style.removeProperty('color-scheme')
@@ -117,7 +122,7 @@ afterEach(() => {
 /** Mount the native shell over three Sessions in one Workspace; the Workspace baseline waits for `baselineGate`. */
 async function harness(baselineGate: Promise<void> = Promise.resolve()) {
   localStorage.setItem('dsh.native.onboarding.welcome', '2026-08-13.1')
-  vi.stubEnv('DSH_CLIENT_TITLE', 'Product')
+  vi.stubEnv('RSH_CLIENT_TITLE', 'Product')
   vi.stubGlobal('innerWidth', 1280)
   vi.stubGlobal('ResizeObserver', ResizeObserverStub)
   const media = {

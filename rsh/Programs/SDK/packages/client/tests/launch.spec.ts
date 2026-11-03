@@ -8,10 +8,10 @@ import { fileURLToPath, pathToFileURL } from 'node:url'
 import { afterEach, describe, expect, it } from 'vitest'
 import { HarnessClient } from '../src/client.ts'
 import {
-  installedDshBin,
-  resolveDshNodeLaunchFromManifests,
-  resolveDshBinFromManifests,
-  resolveDshLaunch,
+  installedRshBin,
+  resolveRshNodeLaunchFromManifests,
+  resolveRshBinFromManifests,
+  resolveRshLaunch,
 } from '../src/launch.ts'
 import type { RuntimeProcessOptions } from '../src/launch.ts'
 
@@ -20,7 +20,7 @@ afterEach(() => {
   for (const path of cleanups.splice(0)) rmSync(path, { recursive: true, force: true })
 })
 
-function manifestPair(dsh: object, client: object): { dshUrl: string; clientUrl: string; root: string } {
+function manifestPair(dsh: object, client: object): { rshUrl: string; clientUrl: string; root: string } {
   const root = mkdtempSync(join(tmpdir(), 'dsh-sdk-manifests-'))
   cleanups.push(root)
   const dshPath = join(root, 'dsh-package.json')
@@ -28,7 +28,7 @@ function manifestPair(dsh: object, client: object): { dshUrl: string; clientUrl:
   writeFileSync(dshPath, JSON.stringify({ dsh: { nativeProfileTemplates: [] }, ...dsh }))
   writeFileSync(clientPath, JSON.stringify(client))
   return {
-    dshUrl: pathToFileURL(dshPath).href,
+    rshUrl: pathToFileURL(dshPath).href,
     clientUrl: pathToFileURL(clientPath).href,
     root,
   }
@@ -36,9 +36,9 @@ function manifestPair(dsh: object, client: object): { dshUrl: string; clientUrl:
 
 describe('SDK dsh launch resolution', () => {
   it('resolves the same-version installed dsh entry by default', () => {
-    const bin = installedDshBin()
+    const bin = installedRshBin()
     expect(bin.endsWith(join('rsh', 'Programs', 'CLI', 'lib', 'bin.js'))).toBe(true)
-    const launch = resolveDshLaunch()
+    const launch = resolveRshLaunch()
     expect(launch.command).toBe(process.execPath)
     expect(launch.args).toEqual(existsSync(bin)
       ? [bin, '--profile', 'sdk']
@@ -52,20 +52,20 @@ describe('SDK dsh launch resolution', () => {
 
   it('makes every filesystem input absolute before spawn and preserves patch order', () => {
     const caller = resolve('/tmp', 'sdk-launch-caller')
-    const launch = resolveDshLaunch({
-      dshBin: './bin/dsh',
+    const launch = resolveRshLaunch({
+      rshBin: './bin/dsh',
       profile: 'custom-sdk',
       patches: ['./first.yml', '../second.yml'],
-      dshHome: './home',
+      rshHome: './home',
       processCwd: './worker',
-      env: { PATH: '/bin', DSH_HOME: '/stale' },
+      env: { PATH: '/bin', RSH_HOME: '/stale' },
       initializeTimeoutMs: 123,
       requestTimeoutMs: 456,
       shutdownTimeoutMs: 789,
       disposeEofGraceMs: 12,
       disposeGraceMs: 34,
     }, caller)
-    const expectedEnvironment: NodeJS.ProcessEnv = { PATH: '/bin', DSH_HOME: join(caller, 'home') }
+    const expectedEnvironment: NodeJS.ProcessEnv = { PATH: '/bin', RSH_HOME: join(caller, 'home') }
     if (process.platform === 'win32' && process.env.SystemRoot !== undefined) {
       expectedEnvironment.SystemRoot = process.env.SystemRoot
     }
@@ -96,14 +96,14 @@ describe('SDK dsh launch resolution', () => {
     writeFileSync(sourceBin, '')
     writeFileSync(sourceTsconfig, '{}\n')
 
-    expect(resolveDshNodeLaunchFromManifests(pair.dshUrl, pair.clientUrl, {
+    expect(resolveRshNodeLaunchFromManifests(pair.rshUrl, pair.clientUrl, {
       sourceLoaderUrl: 'file:///tsx-loader.mjs',
     }))
       .toEqual({
         nodeArgs: ['--import', 'file:///tsx-loader.mjs', sourceBin],
         environment: { TSX_TSCONFIG_PATH: sourceTsconfig },
       })
-    expect(resolveDshNodeLaunchFromManifests(pair.dshUrl, pair.clientUrl))
+    expect(resolveRshNodeLaunchFromManifests(pair.rshUrl, pair.clientUrl))
       .toEqual({
         nodeArgs: ['--import', import.meta.resolve('tsx/esm'), sourceBin],
         environment: { TSX_TSCONFIG_PATH: sourceTsconfig },
@@ -117,7 +117,7 @@ describe('SDK dsh launch resolution', () => {
     mkdirSync(join(pair.root, 'src'))
     writeFileSync(sourceBin, '')
     writeFileSync(sourceTsconfig, '{}\n')
-    expect(resolveDshNodeLaunchFromManifests(pair.dshUrl, pair.clientUrl, { sourceLoaderUrl: 'file:///tsx-loader.mjs' }))
+    expect(resolveRshNodeLaunchFromManifests(pair.rshUrl, pair.clientUrl, { sourceLoaderUrl: 'file:///tsx-loader.mjs' }))
       .toEqual({
         nodeArgs: ['--import', 'file:///tsx-loader.mjs', sourceBin],
         environment: { TSX_TSCONFIG_PATH: sourceTsconfig },
@@ -138,7 +138,7 @@ describe('SDK dsh launch resolution', () => {
     writeFileSync(sourceManifestPath, JSON.stringify({ version: cliManifest.version,
       bin: `lib/.missing-${randomUUID()}.js`, dsh: cliManifest.dsh }))
     const clientManifestUrl = new URL('../package.json', import.meta.url).href
-    const source = resolveDshNodeLaunchFromManifests(
+    const source = resolveRshNodeLaunchFromManifests(
       pathToFileURL(sourceManifestPath).href,
       clientManifestUrl,
       { sourceLoaderUrl: import.meta.resolve('tsx/esm') },
@@ -146,7 +146,7 @@ describe('SDK dsh launch resolution', () => {
     const launch: RuntimeProcessOptions = {
       command: process.execPath,
       args: [...source.nodeArgs, '--profile', 'sdk'],
-      environment: () => ({ ...process.env, DSH_HOME: home, ...source.environment }),
+      environment: () => ({ ...process.env, RSH_HOME: home, ...source.environment }),
       description: 'dsh profile "sdk" source entry',
       initializeTimeoutMs: 30_000,
       shutdownTimeoutMs: 5_000,
@@ -156,7 +156,7 @@ describe('SDK dsh launch resolution', () => {
       const initialized = await client.initialize({
         cwd: process.cwd(), provider: 'deepseek-official', model: 'deepseek-v4-flash',
       })
-      expect(initialized.serverInfo).toMatchObject({ name: 'deepseek-harness-sdk-runtime' })
+      expect(initialized.serverInfo).toMatchObject({ name: 'redspark-harness-sdk-runtime' })
     } finally {
       await client.close()
     }
@@ -168,7 +168,7 @@ describe('SDK dsh launch resolution', () => {
     mkdirSync(join(pair.root, 'lib'))
     writeFileSync(bin, '')
 
-    expect(resolveDshNodeLaunchFromManifests(pair.dshUrl, pair.clientUrl)).toEqual({
+    expect(resolveRshNodeLaunchFromManifests(pair.rshUrl, pair.clientUrl)).toEqual({
       nodeArgs: [bin],
       environment: {},
     })
@@ -179,7 +179,7 @@ describe('SDK dsh launch resolution', () => {
     mkdirSync(join(pair.root, 'src'))
     const sourceFiles = ['src/bin.ts', 'tsconfig.json']
     for (const source of sourceFiles.slice(0, presentCount)) writeFileSync(join(pair.root, source), '')
-    expect(() => resolveDshNodeLaunchFromManifests(pair.dshUrl, pair.clientUrl, {
+    expect(() => resolveRshNodeLaunchFromManifests(pair.rshUrl, pair.clientUrl, {
       sourceLoaderUrl: 'file:///tsx-loader.mjs',
     }))
       .toThrow('is missing its built executable')
@@ -187,27 +187,27 @@ describe('SDK dsh launch resolution', () => {
 
   it('reads explicit and inherited environments when the child starts', () => {
     const explicit: NodeJS.ProcessEnv = { MARKER: 'before' }
-    const explicitLaunch = resolveDshLaunch({ dshBin: '/bin/dsh', env: explicit })
+    const explicitLaunch = resolveRshLaunch({ rshBin: '/bin/dsh', env: explicit })
     explicit.MARKER = 'after'
     expect(explicitLaunch.environment().MARKER).toBe('after')
 
-    const inheritedLaunch = resolveDshLaunch({ dshBin: '/bin/dsh' })
-    process.env.DSH_SDK_LATE_ENV_TEST = 'late'
+    const inheritedLaunch = resolveRshLaunch({ rshBin: '/bin/dsh' })
+    process.env.RSH_SDK_LATE_ENV_TEST = 'late'
     try {
-      expect(inheritedLaunch.environment().DSH_SDK_LATE_ENV_TEST).toBe('late')
+      expect(inheritedLaunch.environment().RSH_SDK_LATE_ENV_TEST).toBe('late')
     } finally {
-      delete process.env.DSH_SDK_LATE_ENV_TEST
+      delete process.env.RSH_SDK_LATE_ENV_TEST
     }
   })
 
   it('adds only the required Windows SystemRoot to an explicit child environment', () => {
-    const launch = resolveDshLaunch({ dshBin: '/bin/dsh', env: { MARKER: 'explicit' } })
+    const launch = resolveRshLaunch({ rshBin: '/bin/dsh', env: { MARKER: 'explicit' } })
     const expected: NodeJS.ProcessEnv = { MARKER: 'explicit' }
     if (process.platform === 'win32' && process.env.SystemRoot !== undefined) {
       expected.SystemRoot = process.env.SystemRoot
     }
     expect(launch.environment()).toEqual(expected)
-    expect(resolveDshLaunch({ dshBin: '/bin/dsh', env: { SYSTEMROOT: 'caller-root' } }).environment())
+    expect(resolveRshLaunch({ rshBin: '/bin/dsh', env: { SYSTEMROOT: 'caller-root' } }).environment())
       .toEqual({ SYSTEMROOT: 'caller-root' })
   })
 
@@ -215,21 +215,21 @@ describe('SDK dsh launch resolution', () => {
     'rejects a dsh version that differs from the client (%j)',
     (version) => {
       const pair = manifestPair({ version, bin: 'bin.js' }, { version: '1.0.0' })
-      expect(() => resolveDshBinFromManifests(pair.dshUrl, pair.clientUrl))
+      expect(() => resolveRshBinFromManifests(pair.rshUrl, pair.clientUrl))
         .toThrow(`requires the same dsh version, got ${String(version)}`)
     },
   )
 
   it('accepts the string npm bin form', () => {
     const pair = manifestPair({ version: '1.0.0', bin: './bin.js' }, { version: '1.0.0' })
-    expect(resolveDshBinFromManifests(pair.dshUrl, pair.clientUrl)).toBe(join(pair.root, 'bin.js'))
+    expect(resolveRshBinFromManifests(pair.rshUrl, pair.clientUrl)).toBe(join(pair.root, 'bin.js'))
   })
 
   it.each([null, {}, ''])(
     'rejects a manifest without a usable dsh executable (%j)',
     (bin) => {
       const pair = manifestPair({ version: '1.0.0', bin }, { version: '1.0.0' })
-      expect(() => resolveDshBinFromManifests(pair.dshUrl, pair.clientUrl))
+      expect(() => resolveRshBinFromManifests(pair.rshUrl, pair.clientUrl))
         .toThrow('declares no dsh executable')
     },
   )

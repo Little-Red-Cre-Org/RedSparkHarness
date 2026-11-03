@@ -7,11 +7,11 @@
  * aggregates — with zero content duplication. Host-coupled domain
  * vocabulary (message sources, events, fold shapes) lives in ./domain.ts.
  *
- * @module @deepseek-ai/dsh-goal/types
+ * @module @redspark/rsh-goal/types
  */
 
-import type { Branded } from '@deepseek-ai/dsh-brand'
-import type { SessionId } from '@deepseek-ai/dsh-session/types'
+import type { Branded } from '@redspark/rsh-brand'
+import type { SessionId } from '@redspark/rsh-session/types'
 
 /** Identifies one goal across its durable revisions. */
 export type GoalId = Branded<'GoalId'>

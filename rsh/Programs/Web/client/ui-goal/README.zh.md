@@ -3,7 +3,7 @@ description: "Web GUI 的 goal 界面：提供 goal 状态 composer 条带，以
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-client-ui-goal
+# @redspark/rsh-client-ui-goal
 
 [English](README.md) | 中文
 
@@ -29,7 +29,7 @@ Web GUI 的 goal 界面同时显示持久 goal 状态及当前的进程本地激
 
 ### Native 展示
 
-从 `@deepseek-ai/dsh-client-ui-goal/native` 导入 `NativeGoalBar` 与 `goalFromSessionEvents`。投影读取所选 Session 已有事件；创建前或清除后没有当前 goal。条带显示目标、持久 phase 和已准入轮次进度，包括已完成的 goal；它不读取进程本地 activation，也不执行 goal 操作。
+从 `@redspark/rsh-client-ui-goal/native` 导入 `NativeGoalBar` 与 `goalFromSessionEvents`。投影读取所选 Session 已有事件；创建前或清除后没有当前 goal。条带显示目标、持久 phase 和已准入轮次进度，包括已完成的 goal；它不读取进程本地 activation，也不执行 goal 操作。
 
 ### 指令输入气泡
 

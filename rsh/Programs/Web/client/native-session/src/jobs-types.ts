@@ -1,5 +1,5 @@
 /** Browser-safe background-job rows and change frames shared with the Native Host. */
-import type { SessionId } from '@deepseek-ai/dsh-session/types'
+import type { SessionId } from '@redspark/rsh-session/types'
 
 /**
  * One background job owned by a Session, projected for browser display.

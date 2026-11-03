@@ -1,6 +1,6 @@
-import type { Context } from '@deepseek-ai/cordis'
-import type {} from '@deepseek-ai/dsh-compat-settings-definition'
-import type {} from '@deepseek-ai/dsh-agent-presets'
+import type { Context } from '@redspark/cordis'
+import type {} from '@redspark/rsh-compat-settings-definition'
+import type {} from '@redspark/rsh-agent-presets'
 
 /**
  * Cordis adapter for the optional preset-selection Settings scope.
@@ -10,8 +10,8 @@ import type {} from '@deepseek-ai/dsh-agent-presets'
  */
 export async function apply(ctx: Context): Promise<void> {
   const [service, settings] = await Promise.all([
-    import('@deepseek-ai/dsh-agent-presets'),
-    import('@deepseek-ai/dsh-agent-presets/compat-settings'),
+    import('@redspark/rsh-agent-presets'),
+    import('@redspark/rsh-agent-presets/compat-settings'),
   ]).catch((cause: unknown) => {
     throw new Error('The selected Agent Presets Settings adapter requires its Engine peer.', { cause })
   })

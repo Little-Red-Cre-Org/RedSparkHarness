@@ -15,8 +15,8 @@
  * @module
  */
 
-import { StorageError } from '@deepseek-ai/dsh-storage/backend'
-import type { KvFacet, KvUnit, KvUnitDescriptor, StorageBackend } from '@deepseek-ai/dsh-storage/backend'
+import { StorageError } from '@redspark/rsh-storage/backend'
+import type { KvFacet, KvUnit, KvUnitDescriptor, StorageBackend } from '@redspark/rsh-storage/backend'
 
 /** One unit's medium: tables of records plus the global slot (`null` = never written). */
 export interface MemoryMedium {

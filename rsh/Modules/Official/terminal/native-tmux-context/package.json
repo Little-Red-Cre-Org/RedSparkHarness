@@ -1,5 +1,5 @@
 {
-  "name": "@deepseek-ai/dsh-native-tmux-context",
+  "name": "@redspark/rsh-native-tmux-context",
   "description": "Native tmux location provider for durable headless model context",
   "version": "1.0.0",
   "publishConfig": { "access": "public" },
@@ -20,17 +20,17 @@
   "files": ["lib/index.js", "lib/native.js", "lib/shared-*.js", "lib/types/**/*.d.ts"],
   "license": "MIT",
   "dependencies": {
-    "@deepseek-ai/dsh-llm": "workspace:^",
-    "@deepseek-ai/dsh-native-runtime": "workspace:^"
+    "@redspark/rsh-llm": "workspace:^",
+    "@redspark/rsh-native-runtime": "workspace:^"
   },
   "peerDependencies": {
-    "@deepseek-ai/dsh-shell": "workspace:^",
-    "@deepseek-ai/dsh-session": "workspace:^",
-    "@deepseek-ai/dsh-tmux-context-definition": "workspace:^"
+    "@redspark/rsh-shell": "workspace:^",
+    "@redspark/rsh-session": "workspace:^",
+    "@redspark/rsh-tmux-context-definition": "workspace:^"
   },
   "devDependencies": {
-    "@deepseek-ai/dsh-shell": "workspace:^",
-    "@deepseek-ai/dsh-session": "workspace:^",
-    "@deepseek-ai/dsh-tmux-context-definition": "workspace:^"
+    "@redspark/rsh-shell": "workspace:^",
+    "@redspark/rsh-session": "workspace:^",
+    "@redspark/rsh-tmux-context-definition": "workspace:^"
   }
 }

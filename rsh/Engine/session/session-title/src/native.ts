@@ -8,14 +8,14 @@
  * Agent Note:
  * - .agents/notes/implemented/architecture/2026-10-08-native-session-title-and-plan-mode.md
  *
- * @module @deepseek-ai/dsh-session-title/native
+ * @module @redspark/rsh-session-title/native
  */
 
-import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
-import type { NativeAgent } from '@deepseek-ai/dsh-native-agent'
-import type { NativeActiveSessionOwner } from '@deepseek-ai/dsh-native-session-execution'
-import type {} from '@deepseek-ai/dsh-native-session-execution/native'
-import type { SessionEvent, SessionEventMap, SessionEventType } from '@deepseek-ai/dsh-session/native'
+import type { NativePlugin } from '@redspark/rsh-native-runtime'
+import type { NativeAgent } from '@redspark/rsh-native-agent'
+import type { NativeActiveSessionOwner } from '@redspark/rsh-native-session-execution'
+import type {} from '@redspark/rsh-native-session-execution/native'
+import type { SessionEvent, SessionEventMap, SessionEventType } from '@redspark/rsh-session/native'
 import {
   SessionTitleEngine,
   type SessionTitleEngineProvider,
@@ -99,7 +99,7 @@ export interface NativeSessionTitles {
   register(provider: NativeSessionTitleProvider): () => Promise<void>
 }
 
-declare module '@deepseek-ai/dsh-native-runtime' {
+declare module '@redspark/rsh-native-runtime' {
   interface NativeServices {
     /** Durable Session titles, deterministic fallback, and the optional provider seam. */
     sessionTitles: NativeSessionTitles
@@ -260,7 +260,7 @@ function fold(target: OwnerTarget, event: SessionEvent): void {
 /** Native session-title Provider over the selected active Session registry. */
 export const plugin: NativePlugin = {
   apiVersion: 1,
-  name: '@deepseek-ai/dsh-session-title',
+  name: '@redspark/rsh-session-title',
   targets: ['host'],
   requires: ['activeSessions'],
   provides: ['sessionTitles'],

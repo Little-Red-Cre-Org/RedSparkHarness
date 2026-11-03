@@ -3,7 +3,7 @@ description: "读取选定 Program 中可持续子任务的原生只读 list_age
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-native-tool-subagent-list-agents
+# @redspark/rsh-native-tool-subagent-list-agents
 
 [English](README.md) | 中文
 

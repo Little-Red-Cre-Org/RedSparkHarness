@@ -14,7 +14,7 @@ it('keeps npm and pnpm workspaces aligned with source manifests and excludes bui
   const actual = globSync(pnpm.packages.map(path => `${path}/package.json`), { cwd }).map(normalize).sort()
   expect(actual).toEqual(expected)
   for (const artifact of [
-    'rsh/Programs/SDK/python/sdk-runtime/src/deepseek_harness_runtime/runtime/node',
+    'rsh/Programs/SDK/python/sdk-runtime/src/redspark_harness_runtime/runtime/node',
     'rsh/Programs/Desktop/.desktop-build/targets/win-x64/app',
     'rsh/Programs/CLI/tests/fixtures/workspace',
   ]) {

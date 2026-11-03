@@ -1,5 +1,5 @@
 /** Framework-neutral fatal workflow failure vocabulary. */
-import { HarnessError } from '@deepseek-ai/dsh-llm/native'
+import { HarnessError } from '@redspark/rsh-llm/native'
 
 /**
  * Machine-routable fatal workflow failures: parse/meta/argument/schema errors,

@@ -3,7 +3,7 @@ description: "The private Desktop Host assembly for explicitly selected legacy C
 kind: "package-library"
 ---
 
-# @deepseek-ai/dsh-desktop-host-compatibility
+# @redspark/rsh-desktop-host-compatibility
 
 English | [中文](README.zh.md)
 
@@ -34,7 +34,7 @@ DesktopHost imports this private assembly only when the installed profile select
 The DesktopHost provides the installed runtime and project directories after selecting the compatibility assembly:
 
 ```ts
-import { createLegacyDesktopRuntime } from '@deepseek-ai/dsh-desktop-host-compatibility'
+import { createLegacyDesktopRuntime } from '@redspark/rsh-desktop-host-compatibility'
 
 const runtimeDir = '/path/to/installed/dsh'
 const projectDir = '/path/to/desktop-project'

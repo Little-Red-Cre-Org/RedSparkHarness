@@ -1,14 +1,14 @@
 /** Native tool registry Provider. */
-import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
+import type { NativePlugin } from '@redspark/rsh-native-runtime'
 import { NativeToolRegistry } from './index.ts'
 
-declare module '@deepseek-ai/dsh-native-runtime' {
+declare module '@redspark/rsh-native-runtime' {
   interface NativeServices { tools: NativeToolRegistry }
 }
 
 /** One scoped registry; plugin effects own its registered contributions. */
 export const plugin: NativePlugin = {
-  apiVersion: 1, name: '@deepseek-ai/dsh-native-tools', targets: ['host'],
+  apiVersion: 1, name: '@redspark/rsh-native-tools', targets: ['host'],
   requires: ['agents'], provides: ['tools'],
   resolve(input) {
     if (input !== undefined && (typeof input !== 'object' || input === null || Array.isArray(input))) {

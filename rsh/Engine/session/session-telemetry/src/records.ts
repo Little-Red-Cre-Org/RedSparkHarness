@@ -1,8 +1,8 @@
 /** Pure projection from accepted Session events to copied outbound records. */
-import type { SessionEvent, SessionHeader, SessionId } from '@deepseek-ai/dsh-session/native'
+import type { SessionEvent, SessionHeader, SessionId } from '@redspark/rsh-session/native'
 import type { SessionTelemetryRecord, SessionTelemetrySeverity } from './types.ts'
-import type {} from '@deepseek-ai/dsh-command-feedback/native-definition'
-import type {} from '@deepseek-ai/dsh-message-feedback/native-definition'
+import type {} from '@redspark/rsh-command-feedback/native-definition'
+import type {} from '@redspark/rsh-message-feedback/native-definition'
 
 /**
  * Map the event's recorded failure status to telemetry severity.

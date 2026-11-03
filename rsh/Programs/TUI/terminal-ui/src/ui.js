@@ -23,7 +23,7 @@ import { ENGLISH_ROWS } from './copy.ts';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Box, Text as InkText, useApp, useInput, useStdout } from 'ink';
 import TextInput from 'ink-text-input';
-import { createUserMessage } from '@deepseek-ai/dsh-llm/native';
+import { createUserMessage } from '@redspark/rsh-llm/native';
 import { userMessageBg, codeChipBg, stripAnsi } from './utils.js';
 
 /** Only Ink-generated styling may emit terminal control sequences. */

@@ -1,18 +1,18 @@
 /** Cordis answerer event for the compatibility approval Service. */
-import type { Scoped } from '@deepseek-ai/dsh-scope'
-import type { Agent } from '@deepseek-ai/dsh-agent/types'
-import type { ToolCallId } from '@deepseek-ai/dsh-llm/brand'
+import type { Scoped } from '@redspark/rsh-scope'
+import type { Agent } from '@redspark/rsh-agent/types'
+import type { ToolCallId } from '@redspark/rsh-llm/brand'
 import type {
   ApprovalRequest as DefinitionApprovalRequest,
   ApprovalOutcome,
   ApprovalServiceDefinition as DefinitionApprovalServiceDefinition,
-} from '@deepseek-ai/dsh-approval-definition/legacy'
+} from '@redspark/rsh-approval-definition/legacy'
 
 export type {
   ApprovalOutcome,
   ApprovalPolicy,
-} from '@deepseek-ai/dsh-approval-definition/legacy'
-export { APPROVAL_POLICIES, ApprovalRequestId } from '@deepseek-ai/dsh-approval-definition/legacy'
+} from '@redspark/rsh-approval-definition/legacy'
+export { APPROVAL_POLICIES, ApprovalRequestId } from '@redspark/rsh-approval-definition/legacy'
 
 /** Cordis implementation specialized to the exact scoped Agent owner. */
 export interface ApprovalServiceDefinition extends DefinitionApprovalServiceDefinition<Agent> {}
@@ -36,11 +36,11 @@ export interface ApprovalRequest extends Omit<DefinitionApprovalRequest<Agent>, 
   readonly agent: Agent
 }
 
-declare module '@deepseek-ai/cordis' {
+declare module '@redspark/cordis' {
   interface Events {
     /**
      * Ask composed answerers for one decision. Return an outcome to claim it or call `next()` to delegate.
-     * Scope-filtered dispatch (`@deepseek-ai/dsh-scope`) limits listeners to the requesting Agent's scope.
+     * Scope-filtered dispatch (`@redspark/rsh-scope`) limits listeners to the requesting Agent's scope.
      * @param req - pending approval request.
      * @mode waterfall
      */

@@ -1,8 +1,8 @@
 /** Client-safe payloads and event declarations owned by the agent-preset domain. */
-import type { SessionId } from '@deepseek-ai/dsh-session/types'
-import type {} from '@deepseek-ai/dsh-session-projection/types'
-import type {} from '@deepseek-ai/dsh-typert-protocol/types'
-import type {} from '@deepseek-ai/cordis'
+import type { SessionId } from '@redspark/rsh-session/types'
+import type {} from '@redspark/rsh-session-projection/types'
+import type {} from '@redspark/rsh-typert-protocol/types'
+import type {} from '@redspark/cordis'
 import type { PresetTrust } from './preset.ts'
 
 export type { PresetTrust } from './preset.ts'
@@ -36,7 +36,7 @@ export interface AgentPresetRoster {
   readonly modeSelectionEnabled: boolean
 }
 
-declare module '@deepseek-ai/dsh-typert-protocol/types' {
+declare module '@redspark/rsh-typert-protocol/types' {
   interface RemoteErrorDetailsMap {
     /** No configured root supplies the requested id. */
     'agent-preset/not-found': { readonly agentPreset: string; readonly available: readonly string[] }
@@ -63,7 +63,7 @@ export interface AgentPresetDocument {
   readonly description?: string
 }
 
-declare module '@deepseek-ai/dsh-session-projection/types' {
+declare module '@redspark/rsh-session-projection/types' {
   interface SessionProjectionStateMap {
     agentPreset: string | null
   }
@@ -73,7 +73,7 @@ declare module '@deepseek-ai/dsh-session-projection/types' {
   }
 }
 
-declare module '@deepseek-ai/cordis' {
+declare module '@redspark/cordis' {
   interface Events {
     /**
      * One session committed a different agent preset to its durable log.

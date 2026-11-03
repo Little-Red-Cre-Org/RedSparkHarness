@@ -11,21 +11,21 @@ import type {
   SessionConfigOption,
 } from '@agentclientprotocol/sdk'
 import { Readable, Writable } from 'node:stream'
-import { credentialRef } from '@deepseek-ai/dsh-credentials/native'
-import type { NativeContext, NativePlugin } from '@deepseek-ai/dsh-native-runtime'
-import type { ContentBlock } from '@deepseek-ai/dsh-llm/native'
+import { credentialRef } from '@redspark/rsh-credentials/native'
+import type { NativeContext, NativePlugin } from '@redspark/rsh-native-runtime'
+import type { ContentBlock } from '@redspark/rsh-llm/native'
 import type { NativeExternalSubagentDriver, NativeExternalSubagentOutcome,
-  NativeExternalSubagentRun, NativeSubagentStopReason } from '@deepseek-ai/dsh-native-subagent/native'
+  NativeExternalSubagentRun, NativeSubagentStopReason } from '@redspark/rsh-native-subagent/native'
 import {
   NATIVE_ACP_SUBAGENT_PROTOCOL_VERSION,
   nativeAcpSubagentPolicyMetadata,
   readNativeAcpSubagentPermissionRequest,
   readNativeAcpSubagentPolicy,
   readNativeAcpSubagentServerCapabilities,
-} from '@deepseek-ai/dsh-acp-protocol'
-import type { NativeAcpSubagentPermissionMode, NativeAcpSubagentPolicy } from '@deepseek-ai/dsh-acp-protocol'
-import type { StoredImageAttachment } from '@deepseek-ai/dsh-attachment/native'
-import type { ReasoningEffortId } from '@deepseek-ai/dsh-llm/native'
+} from '@redspark/rsh-acp-protocol'
+import type { NativeAcpSubagentPermissionMode, NativeAcpSubagentPolicy } from '@redspark/rsh-acp-protocol'
+import type { StoredImageAttachment } from '@redspark/rsh-attachment/native'
+import type { ReasoningEffortId } from '@redspark/rsh-llm/native'
 import type { NativeAcpChildRuntime, NativeAcpChildRuntimeRequest } from './runtime.ts'
 
 export type { NativeAcpChildRuntime, NativeAcpChildRuntimeLauncher, NativeAcpChildRuntimeRequest } from './runtime.ts'
@@ -330,7 +330,7 @@ function startDriver(context: NativeContext, config: Config): NativeExternalSuba
       }
       onAbort = (): void => { void closeRun(true).catch((error: unknown) => { protocolFailure ??= new Error(errorMessage(error)) }) }
 
-      const app = client({ name: '@deepseek-ai/dsh-acp-child' })
+      const app = client({ name: '@redspark/rsh-acp-child' })
         .onRequest(methods.client.session.requestPermission, async ({ params }) => {
           const work = (async (): Promise<RequestPermissionResponse> => {
             const permission = readNativeAcpSubagentPermissionRequest(params._meta)
@@ -459,7 +459,7 @@ function startDriver(context: NativeContext, config: Config): NativeExternalSuba
 
         const initialize = await raceAbort(track(connection.agent.request(methods.agent.initialize, {
           protocolVersion: PROTOCOL_VERSION,
-          clientInfo: { name: '@deepseek-ai/dsh-acp-child', version: '0.1.0' },
+          clientInfo: { name: '@redspark/rsh-acp-child', version: '0.1.0' },
           _meta: { 'com.deepseek.ai/dsh-native-subagent': {
             version: NATIVE_ACP_SUBAGENT_PROTOCOL_VERSION,
             permissionRelay: canRelay,
@@ -502,7 +502,6 @@ function startDriver(context: NativeContext, config: Config): NativeExternalSuba
         const promptSessionId = sessionId
         let result: Promise<NativeExternalSubagentOutcome> | undefined
         const runPrompt = async (): Promise<NativeExternalSubagentOutcome> => {
-          // oxlint-disable-next-line typescript/no-unnecessary-condition -- Later getter calls reuse this cached prompt result.
           if (result !== undefined) return result
           promptStarted = true
           const promptWork = track(promptConnection.agent.request(
@@ -559,7 +558,7 @@ function startDriver(context: NativeContext, config: Config): NativeExternalSuba
 /** Install the fixed-profile ACP driver selected by the Native Subagent Provider. */
 export const plugin: NativePlugin = {
   apiVersion: 1,
-  name: '@deepseek-ai/dsh-acp-child',
+  name: '@redspark/rsh-acp-child',
   targets: ['host'],
   requires: ['credentials', 'acpChildRuntimeLauncher'],
   optional: ['attachments'],

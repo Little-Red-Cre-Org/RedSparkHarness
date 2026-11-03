@@ -1,7 +1,7 @@
 import { useSyncExternalStore } from 'react'
 import type {
   ConversationLocationDataSource, ConversationLocationDataStore, ConversationTurnDataMap,
-} from '@deepseek-ai/dsh-client-ui-conversation/client'
+} from '@redspark/rsh-client-ui-conversation/client'
 
 const EMPTY_SOURCE: ConversationLocationDataSource<undefined> = {
   getSnapshot: () => undefined,

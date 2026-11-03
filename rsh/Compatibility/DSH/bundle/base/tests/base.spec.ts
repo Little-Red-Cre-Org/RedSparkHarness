@@ -8,8 +8,8 @@ import { fileURLToPath } from 'node:url'
 import { resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import * as yaml from 'js-yaml'
-import { entryListSchema } from '@deepseek-ai/cordis-plugin-include'
-import { evaluate } from '@deepseek-ai/cordis-plugin-loader'
+import { entryListSchema } from '@redspark/cordis-plugin-include'
+import { evaluate } from '@redspark/cordis-plugin-loader'
 
 describe('dsh-base bundle', () => {
   it('declares a parseable patch list through the dsh.bundle.patch manifest field', () => {
@@ -33,20 +33,20 @@ describe('dsh-base bundle', () => {
     expect(rows.length).toBeGreaterThan(50)
     expect(rows.some(row => row.id === 'agent-loop')).toBe(true)
     expect(rows.find(row => row.id === 'plugin-host')).toMatchObject({
-      name: '@deepseek-ai/dsh-plugin-host',
+      name: '@redspark/rsh-plugin-host',
     })
     expect(rows.find(row => row.id === 'fs-observation-policy')).toMatchObject({
-      name: '@deepseek-ai/dsh-fs-observation-policy/runtime',
+      name: '@redspark/rsh-fs-observation-policy/runtime',
     })
     expect(rows.find(row => row.id === 'tool-fs')).toMatchObject({
-      name: '@deepseek-ai/dsh-tool-fs/runtime',
+      name: '@redspark/rsh-tool-fs/runtime',
     })
     expect(rows.find(row => row.id === 'fs-sandbox')).toMatchObject({
-      name: '@deepseek-ai/dsh-fs-sandbox/runtime',
+      name: '@redspark/rsh-fs-sandbox/runtime',
     })
     expect(rows.find(row => row.id === 'session-telemetry-otel')?.disabled).toBeUndefined()
     expect(rows.find(row => row.id === 'session-telemetry-otel')?.config?.['mode']).toEqual({
-      __jsExpr: "process.env.DSH_TELEMETRY_MODE || 'FEEDBACK_ONLY'",
+      __jsExpr: "process.env.RSH_TELEMETRY_MODE || 'FEEDBACK_ONLY'",
     })
     expect(rows.find(row => row.id === 'hmr')).toMatchObject({
       disabled: true,
@@ -59,10 +59,10 @@ describe('dsh-base bundle', () => {
     expect(rows.find(row => row.id === 'tool-web')?.config).toMatchObject({ fetch: true })
     expect(rows.findIndex(row => row.id === 'archify')).toBeGreaterThan(-1)
     expect(rows.findIndex(row => row.id === 'archify')).toBeLessThan(rows.findIndex(row => row.id === 'tool-skill'))
-    expect(manifest.dependencies).not.toHaveProperty('@deepseek-ai/dsh-subagent-codex')
-    expect(manifest.dependencies).not.toHaveProperty('@deepseek-ai/dsh-subagent-claude-code')
-    expect(manifest.dependencies).toHaveProperty('@deepseek-ai/dsh-web-fetch-http')
-    expect(manifest.dependencies).toHaveProperty('@deepseek-ai/dsh-archify')
+    expect(manifest.dependencies).not.toHaveProperty('@redspark/rsh-subagent-codex')
+    expect(manifest.dependencies).not.toHaveProperty('@redspark/rsh-subagent-claude-code')
+    expect(manifest.dependencies).toHaveProperty('@redspark/rsh-web-fetch-http')
+    expect(manifest.dependencies).toHaveProperty('@redspark/rsh-archify')
   })
 
   it('gates each shell stack by platform with a symmetric disabled expression', () => {

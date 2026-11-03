@@ -1,4 +1,4 @@
-import { Context } from '@deepseek-ai/cordis'
+import { Context } from '@redspark/cordis'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
   apply,

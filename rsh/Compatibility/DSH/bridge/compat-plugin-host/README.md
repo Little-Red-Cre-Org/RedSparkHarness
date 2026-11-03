@@ -3,7 +3,7 @@ description: "RSH plugin-role registry and Cordis lifecycle adapter."
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-plugin-host
+# @redspark/rsh-plugin-host
 
 English | [中文](README.zh.md)
 
@@ -28,9 +28,9 @@ Mount both the host and the adapted runtime entry in the same Loader configurati
 
 ```yaml
 - id: plugin-host
-  name: '@deepseek-ai/dsh-plugin-host'
+  name: '@redspark/rsh-plugin-host'
 - id: fs-observation-policy
-  name: '@deepseek-ai/dsh-fs-observation-policy/runtime'
+  name: '@redspark/rsh-fs-observation-policy/runtime'
 ```
 
 The descriptor's `packageName`, `role`, and `capability` are validated before the legacy plugin starts. A duplicate active package name fails mounting; during module HMR, a replacement adapter waits for the disposing prior adapter and its child to finish cleanup before claiming the name. Adapting a plugin does not sandbox it: a same-process Cordis plugin remains trusted code with the Context access that its own `inject` declaration receives.

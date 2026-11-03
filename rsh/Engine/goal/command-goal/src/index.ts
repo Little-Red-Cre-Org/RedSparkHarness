@@ -1,14 +1,14 @@
 /**
  * Human-facing `/goal` command over the persisted same-session goal domain.
- * @module @deepseek-ai/dsh-command-goal
+ * @module @redspark/rsh-command-goal
  */
 
 import { assertNever, prepareGoalCommand, resolveGoalCommandState, renderGoal, goalCommandRef, missingGoal } from './common.ts'
-import type { Context } from '@deepseek-ai/cordis'
-import { CommandDefinitionId } from '@deepseek-ai/dsh-commands/brand'
-import type { CommandInvocation, CommandResult } from '@deepseek-ai/dsh-commands'
-import { GoalError } from '@deepseek-ai/dsh-goal'
-import { createUserMessage } from '@deepseek-ai/dsh-llm'
+import type { Context } from '@redspark/cordis'
+import { CommandDefinitionId } from '@redspark/rsh-commands/brand'
+import type { CommandInvocation, CommandResult } from '@redspark/rsh-commands'
+import { GoalError } from '@redspark/rsh-goal'
+import { createUserMessage } from '@redspark/rsh-llm'
 
 export const name = 'command-goal'
 export const inject = ['commands', 'goals']
@@ -82,7 +82,7 @@ function executeGoalCommand(ctx: Context, invocation: CommandInvocation): Comman
 /** Register the Codex-shaped `/goal` command for every composed command adapter. */
 export function apply(ctx: Context): void {
   ctx.commands.register({
-    definitionId: CommandDefinitionId('@deepseek-ai/dsh-command-goal'),
+    definitionId: CommandDefinitionId('@redspark/rsh-command-goal'),
     name: 'goal',
     description: 'Set or view the goal for a long-running task',
     input: { hint: '[<objective>|clear|edit <objective>|pause|resume]', attachments: true },

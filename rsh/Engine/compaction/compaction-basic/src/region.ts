@@ -2,7 +2,7 @@
  * Surface retention selection and the shared log-recorded compaction
  * transaction for automatic open-turn and manual idle-session compaction.
  *
- * @module @deepseek-ai/dsh-compaction-basic/region
+ * @module @redspark/rsh-compaction-basic/region
  */
 
 import { randomUUID } from 'node:crypto'
@@ -13,13 +13,13 @@ import {
   compactCheckpointSource,
   toolPairingBalancedAfter,
   toolPairingBalancedBefore,
-} from '@deepseek-ai/dsh-compaction/native'
-import type { CompactionResult } from '@deepseek-ai/dsh-compaction/native'
-import type { CommandId } from '@deepseek-ai/dsh-commands/brand'
-import { createUserMessage, errorChain } from '@deepseek-ai/dsh-llm/native'
-import type { Message, UserMessage } from '@deepseek-ai/dsh-llm/native'
-import type { NativeTokenMeterOperations, TokenMeasurement } from '@deepseek-ai/dsh-token-meter/native'
-import { SessionSeq, type Session, type SessionEvent } from '@deepseek-ai/dsh-session/native'
+} from '@redspark/rsh-compaction/native'
+import type { CompactionResult } from '@redspark/rsh-compaction/native'
+import type { CommandId } from '@redspark/rsh-commands/brand'
+import { createUserMessage, errorChain } from '@redspark/rsh-llm/native'
+import type { Message, UserMessage } from '@redspark/rsh-llm/native'
+import type { NativeTokenMeterOperations, TokenMeasurement } from '@redspark/rsh-token-meter/native'
+import { SessionSeq, type Session, type SessionEvent } from '@redspark/rsh-session/native'
 import { frameSummary } from './summarizer.ts'
 import type { SummarizationInput, SummaryResult } from './summarizer.ts'
 

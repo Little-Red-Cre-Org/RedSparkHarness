@@ -1,8 +1,8 @@
 /** Related facts are rejected together before publication or surface changes. */
 import { expect, it } from 'vitest'
-import { createUserMessage } from '@deepseek-ai/dsh-llm/native'
+import { createUserMessage } from '@redspark/rsh-llm/native'
 import { Session, SessionId, SessionSeq } from '../src/native.ts'
-import { Context } from '@deepseek-ai/cordis'
+import { Context } from '@redspark/cordis'
 import SessionStore from '../src/index.ts'
 
 it('publishes the complete accepted batch in order through the existing store', async () => {

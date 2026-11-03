@@ -3,7 +3,7 @@ description: "Native Host provider for path-only workspace file discovery throug
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-native-file-reference-local
+# @redspark/rsh-native-file-reference-local
 
 English | [中文](README.zh.md)
 

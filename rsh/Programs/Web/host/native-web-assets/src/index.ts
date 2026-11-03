@@ -56,7 +56,7 @@ function nativePage(html: string, bundle: NativeClientBundle, transportScript: s
   if (head === null) throw new Error('dsh desktop: native frontend has no head element')
   if (/<\/script/iu.test(transportScript)) throw new Error('dsh desktop: transport script closes its element')
   const wire = JSON.stringify(bundle.wire).replaceAll('<', '\\u003c')
-  const markup = `<script>${transportScript}</script><script>globalThis.__DSH_NATIVE_CLIENT_BOOT__ = ${wire}</script>`
+  const markup = `<script>${transportScript}</script><script>globalThis.__RSH_NATIVE_CLIENT_BOOT__ = ${wire}</script>`
   const at = head.index + head[0].length
   return `${html.slice(0, at)}${markup}${html.slice(at)}`
 }
@@ -76,9 +76,9 @@ function createAssetRoutes(
   const require = createRequire(join(runtimeDir, 'package.json'))
   const distNativeIndex = nativeClient === undefined
     ? undefined
-    : require.resolve('@deepseek-ai/dsh-web-frontend/dist/index.html')
+    : require.resolve('@redspark/rsh-web-frontend/dist/index.html')
   const distRoot = realpathSync(dirname(distNativeIndex
-    ?? require.resolve('@deepseek-ai/dsh-web-frontend/dist/index.html')))
+    ?? require.resolve('@redspark/rsh-web-frontend/dist/index.html')))
   const renderNativeIndex = async (method: string): Promise<Response> => {
     if (distNativeIndex === undefined || nativeClient === undefined) return new Response(null, { status: 404 })
     const body = nativePage(await readFile(distNativeIndex, 'utf8'), nativeClient, transportScript)

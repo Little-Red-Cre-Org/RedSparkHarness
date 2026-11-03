@@ -3,14 +3,14 @@
 
 - insert:
     - id: webhook-runtime
-      name: '@deepseek-ai/dsh-webhook'
+      name: '@redspark/rsh-webhook'
 
     - id: github-ready-review-rule
       name: './github-ready-review-rule.mjs'
       config:
         source: primary-github
-        repository: deepseek-harness/deepseek-harness
-        workspacePath: !!js process.env.DSH_GITHUB_REVIEW_WORKSPACE ?? process.cwd()
+        repository: redspark-harness/redspark-harness
+        workspacePath: !!js process.env.RSH_GITHUB_REVIEW_WORKSPACE ?? process.cwd()
         agentPreset: standard
         permissionPreset: read-only
 
@@ -21,15 +21,15 @@
         webServer: true
       config:
         - id: github-webhook-server
-          name: '@deepseek-ai/dsh-host-webserver'
+          name: '@redspark/rsh-host-webserver'
           config:
             host: '127.0.0.1'
-            port: !!js Number(process.env.DSH_GITHUB_WEBHOOK_PORT ?? 3081)
+            port: !!js Number(process.env.RSH_GITHUB_WEBHOOK_PORT ?? 3081)
 
         - id: github-webhook-adapter
-          name: '@deepseek-ai/dsh-webhook-github'
+          name: '@redspark/rsh-webhook-github'
           config:
             source: primary-github
             path: /github
-            secretEnv: DSH_GITHUB_WEBHOOK_SECRET
+            secretEnv: RSH_GITHUB_WEBHOOK_SECRET
             maxBodyBytes: 1048576

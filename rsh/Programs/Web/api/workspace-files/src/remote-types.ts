@@ -1,10 +1,10 @@
 /** Remote error details paired with the Cordis-free workspace file wire types.
- * @module @deepseek-ai/dsh-api-workspace-files/types
+ * @module @redspark/rsh-api-workspace-files/types
  */
-import type {} from '@deepseek-ai/dsh-typert-protocol/types'
+import type {} from '@redspark/rsh-typert-protocol/types'
 export type * from './types.ts'
 
-declare module '@deepseek-ai/dsh-typert-protocol/types' {
+declare module '@redspark/rsh-typert-protocol/types' {
   interface RemoteErrorDetailsMap {
     /** No entry exists at that path inside the workspace. */
     'workspace-file/not-found': { readonly path: string }

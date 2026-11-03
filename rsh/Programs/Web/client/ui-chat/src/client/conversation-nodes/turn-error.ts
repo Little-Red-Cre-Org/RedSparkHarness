@@ -1,7 +1,7 @@
-import type { Context } from '@deepseek-ai/cordis'
+import type { Context } from '@redspark/cordis'
 import type {
   ConversationMatch, ConversationNodeContext, ConversationNodeDefinition, TurnErrorNode,
-} from '@deepseek-ai/dsh-client-ui-conversation/client'
+} from '@redspark/rsh-client-ui-conversation/client'
 import { chatNode } from './common.ts'
 import { displayFailure } from './event-projection.ts'
 

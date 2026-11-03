@@ -1,9 +1,9 @@
-import type { Context } from '@deepseek-ai/cordis'
+import type { Context } from '@redspark/cordis'
 import type {
   ContextMessageNode, ConversationNodeDefinition, ConversationPreviousContext,
   SteeringMessageNode, UserMessageNode,
-} from '@deepseek-ai/dsh-client-ui-conversation/native-types'
-import type {} from '@deepseek-ai/dsh-agent/types'
+} from '@redspark/rsh-client-ui-conversation/native-types'
+import type {} from '@redspark/rsh-agent/types'
 import { trajectoryNode } from './trajectory-definition-common.ts'
 import { contextForm, contextProvenance } from './trajectory-event-projection.ts'
 

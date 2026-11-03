@@ -3,7 +3,7 @@ description: "带协作式取消与排空的原生 Agent 所有后台 job 注册
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-native-jobs
+# @redspark/rsh-native-jobs
 
 [English](README.md) | 中文
 

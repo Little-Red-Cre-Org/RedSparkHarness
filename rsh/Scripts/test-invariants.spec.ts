@@ -1,9 +1,9 @@
 import { describe, expect, it, vi } from 'vitest'
-import { Context, Service, ValidationError } from '@deepseek-ai/cordis'
-import Loader from '@deepseek-ai/cordis-plugin-loader'
-import z from '@deepseek-ai/schemastery'
-import InvariantRegistry from '@deepseek-ai/dsh-invariants'
-import type { InvariantInstaller } from '@deepseek-ai/dsh-invariants'
+import { Context, Service, ValidationError } from '@redspark/cordis'
+import Loader from '@redspark/cordis-plugin-loader'
+import z from '@redspark/schemastery'
+import InvariantRegistry from '@redspark/rsh-invariants'
+import type { InvariantInstaller } from '@redspark/rsh-invariants'
 import { FiberState } from '../Modules/Official/extensions/tool-cordis/src/fiber-state.ts'
 import { packageInvariantOwners } from './package-invariants.ts'
 import {
@@ -14,7 +14,7 @@ import {
   usesManualInvariantTree,
 } from './test-invariants.ts'
 
-declare module '@deepseek-ai/cordis' {
+declare module '@redspark/cordis' {
   interface Context {
     testInvariantProbe: TestInvariantProbe
   }

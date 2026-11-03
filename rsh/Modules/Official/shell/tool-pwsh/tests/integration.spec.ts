@@ -1,5 +1,5 @@
 /**
- * Integration tests: the REAL `@deepseek-ai/dsh-pwsh-local` executor plus the
+ * Integration tests: the REAL `@redspark/rsh-pwsh-local` executor plus the
  * `pwsh` tool, exercised through `ctx.tools.execute()` with a real PowerShell
  * process. These verify the world — actual commands run, stdout/stderr come
  * back, exit codes render, timeouts abort, background jobs settle through the
@@ -14,16 +14,16 @@ import { mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { spawnSync } from 'node:child_process'
-import { Context } from '@deepseek-ai/cordis'
-import { ToolCallId } from '@deepseek-ai/dsh-llm'
-import SystemPrompt from '@deepseek-ai/dsh-system-prompt'
-import ToolRuntime, { TOOL_ABORTED } from '@deepseek-ai/dsh-tools'
-import LocalJobRegistry from '@deepseek-ai/dsh-jobs-local'
-import * as ToolTasks from '@deepseek-ai/dsh-tool-jobs'
-import LocalSubprocessRuntime from '@deepseek-ai/dsh-subprocess-local'
-import { PwshLocalExecutor, resolvePwshPath } from '@deepseek-ai/dsh-pwsh-local'
-import * as ToolPwsh from '@deepseek-ai/dsh-tool-pwsh'
-import * as BashEnvPlugin from '@deepseek-ai/dsh-shell-env'
+import { Context } from '@redspark/cordis'
+import { ToolCallId } from '@redspark/rsh-llm'
+import SystemPrompt from '@redspark/rsh-system-prompt'
+import ToolRuntime, { TOOL_ABORTED } from '@redspark/rsh-tools'
+import LocalJobRegistry from '@redspark/rsh-jobs-local'
+import * as ToolTasks from '@redspark/rsh-tool-jobs'
+import LocalSubprocessRuntime from '@redspark/rsh-subprocess-local'
+import { PwshLocalExecutor, resolvePwshPath } from '@redspark/rsh-pwsh-local'
+import * as ToolPwsh from '@redspark/rsh-tool-pwsh'
+import * as BashEnvPlugin from '@redspark/rsh-shell-env'
 
 const testToolSignal = new AbortController().signal
 

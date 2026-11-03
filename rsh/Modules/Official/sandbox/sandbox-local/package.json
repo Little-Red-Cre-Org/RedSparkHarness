@@ -1,5 +1,5 @@
 {
-  "name": "@deepseek-ai/dsh-sandbox-local",
+  "name": "@redspark/rsh-sandbox-local",
   "description": "Local process-sandbox backends for the RedSpark Harness sandbox seam: bwrap, the npm-distributed landlock-run launcher, macOS Seatbelt, or the Windows ACL restricted-token runner — functionally probed, fail-closed",
   "version": "1.0.0",
   "publishConfig": {
@@ -33,21 +33,21 @@
   ],
   "license": "MIT",
   "peerDependencies": {
-    "@deepseek-ai/cordis": "workspace:^",
-    "@deepseek-ai/dsh-llm": "workspace:^"
+    "@redspark/cordis": "workspace:^",
+    "@redspark/rsh-llm": "workspace:^"
   },
   "dependencies": {
-    "@deepseek-ai/dsh-sandbox-windows-acl": "workspace:^",
-    "@deepseek-ai/dsh-util-values": "workspace:^",
-    "@deepseek-ai/node-addon-system": "workspace:^",
-    "@deepseek-ai/schemastery": "workspace:^",
-    "@deepseek-ai/dsh-sandbox": "workspace:^",
-    "@deepseek-ai/dsh-session": "workspace:^",
-    "@deepseek-ai/dsh-native-runtime": "workspace:^"
+    "@redspark/rsh-sandbox-windows-acl": "workspace:^",
+    "@redspark/rsh-util-values": "workspace:^",
+    "@redspark/node-addon-system": "workspace:^",
+    "@redspark/schemastery": "workspace:^",
+    "@redspark/rsh-sandbox": "workspace:^",
+    "@redspark/rsh-session": "workspace:^",
+    "@redspark/rsh-native-runtime": "workspace:^"
   },
   "devDependencies": {
-    "@deepseek-ai/cordis": "workspace:^",
-    "@deepseek-ai/dsh-llm": "workspace:^"
+    "@redspark/cordis": "workspace:^",
+    "@redspark/rsh-llm": "workspace:^"
   },
   "dsh": {
     "native": {
@@ -64,10 +64,10 @@
     }
   },
   "peerDependenciesMeta": {
-    "@deepseek-ai/cordis": {
+    "@redspark/cordis": {
       "optional": true
     },
-    "@deepseek-ai/dsh-llm": {
+    "@redspark/rsh-llm": {
       "optional": true
     }
   }

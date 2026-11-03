@@ -1,7 +1,7 @@
 /** Cordis-free question records and shared presentation models. */
 import type {
   AskUserQuestionAnswer, AskUserQuestionIntent, AskUserQuestionItem, AskUserQuestionOption,
-} from '@deepseek-ai/dsh-user-questions/protocol'
+} from '@redspark/rsh-user-questions/protocol'
 
 /** Question fields consumed by the generic and plan-review cards. */
 export type QuestionItem = Omit<AskUserQuestionItem, 'detail' | 'header' | 'options' | 'multiSelect' | 'intent'> & {

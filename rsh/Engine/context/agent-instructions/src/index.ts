@@ -6,16 +6,16 @@
  * Plugin lifecycle reads use the optional `ctx.fs` provider, so providerless products
  * mount it as a no-op.
  *
- * @module @deepseek-ai/dsh-agent-instructions
+ * @module @redspark/rsh-agent-instructions
  */
 
-import type { Context } from '@deepseek-ai/cordis'
-import type {} from '@deepseek-ai/dsh-fs'
+import type { Context } from '@redspark/cordis'
+import type {} from '@redspark/rsh-fs'
 import { isDeepStrictEqual } from 'node:util'
-import type { Agent, PreStepDecision } from '@deepseek-ai/dsh-agent'
-import type { Session, UserMessage } from '@deepseek-ai/dsh-session'
-import type {} from '@deepseek-ai/dsh-session-projection'
-import type { ToolExecution, ToolExecutionResult, ToolExecutionToken } from '@deepseek-ai/dsh-tools'
+import type { Agent, PreStepDecision } from '@redspark/rsh-agent'
+import type { Session, UserMessage } from '@redspark/rsh-session'
+import type {} from '@redspark/rsh-session-projection'
+import type { ToolExecution, ToolExecutionResult, ToolExecutionToken } from '@redspark/rsh-tools'
 import { Config, resolveConfig, type ResolvedConfig } from './config.ts'
 import { InstructionComposer } from './composition.ts'
 import { name } from './state.ts'

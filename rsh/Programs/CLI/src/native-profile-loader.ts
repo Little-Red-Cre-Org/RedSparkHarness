@@ -4,15 +4,15 @@ import { createRequire } from 'node:module'
 import { isAbsolute, join, relative, resolve, sep } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { isDeepStrictEqual } from 'node:util'
-import type { NativePresetFolderSummary } from '@deepseek-ai/dsh-agent-presets/native'
+import type { NativePresetFolderSummary } from '@redspark/rsh-agent-presets/native'
 import {
   NativeHost, NativeScope, parseNativeEntryManifest, resolveInstallation, validateNativePluginEntry,
   type InstallationRequest, type NativeApplication, type NativeEntryManifest, type NativePackageInstallation,
   type NativePackageProvenance, type NativePlugin,
-} from '@deepseek-ai/dsh-native-runtime'
-import { launchEnvironmentProvider, type LaunchEnvironmentSnapshot } from '@deepseek-ai/dsh-launch-environment/native'
-import { loadLayeredEnv } from '@deepseek-ai/dsh-launch-environment/layers'
-import { resolveDshHome } from '@deepseek-ai/dsh-home-paths'
+} from '@redspark/rsh-native-runtime'
+import { launchEnvironmentProvider, type LaunchEnvironmentSnapshot } from '@redspark/rsh-launch-environment/native'
+import { loadLayeredEnv } from '@redspark/rsh-launch-environment/layers'
+import { resolveRshHome } from '@redspark/rsh-home-paths'
 import { nativeSdkChildRuntimeLauncher } from './native-sdk-child-runtime-launcher.ts'
 import { nativeAcpChildRuntimeLauncher } from './native-acp-child-runtime-launcher.ts'
 import {
@@ -46,8 +46,8 @@ interface LoadedProfileState {
 const loadedProfileStates = new WeakMap<LoadedNativeProfile, LoadedProfileState>()
 
 const nativeChildLaunchers = [
-  { package: '@deepseek-ai/dsh-sdk-child', service: 'sdkChildRuntimeLauncher', plugin: nativeSdkChildRuntimeLauncher },
-  { package: '@deepseek-ai/dsh-acp-child', service: 'acpChildRuntimeLauncher', plugin: nativeAcpChildRuntimeLauncher },
+  { package: '@redspark/rsh-sdk-child', service: 'sdkChildRuntimeLauncher', plugin: nativeSdkChildRuntimeLauncher },
+  { package: '@redspark/rsh-acp-child', service: 'acpChildRuntimeLauncher', plugin: nativeAcpChildRuntimeLauncher },
 ] as const
 
 /** One provider visible to the native CLI profile loader. */
@@ -166,8 +166,8 @@ export function nativeProfileChildSupportInstallations(profile: NativeProfileCon
     return [row.scope]
   }))
   const additions = [
-    { service: 'childConnection', id: 'subprocess', plugin: '@deepseek-ai/dsh-subprocess-local' },
-    { service: 'sandbox', id: 'sandbox', plugin: '@deepseek-ai/dsh-sandbox-local' },
+    { service: 'childConnection', id: 'subprocess', plugin: '@redspark/rsh-subprocess-local' },
+    { service: 'sandbox', id: 'sandbox', plugin: '@redspark/rsh-sandbox-local' },
   ] as const
   const providers = [...selected]
   const installations: NativeProfileChildSupportInstallation[] = []
@@ -274,17 +274,17 @@ export function nativeProfileChildProviderRoutes(profile: NativeProfileConfig,
   const installations = [...profile.installations]
   for (let index = 0; index < installations.length; index += 1) {
     const child = installations[index]
-    if ((child?.plugin !== '@deepseek-ai/dsh-sdk-child' && child?.plugin !== '@deepseek-ai/dsh-acp-child')
+    if ((child?.plugin !== '@redspark/rsh-sdk-child' && child?.plugin !== '@redspark/rsh-acp-child')
       || child.disabled === true) continue
     const config = typeof child.config === 'object' && child.config !== null && !Array.isArray(child.config)
       ? child.config as Record<string, unknown> : {}
-    if (child.plugin === '@deepseek-ai/dsh-acp-child'
+    if (child.plugin === '@redspark/rsh-acp-child'
       && (typeof config.providerName !== 'string' || config.providerName === '')) {
       throw new Error(`native profile installation ${child.id} must select an acp-child providerName`)
     }
     const modelProvider = nearestSelectedProvider(selected, scopeAncestry(profile, child.scope), 'model')
     if (modelProvider === undefined) throw new Error(`native profile installation ${child.id} has no visible model Provider`)
-    if (modelProvider.plugin !== '@deepseek-ai/dsh-llm-pi-ai') {
+    if (modelProvider.plugin !== '@redspark/rsh-llm-pi-ai') {
       throw new Error(`native profile installation ${child.id} cannot inherit route config from model Provider ${modelProvider.plugin}`)
     }
     const providerConfig = typeof modelProvider.config === 'object' && modelProvider.config !== null && !Array.isArray(modelProvider.config)
@@ -421,12 +421,12 @@ function selectNativePackage(row: NativeProfileConfig['installations'][number], 
 
 async function nativeAgentPresetFolders(profile: NativeProfileConfig, home: string,
   anchors: readonly ReturnType<typeof createRequire>[]): Promise<NativeProfileConfig> {
-  const presetsInstallation = profile.installations.find(row => row.plugin === '@deepseek-ai/dsh-agent-presets' && row.disabled !== true)
+  const presetsInstallation = profile.installations.find(row => row.plugin === '@redspark/rsh-agent-presets' && row.disabled !== true)
   if (presetsInstallation === undefined) return profile
-  const { nativePresetRoots, scanNativePresetFolders } = await import('@deepseek-ai/dsh-agent-presets/native')
+  const { nativePresetRoots, scanNativePresetFolders } = await import('@redspark/rsh-agent-presets/native')
   const roots = nativePresetRoots(home)
   const registeredPresetIds = new Set(profile.installations.flatMap((row) => {
-    if (row.plugin !== '@deepseek-ai/dsh-agent-preset-standing'
+    if (row.plugin !== '@redspark/rsh-agent-preset-standing'
       || typeof row.config !== 'object' || row.config === null || Array.isArray(row.config)) return []
     const id = (row.config as Record<string, unknown>).id
     return typeof id === 'string' ? [id] : []
@@ -488,7 +488,7 @@ async function nativeAgentPresetFolders(profile: NativeProfileConfig, home: stri
     for (const row of folder.installations ?? []) {
       installations.push({ ...row, id: `${scope}/${row.id}`, scope })
     }
-    installations.push({ id: scope, plugin: '@deepseek-ai/dsh-agent-preset-standing', scope,
+    installations.push({ id: scope, plugin: '@redspark/rsh-agent-preset-standing', scope,
       config: { id: folder.id, name: folder.name,
         ...folder.description === undefined ? {} : { description: folder.description } } })
   }
@@ -508,7 +508,7 @@ async function nativeAgentPresetFolders(profile: NativeProfileConfig, home: stri
  * @returns the profile with ready preset installations and folder summaries.
  */
 export function expandNativeProfilePresets(profile: NativeProfileConfig,
-  anchors: readonly ReturnType<typeof createRequire>[], home = resolveDshHome()): Promise<NativeProfileConfig> {
+  anchors: readonly ReturnType<typeof createRequire>[], home = resolveRshHome()): Promise<NativeProfileConfig> {
   return nativeAgentPresetFolders(profile, home, anchors)
 }
 /** Read the same strict composition used by native boot, without importing plugin code. */
@@ -518,7 +518,7 @@ export function readNativeProfile(options: {
   home?: string
   profileDir?: string
 }): NativeProfileConfig {
-  const home = options.home ?? resolveDshHome()
+  const home = options.home ?? resolveRshHome()
   const profileDir = options.profileDir ?? join(home, 'profiles', options.profile)
   const runtime = options.profileDir === undefined ? profileRuntime(options.profile, home) : profileDirectoryRuntime(profileDir)
   if (runtime !== 'native') {
@@ -554,7 +554,7 @@ export async function loadNativeProfile(options: {
   previous?: LoadedNativeProfile
   onApplication?: (application: NativeApplication) => void
 }): Promise<LoadedNativeProfile> {
-  const home = options.home ?? resolveDshHome()
+  const home = options.home ?? resolveRshHome()
   const environment = options.target === 'host' ? options.environment ?? loadLayeredEnv('dsh') : undefined
   const profileDir = options.profileDir ?? join(home, 'profiles', options.profile)
   let profile = readNativeProfile({

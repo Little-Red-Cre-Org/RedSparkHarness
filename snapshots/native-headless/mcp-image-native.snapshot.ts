@@ -8,12 +8,12 @@ import { fileURLToPath, pathToFileURL } from 'node:url'
 import { zstdDecompressSync } from 'node:zlib'
 import { execa } from 'execa'
 import { expect, it } from 'vitest'
-import { JsonlSessionBackend } from '@deepseek-ai/dsh-session-persistence-jsonl'
-import { deriveReplayScript, parseSessionLog } from '@deepseek-ai/dsh-llm-replay'
-import { ToolCallId, type ContentBlock } from '@deepseek-ai/dsh-llm/native'
-import { LocalAttachmentBackend } from '@deepseek-ai/dsh-attachment-local/backend'
+import { JsonlSessionBackend } from '@redspark/rsh-session-persistence-jsonl'
+import { deriveReplayScript, parseSessionLog } from '@redspark/rsh-llm-replay'
+import { ToolCallId, type ContentBlock } from '@redspark/rsh-llm/native'
+import { LocalAttachmentBackend } from '@redspark/rsh-attachment-local/backend'
 import { formatSystemPromptSnapshot, formatToolSchemasSnapshot, normalizedSystemPrompts, normalizedToolSchemas,
-  normalizeSessionSnapshot, redactSessionSnapshotIds } from '@deepseek-ai/dsh-session-snapshot'
+  normalizeSessionSnapshot, redactSessionSnapshotIds } from '@redspark/rsh-session-snapshot'
 
 const root = fileURLToPath(new URL('../../', import.meta.url))
 const scene = join(root, 'snapshots/native-headless/mcp-image-native')
@@ -61,7 +61,7 @@ it('calls a real MCP image tool through dsh, persists attachments and cold-repla
   const profile = join(home, 'profiles/native-mcp-image')
   const workspace = join(home, 'workspace')
   const sessions = join(home, 'sessions')
-  const modules = join(profile, 'node_modules/@deepseek-ai')
+  const modules = join(profile, 'node_modules/@redspark')
   mkdirSync(workspace, { recursive: true })
   mkdirSync(modules, { recursive: true })
   for (const name of ['package.json', 'rsh.profile.json']) {
@@ -81,11 +81,11 @@ it('calls a real MCP image tool through dsh, persists attachments and cold-repla
   writeFileSync(patch, JSON.stringify({ formatVersion: 1, installations: [
     { id: 'app', config: { cwd: workspace, provider: 'native-image-fixture', model: 'vision-fixture',
       systemPrompt: 'Use the registered MCP image tool.', maxSteps: 3, builtinTools: false } }, { id: 'fs', config: { cwd: workspace } },
-    { id: 'storage', config: { root: sessions, compression: 'none' } }, { id: 'attachments', config: { dshHome: home } },
+    { id: 'storage', config: { root: sessions, compression: 'none' } }, { id: 'attachments', config: { rshHome: home } },
     { id: 'mcp', config: { transport: 'stdio', serverName: 'fixture', command: process.execPath,
       args: ['--import', 'tsx/esm', join(root, 'rsh/Modules/Official/mcp/mcp-client/tests/fixture-server.ts')],
       cwd: root, env: {}, toolCallTimeoutMs: 10000, failOnStartupError: true, reconnect: { enabled: false } } },
-    { id: 'credentials', config: { dshHome: home, watch: false } },
+    { id: 'credentials', config: { rshHome: home, watch: false } },
     { id: 'model', config: { providers: { 'native-image-fixture': { baseURL: 'http://127.0.0.1:' + address.port + '/v1',
       apiKeyEnv: 'NATIVE_IMAGE_KEY', api: 'openai-completions', models: [{ id: 'vision-fixture', name: 'Fixture vision',
         input: ['text', 'image'], contextWindow: 4096, maxTokens: 512 }] } } } },
@@ -94,7 +94,7 @@ it('calls a real MCP image tool through dsh, persists attachments and cold-repla
     const result = await execa(process.execPath, [
       '--import', pathToFileURL(join(root, 'rsh/Programs/CLI/tests/fixtures/deny-cordis-context-register.mjs')).href,
       join(root, 'rsh/Programs/CLI/lib/bin.js'), '--profile', 'native-mcp-image', '--patch', patch, task,
-    ], { env: { ...process.env, DSH_HOME: home, NATIVE_IMAGE_KEY: 'native-image-fixture-key' }, reject: false, timeout: 30_000 })
+    ], { env: { ...process.env, RSH_HOME: home, NATIVE_IMAGE_KEY: 'native-image-fixture-key' }, reject: false, timeout: 30_000 })
     expect(result.exitCode, result.stderr).toBe(0)
     expect(requests).toHaveLength(2)
     expect(requests.map(request => request.model)).toEqual(['vision-fixture', 'vision-fixture'])
@@ -109,7 +109,7 @@ it('calls a real MCP image tool through dsh, persists attachments and cold-repla
     const image = results[0]?.data.message.content.flatMap(block => block.type === 'tool-result' ? block.content : [])
       .find(block => block.type === 'image')
     if (image?.type !== 'image') throw new Error('mcp-image-native: image was not persisted in the tool result')
-    const attachments = new LocalAttachmentBackend({ dshHome: home })
+    const attachments = new LocalAttachmentBackend({ rshHome: home })
     const stored = await attachments.readImage(image.attachment)
     expect(stored.data.byteLength).toBe(image.attachment.bytes)
     expect(image.attachment.attachmentId).toContain(createHash('sha256').update(stored.data).digest('hex'))
@@ -134,7 +134,7 @@ it('calls a real MCP image tool through dsh, persists attachments and cold-repla
     if (prompts[0] === undefined || schemas[0] === undefined) throw new Error('mcp-image-native: missing request header')
     const prompt = formatSystemPromptSnapshot(prompts[0], prompts.slice(1))
     const tools = formatToolSchemasSnapshot(schemas[0], schemas.slice(1))
-    if (process.env.DSH_SNAPSHOT === 'refresh') {
+    if (process.env.RSH_SNAPSHOT === 'refresh') {
       writeFileSync(expected, normalized)
       writeFileSync(join(scene, 'system-prompt.expected.md'), prompt)
       writeFileSync(join(scene, 'tool-schemas.expected.json'), tools)

@@ -1,5 +1,5 @@
 {
-  "name": "@deepseek-ai/dsh-util-crypto",
+  "name": "@redspark/rsh-util-crypto",
   "description": "Zero-dependency browser-safe UUID and byte-encoding helpers",
   "version": "1.0.0",
   "publishConfig": {

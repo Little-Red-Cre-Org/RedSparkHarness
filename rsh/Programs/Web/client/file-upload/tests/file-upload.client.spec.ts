@@ -1,5 +1,5 @@
-import { Context } from '@deepseek-ai/cordis'
-import type { SessionId } from '@deepseek-ai/dsh-session/types'
+import { Context } from '@redspark/cordis'
+import type { SessionId } from '@redspark/rsh-session/types'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { apply } from '../src/client/index.ts'
 import { fileUploadWorker, FileUploadRuntime } from '../src/client/runtime.ts'
@@ -7,11 +7,11 @@ import type { FileUploadBody } from '../src/client/contract.ts'
 import type { ClientFileUploadHooks } from '../src/types.ts'
 
 interface UploadGlobal {
-  __DSH_FILE_UPLOAD__?: ClientFileUploadHooks
+  __RSH_FILE_UPLOAD__?: ClientFileUploadHooks
 }
 
 afterEach(() => {
-  delete (globalThis as UploadGlobal).__DSH_FILE_UPLOAD__
+  delete (globalThis as UploadGlobal).__RSH_FILE_UPLOAD__
   vi.restoreAllMocks()
   vi.unstubAllGlobals()
 })
@@ -216,7 +216,7 @@ describe('file upload service', () => {
     vi.stubGlobal('location', { origin: 'https://preview.test' })
     const fetch = vi.fn((_url: URL, _init?: RequestInit) =>
       Promise.resolve(new Response('accepted', { status: 202 })))
-    ;(globalThis as UploadGlobal).__DSH_FILE_UPLOAD__ = { fetch }
+    ;(globalThis as UploadGlobal).__RSH_FILE_UPLOAD__ = { fetch }
     const ctx = new Context()
     const fiber = ctx.plugin(FileUploadRuntime)
     await fiber
@@ -240,7 +240,7 @@ describe('file upload service', () => {
   it('mounts through the plugin entry and resolves non-browser URLs', async () => {
     vi.stubGlobal('location', { origin: 'null' })
     const fetch = vi.fn(() => Promise.resolve(new Response(null, { status: 204 })))
-    ;(globalThis as UploadGlobal).__DSH_FILE_UPLOAD__ = { fetch }
+    ;(globalThis as UploadGlobal).__RSH_FILE_UPLOAD__ = { fetch }
     const ctx = new Context()
     const fiber = ctx.plugin({ apply })
     await fiber
@@ -414,7 +414,7 @@ describe('Session-addressed file upload', () => {
         },
       }), { status: 200 }))
     })
-    ;(globalThis as UploadGlobal).__DSH_FILE_UPLOAD__ = { fetch }
+    ;(globalThis as UploadGlobal).__RSH_FILE_UPLOAD__ = { fetch }
     const { fiber, service } = await scopedService()
     const signal = new AbortController().signal
     const file = new Blob(['data'])
@@ -468,7 +468,7 @@ describe('Session-addressed file upload', () => {
     await fixture.fiber.dispose()
 
     vi.stubGlobal('location', { origin: 'https://preview.test' })
-    ;(globalThis as UploadGlobal).__DSH_FILE_UPLOAD__ = {
+    ;(globalThis as UploadGlobal).__RSH_FILE_UPLOAD__ = {
       fetch: () => Promise.resolve(new Response(null, { status: 413 })),
     }
     const rejected = await scopedService()
@@ -487,7 +487,7 @@ describe('Session-addressed file upload', () => {
       { ok: true, value: { receiptId: 'r', file: { attachmentId: 'a', name: 'x', bytes: -1 } } },
     ]
     for (const body of bodies) {
-      ;(globalThis as UploadGlobal).__DSH_FILE_UPLOAD__ = {
+      ;(globalThis as UploadGlobal).__RSH_FILE_UPLOAD__ = {
         fetch: () => Promise.resolve(new Response(JSON.stringify(body), { status: 200 })),
       }
       const malformed = await scopedService()
@@ -496,7 +496,7 @@ describe('Session-addressed file upload', () => {
       await malformed.fiber.dispose()
     }
 
-    ;(globalThis as UploadGlobal).__DSH_FILE_UPLOAD__ = {
+    ;(globalThis as UploadGlobal).__RSH_FILE_UPLOAD__ = {
       fetch: () => Promise.resolve(new Response(JSON.stringify({
         ok: false,
         error: { code: 'session/attachment-invalid', message: 'denied', details: { reason: 'NOPE' } },

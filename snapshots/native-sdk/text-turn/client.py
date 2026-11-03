@@ -7,15 +7,15 @@ import sys
 from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
 from urllib.request import Request, urlopen
 
-from deepseek_harness import DeepSeekHarness, DeepSeekHarnessConfig
-from deepseek_harness.errors import JsonRpcError, TransportClosedError
+from redspark_harness import RedSparkHarness, RedSparkHarnessConfig
+from redspark_harness.errors import JsonRpcError, TransportClosedError
 
 launcher, home, workspace, patch, *arguments = sys.argv[1:]
 goal_control = arguments[-1:] == ["goal-control"]
 scheduled_origin = arguments[-1:] == ["scheduled-origin"]
 task = arguments[0] if arguments else "say hello through native SDK"
 profile_args = {"profile": "native-sdk"} if goal_control or scheduled_origin else {}
-config = DeepSeekHarnessConfig(dsh_bin=launcher, dsh_home=home,
+config = RedSparkHarnessConfig(dsh_bin=launcher, rsh_home=home,
     **profile_args,
     patches=(patch,), cwd=workspace, provider="fixture", model="fixture-model",
     request_timeout_seconds=20, env={"NATIVE_SDK_FIXTURE_KEY": "fixture-key"})
@@ -70,7 +70,7 @@ if scheduled_origin:
         if expected is not None and actual != expected:
             raise AssertionError(f"expected {expected!r}, received {actual!r}")
 
-    uninitialized = DeepSeekHarness(config)
+    uninitialized = RedSparkHarness(config)
     try:
         uninitialized.client.start()
         endpoint("await-origin-plugin-loaded", "ready")
@@ -80,13 +80,13 @@ if scheduled_origin:
         uninitialized.close()
     endpoint("await-origin-root-rejected", "rejected")
 
-    with DeepSeekHarness(config) as initializing:
+    with RedSparkHarness(config) as initializing:
         initializing.start()
         endpoint("start-origin", "accepted")
         endpoint("await-origin-ready", "ready")
         initializing.start_session(session_id).run(first_task)
     endpoint("await-schedule-seed", "ready")
-    with DeepSeekHarness(config) as restored:
+    with RedSparkHarness(config) as restored:
         result = restored.start_session(session_id).run(restored_task)
         print(json.dumps({"run": serialized(result)}))
     raise SystemExit(0)
@@ -168,7 +168,7 @@ if goal_control:
     def bounded_run(session, text, description, harness):
         return bounded_call(lambda: session.run(text), description, harness)
 
-    with DeepSeekHarness(config) as harness:
+    with RedSparkHarness(config) as harness:
         session = harness.start_session(session_id)
         harness.start()
         tree = harness.client.subscribe_session_notifications(session_id)
@@ -214,7 +214,7 @@ if goal_control:
                 raise
         tree.close()
 
-    with DeepSeekHarness(config) as restored:
+    with RedSparkHarness(config) as restored:
         restored_session = restored.start_session(session_id)
         runs["cold"] = serialized(bounded_run(restored_session, cold_text,
             "cold restored SDK admission while Goal is disarmed", restored))
@@ -225,7 +225,7 @@ if goal_control:
     raise SystemExit(0)
 
 
-with DeepSeekHarness(config) as harness:
+with RedSparkHarness(config) as harness:
     session = harness.start_session("sdk-recorded-turn")
     assert session.cancel() is False
     refuse_steering(session, "idle steering")
@@ -249,7 +249,7 @@ with DeepSeekHarness(config) as harness:
     assert any(event["type"] == "agent/inbox/spliced" and event["data"]["target"] == "next-step"
         and any(message["id"] == steering for message in event["data"]["inserted"]) for event in result.events)
     refuse_steering(session, "settled steering")
-with DeepSeekHarness(config) as resumed:
+with RedSparkHarness(config) as resumed:
     result = resumed.run("finish after cancellation", session_id="sdk-recorded-turn")
     source = resumed.start_session("sdk-recorded-turn")
     for destination, anchor in [("sdk-recorded-turn", None), ("sdk-recorded-fork", 9007199254740991)]:
@@ -261,7 +261,7 @@ with DeepSeekHarness(config) as resumed:
             raise AssertionError("invalid fork accepted")
     fork = source.fork("sdk-recorded-fork", result.events[-1]["seq"])
     assert fork.id == "sdk-recorded-fork"
-with DeepSeekHarness(config) as forked:
+with RedSparkHarness(config) as forked:
     session = forked.start_session("sdk-recorded-fork")
     data = base64.b64encode(Path(__file__).with_name("image.png").read_bytes()).decode("ascii")
     for encoded, mime in [("invalid", "image/png"), (data, "image/jpeg")]:
@@ -273,7 +273,7 @@ with DeepSeekHarness(config) as forked:
             raise AssertionError("invalid image accepted")
     result = session.run([{"type": "text", "text": "finish the cold fork"},
         {"type": "image", "data": data, "mimeType": "image/png"}])
-with DeepSeekHarness(config) as restored:
+with RedSparkHarness(config) as restored:
     result = restored.start_session("sdk-recorded-fork").run("retain the image")
     result = restored.start_session("sdk-recorded-fork").run("delegate a native child")
     delegated = result
@@ -337,7 +337,7 @@ with DeepSeekHarness(config) as restored:
     assert any(item.method == "session.event" and item.payload["sessionId"] != session.id
         and item.payload["event"]["type"] == "turn/end" for item in cancelled_child.notifications)
     result = production
-with DeepSeekHarness(config) as recovered:
+with RedSparkHarness(config) as recovered:
     resumed = recovered.start_session("sdk-recorded-fork").run("recover after child cancellation")
     assert resumed.events[-1]["data"]["reason"]["kind"] == "completed"
     assert resumed.final_response == result.final_response
@@ -377,7 +377,7 @@ with DeepSeekHarness(config) as recovered:
         except TransportClosedError:
             pass
         expect_finished(cancelled_epoch + shutdown_notifications, continuation_id, "aborted")
-with DeepSeekHarness(config) as cold:
+with RedSparkHarness(config) as cold:
     session = cold.start_session("sdk-recorded-fork")
     with cold.client.subscribe_session_notifications(session.id) as tree:
         refused = session.run("refuse invalid continuation recipients")
@@ -404,7 +404,7 @@ with DeepSeekHarness(config) as cold:
                 break
         expect_finished(completed_epoch, continuation_id, "completed")
 
-with DeepSeekHarness(config) as catalog:
+with RedSparkHarness(config) as catalog:
     listed = catalog.start_session("sdk-recorded-turn").run("catalog descendants through fork")
     content = next(event for event in listed.events if event["type"] == "tool/result")["data"]["message"]["content"][0]
     assert content["isError"] is False

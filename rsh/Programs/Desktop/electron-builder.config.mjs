@@ -27,13 +27,13 @@ export function createElectronBuilderConfig(
   hostArch = process.arch,
 ) {
   const appId = resolveDesktopAppId(env)
-  const targetPlatform = env.DSH_DESKTOP_TARGET_PLATFORM
+  const targetPlatform = env.RSH_DESKTOP_TARGET_PLATFORM
   const resolvedPlatform = targetPlatform ?? hostPlatform
-  const resolvedArch = env.DSH_DESKTOP_TARGET_ARCH ?? hostArch
-  if (env.DSH_DESKTOP_UNSIGNED !== undefined && !['0', '1'].includes(env.DSH_DESKTOP_UNSIGNED)) {
-    throw new Error('desktop package: DSH_DESKTOP_UNSIGNED must be 0 or 1')
+  const resolvedArch = env.RSH_DESKTOP_TARGET_ARCH ?? hostArch
+  if (env.RSH_DESKTOP_UNSIGNED !== undefined && !['0', '1'].includes(env.RSH_DESKTOP_UNSIGNED)) {
+    throw new Error('desktop package: RSH_DESKTOP_UNSIGNED must be 0 or 1')
   }
-  const unsigned = env.DSH_DESKTOP_UNSIGNED === '1'
+  const unsigned = env.RSH_DESKTOP_UNSIGNED === '1'
   if (unsigned && resolvedPlatform !== 'win32') throw new Error('desktop package: unsigned builds require Windows')
   const packagesMacOS = targetPlatform === 'darwin' || (targetPlatform === undefined && hostPlatform === 'darwin')
   const packagesWindows = targetPlatform === 'win32'
@@ -41,10 +41,10 @@ export function createElectronBuilderConfig(
   if (packagesMacOS) resolveMacOSNotarizationEnvironment(env)
   const windowsSigner = packagesWindows && !unsigned
     ? createWindowsTokenSigner({
-        certificateFile: env.DSH_DESKTOP_WINDOWS_CER_FILE,
-        signTool: env.DSH_DESKTOP_WINDOWS_SIGNTOOL,
-        tokenPin: env.DSH_DESKTOP_WINDOWS_TOKEN_PIN,
-        keyContainer: env.DSH_DESKTOP_WINDOWS_KEY_CONTAINER,
+        certificateFile: env.RSH_DESKTOP_WINDOWS_CER_FILE,
+        signTool: env.RSH_DESKTOP_WINDOWS_SIGNTOOL,
+        tokenPin: env.RSH_DESKTOP_WINDOWS_TOKEN_PIN,
+        keyContainer: env.RSH_DESKTOP_WINDOWS_KEY_CONTAINER,
       })
     : undefined
   if (windowsSigner !== undefined) {

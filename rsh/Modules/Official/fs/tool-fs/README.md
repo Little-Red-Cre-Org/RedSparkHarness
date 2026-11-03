@@ -3,7 +3,7 @@ description: "The model-facing read, read_image, write, and edit tools for users
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-tool-fs
+# @redspark/rsh-tool-fs
 
 English | [中文](README.zh.md)
 
@@ -32,9 +32,9 @@ Mount the tools after a `ctx.fs` backend and, for read-before-write/edit behavio
 A backend, the policy plugin, then the tools; the attachment store is optional and enables `read_image`.
 
 ```yaml
-- name: '@deepseek-ai/dsh-fs-local'
-- name: '@deepseek-ai/dsh-fs-observation-policy'
-- name: '@deepseek-ai/dsh-tool-fs'
+- name: '@redspark/rsh-fs-local'
+- name: '@redspark/rsh-fs-observation-policy'
+- name: '@redspark/rsh-tool-fs'
 ```
 
 The policy plugin is optional: without it the tools run against the bare provider (unconditional write, overwrite, and edit with no observed-state). A deployment that loads these tools is expected to also load it, so the behavior is read-before-write/edit. `read_image` registers only while a durable `ctx.attachments` service is mounted; execution additionally refuses on a route whose exact model does not declare image input, so a text route's durable history stays free of image blocks.
@@ -61,7 +61,7 @@ All keys are optional; the defaults are the shipped read caps.
 | `readMaxBytes` | `51200` | Byte cap on one `read` call's selected lines; overflow ends the window with a capped footer |
 | `readStreamMinSize` | `10485760` | Files at or above this size (or of unknown size) stream instead of loading whole into memory |
 
-The generated [configuration catalog](../../../../Docs/config-catalog.md#deepseek-aidsh-tool-fs) is the exhaustive source for every accepted field and its JSDoc.
+The generated [configuration catalog](../../../../Docs/config-catalog.md#redsparkrsh-tool-fs) is the exhaustive source for every accepted field and its JSDoc.
 
 ### Policy and sandbox behavior
 
@@ -130,7 +130,7 @@ Read these pages when the package-level contract is not enough. They move from t
 - [fs-local](../fs-local/README.md) — the host-filesystem backend these tools run against.
 - [fs-sandbox](../fs-sandbox/README.md) — the sandbox-enforcing backend that adds the escalation fields.
 - [fs-observation-policy](../fs-observation-policy/README.md) — the policy plugin that guards mutations through the `fs/*` events.
-- [Generated tool catalog](../../../../Docs/tool-catalog.md#deepseek-aidsh-tool-fs) — the exhaustive schemas this package registers.
+- [Generated tool catalog](../../../../Docs/tool-catalog.md#redsparkrsh-tool-fs) — the exhaustive schemas this package registers.
 
 -----
 
@@ -173,7 +173,7 @@ Prefix-stable while the visible tool set, plugin scope, and guidance text are un
 
 #### What the model sees
 
-The model sees the generated [`read`, `read_image`, `write`, and `edit` schemas](../../../../Docs/tool-catalog.md#deepseek-aidsh-tool-fs), with snake_case arguments. The image tool appears only while a durable attachment store is mounted; its schema is route-independent, and the strict gate refuses at execution. Scoped tool restrictions can remove any definition for one agent.
+The model sees the generated [`read`, `read_image`, `write`, and `edit` schemas](../../../../Docs/tool-catalog.md#redsparkrsh-tool-fs), with snake_case arguments. The image tool appears only while a durable attachment store is mounted; its schema is route-independent, and the strict gate refuses at execution. Scoped tool restrictions can remove any definition for one agent.
 
 #### Token effect
 

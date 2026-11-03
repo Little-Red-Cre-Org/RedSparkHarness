@@ -1,6 +1,6 @@
 /** React-free contracts between the slot host and an installed renderer. */
 import type { ReactNode } from 'react'
-import type { ObservableSnapshot } from '@deepseek-ai/dsh-client-store'
+import type { ObservableSnapshot } from '@redspark/rsh-client-store'
 import type {
   SessionAreaProps, SlotEntryDef, SlotScope, SlotSpec, StoredEntry, Translate,
 } from './index.ts'

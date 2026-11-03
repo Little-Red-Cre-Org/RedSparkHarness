@@ -3,7 +3,7 @@ description: "通过 CLI 固定的同版本子进程 launcher，选择可选的 
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-acp-child
+# @redspark/rsh-acp-child
 
 [English](README.md) | 中文
 
@@ -38,7 +38,7 @@ kind: "package-reference"
 ```json
 {
   "id": "acp-child",
-  "plugin": "@deepseek-ai/dsh-acp-child",
+  "plugin": "@redspark/rsh-acp-child",
   "scope": "root",
   "config": { "providerName": "dsh-acp-child" }
 }
@@ -46,7 +46,7 @@ kind: "package-reference"
 
 | 现有安装项 | 配置字段 | 值 |
 |---|---|---|
-| `subagents`（`@deepseek-ai/dsh-native-subagent`） | `providerName` | `dsh-acp-child` |
+| `subagents`（`@redspark/rsh-native-subagent`） | `providerName` | `dsh-acp-child` |
 | `workflow-worker`（若已安装） | `subagentProvider` | `dsh-acp-child` |
 | `ralph-tool`（若已安装） | `subagentProvider` | `dsh-acp-child` |
 
@@ -77,13 +77,13 @@ Native profile loader 会拒绝缺少可见 pi-ai Provider 或路由目录为空
 | [CLI launcher](../../../../Programs/CLI/src/native-acp-child-runtime-launcher.ts) | 固定子进程运行时的 Program Provider |
 | [CLI profile 模板](../../../../Programs/CLI/src/native-profile-template.ts) | 不包含递归子进程提供方的固定 `native-acp-dsh-child` composition |
 
-CLI 使用固定的 `native-acp-dsh-child` profile 和私有生成 patch 启动同版本 `dsh` 可执行文件。请求不携带可执行文件或任意 argv。子 profile 移除 Native Subagent 和 workflow Provider，因此子进程不能再启动 child。launcher 会显式注入所选路由凭据，要求 child 的规范 cwd 位于父级 workspace 内，并为本次运行创建私有 DSH_HOME。
+CLI 使用固定的 `native-acp-dsh-child` profile 和私有生成 patch 启动同版本 `dsh` 可执行文件。请求不携带可执行文件或任意 argv。子 profile 移除 Native Subagent 和 workflow Provider，因此子进程不能再启动 child。launcher 会显式注入所选路由凭据，要求 child 的规范 cwd 位于父级 workspace 内，并为本次运行创建私有 RSH_HOME。
 
 driver 将文本和图像提示块转换为 ACP，然后要求子进程声明并接受精确选定的 child 提供方/模型、推理强度、step/token 上限和权限模式。无法保留选定路由或不高于请求上限的子进程，会在发送提示词前失败。结果仅包含不透明 ACP 文本；driver 不使用 Engine 的 `request.model` Responses 能力，也不发布六类 `subagent/external-operation` 事实：`model-request`、`model-response`、`model-failure`、`tool-call`、`tool-result` 和 `tool-settlement`。
 
 子进程只接收父级授权的 builtin 文件工具。只有当精确子进程权限请求匹配父级 approval identity、父级要求审批、父级 policy 为 `workspace-write` 且该 builtin 已获准时，才保留 `write_file`；否则子进程使用 `deny` 权限模式且不含写入工具。获准写入时，规范化后的 `workspaceWriteRoot` 必须等于父级 sandbox workspace root。launcher 只在该写入权限获准时派生 `workspace-write` child policy，否则派生 `read-only`，再将其交给共享的 `dsh-sandbox-local` ProcessSandbox。child 保留后端报告的 `full` 或 `partial` 强制执行级别。该级别描述文件操作强制执行，不代表完整的进程隔离。Windows ACL 后端报告 `partial`：Everyone 访问与 NTFS 硬链接别名仍是相关限制，且后端不限制读取、网络访问或进程可见性。若无可用后端或 runner 失败，启动会失败且不会重试为不受限运行。详见 [sandbox-local 策略与强制执行](../../sandbox/sandbox-local/README.zh.md) 和 [Windows ACL 限制](../../sandbox/sandbox-windows-acl/README.zh.md)。
 
-关闭过程会先关闭 ACP 与 child stdio 工作，并等待整个受管进程范围结算，然后 `dispose()` 才移除私有 DSH_HOME。本包不发布 runtime invariant companion，因为它没有可独立比较的注册表或持久身份：Native Subagent 负责准入和父 Session 写入，launcher runtime 负责进程清理，因此本包不导出 `./invariant`。
+关闭过程会先关闭 ACP 与 child stdio 工作，并等待整个受管进程范围结算，然后 `dispose()` 才移除私有 RSH_HOME。本包不发布 runtime invariant companion，因为它没有可独立比较的注册表或持久身份：Native Subagent 负责准入和父 Session 写入，launcher runtime 负责进程清理，因此本包不导出 `./invariant`。
 
 </details>
 

@@ -3,7 +3,7 @@ description: "通过 profile 选择的代码运行时，将有界 TypeScript 或
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-tool-code-runtime
+# @redspark/rsh-tool-code-runtime
 
 [English](README.md) | 中文
 

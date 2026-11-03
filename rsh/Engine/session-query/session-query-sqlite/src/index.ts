@@ -1,16 +1,16 @@
 /** Cordis service adapter for the shared SQLite session-query core. */
 
-import type { Session } from '@deepseek-ai/dsh-session'
-import { SessionLogOffset } from '@deepseek-ai/dsh-session'
-import { Context, Service, type Fiber } from '@deepseek-ai/cordis'
-import z from '@deepseek-ai/schemastery'
-import type SessionPersistence from '@deepseek-ai/dsh-session-persistence'
-import SessionQueryEngine, { readColdSessionLog } from '@deepseek-ai/dsh-session-query'
+import type { Session } from '@redspark/rsh-session'
+import { SessionLogOffset } from '@redspark/rsh-session'
+import { Context, Service, type Fiber } from '@redspark/cordis'
+import z from '@redspark/schemastery'
+import type SessionPersistence from '@redspark/rsh-session-persistence'
+import SessionQueryEngine, { readColdSessionLog } from '@redspark/rsh-session-query'
 import {
   SESSION_QUERY_DEFAULT_PERSISTED_INSPECT_CONCURRENCY,
   SESSION_QUERY_DEFAULT_PREPARED_SESSION_CACHE_SIZE,
   SESSION_QUERY_READ_WINDOW_MAX,
-} from '@deepseek-ai/dsh-session-query/native'
+} from '@redspark/rsh-session-query/native'
 import type {
   SessionEventSearchPage,
   SessionEventSearchRequest,
@@ -18,12 +18,12 @@ import type {
   SessionSearchHit,
   SessionSearchPage,
   SessionSearchRequest,
-} from '@deepseek-ai/dsh-session-query/native'
+} from '@redspark/rsh-session-query/native'
 import type {
   SessionQueryLiveSource,
   SessionQueryPersistenceRecord,
   SessionQuerySource,
-} from '@deepseek-ai/dsh-session-query/source'
+} from '@redspark/rsh-session-query/source'
 import {
   SESSION_QUERY_SQLITE_DEFAULT_LIMIT,
   SESSION_QUERY_SQLITE_MAX_LIMIT,
@@ -53,7 +53,7 @@ export {
 /** Boot-context slot for a launcher-owned absolute path to this process's derived query index. */
 export const SESSION_QUERY_SQLITE_PATH_KEY = 'launcherSessionQueryPath'
 
-declare module '@deepseek-ai/cordis' {
+declare module '@redspark/cordis' {
   interface Context {
     /** Launcher-owned absolute path to this process's disposable derived query index. */
     launcherSessionQueryPath?: string

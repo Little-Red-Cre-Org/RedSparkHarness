@@ -3,11 +3,11 @@
  * pure context-breakdown projection, so both surfaces price identical content
  * to identical numbers.
  *
- * @module @deepseek-ai/dsh-token-meter/estimate
+ * @module @redspark/rsh-token-meter/estimate
  */
 
-import type { ContentBlock, Message } from '@deepseek-ai/dsh-llm/native'
-import type { EpochHeader } from '@deepseek-ai/dsh-session/native'
+import type { ContentBlock, Message } from '@redspark/rsh-llm/native'
+import type { EpochHeader } from '@redspark/rsh-session/native'
 
 /** Fixed text-density estimate used until exact tokenization is needed. */
 const CHARS_PER_TOKEN = 4

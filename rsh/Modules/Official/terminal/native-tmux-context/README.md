@@ -3,7 +3,7 @@ description: "Add the current tmux location to native headless requests and pres
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-native-tmux-context
+# @redspark/rsh-native-tmux-context
 
 English | [中文](README.zh.md)
 

@@ -4,25 +4,25 @@
  * compaction for `/compact`, over the same range selection, summarization and
  * durable bracket as the Cordis backend.
  *
- * @module @deepseek-ai/dsh-compaction-basic/native
+ * @module @redspark/rsh-compaction-basic/native
  */
 
-import { ManualCompactionError } from '@deepseek-ai/dsh-compaction/native'
+import { ManualCompactionError } from '@redspark/rsh-compaction/native'
 import type {
   CompactionResult, CompactionTrigger, NativeCompactionOperations, NativeCompactionOwner,
-} from '@deepseek-ai/dsh-compaction/native'
-import type { CommandId } from '@deepseek-ai/dsh-commands/brand'
-import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
-import type { NativeModel } from '@deepseek-ai/dsh-native-model-execution'
-import type { NativeModelExecution, NativeModelRecoveryRequest } from '@deepseek-ai/dsh-native-model-execution'
-import type {} from '@deepseek-ai/dsh-native-model-execution/native'
-import { CONTEXT_WINDOW_EXCEEDED_CODE } from '@deepseek-ai/dsh-llm/native'
-import type { Session } from '@deepseek-ai/dsh-session/native'
+} from '@redspark/rsh-compaction/native'
+import type { CommandId } from '@redspark/rsh-commands/brand'
+import type { NativePlugin } from '@redspark/rsh-native-runtime'
+import type { NativeModel } from '@redspark/rsh-native-model-execution'
+import type { NativeModelExecution, NativeModelRecoveryRequest } from '@redspark/rsh-native-model-execution'
+import type {} from '@redspark/rsh-native-model-execution/native'
+import { CONTEXT_WINDOW_EXCEEDED_CODE } from '@redspark/rsh-llm/native'
+import type { Session } from '@redspark/rsh-session/native'
 import type {
   NativeActiveSessionOperations, NativeActiveSessionOwner, NativeStepAdmissionHook,
-} from '@deepseek-ai/dsh-native-session-execution'
-import type { NativeTokenMeterOperations } from '@deepseek-ai/dsh-token-meter/native'
-import type { NativeToolResultPrunerOperations } from '@deepseek-ai/dsh-compaction-tool-result-pruner/native'
+} from '@redspark/rsh-native-session-execution'
+import type { NativeTokenMeterOperations } from '@redspark/rsh-token-meter/native'
+import type { NativeToolResultPrunerOperations } from '@redspark/rsh-compaction-tool-result-pruner/native'
 import { resolveConfig, resolveTargetPolicy } from './config.ts'
 import {
   compactForStepPressure, compactForTrigger, compactIdleSurface, compactTurnRegion, routedTarget, summarizeConversation,
@@ -244,7 +244,7 @@ export class NativeBasicCompaction implements NativeCompactionOperations {
 
 /** Install the native compaction Provider over the selected model and token meter. */
 export const plugin: NativePlugin = {
-  apiVersion: 1, name: '@deepseek-ai/dsh-compaction-basic', targets: ['host'],
+  apiVersion: 1, name: '@redspark/rsh-compaction-basic', targets: ['host'],
   requires: ['model', 'tokenMeter', 'activeSessions'], optional: ['modelExecution', 'toolResultPruner'], provides: ['compaction'],
   resolve(input) {
     const config = resolveNativeBasicCompactionConfig(input)

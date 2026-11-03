@@ -1,4 +1,4 @@
-const api = window.dshDesktop
+const api = window.rshDesktop
 
 async function main() {
   const { id, messages } = await api.locale()

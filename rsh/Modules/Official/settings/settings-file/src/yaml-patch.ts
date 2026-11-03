@@ -1,6 +1,6 @@
 /** YAML node edits shared by the legacy and native file Providers. */
 import type { Document } from 'yaml'
-import { deepEqualJson } from '@deepseek-ai/dsh-util-values'
+import { deepEqualJson } from '@redspark/rsh-util-values'
 
 /** Test whether a parsed YAML value is a map for diffing.
  * @param value - parsed document value.

@@ -5,8 +5,8 @@ import { createRequire } from 'node:module'
 import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { build } from 'esbuild'
-import { parseNativeEntryManifest } from '@deepseek-ai/dsh-native-runtime'
-import type { NativeClientBootWire } from '@deepseek-ai/dsh-client-web/native-wire'
+import { parseNativeEntryManifest } from '@redspark/rsh-native-runtime'
+import type { NativeClientBootWire } from '@redspark/rsh-client-web/native-wire'
 import { NativeClientBuildError } from './client-build-error.ts'
 
 const PROFILE_FILENAME = 'rsh.client.json'
@@ -16,7 +16,7 @@ const PACKAGE_NAME = /^(?:@[a-z0-9][a-z0-9._-]*\/)?[a-z0-9][a-z0-9._-]*$/u
 /** Follow the public-only clientBuildEnvironmentDefines contract without a Scripts runtime dependency. */
 function nativeClientEnvironmentDefines(): Record<string, string> {
   const publicValues = Object.fromEntries(Object.entries(process.env)
-    .filter(([name, value]) => name.startsWith('DSH_CLIENT_') && value !== undefined)
+    .filter(([name, value]) => name.startsWith('RSH_CLIENT_') && value !== undefined)
     .sort(([left], [right]) => left.localeCompare(right))
     .map(([name, value]) => [`process.env.${name}`, JSON.stringify(value)]))
   return {

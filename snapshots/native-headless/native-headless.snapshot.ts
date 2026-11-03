@@ -5,12 +5,12 @@ import { join } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { execa } from 'execa'
 import { expect, it } from 'vitest'
-import { JsonlSessionBackend } from '@deepseek-ai/dsh-session-persistence-jsonl'
-import { SESSION_FORMAT_VERSION } from '@deepseek-ai/dsh-session'
+import { JsonlSessionBackend } from '@redspark/rsh-session-persistence-jsonl'
+import { SESSION_FORMAT_VERSION } from '@redspark/rsh-session'
 import {
   formatSystemPromptSnapshot, formatToolSchemasSnapshot, normalizeSessionSnapshot, redactSessionSnapshotIds,
   normalizedSystemPrompts, normalizedToolSchemas, sessionFixtureName,
-} from '@deepseek-ai/dsh-session-snapshot'
+} from '@redspark/rsh-session-snapshot'
 
 const root = fileURLToPath(new URL('../../', import.meta.url))
 const bin = join(root, 'rsh/Programs/CLI/lib/bin.js')
@@ -42,38 +42,38 @@ it('executes and restores a native profile through the published dsh command', a
   copyFileSync(join(shippedProfile, 'package.json'), join(profileDir, 'package.json'))
   const composition = JSON.parse(readFileSync(join(shippedProfile, 'rsh.profile.json'), 'utf8')) as { installations: unknown[] }
   composition.installations.push(
-    { id: 'subprocess', plugin: '@deepseek-ai/dsh-subprocess-local', scope: 'root' },
-    { id: 'shell', plugin: '@deepseek-ai/dsh-bash-local', scope: 'root', config: {
+    { id: 'subprocess', plugin: '@redspark/rsh-subprocess-local', scope: 'root' },
+    { id: 'shell', plugin: '@redspark/rsh-bash-local', scope: 'root', config: {
       bashPath: process.platform === 'win32' ? join(process.env.ProgramFiles ?? 'C:/Program Files', 'Git/bin/bash.exe') : 'bash',
     } },
-    { id: 'tmux-context', plugin: '@deepseek-ai/dsh-native-tmux-context', scope: 'root', disabled: true },
+    { id: 'tmux-context', plugin: '@redspark/rsh-native-tmux-context', scope: 'root', disabled: true },
   )
-  composition.installations.push({ id: 'agent-instructions', plugin: '@deepseek-ai/dsh-agent-instructions', scope: 'root', config: { dshHome: home, maxBytes: 65_536 } })
+  composition.installations.push({ id: 'agent-instructions', plugin: '@redspark/rsh-agent-instructions', scope: 'root', config: { rshHome: home, maxBytes: 65_536 } })
   writeFileSync(join(profileDir, 'rsh.profile.json'), JSON.stringify(composition))
   copyFileSync(join(scenario, 'workspace/AGENTS.md'), join(workspace, 'AGENTS.md'))
-  mkdirSync(join(modules, '@deepseek-ai'), { recursive: true })
+  mkdirSync(join(modules, '@redspark'), { recursive: true })
   for (const [name, path] of [
-    ['dsh-agent-instructions', 'rsh/Engine/context/agent-instructions'],
-    ['dsh-native-agent', 'rsh/Engine/core/native-agent'],
-    ['dsh-native-code-runtime', 'rsh/Modules/Official/code-runtime/native-code-runtime'],
-    ['dsh-native-headless', 'rsh/Engine/core/native-headless'],
-    ['dsh-native-jobs', 'rsh/Engine/core/native-jobs'],
-    ['dsh-native-model-execution', 'rsh/Engine/core/native-model-execution'],
-    ['dsh-native-tool-jobs', 'rsh/Engine/jobs/native-tool-jobs'],
-    ['dsh-native-tools', 'rsh/Engine/core/native-tools'],
-    ['dsh-native-time-context', 'rsh/Engine/context/native-time-context'],
-    ['dsh-tmux-context-definition', 'rsh/Engine/context/tmux-context-definition'],
-    ['dsh-native-tmux-context', 'rsh/Modules/Official/terminal/native-tmux-context'],
-    ['dsh-shell', 'rsh/Modules/Official/shell/shell'],
-    ['dsh-shell-process-local', 'rsh/Modules/Official/shell/shell-process-local'],
-    ['dsh-bash-local', 'rsh/Modules/Official/shell/bash-local'],
-    ['dsh-subprocess', 'rsh/Core/subprocess/subprocess'],
-    ['dsh-subprocess-local', 'rsh/Core/subprocess/subprocess-local'],
-    ['dsh-fs-local', 'rsh/Modules/Official/fs/fs-local'],
-    ['dsh-fs-observation-policy', 'rsh/Modules/Official/fs/fs-observation-policy'],
-    ['dsh-session-persistence-jsonl', 'rsh/Engine/session/session-persistence-jsonl'],
+    ['rsh-agent-instructions', 'rsh/Engine/context/agent-instructions'],
+    ['rsh-native-agent', 'rsh/Engine/core/native-agent'],
+    ['rsh-native-code-runtime', 'rsh/Modules/Official/code-runtime/native-code-runtime'],
+    ['rsh-native-headless', 'rsh/Engine/core/native-headless'],
+    ['rsh-native-jobs', 'rsh/Engine/core/native-jobs'],
+    ['rsh-native-model-execution', 'rsh/Engine/core/native-model-execution'],
+    ['rsh-native-tool-jobs', 'rsh/Engine/jobs/native-tool-jobs'],
+    ['rsh-native-tools', 'rsh/Engine/core/native-tools'],
+    ['rsh-native-time-context', 'rsh/Engine/context/native-time-context'],
+    ['rsh-tmux-context-definition', 'rsh/Engine/context/tmux-context-definition'],
+    ['rsh-native-tmux-context', 'rsh/Modules/Official/terminal/native-tmux-context'],
+    ['rsh-shell', 'rsh/Modules/Official/shell/shell'],
+    ['rsh-shell-process-local', 'rsh/Modules/Official/shell/shell-process-local'],
+    ['rsh-bash-local', 'rsh/Modules/Official/shell/bash-local'],
+    ['rsh-subprocess', 'rsh/Core/subprocess/subprocess'],
+    ['rsh-subprocess-local', 'rsh/Core/subprocess/subprocess-local'],
+    ['rsh-fs-local', 'rsh/Modules/Official/fs/fs-local'],
+    ['rsh-fs-observation-policy', 'rsh/Modules/Official/fs/fs-observation-policy'],
+    ['rsh-session-persistence-jsonl', 'rsh/Engine/session/session-persistence-jsonl'],
   ] as const) {
-    symlinkSync(join(root, path), join(modules, '@deepseek-ai', name), 'junction')
+    symlinkSync(join(root, path), join(modules, '@redspark', name), 'junction')
   }
   mkdirSync(shellFixtureBin)
   writeFileSync(join(shellFixtureBin, 'ps'), `#!/bin/sh
@@ -143,7 +143,7 @@ export PATH="$fixture_dir:$PATH"
     { id: 'tmux-context', disabled: false },
   ] }
   writeFileSync(patchPath, JSON.stringify(patch))
-  const env = { ...process.env, DSH_HOME: home, TMUX_PANE: '%3', TMUX_FIXTURE_AUDIT: shellAudit, BASH_ENV: shellFixture }
+  const env = { ...process.env, RSH_HOME: home, TMUX_PANE: '%3', TMUX_FIXTURE_AUDIT: shellAudit, BASH_ENV: shellFixture }
   const invoke = (args: string[], extraEnv: Record<string, string> = {}) => execa(process.execPath, ['--import', contextProbeUrl, bin, '--profile', 'native-headless', '--patch', patchPath, ...args], {
     env: { ...env, ...extraEnv }, reject: false, timeout: 30_000,
   })
@@ -208,7 +208,7 @@ export PATH="$fixture_dir:$PATH"
       const prompts = normalizedSystemPrompts(raw, context)
       const schemas = normalizedToolSchemas(raw, context)
       if (prompts[0] === undefined || schemas[0] === undefined) throw new Error('native profile omitted its request header')
-      if (process.env.DSH_SNAPSHOT === 'refresh') {
+      if (process.env.RSH_SNAPSHOT === 'refresh') {
         writeFileSync(join(scenario, currentName), normalized)
         writeFileSync(join(scenario, 'system-prompt.expected.md'), formatSystemPromptSnapshot(prompts[0], prompts.slice(1)))
         writeFileSync(join(scenario, 'tool-schemas.expected.json'), formatToolSchemasSnapshot(schemas[0], schemas.slice(1)))

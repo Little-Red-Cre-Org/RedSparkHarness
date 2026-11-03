@@ -13,15 +13,15 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { Context } from '@deepseek-ai/cordis'
-import Loader from '@deepseek-ai/cordis-plugin-loader'
-import Include from '@deepseek-ai/cordis-plugin-include'
-import LlmRuntime, { createMessage, createUserMessage, userAgent } from '@deepseek-ai/dsh-llm'
-import type { ToolCallId } from '@deepseek-ai/dsh-llm'
-import LocalCredentialProvider from '@deepseek-ai/dsh-credentials-local'
-import AuthorizationService from '@deepseek-ai/dsh-authorization'
-import FileSettingsProvider from '@deepseek-ai/dsh-settings-file'
-import * as LlmPiAi from '@deepseek-ai/dsh-llm-pi-ai'
+import { Context } from '@redspark/cordis'
+import Loader from '@redspark/cordis-plugin-loader'
+import Include from '@redspark/cordis-plugin-include'
+import LlmRuntime, { createMessage, createUserMessage, userAgent } from '@redspark/rsh-llm'
+import type { ToolCallId } from '@redspark/rsh-llm'
+import LocalCredentialProvider from '@redspark/rsh-credentials-local'
+import AuthorizationService from '@redspark/rsh-authorization'
+import FileSettingsProvider from '@redspark/rsh-settings-file'
+import * as LlmPiAi from '@redspark/rsh-llm-pi-ai'
 import { assemble } from './assemble.ts'
 import { closeMockServers, mockServer, textEvents } from './mock-server.ts'
 
@@ -58,19 +58,19 @@ async function loadComposition(): Promise<{ ctx: Context; settingsPath: string }
     '- id: llm',
     "  name: 'test-llm-service'",
     '- id: settings',
-    "  name: '@deepseek-ai/dsh-settings-file'",
+    "  name: '@redspark/rsh-settings-file'",
     '  config:',
     `    path: ${JSON.stringify(settingsPath)}`,
     '    debounceMs: 10',
     '- id: credentials',
-    "  name: '@deepseek-ai/dsh-credentials-local'",
+    "  name: '@redspark/rsh-credentials-local'",
     '  config:',
     `    path: ${JSON.stringify(join(root, '.credentials.yaml'))}`,
     '    debounceMs: 10',
     '- id: authorization',
-    "  name: '@deepseek-ai/dsh-authorization'",
+    "  name: '@redspark/rsh-authorization'",
     '- id: llm-pi-ai',
-    "  name: '@deepseek-ai/dsh-llm-pi-ai'",
+    "  name: '@redspark/rsh-llm-pi-ai'",
     '',
   ].join('\n'))
 
@@ -81,10 +81,10 @@ async function loadComposition(): Promise<{ ctx: Context; settingsPath: string }
   ctx.loader.builtins.include = Include
   const modules = new Map<string, unknown>([
     ['test-llm-service', LlmRuntime],
-    ['@deepseek-ai/dsh-settings-file', FileSettingsProvider],
-    ['@deepseek-ai/dsh-credentials-local', LocalCredentialProvider],
-    ['@deepseek-ai/dsh-authorization', AuthorizationService],
-    ['@deepseek-ai/dsh-llm-pi-ai', LlmPiAi],
+    ['@redspark/rsh-settings-file', FileSettingsProvider],
+    ['@redspark/rsh-credentials-local', LocalCredentialProvider],
+    ['@redspark/rsh-authorization', AuthorizationService],
+    ['@redspark/rsh-llm-pi-ai', LlmPiAi],
   ])
   ctx.loader.internal = {
     version: 'v2',

@@ -3,7 +3,7 @@ description: "Shared safe terminal transcript presentation."
 kind: "package-library"
 ---
 
-# @deepseek-ai/dsh-terminal-ui
+# @redspark/rsh-terminal-ui
 
 English | [中文](README.zh.md)
 

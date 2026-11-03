@@ -1,5 +1,5 @@
 {
-  "name": "@deepseek-ai/dsh-session-format-catalog",
+  "name": "@redspark/rsh-session-format-catalog",
   "description": "Build-static first-party Session format codec and migration catalog",
   "version": "1.0.0",
   "publishConfig": {
@@ -27,15 +27,15 @@
   ],
   "license": "MIT",
   "dependencies": {
-    "@deepseek-ai/dsh-session-format": "workspace:^",
-    "@deepseek-ai/dsh-session-format-v0-to-v1": "workspace:^",
-    "@deepseek-ai/dsh-session-format-v1-to-v2": "workspace:^",
-    "@deepseek-ai/dsh-session-format-v2-to-v3": "workspace:^"
+    "@redspark/rsh-session-format": "workspace:^",
+    "@redspark/rsh-session-format-v0-to-v1": "workspace:^",
+    "@redspark/rsh-session-format-v1-to-v2": "workspace:^",
+    "@redspark/rsh-session-format-v2-to-v3": "workspace:^"
   },
   "peerDependencies": {
-    "@deepseek-ai/dsh-session": "workspace:^"
+    "@redspark/rsh-session": "workspace:^"
   },
   "devDependencies": {
-    "@deepseek-ai/dsh-session": "workspace:^"
+    "@redspark/rsh-session": "workspace:^"
   }
 }

@@ -1,17 +1,17 @@
 import { createParser } from 'eventsource-parser'
-import { serializeNativeExternalJson } from '@deepseek-ai/dsh-native-subagent/native'
-import type { NativeResponsesTransportResponse } from '@deepseek-ai/dsh-native-model-execution/responses-transport'
+import { serializeNativeExternalJson } from '@redspark/rsh-native-subagent/native'
+import type { NativeResponsesTransportResponse } from '@redspark/rsh-native-model-execution/responses-transport'
 import type {
   NativeExternalJsonValue,
   NativeExternalModelFailure,
   NativeExternalModelRoute,
   NativeExternalSubagentModelOperations,
   NativeExternalToolCall,
-} from '@deepseek-ai/dsh-native-subagent/native'
+} from '@redspark/rsh-native-subagent/native'
 import { parseCodexResponsesToolCalls } from './dynamic-tools.ts'
 import type { CodexDynamicToolCatalog } from './dynamic-tools.ts'
 import type { NativeCodexToolBridge } from './native-tool-bridge.ts'
-export type { NativeResponsesTransportResponse } from '@deepseek-ai/dsh-native-model-execution/responses-transport'
+export type { NativeResponsesTransportResponse } from '@redspark/rsh-native-model-execution/responses-transport'
 
 const RESPONSE_PATH = '/v1/responses'
 const SAFE_EVENTS = new Set([

@@ -19,7 +19,7 @@ describe.skipIf(!existsSync(builtWorker) || process.platform === 'win32')('built
   it('loads under plain node and reports the native-surface failure', async () => {
     const message = await new Promise<Win32DialogWorkerMessage>((resolve, reject) => {
       const child = spawn(process.execPath, [builtWorker], {
-        env: { ...process.env, DSH_DIALOG_TITLE: 'Built-artifact guard' },
+        env: { ...process.env, RSH_DIALOG_TITLE: 'Built-artifact guard' },
         stdio: ['ignore', 'inherit', 'inherit', 'ipc'],
       })
       child.on('message', resolve)

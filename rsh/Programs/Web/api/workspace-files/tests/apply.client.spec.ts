@@ -2,9 +2,9 @@
  * The plugin body: one `file` provider registered into `ctx.resources` for the
  * fiber's lifetime, reading through `ctx.remote` in the Session each address names.
  */
-import { Context } from '@deepseek-ai/cordis'
-import type { ResourceProvider } from '@deepseek-ai/dsh-client-resources/client'
-import { sessionFileAddress } from '@deepseek-ai/dsh-util-workspace-path'
+import { Context } from '@redspark/cordis'
+import type { ResourceProvider } from '@redspark/rsh-client-resources/client'
+import { sessionFileAddress } from '@redspark/rsh-util-workspace-path'
 import { describe, expect, it, onTestFinished } from 'vitest'
 import { apply, inject } from '../src/client/index.ts'
 import { FakeRemote, settle } from './fake-remote.client.ts'

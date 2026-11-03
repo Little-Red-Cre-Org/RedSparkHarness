@@ -3,7 +3,7 @@ description: "Native DeepSeek Platform browser sign-in and safe profile or walle
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-deepseek-account
+# @redspark/rsh-deepseek-account
 
 English | [中文](README.zh.md)
 

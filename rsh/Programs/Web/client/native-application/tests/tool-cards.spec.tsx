@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { SessionSeq, type SessionEvent } from '@deepseek-ai/dsh-session/types'
+import { SessionSeq, type SessionEvent } from '@redspark/rsh-session/types'
 import { ToolCard, toolCardRecords } from '../src/tool-cards.tsx'
 
 function event(seq: number, type: string, data: unknown): SessionEvent {

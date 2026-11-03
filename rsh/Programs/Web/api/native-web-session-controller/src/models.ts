@@ -1,8 +1,8 @@
 /** Authenticated model-directory and discovery RPC operations. */
 import { z } from 'zod'
-import type { NativeModelDirectory } from '@deepseek-ai/dsh-native-model-execution/model-directory'
-import type { NativeModelSettings } from '@deepseek-ai/dsh-llm-pi-ai/native'
-import type { ConnectionRpcResult } from '@deepseek-ai/dsh-client-connection/native-host'
+import type { NativeModelDirectory } from '@redspark/rsh-native-model-execution/model-directory'
+import type { NativeModelSettings } from '@redspark/rsh-llm-pi-ai/native'
+import type { ConnectionRpcResult } from '@redspark/rsh-client-connection/native-host'
 
 const listRequest = z.strictObject({})
 const discoveryRequest = z.strictObject({

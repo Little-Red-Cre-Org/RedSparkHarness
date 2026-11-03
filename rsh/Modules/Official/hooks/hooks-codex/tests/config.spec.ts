@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { parseCodexConfig, CODEX_EVENTS, CODEX_SUPPORTED_EVENTS } from '@deepseek-ai/dsh-hooks-codex/src/config.ts'
+import { parseCodexConfig, CODEX_EVENTS, CODEX_SUPPORTED_EVENTS } from '@redspark/rsh-hooks-codex/src/config.ts'
 
 describe('parseCodexConfig', () => {
   it('tracks all current Codex events and warns about unmapped events without running them', () => {

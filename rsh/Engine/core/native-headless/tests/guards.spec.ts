@@ -3,21 +3,21 @@ import { mkdir, mkdtemp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { expect, it } from 'vitest'
-import { NativeHost, NativeScope, resolveInstallation, type NativeApplication, type NativePlugin } from '@deepseek-ai/dsh-native-runtime'
-import { localFilesystemPlugin } from '@deepseek-ai/dsh-fs-local/native'
-import { plugin as policyPlugin } from '@deepseek-ai/dsh-fs-observation-policy/native'
-import { plugin as storagePlugin } from '@deepseek-ai/dsh-session-persistence-jsonl/native'
-import { plugin as agentPlugin } from '@deepseek-ai/dsh-native-agent/native'
-import { plugin as modelExecutionPlugin } from '@deepseek-ai/dsh-native-model-execution/native'
-import { plugin as codeToolPlugin } from '@deepseek-ai/dsh-tool-code-runtime/native'
-import { plugin as codeRuntimePlugin } from '@deepseek-ai/dsh-native-code-runtime/native'
-import { plugin as toolsPlugin } from '@deepseek-ai/dsh-native-tools/native'
-import type { NativeToolRegistry } from '@deepseek-ai/dsh-native-tools'
-import { createNativeRetryPlugin } from '@deepseek-ai/dsh-llm-retry/native'
-import { plugin as timeoutPlugin } from '@deepseek-ai/dsh-tool-call-timeout-policy/native'
-import { plugin as repeatPlugin } from '@deepseek-ai/dsh-repeat-tool-reminder/native'
-import type { StreamChunk } from '@deepseek-ai/dsh-llm'
-import type { SessionEvent } from '@deepseek-ai/dsh-session'
+import { NativeHost, NativeScope, resolveInstallation, type NativeApplication, type NativePlugin } from '@redspark/rsh-native-runtime'
+import { localFilesystemPlugin } from '@redspark/rsh-fs-local/native'
+import { plugin as policyPlugin } from '@redspark/rsh-fs-observation-policy/native'
+import { plugin as storagePlugin } from '@redspark/rsh-session-persistence-jsonl/native'
+import { plugin as agentPlugin } from '@redspark/rsh-native-agent/native'
+import { plugin as modelExecutionPlugin } from '@redspark/rsh-native-model-execution/native'
+import { plugin as codeToolPlugin } from '@redspark/rsh-tool-code-runtime/native'
+import { plugin as codeRuntimePlugin } from '@redspark/rsh-native-code-runtime/native'
+import { plugin as toolsPlugin } from '@redspark/rsh-native-tools/native'
+import type { NativeToolRegistry } from '@redspark/rsh-native-tools'
+import { createNativeRetryPlugin } from '@redspark/rsh-llm-retry/native'
+import { plugin as timeoutPlugin } from '@redspark/rsh-tool-call-timeout-policy/native'
+import { plugin as repeatPlugin } from '@redspark/rsh-repeat-tool-reminder/native'
+import type { StreamChunk } from '@redspark/rsh-llm'
+import type { SessionEvent } from '@redspark/rsh-session'
 import { MockAdapter, textResponse, toolCallResponse } from '../../agent-loop/tests/mock-adapter.ts'
 import { plugin as appPlugin } from '../src/native.ts'
 
@@ -59,7 +59,7 @@ async function fixture(script: ConstructorParameters<typeof MockAdapter>[0], opt
   await host.start()
   if (app === undefined || tools === undefined) throw new Error('missing native application dependencies')
   const events = async (): Promise<SessionEvent[]> => {
-    const storage = new (await import('@deepseek-ai/dsh-session-persistence-jsonl')).JsonlSessionBackend({ root: sessions, compression: 'none' })
+    const storage = new (await import('@redspark/rsh-session-persistence-jsonl')).JsonlSessionBackend({ root: sessions, compression: 'none' })
     try {
       const id = (await storage.list())[0]?.header.id
       if (id === undefined) throw new Error('Session was not stored')

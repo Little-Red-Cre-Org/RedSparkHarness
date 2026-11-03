@@ -1,8 +1,8 @@
 /** Opt-in task scheduler: persisted plans, scoped management, and independent Agent runs. */
-import type { Context } from '@deepseek-ai/cordis'
-import z from '@deepseek-ai/schemastery'
+import type { Context } from '@redspark/cordis'
+import z from '@redspark/schemastery'
 import { registerTaskTool } from './tools.ts'
-import type { Agent } from '@deepseek-ai/dsh-agent'
+import type { Agent } from '@redspark/rsh-agent'
 import { TaskStore } from './store.ts'
 import { SchedulerEngine } from './engine.ts'
 import { startReminderJournal } from './reminder-journal.ts'

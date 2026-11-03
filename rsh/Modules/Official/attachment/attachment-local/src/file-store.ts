@@ -1,13 +1,13 @@
-/** Verbatim content-addressed local file storage. @module @deepseek-ai/dsh-attachment-local/file-store */
+/** Verbatim content-addressed local file storage. @module @redspark/rsh-attachment-local/file-store */
 
 import { createHash } from 'node:crypto'
 import { createReadStream } from 'node:fs'
 import { join } from 'node:path'
-import { AttachmentId } from '@deepseek-ai/dsh-attachment/brand'
-import { AttachmentError } from '@deepseek-ai/dsh-attachment/error'
+import { AttachmentId } from '@redspark/rsh-attachment/brand'
+import { AttachmentError } from '@redspark/rsh-attachment/error'
 import type {
   FileAttachmentRef, SaveFileAttachment, SaveFileStreamAttachment,
-} from '@deepseek-ai/dsh-attachment/types'
+} from '@redspark/rsh-attachment/types'
 import {
   publishImmutableAlias, publishImmutableObject, publishImmutableObjectStream,
 } from './store.ts'
@@ -68,7 +68,7 @@ function ensureFileReference(ref: FileAttachmentRef): string {
  * Derive the absolute immutable-object path for one stored file. The digest
  * names a directory so the sanitized display name stays the stored leaf name,
  * giving models and users a path that ends in the real filename.
- * @param root - absolute `DSH_HOME/attachments/v1` root.
+ * @param root - absolute `RSH_HOME/attachments/v1` root.
  * @param ref - durable file reference from the session log or an upload receipt.
  * @returns provider-local path without reading the object.
  * @throws an AttachmentError when the reference digest or name is invalid.
@@ -85,7 +85,7 @@ function storedFileObjectPath(root: string, sha256: string): string {
 
 /**
  * Commit one file byte-for-byte below a versioned attachment root.
- * @param root - absolute `DSH_HOME/attachments/v1` root.
+ * @param root - absolute `RSH_HOME/attachments/v1` root.
  * @param input - exact bytes and optional display name.
  * @returns the durable content-addressed file reference.
  */
@@ -107,7 +107,7 @@ export async function saveFileVerbatim(
 
 /**
  * Commit one file byte-for-byte from bounded chunks below a versioned attachment root.
- * @param root - absolute `DSH_HOME/attachments/v1` root.
+ * @param root - absolute `RSH_HOME/attachments/v1` root.
  * @param input - ordered exact bytes, optional cancellation, and display name.
  * @returns the durable content-addressed file reference.
  */
@@ -140,7 +140,7 @@ export async function saveFileStreamVerbatim(
 
 /**
  * Read one stored file in bounded chunks and verify its byte count and digest.
- * @param root - absolute `DSH_HOME/attachments/v1` root.
+ * @param root - absolute `RSH_HOME/attachments/v1` root.
  * @param ref - durable file reference from the session log.
  * @param signal - optional cancellation for filesystem reads.
  * @returns exact stored bytes in order; integrity failures reject after the final chunk.

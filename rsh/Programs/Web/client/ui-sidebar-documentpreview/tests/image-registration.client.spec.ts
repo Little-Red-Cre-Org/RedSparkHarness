@@ -1,5 +1,5 @@
 /** Image metadata, keyed slot, dictionary, and disposal registration. */
-import { Context } from '@deepseek-ai/cordis'
+import { Context } from '@redspark/cordis'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { DocumentPreviewRegistry } from '../src/client/document/registry.ts'
 import { ImageBody } from '../src/client/image/ImageBody.tsx'

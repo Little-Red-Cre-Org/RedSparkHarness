@@ -1,21 +1,21 @@
 /** Native read, write, and edit contributions over the selected filesystem and observation policy. */
 import { basename, extname, isAbsolute } from 'node:path'
-import type { NativeContext, NativePlugin, NativeScope } from '@deepseek-ai/dsh-native-runtime'
-import { FsError, type FileSystemOperations, type FsTarget, type FsWriteIntent } from '@deepseek-ai/dsh-fs/native'
-import type {} from '@deepseek-ai/dsh-attachment/native'
-import type { AttachmentOperations } from '@deepseek-ai/dsh-attachment/native'
-import type {} from '@deepseek-ai/dsh-native-model-execution/native'
-import type {} from '@deepseek-ai/dsh-native-tools/native'
-import type {} from '@deepseek-ai/dsh-native-sandbox-policy/native'
-import type {} from '@deepseek-ai/dsh-approval-definition'
-import type {} from '@deepseek-ai/dsh-native-prompt/native'
-import { fileAttachmentsIn } from '@deepseek-ai/dsh-llm/native'
-import type { NativeValueToolContribution, NativeToolExecution, NativeToolApprovalContext } from '@deepseek-ai/dsh-native-tools'
-import type { FileAttachmentRef } from '@deepseek-ai/dsh-attachment/native'
+import type { NativeContext, NativePlugin, NativeScope } from '@redspark/rsh-native-runtime'
+import { FsError, type FileSystemOperations, type FsTarget, type FsWriteIntent } from '@redspark/rsh-fs/native'
+import type {} from '@redspark/rsh-attachment/native'
+import type { AttachmentOperations } from '@redspark/rsh-attachment/native'
+import type {} from '@redspark/rsh-native-model-execution/native'
+import type {} from '@redspark/rsh-native-tools/native'
+import type {} from '@redspark/rsh-native-sandbox-policy/native'
+import type {} from '@redspark/rsh-approval-definition'
+import type {} from '@redspark/rsh-native-prompt/native'
+import { fileAttachmentsIn } from '@redspark/rsh-llm/native'
+import type { NativeValueToolContribution, NativeToolExecution, NativeToolApprovalContext } from '@redspark/rsh-native-tools'
+import type { FileAttachmentRef } from '@redspark/rsh-attachment/native'
 import {
   ESCALATION_TARGETS, approveEscalation, escalationHintMarker, sandboxDenialMarker, validateEscalationArgs,
   type SandboxExecutionPolicy, type SandboxMode,
-} from '@deepseek-ai/dsh-sandbox/native'
+} from '@redspark/rsh-sandbox/native'
 import { buildWindow, READ_MAX_BYTES, READ_MAX_LINE_LENGTH } from './read-render.ts'
 import { imageMediaTypeForPath, imageStorageError, sniffImageMediaType } from './read-image-core.ts'
 import { nativeEditOutput, nativeImageOutput, nativeReadOutput, nativeWriteOutput } from './native-output.ts'
@@ -377,7 +377,7 @@ function editTool(context: NativeContext, fs: FileSystemOperations): NativeValue
 
 /** Register one native file-tool suite; each contribution leaves with this installation. */
 export const plugin: NativePlugin = {
-  apiVersion: 1, name: '@deepseek-ai/dsh-tool-fs', targets: ['host'],
+  apiVersion: 1, name: '@redspark/rsh-tool-fs', targets: ['host'],
   requires: ['fs', 'fsObservationPolicy', 'tools'],
   optional: ['attachments', 'model', 'sandboxPolicy', 'approval', 'promptSections'], provides: [],
   resolve(input) {

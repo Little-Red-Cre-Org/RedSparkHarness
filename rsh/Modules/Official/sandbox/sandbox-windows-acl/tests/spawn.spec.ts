@@ -1,12 +1,12 @@
 /** Restricted launch adapters preserve argv and refuse unresolved executables. */
 
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { resolveWindowsExecutable, spawnInheritedJobProcess, spawnPipedProcess, Win32Error } from '@deepseek-ai/dsh-win32-process'
+import { resolveWindowsExecutable, spawnInheritedJobProcess, spawnPipedProcess, Win32Error } from '@redspark/rsh-win32-process'
 import type { NativePtr, Win32Bindings } from '../src/ffi.ts'
 import { spawnSandboxed, spawnSandboxedInherited } from '../src/spawn.ts'
 
-vi.mock('@deepseek-ai/dsh-win32-process', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@deepseek-ai/dsh-win32-process')>()
+vi.mock('@redspark/rsh-win32-process', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@redspark/rsh-win32-process')>()
   return {
     ...actual,
     resolveWindowsExecutable: vi.fn(),

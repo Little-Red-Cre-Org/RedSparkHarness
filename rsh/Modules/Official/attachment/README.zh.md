@@ -27,7 +27,7 @@ kind: "package-group"
 | 包 | 角色 | ctx 键 |
 |---|---|---|
 | [`attachment/`](attachment/README.zh.md) | 可用于提示词与命令、会持久保存并回到历史中的图片附件 | `ctx.attachments` |
-| [`attachment-local/`](attachment-local/README.zh.md) | 把附加图片存储在本机 `DSH_HOME` 下 | 注册到 `ctx.attachments` |
+| [`attachment-local/`](attachment-local/README.zh.md) | 把附加图片存储在本机 `RSH_HOME` 下 | 注册到 `ctx.attachments` |
 
 -----
 
@@ -38,7 +38,7 @@ kind: "package-group"
 
 - [附件子系统参考](../../../Docs/subsystems/attachment.zh.md)——服务约定、载荷类型与 `ctx.attachments` 的 Cordis 接口面。
 - [能力 seam](../../../Docs/capability-seams.zh.md)——本家族遵循的 Service Definition / Service Provider / Consumer 拆分。
-- [生成配置目录](../../../Docs/config-catalog.zh.md#deepseek-aidsh-attachment-local)——本地后端的每个受支持字段。
+- [生成配置目录](../../../Docs/config-catalog.zh.md#redsparkrsh-attachment-local)——本地后端的每个受支持字段。
 
 <a id="dev-note"></a>
 ## 开发备注

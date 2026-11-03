@@ -2,9 +2,9 @@
   - treeitem "{{workspace}}" [expanded]:
     - img
     - text: {{workspace}}
-  - treeitem "Review deepseek-harness/deepseek-harness#314 Session actions for Review deepseek-harness/deepseek-harness#314" [selected]:
-    - text: Review deepseek-harness/deepseek-harness#314
-    - button "Session actions for Review deepseek-harness/deepseek-harness#314":
+  - treeitem "Review redspark-harness/redspark-harness#314 Session actions for Review redspark-harness/redspark-harness#314" [selected]:
+    - text: Review redspark-harness/redspark-harness#314
+    - button "Session actions for Review redspark-harness/redspark-harness#314":
       - img
 
 ---
@@ -14,7 +14,7 @@
 - status: Kitsune is here, waiting for your next spark.
 - banner:
   - navigation "Session hierarchy":
-    - button "Review deepseek-harness/deepseek-harness#314" [disabled]
+    - button "Review redspark-harness/redspark-harness#314" [disabled]
   - img
   - text: Standard mode
   - button "More actions":

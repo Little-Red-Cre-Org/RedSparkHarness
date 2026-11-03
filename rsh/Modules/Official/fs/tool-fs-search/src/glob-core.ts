@@ -1,6 +1,6 @@
 /** Shared glob argument validation, discovery parsing and retained result formatting. */
 import { sep } from 'node:path'
-import type { SpillRef } from '@deepseek-ai/dsh-spill/native'
+import type { SpillRef } from '@redspark/rsh-spill/native'
 
 /**
  * Default cap on paths retained inline by one `glob` call (the `globMaxResults`

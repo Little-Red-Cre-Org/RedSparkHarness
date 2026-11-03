@@ -5,17 +5,17 @@ import { join } from 'node:path'
 import { setImmediate } from 'node:timers/promises'
 import { PassThrough } from 'node:stream'
 import { expect, it } from 'vitest'
-import { NativeHost, NativeScope, resolveInstallation, type NativeContext, type NativePlugin } from '@deepseek-ai/dsh-native-runtime'
-import { LlmAdapter, type LlmResolvedModelInfo, type StreamChunk } from '@deepseek-ai/dsh-llm/native'
-import { SessionId } from '@deepseek-ai/dsh-session/native'
-import { JsonlSessionBackend } from '@deepseek-ai/dsh-session-persistence-jsonl'
+import { NativeHost, NativeScope, resolveInstallation, type NativeContext, type NativePlugin } from '@redspark/rsh-native-runtime'
+import { LlmAdapter, type LlmResolvedModelInfo, type StreamChunk } from '@redspark/rsh-llm/native'
+import { SessionId } from '@redspark/rsh-session/native'
+import { JsonlSessionBackend } from '@redspark/rsh-session-persistence-jsonl'
 import { NativeSdkApplication, plugin as sdkServer } from '../src/native.ts'
-import { plugin as agents } from '@deepseek-ai/dsh-native-agent/native'
-import { plugin as execution } from '@deepseek-ai/dsh-native-session-execution/native'
-import { plugin as modelExecution } from '@deepseek-ai/dsh-native-model-execution/native'
-import { localFilesystemPlugin } from '@deepseek-ai/dsh-fs-local/native'
-import { plugin as storage } from '@deepseek-ai/dsh-session-persistence-jsonl/native'
-import { plugin as attachments } from '@deepseek-ai/dsh-attachment-local/native'
+import { plugin as agents } from '@redspark/rsh-native-agent/native'
+import { plugin as execution } from '@redspark/rsh-native-session-execution/native'
+import { plugin as modelExecution } from '@redspark/rsh-native-model-execution/native'
+import { localFilesystemPlugin } from '@redspark/rsh-fs-local/native'
+import { plugin as storage } from '@redspark/rsh-session-persistence-jsonl/native'
+import { plugin as attachments } from '@redspark/rsh-attachment-local/native'
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
@@ -126,7 +126,7 @@ it('runs without the optional subagent Provider and drains admitted model work a
     { plugin: agents, scope, config: undefined }, { plugin: execution, scope, config: undefined },
     { plugin: modelExecution, scope, config: undefined }, { plugin: localFilesystemPlugin, scope, config: { cwd: workspace } },
     { plugin: storage, scope, config: { root: sessions, compression: 'none' } },
-    { plugin: attachments, scope, config: { dshHome: home } }, { plugin: model, scope, config: undefined },
+    { plugin: attachments, scope, config: { rshHome: home } }, { plugin: model, scope, config: undefined },
     { plugin: carrier, scope, config: undefined },
   ], 'host'))
   let done: Promise<unknown> | undefined
@@ -151,7 +151,7 @@ it('runs without the optional subagent Provider and drains admitted model work a
     } })}\n`)
     const initialization = await initialized
     expect(initialization.result, JSON.stringify(initialization)).toMatchObject({
-      serverInfo: { name: 'deepseek-harness-sdk-runtime' }, maxSteps: 1,
+      serverInfo: { name: 'redspark-harness-sdk-runtime' }, maxSteps: 1,
     })
     await pendingReadiness
     const firstPrompt = response(2)

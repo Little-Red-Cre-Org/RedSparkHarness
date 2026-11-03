@@ -3,7 +3,7 @@ description: "Waterfall-based question and answer service for tools, permission 
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-user-questions
+# @redspark/rsh-user-questions
 
 English | [中文](README.zh.md)
 
@@ -44,7 +44,7 @@ When a request carries an agent, `ask()` authenticates its exact identity throug
 
 The `./native` entry provides `userQuestions` from the selected `agents` and `activeSessions`. Every request carries the exact executing Agent and Session; only root invocations may ask, including historical child Sessions resumed as roots. Answerers are scoped and delegate through `next()` with ancestor cancellation preserved. Removal cancels delegated presentations and waits for their release. The pure `./protocol` entry owns the shared question and answer values; `./types` retains compatibility events.
 
-Select `@deepseek-ai/dsh-user-question-broker` as the pending-question Provider. Its `userQuestionBroker` service lets an authenticated application subscribe and answer with the original Agent and an opaque request id. It rejects malformed or late answers; removing the last recipient cancels the pending question. Native applications must supply a transport; this capability group does not install SDK, ACP or Web answering.
+Select `@redspark/rsh-user-question-broker` as the pending-question Provider. Its `userQuestionBroker` service lets an authenticated application subscribe and answer with the original Agent and an opaque request id. It rejects malformed or late answers; removing the last recipient cancels the pending question. Native applications must supply a transport; this capability group does not install SDK, ACP or Web answering.
 
 ### Presentation intent
 
@@ -53,7 +53,7 @@ Select `@deepseek-ai/dsh-user-question-broker` as the pending-question Provider.
 <a id="role"></a>
 ## Role
 
-This is the Service Definition package. Consumers such as `@deepseek-ai/dsh-tool-ask-user` depend on this service; the Web client contributes an Agent-scoped answerer through Remote Events. The loop stays unchanged: a tool call awaits the waterfall result, and that result resumes the normal agent loop.
+This is the Service Definition package. Consumers such as `@redspark/rsh-tool-ask-user` depend on this service; the Web client contributes an Agent-scoped answerer through Remote Events. The loop stays unchanged: a tool call awaits the waterfall result, and that result resumes the normal agent loop.
 
 <a id="model-experience"></a>
 ## Model Experience

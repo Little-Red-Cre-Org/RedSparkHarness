@@ -11,7 +11,7 @@ permissions:
 env:
   # CI runs must never report to the production telemetry endpoint baked
   # into rsh/Programs/CLI/cordis.yml (AppCLIEntry disables the row when set).
-  DSH_TELEMETRY_DISABLED: '1'
+  RSH_TELEMETRY_DISABLED: '1'
 
 jobs:
   e2b:
@@ -51,8 +51,8 @@ jobs:
       - name: E2B tests (live sandbox)
         env:
           E2B_API_KEY: ${{ secrets.E2B_API_KEY_EXTERNAL }}
-          DSH_E2E_MAX_WORKERS: '1'
-          DSH_EXAMPLE_MODE: lib
+          RSH_E2E_MAX_WORKERS: '1'
+          RSH_EXAMPLE_MODE: lib
         run: >-
           pnpm exec vitest run --config vitest.e2e.config.ts
           rsh/Modules/Official/e2b/e2b/tests/composition.e2e.ts

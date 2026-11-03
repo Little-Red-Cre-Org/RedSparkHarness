@@ -1,5 +1,5 @@
 {
-  "name": "@deepseek-ai/dsh-timeout",
+  "name": "@redspark/rsh-timeout",
   "description": "Zero-dependency timeout/deadline primitive: clampTimeout, deadline, timeoutOf, TimeoutReason (timing + classification only, no termination)",
   "version": "1.0.0",
   "publishConfig": {

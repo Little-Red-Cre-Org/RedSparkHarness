@@ -3,7 +3,7 @@ description: "Domain data form (ctx.storageDomain) for hosts and maintainers cho
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-storage-domain
+# @redspark/rsh-storage-domain
 
 English | [中文](README.zh.md)
 
@@ -75,7 +75,7 @@ The domain plugin's configuration decides which backend serves which domain — 
 | `backend` | required | Default backend name for every domain without an explicit route |
 | `routes` | `{}` | Per-domain overrides: domain name → backend name |
 
-The generated [configuration catalog](../../../Docs/config-catalog.md#deepseek-aidsh-storage-domain) is the exhaustive source for every accepted field and its JSDoc.
+The generated [configuration catalog](../../../Docs/config-catalog.md#redsparkrsh-storage-domain) is the exhaustive source for every accepted field and its JSDoc.
 
 ### Observable behavior and failures
 

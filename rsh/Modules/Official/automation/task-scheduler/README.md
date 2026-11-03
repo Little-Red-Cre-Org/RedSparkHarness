@@ -2,7 +2,7 @@
 description: "Create persistent reminders, recurring tasks, and goal tasks."
 kind: "package-bundle"
 ---
-# @deepseek-ai/dsh-task-scheduler
+# @redspark/rsh-task-scheduler
 
 English | [中文](README.zh.md)
 
@@ -32,7 +32,7 @@ The `taskScheduler.listSchedules()` view returns active, paused, and failed plan
 
 For Cordis, install the plugin into a profile and add [cordis.patch.yml](cordis.patch.yml) to its patches. The Host requires the normal Agent, preset, permission, workspace, and session-persistence services. For Native, install the `./native` entry with `rootExecution`, `activeSessions`, `agents`, and `tools`; Goal scheduling is enabled when the Goal Provider and continuation driver are also installed. The database path must be absolute and must identify a dedicated local SQLite file. Do not share it over a network filesystem. Merely importing the package does not enable scheduling; the exported Cordis `apply` or Native plugin mounts it.
 
-Native installations do not use the Typert protocol. The Cordis package root and gateway load `@deepseek-ai/dsh-typert-protocol`, and the published Client declarations reference its `RemoteResult` type; a compatibility profile that installs this plugin must provide it because it is an optional peer for Native consumers.
+Native installations do not use the Typert protocol. The Cordis package root and gateway load `@redspark/rsh-typert-protocol`, and the published Client declarations reference its `RemoteResult` type; a compatibility profile that installs this plugin must provide it because it is an optional peer for Native consumers.
 
 Web and Desktop enable this plugin by default through the Web bundle, using `task-scheduler.sqlite` in the Harness home. From a built source checkout, use `pnpm dsh web`. The sidebar exposes task creation and Settings exposes the task center. A profile patch can override the `task-scheduler` row or disable it explicitly.
 

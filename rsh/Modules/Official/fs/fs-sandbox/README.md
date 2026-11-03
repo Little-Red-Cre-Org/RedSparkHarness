@@ -3,7 +3,7 @@ description: "The sandbox-enforcing ctx.fs backend for deployments and maintaine
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-fs-sandbox
+# @redspark/rsh-fs-sandbox
 
 English | [中文](README.zh.md)
 
@@ -32,14 +32,14 @@ Select this provider instead of `fs-local` when model writes and edits must foll
 Load the shared policy service, then this backend, then the tools; the read-before-edit policy plugin stays optional.
 
 ```yaml
-- name: '@deepseek-ai/dsh-sandbox-policy'
-- name: '@deepseek-ai/dsh-fs-sandbox'
+- name: '@redspark/rsh-sandbox-policy'
+- name: '@redspark/rsh-fs-sandbox'
   config:
     cwd: /absolute/path/to/workspace
-- name: '@deepseek-ai/dsh-tool-fs'
+- name: '@redspark/rsh-tool-fs'
 ```
 
-The backend's config is unchanged from the local backend's (`cwd` resolution default and `diffBasisMaxBytes` overwrite bound); the [configuration catalog](../../../../Docs/config-catalog.md#deepseek-aidsh-fs-sandbox) is the exhaustive source.
+The backend's config is unchanged from the local backend's (`cwd` resolution default and `diffBasisMaxBytes` overwrite bound); the [configuration catalog](../../../../Docs/config-catalog.md#redsparkrsh-fs-sandbox) is the exhaustive source.
 
 ### Native profile composition
 

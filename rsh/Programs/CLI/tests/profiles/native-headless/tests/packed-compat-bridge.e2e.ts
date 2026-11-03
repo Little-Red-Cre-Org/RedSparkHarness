@@ -7,8 +7,8 @@ import { pathToFileURL } from 'node:url'
 import { execa } from 'execa'
 import { expect, it } from 'vitest'
 
-const PACKED_BIN = process.env.DSH_PACKED_DSH_BIN
-const CONSUMER_ROOT = process.env.DSH_PACKED_CONSUMER_ROOT
+const PACKED_BIN = process.env.RSH_PACKED_BIN
+const CONSUMER_ROOT = process.env.RSH_PACKED_CONSUMER_ROOT
 const SESSION_ID = 'packed-native-compat-bridge'
 const FIRST_TASK = 'Write the requested marker file.'
 const SECOND_TASK = 'Read the marker file in this existing session.'
@@ -26,10 +26,10 @@ const SECOND_REPLY = 'native filesystem read the marker'
 type JsonObject = Record<string, unknown>
 type RunResult = { readonly sessionId: string; readonly finalResponse: string; readonly events: JsonObject[] }
 type InstalledSdk = {
-  DeepSeekHarness: new (options: {
+  RedSparkHarness: new (options: {
     readonly profile: 'native-sdk'
-    readonly dshBin: string
-    readonly dshHome: string
+    readonly rshBin: string
+    readonly rshHome: string
     readonly patches: string[]
     readonly cwd: string
     readonly provider: 'fixture'
@@ -98,25 +98,25 @@ it.skipIf(PACKED_BIN === undefined || CONSUMER_ROOT === undefined)(
     const installedBin = await realpath(packedBin)
     const binRelative = relative(installedRoot, installedBin)
     expect(binRelative.startsWith('..' + sep) || isAbsolute(binRelative)).toBe(false)
-    expect(binRelative.split(sep)).toEqual(['node_modules', '@deepseek-ai', 'dsh', 'lib', 'bin.js'])
+    expect(binRelative.split(sep)).toEqual(['node_modules', '@redspark', 'rsh', 'lib', 'bin.js'])
     const consumerRequire = createRequire(join(installedRoot, 'package.json'))
-    const sdkClientPath = await realpath(consumerRequire.resolve('@deepseek-ai/dsh-sdk-client'))
+    const sdkClientPath = await realpath(consumerRequire.resolve('@redspark/rsh-sdk-client'))
     const sdkRelative = relative(installedRoot, sdkClientPath)
     expect(sdkRelative.startsWith('..' + sep) || isAbsolute(sdkRelative)).toBe(false)
-    expect(sdkRelative.split(sep).slice(0, 3)).toEqual(['node_modules', '@deepseek-ai', 'dsh-sdk-client'])
+    expect(sdkRelative.split(sep).slice(0, 3)).toEqual(['node_modules', '@redspark', 'rsh-sdk-client'])
     for (const packageName of [
-      '@deepseek-ai/dsh-compat-dsh-runtime',
-      '@deepseek-ai/dsh-compat-fs-local',
-      '@deepseek-ai/dsh-compat-fs-policy',
-      '@deepseek-ai/dsh-compat-tool-fs',
-      '@deepseek-ai/cordis',
-      '@deepseek-ai/cordis-plugin-loader',
+      '@redspark/rsh-compat-dsh-runtime',
+      '@redspark/rsh-compat-fs-local',
+      '@redspark/rsh-compat-fs-policy',
+      '@redspark/rsh-compat-tool-fs',
+      '@redspark/cordis',
+      '@redspark/cordis-plugin-loader',
     ]) {
       const packagePath = await realpath(consumerRequire.resolve(packageName + '/package.json'))
       const packageRelative = relative(installedRoot, packagePath)
       expect(packageRelative.startsWith('..' + sep) || isAbsolute(packageRelative)).toBe(false)
     }
-    const { DeepSeekHarness } = await import(pathToFileURL(sdkClientPath).href) as InstalledSdk
+    const { RedSparkHarness } = await import(pathToFileURL(sdkClientPath).href) as InstalledSdk
 
     const root = await mkdtemp(join(installedRoot, '.dsh-p4-compat-bridge-'))
     const home = join(root, 'home')
@@ -127,7 +127,7 @@ it.skipIf(PACKED_BIN === undefined || CONSUMER_ROOT === undefined)(
     try {
       await mkdir(workspace, { recursive: true })
       await writeFile(join(workspace, GUARDED_PATH), GUARDED_CONTENT)
-      const childEnv: NodeJS.ProcessEnv = { ...process.env, DSH_HOME: home, DSH_TELEMETRY_DISABLED: '1',
+      const childEnv: NodeJS.ProcessEnv = { ...process.env, RSH_HOME: home, RSH_TELEMETRY_DISABLED: '1',
         PACKED_COMPAT_FIXTURE_KEY: 'packed-local-fixture-key' }
       delete childEnv.NODE_OPTIONS
       delete childEnv.NODE_PATH
@@ -140,20 +140,20 @@ it.skipIf(PACKED_BIN === undefined || CONSUMER_ROOT === undefined)(
       const profileConfig = join(home, 'profiles', 'native-sdk', 'rsh.profile.json')
       const composition = JSON.parse(await readFile(profileConfig, 'utf8')) as { installations: JsonObject[] }
       expect(composition.installations.filter(row => row.id === 'fs')).toEqual([
-        { id: 'fs', plugin: '@deepseek-ai/dsh-fs-local', scope: 'root' }])
+        { id: 'fs', plugin: '@redspark/rsh-fs-local', scope: 'root' }])
       expect(composition.installations.some(row => row.id === 'policy' || row.id === 'file-tools')).toBe(false)
       const others = composition.installations.filter(row => row.id !== 'fs')
       const bridgeProfile = JSON.stringify({ ...composition, installations: [...others,
-        { id: 'compat-dsh-runtime', plugin: '@deepseek-ai/dsh-compat-dsh-runtime', scope: 'root', config: {} },
-        { id: 'fs', plugin: '@deepseek-ai/dsh-compat-fs-local', scope: 'root', config: { cwd: workspace } },
-        { id: 'policy', plugin: '@deepseek-ai/dsh-compat-fs-policy', scope: 'root', config: {} },
-        { id: 'file-tools', plugin: '@deepseek-ai/dsh-compat-tool-fs', scope: 'root',
+        { id: 'compat-dsh-runtime', plugin: '@redspark/rsh-compat-dsh-runtime', scope: 'root', config: {} },
+        { id: 'fs', plugin: '@redspark/rsh-compat-fs-local', scope: 'root', config: { cwd: workspace } },
+        { id: 'policy', plugin: '@redspark/rsh-compat-fs-policy', scope: 'root', config: {} },
+        { id: 'file-tools', plugin: '@redspark/rsh-compat-tool-fs', scope: 'root',
           config: { readLimit: 200, readMaxLineLength: 2_000, readMaxBytes: 16_000, readStreamMinSize: 128_000 } },
       ] })
       const nativeProfile = JSON.stringify({ ...composition, installations: [...others,
-        { id: 'fs', plugin: '@deepseek-ai/dsh-fs-local', scope: 'root' },
-        { id: 'policy', plugin: '@deepseek-ai/dsh-fs-observation-policy', scope: 'root' },
-        { id: 'file-tools', plugin: '@deepseek-ai/dsh-tool-fs', scope: 'root' },
+        { id: 'fs', plugin: '@redspark/rsh-fs-local', scope: 'root' },
+        { id: 'policy', plugin: '@redspark/rsh-fs-observation-policy', scope: 'root' },
+        { id: 'file-tools', plugin: '@redspark/rsh-tool-fs', scope: 'root' },
       ] })
       await writeFile(profileConfig, bridgeProfile)
 
@@ -196,9 +196,9 @@ it.skipIf(PACKED_BIN === undefined || CONSUMER_ROOT === undefined)(
           baseURL, models: [{ id: MODEL }] } } } },
       ] }))
 
-      const options = { profile: 'native-sdk' as const, dshBin: installedBin, dshHome: home, patches: [patch],
+      const options = { profile: 'native-sdk' as const, rshBin: installedBin, rshHome: home, patches: [patch],
         cwd: workspace, provider: 'fixture' as const, model: MODEL, env: childEnv, requestTimeoutMs: 20_000 }
-      const bridgeHarness = new DeepSeekHarness(options)
+      const bridgeHarness = new RedSparkHarness(options)
       let first: RunResult
       try { first = await bridgeHarness.session(SESSION_ID).run(FIRST_TASK) }
       finally { await bridgeHarness.close() }
@@ -220,7 +220,7 @@ it.skipIf(PACKED_BIN === undefined || CONSUMER_ROOT === undefined)(
       await expect(readFile(join(workspace, FILE_PATH), 'utf8')).resolves.toBe(MARKER)
 
       await writeFile(profileConfig, nativeProfile)
-      const nativeHarness = new DeepSeekHarness(options)
+      const nativeHarness = new RedSparkHarness(options)
       let second: RunResult
       try { second = await nativeHarness.session(SESSION_ID).run(SECOND_TASK) }
       finally { await nativeHarness.close() }

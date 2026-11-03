@@ -1,8 +1,8 @@
 /** Native Client locale registry for the shared Slot renderer. */
-import type { LocaleFace, Translate } from '@deepseek-ai/dsh-client-ui-slots'
-import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
-import type {} from '@deepseek-ai/dsh-client-ui-renderer/native'
-import { notifySubscribers } from '@deepseek-ai/dsh-client-store'
+import type { LocaleFace, Translate } from '@redspark/rsh-client-ui-slots'
+import type { NativePlugin } from '@redspark/rsh-native-runtime'
+import type {} from '@redspark/rsh-client-ui-renderer/native'
+import { notifySubscribers } from '@redspark/rsh-client-store'
 import { en, zh, formatLocaleTemplate } from './dictionary.ts'
 
 /** Built-in locale supported by this native Client entry. */
@@ -26,7 +26,7 @@ export interface NativeLocaleService extends LocaleFace {
   register(namespace: string, dictionaries: Readonly<Record<NativeLocaleId, Readonly<Record<string, string>>>>): () => void
 }
 
-declare module '@deepseek-ai/dsh-native-runtime' {
+declare module '@redspark/rsh-native-runtime' {
   interface NativeServices {
     /** Shared locale registry installed by a native Client profile. */
     clientLocale: NativeLocaleService
@@ -117,7 +117,7 @@ class NativeLocaleRuntime implements NativeLocaleService {
 /** Native locale Provider for the shared UI slot renderer. */
 export const plugin: NativePlugin = {
   apiVersion: 1,
-  name: '@deepseek-ai/dsh-client-locale',
+  name: '@redspark/rsh-client-locale',
   targets: ['client'],
   requires: ['clientSlots'],
   provides: ['clientLocale'],

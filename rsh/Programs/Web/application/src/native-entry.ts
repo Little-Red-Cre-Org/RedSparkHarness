@@ -1,5 +1,5 @@
 /** Browser entry adapter for the Host-injected native Client profile. */
-import { bootNativeClient } from '@deepseek-ai/dsh-client-web/native'
+import { bootNativeClient } from '@redspark/rsh-client-web/native'
 import type {
   NativeClientBootOptions,
   NativeClientBootWire,
@@ -7,7 +7,7 @@ import type {
   NativeClientModuleSource,
   NativeClientSelection,
   NativeClientEntryState,
-} from '@deepseek-ai/dsh-client-web/native'
+} from '@redspark/rsh-client-web/native'
 
 const NATIVE_MODULE_PATH = '/.dsh/native-client/'
 

@@ -3,7 +3,7 @@ description: "Shell commands and terminals inside the shared remote sandbox: wha
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-subprocess-e2b
+# @redspark/rsh-subprocess-e2b
 
 English | [中文](README.zh.md)
 
@@ -39,7 +39,7 @@ The only setting is how often the package checks a running command's status; the
 |---|---|---|
 | `pollMs` | `20` | How often the package checks a running command's status, in milliseconds |
 
-The generated [configuration catalog](../../../../Docs/config-catalog.md#deepseek-aidsh-subprocess-e2b) is the exhaustive source for every accepted field and its JSDoc.
+The generated [configuration catalog](../../../../Docs/config-catalog.md#redsparkrsh-subprocess-e2b) is the exhaustive source for every accepted field and its JSDoc.
 
 ### Running commands
 
@@ -97,7 +97,7 @@ The synchronous seam returns a handle immediately while the command starts async
 
 ### Environment boundary
 
-One trusted control-shell probe resolves the sandbox user's login home from its passwd entry and transports the sandbox environment as base64 ASCII for one strict UTF-8 decode; the wrapper then removes ambient `DSH_*` and credential-shaped (`*KEY*`, `*SECRET*`, `*TOKEN*`) names and restores every valid `spec.env` entry as an explicit caller opt-in. Empty names, `=`, and NUL framing violations reject before launch; subsequent command and PTY login shells receive a fresh randomized root-level `HOME` plus empty overrides for every scrubbed ambient name before user profiles can run. Private environment files are removed after consumption.
+One trusted control-shell probe resolves the sandbox user's login home from its passwd entry and transports the sandbox environment as base64 ASCII for one strict UTF-8 decode; the wrapper then removes ambient `RSH_*` and credential-shaped (`*KEY*`, `*SECRET*`, `*TOKEN*`) names and restores every valid `spec.env` entry as an explicit caller opt-in. Empty names, `=`, and NUL framing violations reject before launch; subsequent command and PTY login shells receive a fresh randomized root-level `HOME` plus empty overrides for every scrubbed ambient name before user profiles can run. Private environment files are removed after consumption.
 
 ### Output handling
 
@@ -121,7 +121,7 @@ Read these pages when the package-level contract is not enough. They move from t
 - [Subprocess seam package](../../../../Core/subprocess/subprocess/README.md) — the abstract contract this provider implements.
 - [Bash executor](../../shell/bash-local/README.md) — the consumer that renders spawned commands to the model.
 - [PTY terminal backend](../../terminal/terminal-bash/README.md) — the consumer that renders terminal sessions.
-- [Generated configuration catalog](../../../../Docs/config-catalog.md#deepseek-aidsh-subprocess-e2b) — every accepted config field and its source declaration.
+- [Generated configuration catalog](../../../../Docs/config-catalog.md#redsparkrsh-subprocess-e2b) — every accepted config field and its source declaration.
 
 -----
 

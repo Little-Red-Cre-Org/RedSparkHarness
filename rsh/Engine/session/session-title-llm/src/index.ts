@@ -1,20 +1,20 @@
 /**
  * Shared route, framing, timeout, assembly, and validation policy for
  * model-backed session-title providers.
- * @module @deepseek-ai/dsh-session-title-llm
+ * @module @redspark/rsh-session-title-llm
  */
 
-import type { Context } from '@deepseek-ai/cordis'
-import z from '@deepseek-ai/schemastery'
-import type {} from '@deepseek-ai/dsh-llm'
-import { MAX_TIMER_DELAY_MS } from '@deepseek-ai/dsh-timeout'
-import { SessionTitleProviderId } from '@deepseek-ai/dsh-session-title'
+import type { Context } from '@redspark/cordis'
+import z from '@redspark/schemastery'
+import type {} from '@redspark/rsh-llm'
+import { MAX_TIMER_DELAY_MS } from '@redspark/rsh-timeout'
+import { SessionTitleProviderId } from '@redspark/rsh-session-title'
 import type {
   SessionTitleAutomaticMode,
   SessionTitleProviderRequest,
   SessionTitleProviderResult,
   SessionTitleUserMessage,
-} from '@deepseek-ai/dsh-session-title'
+} from '@redspark/rsh-session-title'
 import {
   generateSessionTitle,
   resolveSessionTitleLlmConfig,

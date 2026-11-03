@@ -11,7 +11,7 @@
  * - `list` speaks workspace paths — the same syntax its `path` argument accepts —
  *   because its consumer is a tree rooted at the workspace root.
  *
- * @module @deepseek-ai/dsh-api-workspace-files/native-types
+ * @module @redspark/rsh-api-workspace-files/native-types
  */
 
 /** Identity and freshness of one workspace file, without its content. */

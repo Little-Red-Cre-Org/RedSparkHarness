@@ -1,16 +1,16 @@
 /** Native scheduled reminders owned by each exact live root Session. */
 
-import { createUserMessage } from '@deepseek-ai/dsh-llm/native'
-import type { JsonValue } from '@deepseek-ai/dsh-util-values'
-import type { MessageId } from '@deepseek-ai/dsh-llm/native'
-import type { NativeAgent } from '@deepseek-ai/dsh-native-agent'
-import type { NativePlugin, NativeContext } from '@deepseek-ai/dsh-native-runtime'
-import type { NativeToolExecution, NativeValueToolContribution } from '@deepseek-ai/dsh-native-tools'
-import type { JsonSchemaNode } from '@deepseek-ai/dsh-native-tools/json-schema'
-import type { NativeActiveSessionOperations, NativeActiveSessionOwner } from '@deepseek-ai/dsh-native-session-execution'
-import { SessionLogOffset } from '@deepseek-ai/dsh-session/native'
-import type {} from '@deepseek-ai/dsh-native-session-execution/native'
-import type {} from '@deepseek-ai/dsh-native-tools/native'
+import { createUserMessage } from '@redspark/rsh-llm/native'
+import type { JsonValue } from '@redspark/rsh-util-values'
+import type { MessageId } from '@redspark/rsh-llm/native'
+import type { NativeAgent } from '@redspark/rsh-native-agent'
+import type { NativePlugin, NativeContext } from '@redspark/rsh-native-runtime'
+import type { NativeToolExecution, NativeValueToolContribution } from '@redspark/rsh-native-tools'
+import type { JsonSchemaNode } from '@redspark/rsh-native-tools/json-schema'
+import type { NativeActiveSessionOperations, NativeActiveSessionOwner } from '@redspark/rsh-native-session-execution'
+import { SessionLogOffset } from '@redspark/rsh-session/native'
+import type {} from '@redspark/rsh-native-session-execution/native'
+import type {} from '@redspark/rsh-native-tools/native'
 import {
   decideDueSchedules,
   foldScheduleEvents,
@@ -470,7 +470,7 @@ class NativeScheduleService {
 /** Native Session-local Schedule Consumer; the selected profile must opt in to load it. */
 export const plugin: NativePlugin = {
   apiVersion: 1,
-  name: '@deepseek-ai/dsh-schedule',
+  name: '@redspark/rsh-schedule',
   targets: ['host'],
   requires: ['activeSessions', 'tools'],
   provides: [],

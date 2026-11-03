@@ -1,5 +1,5 @@
 {
-  "name": "@deepseek-ai/dsh-workspace",
+  "name": "@redspark/rsh-workspace",
   "description": "Workspace entity registry (ctx.workspaceRegistry): durable workspace records with validated session attachment over the domain data form for the RedSpark Harness",
   "version": "1.0.0",
   "publishConfig": {
@@ -47,28 +47,28 @@
   ],
   "license": "MIT",
   "peerDependencies": {
-    "@deepseek-ai/cordis": "workspace:^",
-    "@deepseek-ai/dsh-invariants": "workspace:^",
-    "@deepseek-ai/dsh-typert-protocol": "workspace:^"
+    "@redspark/cordis": "workspace:^",
+    "@redspark/rsh-invariants": "workspace:^",
+    "@redspark/rsh-typert-protocol": "workspace:^"
   },
   "dependencies": {
-    "@deepseek-ai/dsh-brand": "workspace:^",
+    "@redspark/rsh-brand": "workspace:^",
     "zod": "^4.4.3",
-    "@deepseek-ai/dsh-native-runtime": "workspace:^",
-    "@deepseek-ai/dsh-native-session-execution": "workspace:^",
-    "@deepseek-ai/dsh-session": "workspace:^",
-    "@deepseek-ai/dsh-session-persistence": "workspace:^",
-    "@deepseek-ai/dsh-storage": "workspace:^",
-    "@deepseek-ai/dsh-storage-domain": "workspace:^",
-    "@deepseek-ai/dsh-workspace-definition": "workspace:^"
+    "@redspark/rsh-native-runtime": "workspace:^",
+    "@redspark/rsh-native-session-execution": "workspace:^",
+    "@redspark/rsh-session": "workspace:^",
+    "@redspark/rsh-session-persistence": "workspace:^",
+    "@redspark/rsh-storage": "workspace:^",
+    "@redspark/rsh-storage-domain": "workspace:^",
+    "@redspark/rsh-workspace-definition": "workspace:^"
   },
   "devDependencies": {
-    "@deepseek-ai/cordis": "workspace:^",
-    "@deepseek-ai/dsh-invariants": "workspace:^",
-    "@deepseek-ai/dsh-typert-protocol": "workspace:^",
-    "@deepseek-ai/dsh-storage-json": "workspace:^",
-    "@deepseek-ai/dsh-native-agent": "workspace:^",
-    "@deepseek-ai/dsh-session-persistence-jsonl": "workspace:^"
+    "@redspark/cordis": "workspace:^",
+    "@redspark/rsh-invariants": "workspace:^",
+    "@redspark/rsh-typert-protocol": "workspace:^",
+    "@redspark/rsh-storage-json": "workspace:^",
+    "@redspark/rsh-native-agent": "workspace:^",
+    "@redspark/rsh-session-persistence-jsonl": "workspace:^"
   },
   "dsh": {
     "native": {
@@ -89,13 +89,13 @@
     }
   },
   "peerDependenciesMeta": {
-    "@deepseek-ai/cordis": {
+    "@redspark/cordis": {
       "optional": true
     },
-    "@deepseek-ai/dsh-invariants": {
+    "@redspark/rsh-invariants": {
       "optional": true
     },
-    "@deepseek-ai/dsh-typert-protocol": {
+    "@redspark/rsh-typert-protocol": {
       "optional": true
     }
   }

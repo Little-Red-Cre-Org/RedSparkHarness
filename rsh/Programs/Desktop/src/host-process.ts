@@ -36,7 +36,7 @@ function isDesktopHostEvent(message: unknown): message is DesktopHostEvent {
   const candidate = message as Record<string, unknown>
   switch (candidate.type) {
     case 'ready':
-      return candidate.protocolVersion === DESKTOP_HOST_PROTOCOL_VERSION && typeof candidate.dshVersion === 'string'
+      return candidate.protocolVersion === DESKTOP_HOST_PROTOCOL_VERSION && typeof candidate.rshVersion === 'string'
     case 'fatal':
       return ['AggregateError', 'Error', 'RangeError', 'SyntaxError', 'TypeError', 'UnknownError', 'ValidationError']
         .includes(candidate.errorType as string)
@@ -68,7 +68,7 @@ async function exitsWithin(exit: Promise<void>, milliseconds: number): Promise<b
 /** Ready facts reported by one installed dsh child. */
 export interface DesktopHostReady {
   readonly protocolVersion: typeof DESKTOP_HOST_PROTOCOL_VERSION
-  readonly dshVersion: string
+  readonly rshVersion: string
 }
 
 /** One dsh backend running under the bundled upstream Node.js executable. */
@@ -117,7 +117,7 @@ export class DesktopHostProcess {
     // A Host instance starts at most once, so a teardown that ran before this call must not
     // suppress the failures of the child this call is about to spawn.
     this.stopping = false
-    const entry = join(this.runtimeDir, 'node_modules', '@deepseek-ai', 'dsh-desktop-host', 'lib', 'index.js')
+    const entry = join(this.runtimeDir, 'node_modules', '@redspark', 'rsh-desktop-host', 'lib', 'index.js')
     const child = spawn(this.node, [
       ...(this.inspectPort === undefined ? [] : [`--inspect=127.0.0.1:${String(this.inspectPort)}`]),
       entry,
@@ -127,7 +127,7 @@ export class DesktopHostProcess {
     ], {
       cwd: this.projectDir,
       env: Object.fromEntries(Object.entries(this.environment).filter(([name]) => (
-        name !== 'NODE_OPTIONS' && name !== 'NODE_PATH' && !/^DSH_DESKTOP_/u.test(name) && !/^(?:npm|pnpm|corepack)_/iu.test(name)
+        name !== 'NODE_OPTIONS' && name !== 'NODE_PATH' && !/^RSH_DESKTOP_/u.test(name) && !/^(?:npm|pnpm|corepack)_/iu.test(name)
       ))),
       stdio: ['ignore', 'pipe', 'pipe', 'pipe', 'pipe', 'ipc'],
     })

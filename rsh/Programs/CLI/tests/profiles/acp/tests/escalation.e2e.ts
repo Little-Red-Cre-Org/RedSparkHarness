@@ -12,8 +12,8 @@ import {
   launchAcpTestAgent,
   type AgentUnderTest,
   type LaunchedAcpTestAgent,
-} from '@deepseek-ai/dsh-session-snapshot'
-import { bwrapProfileArgs } from '@deepseek-ai/dsh-sandbox-local/src/profiles.ts'
+} from '@redspark/rsh-session-snapshot'
+import { bwrapProfileArgs } from '@redspark/rsh-sandbox-local/src/profiles.ts'
 import { cleanupAcpExampleTest } from './cleanup.ts'
 
 /**
@@ -86,7 +86,7 @@ function launchExampleAcpAgent(
     // A dummy key lets the adapter boot keylessly; live tests carry the real key.
     env: {
       DEEPSEEK_API_KEY: process.env.DEEPSEEK_API_KEY ?? 'sk-dummy-for-boot',
-      DSH_PERMISSION_MODE: sandboxMode,
+      RSH_PERMISSION_MODE: sandboxMode,
     },
     requestPermission(params) {
       permissionRequests.push(params)

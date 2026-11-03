@@ -4,8 +4,8 @@
 import type { ReactNode, RefObject } from 'react'
 import {
   ChatWelcome, FishLogo, IconChevronDownOutline14, IconFolderClose16, IconFolderOpen16,
-} from '@deepseek-ai/dsh-client-ui-primitives'
-import { workspaceTitleOf } from '@deepseek-ai/dsh-util-workspace-path'
+} from '@redspark/rsh-client-ui-primitives'
+import { workspaceTitleOf } from '@redspark/rsh-util-workspace-path'
 import type { ConversationSlotProps } from '../contract/slots.ts'
 import css from './HeroShell.module.css'
 

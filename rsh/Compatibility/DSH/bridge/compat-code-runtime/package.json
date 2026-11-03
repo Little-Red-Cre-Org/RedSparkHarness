@@ -1,5 +1,5 @@
 {
-  "name": "@deepseek-ai/dsh-code-runtime",
+  "name": "@redspark/rsh-code-runtime",
   "description": "Abstract code-execution seam (ctx.codeRuntime) for the RedSpark Harness",
   "version": "1.0.0",
   "publishConfig": {
@@ -27,12 +27,12 @@
   ],
   "license": "MIT",
   "dependencies": {
-    "@deepseek-ai/dsh-code-runtime-definition": "workspace:^"
+    "@redspark/rsh-code-runtime-definition": "workspace:^"
   },
   "peerDependencies": {
-    "@deepseek-ai/cordis": "workspace:^"
+    "@redspark/cordis": "workspace:^"
   },
   "devDependencies": {
-    "@deepseek-ai/cordis": "workspace:^"
+    "@redspark/cordis": "workspace:^"
   }
 }

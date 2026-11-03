@@ -1,12 +1,12 @@
 /** Cordis-only Settings Context and event declarations for legacy consumers. */
-import type { Context } from '@deepseek-ai/cordis'
-import type z from '@deepseek-ai/schemastery'
+import type { Context } from '@redspark/cordis'
+import type z from '@redspark/schemastery'
 import type {
   SettingsApplies,
   SettingsNamespaceInput,
   SettingsScope,
   SettingsService,
-} from '@deepseek-ai/dsh-settings-definition'
+} from '@redspark/rsh-settings-definition'
 export type {} from './events.ts'
 
 /** Registration options accepted by the Cordis Settings Provider. */
@@ -67,7 +67,7 @@ export interface CordisSettingsService extends SettingsService {
   ): void
 }
 
-declare module '@deepseek-ai/cordis' {
+declare module '@redspark/cordis' {
   interface Context {
     settings: CordisSettingsService
   }

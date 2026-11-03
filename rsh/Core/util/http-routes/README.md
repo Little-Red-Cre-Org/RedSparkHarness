@@ -3,13 +3,13 @@ description: "Defines the Node HTTP route contracts and one drainable route tabl
 kind: "package-library"
 ---
 
-# @deepseek-ai/dsh-http-routes
+# @redspark/rsh-http-routes
 
 English | [中文](README.zh.md)
 
 ## Summary
 
-`@deepseek-ai/dsh-http-routes` gives selected Node HTTP listeners one route contract and one drainable in-memory table. Cordis Web and Native Web listener Providers use it; feature owners register routes and retain their disposer. HTTP matching checks exact paths before the longest matching prefix, while upgrades use a separate exact-path table. The Host and Native entries contain only Node route types; browser index inputs are exposed by the Client entry.
+`@redspark/rsh-http-routes` gives selected Node HTTP listeners one route contract and one drainable in-memory table. Cordis Web and Native Web listener Providers use it; feature owners register routes and retain their disposer. HTTP matching checks exact paths before the longest matching prefix, while upgrades use a separate exact-path table. The Host and Native entries contain only Node route types; browser index inputs are exposed by the Client entry.
 
 ## Table of Contents
 
@@ -31,7 +31,7 @@ Use this library when a Node HTTP listener needs shared route registration and t
 ### Entry point
 
 ```text
-import { HttpRouteTable } from '@deepseek-ai/dsh-http-routes/native'
+import { HttpRouteTable } from '@redspark/rsh-http-routes/native'
 
 const routes = new HttpRouteTable()
 const dispose = routes.register({ kind: 'exact', path: '/health', handler })

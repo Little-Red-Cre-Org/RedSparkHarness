@@ -56,7 +56,7 @@ export const PAGE_ASSETS: readonly string[] = [
 
 /** Client-path JavaScript that is a worker module rather than a served page bundle. */
 export const WORKER_RUNTIME_CLIENTS: readonly string[] = [
-  'node_modules/@deepseek-ai/dsh-http-routes/lib/client.js',
+  'node_modules/@redspark/rsh-http-routes/lib/client.js',
 ]
 
 /**
@@ -67,9 +67,9 @@ export const WORKER_RUNTIME_CLIENTS: readonly string[] = [
  * `worker-host.ts`.
  */
 export const IMAGE_ENTRY_SEEDS: readonly string[] = [
-  '@deepseek-ai/dsh-app-boot',
-  '@deepseek-ai/dsh-cmdline',
-  '@deepseek-ai/cordis',
-  '@deepseek-ai/cordis-plugin-include',
+  '@redspark/rsh-app-boot',
+  '@redspark/rsh-cmdline',
+  '@redspark/cordis',
+  '@redspark/cordis-plugin-include',
   'js-yaml',
 ]

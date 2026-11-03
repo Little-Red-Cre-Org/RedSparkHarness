@@ -1,11 +1,11 @@
 // @vitest-environment jsdom
 import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { makeTranslate } from '@deepseek-ai/dsh-client-test-runtime'
-import type { SessionSnapshot, UseProjection } from '@deepseek-ai/dsh-api-session-controller/client'
-import type { ScheduleRecord } from '@deepseek-ai/dsh-schedule/client'
-import { ScheduleId } from '@deepseek-ai/dsh-schedule'
-import type { SessionId } from '@deepseek-ai/dsh-session/types'
+import { makeTranslate } from '@redspark/rsh-client-test-runtime'
+import type { SessionSnapshot, UseProjection } from '@redspark/rsh-api-session-controller/client'
+import type { ScheduleRecord } from '@redspark/rsh-schedule/client'
+import { ScheduleId } from '@redspark/rsh-schedule'
+import type { SessionId } from '@redspark/rsh-session/types'
 import {
   formatScheduleFrequency,
   formatScheduleLocalTime,

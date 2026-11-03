@@ -1,8 +1,8 @@
 /** Native request Consumer for the exact active Session's durable event suffix. */
-import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
-import type {} from '@deepseek-ai/dsh-deepseek-llm-api-extensions/native'
-import type { NativeActiveSessionOperations, NativeActiveSessionOwner } from '@deepseek-ai/dsh-native-session-execution/active-session-protocol'
-import type { DeepSeekLlmApiExtensionRequest } from '@deepseek-ai/dsh-deepseek-llm-api-extensions/types'
+import type { NativePlugin } from '@redspark/rsh-native-runtime'
+import type {} from '@redspark/rsh-deepseek-llm-api-extensions/native'
+import type { NativeActiveSessionOperations, NativeActiveSessionOwner } from '@redspark/rsh-native-session-execution/active-session-protocol'
+import type { DeepSeekLlmApiExtensionRequest } from '@redspark/rsh-deepseek-llm-api-extensions/types'
 import { resolveConfig } from './config.ts'
 import { foldAcceptedThrough, wireUpload } from './wire.ts'
 
@@ -18,7 +18,7 @@ function assertCurrentOwner(operations: NativeActiveSessionOperations, owner: Na
 /** Upload accepted Session history through the existing Native active writer. */
 export const plugin: NativePlugin = {
   apiVersion: 1,
-  name: '@deepseek-ai/dsh-session-log-deepseek',
+  name: '@redspark/rsh-session-log-deepseek',
   targets: ['host'],
   requires: ['deepseekLlmApiExtensions', 'activeSessions'],
   provides: [],

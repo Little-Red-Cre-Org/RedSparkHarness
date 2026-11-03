@@ -1,17 +1,17 @@
 /** Native Module adapter for the standard dsh Native SDK child runtime. */
 
-import type { StoredImageAttachment } from '@deepseek-ai/dsh-attachment/native'
-import type { NativePlugin, NativeContext } from '@deepseek-ai/dsh-native-runtime'
+import type { StoredImageAttachment } from '@redspark/rsh-attachment/native'
+import type { NativePlugin, NativeContext } from '@redspark/rsh-native-runtime'
 import type { NativeExternalSubagentDriver, NativeExternalSubagentOutcome,
-  NativeExternalSubagentRun } from '@deepseek-ai/dsh-native-subagent/native'
-import { AssistantOutputFold } from '@deepseek-ai/dsh-subagent-protocol/assistant-output'
-import type { ContentBlock } from '@deepseek-ai/dsh-llm/native'
-import type { SessionEvent, TurnEndReason } from '@deepseek-ai/dsh-session/native'
-import { credentialKey, credentialRef, isCredentialKeySegment } from '@deepseek-ai/dsh-credentials/native'
-import { createNativeSdkChildHarness, type NativeSdkChildRuntimeRequest } from '@deepseek-ai/dsh-sdk-runtime'
-import type { NativeSdkChildApprovalRelay } from '@deepseek-ai/dsh-sdk-runtime/native'
-import type { NativeSdkPromptContentBlock } from '@deepseek-ai/dsh-sdk-protocol'
-import type {} from '@deepseek-ai/dsh-attachment/native'
+  NativeExternalSubagentRun } from '@redspark/rsh-native-subagent/native'
+import { AssistantOutputFold } from '@redspark/rsh-subagent-protocol/assistant-output'
+import type { ContentBlock } from '@redspark/rsh-llm/native'
+import type { SessionEvent, TurnEndReason } from '@redspark/rsh-session/native'
+import { credentialKey, credentialRef, isCredentialKeySegment } from '@redspark/rsh-credentials/native'
+import { createNativeSdkChildHarness, type NativeSdkChildRuntimeRequest } from '@redspark/rsh-sdk-runtime'
+import type { NativeSdkChildApprovalRelay } from '@redspark/rsh-sdk-runtime/native'
+import type { NativeSdkPromptContentBlock } from '@redspark/rsh-sdk-protocol'
+import type {} from '@redspark/rsh-attachment/native'
 
 type NativeSdkChildPromptBlock = Extract<NativeSdkPromptContentBlock, { type: 'text' | 'image' }>
 
@@ -272,7 +272,7 @@ function createDriver(context: NativeContext, config: Config): NativeExternalSub
 /** Install the SDK child adapter; the Subagent Provider remains the only scheduler and result publisher. */
 export const plugin: NativePlugin = {
   apiVersion: 1,
-  name: '@deepseek-ai/dsh-sdk-child',
+  name: '@redspark/rsh-sdk-child',
   targets: ['host'],
   requires: ['credentials', 'sdkChildRuntimeLauncher'],
   optional: ['attachments'],

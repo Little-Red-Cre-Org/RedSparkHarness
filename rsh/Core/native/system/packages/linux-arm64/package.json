@@ -1,5 +1,5 @@
 {
-  "name": "@deepseek-ai/node-addon-system-linux-arm64",
+  "name": "@redspark/node-addon-system-linux-arm64",
   "version": "0.1.2",
   "exports": {
     "./package.json": "./package.json"
@@ -7,7 +7,7 @@
   "description": "Linux arm64 system binaries: static Landlock launcher and glibc/musl Node-API flock addons",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/deepseek-harness/deepseek-harness.git",
+    "url": "git+https://github.com/redspark-harness/redspark-harness.git",
     "directory": "rsh/Core/native/system/packages/linux-arm64"
   },
   "os": [

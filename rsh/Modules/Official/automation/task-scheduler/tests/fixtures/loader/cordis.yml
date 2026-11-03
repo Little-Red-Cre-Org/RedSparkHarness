@@ -1,48 +1,48 @@
-- name: '@deepseek-ai/dsh-llm'
-- name: '@deepseek-ai/dsh-session'
-- name: '@deepseek-ai/dsh-session-persistence-jsonl'
+- name: '@redspark/rsh-llm'
+- name: '@redspark/rsh-session'
+- name: '@redspark/rsh-session-persistence-jsonl'
   config:
     root: ./sessions
-- name: '@deepseek-ai/dsh-session-projection'
-- name: '@deepseek-ai/dsh-system-prompt'
-- name: '@deepseek-ai/dsh-tools'
-- name: '@deepseek-ai/dsh-agent'
-- name: '@deepseek-ai/dsh-goal'
-- name: '@deepseek-ai/dsh-goal-round-driver'
-- name: '@deepseek-ai/dsh-agent-loop'
+- name: '@redspark/rsh-session-projection'
+- name: '@redspark/rsh-system-prompt'
+- name: '@redspark/rsh-tools'
+- name: '@redspark/rsh-agent'
+- name: '@redspark/rsh-goal'
+- name: '@redspark/rsh-goal-round-driver'
+- name: '@redspark/rsh-agent-loop'
   config:
     agents: []
-- name: '@deepseek-ai/dsh-subprocess-local'
-- name: '@deepseek-ai/dsh-sandbox-local'
-- name: '@deepseek-ai/dsh-sandbox-policy'
-- name: '@deepseek-ai/dsh-pwsh-sandbox'
+- name: '@redspark/rsh-subprocess-local'
+- name: '@redspark/rsh-sandbox-local'
+- name: '@redspark/rsh-sandbox-policy'
+- name: '@redspark/rsh-pwsh-sandbox'
   disabled: !!js process.platform !== 'win32'
-- name: '@deepseek-ai/dsh-bash-sandbox'
+- name: '@redspark/rsh-bash-sandbox'
   disabled: !!js process.platform === 'win32'
-- name: '@deepseek-ai/dsh-user-approval'
+- name: '@redspark/rsh-user-approval'
   config:
     policy: never
-- name: '@deepseek-ai/dsh-permission-presets'
+- name: '@redspark/rsh-permission-presets'
   config:
     defaultPreset: read-only
     presets:
       read-only:
         sandbox: read-only
         approval: never
-- name: '@deepseek-ai/dsh-session-title'
+- name: '@redspark/rsh-session-title'
   config:
     fallbackMaxWords: 5
     fallbackMaxBytes: 40
     maxTitleBytes: 200
-- name: '@deepseek-ai/dsh-storage'
-- name: '@deepseek-ai/dsh-storage-json'
+- name: '@redspark/rsh-storage'
+- name: '@redspark/rsh-storage-json'
   config:
     root: ./storage
-- name: '@deepseek-ai/dsh-storage-domain'
+- name: '@redspark/rsh-storage-domain'
   config:
     backend: json
-- name: '@deepseek-ai/dsh-workspace'
-- name: '@deepseek-ai/dsh-agent-presets'
+- name: '@redspark/rsh-workspace'
+- name: '@redspark/rsh-agent-presets'
   config:
     default: test
     includeShippedRoot: false

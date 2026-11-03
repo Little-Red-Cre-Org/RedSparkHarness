@@ -1,5 +1,5 @@
 /** Installation-owned lifetime for the two real native HTTP adapters. */
-import type { GenerateOptions, LlmAdapter, LlmImageRequestPricing, LlmResolvedModelInfo, PreparedAdapterCall, ResolvedRetryPolicy, StreamChunk } from '@deepseek-ai/dsh-llm/native'
+import type { GenerateOptions, LlmAdapter, LlmImageRequestPricing, LlmResolvedModelInfo, PreparedAdapterCall, ResolvedRetryPolicy, StreamChunk } from '@redspark/rsh-llm/native'
 import type { NativeModel } from './index.ts'
 import type { NativeResponsesGenerationCapture, NativeResponsesTransport } from './responses-transport.ts'
 

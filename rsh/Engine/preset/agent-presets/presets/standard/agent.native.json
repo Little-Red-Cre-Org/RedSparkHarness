@@ -3,7 +3,7 @@
   "installations": [
     {
       "id": "persona",
-      "plugin": "@deepseek-ai/dsh-native-persona",
+      "plugin": "@redspark/rsh-native-persona",
       "config": {
         "prefix": "You are a coding agent powered by the {{model}} model.",
         "suffix": "Your working directory is {{cwd}}."

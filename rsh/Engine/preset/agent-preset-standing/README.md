@@ -3,7 +3,7 @@ description: "Register one standing Agent composition in a native profile scope 
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-agent-preset-standing
+# @redspark/rsh-agent-preset-standing
 
 English | [中文](README.zh.md)
 
@@ -38,7 +38,7 @@ Add a native installation row to the profile composition and provide its exact s
 ```json
 {
   "id": "preset-minimal",
-  "plugin": "@deepseek-ai/dsh-agent-preset-standing",
+  "plugin": "@redspark/rsh-agent-preset-standing",
   "scope": "minimal",
   "config": {
     "id": "minimal",

@@ -1,5 +1,5 @@
 {
-  "name": "@deepseek-ai/dsh-approval-definition",
+  "name": "@redspark/rsh-approval-definition",
   "description": "Framework-free approval identities, event vocabulary and consumer operations",
   "version": "1.0.0",
   "publishConfig": { "access": "public" },
@@ -20,10 +20,10 @@
   "files": ["lib/index.js", "lib/legacy.js", "lib/types/**/*.d.ts"],
   "license": "MIT",
   "dependencies": {
-    "@deepseek-ai/dsh-brand": "workspace:^",
-    "@deepseek-ai/dsh-llm": "workspace:^",
-    "@deepseek-ai/dsh-native-agent": "workspace:^",
-    "@deepseek-ai/dsh-native-runtime": "workspace:^",
-    "@deepseek-ai/dsh-session": "workspace:^"
+    "@redspark/rsh-brand": "workspace:^",
+    "@redspark/rsh-llm": "workspace:^",
+    "@redspark/rsh-native-agent": "workspace:^",
+    "@redspark/rsh-native-runtime": "workspace:^",
+    "@redspark/rsh-session": "workspace:^"
   }
 }

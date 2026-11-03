@@ -1,11 +1,11 @@
 /**
  * Framework-free configuration for the Perplexity search provider, shared by its Cordis plugin and
  * native installation.
- * @module @deepseek-ai/dsh-web-search-perplexity/config
+ * @module @redspark/rsh-web-search-perplexity/config
  */
 
-import z from '@deepseek-ai/schemastery'
-import type { LaunchEnvironmentSnapshot } from '@deepseek-ai/dsh-launch-environment/native'
+import z from '@redspark/schemastery'
+import type { LaunchEnvironmentSnapshot } from '@redspark/rsh-launch-environment/native'
 import {
   PERPLEXITY_DEFAULT_BASE_URL,
   PERPLEXITY_DEFAULT_MAX_TOKENS,

@@ -3,13 +3,13 @@ description: "An immutable snapshot of this run's environment that remembers whi
 kind: "package-library"
 ---
 
-# @deepseek-ai/dsh-launch-environment
+# @redspark/rsh-launch-environment
 
 English | [中文](README.zh.md)
 
 ## Summary
 
-Use `@deepseek-ai/dsh-launch-environment` to resolve launch-time environment values without trusting the flattened `process.env`. It freezes inherited process values, the invocation directory's `.env`, and the Harness home's `.env`, then returns the winning value and its source in a fixed trust order. Callers can exclude layers for sensitive lookups; an omitted layer stays unreachable regardless of later ordering changes. The snapshot is immutable, but every layer is still copied into `process.env`, so it does not isolate subprocesses. Import it as a library; it cannot be mounted from `cordis.yml`.
+Use `@redspark/rsh-launch-environment` to resolve launch-time environment values without trusting the flattened `process.env`. It freezes inherited process values, the invocation directory's `.env`, and the Harness home's `.env`, then returns the winning value and its source in a fixed trust order. Callers can exclude layers for sensitive lookups; an omitted layer stays unreachable regardless of later ordering changes. The snapshot is immutable, but every layer is still copied into `process.env`, so it does not isolate subprocesses. Import it as a library; it cannot be mounted from `cordis.yml`.
 
 ## Table of Contents
 
@@ -33,9 +33,9 @@ Native Hosts and Clients import `./native` for the snapshot types, constructor, 
 ### Resolving a value
 
 ```ts
-import { launchEnvironmentOf } from '@deepseek-ai/dsh-launch-environment'
+import { launchEnvironmentOf } from '@redspark/rsh-launch-environment'
 
-declare const ctx: import('@deepseek-ai/cordis').Context
+declare const ctx: import('@redspark/cordis').Context
 const endpoint = launchEnvironmentOf(ctx).get('DEEPSEEK_BASE_URL')?.value
 ```
 
@@ -49,7 +49,7 @@ const endpoint = launchEnvironmentOf(ctx).get('DEEPSEEK_BASE_URL')?.value
 |---|---|
 | Inherited process environment | What the launching shell, CI job, or container passed in — this run's explicit intent |
 | `<invocation cwd>/.env` | The project the harness was launched in, which the product trusts to configure its own agent |
-| `$DSH_HOME/.env` | The user's own machine-level defaults |
+| `$RSH_HOME/.env` | The user's own machine-level defaults |
 
 Names match the way the platform matches them: exactly on POSIX, case-insensitively on Windows. A case-sensitive lookup on Windows would rank the wrong layer — a shell's `deepseek_api_key` and a project `.env`'s `DEEPSEEK_API_KEY` are one variable to the OS.
 

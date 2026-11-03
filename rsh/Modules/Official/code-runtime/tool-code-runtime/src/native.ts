@@ -1,16 +1,16 @@
 /** Reversible native run_code Consumer; the application owns its Session result. */
-import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
-import { createNativePtcDispatch, type NativeProjectedToolContribution, type NativeToolMode } from '@deepseek-ai/dsh-native-tools'
-import type { CodeBindingNamespace, CodeRunResult } from '@deepseek-ai/dsh-code-runtime-definition'
-import { renderToolsSdkDeclarations } from '@deepseek-ai/dsh-native-tools/sdk-typescript'
-import { renderToolsSdkPyDeclarations } from '@deepseek-ai/dsh-native-tools/sdk-python'
-export type {} from '@deepseek-ai/dsh-native-prompt/native'
-export type {} from '@deepseek-ai/dsh-native-tools/native'
-export type {} from '@deepseek-ai/dsh-code-runtime-definition'
-export type {} from '@deepseek-ai/dsh-fs/native'
-export type {} from '@deepseek-ai/dsh-native-sandbox-policy/native'
-import { ToolArgsError } from '@deepseek-ai/dsh-native-tools/json-schema'
-import { renderCodeOutput } from '@deepseek-ai/dsh-native-tools/code-output'
+import type { NativePlugin } from '@redspark/rsh-native-runtime'
+import { createNativePtcDispatch, type NativeProjectedToolContribution, type NativeToolMode } from '@redspark/rsh-native-tools'
+import type { CodeBindingNamespace, CodeRunResult } from '@redspark/rsh-code-runtime-definition'
+import { renderToolsSdkDeclarations } from '@redspark/rsh-native-tools/sdk-typescript'
+import { renderToolsSdkPyDeclarations } from '@redspark/rsh-native-tools/sdk-python'
+export type {} from '@redspark/rsh-native-prompt/native'
+export type {} from '@redspark/rsh-native-tools/native'
+export type {} from '@redspark/rsh-code-runtime-definition'
+export type {} from '@redspark/rsh-fs/native'
+export type {} from '@redspark/rsh-native-sandbox-policy/native'
+import { ToolArgsError } from '@redspark/rsh-native-tools/json-schema'
+import { renderCodeOutput } from '@redspark/rsh-native-tools/code-output'
 
 /** Canonical transport output; Provider completion values are exposed under result. */
 type CodeToolOutcome = Omit<CodeRunResult, 'value'> & { result?: CodeRunResult['value'] }
@@ -52,7 +52,7 @@ function resolveConfig(input: unknown): {
 
 /** Register run_code through the same scoped registry as other model tools. */
 export const plugin: NativePlugin = {
-  apiVersion: 1, name: '@deepseek-ai/dsh-tool-code-runtime', targets: ['host'],
+  apiVersion: 1, name: '@redspark/rsh-tool-code-runtime', targets: ['host'],
   requires: ['tools', 'codeRuntime', 'fs'], optional: ['sandboxPolicy', 'promptSections'], provides: [],
   resolve(input) {
     const { maxParallel, sdkPrompt, presentation, denyTools } = resolveConfig(input)

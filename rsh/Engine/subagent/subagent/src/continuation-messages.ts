@@ -1,17 +1,17 @@
 /**
  * Model-visible messages owned by continuable-subagent orchestration.
  *
- * @module @deepseek-ai/dsh-subagent/continuation-messages
+ * @module @redspark/rsh-subagent/continuation-messages
  */
 
-import { createAdjacentAgentMessage } from '@deepseek-ai/dsh-subagent-protocol'
-export { withContinuableReturnGuidance } from '@deepseek-ai/dsh-subagent-protocol'
-export { createSettlementMessage } from '@deepseek-ai/dsh-subagent-protocol'
-export type { SubagentSettledMessageSource } from '@deepseek-ai/dsh-subagent-protocol'
-export type { AgentMessageSource } from '@deepseek-ai/dsh-subagent-protocol'
-import type { Agent } from '@deepseek-ai/dsh-agent'
-import type { createUserMessage } from '@deepseek-ai/dsh-llm'
-import type { ContentBlock } from '@deepseek-ai/dsh-llm'
+import { createAdjacentAgentMessage } from '@redspark/rsh-subagent-protocol'
+export { withContinuableReturnGuidance } from '@redspark/rsh-subagent-protocol'
+export { createSettlementMessage } from '@redspark/rsh-subagent-protocol'
+export type { SubagentSettledMessageSource } from '@redspark/rsh-subagent-protocol'
+export type { AgentMessageSource } from '@redspark/rsh-subagent-protocol'
+import type { Agent } from '@redspark/rsh-agent'
+import type { createUserMessage } from '@redspark/rsh-llm'
+import type { ContentBlock } from '@redspark/rsh-llm'
 
 /**
  * Build the model-visible and durable representation of one adjacent-Agent message.

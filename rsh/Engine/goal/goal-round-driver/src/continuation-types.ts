@@ -1,14 +1,14 @@
 /** Explicit Goal arming through installed same-session continuation hooks. */
-import type { NativeActiveSessionOwner } from '@deepseek-ai/dsh-native-session-execution'
-import type { CreateGoalRequest, GoalRef, GoalView } from '@deepseek-ai/dsh-goal/types'
-import type { NativeScheduledGoalAdmission, NativeScheduledGoalHost } from '@deepseek-ai/dsh-goal/native'
+import type { NativeActiveSessionOwner } from '@redspark/rsh-native-session-execution'
+import type { CreateGoalRequest, GoalRef, GoalView } from '@redspark/rsh-goal/types'
+import type { NativeScheduledGoalAdmission, NativeScheduledGoalHost } from '@redspark/rsh-goal/native'
 export type {
   NativeScheduledGoalAdmission,
   NativeScheduledGoalAdmissionAuthority,
   NativeScheduledGoalAdmissionLease,
   NativeScheduledGoalExecutor,
   NativeScheduledGoalHost,
-} from '@deepseek-ai/dsh-goal/native'
+} from '@redspark/rsh-goal/native'
 
 /** Explicit trusted caller category; model tools never choose their own category. */
 export type NativeGoalContinuationSource = 'human' | 'model'
@@ -55,7 +55,7 @@ export interface NativeGoalContinuationOperations {
     source: NativeGoalContinuationSource, signal?: AbortSignal): Promise<GoalView>
 }
 
-declare module '@deepseek-ai/dsh-native-runtime' {
+declare module '@redspark/rsh-native-runtime' {
   interface NativeServices {
     goalContinuation: NativeGoalContinuationOperations
     scheduledGoalHost: NativeScheduledGoalHost

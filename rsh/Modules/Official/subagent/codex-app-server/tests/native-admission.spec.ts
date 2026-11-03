@@ -1,6 +1,6 @@
 import { expect, it, vi } from 'vitest'
-import { NativeHost, NativeScope, resolveInstallation, type NativePlugin } from '@deepseek-ai/dsh-native-runtime'
-import type { ChildConnectionDefinition } from '@deepseek-ai/dsh-subprocess/native'
+import { NativeHost, NativeScope, resolveInstallation, type NativePlugin } from '@redspark/rsh-native-runtime'
+import type { ChildConnectionDefinition } from '@redspark/rsh-subprocess/native'
 import { plugin as codexPlugin } from '../src/native.ts'
 
 it('rejects a bypass permission mode while resolving Native product configuration', () => {

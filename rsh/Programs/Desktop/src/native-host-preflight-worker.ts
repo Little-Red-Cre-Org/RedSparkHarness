@@ -1,7 +1,7 @@
 /** Resolve the selected Host graph in an isolated module cache without activating Providers. */
 import { parentPort, workerData } from 'node:worker_threads'
-import { createLaunchEnvironmentSnapshot, launchEnvironmentProvider } from '@deepseek-ai/dsh-launch-environment/native'
-import { NativeScope, resolveInstallation, validateNativePluginEntry, type NativePlugin } from '@deepseek-ai/dsh-native-runtime'
+import { createLaunchEnvironmentSnapshot, launchEnvironmentProvider } from '@redspark/rsh-launch-environment/native'
+import { NativeScope, resolveInstallation, validateNativePluginEntry, type NativePlugin } from '@redspark/rsh-native-runtime'
 import { pathToFileURL } from 'node:url'
 import type { NativeDesktopValidationDiagnostic } from './native-module-management.ts'
 import type { NativeHostPreflightInput, NativeHostPreflightReply } from './native-host-preflight-types.ts'

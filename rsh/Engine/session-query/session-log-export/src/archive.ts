@@ -23,13 +23,13 @@
 import { Zip, ZipDeflate } from 'fflate'
 import type {
   AttachmentOperations, FileAttachmentRef, ImageAttachmentRef,
-} from '@deepseek-ai/dsh-attachment/native'
-import { SESSION_FORMAT_VERSION } from '@deepseek-ai/dsh-session/types'
-import { sessionFormatLogFilename } from '@deepseek-ai/dsh-session-format'
-import type { SessionEvent, SessionHeader, SessionId } from '@deepseek-ai/dsh-session/native'
-import type { NativeSessionPersistenceOperations, SessionHandle } from '@deepseek-ai/dsh-session-persistence/native'
-import { SessionPersistenceNotFoundError } from '@deepseek-ai/dsh-session-persistence/native'
-import type { SessionLineageNode, SessionQueryOperations } from '@deepseek-ai/dsh-session-query/native'
+} from '@redspark/rsh-attachment/native'
+import { SESSION_FORMAT_VERSION } from '@redspark/rsh-session/types'
+import { sessionFormatLogFilename } from '@redspark/rsh-session-format'
+import type { SessionEvent, SessionHeader, SessionId } from '@redspark/rsh-session/native'
+import type { NativeSessionPersistenceOperations, SessionHandle } from '@redspark/rsh-session-persistence/native'
+import { SessionPersistenceNotFoundError } from '@redspark/rsh-session-persistence/native'
+import type { SessionLineageNode, SessionQueryOperations } from '@redspark/rsh-session-query/native'
 
 /** Valid fflate DEFLATE levels accepted by session-log export. */
 export type SessionLogCompressionLevel = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9

@@ -1,5 +1,5 @@
 {
-  "name": "@deepseek-ai/dsh-command-feedback",
+  "name": "@redspark/rsh-command-feedback",
   "description": "Log-only session feedback: the record event, the sessionFeedback Host Remote, and the human-facing slash command",
   "version": "1.0.0",
   "publishConfig": {
@@ -64,37 +64,37 @@
   ],
   "license": "MIT",
   "peerDependencies": {
-    "@deepseek-ai/dsh-commands": "workspace:^",
-    "@deepseek-ai/dsh-session": "workspace:^",
-    "@deepseek-ai/dsh-anonymous-user-id": "workspace:^",
-    "@deepseek-ai/cordis": "workspace:^",
-    "@deepseek-ai/dsh-typert-protocol": "workspace:^",
-    "@deepseek-ai/dsh-native-runtime": "workspace:^",
-    "@deepseek-ai/dsh-native-session-execution": "workspace:^",
-    "@deepseek-ai/dsh-session-persistence": "workspace:^"
+    "@redspark/rsh-commands": "workspace:^",
+    "@redspark/rsh-session": "workspace:^",
+    "@redspark/rsh-anonymous-user-id": "workspace:^",
+    "@redspark/cordis": "workspace:^",
+    "@redspark/rsh-typert-protocol": "workspace:^",
+    "@redspark/rsh-native-runtime": "workspace:^",
+    "@redspark/rsh-native-session-execution": "workspace:^",
+    "@redspark/rsh-session-persistence": "workspace:^"
   },
   "peerDependenciesMeta": {
-    "@deepseek-ai/cordis": { "optional": true },
-    "@deepseek-ai/dsh-typert-protocol": { "optional": true },
-    "@deepseek-ai/dsh-native-runtime": { "optional": true }
+    "@redspark/cordis": { "optional": true },
+    "@redspark/rsh-typert-protocol": { "optional": true },
+    "@redspark/rsh-native-runtime": { "optional": true }
   },
   "dependencies": {
     "zod": "^4.4.3"
   },
   "scripts": { "bundle": "tsdown" },
   "devDependencies": {
-    "@deepseek-ai/cordis-plugin-include": "workspace:^",
-    "@deepseek-ai/cordis-plugin-loader": "workspace:^",
-    "@deepseek-ai/dsh-agent": "workspace:^",
-    "@deepseek-ai/dsh-agent-loop-testkit": "workspace:^",
-    "@deepseek-ai/dsh-commands": "workspace:^",
-    "@deepseek-ai/dsh-llm": "workspace:^",
-    "@deepseek-ai/dsh-session": "workspace:^",
-    "@deepseek-ai/dsh-anonymous-user-id": "workspace:^",
-    "@deepseek-ai/cordis": "workspace:^",
-    "@deepseek-ai/dsh-typert-protocol": "workspace:^",
-    "@deepseek-ai/dsh-native-runtime": "workspace:^",
-    "@deepseek-ai/dsh-native-session-execution": "workspace:^",
-    "@deepseek-ai/dsh-session-persistence": "workspace:^"
+    "@redspark/cordis-plugin-include": "workspace:^",
+    "@redspark/cordis-plugin-loader": "workspace:^",
+    "@redspark/rsh-agent": "workspace:^",
+    "@redspark/rsh-agent-loop-testkit": "workspace:^",
+    "@redspark/rsh-commands": "workspace:^",
+    "@redspark/rsh-llm": "workspace:^",
+    "@redspark/rsh-session": "workspace:^",
+    "@redspark/rsh-anonymous-user-id": "workspace:^",
+    "@redspark/cordis": "workspace:^",
+    "@redspark/rsh-typert-protocol": "workspace:^",
+    "@redspark/rsh-native-runtime": "workspace:^",
+    "@redspark/rsh-native-session-execution": "workspace:^",
+    "@redspark/rsh-session-persistence": "workspace:^"
   }
 }

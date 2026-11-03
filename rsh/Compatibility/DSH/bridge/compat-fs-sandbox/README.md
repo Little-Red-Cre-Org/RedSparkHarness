@@ -3,7 +3,7 @@ description: "Native profiles can use the legacy sandbox filesystem only with an
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-compat-fs-sandbox
+# @redspark/rsh-compat-fs-sandbox
 
 English | [中文](README.zh.md)
 

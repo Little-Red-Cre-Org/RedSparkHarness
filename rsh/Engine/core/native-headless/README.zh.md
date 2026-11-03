@@ -3,7 +3,7 @@ description: "面向显式文件系统与持久 Session profile 的原生一次�
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-native-headless
+# @redspark/rsh-native-headless
 
 [English](README.md) | 中文
 

@@ -1,8 +1,8 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, expect, it, vi } from 'vitest'
-import type { SessionId } from '@deepseek-ai/dsh-session/types'
-import type { NativeSessionClient } from '@deepseek-ai/dsh-client-native-session/native'
+import type { SessionId } from '@redspark/rsh-session/types'
+import type { NativeSessionClient } from '@redspark/rsh-client-native-session/native'
 import { ConversationError } from '../src/conversation-error.tsx'
 import { NativeConversationController } from '../src/controller.ts'
 import { en } from '../src/locales.ts'
@@ -72,7 +72,7 @@ it('keeps one draft per Session and sends attached images without text', async (
   expect(controller.getSnapshot().error).toBeUndefined()
   expect(promptContent.mock.calls[0]?.slice(0, 3)).toEqual([id,
     [{ type: 'image', mediaType: 'image/png', data: btoa('png'), name: 'shot.png' }], true])
-  expect(() => controller.send('  ')).toThrow('enter text or attach an image')
+  expect(() => controller.send('  ')).toThrow('enter text or attach a file')
   await controller.close()
 })
 

@@ -19,7 +19,7 @@
     "lib/shared-*.js",
     "lib/types/**/*.d.ts"
   ],
-  "name": "@deepseek-ai/dsh-terminal-ui",
+  "name": "@redspark/rsh-terminal-ui",
   "description": "Shared Ink transcript presentation",
   "exports": {
     ".": {
@@ -42,10 +42,10 @@
     "react": "^18.2.0"
   },
   "peerDependencies": {
-    "@deepseek-ai/dsh-llm": "workspace:^"
+    "@redspark/rsh-llm": "workspace:^"
   },
   "devDependencies": {
-    "@deepseek-ai/dsh-llm": "workspace:^",
+    "@redspark/rsh-llm": "workspace:^",
     "@types/react": "^18.2.0"
   },
   "scripts": {

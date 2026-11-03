@@ -3,7 +3,7 @@ description: "Cordis declarations for the legacy Settings API, including Context
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-compat-settings-definition
+# @redspark/rsh-compat-settings-definition
 
 English | [中文](README.zh.md)
 
@@ -27,7 +27,7 @@ Use this package when a Cordis plugin consumes the legacy `Context.settings` API
 Cordis plugin type declarations import the root export to make `Context.settings` available:
 
 ```ts
-import type {} from '@deepseek-ai/dsh-compat-settings-definition'
+import type {} from '@redspark/rsh-compat-settings-definition'
 ```
 
 The `/events` export declares the compatibility Settings events. These imports only augment TypeScript declarations; the selected Settings provider creates the runtime service.

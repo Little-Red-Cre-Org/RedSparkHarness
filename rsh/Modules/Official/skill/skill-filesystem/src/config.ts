@@ -1,8 +1,8 @@
 import { homedir } from 'node:os'
 import { join, resolve } from 'node:path'
-import z from '@deepseek-ai/schemastery'
-import type Schema from '@deepseek-ai/schemastery'
-import { resolveDshHome } from '@deepseek-ai/dsh-home-paths'
+import z from '@redspark/schemastery'
+import type Schema from '@redspark/schemastery'
+import { resolveRshHome } from '@redspark/rsh-home-paths'
 import {
   DEFAULT_WATCH_MAX_PROJECTS,
   DEFAULT_WATCH_POLL_INTERVAL_MS,
@@ -16,13 +16,13 @@ export interface Config extends SkillWatchConfigInput {
   providerName?: string
   /** Whether project and user roots are included around custom roots. */
   includeDefaultRoots?: boolean
-  /** RedSpark Harness config root. Defaults to `$DSH_HOME` or `~/.dsh`. */
-  dshHome?: string
-  /** Shared agent config root. Defaults to `$DSH_AGENTS_HOME` or `~/.agents`. */
+  /** RedSpark Harness config root. Defaults to `$RSH_HOME` or `~/.dsh`. */
+  rshHome?: string
+  /** Shared agent config root. Defaults to `$RSH_AGENTS_HOME` or `~/.agents`. */
   agentsHome?: string
   /** Additional skill roots scanned after project roots and before user roots. */
   customSkillDirs?: string[]
-  /** Bundled skill root; defaults to `$DSH_BUNDLED_SKILL_DIR` when default roots are included, otherwise mounts none. */
+  /** Bundled skill root; defaults to `$RSH_BUNDLED_SKILL_DIR` when default roots are included, otherwise mounts none. */
   bundledSkillDir?: string
 }
 
@@ -30,7 +30,7 @@ export interface Config extends SkillWatchConfigInput {
 export const Config: Schema<Config> = z.object({
   providerName: z.string().min(1).default('filesystem'),
   includeDefaultRoots: z.boolean().default(true),
-  dshHome: z.string(),
+  rshHome: z.string(),
   agentsHome: z.string(),
   customSkillDirs: z.array(z.string()).default([]),
   watch: z.boolean().default(true),
@@ -46,7 +46,7 @@ export const Config: Schema<Config> = z.object({
 export interface ResolvedConfig {
   readonly providerName: string
   readonly includeDefaultRoots: boolean
-  readonly dshHome: string
+  readonly rshHome: string
   readonly agentsHome: string
   readonly customSkillDirs: readonly string[]
   readonly watch: boolean
@@ -59,7 +59,7 @@ export interface ResolvedConfig {
 }
 
 const CONFIG_FIELDS = new Set([
-  'providerName', 'includeDefaultRoots', 'dshHome', 'agentsHome', 'customSkillDirs', 'watch',
+  'providerName', 'includeDefaultRoots', 'rshHome', 'agentsHome', 'customSkillDirs', 'watch',
   'watchUsePolling', 'watchStabilityThresholdMs', 'watchPollIntervalMs', 'watchMaxProjects',
   'watchFollowSymlinks', 'bundledSkillDir',
 ])
@@ -78,12 +78,12 @@ export function resolveSkillFilesystemConfig(input: unknown): ResolvedConfig {
   }
   const config = Config(fields ?? {})
   const includeDefaultRoots = config.includeDefaultRoots ?? true
-  const bundledSkillDir = config.bundledSkillDir ?? (includeDefaultRoots ? process.env.DSH_BUNDLED_SKILL_DIR : undefined)
+  const bundledSkillDir = config.bundledSkillDir ?? (includeDefaultRoots ? process.env.RSH_BUNDLED_SKILL_DIR : undefined)
   return {
     providerName: config.providerName ?? 'filesystem',
     includeDefaultRoots,
-    dshHome: resolveDshHome(config.dshHome),
-    agentsHome: resolve(config.agentsHome ?? process.env.DSH_AGENTS_HOME ?? join(homedir(), '.agents')),
+    rshHome: resolveRshHome(config.rshHome),
+    agentsHome: resolve(config.agentsHome ?? process.env.RSH_AGENTS_HOME ?? join(homedir(), '.agents')),
     customSkillDirs: (config.customSkillDirs ?? []).map(path => resolve(path)),
     watch: config.watch ?? true,
     watchUsePolling: config.watchUsePolling ?? false,

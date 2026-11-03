@@ -2,10 +2,10 @@
  * Client-safe credential brands, stored records, and reference views. These
  * types have no Host runtime or Cordis imports and serve both compilation faces.
  *
- * @module @deepseek-ai/dsh-credentials/native-types
+ * @module @redspark/rsh-credentials/native-types
  */
 
-import type { Branded } from '@deepseek-ai/dsh-brand'
+import type { Branded } from '@redspark/rsh-brand'
 
 /** Nominal reference to one credential: a POSIX-style environment-variable name. */
 export type CredentialRef = Branded<'CredentialRef'>

@@ -1,6 +1,6 @@
 /** Advisory catalogs and cancellation for the profile-selected model adapter. */
-import type { LlmAdapter } from '@deepseek-ai/dsh-llm/native'
-import type { LlmProviderInfo, LlmResolvedModelInfo } from '@deepseek-ai/dsh-llm/native'
+import type { LlmAdapter } from '@redspark/rsh-llm/native'
+import type { LlmProviderInfo, LlmResolvedModelInfo } from '@redspark/rsh-llm/native'
 import type { NativeModelDirectory } from './model-directory.ts'
 import type { ModelCatalog, ModelProviderGroup, ModelSelection } from './model-selection.ts'
 

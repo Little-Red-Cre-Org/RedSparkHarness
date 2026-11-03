@@ -2,12 +2,12 @@
 import json
 import sys
 
-from deepseek_harness import DeepSeekHarness, DeepSeekHarnessConfig
+from redspark_harness import RedSparkHarness, RedSparkHarnessConfig
 
 launcher, home, workspace, patch, session_id, task, recovery_task = sys.argv[1:]
-config = DeepSeekHarnessConfig(dsh_bin=launcher, profile="native-sdk", dsh_home=home,
+config = RedSparkHarnessConfig(dsh_bin=launcher, profile="native-sdk", rsh_home=home,
     patches=(patch,), cwd=workspace, provider="fixture", model="fixture-model",
-    request_timeout_seconds=20, env={"NATIVE_SDK_FIXTURE_KEY": "fixture-key", "DSH_TELEMETRY_DISABLED": "1"})
+    request_timeout_seconds=20, env={"NATIVE_SDK_FIXTURE_KEY": "fixture-key", "RSH_TELEMETRY_DISABLED": "1"})
 
 
 def serialize(result):
@@ -15,10 +15,10 @@ def serialize(result):
         "notifications": [{"method": item.method, "params": item.payload} for item in result.notifications]}
 
 
-with DeepSeekHarness(config) as initial:
+with RedSparkHarness(config) as initial:
     first = serialize(initial.start_session(session_id).run(task))
 
-with DeepSeekHarness(config) as cold:
+with RedSparkHarness(config) as cold:
     recovery = serialize(cold.start_session(session_id).run(recovery_task))
 
 print(json.dumps({"first": first, "recovery": recovery}))

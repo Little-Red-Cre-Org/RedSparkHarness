@@ -1,5 +1,5 @@
 /** Keep the legacy reader's byte result while sharing HTML dependency collection. */
-import { packWorkspaceHtml } from '@deepseek-ai/dsh-client-ui-primitives'
+import { packWorkspaceHtml } from '@redspark/rsh-client-ui-primitives'
 import type { HtmlBundle } from './bootstrap.ts'
 import type { DocumentFileBytes } from '../rpc.ts'
 

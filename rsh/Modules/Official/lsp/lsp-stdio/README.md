@@ -3,7 +3,7 @@ description: "The stdio language-server provider for ctx.lsp: configured server 
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-lsp-stdio
+# @redspark/rsh-lsp-stdio
 
 English | [中文](README.zh.md)
 
@@ -32,10 +32,10 @@ Mount this provider when a deployment has local language servers — for example
 The `servers` record maps each stable provider id to one server command. The provider resolves every executable at load after credential scrubbing, so a bad entry prevents every provider from registering; processes launch lazily on the first matching query.
 
 ```yaml
-- name: '@deepseek-ai/dsh-fs-local'
-- name: '@deepseek-ai/dsh-subprocess-local'
-- name: '@deepseek-ai/dsh-lsp'
-- name: '@deepseek-ai/dsh-lsp-stdio'
+- name: '@redspark/rsh-fs-local'
+- name: '@redspark/rsh-subprocess-local'
+- name: '@redspark/rsh-lsp'
+- name: '@redspark/rsh-lsp-stdio'
   config:
     servers:
       typescript:
@@ -43,7 +43,7 @@ The `servers` record maps each stable provider id to one server command. The pro
         args: ['--stdio']
         extensionToLanguage:
           '.ts': typescript
-- name: '@deepseek-ai/dsh-tool-lsp'
+- name: '@redspark/rsh-tool-lsp'
 ```
 
 | Field | Default | Meaning |
@@ -51,7 +51,7 @@ The `servers` record maps each stable provider id to one server command. The pro
 | `command` | required | Executable to spawn — absolute, or resolved on the child PATH at load; launched without a shell |
 | `extensionToLanguage` | required | Lowercase leading-dot extension → LSP language id (e.g. `{ '.ts': 'typescript' }`) |
 | `args` | `[]` | Arguments passed to the executable |
-| `env` | `{}` | Extra env merged over the credential-scrubbed ambient env; variables matching `KEY`/`PASSWORD`/`SECRET`/`TOKEN` and all `DSH_*` names are not forwarded |
+| `env` | `{}` | Extra env merged over the credential-scrubbed ambient env; variables matching `KEY`/`PASSWORD`/`SECRET`/`TOKEN` and all `RSH_*` names are not forwarded |
 | `initializationOptions` | `null` | Static `initialize` options forwarded to the server |
 | `configuration` | `null` | Static answer to every `workspace/configuration` item |
 | `maxMessageBytes` | `16000000` | Largest single framed message accepted from the server |
@@ -60,7 +60,7 @@ The `servers` record maps each stable provider id to one server command. The pro
 | `shutdownTimeoutMs` | `5000` | Graceful `shutdown`/`exit` budget before escalation |
 | `killGraceMs` | `2000` | Request-cancel and SIGTERM→SIGKILL escalation grace |
 
-`servers` must contain at least one entry with non-empty ids; timer budgets must be positive integers within Node's timer range, and byte caps must be positive. The generated [configuration catalog](../../../../Docs/config-catalog.md#deepseek-aidsh-lsp-stdio) is the exhaustive source for every accepted field.
+`servers` must contain at least one entry with non-empty ids; timer budgets must be positive integers within Node's timer range, and byte caps must be positive. The generated [configuration catalog](../../../../Docs/config-catalog.md#redsparkrsh-lsp-stdio) is the exhaustive source for every accepted field.
 
 ### What a query does
 

@@ -1,5 +1,5 @@
 {
-  "name": "@deepseek-ai/dsh-util-values",
+  "name": "@redspark/rsh-util-values",
   "description": "Duplicate-install-safe value primitives for the RedSpark Harness",
   "version": "1.0.0",
   "publishConfig": {

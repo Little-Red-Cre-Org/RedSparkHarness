@@ -1,13 +1,13 @@
 /** Open declared source files verified by the viewed Session's filesystem. */
-import type { Context } from '@deepseek-ai/cordis'
-import type {} from '@deepseek-ai/dsh-api-session-controller'
-import type {} from '@deepseek-ai/dsh-api-workspace-files'
-import type {} from '@deepseek-ai/dsh-fs'
-import type {} from '@deepseek-ai/dsh-sandbox-policy'
-import { remoteErrorOf } from '@deepseek-ai/dsh-typert-protocol'
-import type {} from '@deepseek-ai/dsh-client-connection'
-import type {} from '@deepseek-ai/dsh-session-query'
-import type { SessionId, SessionSeq } from '@deepseek-ai/dsh-session'
+import type { Context } from '@redspark/cordis'
+import type {} from '@redspark/rsh-api-session-controller'
+import type {} from '@redspark/rsh-api-workspace-files'
+import type {} from '@redspark/rsh-fs'
+import type {} from '@redspark/rsh-sandbox-policy'
+import { remoteErrorOf } from '@redspark/rsh-typert-protocol'
+import type {} from '@redspark/rsh-client-connection'
+import type {} from '@redspark/rsh-session-query'
+import type { SessionId, SessionSeq } from '@redspark/rsh-session'
 import { isPresentedData, isPresentedFile, PRESENT_OPEN_PATH, PRESENT_HOST_PATH, type PresentedHost } from './presented.ts'
 
 /**

@@ -3,12 +3,12 @@ import { dequal } from 'dequal'
 import {
   NativeHost, NativeScope, resolveInstallation,
   type InstallationRequest, type NativePlugin,
-} from '@deepseek-ai/dsh-native-runtime'
+} from '@redspark/rsh-native-runtime'
 import type { NativeClientSelection } from './native-wire.ts'
 
 export type { NativeClientBootWire, NativeClientSelection } from './native-wire.ts'
 
-export type { NativeClientApplication, NativeClientRenderer } from '@deepseek-ai/dsh-client-ui-slots/native'
+export type { NativeClientApplication, NativeClientRenderer } from '@redspark/rsh-client-ui-slots/native'
 
 /** Module import and installation states exposed to the native loading page. */
 export type NativeClientEntryState = 'loading' | 'active' | 'failed'

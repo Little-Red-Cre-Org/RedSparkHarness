@@ -1,6 +1,6 @@
-import z from '@deepseek-ai/schemastery'
+import z from '@redspark/schemastery'
 
-/** @module @deepseek-ai/dsh-tool-terminal/config */
+/** @module @redspark/rsh-tool-terminal/config */
 
 /** Default cap for one complete model-facing terminal result. */
 export const DEFAULT_MAX_RESULT_BYTES = 256 * 1024

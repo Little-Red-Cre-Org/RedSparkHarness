@@ -49,7 +49,7 @@ it('keeps the browser responsive while rendering 100,000 reasoning chunks', asyn
   let page: Page | undefined
   try {
     scaffold = await launchWebScaffold()
-    browser = await chromium.launch({ headless: process.env.DSH_WEB_STRESS_HEADFUL !== '1' })
+    browser = await chromium.launch({ headless: process.env.RSH_WEB_STRESS_HEADFUL !== '1' })
     page = await newEnglishPage(browser)
     const activePage = page
     await activePage.addInitScript(() => {

@@ -7,7 +7,7 @@
  */
 
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { NativeHost, NativeScope, resolveInstallation, type NativePlugin } from '@deepseek-ai/dsh-native-runtime'
+import { NativeHost, NativeScope, resolveInstallation, type NativePlugin } from '@redspark/rsh-native-runtime'
 import { plugin as renderer } from '../../ui-renderer/src/native.ts'
 import { plugin as locale } from '../../locale/src/native.ts'
 import { plugin as connection } from '../../connection/src/native.ts'
@@ -81,7 +81,7 @@ afterEach(async () => {
 describe('open-in-app native half', () => {
   it('declares the services it binds and the target it serves', () => {
     expect(plugin.apiVersion).toBe(1)
-    expect(plugin.name).toBe('@deepseek-ai/dsh-client-ui-open-in-app')
+    expect(plugin.name).toBe('@redspark/rsh-client-ui-open-in-app')
     expect(plugin.targets).toEqual(['client'])
     expect(plugin.requires).toEqual(['clientSlots', 'clientLocale', 'clientConnection', 'clientNativeConversation'])
     expect(plugin.provides).toEqual([])

@@ -18,24 +18,24 @@
  * agent factory's `setup(agentCtx)` hook is the one supported call site,
  * because only there is the join installed while the agent is still
  * unpublished, so a rejected composition rolls the whole creation back.
- * @module @deepseek-ai/dsh-agent-presets
+ * @module @redspark/rsh-agent-presets
  */
 
 import { stat } from 'node:fs/promises'
-import { Context } from '@deepseek-ai/cordis'
-import { evaluate } from '@deepseek-ai/cordis-plugin-loader'
-import z from '@deepseek-ai/schemastery'
-import { Remote, RemoteError, TypertRemoteService } from '@deepseek-ai/dsh-typert-protocol'
-import { bindScopeParent, createScope, scopeOf, type Scope, type ScopeKey, type ScopeParentBinding } from '@deepseek-ai/dsh-scope'
+import { Context } from '@redspark/cordis'
+import { evaluate } from '@redspark/cordis-plugin-loader'
+import z from '@redspark/schemastery'
+import { Remote, RemoteError, TypertRemoteService } from '@redspark/rsh-typert-protocol'
+import { bindScopeParent, createScope, scopeOf, type Scope, type ScopeKey, type ScopeParentBinding } from '@redspark/rsh-scope'
 // Type-only: resolves the `agent/created` lifecycle event this service watches.
-import type {} from '@deepseek-ai/dsh-agent'
-import type { Agent } from '@deepseek-ai/dsh-agent'
+import type {} from '@redspark/rsh-agent'
+import type { Agent } from '@redspark/rsh-agent'
 import type { AgentPresetDocument, AgentPresetRoster } from './types.ts'
-import type {} from '@deepseek-ai/dsh-session-projection'
+import type {} from '@redspark/rsh-session-projection'
 // Type-only: resolves the registry notification emitted after scope reparenting.
-import type {} from '@deepseek-ai/dsh-tools'
-import type { SettingsScope, SettingsService } from '@deepseek-ai/dsh-settings-definition'
-import { dshHomePath } from '@deepseek-ai/dsh-home-paths'
+import type {} from '@redspark/rsh-tools'
+import type { SettingsScope, SettingsService } from '@redspark/rsh-settings-definition'
+import { rshHomePath } from '@redspark/rsh-home-paths'
 import { retainSettingsOwner } from './settings-owner.ts'
 import { discoverPresets, SHIPPED_PRESET_ROOT, USER_PRESET_DIR } from './discovery.ts'
 import { copyComposition, deleteComposition, presetExists, readComposition } from './authoring.ts'
@@ -87,7 +87,7 @@ export { copyComposition, deleteComposition, readComposition, writableRoot } fro
 export { agentPresetProjectionDefinition } from './session.ts'
 export type { AgentPreset, Config, PresetRoot, PresetTrust } from './preset.ts'
 
-declare module '@deepseek-ai/cordis' {
+declare module '@redspark/cordis' {
   interface Context {
     agentPresets: AgentPresets
   }
@@ -190,7 +190,7 @@ export class AgentPresets extends TypertRemoteService {
     this.resolvedRoots = [
       ...config.includeShippedRoot ? [{ path: SHIPPED_PRESET_ROOT, trust: 'system' } satisfies PresetRoot] : [],
       ...config.roots,
-      ...config.includeUserRoot ? [{ path: dshHomePath(USER_PRESET_DIR), trust: 'user' } satisfies PresetRoot] : [],
+      ...config.includeUserRoot ? [{ path: rshHomePath(USER_PRESET_DIR), trust: 'user' } satisfies PresetRoot] : [],
     ]
     ctx.sessionProjections.register(agentPresetProjectionDefinition)
 

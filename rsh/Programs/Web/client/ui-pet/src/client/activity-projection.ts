@@ -1,8 +1,8 @@
 /** Incremental pet activity projection over the existing Conversation assembler. */
-import type { Context } from '@deepseek-ai/cordis'
-import type { ConversationNodeDefinition, ConversationViewBuilder, ConversationViewNode } from '@deepseek-ai/dsh-client-ui-conversation/client'
-import type {} from '@deepseek-ai/dsh-compaction/types'
-import type {} from '@deepseek-ai/dsh-llm-retry/types'
+import type { Context } from '@redspark/cordis'
+import type { ConversationNodeDefinition, ConversationViewBuilder, ConversationViewNode } from '@redspark/rsh-client-ui-conversation/client'
+import type {} from '@redspark/rsh-compaction/types'
+import type {} from '@redspark/rsh-llm-retry/types'
 import type { PetActivity } from './runtime.ts'
 
 /** Latest lifecycle facts for a pet, independent from the visible Chat target. */
@@ -107,6 +107,6 @@ export function createPetActivityBuilder(): ConversationViewBuilder<PetNode, Pet
   }
 }
 
-declare module '@deepseek-ai/dsh-client-ui-conversation/client' {
+declare module '@redspark/rsh-client-ui-conversation/client' {
   interface ConversationViewSnapshotMap { 'pet-activity': PetLifecycle | undefined }
 }

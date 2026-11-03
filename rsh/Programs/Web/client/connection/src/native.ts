@@ -1,8 +1,8 @@
 /** Browser Connection Provider for native Client compositions. */
-import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
+import type { NativePlugin } from '@redspark/rsh-native-runtime'
 import { createConnectionHandle, type ConnectionHandle } from './client/native-core.ts'
 
-declare module '@deepseek-ai/dsh-native-runtime' {
+declare module '@redspark/rsh-native-runtime' {
   interface NativeServices {
     /** Browser RPC and connection generation state for native Client Consumers. */
     clientConnection: ConnectionHandle

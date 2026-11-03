@@ -1,9 +1,9 @@
 /** Native owner-scoped terminal allocation, interaction and awaited cleanup. */
-import { brandString, type Branded } from '@deepseek-ai/dsh-brand'
-import type { NativeAgent, NativeAgentRegistry } from '@deepseek-ai/dsh-native-agent'
-import type {} from '@deepseek-ai/dsh-native-agent/native'
-import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
-import type { Session } from '@deepseek-ai/dsh-session/native'
+import { brandString, type Branded } from '@redspark/rsh-brand'
+import type { NativeAgent, NativeAgentRegistry } from '@redspark/rsh-native-agent'
+import type {} from '@redspark/rsh-native-agent/native'
+import type { NativePlugin } from '@redspark/rsh-native-runtime'
+import type { Session } from '@redspark/rsh-session/native'
 import type { TerminalBackendSession, TerminalReadRequest, TerminalReadResult, TerminalSendOperation, TerminalSendRequest, TerminalSignal, TerminalSignalResult } from './protocol.ts'
 
 /** Opaque identity minted for one native terminal session. */
@@ -309,13 +309,13 @@ export class NativeTerminalRegistry {
   }
 }
 
-declare module '@deepseek-ai/dsh-native-runtime' {
+declare module '@redspark/rsh-native-runtime' {
   interface NativeServices { terminals: NativeTerminalRegistry }
 }
 
 /** Install one registry with Agent release and Host teardown ownership. */
 export const plugin: NativePlugin = {
-  apiVersion: 1, name: '@deepseek-ai/dsh-terminal', targets: ['host'],
+  apiVersion: 1, name: '@redspark/rsh-terminal', targets: ['host'],
   requires: ['agents'], provides: ['terminals'],
   resolve(input) {
     if (input !== undefined && (typeof input !== 'object' || input === null || Array.isArray(input)

@@ -26,7 +26,7 @@ rsh/Programs/CLI/src/native-profile-loader.ts:408 |       const entry = parseNat
 rsh/Programs/CLI/src/native-profile-loader.ts:579 |     const plugin = validateNativePluginEntry(imported.plugin, entry)
 ```
 
-Native 的客户端侧装载是**一次性 esbuild 打包 + 一张具名 plugins 表**，不是 lazy-CJS 模块表，也不是 `__DSH_BOOT__` 行图：
+Native 的客户端侧装载是**一次性 esbuild 打包 + 一张具名 plugins 表**，不是 lazy-CJS 模块表，也不是 `__RSH_BOOT__` 行图：
 
 ```
 rsh/Programs/Web/host/native-web-assets/src/native-client.ts:173 |     const entry = parseNativeEntryManifest(manifest.dsh?.native, new Set(Object.keys(manifest.exports)))
@@ -81,40 +81,40 @@ rsh/Programs/Web/client/modules/src/client/native.ts:1 | /** Cordis-free browser
 rsh/Programs/Web/client/modules/src/client/native.ts:2 | export { ClientModuleSystem } from './system.ts'
 ```
 
-所以这个包是「三面」而不是「双面」：Node 半（组合 `__DSH_BOOT__`）、`./client` 浏览器半（Cordis 引导面）、`./native` 浏览器半（无 Cordis 的模块表）。
+所以这个包是「三面」而不是「双面」：Node 半（组合 `__RSH_BOOT__`）、`./client` 浏览器半（Cordis 引导面）、`./native` 浏览器半（无 Cordis 的模块表）。
 
 ### 1.2 Node 半的职责已被谁取代
 
-Node 半的核心是扫描宿主 Loader 的 entry，组合 `window.__DSH_BOOT__`，并在 `/plugins` 下提供 bundle 路由：
+Node 半的核心是扫描宿主 Loader 的 entry，组合 `window.__RSH_BOOT__`，并在 `/plugins` 下提供 bundle 路由：
 
 ```
 rsh/Programs/Web/client/modules/src/index.ts:3 |  * the host Loader's entries for packages declaring `dsh.client`, composes the
-rsh/Programs/Web/client/modules/src/index.ts:4 |  * `window.__DSH_BOOT__` entry graph (wire single source: {@link WebBootEntry}
-rsh/Programs/Web/client/modules/src/index.ts:476 |   rows.push({ kind: 'global', name: '__DSH_BOOT__', value: graph })
+rsh/Programs/Web/client/modules/src/index.ts:4 |  * `window.__RSH_BOOT__` entry graph (wire single source: {@link WebBootEntry}
+rsh/Programs/Web/client/modules/src/index.ts:476 |   rows.push({ kind: 'global', name: '__RSH_BOOT__', value: graph })
 rsh/Programs/Web/client/modules/src/index.ts:487 | export class ClientModuleRegistry extends Service {
 rsh/Programs/Web/client/modules/src/index.ts:488 |   static inject = ['loader']
-rsh/Programs/Web/client/modules/src/index.ts:32 | import { Service } from '@deepseek-ai/cordis'
+rsh/Programs/Web/client/modules/src/index.ts:32 | import { Service } from '@redspark/cordis'
 ```
 
-`ClientModuleRegistry` 是 Cordis `Service` 且 `inject = ['loader']`——它从 vendored Cordis Loader 的 entry 树里发现客户端包。Native 没有 Loader entry 树这个概念：包来自 `rsh.client.json` 的行，经 `parseNativeEntryManifest` 校验（`native-client.ts:173`），再由 esbuild 打成单一 ESM bundle（`native-client.ts:222-238`），由 `native-web-host` 以 `/.dsh/native-client/` 前缀提供资产。**构图、校验、路由、打包四件事都有了对应的 Native 实现**，`__DSH_BOOT__` 这个全局量在 Native 路径上完全不存在（`native-wire.ts` 的载荷字段是 `bundle` / `styles` / `modules` / `selections`，没有 entry 图）。
+`ClientModuleRegistry` 是 Cordis `Service` 且 `inject = ['loader']`——它从 vendored Cordis Loader 的 entry 树里发现客户端包。Native 没有 Loader entry 树这个概念：包来自 `rsh.client.json` 的行，经 `parseNativeEntryManifest` 校验（`native-client.ts:173`），再由 esbuild 打成单一 ESM bundle（`native-client.ts:222-238`），由 `native-web-host` 以 `/.dsh/native-client/` 前缀提供资产。**构图、校验、路由、打包四件事都有了对应的 Native 实现**，`__RSH_BOOT__` 这个全局量在 Native 路径上完全不存在（`native-wire.ts` 的载荷字段是 `bundle` / `styles` / `modules` / `selections`，没有 entry 图）。
 
 ### 1.3 `./client` 浏览器半为何不能移植
 
 ```
 rsh/Programs/Web/client/modules/src/client/index.ts:65 | export function apply(ctx: Context): void {
 rsh/Programs/Web/client/modules/src/client/index.ts:69 |   ctx.reflect.provide('modules', moduleSystem)
-rsh/Programs/Web/client/modules/src/client/index.ts:13 | import type { Context } from '@deepseek-ai/cordis'
-rsh/Programs/Web/client/modules/src/client/index.ts:20 | declare module '@deepseek-ai/cordis' {
+rsh/Programs/Web/client/modules/src/client/index.ts:13 | import type { Context } from '@redspark/cordis'
+rsh/Programs/Web/client/modules/src/client/index.ts:20 | declare module '@redspark/cordis' {
 ```
 
-它的入口本身就是一个 Cordis 插件（`apply` + `ctx.reflect.provide`），并对 `@deepseek-ai/cordis` 做 declaration merge。`native-client.ts:291` 明确禁止 Native bundle 里出现 Cordis——这一半在 Native 下不但多余，还是构建期硬错误。
+它的入口本身就是一个 Cordis 插件（`apply` + `ctx.reflect.provide`），并对 `@redspark/cordis` 做 declaration merge。`native-client.ts:291` 明确禁止 Native bundle 里出现 Cordis——这一半在 Native 下不但多余，还是构建期硬错误。
 
 ### 1.4 保留哪部分
 
 `./native` 是零 Cordis、零工作区依赖的浏览器模块表与启动清单解析器：
 
 ```
-rsh/Programs/Web/client/modules/README.md:32 | The browser-only `@deepseek-ai/dsh-client-modules/native` export provides `ClientModuleSystem`, boot-manifest parsing, and their types without importing Cordis. Its JavaScript and public declarations have no workspace package imports; the Cordis peer is optional for this export. It does not activate a plugin tree or replace the current `./client` bootstrap; a native shell must supply its own plugin installation and renderer handoff.
+rsh/Programs/Web/client/modules/README.md:32 | The browser-only `@redspark/rsh-client-modules/native` export provides `ClientModuleSystem`, boot-manifest parsing, and their types without importing Cordis. Its JavaScript and public declarations have no workspace package imports; the Cordis peer is optional for this export. It does not activate a plugin tree or replace the current `./client` bootstrap; a native shell must supply its own plugin installation and renderer handoff.
 rsh/Programs/Web/client/modules/src/client/system.ts:61 | export class ClientModuleSystem implements ClientModuleLoader {
 ```
 
@@ -123,8 +123,8 @@ policy 也把它登记为「有 native 值但无 installer manifest」（`native
 **必须点明的保留理由的限度**：这个 `./native` 面在**生产代码里当前没有 Native 消费者**。搜索 `ClientModuleSystem` 的引用，除本包自身与 `web` 包的测试/e2e 之外没有第三方：
 
 ```
-rsh/Programs/Web/client/web/tests/native-boot.client.spec.ts:2 | import { ClientModuleSystem, parseBootManifest, type ClientModuleLoaderTarget, type WebBootGraph } from '@deepseek-ai/dsh-client-modules/native'
-rsh/Programs/Web/client/web/tests/built-native-consumer.e2e.ts:113 |         import { ClientModuleSystem } from '@deepseek-ai/dsh-client-modules/native'
+rsh/Programs/Web/client/web/tests/native-boot.client.spec.ts:2 | import { ClientModuleSystem, parseBootManifest, type ClientModuleLoaderTarget, type WebBootGraph } from '@redspark/rsh-client-modules/native'
+rsh/Programs/Web/client/web/tests/built-native-consumer.e2e.ts:113 |         import { ClientModuleSystem } from '@redspark/rsh-client-modules/native'
 ```
 
 而真正的 Native 启动路径（`native-boot.ts:102`、`native-entry.ts:151`）用的是自己构造的 `import` 闭包，**没有**实例化 `ClientModuleSystem`。因此「保留」是指「暂不删除、等待其是否成为 Native 第二装载实现的决定」，不是「Native 现在需要它」。
@@ -143,7 +143,7 @@ rsh/Programs/Web/client/web/tests/built-native-consumer.e2e.ts:113 |         imp
 rsh/Programs/Web/client/resources/package.json:28 |   "dsh": {
 rsh/Programs/Web/client/resources/package.json:29 |     "client": {
 rsh/Programs/Web/client/resources/package.json:30 |       "inject": [
-rsh/Programs/Web/client/resources/package.json:31 |         "@deepseek-ai/dsh-client-ui-renderer"
+rsh/Programs/Web/client/resources/package.json:31 |         "@redspark/rsh-client-ui-renderer"
 rsh/Programs/Web/client/resources/package.json:32 |       ],
 rsh/Programs/Web/client/resources/package.json:33 |       "platform": "web"
 ```
@@ -164,12 +164,12 @@ rsh/Programs/Web/client/resources/src/client/resources.ts:88 |     const dispose
 
 `ctx.reflect.provide`、`ctx.slots`、`ctx.effect` 三个都是 Cordis Context 成员；`ResourceRegistry` 把 `ctx` 存进构造函数只为了调 `ctx.effect` 挂注册生命周期。
 
-契约面同样对 `@deepseek-ai/cordis` 做 declaration merge，并把 `useResource` 塞进 `GlobalStandardProps`：
+契约面同样对 `@redspark/cordis` 做 declaration merge，并把 `useResource` 塞进 `GlobalStandardProps`：
 
 ```
-rsh/Programs/Web/client/resources/src/client/contract.ts:21 | declare module '@deepseek-ai/dsh-client-ui-slots' {
+rsh/Programs/Web/client/resources/src/client/contract.ts:21 | declare module '@redspark/rsh-client-ui-slots' {
 rsh/Programs/Web/client/resources/src/client/contract.ts:24 |     useResource: UseResource
-rsh/Programs/Web/client/resources/src/client/contract.ts:28 | declare module '@deepseek-ai/cordis' {
+rsh/Programs/Web/client/resources/src/client/contract.ts:28 | declare module '@redspark/cordis' {
 rsh/Programs/Web/client/resources/src/client/contract.ts:31 |     resources: Resources
 ```
 
@@ -219,7 +219,7 @@ rsh/Programs/Web/api/workspace-files/src/client/index.ts:27 |     const release 
 rsh/Programs/Web/client/file-upload/package.json:40 |   "dsh": {
 rsh/Programs/Web/client/file-upload/package.json:41 |     "client": {
 rsh/Programs/Web/client/file-upload/package.json:42 |       "inject": [
-rsh/Programs/Web/client/file-upload/package.json:43 |         "@deepseek-ai/dsh-api-remotes"
+rsh/Programs/Web/client/file-upload/package.json:43 |         "@redspark/rsh-api-remotes"
 rsh/Programs/Web/client/file-upload/package.json:46 |       "immediately": true
 ```
 
@@ -230,7 +230,7 @@ rsh/Programs/Web/client/file-upload/package.json:46 |       "immediately": true
 Host 半是一个 Cordis 服务，注册 `/api/session/uploadFileBinary` 流式路由：
 
 ```
-rsh/Programs/Web/client/file-upload/src/index.ts:18 | declare module '@deepseek-ai/cordis' {
+rsh/Programs/Web/client/file-upload/src/index.ts:18 | declare module '@redspark/cordis' {
 rsh/Programs/Web/client/file-upload/src/index.ts:21 |     fileUploads: FileUploads
 rsh/Programs/Web/client/file-upload/src/index.ts:57 | export class FileUploads extends TypertRemoteService {
 rsh/Programs/Web/client/file-upload/src/index.ts:58 |   static inject = ['agents', 'attachments', 'commands', 'connection']
@@ -257,20 +257,20 @@ rsh/Engine/core/native-session-execution/src/root-execution.ts:46 |   stageStrea
 ```
 rsh/Programs/Web/client/file-upload/src/client/index.ts:18 | export const inject = ['remote']
 rsh/Programs/Web/client/file-upload/src/client/runtime.ts:162 | export class FileUploadRuntime extends Service implements FileUploadService {
-rsh/Programs/Web/client/file-upload/src/client/runtime.ts:169 |     const hook = (globalThis as ClientFileUploadGlobal).__DSH_FILE_UPLOAD__
+rsh/Programs/Web/client/file-upload/src/client/runtime.ts:169 |     const hook = (globalThis as ClientFileUploadGlobal).__RSH_FILE_UPLOAD__
 rsh/Programs/Web/client/file-upload/src/client/runtime.ts:171 |     this.transport = hook === undefined ? workerTransport() : customTransport(hook.fetch)
 ```
 
 Native 的等价能力在 `clientNativeSession` 里，**直接读同一个全局钩子，并自带 Fetch 流式兜底**：
 
 ```
-rsh/Programs/Web/client/native-session/src/native.ts:70 |   __DSH_FILE_UPLOAD__?: { readonly fetch: (input: URL, init: RequestInit) => Promise<Response> }
-rsh/Programs/Web/client/native-session/src/native.ts:1773 |         const uploadFetch = (globalThis as NativeFileUploadGlobal).__DSH_FILE_UPLOAD__?.fetch
+rsh/Programs/Web/client/native-session/src/native.ts:70 |   __RSH_FILE_UPLOAD__?: { readonly fetch: (input: URL, init: RequestInit) => Promise<Response> }
+rsh/Programs/Web/client/native-session/src/native.ts:1773 |         const uploadFetch = (globalThis as NativeFileUploadGlobal).__RSH_FILE_UPLOAD__?.fetch
 rsh/Programs/Web/client/native-session/src/native.ts:1778 |           const responseOperation = rpc.response
 rsh/Programs/Web/client/native-session/src/native.ts:1779 |           if (responseOperation === undefined) throw new Error('native Session Client: selected carrier has no streaming Fetch operation')
 ```
 
-结论：Worker 后台传输这一层在 Native 下不需要——Native 用连接载体的 streaming Fetch 操作直接以 `duplex: 'half'` 发流（`native.ts:1778-1780`）。`__DSH_FILE_UPLOAD__` 这个**发布点**（`webworker-runtime`，`Modules/Community/experimental/webworker-runtime/src/client/index.ts:160-162`）与 Native 的**消费点**（`native.ts:1771`）是直接对接的，中间不需要本包。
+结论：Worker 后台传输这一层在 Native 下不需要——Native 用连接载体的 streaming Fetch 操作直接以 `duplex: 'half'` 发流（`native.ts:1778-1780`）。`__RSH_FILE_UPLOAD__` 这个**发布点**（`webworker-runtime`，`Modules/Community/experimental/webworker-runtime/src/client/index.ts:160-162`）与 Native 的**消费点**（`native.ts:1771`）是直接对接的，中间不需要本包。
 
 ### 3.4 一个必须写清的区分
 
@@ -306,7 +306,7 @@ rsh/Programs/Web/client/native-application/src/controller.ts:710 |             i
 rsh/Programs/Web/client/hmr/package.json:32 |   "dsh": {
 rsh/Programs/Web/client/hmr/package.json:33 |     "client": {
 rsh/Programs/Web/client/hmr/package.json:34 |       "inject": [
-rsh/Programs/Web/client/hmr/package.json:35 |         "@deepseek-ai/dsh-client-modules"
+rsh/Programs/Web/client/hmr/package.json:35 |         "@redspark/rsh-client-modules"
 rsh/Programs/Web/client/hmr/package.json:36 |       ],
 ```
 
@@ -370,7 +370,7 @@ rsh/Programs/Web/application/src/native-entry.ts:150 |     await host.replace({
 
 | 包 | 结论 | 关键依据行号 | 对 Native 装配的影响 |
 |---|---|---|---|
-| `modules` | ③ 部分保留：保留 `./native` 浏览器半（`ClientModuleSystem` + 启动清单解析器），弃 Node 半与 `./client` 引导面 | `package.json:25-28`（`./native` 导出）、`package.json:36-42`（只有 `dsh.client`）、`src/index.ts:476`（`__DSH_BOOT__` 行）、`src/index.ts:487-488`（Cordis `Service` + `inject ['loader']`）、`src/client/index.ts:65-69`（Cordis 插件面）、`src/client/native.ts:1-2`（零 Cordis 面）、`native-client.ts:173/222-238/291`（取代者）、`native-package-policy.ts:270`（已登记为 native 值库） | 不进 `rsh.client.json`。强加会在构图期抛 `native manifest must be an object`。保留部分当前无生产消费者 |
+| `modules` | ③ 部分保留：保留 `./native` 浏览器半（`ClientModuleSystem` + 启动清单解析器），弃 Node 半与 `./client` 引导面 | `package.json:25-28`（`./native` 导出）、`package.json:36-42`（只有 `dsh.client`）、`src/index.ts:476`（`__RSH_BOOT__` 行）、`src/index.ts:487-488`（Cordis `Service` + `inject ['loader']`）、`src/client/index.ts:65-69`（Cordis 插件面）、`src/client/native.ts:1-2`（零 Cordis 面）、`native-client.ts:173/222-238/291`（取代者）、`native-package-policy.ts:270`（已登记为 native 值库） | 不进 `rsh.client.json`。强加会在构图期抛 `native manifest must be an object`。保留部分当前无生产消费者 |
 | `resources` | ② Cordis 专属，应当排除 | `package.json:28-34`（只有 `dsh.client`，无 `./native`）、`src/client/index.ts:23/34/38`（`inject ['slots']`、`ctx.reflect.provide`、`ctx.slots.provideRoot`）、`src/client/resources.ts:80/88`（`ctx.effect`）、`src/client/contract.ts:24/28-30`（declaration merge 到 `ui-slots` 与 `cordis`）、`native-session/src/native.ts:89/146`（取代者）、`workspace-files/src/client/index.ts:17/27`（唯一 provider 走 Cordis） | 不进 `rsh.client.json`。`dsh-resource://` 语法保留在 `Core/util/workspace-path`，运行时服务不需要 |
 | `file-upload` | ② Cordis 专属，应当排除 | `package.json:40-47`（只有 `dsh.client`）、`src/index.ts:18-21/57-58/73-74`（Cordis `Service` + Typert Remote + `/api/session/uploadFileBinary`）、`src/client/runtime.ts:162/169-171`（Cordis `Service` + Worker 传输）、`native-web-session-controller/src/native.ts:2411/697`（取代者，另一条路径）、`root-execution.ts:40/46`（Native 收据操作）、`native-session/src/native.ts:1773/1778-1782`（浏览器半取代者） | 不进 `rsh.client.json`。但不能连带删除 Host 侧 `FileUploads`——Cordis Web 仍是活路径（`session-controller/src/index.ts:125`） |
 | `hmr` | ② Cordis 专属，应当排除 | `package.json:32-39`（只有 `dsh.client`，inject `client-modules`）、`src/index.ts:28/79/130`（`clientModules` + `webServer`）、`src/client/index.ts:77/88/134/145`（`loader` + `modules`，`entry.refresh()`）、`native-web-host/src/client-reload.ts:39/44`（取代者，chokidar）、`native-web-host/src/native.ts:81/148/169`（`clientReload: 'live'`）、`native-entry.ts:126-129/150`（revision 轮询 + `host.replace`） | 不进 `rsh.client.json`。开发期热更新走 `clientReload: 'live'`，不要为 Native 另造 HMR |

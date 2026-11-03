@@ -1,0 +1,74 @@
+# SDK-profile patch for a deterministic parent model that selects a route for
+# a separate SDK child runtime. Both runtimes persist their request headers.
+
+# This recorded composition owns Bash schemas on every replay host.
+- id: bash-sandbox
+  disabled: false
+
+- id: pwsh-sandbox
+  disabled: true
+
+- id: tool-bash
+  disabled: false
+
+- id: tool-pwsh
+  disabled: true
+
+- id: llm-deepseek
+  name: '@redspark/rsh-llm-deepseek'
+  disabled: true
+
+- id: tool-subagent
+  name: '@redspark/rsh-tool-subagent'
+  disabled: true
+
+- id: sdk-jsonrpc-server
+  name: '@redspark/rsh-sdk-jsonrpc-server'
+  disabled: true
+
+- id: session-persistence-jsonl
+  name: '@redspark/rsh-session-persistence-jsonl'
+  config:
+    root: !!js rshHomePath('sessions')
+    compression: none
+
+- insert:
+    - id: mock-llm
+      name: '../../../rsh/Compatibility/DSH/subagent/subagent-rsh-sdk/tests/fixtures/loader/mock-delegating-llm.ts'
+      disabled: !!js process.env.RSH_SNAPSHOT !== 'record'
+
+    - id: subagent-rsh-sdk
+      name: '@redspark/rsh-subagent-rsh-sdk'
+      config:
+        profile: sdk
+        patches: !!js JSON.parse(process.env.RSH_TEST_CHILD_PATCHES ?? '[]')
+        rshHome: !!js process.env.RSH_TEST_CHILD_HOME
+        provider: mock
+        model: mock-routed
+        env:
+          RSH_TELEMETRY_DISABLED: '1'
+
+    - id: subagent-model-selection-settings
+      name: '@redspark/rsh-tool-subagent/model-selection-settings'
+      config:
+        enabled: true
+        allowedModels:
+          - provider: mock
+            model: mock-routed
+
+    - id: tool-subagent-rsh-sdk
+      name: '../../../rsh/Compatibility/DSH/subagent/subagent-rsh-sdk/tests/fixtures/loader/scoped-tool-subagent.ts'
+      config:
+        provider: dsh-sdk
+        toolName: subagent
+        enableRunInBackground: false
+        agentOptions:
+          maxTokens: 777
+        maxDepth: 'provider-managed'
+
+    - id: sdk-jsonrpc-server-dynamic-live
+      name: '@redspark/rsh-sdk-jsonrpc-server'
+      inject: [sdkAppStartup, loader]
+      disabled: !!js process.env.RSH_SNAPSHOT !== 'record'
+      config:
+        maxTokensAsSuccess: true

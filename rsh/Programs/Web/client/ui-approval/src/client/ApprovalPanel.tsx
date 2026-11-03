@@ -1,6 +1,6 @@
 /** Composer takeover for one pending approval waterfall. */
 import { useState, type ReactNode } from 'react'
-import type { TranslateNS } from '@deepseek-ai/dsh-client-ui-slots'
+import type { TranslateNS } from '@redspark/rsh-client-ui-slots'
 import type { ApprovalComposerProps, PendingApproval } from './contract/slots.ts'
 import { ApprovalCard } from '../ApprovalCard.tsx'
 

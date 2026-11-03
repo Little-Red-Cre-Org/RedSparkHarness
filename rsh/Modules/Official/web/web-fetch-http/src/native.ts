@@ -2,11 +2,11 @@
  * Native installation of the anonymous public HTTP(S) fetch provider. It registers into the
  * selected `web` service with the same limits, destination policy, and provider id as the Cordis
  * plugin.
- * @module @deepseek-ai/dsh-web-fetch-http/native
+ * @module @redspark/rsh-web-fetch-http/native
  */
 
-import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
-import type {} from '@deepseek-ai/dsh-web/native'
+import type { NativePlugin } from '@redspark/rsh-native-runtime'
+import type {} from '@redspark/rsh-web/native'
 import { Config, resolveHttpFetchLimits } from './config.ts'
 import { HttpFetchProvider } from './provider.ts'
 
@@ -33,7 +33,7 @@ function resolveConfig(input: unknown): Config {
 
 /** Register the `http` fetch provider; removal cancels and drains its admitted fetches. */
 export const plugin: NativePlugin = {
-  apiVersion: 1, name: '@deepseek-ai/dsh-web-fetch-http', targets: ['host'],
+  apiVersion: 1, name: '@redspark/rsh-web-fetch-http', targets: ['host'],
   requires: ['web'], optional: [], provides: [],
   resolve(input) {
     const limits = resolveHttpFetchLimits(resolveConfig(input))

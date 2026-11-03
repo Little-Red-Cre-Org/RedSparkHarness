@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
-import { Context } from '@deepseek-ai/cordis'
-import type { ChatSnapshot, UseChat } from '@deepseek-ai/dsh-client-ui-chat/client'
-import type { PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
+import { Context } from '@redspark/cordis'
+import type { ChatSnapshot, UseChat } from '@redspark/rsh-client-ui-chat/client'
+import type { PropsRuntime } from '@redspark/rsh-client-ui-slots'
 import { render, screen } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 import { ApprovalCommand, commandOf } from '../src/client/chat/ApprovalCommand.tsx'

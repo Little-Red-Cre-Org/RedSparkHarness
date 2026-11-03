@@ -3,7 +3,7 @@ description: "在 Native 应用与 Provider 之间共用 tmux 上下文服务类
 kind: "package-library"
 ---
 
-# @deepseek-ai/dsh-tmux-context-definition
+# @redspark/rsh-tmux-context-definition
 
 [English](README.md) | 中文
 
@@ -34,7 +34,7 @@ Native 应用与 Provider 使用本包共享 `tmuxContext` 请求和服务类型
 从包根导入请求与服务类型。服务接收确切的 Session、活动中的 turn 与 step，以及取消信号；`seed()` 和 `record()` 遵循应用加载与提交事件的顺序。
 
 ```ts
-import type { NativeTmuxContext, NativeTmuxContextRequest } from '@deepseek-ai/dsh-tmux-context-definition'
+import type { NativeTmuxContext, NativeTmuxContextRequest } from '@redspark/rsh-tmux-context-definition'
 ```
 
 本包导出的 [`NativeTmuxContextRequest` 和 `NativeTmuxContext`](../../../Docs/subsystems/tmux-context.zh.md) 已在子系统页逐字记录源声明与 JSDoc。

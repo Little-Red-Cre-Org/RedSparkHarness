@@ -1,13 +1,13 @@
 /** Native JSONL Session storage uses the released generation and single-writer backend. */
 import { isAbsolute, resolve } from 'node:path'
-import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
+import type { NativePlugin } from '@redspark/rsh-native-runtime'
 import { JsonlSessionBackend, type Config, type JsonlCompression } from './backend.ts'
 
 export { JsonlSessionBackend }
 export type { JsonlCompression }
 export { inspectSessionRootCompression } from './native-inspection.ts'
 
-import type { NativeSessionPersistenceOperations } from '@deepseek-ai/dsh-session-persistence/native'
+import type { NativeSessionPersistenceOperations } from '@redspark/rsh-session-persistence/native'
 
 function resolveConfig(input: unknown): Config {
   if (typeof input !== 'object' || input === null || Array.isArray(input)) {
@@ -32,7 +32,7 @@ function resolveConfig(input: unknown): Config {
 /** Explicit native storage provider; closing waits for all owned handles to drain. */
 export const plugin: NativePlugin = {
   apiVersion: 1,
-  name: '@deepseek-ai/dsh-session-persistence-jsonl',
+  name: '@redspark/rsh-session-persistence-jsonl',
   targets: ['host'],
   requires: [],
   provides: ['sessionPersistence'],

@@ -3,12 +3,12 @@
  * configured root — a whole-unit file (`single` layout) or one document per
  * record (`per-record` layout), published by atomic rewrite. Registers as
  * backend `json` on the storage hub.
- * @module @deepseek-ai/dsh-storage-json
+ * @module @redspark/rsh-storage-json
  */
 
-import type { Context } from '@deepseek-ai/cordis'
-import z from '@deepseek-ai/schemastery'
-import { storageBackendServiceKey } from '@deepseek-ai/dsh-storage'
+import type { Context } from '@redspark/cordis'
+import z from '@redspark/schemastery'
+import { storageBackendServiceKey } from '@redspark/rsh-storage'
 import { JsonStorageBackend } from './backend.ts'
 export { JsonStorageBackend } from './backend.ts'
 

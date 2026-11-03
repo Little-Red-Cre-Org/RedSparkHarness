@@ -1,12 +1,12 @@
 /**
  * Native repeat-call reminder over recorded tool settlements of the selected tool registry.
- * @module @deepseek-ai/dsh-repeat-tool-reminder/native
+ * @module @redspark/rsh-repeat-tool-reminder/native
  */
-import type { Message } from '@deepseek-ai/dsh-llm/native'
-import type { NativeAgent } from '@deepseek-ai/dsh-native-agent'
-import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
-import type { Session } from '@deepseek-ai/dsh-session/native'
-import type {} from '@deepseek-ai/dsh-native-tools/native'
+import type { Message } from '@redspark/rsh-llm/native'
+import type { NativeAgent } from '@redspark/rsh-native-agent'
+import type { NativePlugin } from '@redspark/rsh-native-runtime'
+import type { Session } from '@redspark/rsh-session/native'
+import type {} from '@redspark/rsh-native-tools/native'
 import { compileRepeatToolReminder, repeatToolReminderSchema, repeatToolReminderSettings, type RepeatChain, type RepeatToolReminderSettings } from './core.ts'
 
 const FIELDS = new Set(['thresholds', 'include', 'exclude', 'argumentsPreviewChars'])
@@ -39,7 +39,7 @@ interface AgentChain {
 
 /** Install the advisory repeat-call reminder for every Agent visible in this installation's scope. */
 export const plugin: NativePlugin = {
-  apiVersion: 1, name: '@deepseek-ai/dsh-repeat-tool-reminder', targets: ['host'],
+  apiVersion: 1, name: '@redspark/rsh-repeat-tool-reminder', targets: ['host'],
   requires: ['tools'], provides: [],
   resolve(input) {
     const detector = compileRepeatToolReminder(resolveNativeRepeatToolReminderConfig(input))

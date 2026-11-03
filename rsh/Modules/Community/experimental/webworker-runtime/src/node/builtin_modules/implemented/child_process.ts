@@ -12,7 +12,7 @@
  *
  * What stays impossible is what needs a real process: synchronous execution
  * (`execSync`, and `spawnSync` for a known program) and `fork`.
- * @module @deepseek-ai/dsh-experimental-webworker-runtime/src/node/builtin_modules/implemented/child_process
+ * @module @redspark/rsh-experimental-webworker-runtime/src/node/builtin_modules/implemented/child_process
  */
 
 import { Buffer } from 'buffer'
@@ -25,7 +25,7 @@ import { virtualExecutable } from '../../../shell/process/virtual-executables.ts
 import type { VirtualExecutableExit } from '../../../shell/process/virtual-executables.ts'
 import { standardPrograms } from '../../../shell/programs/index.ts'
 import type { ShellFileSystem } from '../../../shell/types.ts'
-import { DSH_ROOT } from '../../../storage/paths.ts'
+import { RSH_ROOT } from '../../../storage/paths.ts'
 
 const MODULE = 'node:child_process'
 
@@ -265,7 +265,7 @@ export function spawn(
   // exactly that — is never racing the first output.
   queueMicrotask(() => {
     void (async () => {
-      const cwd = options.cwd ?? DSH_ROOT
+      const cwd = options.cwd ?? RSH_ROOT
       let commandArgv: readonly string[] = argv
       let filesystem: ShellFileSystem | undefined
       let missingExecutable: VirtualExecutableExit | undefined

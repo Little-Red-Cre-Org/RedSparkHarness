@@ -1,6 +1,6 @@
 /** Required Session execution-policy vocabulary and folding. */
 import { expect, it } from 'vitest'
-import { SessionSeq, type SessionEvent } from '@deepseek-ai/dsh-session/native'
+import { SessionSeq, type SessionEvent } from '@redspark/rsh-session/native'
 import { nativeSessionExecutionPolicy, readNativeSessionExecutionPolicy } from '../src/index.ts'
 
 const policy = {

@@ -3,11 +3,11 @@ import {
   RemoteStream,
   RemoteStreamCarrierError,
   type RemoteStreamOptions,
-} from '@deepseek-ai/dsh-api-gateway/client'
-import { RemoteError } from '@deepseek-ai/dsh-typert-protocol'
-import { LlmAttemptId } from '@deepseek-ai/dsh-llm'
-import { SESSION_FORMAT_VERSION } from '@deepseek-ai/dsh-session/types'
-import type { RemoteResult } from '@deepseek-ai/dsh-typert-protocol'
+} from '@redspark/rsh-api-gateway/client'
+import { RemoteError } from '@redspark/rsh-typert-protocol'
+import { LlmAttemptId } from '@redspark/rsh-llm'
+import { SESSION_FORMAT_VERSION } from '@redspark/rsh-session/types'
+import type { RemoteResult } from '@redspark/rsh-typert-protocol'
 import {
   createSessionControlStream,
   SessionEventStream,

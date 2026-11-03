@@ -1,18 +1,18 @@
 /** Native model-facing Bash tool over one selected shell Provider. */
 import { isAbsolute, resolve as resolvePath } from 'node:path'
-import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
-import type { NativeValueToolContribution, NativeToolExecution } from '@deepseek-ai/dsh-native-tools'
-import type { NativeJobRegistry } from '@deepseek-ai/dsh-native-jobs'
-import type {} from '@deepseek-ai/dsh-native-tools/native'
-import type {} from '@deepseek-ai/dsh-native-jobs'
-import type {} from '@deepseek-ai/dsh-native-tool-jobs/native'
-import type { ShellEnvironment } from '@deepseek-ai/dsh-shell-env/definition'
-import type {} from '@deepseek-ai/dsh-bash-local/native'
-import type {} from '@deepseek-ai/dsh-native-sandbox-policy/native'
-import type {} from '@deepseek-ai/dsh-approval-definition'
-import { ESCALATION_TARGETS, approveEscalation, canonicalPath, validateEscalationArgs } from '@deepseek-ai/dsh-sandbox/native'
-import type { SandboxExecutionPolicy, SandboxMode } from '@deepseek-ai/dsh-sandbox/native'
-import { canonicalShellResult, type ShellOperations, type ShellRunResult } from '@deepseek-ai/dsh-shell/native'
+import type { NativePlugin } from '@redspark/rsh-native-runtime'
+import type { NativeValueToolContribution, NativeToolExecution } from '@redspark/rsh-native-tools'
+import type { NativeJobRegistry } from '@redspark/rsh-native-jobs'
+import type {} from '@redspark/rsh-native-tools/native'
+import type {} from '@redspark/rsh-native-jobs'
+import type {} from '@redspark/rsh-native-tool-jobs/native'
+import type { ShellEnvironment } from '@redspark/rsh-shell-env/definition'
+import type {} from '@redspark/rsh-bash-local/native'
+import type {} from '@redspark/rsh-native-sandbox-policy/native'
+import type {} from '@redspark/rsh-approval-definition'
+import { ESCALATION_TARGETS, approveEscalation, canonicalPath, validateEscalationArgs } from '@redspark/rsh-sandbox/native'
+import type { SandboxExecutionPolicy, SandboxMode } from '@redspark/rsh-sandbox/native'
+import { canonicalShellResult, type ShellOperations, type ShellRunResult } from '@redspark/rsh-shell/native'
 import { renderProcessRead, renderResult } from './render.ts'
 import { processOutcome } from './background.ts'
 
@@ -154,9 +154,9 @@ function contribution(
       const standing = resolvePolicy(call)
       const policy = await policyFor(call, args, standing)
       const cwd = workdir(call, args.workdir, standing)
-      const dshEnv = shellEnv.collect(call)
+      const rshEnv = shellEnv.collect(call)
       const request = {
-        command: args.command, dshEnv,
+        command: args.command, rshEnv,
         ...cwd === undefined ? {} : { workdir: cwd },
         ...args.timeoutMs === undefined ? {} : { timeoutMs: args.timeoutMs },
         ...policy === undefined ? {} : { sandboxPolicy: policy },
@@ -189,7 +189,7 @@ function contribution(
 
 /** Register a foreground Bash tool after its shell and policy services are selected. */
 export const plugin: NativePlugin = {
-  apiVersion: 1, name: '@deepseek-ai/dsh-tool-bash', targets: ['host'],
+  apiVersion: 1, name: '@redspark/rsh-tool-bash', targets: ['host'],
   requires: ['shell', 'tools', 'shellEnv'], optional: ['sandboxPolicy', 'approval', 'jobs', 'jobControls'], provides: [],
   resolve(input) {
     if (input !== undefined && (typeof input !== 'object' || input === null || Array.isArray(input)

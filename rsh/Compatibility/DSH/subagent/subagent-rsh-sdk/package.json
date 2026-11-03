@@ -1,0 +1,63 @@
+{
+  "name": "@redspark/rsh-subagent-rsh-sdk",
+  "description": "Out-of-process SDK subagent backend: drives a child RedSpark Harness runtime subprocess over stdio JSON-RPC through the TypeScript SDK client",
+  "version": "1.0.0",
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Little-Red-Cre-Org/RedSparkHarness.git",
+    "directory": "rsh/Compatibility/DSH/subagent/subagent-rsh-sdk"
+  },
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/types/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./src/*": "./src/*",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib/index.js",
+    "lib/types/**/*.d.ts"
+  ],
+  "license": "MIT",
+  "peerDependencies": {
+    "@redspark/cordis": "workspace:^",
+    "@redspark/rsh-agent": "workspace:^",
+    "@redspark/rsh-llm": "workspace:^",
+    "@redspark/rsh-sdk-client": "workspace:^",
+    "@redspark/rsh-session": "workspace:^",
+    "@redspark/rsh-subagent": "workspace:^",
+    "@redspark/rsh-subprocess": "workspace:^"
+  },
+  "dependencies": {
+    "@redspark/rsh-brand": "workspace:^",
+    "@redspark/schemastery": "workspace:^"
+  },
+  "devDependencies": {
+    "@redspark/cordis": "workspace:^",
+    "@redspark/cordis-plugin-loader": "workspace:^",
+    "@redspark/rsh-agent": "workspace:^",
+    "@redspark/rsh-agent-instructions": "workspace:^",
+    "@redspark/rsh-app-boot": "workspace:^",
+    "@redspark/rsh-llm": "workspace:^",
+    "@redspark/rsh-llm-deepseek": "workspace:^",
+    "@redspark/rsh-loader-smoke": "workspace:^",
+    "@redspark/rsh-sdk-client": "workspace:^",
+    "@redspark/rsh-sdk-protocol": "workspace:^",
+    "@redspark/rsh-session": "workspace:^",
+    "@redspark/rsh-session-checkpoint-policy": "workspace:^",
+    "@redspark/rsh-session-persistence-jsonl": "workspace:^",
+    "@redspark/rsh-session-projection": "workspace:^",
+    "@redspark/rsh-skill-filesystem": "workspace:^",
+    "@redspark/rsh-subagent": "workspace:^",
+    "@redspark/rsh-subprocess": "workspace:^",
+    "@redspark/rsh-system-prompt": "workspace:^",
+    "@redspark/rsh-tool-subagent": "workspace:^"
+  }
+}

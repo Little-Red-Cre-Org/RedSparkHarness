@@ -5,23 +5,23 @@ import { mkdtemp, lstat, realpath, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
-import type { ChildConnectionDefinition } from '@deepseek-ai/dsh-subprocess/native'
-import { scrubbedParentEnv } from '@deepseek-ai/dsh-subprocess/native'
-import type { SandboxEnforcement, SandboxPolicy } from '@deepseek-ai/dsh-sandbox/native'
+import type { NativePlugin } from '@redspark/rsh-native-runtime'
+import type { ChildConnectionDefinition } from '@redspark/rsh-subprocess/native'
+import { scrubbedParentEnv } from '@redspark/rsh-subprocess/native'
+import type { SandboxEnforcement, SandboxPolicy } from '@redspark/rsh-sandbox/native'
 import type {
   NativeSdkChildRuntime, NativeSdkChildRuntimeLauncher, NativeSdkChildRuntimeRequest,
   RuntimeProcessOptions,
-} from '@deepseek-ai/dsh-sdk-runtime'
+} from '@redspark/rsh-sdk-runtime'
 
-export const NATIVE_SDK_CHILD_APPROVAL_RELAY_ENV = 'DSH_NATIVE_SDK_CHILD_APPROVAL_RELAY'
+export const NATIVE_SDK_CHILD_APPROVAL_RELAY_ENV = 'RSH_NATIVE_SDK_CHILD_APPROVAL_RELAY'
 
 interface CliManifest {
   readonly bin?: unknown
 }
 
 function resolveNativeSdkChildRuntime(request: NativeSdkChildRuntimeRequest, home: string, overlay: string): RuntimeProcessOptions {
-  const packageManifestPath = fileURLToPath(import.meta.resolve('@deepseek-ai/dsh/package.json'))
+  const packageManifestPath = fileURLToPath(import.meta.resolve('@redspark/rsh/package.json'))
   const packageRoot = dirname(packageManifestPath)
   const manifest = JSON.parse(readFileSync(packageManifestPath, 'utf8')) as CliManifest
   const bin = typeof manifest.bin === 'object' && manifest.bin !== null
@@ -52,7 +52,7 @@ function resolveNativeSdkChildRuntime(request: NativeSdkChildRuntimeRequest, hom
     command: process.execPath,
     args: [...nodeArgs, '--profile', 'native-sdk', '--patch', overlay],
     cwd: resolve(process.cwd(), request.cwd),
-    environment: () => ({ ...environment, ...sourceEnvironment, DSH_HOME: resolve(home) }),
+    environment: () => ({ ...environment, ...sourceEnvironment, RSH_HOME: resolve(home) }),
     description: 'dsh profile "native-sdk"',
     initializeTimeoutMs: 30_000,
   }
@@ -100,7 +100,7 @@ async function removePrivateHome(path: string, root: string): Promise<void> {
 /** Install the fixed same-version launcher capability into a native Host. */
 export const nativeSdkChildRuntimeLauncher: NativePlugin = {
   apiVersion: 1,
-  name: '@deepseek-ai/dsh-sdk-child-runtime-launcher',
+  name: '@redspark/rsh-sdk-child-runtime-launcher',
   targets: ['host'],
   requires: ['childConnection', 'sandbox'],
   provides: ['sdkChildRuntimeLauncher'],

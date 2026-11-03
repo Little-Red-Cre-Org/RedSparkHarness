@@ -6,15 +6,15 @@
  */
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { act } from '@testing-library/react'
-import { SlotTestRuntime } from '@deepseek-ai/dsh-client-test-runtime'
-import type { PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
-import type { RemoteResult } from '@deepseek-ai/dsh-typert-protocol'
+import { SlotTestRuntime } from '@redspark/rsh-client-test-runtime'
+import type { PropsRuntime } from '@redspark/rsh-client-ui-slots'
+import type { RemoteResult } from '@redspark/rsh-typert-protocol'
 import { apply, inject, type ResourceSnapshot, type UseResource } from '../src/client/index.ts'
 import { apply as hostApply } from '../src/index.ts'
 import { ResourceRegistry } from '../src/client/resources.ts'
 import type { ResourceProvider } from '../src/client/contract.ts'
 
-declare module '@deepseek-ai/dsh-client-ui-slots' {
+declare module '@redspark/rsh-client-ui-slots' {
   interface SlotMap {
     'resources.probe': { kind: 'single'; scope: 'root' }
     'resources.sessionProbe': { kind: 'single'; scope: 'session' }

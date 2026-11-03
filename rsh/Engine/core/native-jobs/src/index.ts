@@ -1,10 +1,10 @@
 /** Native Agent-owned background work registry for native Host profiles. */
-import { brandString, type Branded } from '@deepseek-ai/dsh-brand'
-import { TextRetainer } from '@deepseek-ai/dsh-output-retention'
-import { type NativePlugin } from '@deepseek-ai/dsh-native-runtime'
-import type { NativeAgent, NativeAgentRegistry } from '@deepseek-ai/dsh-native-agent'
+import { brandString, type Branded } from '@redspark/rsh-brand'
+import { TextRetainer } from '@redspark/rsh-output-retention'
+import { type NativePlugin } from '@redspark/rsh-native-runtime'
+import type { NativeAgent, NativeAgentRegistry } from '@redspark/rsh-native-agent'
 
-declare module '@deepseek-ai/dsh-native-runtime' {
+declare module '@redspark/rsh-native-runtime' {
   interface NativeServices { jobs: NativeJobRegistry }
 }
 
@@ -312,7 +312,7 @@ export class NativeJobRegistry {
 
 /** Native background-job Provider with an explicit per-Agent concurrency limit. */
 export const plugin: NativePlugin = {
-  apiVersion: 1, name: '@deepseek-ai/dsh-native-jobs', targets: ['host'], requires: ['agents'], provides: ['jobs'],
+  apiVersion: 1, name: '@redspark/rsh-native-jobs', targets: ['host'], requires: ['agents'], provides: ['jobs'],
   resolve(input) {
     if (input !== undefined && (typeof input !== 'object' || input === null || Array.isArray(input))) {
       throw new Error('native-jobs: configuration must be an object')

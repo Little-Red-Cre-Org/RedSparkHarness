@@ -1,5 +1,5 @@
-import type { SettingsSchemaService } from '@deepseek-ai/dsh-client-ui-settings/client'
-import type { ModelSettingsSchemaOperations } from '@deepseek-ai/dsh-client-ui-primitives'
+import type { SettingsSchemaService } from '@redspark/rsh-client-ui-settings/client'
+import type { ModelSettingsSchemaOperations } from '@redspark/rsh-client-ui-primitives'
 
 /** Plain schema callbacks exposed to Models stores and presentation components. */
 export type SettingsSchemaOperations = ModelSettingsSchemaOperations

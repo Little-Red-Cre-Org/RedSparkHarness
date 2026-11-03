@@ -1,6 +1,6 @@
 import { clientOnly, staticLinked } from '../tsdown.client.ts'
 
-const native = staticLinked('@deepseek-ai/dsh-client-web', [
+const native = staticLinked('@redspark/rsh-client-web', [
   'lib/types/index.js',
   'lib/types/boot-page.js',
   'lib/types/base-css.js',

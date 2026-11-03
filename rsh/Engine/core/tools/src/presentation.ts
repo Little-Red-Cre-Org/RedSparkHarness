@@ -2,18 +2,18 @@
  * Tool render-intent vocabulary: the provider-neutral types a tool declares via
  * `ToolDefinition.presentCall`/`ToolDefinition.presentResult` to say how one of its calls
  * renders in a UI (an editor's tool-call card, a CLI log line).
- * @module @deepseek-ai/dsh-tools/src/presentation
+ * @module @redspark/rsh-tools/src/presentation
  */
 
-import type { ContentBlock } from '@deepseek-ai/dsh-llm'
+import type { ContentBlock } from '@redspark/rsh-llm'
 import type {
   FileDiff,
   FileLocation,
   GenericCallView,
   SearchResultView,
-} from '@deepseek-ai/dsh-native-tools/presentation'
+} from '@redspark/rsh-native-tools/presentation'
 
-export type { FileDiff, FileLocation, GenericCallView, ToolCallKind } from '@deepseek-ai/dsh-native-tools/presentation'
+export type { FileDiff, FileLocation, GenericCallView, ToolCallKind } from '@redspark/rsh-native-tools/presentation'
 
 /**
  * Provider-neutral pending-call presentation. Tools declare one tagged intent;
@@ -136,7 +136,7 @@ export interface DiffResultView {
   diffs: FileDiff[]
 }
 
-export type { SearchLineMatch, SearchFileMatches, SearchMatchesResultView, SearchPathsResultView, SearchResultView } from '@deepseek-ai/dsh-native-tools/presentation'
+export type { SearchLineMatch, SearchFileMatches, SearchMatchesResultView, SearchPathsResultView, SearchResultView } from '@redspark/rsh-native-tools/presentation'
 
 /**
  * A completed file read rendered as a line-numbered, optionally syntax-highlighted

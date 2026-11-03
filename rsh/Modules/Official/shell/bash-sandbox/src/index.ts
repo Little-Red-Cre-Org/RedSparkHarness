@@ -1,13 +1,13 @@
 /**
  * Cordis adapter for the sandbox-consuming Bash controller. The configured
  * policy and runner remain owned by their respective services.
- * @module @deepseek-ai/dsh-bash-sandbox
+ * @module @redspark/rsh-bash-sandbox
  */
-import { Context } from '@deepseek-ai/cordis'
-import type { ShellExecRequest, ShellExecSpec, ShellProcess, ShellRunResult } from '@deepseek-ai/dsh-shell'
-import type {} from '@deepseek-ai/dsh-sandbox-policy'
-import { LocalBashExecutor } from '@deepseek-ai/dsh-bash-local'
-import type { Config as LocalConfig } from '@deepseek-ai/dsh-bash-local'
+import { Context } from '@redspark/cordis'
+import type { ShellExecRequest, ShellExecSpec, ShellProcess, ShellRunResult } from '@redspark/rsh-shell'
+import type {} from '@redspark/rsh-sandbox-policy'
+import { LocalBashExecutor } from '@redspark/rsh-bash-local'
+import type { Config as LocalConfig } from '@redspark/rsh-bash-local'
 import { SandboxBashController } from './controller.ts'
 
 /** Local Bash budgets; sandbox policy and runner selection belong to their providers. */

@@ -10,7 +10,7 @@ export interface SkillCatalogSource {
   readonly entries: readonly { readonly name: string; readonly description: string }[]
 }
 
-declare module '@deepseek-ai/dsh-llm/message' {
+declare module '@redspark/rsh-llm/message' {
   interface MessageSourceMap {
     'skill-catalog': SkillCatalogSource
   }

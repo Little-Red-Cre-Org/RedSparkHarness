@@ -3,18 +3,18 @@
  * cancellation-grace expiry owns settlement and closes message admission.
  * Pending starts share one abort signal; published children share idempotent
  * cleanup, and quiescence waits for both while synthesizing any missing end events.
- * @module @deepseek-ai/dsh-workflow-worker-thread/host
+ * @module @redspark/rsh-workflow-worker-thread/host
  */
 
 import { tmpdir } from 'node:os'
 import { Worker } from 'node:worker_threads'
 import type { WorkerOptions } from 'node:worker_threads'
 import { fileURLToPath } from 'node:url'
-import { assertNever, snapshotJsonValue } from '@deepseek-ai/dsh-util-values'
-import type { WorkflowAgentEndInfo, WorkflowAgentInfo, WorkflowMeta, WorkflowResult, WorkflowRunId } from '@deepseek-ai/dsh-workflow/types'
-import type { NativeWorkflowObserver, WorkflowRun } from '@deepseek-ai/dsh-workflow/native'
-import type { ContentBlock } from '@deepseek-ai/dsh-llm/native'
-import type { SessionId } from '@deepseek-ai/dsh-session/types'
+import { assertNever, snapshotJsonValue } from '@redspark/rsh-util-values'
+import type { WorkflowAgentEndInfo, WorkflowAgentInfo, WorkflowMeta, WorkflowResult, WorkflowRunId } from '@redspark/rsh-workflow/types'
+import type { NativeWorkflowObserver, WorkflowRun } from '@redspark/rsh-workflow/native'
+import type { ContentBlock } from '@redspark/rsh-llm/native'
+import type { SessionId } from '@redspark/rsh-session/types'
 import { renderThrown } from './realm.ts'
 import { HostToWorkerType, WorkerToHostType } from './protocol.ts'
 import type { HostToWorkerPayloads, WorkerToHostMessage } from './protocol.ts'

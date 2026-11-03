@@ -1,18 +1,18 @@
 // @vitest-environment jsdom
 /** Global panel rows and DOM focus through the production slot renderer. */
-import type { Context } from '@deepseek-ai/cordis'
+import type { Context } from '@redspark/cordis'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { act, cleanup, fireEvent, waitFor, within } from '@testing-library/react'
-import { SlotTestRuntime } from '@deepseek-ai/dsh-client-test-runtime'
-import { LocaleRuntime } from '@deepseek-ai/dsh-client-locale/client'
-import { en as commonEn } from '@deepseek-ai/dsh-client-locale/src/locales/en.ts'
-import { zh as commonZh } from '@deepseek-ai/dsh-client-locale/src/locales/zh.ts'
-import { IconGlobeOutline14 } from '@deepseek-ai/dsh-client-ui-primitives'
-import type { ILayout, MainPanelId } from '@deepseek-ai/dsh-client-ui-layout/client'
-import type { PropsRenderSlots, PropsRuntime, SlotLabel } from '@deepseek-ai/dsh-client-ui-slots'
+import { SlotTestRuntime } from '@redspark/rsh-client-test-runtime'
+import { LocaleRuntime } from '@redspark/rsh-client-locale/client'
+import { en as commonEn } from '@redspark/rsh-client-locale/src/locales/en.ts'
+import { zh as commonZh } from '@redspark/rsh-client-locale/src/locales/zh.ts'
+import { IconGlobeOutline14 } from '@redspark/rsh-client-ui-primitives'
+import type { ILayout, MainPanelId } from '@redspark/rsh-client-ui-layout/client'
+import type { PropsRenderSlots, PropsRuntime, SlotLabel } from '@redspark/rsh-client-ui-slots'
 import { apply, inject } from '../src/client/index.ts'
 
-declare module '@deepseek-ai/dsh-client-ui-slots' {
+declare module '@redspark/rsh-client-ui-slots' {
   interface LocaleNamespaceMap {
     'sidebar-panel-test': 'alpha'
   }

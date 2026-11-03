@@ -19,8 +19,8 @@ export function resolveDesktopBuildTarget(
   hostPlatform = process.platform,
   hostArch = process.arch,
 ) {
-  const platform = env.DSH_DESKTOP_TARGET_PLATFORM ?? env.npm_config_platform ?? hostPlatform
-  const arch = env.DSH_DESKTOP_TARGET_ARCH ?? env.npm_config_arch ?? hostArch
+  const platform = env.RSH_DESKTOP_TARGET_PLATFORM ?? env.npm_config_platform ?? hostPlatform
+  const arch = env.RSH_DESKTOP_TARGET_ARCH ?? env.npm_config_arch ?? hostArch
   const os = platform === 'darwin' ? 'mac' : platform === 'win32' || platform === 'win' ? 'win' : platform
   const target = `${os}-${arch}`
   if (!SUPPORTED_TARGETS.has(target)) {
@@ -31,7 +31,7 @@ export function resolveDesktopBuildTarget(
 
 /** Resolve the explicitly selected Desktop runtime assembly. */
 export function resolveDesktopBuildAssembly(env = process.env) {
-  const assembly = env.DSH_DESKTOP_ASSEMBLY ?? 'native'
+  const assembly = env.RSH_DESKTOP_ASSEMBLY ?? 'native'
   if (!SUPPORTED_ASSEMBLIES.has(assembly)) {
     throw new Error(`desktop build paths: unsupported assembly ${String(assembly)}`)
   }

@@ -1,5 +1,5 @@
 {
-  "name": "@deepseek-ai/dsh-client-ui-settings-plugins",
+  "name": "@redspark/rsh-client-ui-settings-plugins",
   "description": "Plugins settings section with feature-owned tabs and configurable host-plane plugin cards",
   "version": "1.0.0",
   "publishConfig": {
@@ -32,9 +32,9 @@
   "dsh": {
     "client": {
       "inject": [
-        "@deepseek-ai/dsh-client-locale",
-        "@deepseek-ai/dsh-client-ui-settings",
-        "@deepseek-ai/dsh-api-remotes"
+        "@redspark/rsh-client-locale",
+        "@redspark/rsh-client-ui-settings",
+        "@redspark/rsh-api-remotes"
       ],
       "platform": "web"
     }
@@ -45,20 +45,20 @@
   },
   "license": "MIT",
   "peerDependencies": {
-    "@deepseek-ai/cordis": "workspace:^",
-    "@deepseek-ai/dsh-client-ui-primitives": "workspace:^"
+    "@redspark/cordis": "workspace:^",
+    "@redspark/rsh-client-ui-primitives": "workspace:^"
   },
   "devDependencies": {
-    "@deepseek-ai/cordis": "workspace:^",
-    "@deepseek-ai/dsh-api-remotes": "workspace:^",
-    "@deepseek-ai/dsh-client-locale": "workspace:^",
-    "@deepseek-ai/dsh-client-store": "workspace:^",
-    "@deepseek-ai/dsh-client-test-runtime": "workspace:^",
-    "@deepseek-ai/dsh-client-ui-primitives": "workspace:^",
-    "@deepseek-ai/dsh-client-ui-settings": "workspace:^",
-    "@deepseek-ai/dsh-client-ui-slots": "workspace:^",
+    "@redspark/cordis": "workspace:^",
+    "@redspark/rsh-api-remotes": "workspace:^",
+    "@redspark/rsh-client-locale": "workspace:^",
+    "@redspark/rsh-client-store": "workspace:^",
+    "@redspark/rsh-client-test-runtime": "workspace:^",
+    "@redspark/rsh-client-ui-primitives": "workspace:^",
+    "@redspark/rsh-client-ui-settings": "workspace:^",
+    "@redspark/rsh-client-ui-slots": "workspace:^",
     "@types/react": "~18.3.1",
-    "@deepseek-ai/dsh-client-ui-renderer": "workspace:^"
+    "@redspark/rsh-client-ui-renderer": "workspace:^"
   },
   "files": [
     "lib/index.js",

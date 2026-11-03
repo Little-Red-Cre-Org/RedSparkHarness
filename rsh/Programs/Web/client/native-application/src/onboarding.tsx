@@ -4,18 +4,18 @@ import type { ReactNode } from 'react'
 import {
   Button, FishLogo, IconDarkOutline16, IconGlobeOutline14, IconLightOutline16,
   ModelOnboardingView, OnboardingSurface, WelcomeNoticeView, modelProtocolChoices,
-} from '@deepseek-ai/dsh-client-ui-primitives'
+} from '@redspark/rsh-client-ui-primitives'
 import type {
   ModelCredentialInfo, ModelSettingsNamespace, ModelSettingsOperations,
-} from '@deepseek-ai/dsh-client-ui-primitives'
+} from '@redspark/rsh-client-ui-primitives'
 import {
   NativeSessionRpcError,
-} from '@deepseek-ai/dsh-client-native-session/native'
+} from '@redspark/rsh-client-native-session/native'
 import type {
   NativeConfigurableModelProvider, NativeSessionClient, NativeSettingsDescriptor,
-} from '@deepseek-ai/dsh-client-native-session/native'
-import type { NativeLocaleService } from '@deepseek-ai/dsh-client-locale/native'
-import type { NativeThemeService } from '@deepseek-ai/dsh-client-ui-theme/native'
+} from '@redspark/rsh-client-native-session/native'
+import type { NativeLocaleService } from '@redspark/rsh-client-locale/native'
+import type { NativeThemeService } from '@redspark/rsh-client-ui-theme/native'
 import { modelSettingsSchema } from './model-settings-schema.ts'
 import { en, zh, type ConversationLocaleKey } from './locales.ts'
 import css from './onboarding.module.css'

@@ -1,6 +1,6 @@
 /** Recoverable deletion capability owned by the selected durable storage Provider. */
-import { brandString, type Branded } from '@deepseek-ai/dsh-brand'
-import type { SessionId, SessionHeader } from '@deepseek-ai/dsh-session/types'
+import { brandString, type Branded } from '@redspark/rsh-brand'
+import type { SessionId, SessionHeader } from '@redspark/rsh-session/types'
 import type { SessionPersistenceRevision } from './revision.ts'
 
 /** Identity of one retained physical deletion, distinct from its Session identity. */

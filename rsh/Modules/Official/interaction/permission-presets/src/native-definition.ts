@@ -1,6 +1,6 @@
 /** Native permission-preset contract over the Program-owned Session writer. */
-import type { NativeActiveSessionOwner } from '@deepseek-ai/dsh-native-session-execution'
-import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
+import type { NativeActiveSessionOwner } from '@redspark/rsh-native-session-execution'
+import type { NativePlugin } from '@redspark/rsh-native-runtime'
 import type { PresetSpec } from './presets.ts'
 import type {} from './types.ts'
 
@@ -43,7 +43,7 @@ export interface NativePermissionPresetOperations {
   apply(owner: NativeActiveSessionOwner, name: string, signal: AbortSignal): Promise<void>
 }
 
-declare module '@deepseek-ai/dsh-native-runtime' {
+declare module '@redspark/rsh-native-runtime' {
   interface NativeServices { permissionPresets: NativePermissionPresetOperations }
 }
 

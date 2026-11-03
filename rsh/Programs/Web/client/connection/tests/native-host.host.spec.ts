@@ -1,7 +1,7 @@
 /** Native Host Connection registry keeps carrier mounting and authentication framework-free. */
 
 import { describe, expect, it } from 'vitest'
-import type { CredentialRecord, NativeCredentials } from '@deepseek-ai/dsh-credentials/native'
+import type { CredentialRecord, NativeCredentials } from '@redspark/rsh-credentials/native'
 import { createNativeHostConnectionRegistry, resolveNativeHostConnectionConfig } from '../src/native-host.ts'
 
 function credentials(): Pick<NativeCredentials, 'modifyRecord'> {

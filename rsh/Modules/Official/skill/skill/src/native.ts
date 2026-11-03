@@ -1,6 +1,6 @@
 /** Native Host Definition and Provider for scoped skill discovery and loading. */
-import { NativeContributions, type NativeContext, type NativePlugin, type NativeScope } from '@deepseek-ai/dsh-native-runtime'
-import type { NativeRequestContexts } from '@deepseek-ai/dsh-request-context-definition'
+import { NativeContributions, type NativeContext, type NativePlugin, type NativeScope } from '@redspark/rsh-native-runtime'
+import type { NativeRequestContexts } from '@redspark/rsh-request-context-definition'
 import {
   isSkillName,
   normalizeProviderObservation,
@@ -19,15 +19,15 @@ import type {
   SkillRegistration,
   SkillSummary,
 } from './types.ts'
-import type {} from '@deepseek-ai/dsh-native-runtime'
+import type {} from '@redspark/rsh-native-runtime'
 
-declare module '@deepseek-ai/dsh-native-runtime' {
+declare module '@redspark/rsh-native-runtime' {
   interface NativeServices { skills: NativeSkills; skillInvocations: NativeSkillInvocations }
   interface NativeEvents {
     /**
      * Notify Native consumers that a scoped skill catalog may have changed.
      * @mode parallel
-     * @dshScopeScan unsupported
+     * @rshScopeScan unsupported
      */
     'skills/change': { mode: 'parallel'; args: []; result: void }
   }
@@ -467,7 +467,7 @@ export class NativeSkillRegistry implements NativeSkills {
 /** Native Host Definition for the scoped skill registry. */
 export const plugin: NativePlugin = {
   apiVersion: 1,
-  name: '@deepseek-ai/dsh-skill',
+  name: '@redspark/rsh-skill',
   targets: ['host'],
   requires: [],
   provides: ['skills'],

@@ -1,14 +1,14 @@
 /** Native workspace instructions prepared against the single durable Session authority. */
-import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
-import type { Session, SessionEvent, UserMessage } from '@deepseek-ai/dsh-session/native'
-import type { NativeSessionReferenceOperations } from '@deepseek-ai/dsh-session-reference/native'
-import type { NativeToolExecution, NativeToolResult } from '@deepseek-ai/dsh-native-tools'
-import type {} from '@deepseek-ai/dsh-fs/native'
-import type {} from '@deepseek-ai/dsh-native-tools/native'
+import type { NativePlugin } from '@redspark/rsh-native-runtime'
+import type { Session, SessionEvent, UserMessage } from '@redspark/rsh-session/native'
+import type { NativeSessionReferenceOperations } from '@redspark/rsh-session-reference/native'
+import type { NativeToolExecution, NativeToolResult } from '@redspark/rsh-native-tools'
+import type {} from '@redspark/rsh-fs/native'
+import type {} from '@redspark/rsh-native-tools/native'
 import { Config, resolveConfig } from './config.ts'
 import { InstructionComposer } from './composition.ts'
 
-declare module '@deepseek-ai/dsh-native-runtime' {
+declare module '@redspark/rsh-native-runtime' {
   interface NativeServices { agentInstructions: NativeAgentInstructions }
 }
 
@@ -127,7 +127,7 @@ export class NativeAgentInstructions {
 
 /** Native instruction Provider sharing discovery, byte budgeting and rendering with Cordis. */
 export const plugin: NativePlugin = {
-  apiVersion: 1, name: '@deepseek-ai/dsh-agent-instructions', targets: ['host'],
+  apiVersion: 1, name: '@redspark/rsh-agent-instructions', targets: ['host'],
   requires: ['fs'], optional: ['tools', 'sessionReference'], provides: ['agentInstructions'],
   resolve(input) {
     const config = resolveConfig(Config(input as Config))

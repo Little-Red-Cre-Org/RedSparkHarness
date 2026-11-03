@@ -1,5 +1,5 @@
 {
-  "name": "@deepseek-ai/dsh-host-directory-picker-native",
+  "name": "@redspark/rsh-host-directory-picker-native",
   "description": "Native-OS-chooser backend of the directory-picker seam for the RedSpark Harness web GUI host",
   "version": "1.0.0",
   "publishConfig": {
@@ -38,20 +38,20 @@
   ],
   "license": "MIT",
   "dependencies": {
-    "@deepseek-ai/dsh-host-directory-picker": "workspace:^",
-    "@deepseek-ai/dsh-native-command": "workspace:^",
+    "@redspark/rsh-host-directory-picker": "workspace:^",
+    "@redspark/rsh-native-command": "workspace:^",
     "koffi": "3.1.1"
   },
   "peerDependencies": {
-    "@deepseek-ai/cordis": "workspace:^"
+    "@redspark/cordis": "workspace:^"
   },
   "peerDependenciesMeta": {
-    "@deepseek-ai/cordis": {
+    "@redspark/cordis": {
       "optional": true
     }
   },
   "devDependencies": {
-    "@deepseek-ai/cordis": "workspace:^",
+    "@redspark/cordis": "workspace:^",
     "tsx": "^4.19.2"
   }
 }

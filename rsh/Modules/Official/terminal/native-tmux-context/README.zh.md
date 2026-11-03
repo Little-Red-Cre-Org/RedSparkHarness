@@ -3,7 +3,7 @@ description: "向 Native Headless 请求加入当前 tmux 位置，并让 Sessio
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-native-tmux-context
+# @redspark/rsh-native-tmux-context
 
 [English](README.md) | 中文
 

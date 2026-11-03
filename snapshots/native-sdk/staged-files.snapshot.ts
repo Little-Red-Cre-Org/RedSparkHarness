@@ -8,12 +8,12 @@ import { fileURLToPath, pathToFileURL } from 'node:url'
 import { zstdDecompressSync } from 'node:zlib'
 import { execa } from 'execa'
 import { expect, it } from 'vitest'
-import { DeepSeekHarness } from '@deepseek-ai/dsh-sdk-client'
-import { LocalAttachmentBackend } from '@deepseek-ai/dsh-attachment-local/backend'
-import { parseSessionLog } from '@deepseek-ai/dsh-llm-replay'
-import { JsonlSessionBackend } from '@deepseek-ai/dsh-session-persistence-jsonl'
+import { RedSparkHarness } from '@redspark/rsh-sdk-client'
+import { LocalAttachmentBackend } from '@redspark/rsh-attachment-local/backend'
+import { parseSessionLog } from '@redspark/rsh-llm-replay'
+import { JsonlSessionBackend } from '@redspark/rsh-session-persistence-jsonl'
 import { formatSystemPromptSnapshot, formatToolSchemasSnapshot, normalizedSystemPrompts, normalizedToolSchemas,
-  normalizeSessionSnapshot, redactSessionSnapshotIds } from '@deepseek-ai/dsh-session-snapshot'
+  normalizeSessionSnapshot, redactSessionSnapshotIds } from '@redspark/rsh-session-snapshot'
 import { shippedNativeProfileComposition } from '../../rsh/Programs/CLI/src/native-profile-template.ts'
 
 const root = fileURLToPath(new URL('../../', import.meta.url))
@@ -57,7 +57,7 @@ function imageHandle(request: ModelRequest): string {
 function stablePath(home: string, path: string): string {
   const tail = relative(home, path)
   if (!isAbsolute(path) || tail === '' || tail === '..' || tail.startsWith(`..${sep}`) || isAbsolute(tail)) {
-    throw new Error('native-sdk staged-files: provider handle is outside the fixture DSH_HOME')
+    throw new Error('native-sdk staged-files: provider handle is outside the fixture RSH_HOME')
   }
   return `{{home}}/${tail.split(sep).join('/')}`
 }
@@ -231,22 +231,22 @@ it('stages ordered Native SDK files, reads them through the model file handles, 
       baseURL: `${baseURL}/v1`, models: [{ id: 'fixture-model', input: ['text', 'image'] }] } } } },
   ] }))
   const imageBase64 = imageBytes.toString('base64')
-  const options = { profile: 'native-sdk', dshBin: join(root, 'rsh/Programs/CLI/lib/bin.js'), dshHome: home,
+  const options = { profile: 'native-sdk', rshBin: join(root, 'rsh/Programs/CLI/lib/bin.js'), rshHome: home,
     patches: [patch], cwd: workspace, provider: 'fixture', model: 'fixture-model', allowedTools: ['read_file'],
-    env: { ...process.env, NATIVE_SDK_FIXTURE_KEY: 'fixture-key', DSH_TELEMETRY_DISABLED: '1' }, requestTimeoutMs: 20_000 }
+    env: { ...process.env, NATIVE_SDK_FIXTURE_KEY: 'fixture-key', RSH_TELEMETRY_DISABLED: '1' }, requestTimeoutMs: 20_000 }
   let firstResult: { finalResponse: string } | undefined
   let coldResult: { finalResponse: string } | undefined
   let steeringId = ''
   let firstReceipt: { receiptId: string; name: string; bytes: number } | undefined
   let secondReceipt: { receiptId: string; name: string; bytes: number } | undefined
   try {
-    if (process.env.DSH_NATIVE_SDK_PYTHON !== undefined) {
+    if (process.env.RSH_NATIVE_SDK_PYTHON !== undefined) {
       const launcher = join(home, process.platform === 'win32' ? 'dsh.cmd' : 'dsh')
       writeFileSync(launcher, process.platform === 'win32'
         ? `@echo off\r\n"${process.execPath}" "${join(root, 'rsh/Programs/CLI/lib/bin.js')}" %*\r\n`
         : `#!/bin/sh\nexec "${process.execPath}" "${join(root, 'rsh/Programs/CLI/lib/bin.js')}" "$@"\n`)
       if (process.platform !== 'win32') chmodSync(launcher, 0o700)
-      const python = await execa(process.env.DSH_NATIVE_SDK_PYTHON, [join(scene, 'client.py'), launcher, home, workspace,
+      const python = await execa(process.env.RSH_NATIVE_SDK_PYTHON, [join(scene, 'client.py'), launcher, home, workspace,
         patch, baseURL], { env: { ...process.env, PYTHONPATH: join(root, 'rsh/Programs/SDK/python/sdk/src'),
           NATIVE_SDK_FIXTURE_KEY: 'fixture-key' }, timeout: 60_000 })
       const result = JSON.parse(python.stdout) as { firstResult: unknown; coldResult: unknown; steeringId: string;
@@ -257,7 +257,7 @@ it('stages ordered Native SDK files, reads them through the model file handles, 
       firstReceipt = result.firstReceipt
       secondReceipt = result.secondReceipt
     } else {
-      const harness = new DeepSeekHarness(options)
+      const harness = new RedSparkHarness(options)
       try {
         const session = harness.session(sessionId)
         firstReceipt = await session.uploadFile(firstBytes, 'first.txt')
@@ -279,7 +279,7 @@ it('stages ordered Native SDK files, reads them through the model file handles, 
         await control(baseURL, '/release-initial', 'POST')
         firstResult = await pending
       } finally { await harness.close() }
-      const cold = new DeepSeekHarness(options)
+      const cold = new RedSparkHarness(options)
       try { coldResult = await cold.session(sessionId).run('Cold-read the first staged file again.') }
       finally { await cold.close() }
     }
@@ -316,7 +316,7 @@ it('stages ordered Native SDK files, reads them through the model file handles, 
     expect(images).toHaveLength(1)
     const image = images[0]
     if (image?.type !== 'image') throw new Error('native-sdk staged-files: missing durable image reference')
-    const attachments = new LocalAttachmentBackend({ dshHome: home })
+    const attachments = new LocalAttachmentBackend({ rshHome: home })
     const firstHandle = fileHandle(requests[0] as ModelRequest, 'first.txt')
     const secondHandle = fileHandle(requests[1] as ModelRequest, 'second.txt')
     const normalizedImagePath = imageHandle(requests[0] as ModelRequest)
@@ -375,7 +375,7 @@ it('stages ordered Native SDK files, reads them through the model file handles, 
     const systemPrompt = formatSystemPromptSnapshot(prompts[0], prompts.slice(1))
     const toolSchemas = formatToolSchemasSnapshot(schemas[0], schemas.slice(1))
     const modelRequestSnapshot = JSON.stringify(modelSnapshot(requests, fixturePaths), null, 2) + '\n'
-    if (process.env.DSH_SNAPSHOT === 'refresh') {
+    if (process.env.RSH_SNAPSHOT === 'refresh') {
       writeFileSync(fixture, normalized)
       writeFileSync(join(scene, 'system-prompt.expected.md'), systemPrompt)
       writeFileSync(join(scene, 'tool-schemas.expected.json'), toolSchemas)

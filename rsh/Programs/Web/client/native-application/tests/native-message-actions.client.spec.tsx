@@ -13,9 +13,9 @@
  */
 import { cleanup, render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import type { PropsRenderSlots } from '@deepseek-ai/dsh-client-ui-slots'
-import type { SessionEvent, SessionId } from '@deepseek-ai/dsh-session/types'
-import { makeTranslate } from '@deepseek-ai/dsh-client-test-runtime'
+import type { PropsRenderSlots } from '@redspark/rsh-client-ui-slots'
+import type { SessionEvent, SessionId } from '@redspark/rsh-session/types'
+import { makeTranslate } from '@redspark/rsh-client-test-runtime'
 import { NativeTranscript } from '../src/native-transcript.tsx'
 import { en } from '../src/locales.ts'
 

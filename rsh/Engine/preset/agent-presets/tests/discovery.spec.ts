@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { COMPOSITION_FILE, discoverPresets, scanRoot } from '@deepseek-ai/dsh-agent-presets'
+import { COMPOSITION_FILE, discoverPresets, scanRoot } from '@redspark/rsh-agent-presets'
 import { NATIVE_COMPOSITION_FILE, scanNativePresetFolders } from '../src/native-storage.ts'
 
 const fsHarness = vi.hoisted(() => ({
@@ -176,7 +176,7 @@ describe('native preset discovery', () => {
     await writeFile(join(root, 'ready', 'preset.yml'), 'name: Ready preset\norder: 1\n')
     await writeFile(join(root, 'ready', NATIVE_COMPOSITION_FILE), JSON.stringify({
       formatVersion: 1,
-      installations: [{ id: 'tools', plugin: '@deepseek-ai/dsh-native-tools', config: {} }],
+      installations: [{ id: 'tools', plugin: '@redspark/rsh-native-tools', config: {} }],
     }))
     await writeFile(join(root, 'legacy-only', COMPOSITION_FILE), '[]\n')
     await writeFile(join(root, 'bad-json', NATIVE_COMPOSITION_FILE), '{bad json with private content')
@@ -185,7 +185,7 @@ describe('native preset discovery', () => {
 
     expect(found.map(folder => folder.id)).toEqual(['ready', 'bad-json', 'legacy-only'])
     expect(found[0]).toMatchObject({ id: 'ready', name: 'Ready preset', trust: 'user', status: 'ready',
-      installations: [{ id: 'tools', plugin: '@deepseek-ai/dsh-native-tools', config: {} }] })
+      installations: [{ id: 'tools', plugin: '@redspark/rsh-native-tools', config: {} }] })
     expect(found.find(folder => folder.id === 'legacy-only')?.status).toBe('needs-migration')
     expect(found.find(folder => folder.id === 'bad-json')).toMatchObject({ status: 'invalid',
       problem: 'agent.native.json is not valid JSON' })
@@ -285,8 +285,8 @@ describe('rows naming a plugin that cannot be resolved', () => {
     // The way an authored preset actually rots: it named a package that a
     // later release renamed, so the composition still parses and still cannot
     // compose a session.
-    expect(await scanned('- id: stale\n  name: \'@deepseek-ai/dsh-no-such-package\'\n'))
-      .toBe('row "stale" names a plugin that cannot be resolved: @deepseek-ai/dsh-no-such-package')
+    expect(await scanned('- id: stale\n  name: \'@redspark/rsh-no-such-package\'\n'))
+      .toBe('row "stale" names a plugin that cannot be resolved: @redspark/rsh-no-such-package')
   })
 
   it('names every unresolvable row rather than only the first', async () => {

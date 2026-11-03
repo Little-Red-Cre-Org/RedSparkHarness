@@ -1,7 +1,7 @@
 /** Cordis-free Definition shared by Cordis and Native session-query Providers. */
 
-import type { SessionId } from '@deepseek-ai/dsh-session/native'
-import type { SessionTitleSnapshot } from '@deepseek-ai/dsh-session-title/native'
+import type { SessionId } from '@redspark/rsh-session/native'
+import type { SessionTitleSnapshot } from '@redspark/rsh-session-title/native'
 import type { SessionObservation, SessionObservationOptions } from './types.ts'
 import type {
   SessionEventReadRequest,

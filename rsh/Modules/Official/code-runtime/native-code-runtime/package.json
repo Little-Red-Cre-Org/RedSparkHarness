@@ -1,5 +1,5 @@
 {
-  "name": "@deepseek-ai/dsh-native-code-runtime",
+  "name": "@redspark/rsh-native-code-runtime",
   "description": "Native worker-thread runtime for model-written TypeScript programs",
   "version": "1.0.0",
   "publishConfig": {
@@ -52,10 +52,10 @@
   ],
   "license": "MIT",
   "dependencies": {
-    "@deepseek-ai/dsh-code-runtime-definition": "workspace:^",
-    "@deepseek-ai/dsh-native-runtime": "workspace:^"
+    "@redspark/rsh-code-runtime-definition": "workspace:^",
+    "@redspark/rsh-native-runtime": "workspace:^"
   },
   "devDependencies": {
-    "@deepseek-ai/dsh-session": "workspace:^"
+    "@redspark/rsh-session": "workspace:^"
   }
 }

@@ -1,8 +1,8 @@
 /** Native Host Provider for recorded model execution. */
-import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
+import type { NativePlugin } from '@redspark/rsh-native-runtime'
 import { NativeModelExecution, type NativeModel } from './index.ts'
 
-declare module '@deepseek-ai/dsh-native-runtime' {
+declare module '@redspark/rsh-native-runtime' {
   interface NativeServices {
     model: NativeModel
     modelExecution: NativeModelExecution
@@ -11,7 +11,7 @@ declare module '@deepseek-ai/dsh-native-runtime' {
 
 /** Install one execution authority for the profile-selected model Provider. */
 export const plugin: NativePlugin = {
-  apiVersion: 1, name: '@deepseek-ai/dsh-native-model-execution', targets: ['host'],
+  apiVersion: 1, name: '@redspark/rsh-native-model-execution', targets: ['host'],
   requires: ['model'], provides: ['modelExecution'],
   resolve(input) {
     if (input !== undefined && (typeof input !== 'object' || input === null || Array.isArray(input) || Object.keys(input).length > 0)) {

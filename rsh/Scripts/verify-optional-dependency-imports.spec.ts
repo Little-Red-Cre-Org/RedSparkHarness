@@ -28,7 +28,7 @@ const FIXTURE = {
       paths: {
         '@f/opt': ['./rsh/f/opt/src/index.ts'],
         '@f/hard': ['./rsh/f/hard/src/index.ts'],
-        '@deepseek-ai/cordis': ['./rsh/f/cordis/src/index.ts'],
+        '@redspark/cordis': ['./rsh/f/cordis/src/index.ts'],
       },
     },
     include: ['rsh/**/*.ts', 'rsh/**/*.tsx'],
@@ -43,43 +43,43 @@ const FIXTURE = {
 
   'rsh/f/hard/package.json': JSON.stringify({ name: '@f/hard', version: '0.0.1' }),
   'rsh/f/hard/src/index.ts': 'export const hardValue = 2\n',
-  'rsh/f/cordis/package.json': JSON.stringify({ name: '@deepseek-ai/cordis', version: '0.0.1' }),
+  'rsh/f/cordis/package.json': JSON.stringify({ name: '@redspark/cordis', version: '0.0.1' }),
   'rsh/f/cordis/src/index.ts': 'export const context = 3\n',
 
   'rsh/f/native-consumer/package.json': JSON.stringify({
     name: '@f/native-consumer',
     version: '0.0.1',
     exports: { './native': { types: './lib/types/native.d.ts', default: './lib/native.js' } },
-    peerDependencies: { '@deepseek-ai/cordis': '*' },
-    peerDependenciesMeta: { '@deepseek-ai/cordis': { optional: true } },
+    peerDependencies: { '@redspark/cordis': '*' },
+    peerDependenciesMeta: { '@redspark/cordis': { optional: true } },
   }),
-  'rsh/f/native-consumer/src/index.ts': "import { context } from '@deepseek-ai/cordis'\nexport const legacy = context\n",
+  'rsh/f/native-consumer/src/index.ts': "import { context } from '@redspark/cordis'\nexport const legacy = context\n",
   'rsh/f/native-consumer/src/native.ts': "import './style.css'\nexport { native } from './native-dependency.ts'\n",
-  'rsh/f/native-consumer/src/native-dependency.ts': "import { context } from '@deepseek-ai/cordis'\nexport const native = context\n",
+  'rsh/f/native-consumer/src/native-dependency.ts': "import { context } from '@redspark/cordis'\nexport const native = context\n",
   'rsh/f/native-consumer/src/style.css': '.native { color: red; }\n',
 
   'rsh/f/native-types-consumer/package.json': JSON.stringify({
     name: '@f/native-types-consumer',
     version: '0.0.1',
     exports: { './types': { types: './lib/types/types.d.ts', default: './lib/types/types.js' } },
-    peerDependencies: { '@deepseek-ai/cordis': '*' },
-    peerDependenciesMeta: { '@deepseek-ai/cordis': { optional: true } },
+    peerDependencies: { '@redspark/cordis': '*' },
+    peerDependenciesMeta: { '@redspark/cordis': { optional: true } },
   }),
-  'rsh/f/native-types-consumer/src/index.ts': "import { context } from '@deepseek-ai/cordis'\nexport const legacy = context\n",
+  'rsh/f/native-types-consumer/src/index.ts': "import { context } from '@redspark/cordis'\nexport const legacy = context\n",
   'rsh/f/native-types-consumer/src/types.ts': 'export interface NativeTypes { value: string }\n',
 
   'rsh/f/unsafe-native-types-consumer/package.json': JSON.stringify({
     name: '@f/unsafe-native-types-consumer',
     version: '0.0.1',
     exports: { './types': { types: './lib/types/types.d.ts', default: './lib/types/types.js' } },
-    peerDependencies: { '@deepseek-ai/cordis': '*' },
-    peerDependenciesMeta: { '@deepseek-ai/cordis': { optional: true } },
+    peerDependencies: { '@redspark/cordis': '*' },
+    peerDependenciesMeta: { '@redspark/cordis': { optional: true } },
   }),
-  'rsh/f/unsafe-native-types-consumer/src/index.ts': "import { context } from '@deepseek-ai/cordis'\nexport const legacy = context\n",
-  'rsh/f/unsafe-native-types-consumer/src/types.tsx': "import '@deepseek-ai/cordis'\nexport interface NativeTypes { value: string }\n",
+  'rsh/f/unsafe-native-types-consumer/src/index.ts': "import { context } from '@redspark/cordis'\nexport const legacy = context\n",
+  'rsh/f/unsafe-native-types-consumer/src/types.tsx': "import '@redspark/cordis'\nexport interface NativeTypes { value: string }\n",
 
   'rsh/f/cli/package.json': JSON.stringify({
-    name: '@deepseek-ai/dsh',
+    name: '@redspark/rsh',
     version: '0.0.1',
     bin: { f: 'lib/bin.js' },
     optionalDependencies: { '@f/opt': '*' },
@@ -89,7 +89,7 @@ const FIXTURE = {
   'rsh/f/cli/src/compatibility.ts': "import { runtimeValue } from '@f/opt'\nexport const compatibility = runtimeValue\n",
 
   'rsh/f/cli-static-violation/package.json': JSON.stringify({
-    name: '@deepseek-ai/dsh',
+    name: '@redspark/rsh',
     version: '0.0.1',
     bin: { f: 'lib/bin.js' },
     optionalDependencies: { '@f/opt': '*' },
@@ -222,10 +222,10 @@ describe('optional dependency loads', () => {
         'tsconfig.client.json': FIXTURE['tsconfig.host.json'],
         'rsh/f/compatibility/package.json': JSON.stringify({
           name: '@f/compatibility', version: '0.0.1',
-          peerDependencies: { '@deepseek-ai/cordis': '*' },
-          peerDependenciesMeta: { '@deepseek-ai/cordis': { optional: true } },
+          peerDependencies: { '@redspark/cordis': '*' },
+          peerDependenciesMeta: { '@redspark/cordis': { optional: true } },
         }),
-        'rsh/f/compatibility/src/index.ts': "import { context } from '@deepseek-ai/cordis'\nexport const legacy = context\n",
+        'rsh/f/compatibility/src/index.ts': "import { context } from '@redspark/cordis'\nexport const legacy = context\n",
         'rsh/f/cordis/package.json': FIXTURE['rsh/f/cordis/package.json'],
         'rsh/f/cordis/src/index.ts': FIXTURE['rsh/f/cordis/src/index.ts'],
       }
@@ -233,7 +233,7 @@ describe('optional dependency loads', () => {
         mkdirSync(dirname(join(caseRoot, path)), { recursive: true })
         writeFileSync(join(caseRoot, path), content)
       }
-      const peers = new Map([['rsh/f/compatibility', ['@deepseek-ai/cordis']]])
+      const peers = new Map([['rsh/f/compatibility', ['@redspark/cordis']]])
       expect(collectOptionalImportViolations(new TypeScriptProject(caseRoot, 'host'), new Map(), peers)).toEqual([])
     } finally {
       rmSync(caseRoot, { recursive: true, force: true })
@@ -264,7 +264,7 @@ describe('optional dependency loads', () => {
 
   it('checks Cordis-free type exports while allowing legacy-only Cordis imports', () => {
     expect(safeExportViolations).toContain(
-      'rsh/f/unsafe-native-types-consumer/src/types.tsx:1 loads @deepseek-ai/cordis at module scope,'
+      'rsh/f/unsafe-native-types-consumer/src/types.tsx:1 loads @redspark/cordis at module scope,'
       + ' declared optional in peerDependenciesMeta; import it as a type, or restructure so module scope does not need it',
     )
     expect(safeExportViolations.some(violation => violation.startsWith('rsh/f/native-types-consumer/src/index.ts:1'))).toBe(false)

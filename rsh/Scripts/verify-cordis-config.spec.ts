@@ -20,7 +20,7 @@ import {
 describe('verify-cordis-config metadata expressions', () => {
   it('accepts a disabled !!js expression', () => {
     const problems = metadataExpressionErrors(
-      { id: 'tool-bash', name: '@deepseek-ai/dsh-tool-bash', disabled: { __jsExpr: "process.platform === 'win32'" } },
+      { id: 'tool-bash', name: '@redspark/rsh-tool-bash', disabled: { __jsExpr: "process.platform === 'win32'" } },
       '[0]',
     )
     expect(problems).toEqual([])
@@ -57,11 +57,11 @@ describe('workspace Bundle discovery and product dependency closures', () => {
       mkdirSync(bundleDir, { recursive: true })
       mkdirSync(plainDir, { recursive: true })
       writeFileSync(join(bundleDir, 'package.json'), JSON.stringify({
-        name: '@deepseek-ai/dsh-subagent-example',
+        name: '@redspark/rsh-subagent-example',
         dsh: { bundle: { patch: './cordis.patch.yml' } },
       }))
       writeFileSync(join(plainDir, 'package.json'), JSON.stringify({
-        name: '@deepseek-ai/dsh-plain',
+        name: '@redspark/rsh-plain',
       }))
 
       expect(bundleManifestPaths(fixture)).toEqual([
@@ -76,16 +76,16 @@ describe('workspace Bundle discovery and product dependency closures', () => {
     const manifestPath = 'rsh/Engine/subagent/example/package.json'
     const file = 'rsh/Engine/subagent/example/cordis.patch.yml'
     const manifest = {
-      name: '@deepseek-ai/dsh-subagent-example',
+      name: '@redspark/rsh-subagent-example',
       dependencies: {},
     }
-    const self = { file, name: '@deepseek-ai/dsh-subagent-example' }
+    const self = { file, name: '@redspark/rsh-subagent-example' }
     expect(bundlePluginDependencyErrors(manifestPath, manifest, [self])).toEqual([])
     expect(bundlePluginDependencyErrors(manifestPath, manifest, [
       self,
-      { file, name: '@deepseek-ai/dsh-missing-plugin' },
+      { file, name: '@redspark/rsh-missing-plugin' },
     ])).toEqual([
-      `${file}: @deepseek-ai/dsh-missing-plugin must be declared in ${manifestPath} dependencies`,
+      `${file}: @redspark/rsh-missing-plugin must be declared in ${manifestPath} dependencies`,
     ])
   })
 })
@@ -94,16 +94,16 @@ describe('CLI optional compatibility dependencies', () => {
   it('accepts configured plugins from optional dependencies and rejects absent ones', () => {
     const file = 'rsh/Programs/CLI/config/default/cordis.yml'
     const manifest = {
-      dependencies: { '@deepseek-ai/dsh-native-runtime': 'workspace:^' },
-      optionalDependencies: { '@deepseek-ai/dsh-hooks-codex': 'workspace:^' },
+      dependencies: { '@redspark/rsh-native-runtime': 'workspace:^' },
+      optionalDependencies: { '@redspark/rsh-hooks-codex': 'workspace:^' },
     }
     expect(cliPluginDependencyErrors([
-      { file, name: '@deepseek-ai/dsh-hooks-codex' },
+      { file, name: '@redspark/rsh-hooks-codex' },
     ], manifest)).toEqual([])
     expect(cliPluginDependencyErrors([
-      { file, name: '@deepseek-ai/dsh-missing' },
+      { file, name: '@redspark/rsh-missing' },
     ], manifest)).toEqual([
-      `${file}: @deepseek-ai/dsh-missing must be declared in `
+      `${file}: @redspark/rsh-missing must be declared in `
       + 'rsh/Programs/CLI/package.json dependencies or optionalDependencies',
     ])
   })
@@ -111,11 +111,11 @@ describe('CLI optional compatibility dependencies', () => {
   it('accepts optional and development plugins in test-only compatibility fixtures', () => {
     const file = 'rsh/Programs/CLI/tests/fixtures/cordis.yml'
     expect(cliPluginDependencyErrors([
-      { file, name: '@deepseek-ai/dsh-hooks-codex' },
-      { file, name: '@deepseek-ai/dsh-test-plugin' },
+      { file, name: '@redspark/rsh-hooks-codex' },
+      { file, name: '@redspark/rsh-test-plugin' },
     ], {
-      optionalDependencies: { '@deepseek-ai/dsh-hooks-codex': 'workspace:^' },
-      devDependencies: { '@deepseek-ai/dsh-test-plugin': 'workspace:^' },
+      optionalDependencies: { '@redspark/rsh-hooks-codex': 'workspace:^' },
+      devDependencies: { '@redspark/rsh-test-plugin': 'workspace:^' },
     }, true)).toEqual([])
   })
 })
@@ -125,18 +125,18 @@ describe('package-owned Loader test dependency closures', () => {
     const manifestPath = 'rsh/example/owner/package.json'
     const file = 'rsh/example/owner/tests/fixtures/cordis.yml'
     const manifest = {
-      name: '@deepseek-ai/dsh-owner',
+      name: '@redspark/rsh-owner',
       dependencies: {},
       devDependencies: {
-        '@deepseek-ai/dsh-declared': 'workspace:^',
+        '@redspark/rsh-declared': 'workspace:^',
       },
     }
     expect(packageTestPluginDependencyErrors(manifestPath, manifest, [
-      { file, name: '@deepseek-ai/dsh-owner' },
-      { file, name: '@deepseek-ai/dsh-declared' },
-      { file, name: '@deepseek-ai/dsh-missing' },
+      { file, name: '@redspark/rsh-owner' },
+      { file, name: '@redspark/rsh-declared' },
+      { file, name: '@redspark/rsh-missing' },
     ])).toEqual([
-      `${file}: @deepseek-ai/dsh-missing must be declared in ${manifestPath} dependencies, optionalDependencies or devDependencies`,
+      `${file}: @redspark/rsh-missing must be declared in ${manifestPath} dependencies, optionalDependencies or devDependencies`,
     ])
   })
 
@@ -147,25 +147,25 @@ describe('package-owned Loader test dependency closures', () => {
       const driverDir = join(packageDir, 'tests/fixtures/loader')
       mkdirSync(driverDir, { recursive: true })
       writeFileSync(join(packageDir, 'package.json'), JSON.stringify({
-        name: '@deepseek-ai/dsh-owner',
+        name: '@redspark/rsh-owner',
         devDependencies: {
-          '@deepseek-ai/dsh-declared': 'workspace:^',
+          '@redspark/rsh-declared': 'workspace:^',
         },
       }))
       writeFileSync(join(driverDir, 'driver.ts'), [
-        "import '@deepseek-ai/dsh-owner'",
-        "import '@deepseek-ai/dsh-declared'",
-        "import '@deepseek-ai/dsh-missing'",
+        "import '@redspark/rsh-owner'",
+        "import '@redspark/rsh-declared'",
+        "import '@redspark/rsh-missing'",
       ].join('\n'))
       writeFileSync(join(driverDir, 'cordis.yml'), '[]\n')
-      writeFileSync(join(driverDir, 'fixture.mjs'), "import '@deepseek-ai/dsh-declared'\n")
+      writeFileSync(join(driverDir, 'fixture.mjs'), "import '@redspark/rsh-declared'\n")
       const unrelatedDir = join(packageDir, 'tests/fixtures/unrelated')
       mkdirSync(unrelatedDir, { recursive: true })
-      writeFileSync(join(unrelatedDir, 'driver.ts'), "import '@deepseek-ai/dsh-unrelated'\n")
+      writeFileSync(join(unrelatedDir, 'driver.ts'), "import '@redspark/rsh-unrelated'\n")
 
       expect(packageTestFixtureDependencyErrors(fixture)).toEqual([
         'rsh/example/owner/tests/fixtures/loader/driver.ts: '
-        + '@deepseek-ai/dsh-missing must be declared in '
+        + '@redspark/rsh-missing must be declared in '
         + 'rsh/example/owner/package.json dependencies, optionalDependencies or devDependencies',
       ])
     } finally {

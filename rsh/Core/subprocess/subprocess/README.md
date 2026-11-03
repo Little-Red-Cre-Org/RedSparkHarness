@@ -3,7 +3,7 @@ description: "The subprocess service (ctx.subprocess) for composition authors an
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-subprocess
+# @redspark/rsh-subprocess
 
 English | [中文](README.zh.md)
 
@@ -36,8 +36,8 @@ No runtime invariant companion is published because this package only defines th
 One provider registers `ctx.subprocess` per composition; load it beside the consumers that spawn through it — the bash executors, the LSP host, the PTY shell backend, or an out-of-process subagent backend. Loading a second provider fails loudly (one service per context, Cordis standard).
 
 ```yaml
-- name: '@deepseek-ai/dsh-subprocess-local'
-- name: '@deepseek-ai/dsh-bash-local'
+- name: '@redspark/rsh-subprocess-local'
+- name: '@redspark/rsh-bash-local'
 ```
 
 ### Starting a managed process
@@ -74,7 +74,7 @@ For interactive programs, `spawnTerminal` allocates a real PTY: write text, read
 
 ### Environment every child starts from
 
-General subprocess requests use the scrub-overlay mode: credential-shaped names and ambient `DSH_*` facts are scrubbed, explicit entries merge afterward, and an explicit `undefined` tombstone removes an ordinary ambient entry. Child connections may instead use `envMode: 'replace'`, which passes only the supplied environment entries to the child and performs no ambient scrub or inheritance.
+General subprocess requests use the scrub-overlay mode: credential-shaped names and ambient `RSH_*` facts are scrubbed, explicit entries merge afterward, and an explicit `undefined` tombstone removes an ordinary ambient entry. Child connections may instead use `envMode: 'replace'`, which passes only the supplied environment entries to the child and performs no ambient scrub or inheritance.
 
 ### What can go wrong
 
@@ -101,7 +101,7 @@ The seam is built on one separation: the service owns process coordinates and li
 | [`src/index.ts`](src/index.ts) | Cordis service entry: abstract `SubprocessRuntime`, `ctx.subprocess` registration, the shared `scrubbedParentEnv` scrub |
 | [`src/native.ts`](src/native.ts) | Framework-free `SubprocessOperations` and `ChildConnectionDefinition` service contracts |
 | [`src/connection.ts`](src/connection.ts) | EOF, Provider termination, and managed-range disposal for a connected child |
-| [`src/types.ts`](src/types.ts) | Vocabulary: spawn/connection specs, environment modes, stdio handles, readers, outcomes, `DSH_*` namespace |
+| [`src/types.ts`](src/types.ts) | Vocabulary: spawn/connection specs, environment modes, stdio handles, readers, outcomes, `RSH_*` namespace |
 | — | Providers own process observations and OS signalling; connection consumers own protocol shutdown and grace values. |
 
 ### Data model and flow
@@ -121,7 +121,7 @@ One implementation registers per context; loading a second throws (Cordis standa
 
 Read these pages when the package-level contract is not enough. They move from the exhaustive type reference to the providers and the decision evidence behind the seam.
 
-- [Subprocess subsystem](../../../Docs/subsystems/subprocess.md) — spawn specs, output readers, outcomes, and the `DSH_*` environment in full.
+- [Subprocess subsystem](../../../Docs/subsystems/subprocess.md) — spawn specs, output readers, outcomes, and the `RSH_*` environment in full.
 - [dsh-subprocess-local](../subprocess-local/README.md) — the local host provider that implements this contract.
 - [dsh-subprocess-e2b](../../../Modules/Official/e2b/subprocess-e2b/README.md) — the remote E2B provider for the same seam.
 - [dsh-bash-local](../../../Modules/Official/shell/bash-local/README.md) — the largest consumer: bash commands over this service.

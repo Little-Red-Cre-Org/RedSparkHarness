@@ -1,6 +1,6 @@
 /** Shared immutable-header checks for logical session source observers. */
 
-import type { SessionHeader } from '@deepseek-ai/dsh-session/native'
+import type { SessionHeader } from '@redspark/rsh-session/native'
 import { SessionQueryError } from './config.ts'
 
 /**

@@ -3,10 +3,10 @@
  * live in the framework-free core; this module only binds them to the Cordis registries.
  */
 
-import type { Context } from '@deepseek-ai/cordis'
-import { defineTool } from '@deepseek-ai/dsh-tools'
-import type { GenericCallView, ToolResult, WebSearchResultView } from '@deepseek-ai/dsh-tools'
-import type {} from '@deepseek-ai/dsh-web'
+import type { Context } from '@redspark/cordis'
+import { defineTool } from '@redspark/rsh-tools'
+import type { GenericCallView, ToolResult, WebSearchResultView } from '@redspark/rsh-tools'
+import type {} from '@redspark/rsh-web'
 import {
   formatSearchOutput, parseSearchArgs, runSearchQueries, searchMetaFromResult, searchMetaFromValue, type WebSearchArgs,
   searchOutputValue, webSearchDescription, webSearchGuidance, webSearchQueriesDescription,
@@ -60,7 +60,7 @@ export function presentSearchResult(args: WebSearchArgs, result: ToolResult): We
  *   request's `maxResults`.
  * @param maxQueries - the deployment's query cap enforced before provider calls.
  * @param timeoutMs - the cooperative tool-call budget (ms) attached as the tool's
- *   `ToolDefinition.timeoutMs` for `@deepseek-ai/dsh-tool-call-timeout-policy` to enforce.
+ *   `ToolDefinition.timeoutMs` for `@redspark/rsh-tool-call-timeout-policy` to enforce.
  * @param fetchEnabled - whether the same composition exposes `web_fetch`, which
  *   permits recommending that follow-up tool when it is also visible at assembly.
  */

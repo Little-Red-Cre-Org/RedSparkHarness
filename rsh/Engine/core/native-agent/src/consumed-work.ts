@@ -9,11 +9,11 @@
  * with `removedCount` and marks a cancellation `outcome: 'canceled'`, which
  * separates a turn claiming its input from work being dropped unrun.
  *
- * @module @deepseek-ai/dsh-native-agent/consumed-work
+ * @module @redspark/rsh-native-agent/consumed-work
  */
 
 import type {} from './inbox.ts'
-import type { SessionEvent, TurnEndReason } from '@deepseek-ai/dsh-session/types'
+import type { SessionEvent, TurnEndReason } from '@redspark/rsh-session/types'
 
 /** How one agent log accounts for the work it consumed. */
 export interface ConsumedWork {

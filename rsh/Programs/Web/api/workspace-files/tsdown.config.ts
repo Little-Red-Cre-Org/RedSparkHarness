@@ -3,7 +3,7 @@ import { resolve } from 'node:path'
 import { WorkspaceTypertGenerator } from '../../../../Core/typert/generator/lib/types/workspace.js'
 import { clientBundle } from '../../client/tsdown.client.ts'
 
-const name = '@deepseek-ai/dsh-api-workspace-files'
+const name = '@redspark/rsh-api-workspace-files'
 const typert = {
   name: 'workspace-files-typert',
   writeBundle() {

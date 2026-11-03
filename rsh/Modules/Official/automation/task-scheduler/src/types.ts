@@ -1,6 +1,6 @@
 /** Persisted task definitions and execution receipts. */
-import type { Branded } from '@deepseek-ai/dsh-brand'
-import type { NativeRootRouteId, NativeSessionConfiguration } from '@deepseek-ai/dsh-native-session-execution'
+import type { Branded } from '@redspark/rsh-brand'
+import type { NativeRootRouteId, NativeSessionConfiguration } from '@redspark/rsh-native-session-execution'
 
 /** Durable identity of one scheduled plan. */
 export type TaskId = Branded<'ScheduledTaskId'>

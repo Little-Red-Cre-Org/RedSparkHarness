@@ -7,7 +7,7 @@
  * declaring it structurally in `src/native.ts`.
  */
 import { describe, expect, it } from 'vitest'
-import type { SessionId } from '@deepseek-ai/dsh-session/types'
+import type { SessionId } from '@redspark/rsh-session/types'
 import type { InputTriggerSource } from '../src/types.ts'
 import type { NativeSessionReadFace } from '../src/native.ts'
 import { createNativeInputTrigger, nativeActx } from '../src/native.ts'

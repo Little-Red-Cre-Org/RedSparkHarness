@@ -43,7 +43,7 @@ const root = resolve(import.meta.dirname, '..', '..')
 const PUBLISHED_SOURCE = /^rsh\/.+\/src\//
 
 /** The only binary whose declared legacy branches are preflighted at runtime. */
-const OPTIONAL_BINARY_PACKAGE = '@deepseek-ai/dsh'
+const OPTIONAL_BINARY_PACKAGE = '@redspark/rsh'
 
 /** How a manifest marked a dependency optional, for the violation message. */
 type OptionalKind = 'optionalDependencies' | 'peerDependenciesMeta'
@@ -175,7 +175,7 @@ function cordisFreeSourceClosure(
       const loads = isImport
         ? importLoadsModule(statement, project.checker)
         : exportLoadsModule(statement, project.checker)
-      if (!loads || packageOf(specifier.text) === '@deepseek-ai/cordis') continue
+      if (!loads || packageOf(specifier.text) === '@redspark/cordis') continue
       const resolved = ts.resolveModuleName(
         specifier.text,
         source.fileName,
@@ -377,7 +377,7 @@ export function collectOptionalImportViolations(
       if (kind === undefined) continue
       const compatibilityPeer = compatibilityPeers.get(relative(project.projectRoot, directory).replaceAll('\\', '/'))
         ?.includes(importedPackage) === true
-      if ((importedPackage === '@deepseek-ai/cordis' || compatibilityPeer) && kind === 'peerDependenciesMeta') {
+      if ((importedPackage === '@redspark/cordis' || compatibilityPeer) && kind === 'peerDependenciesMeta') {
         const typesEntries = cordisFreeTypesEntries(packageImports, directory, project.projectRoot, safeSubpaths)
         if (typesEntries.length === 0) {
           if (compatibilityPeer) continue

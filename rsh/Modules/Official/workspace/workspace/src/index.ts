@@ -1,9 +1,9 @@
 /** Cordis adapter for the shared v2 Workspace registry implementation. */
-import { Context, Service } from '@deepseek-ai/cordis'
-import type { SessionId } from '@deepseek-ai/dsh-session/native'
-import type {} from '@deepseek-ai/dsh-session'
-import type {} from '@deepseek-ai/dsh-session-persistence'
-import type {} from '@deepseek-ai/dsh-storage-domain'
+import { Context, Service } from '@redspark/cordis'
+import type { SessionId } from '@redspark/rsh-session/native'
+import type {} from '@redspark/rsh-session'
+import type {} from '@redspark/rsh-session-persistence'
+import type {} from '@redspark/rsh-storage-domain'
 import { WorkspaceRegistryRuntime } from './runtime.ts'
 import type { Workspace, WorkspaceId } from './workspace-types.ts'
 export { WorkspaceId } from './workspace-types.ts'
@@ -14,7 +14,7 @@ export { workspaceDomainState, workspaceRecord, workspaceDomainSpec } from './sp
 export type { WorkspaceDomainState, WorkspaceRecord } from './spec.ts'
 export { realpathNormalize } from './paths.ts'
 
-declare module '@deepseek-ai/cordis' { interface Context { workspaceRegistry: WorkspaceRegistry } }
+declare module '@redspark/cordis' { interface Context { workspaceRegistry: WorkspaceRegistry } }
 
 /** Compatibility Service delegates every record and write to the shared runtime. */
 export class WorkspaceRegistry extends Service {

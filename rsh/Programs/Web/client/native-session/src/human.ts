@@ -1,6 +1,6 @@
 /** Transient human presentations and answers for one authenticated Web turn. */
 import { z } from 'zod'
-import type { Branded } from '@deepseek-ai/dsh-brand'
+import type { Branded } from '@redspark/rsh-brand'
 
 /** Identity of one pending Web presentation; it carries no execution authority. */
 export type NativeWebHumanId = Branded<'native-web-human'>

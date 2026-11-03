@@ -1,9 +1,9 @@
 /** Shared v2 Workspace registry; the selected Provider supplies only external authorities. */
 import { randomUUID } from 'node:crypto'
 import { stat } from 'node:fs/promises'
-import type { SessionHeader, SessionId } from '@deepseek-ai/dsh-session/native'
-import type { SessionPersistenceSnapshot } from '@deepseek-ai/dsh-session-persistence/native'
-import type { DomainFacilityCore, DomainGlobal, KvTable } from '@deepseek-ai/dsh-storage-domain/native'
+import type { SessionHeader, SessionId } from '@redspark/rsh-session/native'
+import type { SessionPersistenceSnapshot } from '@redspark/rsh-session-persistence/native'
+import type { DomainFacilityCore, DomainGlobal, KvTable } from '@redspark/rsh-storage-domain/native'
 import { WorkspaceEntity, type WorkspaceEntityHost } from './entity.ts'
 import { WorkspaceUnknownSessionError, WorkspaceOrderInvalidError } from './errors.ts'
 import { WorkspaceId, type Workspace } from './workspace-types.ts'

@@ -3,7 +3,7 @@ description: "Interactive terminal conversations through explicit native profile
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-native-tui
+# @redspark/rsh-native-tui
 
 English | [中文](README.zh.md)
 

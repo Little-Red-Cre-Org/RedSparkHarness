@@ -3,7 +3,7 @@ description: "web GUI 宿主的 HTTP 服务器：具名路由与 upgrade 注册�
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-host-webserver
+# @redspark/rsh-host-webserver
 
 [English](README.md) | 中文
 
@@ -30,7 +30,7 @@ kind: "package-reference"
 ### 最小配置
 
 ```yaml
-- name: '@deepseek-ai/dsh-host-webserver'
+- name: '@redspark/rsh-host-webserver'
   config:
     host: 127.0.0.1
     port: 3000
@@ -64,7 +64,7 @@ index 启动输入分两层。`collectIndexInjections()` 收集一张全新的�
 
 ### 设计理念
 
-通用 route 定义与可排空 table 位于 `@deepseek-ai/dsh-http-routes`；本包拥有 Cordis `WebServer` listener Provider。`ctx.webServer` 与 `webserver/index-inject` 的 Cordis 声明位于 `@deepseek-ai/dsh-http-routes-cordis`，浏览器安全的注入行位于 Core Client face。`WebServer` 继承 Cordis `Service`，拥有 socket、gzip 策略、回退 slot、原始 index 转换列表与 index 事件收集。upgrade handler 拥有协议协商与 socket 使用；webserver 只交付原始 socket 和 request。`host` 与 `port` getter 暴露其他插件自适应的组合期事实（例如 directory-picker 选择器）。
+通用 route 定义与可排空 table 位于 `@redspark/rsh-http-routes`；本包拥有 Cordis `WebServer` listener Provider。`ctx.webServer` 与 `webserver/index-inject` 的 Cordis 声明位于 `@redspark/rsh-http-routes-cordis`，浏览器安全的注入行位于 Core Client face。`WebServer` 继承 Cordis `Service`，拥有 socket、gzip 策略、回退 slot、原始 index 转换列表与 index 事件收集。upgrade handler 拥有协议协商与 socket 使用；webserver 只交付原始 socket 和 request。`host` 与 `port` getter 暴露其他插件自适应的组合期事实（例如 directory-picker 选择器）。
 
 ### 匹配与生命周期
 
@@ -91,7 +91,7 @@ Core `HttpRouteTable` 先查精确表，再遍历前缀表取最长匹配，最�
 - [HTTP routes 子系统](../../../../Docs/subsystems/http-routes.zh.md)——共享 Host／Native 路由约定与排空 table。
 - [SPA dist 服务器](../frontend-static/README.zh.md)——回退席位的随附持有者。
 - [Web 配置树启动与传输分层](../../../../../.agents/notes/implemented/architecture/2026-07-24-web-config-tree-boot-and-transport-layering.zh.md)——功能插件为何拥有每条路由。
-- [生成配置目录](../../../../Docs/config-catalog.zh.md#deepseek-aidsh-host-webserver)——每个受支持配置字段及其源声明。
+- [生成配置目录](../../../../Docs/config-catalog.zh.md#redsparkrsh-host-webserver)——每个受支持配置字段及其源声明。
 
 -----
 

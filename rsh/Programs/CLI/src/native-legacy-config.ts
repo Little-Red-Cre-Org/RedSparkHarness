@@ -3,12 +3,12 @@ import { existsSync, readFileSync, statSync } from 'node:fs'
 import { createRequire } from 'node:module'
 import { extname, join, resolve } from 'node:path'
 import { isDeepStrictEqual } from 'node:util'
-import { withFileLock, writeFileAtomic } from '@deepseek-ai/dsh-atomic-write'
-import { resolveDshHome } from '@deepseek-ai/dsh-home-paths'
-import type { NativePresetFolderSummary } from '@deepseek-ai/dsh-agent-presets/native'
-import type { LaunchEnvironmentSnapshot } from '@deepseek-ai/dsh-launch-environment/native'
-import { parseNativeClientProfile } from '@deepseek-ai/dsh-native-web-assets/native-client'
-import { parseNativeSettingsDocument, resolveNativeSettingsConfig } from '@deepseek-ai/dsh-settings-file/native'
+import { withFileLock, writeFileAtomic } from '@redspark/rsh-atomic-write'
+import { resolveRshHome } from '@redspark/rsh-home-paths'
+import type { NativePresetFolderSummary } from '@redspark/rsh-agent-presets/native'
+import type { LaunchEnvironmentSnapshot } from '@redspark/rsh-launch-environment/native'
+import { parseNativeClientProfile } from '@redspark/rsh-native-web-assets/native-client'
+import { parseNativeSettingsDocument, resolveNativeSettingsConfig } from '@redspark/rsh-settings-file/native'
 import {
   applyNativeProfilePatches, parseNativeProfileConfig, type NativeProfileConfig,
 } from './native-profile-config.ts'
@@ -16,14 +16,14 @@ import { expandNativeProfilePresets, nearestNativeProfileInstallation } from './
 
 const MIGRATION_DOC = 'rsh/Docs/native-config-migration.md'
 const NATIVE_CLI = 'native CLI launch'
-const WEB_SESSION_CONTROLLER = '@deepseek-ai/dsh-native-web-session-controller'
-const SETTINGS_FILE = '@deepseek-ai/dsh-settings-file'
-const NATIVE_SANDBOX_POLICY = '@deepseek-ai/dsh-native-sandbox-policy'
-const NATIVE_APPROVAL = '@deepseek-ai/dsh-native-approval'
-const AGENT_PRESETS = '@deepseek-ai/dsh-agent-presets'
-const AGENT_PRESET_STANDING = '@deepseek-ai/dsh-agent-preset-standing'
-const CLIENT_LOCALE = '@deepseek-ai/dsh-client-locale'
-const CLIENT_THEME = '@deepseek-ai/dsh-client-ui-theme'
+const WEB_SESSION_CONTROLLER = '@redspark/rsh-native-web-session-controller'
+const SETTINGS_FILE = '@redspark/rsh-settings-file'
+const NATIVE_SANDBOX_POLICY = '@redspark/rsh-native-sandbox-policy'
+const NATIVE_APPROVAL = '@redspark/rsh-native-approval'
+const AGENT_PRESETS = '@redspark/rsh-agent-presets'
+const AGENT_PRESET_STANDING = '@redspark/rsh-agent-preset-standing'
+const CLIENT_LOCALE = '@redspark/rsh-client-locale'
+const CLIENT_THEME = '@redspark/rsh-client-ui-theme'
 
 type SettingsRule = {
   namespace: string
@@ -40,30 +40,30 @@ const SETTINGS_RULES: readonly SettingsRule[] = [
   { namespace: 'ui-theme', key: 'preference', surfaces: [CLIENT_THEME], action: 'theme' },
   { namespace: 'agent-default-model', key: 'reasoningEffort', surfaces: [WEB_SESSION_CONTROLLER], action: 'error',
     remedy: 'agent-default-model.reasoningEffort is deleted; remove this key' },
-  { namespace: 'llm-deepseek', surfaces: ['@deepseek-ai/dsh-llm-deepseek'], action: 'error',
-    remedy: 'native does not read llm-deepseek settings; move provider values to llm-pi-ai.providers, or install @deepseek-ai/dsh-llm-deepseek and put them in its rsh.profile.json installation config' },
-  { namespace: 'agent-loop', key: 'maxParallelToolCalls', surfaces: ['@deepseek-ai/dsh-native-agent'], action: 'error',
+  { namespace: 'llm-deepseek', surfaces: ['@redspark/rsh-llm-deepseek'], action: 'error',
+    remedy: 'native does not read llm-deepseek settings; move provider values to llm-pi-ai.providers, or install @redspark/rsh-llm-deepseek and put them in its rsh.profile.json installation config' },
+  { namespace: 'agent-loop', key: 'maxParallelToolCalls', surfaces: ['@redspark/rsh-native-agent'], action: 'error',
     remedy: 'native has no maxParallelToolCalls setting; remove this key' },
-  { namespace: 'subagent-model-selection', key: '*', surfaces: ['@deepseek-ai/dsh-tool-subagent'], action: 'error',
-    remedy: 'move provider and model to the @deepseek-ai/dsh-tool-subagent installation config in rsh.profile.json; enabled and allowedModels are deleted' },
+  { namespace: 'subagent-model-selection', key: '*', surfaces: ['@redspark/rsh-tool-subagent'], action: 'error',
+    remedy: 'move provider and model to the @redspark/rsh-tool-subagent installation config in rsh.profile.json; enabled and allowedModels are deleted' },
   { namespace: 'agent-presets', key: 'modeSelectionEnabled', surfaces: [AGENT_PRESETS], action: 'error',
     remedy: 'agent-presets.modeSelectionEnabled is deleted; remove this key' },
   {
     namespace: 'shell',
     surfaces: [
-      '@deepseek-ai/dsh-bash-sandbox', '@deepseek-ai/dsh-pwsh-sandbox',
-      '@deepseek-ai/dsh-bash-local', '@deepseek-ai/dsh-pwsh-local',
+      '@redspark/rsh-bash-sandbox', '@redspark/rsh-pwsh-sandbox',
+      '@redspark/rsh-bash-local', '@redspark/rsh-pwsh-local',
     ],
     action: 'error',
     remedy: 'native does not support the shell settings namespace; remove it',
   },
   { namespace: 'ui-theme', key: 'fontSize', surfaces: [CLIENT_THEME], action: 'error',
     remedy: 'ui-theme.fontSize has no persistent native setting; remove this key' },
-  { namespace: 'ui-chat', key: 'transcriptView', surfaces: ['@deepseek-ai/dsh-client-ui-chat'], action: 'error',
+  { namespace: 'ui-chat', key: 'transcriptView', surfaces: ['@redspark/rsh-client-ui-chat'], action: 'error',
     remedy: 'ui-chat.transcriptView is deleted; remove this key' },
-  { namespace: 'ui-pet', surfaces: ['@deepseek-ai/dsh-client-ui-pet'], action: 'error',
+  { namespace: 'ui-pet', surfaces: ['@redspark/rsh-client-ui-pet'], action: 'error',
     remedy: 'ui-pet is deleted; remove this namespace' },
-  { namespace: 'ui-onboarding', surfaces: ['@deepseek-ai/dsh-client-ui-settings-general'], action: 'error',
+  { namespace: 'ui-onboarding', surfaces: ['@redspark/rsh-client-ui-settings-general'], action: 'error',
     remedy: 'ui-onboarding is deleted; remove this namespace' },
 ]
 
@@ -75,22 +75,22 @@ type EnvironmentRule = {
 }
 
 const ENVIRONMENT_RULES: readonly EnvironmentRule[] = [
-  { name: 'DSH_PERMISSION_MODE', surfaces: [NATIVE_SANDBOX_POLICY],
-    remedy: 'remove it and set @deepseek-ai/dsh-native-sandbox-policy config.mode and @deepseek-ai/dsh-native-approval config.policy in rsh.profile.json' },
-  { name: 'DSH_TOOLS_MODE', surfaces: ['@deepseek-ai/dsh-native-headless', '@deepseek-ai/dsh-native-web-host'],
+  { name: 'RSH_PERMISSION_MODE', surfaces: [NATIVE_SANDBOX_POLICY],
+    remedy: 'remove it and set @redspark/rsh-native-sandbox-policy config.mode and @redspark/rsh-native-approval config.policy in rsh.profile.json' },
+  { name: 'RSH_TOOLS_MODE', surfaces: ['@redspark/rsh-native-headless', '@redspark/rsh-native-web-host'],
     remedy: 'native selects tools through rsh.profile.json installations; remove this variable' },
-  { name: 'DSH_CONTEXT_WINDOW', surfaces: ['@deepseek-ai/dsh-llm-pi-ai'],
-    remedy: 'DSH_CONTEXT_WINDOW is deleted; set the provider context window in the @deepseek-ai/dsh-llm-pi-ai installation config.providers.<provider>.models[].contextWindow in rsh.profile.json' },
-  { name: 'DSH_SYSTEM_PROMPT', surfaces: ['@deepseek-ai/dsh-native-sdk-server'],
-    remedy: 'DSH_SYSTEM_PROMPT is deleted; remove this variable' },
-  { name: 'DSH_MAX_TOKENS_AS_SUCCESS', surfaces: ['@deepseek-ai/dsh-native-sdk-server'],
-    remedy: 'DSH_MAX_TOKENS_AS_SUCCESS is deleted; remove this variable' },
-  { name: 'DSH_TUI_BG', surfaces: ['@deepseek-ai/dsh-native-tui'],
-    remedy: 'DSH_TUI_BG is deleted; remove this variable' },
-  { name: 'DSH_TELEMETRY_MODE', surfaces: ['@deepseek-ai/dsh-session-telemetry-otel'],
-    remedy: 'set config.mode on the @deepseek-ai/dsh-session-telemetry-otel installation in rsh.profile.json', allowDisabled: true },
-  { name: 'DSH_TELEMETRY_OTLP_URL', surfaces: ['@deepseek-ai/dsh-session-telemetry-otel'],
-    remedy: 'set config.exporter.url on the @deepseek-ai/dsh-session-telemetry-otel installation in rsh.profile.json' },
+  { name: 'RSH_CONTEXT_WINDOW', surfaces: ['@redspark/rsh-llm-pi-ai'],
+    remedy: 'RSH_CONTEXT_WINDOW is deleted; set the provider context window in the @redspark/rsh-llm-pi-ai installation config.providers.<provider>.models[].contextWindow in rsh.profile.json' },
+  { name: 'RSH_SYSTEM_PROMPT', surfaces: ['@redspark/rsh-native-sdk-server'],
+    remedy: 'RSH_SYSTEM_PROMPT is deleted; remove this variable' },
+  { name: 'RSH_MAX_TOKENS_AS_SUCCESS', surfaces: ['@redspark/rsh-native-sdk-server'],
+    remedy: 'RSH_MAX_TOKENS_AS_SUCCESS is deleted; remove this variable' },
+  { name: 'RSH_TUI_BG', surfaces: ['@redspark/rsh-native-tui'],
+    remedy: 'RSH_TUI_BG is deleted; remove this variable' },
+  { name: 'RSH_TELEMETRY_MODE', surfaces: ['@redspark/rsh-session-telemetry-otel'],
+    remedy: 'set config.mode on the @redspark/rsh-session-telemetry-otel installation in rsh.profile.json', allowDisabled: true },
+  { name: 'RSH_TELEMETRY_OTLP_URL', surfaces: ['@redspark/rsh-session-telemetry-otel'],
+    remedy: 'set config.exporter.url on the @redspark/rsh-session-telemetry-otel installation in rsh.profile.json' },
   { name: 'CORDIS_SHARED', surfaces: [NATIVE_CLI],
     remedy: 'native does not run the Cordis Loader; remove this variable' },
 ]
@@ -158,13 +158,13 @@ function settingsDocument(profile: NativeProfileConfig): { filename: string; doc
   if (!['.yaml', '.yml', '.json'].includes(extension)) {
     throw new Error('settings-file: extension "' + extension + '" is not supported (use .yaml, .yml, or .json)')
   }
-  const filename = configuredFilename ?? resolve(join(resolveDshHome(config.dshHome), 'settings.yaml'))
+  const filename = configuredFilename ?? resolve(join(resolveRshHome(config.rshHome), 'settings.yaml'))
   const text = existsSync(filename) ? readFileSync(filename, 'utf8') : ''
   return { filename, document: parseNativeSettingsDocument(text, filename, extension === '.json' ? 'json' : 'yaml') }
 }
 
 function nativeClientPath(profile: NativeProfileConfig): string | undefined {
-  const webHost = profile.installations.find(row => row.plugin === '@deepseek-ai/dsh-native-web-host' && row.disabled !== true)
+  const webHost = profile.installations.find(row => row.plugin === '@redspark/rsh-native-web-host' && row.disabled !== true)
   if (webHost === undefined) return undefined
   const projectDir = record(webHost.config)?.projectDir
   if (typeof projectDir !== 'string' || projectDir.length === 0) {

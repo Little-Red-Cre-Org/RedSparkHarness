@@ -6,7 +6,7 @@ import { controllerProof } from './controller-proof.ts'
 import { terminalFixture } from './pty-profile.ts'
 import { NativeTuiApplication } from '../src/native.ts'
 import { TerminalController } from '../src/controller.ts'
-import type { ReplayEntry } from '@deepseek-ai/dsh-llm-replay'
+import type { ReplayEntry } from '@redspark/rsh-llm-replay'
 
 it.each([false, true])('cancels through the actual TTY and releases Ink after drain (cleanup failure: %s)', async (cleanupFailure) => {
   const script = [{ kind: 'chunks', chunks: [

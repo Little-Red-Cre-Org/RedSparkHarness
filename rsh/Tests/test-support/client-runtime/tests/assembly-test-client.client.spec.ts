@@ -5,19 +5,19 @@
  * `RemoteMock` installed as the Connection carrier, mount, HMR-style reload,
  * unload, and fail-loud teardown.
  */
-import type {} from '@deepseek-ai/dsh-client-ui-renderer/client'
-import { RemoteMock, ok, openStream } from '@deepseek-ai/dsh-remote-mock'
+import type {} from '@redspark/rsh-client-ui-renderer/client'
+import { RemoteMock, ok, openStream } from '@redspark/rsh-remote-mock'
 import { describe, expect, it, onTestFinished, vi } from 'vitest'
 import type { AssemblyPlan, TestClientOptions } from '../src/assembly/index.ts'
 import { ClientRoster, TestClient, remoteDefaultResponses, webApp } from '../src/assembly/index.ts'
 
 /** The Gateway client and what it injects: the Typert registry and the Connection. */
-const API_ROSTER = webApp.closure(['@deepseek-ai/dsh-api-gateway'])
-const SIDEBAR = '@deepseek-ai/dsh-client-ui-sidebar'
+const API_ROSTER = webApp.closure(['@redspark/rsh-api-gateway'])
+const SIDEBAR = '@redspark/rsh-client-ui-sidebar'
 /** Declared by ui-sidebar, whose SlotMap merge is outside this package's compilation face. */
 const SIDEBAR_SETTINGS = 'sidebar.settings' as never
-const BRAND = '@deepseek-ai/dsh-client-ui-brand-official'
-const globals = globalThis as { __DSH_TRANSPORT__?: unknown; EventSource?: unknown; ResizeObserver?: unknown }
+const BRAND = '@redspark/rsh-client-ui-brand-official'
+const globals = globalThis as { __RSH_TRANSPORT__?: unknown; EventSource?: unknown; ResizeObserver?: unknown }
 /** The whole roster's first boot pays the cold module transform of every plugin package. */
 const COLD_BOOT_TIMEOUT_MS = 60_000
 
@@ -40,12 +40,12 @@ describe('TestClient (jsdom)', () => {
     const container = client.container!
     expect(document.body.contains(container)).toBe(true)
     expect(container.childElementCount).toBeGreaterThan(0)
-    expect(globals.__DSH_TRANSPORT__).toBeDefined()
+    expect(globals.__RSH_TRANSPORT__).toBeDefined()
     expect(globals.EventSource).toBeDefined()
     expect(globals.ResizeObserver).toBeDefined()
     await client.dispose()
     expect(document.body.contains(container)).toBe(false)
-    expect(globals.__DSH_TRANSPORT__).toBeUndefined()
+    expect(globals.__RSH_TRANSPORT__).toBeUndefined()
     expect(globals.EventSource).toBeUndefined()
     expect(globals.ResizeObserver).toBeUndefined()
     await client.dispose()
@@ -78,16 +78,16 @@ describe('TestClient (jsdom)', () => {
     expect(mockA.log.calls('session/rename')).toHaveLength(1)
     expect(mockB.log.calls('session/rename')).toHaveLength(1)
     // A rebuilt connection row reads its own mock even after another client installed the transport last.
-    await a.reload('@deepseek-ai/dsh-client-connection')
+    await a.reload('@redspark/rsh-client-connection')
     await vi.waitFor(() => { expect(a.connection.state.getSnapshot()).toBe('connected') })
     await expect(rename(a)).resolves.toEqual({ ok: true, value: { title: 'a', seq: 1 } })
     expect(mockA.log.calls('session/rename')).toHaveLength(2)
     expect(mockB.log.calls('session/rename')).toHaveLength(1)
     await a.dispose()
-    expect(globals.__DSH_TRANSPORT__).toBeDefined()
+    expect(globals.__RSH_TRANSPORT__).toBeDefined()
     expect(globals.EventSource).toBeDefined()
     await b.dispose()
-    expect(globals.__DSH_TRANSPORT__).toBeUndefined()
+    expect(globals.__RSH_TRANSPORT__).toBeUndefined()
     expect(globals.EventSource).toBeUndefined()
   })
 
@@ -103,15 +103,15 @@ describe('TestClient (jsdom)', () => {
     await expect(TestClient.start({ roster: API_ROSTER }, RemoteMock.create().load(remoteDefaultResponses), { mount: true }))
       .rejects.toThrow('mount requested, but the roster provides no `uiRenderer`')
     expect(document.body.childElementCount).toBe(before)
-    expect(globals.__DSH_TRANSPORT__).toBeUndefined()
+    expect(globals.__RSH_TRANSPORT__).toBeUndefined()
   })
 
   it('creates no mount element when the roster cannot be loaded', async () => {
-    const roster = ClientRoster.of([{ name: '@deepseek-ai/dsh-client-test-runtime-missing', inject: [], immediately: true }])
+    const roster = ClientRoster.of([{ name: '@redspark/rsh-client-test-runtime-missing', inject: [], immediately: true }])
     const before = document.body.childElementCount
     await expect(TestClient.start({ roster }, RemoteMock.create(), { mount: true })).rejects.toThrow()
     expect(document.body.childElementCount).toBe(before)
-    expect(globals.__DSH_TRANSPORT__).toBeUndefined()
+    expect(globals.__RSH_TRANSPORT__).toBeUndefined()
   })
 
   it('mounts into a caller-supplied element and leaves it in place on dispose', async () => {
@@ -171,11 +171,11 @@ describe('TestClient (jsdom)', () => {
   it('reports the log when the connection never becomes ready', async () => {
     // No fixtures: workspace-controller's follow has no rule, so the proxy dispatches it as a unary call the mock
     // logs as unmatched, while $events never sends ready.
-    const roster = webApp.closure(['@deepseek-ai/dsh-api-workspace-controller'])
+    const roster = webApp.closure(['@redspark/rsh-api-workspace-controller'])
     const mock = RemoteMock.create().stream('$events', openStream([]))
     await expect(TestClient.start({ roster }, mock, { connectTimeoutMs: 300 }))
       .rejects.toThrow(/connection state is \S+ after 300ms; unmatched: \[unary workspace\/follow\]; streams: \[.*\$events \(open\).*\]/)
-    expect(globals.__DSH_TRANSPORT__).toBeUndefined()
+    expect(globals.__RSH_TRANSPORT__).toBeUndefined()
     expect(globals.EventSource).toBeUndefined()
   })
 })

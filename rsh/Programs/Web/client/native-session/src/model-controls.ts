@@ -1,6 +1,6 @@
 /** Provider-owned catalogs and installed composition metadata decoded at the browser wire. */
 import { z } from 'zod'
-import type { ModelCatalog } from '@deepseek-ai/dsh-native-model-selection/types'
+import type { ModelCatalog } from '@redspark/rsh-native-model-selection/types'
 
 /** Read-only choices advertised by the selected Host; missing Providers stay explicit. */
 export interface NativeModelControls {

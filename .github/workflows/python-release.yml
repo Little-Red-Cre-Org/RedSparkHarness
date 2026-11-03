@@ -50,7 +50,7 @@ jobs:
 
       - uses: actions/download-artifact@v8
         with:
-          pattern: deepseek_harness_*
+          pattern: redspark_harness_*
           path: dist
           merge-multiple: true
 
@@ -74,13 +74,13 @@ jobs:
           python -m venv "$venv"
           smoke_python="$venv/bin/python"
           "$smoke_python" -m pip install \
-            "dist/deepseek_harness_sdk-$VERSION-py3-none-any.whl" \
-            "dist/deepseek_harness_runtime_bin-$VERSION-py3-none-manylinux_2_28_x86_64.whl"
+            "dist/redspark_harness_sdk-$VERSION-py3-none-any.whl" \
+            "dist/redspark_harness_runtime_bin-$VERSION-py3-none-manylinux_2_28_x86_64.whl"
           smoke_root="$(python -c 'import tempfile; print(tempfile.mkdtemp(prefix="dsh-sdk-release-smoke-"))')"
           cd "$smoke_root"
-          env -u PYTHONPATH -u DSH_RUNTIME_MODE "$smoke_python" "$GITHUB_WORKSPACE/rsh/Scripts/smoke-python-runtime.py" --scenario sdk-default --installed-wheel
-          env -u PYTHONPATH -u DSH_RUNTIME_MODE "$smoke_python" "$GITHUB_WORKSPACE/rsh/Scripts/smoke-python-runtime.py" --scenario sdk-mcp --installed-wheel
-          env -u PYTHONPATH -u DSH_RUNTIME_MODE "$smoke_python" "$GITHUB_WORKSPACE/rsh/Scripts/smoke-python-runtime.py" --scenario sdk-native --installed-wheel
+          env -u PYTHONPATH -u RSH_RUNTIME_MODE "$smoke_python" "$GITHUB_WORKSPACE/rsh/Scripts/smoke-python-runtime.py" --scenario sdk-default --installed-wheel
+          env -u PYTHONPATH -u RSH_RUNTIME_MODE "$smoke_python" "$GITHUB_WORKSPACE/rsh/Scripts/smoke-python-runtime.py" --scenario sdk-mcp --installed-wheel
+          env -u PYTHONPATH -u RSH_RUNTIME_MODE "$smoke_python" "$GITHUB_WORKSPACE/rsh/Scripts/smoke-python-runtime.py" --scenario sdk-native --installed-wheel
 
   validate:
     name: Validate release candidate
@@ -143,7 +143,7 @@ jobs:
 
       - uses: actions/download-artifact@v8
         with:
-          pattern: deepseek_harness_*
+          pattern: redspark_harness_*
           path: dist
           merge-multiple: true
 
@@ -155,12 +155,12 @@ jobs:
           expected="$(mktemp)"
           actual="$(mktemp)"
           printf '%s\n' \
-            "deepseek_harness_runtime_bin-$VERSION-py3-none-macosx_14_0_arm64.whl" \
-            "deepseek_harness_runtime_bin-$VERSION-py3-none-macosx_14_0_x86_64.whl" \
-            "deepseek_harness_runtime_bin-$VERSION-py3-none-manylinux_2_28_aarch64.whl" \
-            "deepseek_harness_runtime_bin-$VERSION-py3-none-manylinux_2_28_x86_64.whl" \
-            "deepseek_harness_runtime_bin-$VERSION-py3-none-win_amd64.whl" \
-            "deepseek_harness_sdk-$VERSION-py3-none-any.whl" > "$expected"
+            "redspark_harness_runtime_bin-$VERSION-py3-none-macosx_14_0_arm64.whl" \
+            "redspark_harness_runtime_bin-$VERSION-py3-none-macosx_14_0_x86_64.whl" \
+            "redspark_harness_runtime_bin-$VERSION-py3-none-manylinux_2_28_aarch64.whl" \
+            "redspark_harness_runtime_bin-$VERSION-py3-none-manylinux_2_28_x86_64.whl" \
+            "redspark_harness_runtime_bin-$VERSION-py3-none-win_amd64.whl" \
+            "redspark_harness_sdk-$VERSION-py3-none-any.whl" > "$expected"
           find dist -maxdepth 1 -type f -name '*.whl' -exec basename {} \; | sort > "$actual"
           diff -u "$expected" "$actual"
           while IFS= read -r wheel; do
@@ -211,7 +211,7 @@ jobs:
       - name: Select runtime wheels
         run: |
           mkdir -p dist/runtime
-          mv dist/deepseek_harness_runtime_bin-*.whl dist/runtime/
+          mv dist/redspark_harness_runtime_bin-*.whl dist/runtime/
 
       - name: Publish runtime wheels
         uses: pypa/gh-action-pypi-publish@release/v1
@@ -246,7 +246,7 @@ jobs:
       - name: Select SDK wheel
         run: |
           mkdir -p dist/sdk
-          mv dist/deepseek_harness_sdk-*.whl dist/sdk/
+          mv dist/redspark_harness_sdk-*.whl dist/sdk/
 
       - name: Publish SDK wheel
         uses: pypa/gh-action-pypi-publish@release/v1

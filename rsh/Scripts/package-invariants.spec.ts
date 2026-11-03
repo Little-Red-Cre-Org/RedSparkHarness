@@ -47,7 +47,7 @@ function fixture(options: {
   const packageDirectory = options.packageDirectory ?? 'rsh/Engine/core/probe'
   const dir = join(root, packageDirectory)
   mkdirSync(join(dir, 'src'), { recursive: true })
-  const packageName = options.packageName ?? '@deepseek-ai/dsh-probe'
+  const packageName = options.packageName ?? '@redspark/rsh-probe'
   const companion = options.companion ?? true
   const invariantExport = options.invariantExport ?? companion
   const invariantFile = options.invariantFile ?? companion
@@ -81,10 +81,10 @@ function fixture(options: {
     exports,
     files: ['lib/index.js', ...invariantFile ? ['lib/invariant.js'] : []],
     peerDependencies: !invariantDependency || developmentOnlyInvariant ? {} : {
-      '@deepseek-ai/dsh-invariants': 'workspace:^',
+      '@redspark/rsh-invariants': 'workspace:^',
     },
     devDependencies: !invariantDependency ? {} : {
-      '@deepseek-ai/dsh-invariants': 'workspace:^',
+      '@redspark/rsh-invariants': 'workspace:^',
     },
   }
   writeFileSync(join(dir, 'package.json'), `${JSON.stringify(manifest, null, 2)}\n`)
@@ -133,12 +133,12 @@ describe('package invariant gate', () => {
   })
 
   it('accepts development-only invariants for configured Host dependencies', () => {
-    expect(collectPackageInvariantViolations(fixture({ packageName: '@deepseek-ai/dsh-llm' }))).toEqual([])
+    expect(collectPackageInvariantViolations(fixture({ packageName: '@redspark/rsh-llm' }))).toEqual([])
   })
 
   it('accepts development-only invariants for client packages', () => {
     expect(collectPackageInvariantViolations(fixture({
-      packageName: '@deepseek-ai/dsh-client-probe',
+      packageName: '@redspark/rsh-client-probe',
       packageDirectory: 'rsh/Programs/Web/client/probe',
     }))).toEqual([])
   })
@@ -252,24 +252,24 @@ describe('package invariant gate', () => {
     {
       name: 'local clientBundle helper decoy',
       companion: true,
-      buildEntry: "function clientBundle(_name: string, _entries: readonly string[]){return {entry:['lib/types/index.js']}}; export default clientBundle('@deepseek-ai/dsh-probe',['lib/types/invariant.js'])",
+      buildEntry: "function clientBundle(_name: string, _entries: readonly string[]){return {entry:['lib/types/index.js']}}; export default clientBundle('@redspark/rsh-probe',['lib/types/invariant.js'])",
       message: 'package build override has an unsupported entry declaration',
     },
     {
       name: 'imported clientBundle wrapper preserves entry',
       companion: false,
       packageDirectory: 'rsh/Programs/Web/client/ui-sidebar-documentpreview',
-      packageName: '@deepseek-ai/dsh-client-ui-sidebar-documentpreview',
+      packageName: '@redspark/rsh-client-ui-sidebar-documentpreview',
       buildEntry: configSource(
         "import { clientBundle } from '../tsdown.client.ts'",
-        "const bundle = clientBundle('@deepseek-ai/dsh-client-ui-sidebar-documentpreview', ['lib/types/index.js'])",
+        "const bundle = clientBundle('@redspark/rsh-client-ui-sidebar-documentpreview', ['lib/types/index.js'])",
         'const pdfWorker = []',
         "function pdfLicenseBanner() { return 'license' }",
         "function pdfAssets() { return '{}' }",
         'export default (options) => bundle(options).map(config =>',
         "  config.name?.endsWith('/client') === true ? { ...config,",
         '    banner: pdfLicenseBanner(), plugins: [config.plugins, pdfWorker],',
-        '    define: { ...config.define, __DSH_PDFJS_ASSETS__: pdfAssets() },',
+        '    define: { ...config.define, __RSH_PDFJS_ASSETS__: pdfAssets() },',
         '  } : config,',
         ')',
       ),
@@ -279,11 +279,11 @@ describe('package invariant gate', () => {
       name: 'canonical Client wrappers preserve static linked leaves',
       companion: false,
       packageDirectory: 'rsh/Programs/Web/client/ui-conversation',
-      packageName: '@deepseek-ai/dsh-client-ui-conversation',
+      packageName: '@redspark/rsh-client-ui-conversation',
       buildEntry: configSource(
         "import { clientBundle, staticLinkedLeaf } from '../tsdown.client.ts'",
-        "const legacy = clientBundle('@deepseek-ai/dsh-client-ui-conversation', ['lib/types/index.js'])",
-        "const native = staticLinkedLeaf('@deepseek-ai/dsh-client-ui-conversation', ['lib/types/tool-records.js', 'lib/types/conversation-copy.js'])",
+        "const legacy = clientBundle('@redspark/rsh-client-ui-conversation', ['lib/types/index.js'])",
+        "const native = staticLinkedLeaf('@redspark/rsh-client-ui-conversation', ['lib/types/tool-records.js', 'lib/types/conversation-copy.js'])",
         'export default (args) => [...legacy(args), ...native(args)]',
       ),
       message: undefined,
@@ -292,11 +292,11 @@ describe('package invariant gate', () => {
       name: 'canonical Client-only wrapper preserves literal entry maps',
       companion: false,
       packageDirectory: 'rsh/Programs/Web/client/native-application',
-      packageName: '@deepseek-ai/dsh-client-native-application',
+      packageName: '@redspark/rsh-client-native-application',
       buildEntry: configSource(
         "import { defineConfig } from 'tsdown'",
         "import { clientOnly } from '../tsdown.client.ts'",
-        "export default clientOnly([defineConfig({ name: '@deepseek-ai/dsh-client-native-application/client', entry: ['lib/types/index.js', 'lib/types/native.js', 'lib/types/controller.js'], outDir: 'lib', format: ['esm'], platform: 'browser', target: 'es2024', fixedExtension: false, dts: false, clean: false })])",
+        "export default clientOnly([defineConfig({ name: '@redspark/rsh-client-native-application/client', entry: ['lib/types/index.js', 'lib/types/native.js', 'lib/types/controller.js'], outDir: 'lib', format: ['esm'], platform: 'browser', target: 'es2024', fixedExtension: false, dts: false, clean: false })])",
       ),
       message: undefined,
     },
@@ -333,7 +333,7 @@ export const inject = ['invariants']
 const selected = process.env.PACKAGE_NAME
 const install = (_ctx: unknown, fail: (message: string) => never) => { fail('probe') }
 export const apply = (ctx: { invariants: { register(name: string, install: typeof install): () => void } }) => {
-  ctx.invariants.register('@deepseek-ai/dsh-foreign', install)
+  ctx.invariants.register('@redspark/rsh-foreign', install)
   return ctx.invariants.register(selected!, install)
 }
 `
@@ -346,7 +346,7 @@ export const apply = (ctx: { invariants: { register(name: string, install: typeo
 
   it('rejects generated markers and reporter-free executable installers', () => {
     const generated = fixture({
-      source: `/** @generated */\n${handwrittenInvariant('@deepseek-ai/dsh-probe')}`,
+      source: `/** @generated */\n${handwrittenInvariant('@redspark/rsh-probe')}`,
     })
     expect(collectPackageInvariantViolations(generated).map(violation => violation.message))
       .toContain('invariant companions must be hand-owned and may not carry @generated markers')
@@ -357,7 +357,7 @@ export const name = 'probe-invariant'
 export const inject = ['invariants']
 const install = () => { void 0 }
 export const apply = (ctx: { invariants: { register(name: string, install: typeof install): () => void } }) =>
-  Promise.resolve(ctx.invariants.register('@deepseek-ai/dsh-probe', install))
+  Promise.resolve(ctx.invariants.register('@redspark/rsh-probe', install))
 `,
     })
     expect(collectPackageInvariantViolations(reporterFree).map(violation => violation.message))
@@ -369,7 +369,7 @@ export const name = 'probe-invariant'
 export const inject = ['invariants']
 const install = (_ctx: unknown, _fail: (message: string) => never) => { void 0 }
 export const apply = (ctx: { invariants: { register(name: string, install: typeof install): () => void } }) =>
-  Promise.resolve(ctx.invariants.register('@deepseek-ai/dsh-probe', install))
+  Promise.resolve(ctx.invariants.register('@redspark/rsh-probe', install))
 `,
     })
     expect(collectPackageInvariantViolations(unused).map(violation => violation.message))
@@ -383,7 +383,7 @@ export const name = 'probe-invariant'
 export const inject = ['invariants']
 const install = (_ctx: unknown, fail: (message: string) => never) => { fail('checked decoy') }
 export const apply = (ctx: { invariants: { register(name: string, install: () => void): () => void } }) =>
-  ctx.invariants.register('@deepseek-ai/dsh-probe', () => {})
+  ctx.invariants.register('@redspark/rsh-probe', () => {})
 `,
     })
     expect(collectPackageInvariantViolations(decoy).map(violation => violation.message))
@@ -394,7 +394,7 @@ export const apply = (ctx: { invariants: { register(name: string, install: () =>
     'export default { name, inject, apply }',
     "export * as default from './probe.ts'",
   ])('rejects a default export that would collapse the Loader namespace', (defaultExport) => {
-    const source = `${handwrittenInvariant('@deepseek-ai/dsh-probe')}\n${defaultExport}\n`
+    const source = `${handwrittenInvariant('@redspark/rsh-probe')}\n${defaultExport}\n`
     expect(collectPackageInvariantViolations(fixture({ source })).map(violation => violation.message))
       .toContain('must not default-export; Loader must retain the companion namespace')
   })
@@ -403,7 +403,7 @@ export const apply = (ctx: { invariants: { register(name: string, install: () =>
     const source = `
 export const name = 'probe-invariant'
 export const inject = ['invariants']
-const PACKAGE_NAME = '@deepseek-ai/dsh-probe'
+const PACKAGE_NAME = '@redspark/rsh-probe'
 const install = () => {}
 export const apply = (ctx: { invariants: { register(name: string, install: () => void): () => void } }) =>
   ctx.invariants.register(PACKAGE_NAME, install)

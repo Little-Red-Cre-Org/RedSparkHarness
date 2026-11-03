@@ -287,7 +287,7 @@ const keyOf = (x: { doc: string; symbol: string; projection?: 'public-api' }): s
 // as an orphan rather than silently skipped.
 const docSet = new Set<string>()
 for (const pattern of MARKDOWN_GLOBS) {
-  for (const match of globSync(pattern, { cwd: root, exclude: ['**/node_modules/**', 'rsh/Programs/SDK/python/sdk-runtime/src/deepseek_harness_runtime/runtime/**'] })) {
+  for (const match of globSync(pattern, { cwd: root, exclude: ['**/node_modules/**', 'rsh/Programs/SDK/python/sdk-runtime/src/redspark_harness_runtime/runtime/**'] })) {
     const normalized = match.split(sep).join('/')
     if (!isArchivedAgentNotePath(normalized)) docSet.add(normalized)
   }

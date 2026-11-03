@@ -3,7 +3,7 @@ description: "为 Host 账户界面提供原生 DeepSeek Platform 浏览器登�
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-deepseek-account
+# @redspark/rsh-deepseek-account
 
 [English](README.md) | 中文
 

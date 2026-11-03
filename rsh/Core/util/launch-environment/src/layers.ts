@@ -2,7 +2,7 @@
 import { readFileSync } from 'node:fs'
 import { parseEnv } from 'node:util'
 import { resolve } from 'node:path'
-import { resolveDshHome } from '@deepseek-ai/dsh-home-paths'
+import { resolveRshHome } from '@redspark/rsh-home-paths'
 import { createLaunchEnvironmentSnapshot, type LaunchEnvironmentSnapshot } from './native.ts'
 
 /** Exact names no discovered file may set. */
@@ -30,12 +30,12 @@ const BOOTSTRAP_NAMES = new Set([
 ])
 
 /** Name prefixes no discovered file may set. */
-const BOOTSTRAP_PREFIXES = ['DSH_', 'XDG_', 'DYLD_', 'BASH_FUNC_']
+const BOOTSTRAP_PREFIXES = ['RSH_', 'XDG_', 'DYLD_', 'BASH_FUNC_']
 
 /**
  * The bootstrap names the Harness-home `.env` alone may set. A proxy chooses the route every
  * request takes, so the invoking directory's file — which arrives with a clone — keeps refusing
- * them; the home file is the user's own, and `DSH_HOME` is itself bootstrap-only, so no `.env` can
+ * them; the home file is the user's own, and `RSH_HOME` is itself bootstrap-only, so no `.env` can
  * relocate this exemption. The CA and TLS names in the same group stay refused everywhere: they
  * change what is trusted, not where traffic goes.
  */
@@ -114,7 +114,7 @@ export function loadLayeredEnv(
   warn: (line: string) => void = line => void process.stderr.write(line),
   homeDirectory?: string,
 ): LaunchEnvironmentSnapshot {
-  const home = resolveDshHome(homeDirectory)
+  const home = resolveRshHome(homeDirectory)
   const inherited = { ...process.env } as Record<string, string>
   // Parse both layers first: a rejection must not leave one file applied.
   const project = readEnvLayer(binName, cwd, warn, home)

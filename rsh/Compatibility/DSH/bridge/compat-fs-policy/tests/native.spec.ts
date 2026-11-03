@@ -4,12 +4,12 @@ import { readFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { expect, it } from 'vitest'
-import { NativeHost, NativeScope, resolveInstallation, type NativePlugin } from '@deepseek-ai/dsh-native-runtime'
-import { plugin as compatRuntimePlugin } from '@deepseek-ai/dsh-compat-dsh-runtime/native'
-import type { CompatDshRuntime } from '@deepseek-ai/dsh-compat-dsh-runtime/native'
-import { localFilesystemPlugin } from '@deepseek-ai/dsh-fs-local/native'
-import type { FileSystemOperations } from '@deepseek-ai/dsh-fs/native'
-import { plugin as nativePolicy } from '@deepseek-ai/dsh-fs-observation-policy/native'
+import { NativeHost, NativeScope, resolveInstallation, type NativePlugin } from '@redspark/rsh-native-runtime'
+import { plugin as compatRuntimePlugin } from '@redspark/rsh-compat-dsh-runtime/native'
+import type { CompatRshRuntime } from '@redspark/rsh-compat-dsh-runtime/native'
+import { localFilesystemPlugin } from '@redspark/rsh-fs-local/native'
+import type { FileSystemOperations } from '@redspark/rsh-fs/native'
+import { plugin as nativePolicy } from '@redspark/rsh-fs-observation-policy/native'
 import { plugin, validateLegacyPolicyManifest } from '../src/native.ts'
 
 it('rejects changed legacy declarations, configuration and duplicate policy authority', () => {
@@ -29,14 +29,14 @@ it('preserves observations, releases listeners on unload, and shows policy short
   const directory = await mkdtemp(join(tmpdir(), 'dsh-compat-fs-policy-'))
   const scope = new NativeScope()
   let filesystem: FileSystemOperations | undefined
-  let runtime: CompatDshRuntime | undefined
+  let runtime: CompatRshRuntime | undefined
   const consumer: NativePlugin = {
     apiVersion: 1, name: 'consumer', targets: ['host'], requires: ['fs'], provides: [],
     resolve: () => (context) => { filesystem = context.require('fs') },
   }
   const capture: NativePlugin = {
-    apiVersion: 1, name: 'compat-runtime-capture', targets: ['host'], requires: ['compatDshRuntime'], provides: [],
-    resolve: () => (context) => { runtime = context.require('compatDshRuntime') },
+    apiVersion: 1, name: 'compat-runtime-capture', targets: ['host'], requires: ['compatRshRuntime'], provides: [],
+    resolve: () => (context) => { runtime = context.require('compatRshRuntime') },
   }
   const selectedPolicy = { plugin, scope, config: undefined }
   const host = new NativeHost(resolveInstallation([

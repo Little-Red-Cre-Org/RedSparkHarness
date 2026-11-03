@@ -3,7 +3,7 @@ description: "The persisted session-projection cache for deployments and maintai
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-session-projection-cache
+# @redspark/rsh-session-projection-cache
 
 English | [中文](README.zh.md)
 
@@ -35,11 +35,11 @@ Choose it when a deployment restarts sessions and needs durable projection value
 
 Both throttle fields are required — flush cadence is a deployment choice with no universally correct value:
 
-The cache opens its domain through the storage stack, so base mounts `storage`, `storage-json` (root `dshHomePath('storages')`), and `storage-domain` (`backend: json`) before it:
+The cache opens its domain through the storage stack, so base mounts `storage`, `storage-json` (root `rshHomePath('storages')`), and `storage-domain` (`backend: json`) before it:
 
 ```yaml
 - id: session-projection-cache
-  name: '@deepseek-ai/dsh-session-projection-cache'
+  name: '@redspark/rsh-session-projection-cache'
   config:
     writeEveryEvents: 200
     writeIntervalMs: 5000
@@ -50,7 +50,7 @@ The cache opens its domain through the storage stack, so base mounts `storage`, 
 | `writeEveryEvents` | required | Committed events per session that force a durable checkpoint write between mandatory points |
 | `writeIntervalMs` | required | Longest time a dirty checkpoint may stay unwritten between mandatory points |
 
-The plugin injects `storageDomain`, `sessionProjections`, and `sessions`. The generated [configuration catalog](../../../Docs/config-catalog.md#deepseek-aidsh-session-projection-cache) is the exhaustive source for every accepted field and its JSDoc.
+The plugin injects `storageDomain`, `sessionProjections`, and `sessions`. The generated [configuration catalog](../../../Docs/config-catalog.md#redsparkrsh-session-projection-cache) is the exhaustive source for every accepted field and its JSDoc.
 
 The Cordis-free `./native` entry provides the Native Host `sessionProjectionCache` service. It requires `activeSessions`, `sessionProjections`, and `storageDomain`, and accepts the same two required throttle fields. Native owner detach marks the owner state detached before calling its listener remover. If removal throws, the cache still attempts the final checkpoint, evicts the owner state, and reports that same error; a callback left registered cannot schedule cache work. Provider close attempts both observer removers and every owner listener remover, drains final writes, and closes the domain before reporting cleanup failures.
 

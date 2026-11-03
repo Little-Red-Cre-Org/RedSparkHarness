@@ -1,16 +1,16 @@
 /** Workspace archive and directory UI capability. */
 
-import { Service, type Context } from '@deepseek-ai/cordis'
-import type { ClientRemote, DirectoryListing, RemoteFailure } from '@deepseek-ai/dsh-api-remotes/client'
+import { Service, type Context } from '@redspark/cordis'
+import type { ClientRemote, DirectoryListing, RemoteFailure } from '@redspark/rsh-api-remotes/client'
 import type {
   ISessions,
   SessionListState,
-} from '@deepseek-ai/dsh-api-session-controller/client'
+} from '@redspark/rsh-api-session-controller/client'
 import type {
   IWorkspaces, WorkspaceId, WorkspaceView,
-} from '@deepseek-ai/dsh-api-workspace-controller/client'
-import type { SessionId } from '@deepseek-ai/dsh-session/types'
-import type {} from '@deepseek-ai/dsh-client-ui-layout/client'
+} from '@redspark/rsh-api-workspace-controller/client'
+import type { SessionId } from '@redspark/rsh-session/types'
+import type {} from '@redspark/rsh-client-ui-layout/client'
 
 /** Workspace archive and directory operations consumed by Client UI domains. */
 export interface UiWorkspace {
@@ -69,7 +69,7 @@ export interface UiWorkspace {
   createDirectory(path: string, name: string): Promise<string>
 }
 
-declare module '@deepseek-ai/cordis' {
+declare module '@redspark/cordis' {
   interface Context {
     /** Cross-Controller Workspace navigation and directory UI capability. */
     uiWorkspace: UiWorkspace

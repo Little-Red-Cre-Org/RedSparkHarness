@@ -1,12 +1,12 @@
 /**
  * Native installation of the Exa search provider. It registers into the selected `web` service
  * with the same configuration, launch-environment key fallback, and provider id as the Cordis plugin.
- * @module @deepseek-ai/dsh-web-search-exa/native
+ * @module @redspark/rsh-web-search-exa/native
  */
 
-import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
-import type {} from '@deepseek-ai/dsh-launch-environment/native'
-import type {} from '@deepseek-ai/dsh-web/native'
+import type { NativePlugin } from '@redspark/rsh-native-runtime'
+import type {} from '@redspark/rsh-launch-environment/native'
+import type {} from '@redspark/rsh-web/native'
 import { Config, resolveExaOptions } from './config.ts'
 import { ExaSearchProvider } from './provider.ts'
 
@@ -32,7 +32,7 @@ function resolveConfig(input: unknown): Config {
 
 /** Register the Exa search provider; removal cancels and drains its admitted searches. */
 export const plugin: NativePlugin = {
-  apiVersion: 1, name: '@deepseek-ai/dsh-web-search-exa', targets: ['host'],
+  apiVersion: 1, name: '@redspark/rsh-web-search-exa', targets: ['host'],
   requires: ['web', 'launchEnvironment'], optional: [], provides: [],
   resolve(input) {
     const config = resolveConfig(input)

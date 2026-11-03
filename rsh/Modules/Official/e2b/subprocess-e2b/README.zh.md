@@ -3,7 +3,7 @@ description: "共享远程沙箱内的 shell 命令与终端：agent（智能体
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-subprocess-e2b
+# @redspark/rsh-subprocess-e2b
 
 [English](README.md) | 中文
 
@@ -39,7 +39,7 @@ kind: "package-reference"
 |---|---|---|
 | `pollMs` | `20` | 包检查运行中命令状态的频率（毫秒） |
 
-生成的[配置目录](../../../../Docs/config-catalog.zh.md#deepseek-aidsh-subprocess-e2b)是每个受支持字段及其 JSDoc 的穷尽式真源。
+生成的[配置目录](../../../../Docs/config-catalog.zh.md#redsparkrsh-subprocess-e2b)是每个受支持字段及其 JSDoc 的穷尽式真源。
 
 ### 运行命令
 
@@ -97,7 +97,7 @@ agent 可以在沙箱中打开交互式终端、发送输入、读取输出，�
 
 ### 环境边界
 
-一次受信任的控制 shell 探测会从 passwd 条目解析沙箱用户的登录主目录，以 base64 ASCII 传输沙箱环境，再进行一次严格 UTF-8 解码；随后包装层移除环境中的 `DSH_*` 与形似凭据的名称（`*KEY*`、`*SECRET*`、`*TOKEN*`），并把每个有效的 `spec.env` 条目恢复为调用方显式选择。空名称、`=` 与违反 NUL 分帧规则的条目会在启动前被拒绝；在用户 profile 脚本运行前，此后的命令与 PTY 登录 shell 会获得位于根目录下、全新随机生成的 `HOME`，并为每个被清理的环境变量名设置空值覆盖。私有环境文件在使用后会被删除。
+一次受信任的控制 shell 探测会从 passwd 条目解析沙箱用户的登录主目录，以 base64 ASCII 传输沙箱环境，再进行一次严格 UTF-8 解码；随后包装层移除环境中的 `RSH_*` 与形似凭据的名称（`*KEY*`、`*SECRET*`、`*TOKEN*`），并把每个有效的 `spec.env` 条目恢复为调用方显式选择。空名称、`=` 与违反 NUL 分帧规则的条目会在启动前被拒绝；在用户 profile 脚本运行前，此后的命令与 PTY 登录 shell 会获得位于根目录下、全新随机生成的 `HOME`，并为每个被清理的环境变量名设置空值覆盖。私有环境文件在使用后会被删除。
 
 ### 输出处理
 
@@ -121,7 +121,7 @@ agent 可以在沙箱中打开交互式终端、发送输入、读取输出，�
 - [子进程 seam 包](../../../../Core/subprocess/subprocess/README.zh.md)——本提供方实现的抽象约定。
 - [Bash 执行器](../../shell/bash-local/README.zh.md)——向模型渲染所启动命令的消费方。
 - [PTY 终端后端](../../terminal/terminal-bash/README.zh.md)——渲染终端会话的消费方。
-- [生成配置目录](../../../../Docs/config-catalog.zh.md#deepseek-aidsh-subprocess-e2b)——每个受支持配置字段及其源声明。
+- [生成配置目录](../../../../Docs/config-catalog.zh.md#redsparkrsh-subprocess-e2b)——每个受支持配置字段及其源声明。
 
 -----
 

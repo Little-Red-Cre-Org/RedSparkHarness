@@ -1,8 +1,8 @@
 /** Complete HTML rendered in a script-enabled opaque iframe, without parent application access. */
 import { useCallback, useMemo } from 'react'
 import type { ReactNode } from 'react'
-import type { PropsLocale } from '@deepseek-ai/dsh-client-ui-slots'
-import { WorkspaceHtmlPreview } from '@deepseek-ai/dsh-client-ui-primitives'
+import type { PropsLocale } from '@redspark/rsh-client-ui-slots'
+import { WorkspaceHtmlPreview } from '@redspark/rsh-client-ui-primitives'
 import type { DocumentPreviewProps } from '../document/contract.ts'
 import { createReadHtmlRelative } from './read-relative.ts'
 import type { ReadHtmlRelated } from './read-relative.ts'

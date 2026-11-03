@@ -9,22 +9,22 @@
  * per-item nulls. Every returned promise has a rejection consumer so dropped script promises cannot
  * kill the worker. A cancelled script that never settles emits nothing; the host force-settles the
  * run within grace and terminates the thread.
- * @module @deepseek-ai/dsh-workflow-worker-thread/runtime
+ * @module @redspark/rsh-workflow-worker-thread/runtime
  */
 
 import * as vm from 'node:vm'
-import { brandString } from '@deepseek-ai/dsh-brand'
-import type { ContentBlock } from '@deepseek-ai/dsh-llm/native'
-import type { SessionId } from '@deepseek-ai/dsh-session/types'
-import { assertObjectJsonSchema, JsonSchemaError } from '@deepseek-ai/dsh-native-tools/json-schema'
-import type { ObjectJsonSchema } from '@deepseek-ai/dsh-native-tools/json-schema'
-import { isFatalWorkflowError, WorkflowError } from '@deepseek-ai/dsh-workflow/errors'
+import { brandString } from '@redspark/rsh-brand'
+import type { ContentBlock } from '@redspark/rsh-llm/native'
+import type { SessionId } from '@redspark/rsh-session/types'
+import { assertObjectJsonSchema, JsonSchemaError } from '@redspark/rsh-native-tools/json-schema'
+import type { ObjectJsonSchema } from '@redspark/rsh-native-tools/json-schema'
+import { isFatalWorkflowError, WorkflowError } from '@redspark/rsh-workflow/errors'
 import type {
   WorkflowAgentEndInfo,
   WorkflowAgentInfo,
   WorkflowMeta,
   WorkflowResult,
-} from '@deepseek-ai/dsh-workflow/types'
+} from '@redspark/rsh-workflow/types'
 import { materializeFromRealm, MaterializeError, renderThrown } from './realm.ts'
 import type { ChildHandle, ChildPort, WorkerLimits } from './types.ts'
 

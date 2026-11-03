@@ -1,0 +1,81 @@
+# TypeScript SDK snapshot patch for foreground and background DSH SDK failures.
+
+# This recorded composition owns Bash schemas on every replay host.
+- id: bash-sandbox
+  disabled: false
+
+- id: pwsh-sandbox
+  disabled: true
+
+- id: tool-bash
+  disabled: false
+
+- id: tool-pwsh
+  disabled: true
+
+- id: skill-filesystem
+  name: '@redspark/rsh-skill-filesystem'
+  config:
+    includeDefaultRoots: false
+
+- id: llm-deepseek
+  name: '@redspark/rsh-llm-deepseek'
+  config:
+    thinking: enabled
+    reasoningEffort: max
+
+- id: session-persistence-jsonl
+  name: '@redspark/rsh-session-persistence-jsonl'
+  config:
+    root: !!js rshHomePath('sessions')
+    compression: !!js "process.env.RSH_SNAPSHOT === undefined ? 'zstd' : 'none'"
+
+- id: session-log-deepseek
+  name: '@redspark/rsh-session-log-deepseek'
+  config:
+    enabled: true
+
+- insert:
+    - id: subagent-rsh-sdk-diagnostic
+      name: '@redspark/rsh-subagent-rsh-sdk'
+      config:
+        providerName: dsh-sdk-diagnostic
+        profile: sdk
+        patches:
+          - !!js process.env.RSH_TEST_CHILD_PATCH
+        rshHome: !!js rshHomePath('children/foreground')
+        provider: mock
+        model: mock-echo
+        env:
+          RSH_TELEMETRY_DISABLED: '1'
+          RSH_TEST_CHILD_FAILURE: '1'
+    - id: tool-subagent-rsh-sdk-diagnostic
+      name: '@redspark/rsh-tool-subagent'
+      config:
+        provider: dsh-sdk-diagnostic
+        toolName: subagent_dsh_sdk
+        backgroundMode: one-shot
+        maxDepth: provider-managed
+    - id: subagent-rsh-sdk-diagnostic-background
+      name: '@redspark/rsh-subagent-rsh-sdk'
+      config:
+        providerName: dsh-sdk-diagnostic-background
+        profile: sdk
+        patches:
+          - !!js process.env.RSH_TEST_CHILD_PATCH
+        rshHome: !!js rshHomePath('children/background')
+        provider: mock
+        model: mock-echo
+        env:
+          RSH_TELEMETRY_DISABLED: '1'
+          RSH_TEST_CHILD_FAILURE: '1'
+          FAKE_INIT_GO: .dsh-sdk-background-release
+    - id: tool-subagent-rsh-sdk-diagnostic-background
+      name: '@redspark/rsh-tool-subagent'
+      config:
+        provider: dsh-sdk-diagnostic-background
+        toolName: subagent_dsh_sdk_background
+        backgroundMode: one-shot
+        maxDepth: provider-managed
+    - id: release-dsh-sdk-background-on-job-output
+      name: '../../../rsh/Programs/CLI/tests/profiles/sdk/fixtures/subagent-rsh-sdk-release-on-job-output.ts'

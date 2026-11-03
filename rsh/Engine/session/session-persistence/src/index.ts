@@ -1,11 +1,11 @@
 /** Cordis SessionPersistence service over provider-neutral storage contracts. */
-import { Context, Service } from '@deepseek-ai/cordis'
-import type { SessionHeader, SessionId } from '@deepseek-ai/dsh-session/native'
+import { Context, Service } from '@redspark/cordis'
+import type { SessionHeader, SessionId } from '@redspark/rsh-session/native'
 import type { SessionHandle, SessionAccess } from './handle.ts'
 import type { SessionPersistenceCreateOptions, SessionPersistenceListOptions, SessionPersistenceOpenOptions, SessionPersistenceSnapshot, SessionPersistenceStatOptions } from './types.ts'
 import type { NativeSessionDeletionOperations, NativeSessionPersistenceOperations } from './native.ts'
 export * from './native.ts'
-declare module '@deepseek-ai/cordis' {
+declare module '@redspark/cordis' {
   interface Context {
     sessionPersistence: SessionPersistence
   }

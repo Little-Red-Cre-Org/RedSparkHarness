@@ -90,7 +90,7 @@ type NativeSettingsEvent =
 
 `clientNativeSchedule` 服务通过 `list()` 和 `follow(signal)` 提供活动、暂停和失败任务行。完整基线及后续 upsert/remove 帧只包含计划元数据，不包含提示或执行配置；Host 错误保留 `native/schedules` 错误码。
 
-`clientNativeWorkspaceFiles` 服务提供 `list(sessionId, path, signal?)`、`stat(sessionId, path, signal?)`、`follow(sessionId, signal)`、`read(sessionId, path, range, signal?)`、`readAll(sessionId, path, signal?)` 和 `readRelated(sessionId, path, relativePath, signal?)`。路径相对于该 Session 的工作区；`relativePath` 从基础文件所在目录解析。目录列表返回 `{ path, entries, truncated }`；stat 返回 `{ absolutePath, version, bytes? }`；文本页增加 `{ offset, text, lines, eof }`；完整读取增加 `{ offset: 0, data, eof: true }`，其中 `data` 是 base64 字节。`follow` 先产出 `ready` 帧，再产出 Host 仪表化文件系统观察生成的 `change` 帧；中止其 signal 会结束流。这些方法复用 `@deepseek-ai/dsh-api-workspace-files/native-types` 中的响应类型。
+`clientNativeWorkspaceFiles` 服务提供 `list(sessionId, path, signal?)`、`stat(sessionId, path, signal?)`、`follow(sessionId, signal)`、`read(sessionId, path, range, signal?)`、`readAll(sessionId, path, signal?)` 和 `readRelated(sessionId, path, relativePath, signal?)`。路径相对于该 Session 的工作区；`relativePath` 从基础文件所在目录解析。目录列表返回 `{ path, entries, truncated }`；stat 返回 `{ absolutePath, version, bytes? }`；文本页增加 `{ offset, text, lines, eof }`；完整读取增加 `{ offset: 0, data, eof: true }`，其中 `data` 是 base64 字节。`follow` 先产出 `ready` 帧，再产出 Host 仪表化文件系统观察生成的 `change` 帧；中止其 signal 会结束流。这些方法复用 `@redspark/rsh-api-workspace-files/native-types` 中的响应类型。
 
 ```ts type-equiv
 /** Settings views and the Host-validated request budgets used by the Client. */

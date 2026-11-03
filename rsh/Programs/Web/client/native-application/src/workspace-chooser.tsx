@@ -3,12 +3,12 @@ import { useState } from 'react'
 import {
   Button, DirectoryBrowser, IconAgentPresetOutline16, IconChevronDownOutline14, IconFolderClose16, IconFolderOpen16,
   IconPlusOutline16, Menu, Modal,
-} from '@deepseek-ai/dsh-client-ui-primitives'
-import type { DirectoryBrowserListing } from '@deepseek-ai/dsh-client-ui-primitives'
+} from '@redspark/rsh-client-ui-primitives'
+import type { DirectoryBrowserListing } from '@redspark/rsh-client-ui-primitives'
 import type {
   NativeAgentPresetList, NativeDirectoryPickerClient, NativeWorkspace,
-} from '@deepseek-ai/dsh-client-native-session/native'
-import type { SessionId } from '@deepseek-ai/dsh-session/types'
+} from '@redspark/rsh-client-native-session/native'
+import type { SessionId } from '@redspark/rsh-session/types'
 import type { ConversationLocaleKey } from './locales.ts'
 import css from './workspace-chooser.module.css'
 

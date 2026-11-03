@@ -2,7 +2,7 @@
 export type * from './native-types.ts'
 import type { CredentialKey, CredentialRef } from './native-types.ts'
 
-declare module '@deepseek-ai/cordis' {
+declare module '@redspark/cordis' {
   interface Events {
     /**
      * Committed change to a provider-managed credential source: a `set`, an

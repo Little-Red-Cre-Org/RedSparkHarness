@@ -1,9 +1,9 @@
 /**
  * Authorization error taxonomy shared by the Cordis service and the native Provider.
- * @module @deepseek-ai/dsh-authorization/errors
+ * @module @redspark/rsh-authorization/errors
  */
 
-import { HarnessError } from '@deepseek-ai/dsh-llm/native'
+import { HarnessError } from '@redspark/rsh-llm/native'
 
 /** Stable error taxonomy for authorization failures. */
 export class AuthorizationError extends HarnessError {

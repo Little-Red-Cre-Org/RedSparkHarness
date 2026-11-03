@@ -3,7 +3,7 @@ description: "Browser UI renderer: React slot bindings, ctx.uiRenderer, and the 
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-client-ui-renderer
+# @redspark/rsh-client-ui-renderer
 
 English | [中文](README.zh.md)
 
@@ -37,7 +37,7 @@ A business plugin registers a component through the slot system; the renderer bi
 
 ### For native Client profiles
 
-Select `@deepseek-ai/dsh-client-ui-renderer/native` for a Cordis-free Client composition that uses React slots. Its plugin provides `clientSlots` and `clientRenderer`; selected native UI plugins register the `root` slot and provide `clientApplication`. The Web native boot package mounts that application, and the native host owns slot registrations, the renderer, and React unmount cleanup. A failed initial render releases its React root before the mounting error reaches the host, so a corrected composition can use the same container. The existing product Client roster still needs native providers before it can use this path.
+Select `@redspark/rsh-client-ui-renderer/native` for a Cordis-free Client composition that uses React slots. Its plugin provides `clientSlots` and `clientRenderer`; selected native UI plugins register the `root` slot and provide `clientApplication`. The Web native boot package mounts that application, and the native host owns slot registrations, the renderer, and React unmount cleanup. A failed initial render releases its React root before the mounting error reaches the host, so a corrected composition can use the same container. The existing product Client roster still needs native providers before it can use this path.
 
 The native entry's declarations expose the shared slot API, so the renderer requires `dsh-client-ui-slots` as a peer; applications provide that package and the React peers.
 

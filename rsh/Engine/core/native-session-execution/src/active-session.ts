@@ -5,8 +5,8 @@ import type {
   NativeStepAdmissionContext,
   NativeStepAdmissionDecision,
   NativeStepAdmissionHook,
-} from '@deepseek-ai/dsh-native-session-execution/active-session-protocol'
-export type * from '@deepseek-ai/dsh-native-session-execution/active-session-protocol'
+} from '@redspark/rsh-native-session-execution/active-session-protocol'
+export type * from '@redspark/rsh-native-session-execution/active-session-protocol'
 
 interface HookEntry {
   readonly hook: NativeStepAdmissionHook

@@ -8,7 +8,7 @@
   "installations": [
     {
       "id": "app",
-      "plugin": "@deepseek-ai/dsh-native-headless",
+      "plugin": "@redspark/rsh-native-headless",
       "scope": "root",
       "config": {
         "cwd": "PROFILE_PATCH_REQUIRED",
@@ -21,17 +21,17 @@
     },
     {
       "id": "agents",
-      "plugin": "@deepseek-ai/dsh-native-agent",
+      "plugin": "@redspark/rsh-native-agent",
       "scope": "root"
     },
     {
       "id": "jobs",
-      "plugin": "@deepseek-ai/dsh-native-jobs",
+      "plugin": "@redspark/rsh-native-jobs",
       "scope": "root"
     },
     {
       "id": "tools",
-      "plugin": "@deepseek-ai/dsh-native-tools",
+      "plugin": "@redspark/rsh-native-tools",
       "scope": "root",
       "config": {
         "mode": "ptc"
@@ -39,22 +39,22 @@
     },
     {
       "id": "tool-jobs",
-      "plugin": "@deepseek-ai/dsh-native-tool-jobs",
+      "plugin": "@redspark/rsh-native-tool-jobs",
       "scope": "root"
     },
     {
       "id": "model-execution",
-      "plugin": "@deepseek-ai/dsh-native-model-execution",
+      "plugin": "@redspark/rsh-native-model-execution",
       "scope": "root"
     },
     {
       "id": "prompt",
-      "plugin": "@deepseek-ai/dsh-native-prompt",
+      "plugin": "@redspark/rsh-native-prompt",
       "scope": "root"
     },
     {
       "id": "code-tool",
-      "plugin": "@deepseek-ai/dsh-tool-code-runtime",
+      "plugin": "@redspark/rsh-tool-code-runtime",
       "scope": "root",
       "config": {
         "maxParallelSubCalls": 2,
@@ -63,7 +63,7 @@
     },
     {
       "id": "code-runtime",
-      "plugin": "@deepseek-ai/dsh-code-runtime-process-sandbox",
+      "plugin": "@redspark/rsh-code-runtime-process-sandbox",
       "scope": "root",
       "config": {
         "computeMs": 2000,
@@ -74,17 +74,17 @@
     },
     {
       "id": "subprocess",
-      "plugin": "@deepseek-ai/dsh-subprocess-local",
+      "plugin": "@redspark/rsh-subprocess-local",
       "scope": "root"
     },
     {
       "id": "sandbox",
-      "plugin": "@deepseek-ai/dsh-sandbox-local",
+      "plugin": "@redspark/rsh-sandbox-local",
       "scope": "root"
     },
     {
       "id": "sandbox-policy",
-      "plugin": "@deepseek-ai/dsh-native-sandbox-policy",
+      "plugin": "@redspark/rsh-native-sandbox-policy",
       "scope": "root",
       "config": {
         "mode": "read-only",
@@ -93,7 +93,7 @@
     },
     {
       "id": "storage",
-      "plugin": "@deepseek-ai/dsh-session-persistence-jsonl",
+      "plugin": "@redspark/rsh-session-persistence-jsonl",
       "scope": "root",
       "config": {
         "root": "PROFILE_PATCH_REQUIRED",
@@ -102,7 +102,7 @@
     },
     {
       "id": "fs",
-      "plugin": "@deepseek-ai/dsh-fs-local",
+      "plugin": "@redspark/rsh-fs-local",
       "scope": "root",
       "config": {
         "cwd": "PROFILE_PATCH_REQUIRED"
@@ -110,7 +110,7 @@
     },
     {
       "id": "policy",
-      "plugin": "@deepseek-ai/dsh-fs-observation-policy",
+      "plugin": "@redspark/rsh-fs-observation-policy",
       "scope": "root"
     },
     {
@@ -120,7 +120,7 @@
     },
     {
       "id": "shell",
-      "plugin": "@deepseek-ai/dsh-bash-local",
+      "plugin": "@redspark/rsh-bash-local",
       "scope": "root",
       "config": {
         "graceMs": 500
@@ -128,12 +128,12 @@
     },
     {
       "id": "shell-env",
-      "plugin": "@deepseek-ai/dsh-shell-env",
+      "plugin": "@redspark/rsh-shell-env",
       "scope": "root"
     },
     {
       "id": "tool-bash",
-      "plugin": "@deepseek-ai/dsh-tool-bash",
+      "plugin": "@redspark/rsh-tool-bash",
       "scope": "root"
     }
   ]

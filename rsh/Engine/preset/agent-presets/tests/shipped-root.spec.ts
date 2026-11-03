@@ -5,7 +5,7 @@
  * `includeShippedRoot: false` is how a deployment supplying purely its own
  * presets — or an embedder using the roster as bare machinery — opts out.
  *
- * `$DSH_HOME` is repointed per test for the same reason as the user-root
+ * `$RSH_HOME` is repointed per test for the same reason as the user-root
  * suite: the derived writable root is resolved in the constructor.
  */
 
@@ -13,13 +13,13 @@ import { mkdtemp, readFile, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
-import { Context } from '@deepseek-ai/cordis'
-import Loader from '@deepseek-ai/cordis-plugin-loader'
-import Include, { entryListSchema } from '@deepseek-ai/cordis-plugin-include'
-import SessionProjectionRegistry from '@deepseek-ai/dsh-session-projection'
+import { Context } from '@redspark/cordis'
+import Loader from '@redspark/cordis-plugin-loader'
+import Include, { entryListSchema } from '@redspark/cordis-plugin-include'
+import SessionProjectionRegistry from '@redspark/rsh-session-projection'
 import * as yaml from 'js-yaml'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import AgentPresets, { SHIPPED_PRESET_ROOT, type Config } from '@deepseek-ai/dsh-agent-presets'
+import AgentPresets, { SHIPPED_PRESET_ROOT, type Config } from '@redspark/rsh-agent-presets'
 
 const FIXTURES = join(dirname(fileURLToPath(import.meta.url)), 'fixtures')
 const SYSTEM_ROOT = join(FIXTURES, 'system')
@@ -28,14 +28,14 @@ let home: string
 let previousHome: string | undefined
 
 beforeEach(async () => {
-  previousHome = process.env.DSH_HOME
+  previousHome = process.env.RSH_HOME
   home = await mkdtemp(join(tmpdir(), 'dsh-shipped-root-'))
-  process.env.DSH_HOME = home
+  process.env.RSH_HOME = home
 })
 
 afterEach(async () => {
-  if (previousHome === undefined) delete process.env.DSH_HOME
-  else process.env.DSH_HOME = previousHome
+  if (previousHome === undefined) delete process.env.RSH_HOME
+  else process.env.RSH_HOME = previousHome
   await rm(home, { recursive: true, force: true })
 })
 

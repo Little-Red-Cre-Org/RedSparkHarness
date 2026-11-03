@@ -1,7 +1,7 @@
 /** Legacy and native consumers must classify errors through the same constructor. */
 import { expect, it } from 'vitest'
-import { HarnessError, errorChain, isHarnessError } from '@deepseek-ai/dsh-errors'
-import { HarnessError as LegacyError, errorChain as legacyChain, isHarnessError as legacyGuard } from '@deepseek-ai/dsh-llm'
+import { HarnessError, errorChain, isHarnessError } from '@redspark/rsh-errors'
+import { HarnessError as LegacyError, errorChain as legacyChain, isHarnessError as legacyGuard } from '@redspark/rsh-llm'
 
 it('shares constructor and diagnostic identity across native and model consumers', () => {
   expect(LegacyError).toBe(HarnessError)

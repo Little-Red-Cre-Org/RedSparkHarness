@@ -1,5 +1,5 @@
 /** Complete-history Agent composition facts without activation or mounting. */
-import type { SessionEvent, SessionId, SessionSeq } from '@deepseek-ai/dsh-session/types'
+import type { SessionEvent, SessionId, SessionSeq } from '@redspark/rsh-session/types'
 export type * from './selection-events.ts'
 
 /** Selected creation or blank-window composition and its last explicit revision. */

@@ -1,8 +1,8 @@
 /** Host Cordis plugin for the cross-realm Inspector Worker and full fetch capture. */
 
-import type { Context } from '@deepseek-ai/cordis'
-import type { IndexInjection } from '@deepseek-ai/dsh-http-routes/client'
-import type {} from '@deepseek-ai/dsh-http-routes-cordis'
+import type { Context } from '@redspark/cordis'
+import type { IndexInjection } from '@redspark/rsh-http-routes/client'
+import type {} from '@redspark/rsh-http-routes-cordis'
 import { resolveInspectorOptions, startInspector, type InspectorOptions } from './bridge/controller.ts'
 import { createInspectorService } from '../shared/service.ts'
 import { publishCordisTree } from './inspection/cordis.ts'
@@ -48,7 +48,7 @@ export async function apply(ctx: Context, config: HostPluginConfig): Promise<voi
       }))
       disposers.push(ctx.provide('inspector', createInspectorService(handle.source)))
       disposers.push(ctx.on('webserver/index-inject', (table: IndexInjection[]) => {
-        table.push({ kind: 'global', name: '__DSH_INSPECTOR__', value: handle.endpoint.client })
+        table.push({ kind: 'global', name: '__RSH_INSPECTOR__', value: handle.endpoint.client })
       }))
       // This readiness URL is emitted while the plugin tree is still loading, before a logger sink is guaranteed.
       console.log(`dsh inspector: ${handle.endpoint.devtoolsFrontendUrl}`)

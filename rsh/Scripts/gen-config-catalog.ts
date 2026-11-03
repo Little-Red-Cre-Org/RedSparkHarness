@@ -56,7 +56,7 @@ interface Paste {
 
 /** One package's catalog entry. */
 export interface CatalogEntry {
-  /** npm package name, e.g. `@deepseek-ai/dsh-agent-loop`. */
+  /** npm package name, e.g. `@redspark/rsh-agent-loop`. */
   pkg: string
   /** Repo-relative package dir, e.g. `rsh/Engine/core/agent-loop`. */
   dir: string

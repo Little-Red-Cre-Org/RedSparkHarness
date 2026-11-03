@@ -1,9 +1,9 @@
 /** Cordis registration for the shared local filesystem backend. */
-import { Context } from '@deepseek-ai/cordis'
-import z from '@deepseek-ai/schemastery'
-import { FileSystem } from '@deepseek-ai/dsh-fs'
+import { Context } from '@redspark/cordis'
+import z from '@redspark/schemastery'
+import { FileSystem } from '@redspark/rsh-fs'
 import { LocalFileSystemBackend, resolveLocalFilesystemConfig, type Config, type ResolvedConfig } from './backend.ts'
-import type { FsDirEntry, FsEditOutcome, FsEditRequest, FsInfo, FsPathInfo, FsTarget, FsVersion, FsWriteIntent, FsWriteOutcome } from '@deepseek-ai/dsh-fs/types'
+import type { FsDirEntry, FsEditOutcome, FsEditRequest, FsInfo, FsPathInfo, FsTarget, FsVersion, FsWriteIntent, FsWriteOutcome } from '@redspark/rsh-fs/types'
 import type { FsIoInternals } from './fsio.ts'
 
 export type { Config } from './backend.ts'

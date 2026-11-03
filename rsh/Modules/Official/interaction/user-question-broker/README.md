@@ -3,7 +3,7 @@ description: "Pending human questions for authenticated native application trans
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-user-question-broker
+# @redspark/rsh-user-question-broker
 
 English | [中文](README.zh.md)
 
@@ -23,7 +23,7 @@ Present a pending question to an authenticated application and accept its answer
 <a id="use-this-package"></a>
 ## Use this package
 
-Select this package in a native profile together with `@deepseek-ai/dsh-user-questions`. Its `./native` entry requires `userQuestions` and provides `userQuestionBroker`; its configuration is empty. An application subscribes through `onRequest`, retaining the presented Agent, then submits JSON through `answer(id, agent, answer)`. Invalid choices fail without consuming the question; duplicate or late answers fail.
+Select this package in a native profile together with `@redspark/rsh-user-questions`. Its `./native` entry requires `userQuestions` and provides `userQuestionBroker`; its configuration is empty. An application subscribes through `onRequest`, retaining the presented Agent, then submits JSON through `answer(id, agent, answer)`. Invalid choices fail without consuming the question; duplicate or late answers fail.
 
 <a id="understand-the-implementation"></a>
 ## Understand the implementation

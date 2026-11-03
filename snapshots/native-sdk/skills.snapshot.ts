@@ -6,12 +6,12 @@ import { fileURLToPath } from 'node:url'
 import { execa } from 'execa'
 import { createServer, type ServerResponse } from 'node:http'
 import { expect, it } from 'vitest'
-import { DeepSeekHarness } from '@deepseek-ai/dsh-sdk-client'
-import { parseSessionLog } from '@deepseek-ai/dsh-llm-replay'
-import { SESSION_FORMAT_VERSION } from '@deepseek-ai/dsh-session/native'
-import { JsonlSessionBackend } from '@deepseek-ai/dsh-session-persistence-jsonl'
+import { RedSparkHarness } from '@redspark/rsh-sdk-client'
+import { parseSessionLog } from '@redspark/rsh-llm-replay'
+import { SESSION_FORMAT_VERSION } from '@redspark/rsh-session/native'
+import { JsonlSessionBackend } from '@redspark/rsh-session-persistence-jsonl'
 import { formatSystemPromptSnapshot, formatToolSchemasSnapshot, normalizedSystemPrompts, normalizedToolSchemas,
-  normalizeSessionSnapshot, redactSessionSnapshotIds } from '@deepseek-ai/dsh-session-snapshot'
+  normalizeSessionSnapshot, redactSessionSnapshotIds } from '@redspark/rsh-session-snapshot'
 import { shippedNativeProfileComposition } from '../../rsh/Programs/CLI/src/native-profile-template.ts'
 
 const root = fileURLToPath(new URL('../../', import.meta.url))
@@ -97,7 +97,7 @@ function durableFactProjection(events: readonly SnapshotEvent[]): unknown[] {
 }
 
 it('projects Native Skills through both SDKs and cold-restores one durable Session', async () => {
-  const mode = process.env.DSH_SNAPSHOT
+  const mode = process.env.RSH_SNAPSHOT
   const fixture = join(scenario, 'session.v3.jsonl')
   const recorded = existsSync(fixture) ? parseSessionLog(readFileSync(fixture, 'utf8')) : undefined
   const inputs = recorded?.filter(event => event.type === 'user/message' && event.data.source.kind === 'user') ?? []
@@ -159,11 +159,11 @@ it('projects Native Skills through both SDKs and cold-restores one durable Sessi
     const composition = shippedNativeProfileComposition(home, 'native-sdk')
     writeFileSync(join(profile, 'rsh.profile.json'), JSON.stringify({ ...composition, installations: [
       ...composition.installations,
-      { id: 'request-context', plugin: '@deepseek-ai/dsh-request-context', scope: 'root' },
-      { id: 'skills', plugin: '@deepseek-ai/dsh-skill', scope: 'root' },
-      { id: 'skill-filesystem', plugin: '@deepseek-ai/dsh-skill-filesystem', scope: 'root',
-        config: { agentsHome: home, dshHome: home, watch: false } },
-      { id: 'tool-skill', plugin: '@deepseek-ai/dsh-tool-skill', scope: 'root' },
+      { id: 'request-context', plugin: '@redspark/rsh-request-context', scope: 'root' },
+      { id: 'skills', plugin: '@redspark/rsh-skill', scope: 'root' },
+      { id: 'skill-filesystem', plugin: '@redspark/rsh-skill-filesystem', scope: 'root',
+        config: { agentsHome: home, rshHome: home, watch: false } },
+      { id: 'tool-skill', plugin: '@redspark/rsh-tool-skill', scope: 'root' },
     ] }))
     writeFileSync(join(workspace, '.agents/skills/review/SKILL.md'), [
       '---', 'name: review', 'description: Inspect changes and state concrete findings.', '---', '', skillBody, '',
@@ -176,13 +176,13 @@ it('projects Native Skills through both SDKs and cold-restores one durable Sessi
         baseURL: `http://127.0.0.1:${address.port}/v1`, models: [{ id: 'fixture-model', input: ['text'] }] } } } },
     ] }))
 
-    const options = { profile: 'native-sdk', dshBin: join(root, 'rsh/Programs/CLI/lib/bin.js'), dshHome: home,
+    const options = { profile: 'native-sdk', rshBin: join(root, 'rsh/Programs/CLI/lib/bin.js'), rshHome: home,
       patches: [modelPatch], cwd: workspace, provider: 'fixture', model: 'fixture-model',
-      env: { ...process.env, NATIVE_SDK_FIXTURE_KEY: 'fixture-key', DSH_TELEMETRY_DISABLED: '1' },
+      env: { ...process.env, NATIVE_SDK_FIXTURE_KEY: 'fixture-key', RSH_TELEMETRY_DISABLED: '1' },
       requestTimeoutMs: 20_000 }
     let first: CarrierRun
     let recovery: CarrierRun
-    if (process.env.DSH_NATIVE_SDK_PYTHON !== undefined) {
+    if (process.env.RSH_NATIVE_SDK_PYTHON !== undefined) {
       const launcher = join(home, process.platform === 'win32' ? 'dsh.cmd' : 'dsh')
       writeFileSync(launcher, process.platform === 'win32'
         ? `@echo off\r\n"${process.execPath}" "${join(root, 'rsh/Programs/CLI/lib/bin.js')}" %*\r\n`
@@ -191,20 +191,20 @@ it('projects Native Skills through both SDKs and cold-restores one durable Sessi
         const { chmodSync } = await import('node:fs')
         chmodSync(launcher, 0o700)
       }
-      const result = await execa(process.env.DSH_NATIVE_SDK_PYTHON, [join(scenario, 'client.py'), launcher, home,
+      const result = await execa(process.env.RSH_NATIVE_SDK_PYTHON, [join(scenario, 'client.py'), launcher, home,
         workspace, modelPatch, sessionId, task, resumedTask], {
         env: { ...process.env, PYTHONPATH: join(root, 'rsh/Programs/SDK/python/sdk/src'),
-          NATIVE_SDK_FIXTURE_KEY: 'fixture-key', DSH_TELEMETRY_DISABLED: '1' },
+          NATIVE_SDK_FIXTURE_KEY: 'fixture-key', RSH_TELEMETRY_DISABLED: '1' },
         timeout: 60_000,
       })
       const output = JSON.parse(result.stdout) as PythonCarrierOutput
       first = output.first
       recovery = output.recovery
     } else {
-      const initial = new DeepSeekHarness(options)
+      const initial = new RedSparkHarness(options)
       try { first = await initial.session(sessionId).run(task) }
       finally { await initial.close() }
-      const cold = new DeepSeekHarness(options)
+      const cold = new RedSparkHarness(options)
       try { recovery = await cold.session(sessionId).run(resumedTask) }
       finally { await cold.close() }
     }

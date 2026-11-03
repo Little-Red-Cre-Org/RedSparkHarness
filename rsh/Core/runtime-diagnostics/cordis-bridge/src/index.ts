@@ -7,12 +7,12 @@
  * Native services the plugin reads, translated to the Cordis shape it expects.
  *
  * The bridge deliberately hosts the Cordis *runtime*, not the legacy Desktop assembly: only
- * `@deepseek-ai/cordis` is involved, never the bundle and boot packages.
+ * `@redspark/cordis` is involved, never the bundle and boot packages.
  *
- * @module @deepseek-ai/dsh-cordis-bridge
+ * @module @redspark/rsh-cordis-bridge
  */
 
-import type { NativeContext, NativePlugin } from '@deepseek-ai/dsh-native-runtime'
+import type { NativeContext, NativePlugin } from '@redspark/rsh-native-runtime'
 
 /** A Cordis plugin module as shipped: a name plus the function that installs it. */
 export interface CordisPlugin {
@@ -44,9 +44,9 @@ export interface BridgedPlugin {
  * @returns completion after the plugin's effects have been disposed.
  */
 export async function hostCordisPlugin(bridged: BridgedPlugin): Promise<() => Promise<void>> {
-  // Loaded here rather than at module scope: `@deepseek-ai/cordis` is an optional peer, so a
+  // Loaded here rather than at module scope: `@redspark/cordis` is an optional peer, so a
   // deployment that never bridges a Cordis plugin must be able to import this module without it.
-  const { Context } = await import('@deepseek-ai/cordis')
+  const { Context } = await import('@redspark/cordis')
   const ctx = new Context()
   for (const [name, service] of Object.entries(bridged.services)) {
     ctx.provide(name as never, service as never)

@@ -1,5 +1,5 @@
 /** Framework-neutral fixed Ralph script, terminal validation and model output. */
-import type { WorkflowResult } from '@deepseek-ai/dsh-workflow/types'
+import type { WorkflowResult } from '@redspark/rsh-workflow/types'
 
 type RalphRoundStatus = 'continue' | 'complete' | 'blocked'
 

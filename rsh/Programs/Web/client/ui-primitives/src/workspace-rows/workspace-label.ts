@@ -1,4 +1,4 @@
-import { workspaceTitleOf } from '@deepseek-ai/dsh-util-workspace-path'
+import { workspaceTitleOf } from '@redspark/rsh-util-workspace-path'
 
 /**
  * Return a directory basename for a workspace group, preserving roots without a basename.

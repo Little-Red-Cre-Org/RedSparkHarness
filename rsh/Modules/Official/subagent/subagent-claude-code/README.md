@@ -3,7 +3,7 @@ description: "The one-shot Claude Code subagent provider for users and maintaine
 kind: "package-bundle"
 ---
 
-# @deepseek-ai/dsh-subagent-claude-code
+# @redspark/rsh-subagent-claude-code
 
 English | [中文](README.zh.md)
 
@@ -32,8 +32,8 @@ Mount this provider when a delegation should run as a real Claude Code session i
 Install the package into the target Profile, then restart that Profile. The installation brings the pinned Agent SDK and one compatible platform CLI payload into the Profile; the declared patch layer registers only the dormant provider and starts no Claude process.
 
 ```sh
-dsh plugin --profile <name> add @deepseek-ai/dsh-subagent-claude-code
-dsh plugin --profile <name> remove @deepseek-ai/dsh-subagent-claude-code
+dsh plugin --profile <name> add @redspark/rsh-subagent-claude-code
+dsh plugin --profile <name> remove @redspark/rsh-subagent-claude-code
 dsh --profile <name>
 ```
 
@@ -59,7 +59,7 @@ These fields configure the retained Cordis compatibility entry only; the Native 
 | `plan` | Run in native planning mode, deny execution approval, and return the completed plan as the final answer |
 | `bypassPermissions` | Explicitly set the SDK's dangerous confirmation and bypass permission checks |
 
-The generated [configuration catalog](../../../../Docs/config-catalog.md#deepseek-aidsh-subagent-claude-code) documents the retained Cordis entry. Its provider name, optional model, environment, and permission mode do not configure the Native entry. The compatibility entry preserves prior Claude behavior: a configured model passes unchanged to each query, credential-shaped ambient variables are removed before the explicit `env` overlay, and the SDK loads host user, project, and local settings relative to the parent Session cwd.
+The generated [configuration catalog](../../../../Docs/config-catalog.md#redsparkrsh-subagent-claude-code) documents the retained Cordis entry. Its provider name, optional model, environment, and permission mode do not configure the Native entry. The compatibility entry preserves prior Claude behavior: a configured model passes unchanged to each query, credential-shaped ambient variables are removed before the explicit `env` overlay, and the SDK loads host user, project, and local settings relative to the parent Session cwd.
 
 ### Native external driver
 
@@ -71,11 +71,11 @@ Each delegation tool row names one provider and needs its own `toolName`, so the
 
 ```yaml
 - id: jobs
-  name: '@deepseek-ai/dsh-jobs-local'
+  name: '@redspark/rsh-jobs-local'
 - id: tool-jobs
-  name: '@deepseek-ai/dsh-tool-jobs'
+  name: '@redspark/rsh-tool-jobs'
 - id: tool-subagent-claude
-  name: '@deepseek-ai/dsh-tool-subagent'
+  name: '@redspark/rsh-tool-subagent'
   config:
     provider: claude-code
     toolName: subagent_claude_code
@@ -138,7 +138,7 @@ Read these pages when the package-level contract is not enough. They move from t
 - [Codex compatibility bridge](../../../../Compatibility/DSH/bridge/subagent-codex/README.md) — the legacy Cordis adapter for the Codex product.
 - [Official Codex app-server product](../codex-app-server/README.md) — the native app-server protocol and external-child driver owner.
 - [Claude Code and Codex backends](../../../../../.agents/notes/implemented/feature/2026-08-04-claude-code-and-codex-subagent-backends.md) — the design record for the product providers.
-- [Generated configuration catalog](../../../../Docs/config-catalog.md#deepseek-aidsh-subagent-claude-code) — every accepted Cordis config field and its source declaration.
+- [Generated configuration catalog](../../../../Docs/config-catalog.md#redsparkrsh-subagent-claude-code) — every accepted Cordis config field and its source declaration.
 
 -----
 

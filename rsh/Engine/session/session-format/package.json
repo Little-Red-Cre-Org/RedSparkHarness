@@ -1,5 +1,5 @@
 {
-  "name": "@deepseek-ai/dsh-session-format",
+  "name": "@redspark/rsh-session-format",
   "description": "Streaming adjacent Session format migration machinery",
   "version": "1.0.0",
   "publishConfig": {
@@ -27,6 +27,6 @@
   ],
   "license": "MIT",
   "dependencies": {
-    "@deepseek-ai/dsh-util-values": "workspace:^"
+    "@redspark/rsh-util-values": "workspace:^"
   }
 }

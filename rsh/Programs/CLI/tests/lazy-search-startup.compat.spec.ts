@@ -25,7 +25,7 @@ const webDist = join(repoRoot, 'rsh/Programs/Web/application/dist/index.html')
 // base patch carries the default, and the web restatement must not re-enable it.
 const baseConfigPath = join(repoRoot, 'rsh/Compatibility/DSH/bundle/base/cordis.patch.yml')
 const webConfigPath = join(repoRoot, 'rsh/Compatibility/DSH/bundle/web-app/cordis.patch.yml')
-const requireBuiltArtifacts = process.env.DSH_REQUIRE_BUILT_CLI_SMOKE === '1'
+const requireBuiltArtifacts = process.env.RSH_REQUIRE_BUILT_CLI_SMOKE === '1'
 
 interface ConfigRow {
   id?: string
@@ -49,7 +49,7 @@ function runBuiltWeb(cwd: string): Promise<{ stdout: string; stderr: string; cod
     const env: NodeJS.ProcessEnv = {
       ...process.env,
       DEEPSEEK_API_KEY: 'dsh-cli-smoke-dummy-key',
-      DSH_HOME: join(cwd, '.dsh'),
+      RSH_HOME: join(cwd, '.dsh'),
     }
     delete env.DEEPSEEK_BASE_URL
     delete env.NODE_OPTIONS

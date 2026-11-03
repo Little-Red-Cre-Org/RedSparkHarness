@@ -1,4 +1,4 @@
-import type { SettingsService } from '@deepseek-ai/dsh-settings-definition'
+import type { SettingsService } from '@redspark/rsh-settings-definition'
 import type { AgentDefaultModelSettings } from './index.ts'
 import { readSettingsOwner, type SettingsOwner } from './settings-owner.ts'
 import type { AgentDefaultModelConfig } from './index.ts'

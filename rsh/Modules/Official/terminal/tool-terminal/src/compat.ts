@@ -1,23 +1,23 @@
 /**
  * Six model-facing persistent terminal tools. Owner identity comes from the exact
  * tool execution Agent; generic `ctx.jobs` owns background ids and collection.
- * @module @deepseek-ai/dsh-tool-terminal
+ * @module @redspark/rsh-tool-terminal
  */
 
-import { Context } from '@deepseek-ai/cordis'
-import type { Agent } from '@deepseek-ai/dsh-agent'
-import type { ContentBlock } from '@deepseek-ai/dsh-llm'
-import { TerminalSessionId } from '@deepseek-ai/dsh-terminal'
-import type { TerminalSendResult, TerminalSessionId as TerminalSessionIdType, TerminalSignal } from '@deepseek-ai/dsh-terminal'
-import type {} from '@deepseek-ai/dsh-jobs'
-import { defineTool } from '@deepseek-ai/dsh-tools'
-import type { ToolDefinition } from '@deepseek-ai/dsh-tools'
+import { Context } from '@redspark/cordis'
+import type { Agent } from '@redspark/rsh-agent'
+import type { ContentBlock } from '@redspark/rsh-llm'
+import { TerminalSessionId } from '@redspark/rsh-terminal'
+import type { TerminalSendResult, TerminalSessionId as TerminalSessionIdType, TerminalSignal } from '@redspark/rsh-terminal'
+import type {} from '@redspark/rsh-jobs'
+import { defineTool } from '@redspark/rsh-tools'
+import type { ToolDefinition } from '@redspark/rsh-tools'
 import { DEFAULT_MAX_RESULT_BYTES, MIN_MAX_RESULT_BYTES } from './config.ts'
 import type { Config as ToolConfig } from './config.ts'
 export { Config, DEFAULT_MAX_RESULT_BYTES, MIN_MAX_RESULT_BYTES } from './config.ts'
 import { boundTerminalText, renderList, renderRead, renderSend, renderSendRead, renderSpawn } from './render.ts'
 
-declare module '@deepseek-ai/dsh-jobs' {
+declare module '@redspark/rsh-jobs' {
   interface JobKindMap {
     'pty-send': 'pty-send'
   }
@@ -233,7 +233,7 @@ export function apply(ctx: Context, config: ToolConfig = {}): void {
       if (args.run_in_background === true) {
         if (!enableRunInBackground) throw new Error('background terminal sends are disabled by tool-terminal configuration')
         const jobs = ctx.get('jobs')
-        if (jobs === undefined) throw new Error('background terminal sends require @deepseek-ai/dsh-jobs and @deepseek-ai/dsh-tool-jobs')
+        if (jobs === undefined) throw new Error('background terminal sends require @redspark/rsh-jobs and @redspark/rsh-tool-jobs')
         let cancelRequested = false
         const jobId = jobs.start({
           kind: 'pty-send',

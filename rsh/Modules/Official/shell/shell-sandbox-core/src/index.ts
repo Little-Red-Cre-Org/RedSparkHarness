@@ -1,10 +1,10 @@
 /** Confinement and result classification shared by shell dialects. */
-import type { ShellExecRequest, ShellExecSpec, ShellOperations, ShellProcess, ShellRunResult } from '@deepseek-ai/dsh-shell/native'
-import { SandboxUnavailableError, classifyRunnerFailure, isRunnerSpawnFailure } from '@deepseek-ai/dsh-sandbox/native'
+import type { ShellExecRequest, ShellExecSpec, ShellOperations, ShellProcess, ShellRunResult } from '@redspark/rsh-shell/native'
+import { SandboxUnavailableError, classifyRunnerFailure, isRunnerSpawnFailure } from '@redspark/rsh-sandbox/native'
 import type {
   ConfinedArgv, ConfinedSandboxMode, ProcessSandbox, RunnerFailureRule,
   SandboxEnforcement, SandboxExecutionPolicy, SandboxMode, SandboxPolicy,
-} from '@deepseek-ai/dsh-sandbox/native'
+} from '@redspark/rsh-sandbox/native'
 
 function matchesSignature(exitCode: number | null, stderr: string, signatures: readonly string[]): boolean {
   if (exitCode === null || exitCode === 0) return false

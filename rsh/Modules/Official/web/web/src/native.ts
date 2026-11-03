@@ -3,12 +3,12 @@
  * registration-order-independent selection, `maxResults` enforcement, and `WebError` codes as the
  * Cordis `ctx.web` service. A provider removal closes its admission, cancels its admitted
  * operations, and resolves after they settle.
- * @module @deepseek-ai/dsh-web/native
+ * @module @redspark/rsh-web/native
  */
 
-import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
-import type { NativeToolExecution } from '@deepseek-ai/dsh-native-tools'
-import type { LaunchEnvironmentSnapshot } from '@deepseek-ai/dsh-launch-environment/native'
+import type { NativePlugin } from '@redspark/rsh-native-runtime'
+import type { NativeToolExecution } from '@redspark/rsh-native-tools'
+import type { LaunchEnvironmentSnapshot } from '@redspark/rsh-launch-environment/native'
 import { assertUniqueProvider, capSources, resolveProvider } from './selection.ts'
 import type { WebFetchRequest, WebFetchResult, WebSearchRequest, WebSearchResult } from './types.ts'
 
@@ -62,9 +62,9 @@ export interface NativeWebFetchProvider {
 
 /** Explicit provider pins; an omitted pin auto-selects exactly one usable provider. */
 export interface NativeWebConfig {
-  /** Search provider id; `$DSH_WEB_SEARCH_PROVIDER` from the process layer supplies it when omitted. */
+  /** Search provider id; `$RSH_WEB_SEARCH_PROVIDER` from the process layer supplies it when omitted. */
   readonly searchProvider?: string
-  /** Fetch provider id; `$DSH_WEB_FETCH_PROVIDER` from the process layer supplies it when omitted. */
+  /** Fetch provider id; `$RSH_WEB_FETCH_PROVIDER` from the process layer supplies it when omitted. */
   readonly fetchProvider?: string
 }
 
@@ -102,7 +102,7 @@ export interface NativeWebService {
   fetch(request: WebFetchRequest, operation: NativeWebOperation): Promise<WebFetchResult>
 }
 
-declare module '@deepseek-ai/dsh-native-runtime' {
+declare module '@redspark/rsh-native-runtime' {
   interface NativeServices { web: NativeWebService }
 }
 
@@ -197,14 +197,14 @@ function processPin(environment: LaunchEnvironmentSnapshot, name: string): strin
 
 /** Provide `web`; configured pins win over the same-named process environment overrides. */
 export const plugin: NativePlugin = {
-  apiVersion: 1, name: '@deepseek-ai/dsh-web', targets: ['host'],
+  apiVersion: 1, name: '@redspark/rsh-web', targets: ['host'],
   requires: ['launchEnvironment'], optional: [], provides: ['web'],
   resolve(input) {
     const config = resolveNativeWebConfig(input)
     return (context) => {
       const environment = context.require('launchEnvironment')
-      const searchProvider = config.searchProvider ?? processPin(environment, 'DSH_WEB_SEARCH_PROVIDER')
-      const fetchProvider = config.fetchProvider ?? processPin(environment, 'DSH_WEB_FETCH_PROVIDER')
+      const searchProvider = config.searchProvider ?? processPin(environment, 'RSH_WEB_SEARCH_PROVIDER')
+      const fetchProvider = config.fetchProvider ?? processPin(environment, 'RSH_WEB_FETCH_PROVIDER')
       context.provide('web', createNativeWebService({
         ...searchProvider === undefined ? {} : { searchProvider },
         ...fetchProvider === undefined ? {} : { fetchProvider },

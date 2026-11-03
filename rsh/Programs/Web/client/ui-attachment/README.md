@@ -3,7 +3,7 @@ description: "Attachment presentation for the conversation UI: mixed draft-attac
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-client-ui-attachment
+# @redspark/rsh-client-ui-attachment
 
 English | [中文](README.zh.md)
 
@@ -27,7 +27,7 @@ This package renders everything the conversation UI shows about attachments: one
 
 Mount this plugin alongside [`ui-conversation`](../ui-conversation/README.md) and [`ui-tool`](../ui-tool/README.md) when tool results need an image gallery. It waits for their slot declarations and registers its components into them. Users then see the mixed draft-attachment rail, DeepSeek Web file cards with upload controls, the drop overlay with its limits line, message images sized by count, the tool card's gallery, and the Escape/mask/close lightbox.
 
-Native Client consumers import presentation components from `@deepseek-ai/dsh-client-ui-attachment/native`. This Cordis-free static entry exports the rail, drop overlay, file card, image lightbox, and message image components with their prop and label types; the caller owns image loading, attachment state, limits, and localized labels.
+Native Client consumers import presentation components from `@redspark/rsh-client-ui-attachment/native`. This Cordis-free static entry exports the rail, drop overlay, file card, image lightbox, and message image components with their prop and label types; the caller owns image loading, attachment state, limits, and localized labels.
 
 ### Draft attachments
 

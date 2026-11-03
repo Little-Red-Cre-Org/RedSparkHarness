@@ -3,8 +3,8 @@ import { mkdir, readdir, stat } from 'node:fs/promises'
 import type { Dirent } from 'node:fs'
 import { homedir } from 'node:os'
 import { basename, dirname, join, posix, resolve, win32 } from 'node:path'
-import { pickNativeDirectory } from '@deepseek-ai/dsh-host-directory-picker-native/native-picker'
-import type { NativeDirectoryEntry, NativeDirectoryListing } from '@deepseek-ai/dsh-client-native-session/workspaces'
+import { pickNativeDirectory } from '@redspark/rsh-host-directory-picker-native/native-picker'
+import type { NativeDirectoryEntry, NativeDirectoryListing } from '@redspark/rsh-client-native-session/workspaces'
 import { z } from 'zod'
 
 const empty = z.strictObject({})

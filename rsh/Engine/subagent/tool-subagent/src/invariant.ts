@@ -1,14 +1,14 @@
 /**
- * Package-owned invariant companion for `@deepseek-ai/dsh-tool-subagent`.
- * @module @deepseek-ai/dsh-tool-subagent/invariant
+ * Package-owned invariant companion for `@redspark/rsh-tool-subagent`.
+ * @module @redspark/rsh-tool-subagent/invariant
  */
 
 /* jscpd:ignore-start */
-import type { Context } from '@deepseek-ai/cordis'
-import type { InvariantFailure, InvariantInstaller } from '@deepseek-ai/dsh-invariants'
+import type { Context } from '@redspark/cordis'
+import type { InvariantFailure, InvariantInstaller } from '@redspark/rsh-invariants'
 import { subagentModelSelectionPolicy } from './model-selection-state.ts'
 
-const PACKAGE_NAME = '@deepseek-ai/dsh-tool-subagent'
+const PACKAGE_NAME = '@redspark/rsh-tool-subagent'
 
 /** Cordis companion plugin name. */
 export const name = 'tool-subagent-invariant'

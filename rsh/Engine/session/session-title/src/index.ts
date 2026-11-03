@@ -1,22 +1,22 @@
 /**
  * Log-backed session title service, deterministic fallback, and provider contract.
- * @module @deepseek-ai/dsh-session-title
+ * @module @redspark/rsh-session-title
  */
 
-import { Context, FiberState, Service, type Fiber } from '@deepseek-ai/cordis'
-import z from '@deepseek-ai/schemastery'
+import { Context, FiberState, Service, type Fiber } from '@redspark/cordis'
+import z from '@redspark/schemastery'
 import { z as zod } from 'zod'
 import type { ZodType } from 'zod'
-import { isAgentLoopRequest } from '@deepseek-ai/dsh-llm'
-import type { GenerateOptions } from '@deepseek-ai/dsh-llm'
+import { isAgentLoopRequest } from '@redspark/rsh-llm'
+import type { GenerateOptions } from '@redspark/rsh-llm'
 import type {
   Session,
   SessionEvent,
-} from '@deepseek-ai/dsh-session'
-import { SessionSeq } from '@deepseek-ai/dsh-session'
-import type {} from '@deepseek-ai/dsh-session-projection'
-import type { ProjectionDefinition } from '@deepseek-ai/dsh-session-projection'
-import type {} from '@deepseek-ai/dsh-agent'
+} from '@redspark/rsh-session'
+import { SessionSeq } from '@redspark/rsh-session'
+import type {} from '@redspark/rsh-session-projection'
+import type { ProjectionDefinition } from '@redspark/rsh-session-projection'
+import type {} from '@redspark/rsh-agent'
 export type {
   SessionTitleEventData,
   SessionTitleModelProvenance,
@@ -56,7 +56,7 @@ export { fallbackSessionTitle, normalizeSessionTitle, truncateTitleUtf8 } from '
 /** Required deterministic fallback and accepted-title limits. */
 export interface Config extends SessionTitleConfig {}
 
-declare module '@deepseek-ai/cordis' {
+declare module '@redspark/cordis' {
   interface Context {
     sessionTitle: SessionTitleService
   }

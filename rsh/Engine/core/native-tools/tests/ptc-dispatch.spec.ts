@@ -1,9 +1,9 @@
 /** Nested dispatch cancellation over the real scoped registry and Session. */
 import { expect, it, vi } from 'vitest'
-import { NativeScope } from '@deepseek-ai/dsh-native-runtime'
-import { NativeAgentId, NativeAgentRegistry } from '@deepseek-ai/dsh-native-agent'
-import { createUserMessage, ToolCallId } from '@deepseek-ai/dsh-llm/native'
-import { Session, SessionId, SESSION_FORMAT_VERSION, type SessionEvent } from '@deepseek-ai/dsh-session/native'
+import { NativeScope } from '@redspark/rsh-native-runtime'
+import { NativeAgentId, NativeAgentRegistry } from '@redspark/rsh-native-agent'
+import { createUserMessage, ToolCallId } from '@redspark/rsh-llm/native'
+import { Session, SessionId, SESSION_FORMAT_VERSION, type SessionEvent } from '@redspark/rsh-session/native'
 import { NativeToolRegistry, type NativeToolExecution } from '../src/index.ts'
 import { createNativePtcDispatch } from '../src/ptc-dispatch.ts'
 

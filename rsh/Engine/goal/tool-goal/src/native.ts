@@ -1,13 +1,13 @@
 /** Native model-facing Goal controls with durable current-turn authority. */
 import { z } from 'zod'
-import type {} from '@deepseek-ai/dsh-native-prompt'
-import { HarnessError, boundContextSummary, createUserMessage } from '@deepseek-ai/dsh-llm/native'
-import type { NativeAgentRegistry } from '@deepseek-ai/dsh-native-agent'
-import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
-import type { NativeToolExecution, NativeProjectedToolOutcome } from '@deepseek-ai/dsh-native-tools'
-import type { JsonSchemaNode } from '@deepseek-ai/dsh-native-tools/json-schema'
-import type { NativeActiveSessionOperations } from '@deepseek-ai/dsh-native-session-execution'
-import { GoalId, type NativeGoalOperations, type GoalView } from '@deepseek-ai/dsh-goal/native'
+import type {} from '@redspark/rsh-native-prompt'
+import { HarnessError, boundContextSummary, createUserMessage } from '@redspark/rsh-llm/native'
+import type { NativeAgentRegistry } from '@redspark/rsh-native-agent'
+import type { NativePlugin } from '@redspark/rsh-native-runtime'
+import type { NativeToolExecution, NativeProjectedToolOutcome } from '@redspark/rsh-native-tools'
+import type { JsonSchemaNode } from '@redspark/rsh-native-tools/json-schema'
+import type { NativeActiveSessionOperations } from '@redspark/rsh-native-session-execution'
+import { GoalId, type NativeGoalOperations, type GoalView } from '@redspark/rsh-goal/native'
 import { CREATE_DESCRIPTION, GET_DESCRIPTION, goalValue, guidance } from './common.ts'
 import { renderWrapupContext } from './wrapup.ts'
 
@@ -65,7 +65,7 @@ function directHuman(auth: { direct: boolean }): void {
 
 /** Native Goal tools Consumer; authority derives from durable current-turn inputs and runtime invocation role. */
 export const plugin: NativePlugin = {
-  apiVersion: 1, name: '@deepseek-ai/dsh-tool-goal', targets: ['host'],
+  apiVersion: 1, name: '@redspark/rsh-tool-goal', targets: ['host'],
   requires: ['agents', 'activeSessions', 'goals', 'tools', 'promptSections'], provides: [],
   resolve(input) {
     const config = resolveNativeGoalToolsConfig(input)

@@ -1,14 +1,14 @@
 /** Same-session Goal continuation over the selected Program's retained durable inbox. */
 import { z } from 'zod'
-import { createUserMessage } from '@deepseek-ai/dsh-llm/native'
-import type { UserMessage } from '@deepseek-ai/dsh-llm/native'
-import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
-import type { NativeActiveSessionOperations, NativeActiveSessionOwner, NativeStepAdmissionHook } from '@deepseek-ai/dsh-native-session-execution'
-import type { NativeGoalOperations, GoalView } from '@deepseek-ai/dsh-goal/native'
-import type { TurnEndCancelCause, TurnEndReason } from '@deepseek-ai/dsh-session/native'
+import { createUserMessage } from '@redspark/rsh-llm/native'
+import type { UserMessage } from '@redspark/rsh-llm/native'
+import type { NativePlugin } from '@redspark/rsh-native-runtime'
+import type { NativeActiveSessionOperations, NativeActiveSessionOwner, NativeStepAdmissionHook } from '@redspark/rsh-native-session-execution'
+import type { NativeGoalOperations, GoalView } from '@redspark/rsh-goal/native'
+import type { TurnEndCancelCause, TurnEndReason } from '@redspark/rsh-session/native'
 import { renderGoalRoundPrompt } from './prompt.ts'
-import { GoalError } from '@deepseek-ai/dsh-goal/native'
-import type { CreateGoalRequest, GoalRef } from '@deepseek-ai/dsh-goal/types'
+import { GoalError } from '@redspark/rsh-goal/native'
+import type { CreateGoalRequest, GoalRef } from '@redspark/rsh-goal/types'
 import type { NativeGoalContinuationOperations, NativeGoalContinuationSource, NativeScheduledGoalAdmission,
   NativeScheduledGoalAdmissionAuthority, NativeScheduledGoalAdmissionLease } from './continuation-types.ts'
 
@@ -374,7 +374,7 @@ export class NativeGoalRoundDriver implements NativeGoalContinuationOperations {
 
 /** Native Goal driver; it contributes no independent execution authority. */
 export const plugin: NativePlugin = {
-  apiVersion: 1, name: '@deepseek-ai/dsh-goal-round-driver', targets: ['host'], requires: ['goals', 'activeSessions'],
+  apiVersion: 1, name: '@redspark/rsh-goal-round-driver', targets: ['host'], requires: ['goals', 'activeSessions'],
   optional: ['scheduledGoalHost'], provides: ['goalContinuation'],
   resolve(input) {
     const config = resolveNativeGoalDriverConfig(input)

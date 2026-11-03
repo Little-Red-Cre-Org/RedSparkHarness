@@ -5,8 +5,8 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { afterEach, expect, it } from 'vitest'
-import { credentialKey, credentialRef } from '@deepseek-ai/dsh-credentials/native'
-import { createLaunchEnvironmentSnapshot } from '@deepseek-ai/dsh-launch-environment/native'
+import { credentialKey, credentialRef } from '@redspark/rsh-credentials/native'
+import { createLaunchEnvironmentSnapshot } from '@redspark/rsh-launch-environment/native'
 import { NativeLocalCredentialProvider } from '../src/backend.ts'
 
 const roots: string[] = []

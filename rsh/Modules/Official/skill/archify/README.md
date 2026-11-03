@@ -3,7 +3,7 @@ description: "Automatic, bounded routing of explicit architecture and diagram de
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-archify
+# @redspark/rsh-archify
 
 English | [中文](README.zh.md)
 
@@ -39,7 +39,7 @@ The shipped Cordis base row needs no configuration. A later profile patch can ad
 
 ```yaml
 - id: archify
-  name: '@deepseek-ai/dsh-archify'
+  name: '@redspark/rsh-archify'
   config:
     autoInvoke: true
 ```
@@ -51,11 +51,11 @@ The shipped Cordis base row needs no configuration. A later profile patch can ad
 | `requestPhrases` | built-in list | Action phrases that qualify a request for automatic loading. |
 | `diagramPhrases` | built-in list | Diagram-domain phrases that must accompany one action phrase. |
 
-The generated [configuration catalog](../../../../Docs/config-catalog.md#deepseek-aidsh-archify) is the exhaustive source for accepted fields.
+The generated [configuration catalog](../../../../Docs/config-catalog.md#redsparkrsh-archify) is the exhaustive source for accepted fields.
 
 ### Observable success and failures
 
-Loaded instructions enumerate the installed JSON schemas and examples and require shell-based resource discovery before authoring. `DSH_ARCHIFY_SKILL_DIR` belongs to the shell environment, not `run_code`'s `process.env`. Self-contained Bash and PowerShell examples read package resources and execute the CLI while keeping candidate and output paths in the user workspace. Delegated diagram tasks must carry the same resource guidance. A missing PATH command does not mean the bundled CLI is unavailable.
+Loaded instructions enumerate the installed JSON schemas and examples and require shell-based resource discovery before authoring. `RSH_ARCHIFY_SKILL_DIR` belongs to the shell environment, not `run_code`'s `process.env`. Self-contained Bash and PowerShell examples read package resources and execute the CLI while keeping candidate and output paths in the user workspace. Delegated diagram tasks must carry the same resource guidance. A missing PATH command does not mean the bundled CLI is unavailable.
 
 A matching request contributes one `archify-auto-invocation` instruction message and makes the upstream body model-visible for that step. The message source has the same public type in both entries; see the [Skills subsystem reference](../../../../Docs/subsystems/skills.md#automatic-archify-invocation). The hidden Skill stays out of `dsh-tool-skill` catalogs because it is model-disabled, while Cordis `/archify` remains user-invocable. A Native TUI composition can also route `/archify` when it installs the Archify `./native` entry and the Native `dsh-tool-skill` consumer; exporting either entry does not change defaults. The package does not run the CLI itself: the loaded instructions require the agent to create a candidate, validate it, deliver JSON and HTML, and call `present` for accepted artifacts.
 
@@ -67,7 +67,7 @@ A matching request contributes one `archify-auto-invocation` instruction message
 <details>
 <summary>Implementation internals — click to expand</summary>
 
-Both entries register one bundled `archify` provider and lazily read the installed `@tt-a1i/archify-dsh@0.1.0` `SKILL.md` body after stripping its frontmatter. The provider advertises `{ modelInvocable: false, userInvocable: true }`, so existing direct invocation can load it while the generic model catalog cannot advertise it. Both contribute the resolved upstream directory to existing shell tools as managed `DSH_ARCHIFY_SKILL_DIR`; rendered instructions use that variable instead of exposing an absolute install path.
+Both entries register one bundled `archify` provider and lazily read the installed `@tt-a1i/archify-dsh@0.1.0` `SKILL.md` body after stripping its frontmatter. The provider advertises `{ modelInvocable: false, userInvocable: true }`, so existing direct invocation can load it while the generic model catalog cannot advertise it. Both contribute the resolved upstream directory to existing shell tools as managed `RSH_ARCHIFY_SKILL_DIR`; rendered instructions use that variable instead of exposing an absolute install path.
 
 The Cordis entry registers at `agent/pre-step`. It observes eligible text blocks from claimed direct user messages up to `maxUserTextChars`; if any direct-user text would be truncated, it declines automatic routing even when the observed prefix contains both phrase families. Only a complete bounded observation with an action phrase and a diagram phrase can match, and a direct `/archify` gesture always bypasses automatic loading. A match resolves the winning Skill with the agent scope and abort signal, then appends a `createUserMessage` with the typed `archify-auto-invocation` source.
 

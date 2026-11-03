@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import type { SessionListState, SessionSummary } from '@deepseek-ai/dsh-api-session-controller/client'
-import type { WorkspaceId, WorkspaceView } from '@deepseek-ai/dsh-api-workspace-controller/client'
-import type { SessionPendingInteractionBase } from '@deepseek-ai/dsh-client-ui-session/client'
-import type { ScheduleId, ScheduleRecord } from '@deepseek-ai/dsh-schedule/client'
-import type { SessionId } from '@deepseek-ai/dsh-session/types'
+import type { SessionListState, SessionSummary } from '@redspark/rsh-api-session-controller/client'
+import type { WorkspaceId, WorkspaceView } from '@redspark/rsh-api-workspace-controller/client'
+import type { SessionPendingInteractionBase } from '@redspark/rsh-client-ui-session/client'
+import type { ScheduleId, ScheduleRecord } from '@redspark/rsh-schedule/client'
+import type { SessionId } from '@redspark/rsh-session/types'
 import {
   deriveFlat, deriveGroups, deriveSearchResults, owningGroupKey, workspaceLabel,
   UNGROUPED_KEY,

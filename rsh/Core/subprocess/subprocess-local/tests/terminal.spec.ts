@@ -1,15 +1,15 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { IDisposable, IPty } from 'node-pty'
-import { LocalTerminalHandle } from '@deepseek-ai/dsh-subprocess-local/src/terminal.ts'
-import { createProcessInspector } from '@deepseek-ai/dsh-subprocess-local/src/process-inspector.ts'
+import { LocalTerminalHandle } from '@redspark/rsh-subprocess-local/src/terminal.ts'
+import { createProcessInspector } from '@redspark/rsh-subprocess-local/src/process-inspector.ts'
 import type {
   ProcessIdentity,
   ProcessInspector,
   ProcessInspectorInternals,
   ProcessSnapshot,
-} from '@deepseek-ai/dsh-subprocess-local/src/process-inspector.ts'
-import type { BoundProcessOwner } from '@deepseek-ai/dsh-subprocess-local/src/managed-owner.ts'
-import type { SubprocessTerminalSignal } from '@deepseek-ai/dsh-subprocess'
+} from '@redspark/rsh-subprocess-local/src/process-inspector.ts'
+import type { BoundProcessOwner } from '@redspark/rsh-subprocess-local/src/managed-owner.ts'
+import type { SubprocessTerminalSignal } from '@redspark/rsh-subprocess'
 
 class FakePty {
   pid = 123

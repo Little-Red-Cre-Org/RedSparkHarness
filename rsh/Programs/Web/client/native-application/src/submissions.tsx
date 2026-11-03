@@ -1,9 +1,9 @@
 /** Host-owned pending inbox presentation; row actions retain exact request identities. */
 import { useEffect, useId, useState } from 'react'
 import { Button, IconCheckOutline16, IconChevronDownOutline14, IconChevronUpOutline14, IconCloseOutline16,
-  IconEditOutline16, IconRightUpOutline16, IconTrashOutline16 } from '@deepseek-ai/dsh-client-ui-primitives'
-import type { NativePendingSubmission, NativeSubmissionRequestId } from '@deepseek-ai/dsh-client-native-session/native'
-import type { TranslateNS } from '@deepseek-ai/dsh-client-ui-slots'
+  IconEditOutline16, IconRightUpOutline16, IconTrashOutline16 } from '@redspark/rsh-client-ui-primitives'
+import type { NativePendingSubmission, NativeSubmissionRequestId } from '@redspark/rsh-client-native-session/native'
+import type { TranslateNS } from '@redspark/rsh-client-ui-slots'
 import type { ConversationSnapshot, NativeConversationController } from './controller.ts'
 import css from './conversation.module.css'
 

@@ -9,7 +9,7 @@ import {
   DESKTOP_COMPATIBILITY_HOST_PACKAGE,
   DESKTOP_COMPATIBILITY_OPTIONAL_DEPENDENCIES,
   desktopCorePackageOverrides,
-  desktopDshPackageSpec,
+  desktopRshPackageSpec,
   parseDesktopCorePackageSet,
   verifyDesktopCoreLockfile,
   verifyDesktopCorePackageSet,
@@ -41,9 +41,9 @@ function packageSetProject(): {
   const dshBody = Buffer.from('dsh')
   const baseBody = Buffer.from('base')
   const hostBody = Buffer.from('host')
-  const dsh = record('@deepseek-ai/dsh', 'dsh.tgz', dshBody)
-  const base = record('@deepseek-ai/dsh-base', 'dsh-base.tgz', baseBody)
-  const host = record('@deepseek-ai/dsh-desktop-host', 'dsh-desktop-host.tgz', hostBody)
+  const dsh = record('@redspark/rsh', 'dsh.tgz', dshBody)
+  const base = record('@redspark/rsh-base', 'dsh-base.tgz', baseBody)
+  const host = record('@redspark/rsh-desktop-host', 'dsh-desktop-host.tgz', hostBody)
   writeFileSync(join(packageDir, dsh.file), dshBody)
   writeFileSync(join(packageDir, host.file), hostBody)
   writeFileSync(join(root, DESKTOP_PACKAGE_SET_FILE), `${JSON.stringify({
@@ -62,14 +62,14 @@ describe('desktop core package set', () => {
   it('pins the direct dsh dependency and every internal package to local tarballs', () => {
     const { root, dsh, base, host } = packageSetProject()
     const packageSet = verifyDesktopCorePackageSet(root, '1.2.3')
-    expect(desktopDshPackageSpec(packageSet)).toBe('file:./desktop-packages/dsh.tgz')
+    expect(desktopRshPackageSpec(packageSet)).toBe('file:./desktop-packages/dsh.tgz')
     expect(desktopCorePackageOverrides(packageSet)).toEqual({
-      '@deepseek-ai/dsh': 'file:./desktop-packages/dsh.tgz',
-      '@deepseek-ai/dsh-desktop-host': 'file:./desktop-packages/dsh-desktop-host.tgz',
+      '@redspark/rsh': 'file:./desktop-packages/dsh.tgz',
+      '@redspark/rsh-desktop-host': 'file:./desktop-packages/dsh-desktop-host.tgz',
     })
     expect(packageSet.ignoredOptionalDependencies).toEqual([...DESKTOP_COMPATIBILITY_OPTIONAL_DEPENDENCIES].sort())
     const compatibilityHost = record(DESKTOP_COMPATIBILITY_HOST_PACKAGE, 'compat-host.tgz', Buffer.from('compat'))
-    const cordis = record('@deepseek-ai/cordis', 'cordis.tgz', Buffer.from('cordis'))
+    const cordis = record('@redspark/cordis', 'cordis.tgz', Buffer.from('cordis'))
     const compatibilityPackages = [dsh, base, host, compatibilityHost, cordis]
       .sort((left, right) => left.name.localeCompare(right.name))
     const compatibility = parseDesktopCorePackageSet({ schemaVersion: 2, assembly: 'compatibility',
@@ -78,7 +78,7 @@ describe('desktop core package set', () => {
         .filter(name => !compatibilityPackages.some(entry => entry.name === name)).sort() }, '1.2.3')
     expect(compatibility.assembly).toBe('compatibility')
     expect(compatibility.packages.map(entry => entry.name)).toContain(DESKTOP_COMPATIBILITY_HOST_PACKAGE)
-    expect(compatibility.ignoredOptionalDependencies).not.toContain('@deepseek-ai/cordis')
+    expect(compatibility.ignoredOptionalDependencies).not.toContain('@redspark/cordis')
   })
 
   it('rejects version drift, descriptor disorder, corruption, and extra files', () => {
@@ -104,19 +104,19 @@ describe('desktop core package set', () => {
   })
 
   it('rejects registry resolutions for names supplied by the local package set', () => {
-    const dsh = record('@deepseek-ai/dsh', 'dsh.tgz', Buffer.from('dsh'))
-    const host = record('@deepseek-ai/dsh-desktop-host', 'host.tgz', Buffer.from('host'))
+    const dsh = record('@redspark/rsh', 'dsh.tgz', Buffer.from('dsh'))
+    const host = record('@redspark/rsh-desktop-host', 'host.tgz', Buffer.from('host'))
     const packageSet = parseDesktopCorePackageSet({ schemaVersion: 2, assembly: 'native', packages: [dsh, host],
       ignoredOptionalDependencies: [...DESKTOP_COMPATIBILITY_OPTIONAL_DEPENDENCIES].sort() })
     expect(() => {
       verifyDesktopCoreLockfile(
-        "packages:\n  '@deepseek-ai/dsh@file:desktop-packages/dsh.tgz':\n    resolution: {}\n",
+        "packages:\n  '@redspark/rsh@file:desktop-packages/dsh.tgz':\n    resolution: {}\n",
         packageSet,
       )
     }).not.toThrow()
     expect(() => {
       verifyDesktopCoreLockfile(
-        "packages:\n  '@deepseek-ai/dsh@1.2.3':\n    resolution: {integrity: sha512-registry}\n",
+        "packages:\n  '@redspark/rsh@1.2.3':\n    resolution: {integrity: sha512-registry}\n",
         packageSet,
       )
     }).toThrow(/outside the local package set/u)
@@ -125,10 +125,10 @@ describe('desktop core package set', () => {
     // ships it locally, so naming it here would be a package-set omission.
     expect(() => {
       verifyDesktopCoreLockfile(
-        "packages:\n  '@deepseek-ai/dsh-app-boot@1.0.0':\n    resolution: {integrity: sha512-registry}\n",
+        "packages:\n  '@redspark/rsh-app-boot@1.0.0':\n    resolution: {integrity: sha512-registry}\n",
         packageSet,
       )
-    }).toThrow(/ignored compatibility optional @deepseek-ai\/dsh-app-boot/u)
+    }).toThrow(/ignored compatibility optional @redspark\/dsh-app-boot/u)
   })
 
 })

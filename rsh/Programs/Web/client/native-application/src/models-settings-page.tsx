@@ -4,15 +4,15 @@ import type { ReactNode } from 'react'
 import {
   Button, CustomProviderCard, IconPlusOutline16, Modal, ModelsSettingsStyles, ProviderEditor,
   deriveModelCredentialRef, modelProtocolChoices,
-} from '@deepseek-ai/dsh-client-ui-primitives'
+} from '@redspark/rsh-client-ui-primitives'
 import type {
   ModelCredentialInfo, ModelDiscoveryRequest, ModelSettingsNamespace, ModelSettingsOperations,
-} from '@deepseek-ai/dsh-client-ui-primitives'
+} from '@redspark/rsh-client-ui-primitives'
 import type {
   NativeConfigurableModelProvider, NativeLlmProviderInfo, NativeSessionClient,
   NativeSettingsDescriptor,
-} from '@deepseek-ai/dsh-client-native-session/native'
-import { NativeSessionRpcError } from '@deepseek-ai/dsh-client-native-session/native'
+} from '@redspark/rsh-client-native-session/native'
+import { NativeSessionRpcError } from '@redspark/rsh-client-native-session/native'
 import type { ConversationLocaleKey } from './locales.ts'
 import { modelSettingsSchema } from './model-settings-schema.ts'
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { SessionEvent, SurfaceEvent, SurfaceEventType } from '@deepseek-ai/dsh-session'
+import type { SessionEvent, SurfaceEvent, SurfaceEventType } from '@redspark/rsh-session'
 import {
   Session,
   SessionId,
@@ -10,8 +10,8 @@ import {
   isReplacementSurfaceEvent,
   isSurfaceEligibleType,
   isSurfaceEvent,
-} from '@deepseek-ai/dsh-session'
-import { SurfaceManager } from '@deepseek-ai/dsh-session/surface'
+} from '@redspark/rsh-session'
+import { SurfaceManager } from '@redspark/rsh-session/surface'
 import {
   createMessage,
   createSystemMessage,
@@ -20,7 +20,7 @@ import {
   freezeMessage,
   ToolCallId,
   MessageId,
-} from '@deepseek-ai/dsh-llm'
+} from '@redspark/rsh-llm'
 
 type TestSurfaceOp = 'append' | { op: 'replace'; startSeq: number; endSeq: number }
 

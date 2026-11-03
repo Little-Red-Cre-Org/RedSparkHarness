@@ -1,9 +1,9 @@
 /** Deterministic provider-independent image normalization. */
 
 import type { Sharp } from 'sharp'
-import { AttachmentError } from '@deepseek-ai/dsh-attachment/error'
-import { requestImageDimensions } from '@deepseek-ai/dsh-attachment/request-projection'
-import type { ImageMediaType } from '@deepseek-ai/dsh-attachment/types'
+import { AttachmentError } from '@redspark/rsh-attachment/error'
+import { requestImageDimensions } from '@redspark/rsh-attachment/request-projection'
+import type { ImageMediaType } from '@redspark/rsh-attachment/types'
 import { encodeFirstWithinLimit, encodingLadder, isExhaustedEncoding } from './encoding.ts'
 import { detectImage, encodedAlphaIsCompatible } from './image.ts'
 import type { DetectedImage } from './image.ts'

@@ -1,9 +1,9 @@
 /** Native Session authorities adapted to the shared query source ports. */
 
-import type { NativeActiveSessionOperations, NativeActiveSessionOwner } from '@deepseek-ai/dsh-native-session-execution/active-session-protocol'
-import { SessionLogOffset } from '@deepseek-ai/dsh-session/native'
-import type { Session, SessionId } from '@deepseek-ai/dsh-session/native'
-import type { NativeSessionPersistenceOperations } from '@deepseek-ai/dsh-session-persistence/native'
+import type { NativeActiveSessionOperations, NativeActiveSessionOwner } from '@redspark/rsh-native-session-execution/active-session-protocol'
+import { SessionLogOffset } from '@redspark/rsh-session/native'
+import type { Session, SessionId } from '@redspark/rsh-session/native'
+import type { NativeSessionPersistenceOperations } from '@redspark/rsh-session-persistence/native'
 import { readColdSessionLog } from './cold-read.ts'
 import type {
   SessionQueryLiveSource,

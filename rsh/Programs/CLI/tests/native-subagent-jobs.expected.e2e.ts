@@ -22,11 +22,11 @@ it.each(['jobs', 'tools'] as const)('rejects inherited Subagent %s that differ f
       installations: [
         ...composition.installations.map(installation => (registry === 'jobs' ? ['tool-jobs', 'subagent-tool'] : ['subagent-controls']).includes(installation.id)
           ? { ...installation, scope: 'child' } : installation),
-        { id: `child-${registry}`, plugin: registry === 'jobs' ? '@deepseek-ai/dsh-native-jobs' : '@deepseek-ai/dsh-native-tools', scope: 'child' },
+        { id: `child-${registry}`, plugin: registry === 'jobs' ? '@redspark/rsh-native-jobs' : '@redspark/rsh-native-tools', scope: 'child' },
       ],
     }))
     const launch = await execa(process.execPath, [join(root, 'rsh/Programs/CLI/lib/bin.js'), '--profile', 'native-sdk'], {
-      env: { ...process.env, DSH_HOME: home, DSH_TELEMETRY_DISABLED: '1' }, reject: false, timeout: 10000,
+      env: { ...process.env, RSH_HOME: home, RSH_TELEMETRY_DISABLED: '1' }, reject: false, timeout: 10000,
     })
     expect(launch.exitCode).not.toBe(0)
     expect(launch.stderr).toContain(registry === 'jobs' ? 'Provider, jobs and jobControls must select the same Jobs registry'

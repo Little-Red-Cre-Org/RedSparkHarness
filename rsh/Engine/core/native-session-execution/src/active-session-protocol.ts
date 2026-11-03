@@ -1,8 +1,8 @@
 /** Active Session owner and lifecycle Consumer types, without execution Providers. */
-import type { NativeAgent } from '@deepseek-ai/dsh-native-agent/definition'
-import type { InboxTarget } from '@deepseek-ai/dsh-native-agent/inbox'
-import type { MessageId, TextBlock, UserMessage } from '@deepseek-ai/dsh-llm/native'
-import type { Session, SessionEvent, SessionId, TurnEndCancelCause, TurnEndReason } from '@deepseek-ai/dsh-session/native'
+import type { NativeAgent } from '@redspark/rsh-native-agent/definition'
+import type { InboxTarget } from '@redspark/rsh-native-agent/inbox'
+import type { MessageId, TextBlock, UserMessage } from '@redspark/rsh-llm/native'
+import type { Session, SessionEvent, SessionId, TurnEndCancelCause, TurnEndReason } from '@redspark/rsh-session/native'
 
 /** Live Program-owned interaction recipient and the root Session displaying its requests. */
 export interface NativeProgramInteractionOwner {
@@ -206,7 +206,7 @@ export interface NativeActiveSessionOperations {
   onDetached(observer: (owner: NativeActiveSessionOwner) => Promise<void>): () => Promise<void>
 }
 
-declare module '@deepseek-ai/dsh-native-runtime' {
+declare module '@redspark/rsh-native-runtime' {
   interface NativeServices {
     activeSessions: NativeActiveSessionOperations
   }

@@ -1,8 +1,8 @@
 import { get as httpGet } from 'node:http'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { credentialKey, type CredentialRecord, type NativeCredentials } from '@deepseek-ai/dsh-credentials/native'
-import type { NativeContext } from '@deepseek-ai/dsh-native-runtime'
-import type { AuthorizationFlow, AuthorizationSession } from '@deepseek-ai/dsh-authorization/native'
+import { credentialKey, type CredentialRecord, type NativeCredentials } from '@redspark/rsh-credentials/native'
+import type { NativeContext } from '@redspark/rsh-native-runtime'
+import type { AuthorizationFlow, AuthorizationSession } from '@redspark/rsh-authorization/native'
 import { plugin, type DeepSeekAccount } from '../src/native.ts'
 import { readAccountDetail } from '../src/details.ts'
 

@@ -13,19 +13,19 @@
 - id: tools
   config:
     # Keep the same temporary process-wide PTC mode opt-in as the Web surface.
-    mode: !!js process.env.DSH_TOOLS_MODE
+    mode: !!js process.env.RSH_TOOLS_MODE
 
 - insert:
     # PTC mode is a core execution capability, not a Web component.
     - id: code-runtime
-      name: '@deepseek-ai/dsh-code-runtime-worker-thread'
+      name: '@redspark/rsh-code-runtime-worker-thread'
 
     - id: headless-startup
-      name: '@deepseek-ai/dsh-headless/startup'
+      name: '@redspark/rsh-headless/startup'
 
     # Reads its task from the ordinary headlessStartup provider.
     - id: headless-runner
-      name: '@deepseek-ai/dsh-headless'
+      name: '@redspark/rsh-headless'
       inject: [headlessStartup]
       config:
         task: !!js ctx.headlessStartup.task

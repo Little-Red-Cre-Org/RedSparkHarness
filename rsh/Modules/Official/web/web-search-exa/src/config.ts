@@ -1,11 +1,11 @@
 /**
  * Framework-free configuration for the Exa search provider, shared by its Cordis plugin and native
  * installation.
- * @module @deepseek-ai/dsh-web-search-exa/config
+ * @module @redspark/rsh-web-search-exa/config
  */
 
-import z from '@deepseek-ai/schemastery'
-import type { LaunchEnvironmentSnapshot } from '@deepseek-ai/dsh-launch-environment/native'
+import z from '@redspark/schemastery'
+import type { LaunchEnvironmentSnapshot } from '@redspark/rsh-launch-environment/native'
 import {
   EXA_DEFAULT_BASE_URL,
   EXA_DEFAULT_HIGHLIGHTS_PER_RESULT,

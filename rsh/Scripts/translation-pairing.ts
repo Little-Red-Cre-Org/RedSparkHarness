@@ -167,8 +167,8 @@ export const TRANSLATION_SCOPE_GLOB_EXCLUDES = [
   'rsh/Programs/Web/application/dist/**',
   'rsh/Docs/website/**',
   '.artifacts/**',
-  'rsh/Programs/SDK/python/sdk-runtime/src/deepseek_harness_runtime/runtime/deepseek-harness-sdk-runtime-*/**',
-  'rsh/Programs/SDK/python/sdk-runtime/src/deepseek_harness_runtime/runtime/node/**',
+  'rsh/Programs/SDK/python/sdk-runtime/src/redspark_harness_runtime/runtime/redspark-harness-sdk-runtime-*/**',
+  'rsh/Programs/SDK/python/sdk-runtime/src/redspark_harness_runtime/runtime/node/**',
   'rsh/Core/vendor/**',
 ]
 
@@ -181,8 +181,8 @@ function isTranslationSourceExcluded(file: string): boolean {
     || file.startsWith('output/')
     || file.startsWith('rsh/Programs/Web/application/dist/')
     || file.startsWith('rsh/Docs/website/')
-    || file.startsWith('rsh/Programs/SDK/python/sdk-runtime/src/deepseek_harness_runtime/runtime/deepseek-harness-sdk-runtime-')
-    || file.startsWith('rsh/Programs/SDK/python/sdk-runtime/src/deepseek_harness_runtime/runtime/node/')
+    || file.startsWith('rsh/Programs/SDK/python/sdk-runtime/src/redspark_harness_runtime/runtime/redspark-harness-sdk-runtime-')
+    || file.startsWith('rsh/Programs/SDK/python/sdk-runtime/src/redspark_harness_runtime/runtime/node/')
 }
 
 /** Whether one discovered Markdown or sidecar path belongs to the bilingual source corpus. */
@@ -327,7 +327,7 @@ export function parseTranslationMarkdown(content: string): Nodes {
   return fromMarkdown(content, { extensions: [gfm()], mdastExtensions: [gfmFromMarkdown()] })
 }
 
-const PUBLIC_REPOSITORY_BLOB_ROOT = 'https://github.com/deepseek-ai/deepseek-harness/blob/master/'
+const PUBLIC_REPOSITORY_BLOB_ROOT = 'https://github.com/deepseek-ai/redspark-harness/blob/master/'
 
 /** Return the accepted relative and public-repository links to one counterpart. */
 export function languageSwitcherTargets(counterpart: string): string[] {

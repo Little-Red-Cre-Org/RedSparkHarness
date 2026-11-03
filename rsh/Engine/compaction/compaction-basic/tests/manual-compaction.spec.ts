@@ -1,37 +1,37 @@
 import { describe, expect, it, vi } from 'vitest'
-import { Context } from '@deepseek-ai/cordis'
-import AgentLoop from '@deepseek-ai/dsh-agent-loop'
-import { mountAgentLoopTestDependencies } from '@deepseek-ai/dsh-agent-loop-testkit'
-import InvariantRegistry from '@deepseek-ai/dsh-invariants'
-import { CommandId } from '@deepseek-ai/dsh-commands/brand'
-import * as SessionInvariant from '@deepseek-ai/dsh-session/invariant'
-import * as AgentInvariant from '@deepseek-ai/dsh-agent/invariant'
-import * as AgentLoopInvariant from '@deepseek-ai/dsh-agent-loop/invariant'
-import * as CompactionInvariant from '@deepseek-ai/dsh-compaction/invariant'
-import { BasicCompactionEngine } from '@deepseek-ai/dsh-compaction-basic'
-import { CompactionId, isCompactCheckpointSource, ManualCompactionError } from '@deepseek-ai/dsh-compaction'
-import type { CompactionResult } from '@deepseek-ai/dsh-compaction'
+import { Context } from '@redspark/cordis'
+import AgentLoop from '@redspark/rsh-agent-loop'
+import { mountAgentLoopTestDependencies } from '@redspark/rsh-agent-loop-testkit'
+import InvariantRegistry from '@redspark/rsh-invariants'
+import { CommandId } from '@redspark/rsh-commands/brand'
+import * as SessionInvariant from '@redspark/rsh-session/invariant'
+import * as AgentInvariant from '@redspark/rsh-agent/invariant'
+import * as AgentLoopInvariant from '@redspark/rsh-agent-loop/invariant'
+import * as CompactionInvariant from '@redspark/rsh-compaction/invariant'
+import { BasicCompactionEngine } from '@redspark/rsh-compaction-basic'
+import { CompactionId, isCompactCheckpointSource, ManualCompactionError } from '@redspark/rsh-compaction'
+import type { CompactionResult } from '@redspark/rsh-compaction'
 import {
   createAssistantMessage,
   createUserMessage,
   LlmAdapter,
-} from '@deepseek-ai/dsh-llm'
+} from '@redspark/rsh-llm'
 import type {
   ContentBlock,
   LlmResolvedModelInfo,
   Message,
   StreamChunk,
   TokenUsage,
-} from '@deepseek-ai/dsh-llm'
-import SessionStore, { Session, SessionId, type SessionEvent } from '@deepseek-ai/dsh-session'
-import SessionProjectionRegistry from '@deepseek-ai/dsh-session-projection'
-import LlmRuntime from '@deepseek-ai/dsh-llm'
-import TokenMeter from '@deepseek-ai/dsh-token-meter'
-import type { Agent } from '@deepseek-ai/dsh-agent'
+} from '@redspark/rsh-llm'
+import SessionStore, { Session, SessionId, type SessionEvent } from '@redspark/rsh-session'
+import SessionProjectionRegistry from '@redspark/rsh-session-projection'
+import LlmRuntime from '@redspark/rsh-llm'
+import TokenMeter from '@redspark/rsh-token-meter'
+import type { Agent } from '@redspark/rsh-agent'
 import type {
   SummarizationInput,
   SummaryResult,
-} from '@deepseek-ai/dsh-compaction-basic/src/summarizer.ts'
+} from '@redspark/rsh-compaction-basic/src/summarizer.ts'
 
 const MODEL = 'mock'
 const SIGNAL = new AbortController().signal

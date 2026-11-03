@@ -2,7 +2,7 @@ import { unwatchFile, watchFile, type Stats } from 'node:fs'
 import { lstat, stat } from 'node:fs/promises'
 import { dirname, join, posix, relative, resolve, sep, win32 } from 'node:path'
 import chokidar from 'chokidar'
-import { canonicalizeWatchPath } from '@deepseek-ai/dsh-home-paths'
+import { canonicalizeWatchPath } from '@redspark/rsh-home-paths'
 
 /** One root in the path space used for watcher and mutation observation. */
 export interface SkillWatchRoot {

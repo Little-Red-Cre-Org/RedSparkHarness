@@ -12,7 +12,7 @@ describe('PDF binary assets', () => {
   }
 
   it('reads the ambient build payload only when the factory is created', async () => {
-    vi.stubGlobal('__DSH_PDFJS_ASSETS__', assets)
+    vi.stubGlobal('__RSH_PDFJS_ASSETS__', assets)
     const Factory = createPdfBinaryDataFactory()
     const factory = new Factory()
     expect(Array.from(await factory.fetch({ kind: 'cMapUrl', filename: 'sample.bcmap' }))).toEqual([1, 2, 3])

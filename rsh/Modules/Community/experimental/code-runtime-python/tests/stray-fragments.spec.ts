@@ -1,4 +1,4 @@
-import { Context } from '@deepseek-ai/cordis'
+import { Context } from '@redspark/cordis'
 import { expect, it, vi } from 'vitest'
 
 // Keep the interpreter and pipe lifecycle real; only OS-dependent read sizes

@@ -10,11 +10,11 @@ import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { afterAll, afterEach, describe, expect, it, onTestFinished, vi } from 'vitest'
 import { FSWatcher, type ChokidarOptions } from 'chokidar'
-import { Context } from '@deepseek-ai/cordis'
-import Hmr from '@deepseek-ai/cordis-plugin-hmr'
-import Include, { type PatchOptions } from '@deepseek-ai/cordis-plugin-include'
-import Loader from '@deepseek-ai/cordis-plugin-loader'
-import Timer from '@deepseek-ai/cordis-plugin-timer'
+import { Context } from '@redspark/cordis'
+import Hmr from '@redspark/cordis-plugin-hmr'
+import Include, { type PatchOptions } from '@redspark/cordis-plugin-include'
+import Loader from '@redspark/cordis-plugin-loader'
+import Timer from '@redspark/cordis-plugin-timer'
 import {
   boot,
   loadOptionalPatches,
@@ -60,7 +60,7 @@ async function eventually(test: () => boolean, message: string): Promise<void> {
 
 describe('loadOptionalPatches', () => {
   afterEach(() => {
-    delete process.env.DSH_HOME
+    delete process.env.RSH_HOME
   })
 
   it('returns undefined when no user patch file exists', () => {
@@ -71,19 +71,19 @@ describe('loadOptionalPatches', () => {
     const dir = tmp()
     writeFileSync(join(dir, PROFILE_PATCH_FILENAME), [
       '- id: agent-loop',
-      "  name: '@deepseek-ai/dsh-agent-loop'",
+      "  name: '@redspark/rsh-agent-loop'",
       '  config:',
-      '    model: !!js process.env.DSH_SPEC_MODEL',
+      '    model: !!js process.env.RSH_SPEC_MODEL',
       '- insert:',
       '    - id: llm',
-      "      name: '@deepseek-ai/dsh-llm-pi-ai'",
+      "      name: '@redspark/rsh-llm-pi-ai'",
       '',
     ].join('\n'))
     const patches = loadOptionalPatches(NAME, join(dir, PROFILE_PATCH_FILENAME))
     expect(patches).toHaveLength(2)
     expect(patches?.[0]).toMatchObject({
       id: 'agent-loop',
-      config: { model: { __jsExpr: 'process.env.DSH_SPEC_MODEL' } },
+      config: { model: { __jsExpr: 'process.env.RSH_SPEC_MODEL' } },
     })
     expect(patches?.[1]?.insert).toHaveLength(1)
   })
@@ -102,7 +102,7 @@ describe('loadOptionalPatches', () => {
       { insert: [
         { id: 'absolute', name: pluginPath },
         { id: 'url', name: pluginUrl },
-        { id: 'bare', name: '@deepseek-ai/dsh-system-prompt' },
+        { id: 'bare', name: '@redspark/rsh-system-prompt' },
         { id: 'nested', name: 'cordis:group', group: true, config: [
           { id: 'child', name: pluginPath },
         ] },
@@ -111,7 +111,7 @@ describe('loadOptionalPatches', () => {
     const patches = load(NAME, patchPath)!
     expect(patches[0]?.name).toBe(pluginPath)
     expect(patches[1]?.insert?.map(entry => entry.name)).toEqual([
-      pluginUrl, pluginUrl, '@deepseek-ai/dsh-system-prompt', 'cordis:group',
+      pluginUrl, pluginUrl, '@redspark/rsh-system-prompt', 'cordis:group',
     ])
     expect((patches[1]?.insert?.[3]?.config as { name: string }[])[0]?.name).toBe(pluginUrl)
 
@@ -366,13 +366,13 @@ describe('boot with user patches', () => {
       '- id: noop',
       '  name: ./noop.mjs',
       '  config:',
-      '    value: !!js process.env.DSH_APP_BOOT_USER_SPEC',
+      '    value: !!js process.env.RSH_APP_BOOT_USER_SPEC',
       '- insert:',
       '    - id: user-extra',
       '      name: ./noop.mjs',
       '',
     ].join('\n'))
-    process.env['DSH_APP_BOOT_USER_SPEC'] = 'user-value'
+    process.env['RSH_APP_BOOT_USER_SPEC'] = 'user-value'
     const ctx = await boot(NAME, writeTree(dir), loadOptionalPatches(NAME, join(userDir, PROFILE_PATCH_FILENAME)))
     try {
       const noop = [...ctx.loader.entries()].find(entry => entry.options.id === 'noop')
@@ -381,7 +381,7 @@ describe('boot with user patches', () => {
       expect([...ctx.loader.entries()].some(entry => entry.options.id === 'user-extra')).toBe(true)
     } finally {
       await ctx.fiber.dispose()
-      delete process.env['DSH_APP_BOOT_USER_SPEC']
+      delete process.env['RSH_APP_BOOT_USER_SPEC']
     }
   })
 

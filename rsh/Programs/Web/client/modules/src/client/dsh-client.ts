@@ -1,5 +1,5 @@
 /** Parser for package-authored legacy dsh.client declarations. */
-import type { DshClientManifest } from '@deepseek-ai/dsh-package-manifest'
+import type { DshClientManifest } from '@redspark/rsh-package-manifest'
 import { optionalStringArray } from './manifest.ts'
 
 /**
@@ -9,7 +9,7 @@ import { optionalStringArray } from './manifest.ts'
  * @returns the validated declaration, or undefined when the field is absent.
  * @throws {Error} when the field is present but any member is malformed.
  */
-export function parseDshClient(pkgName: string, value: unknown): DshClientManifest | undefined {
+export function parseRshClient(pkgName: string, value: unknown): DshClientManifest | undefined {
   if (value === undefined) return undefined
   if (typeof value !== 'object' || value === null) {
     throw new Error(`client-modules: ${pkgName} has a non-object dsh.client declaration`)

@@ -1,7 +1,7 @@
 /** Contribute one standing Agent preset using this installation's exact NativeScope. */
 import { z } from 'zod'
-import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
-import type { NativePresetComposition } from '@deepseek-ai/dsh-agent-presets/native-definition'
+import type { NativePlugin } from '@redspark/rsh-native-runtime'
+import type { NativePresetComposition } from '@redspark/rsh-agent-presets/native-definition'
 
 const configSchema = z.object({
   id: z.string().regex(/^[a-z0-9][a-z0-9-]*$/).describe('Registry identifier for this standing composition.'),
@@ -14,7 +14,7 @@ export type Config = z.infer<typeof configSchema>
 
 /** Register the installation scope as one real standing composition. */
 export const plugin: NativePlugin = {
-  apiVersion: 1, name: '@deepseek-ai/dsh-agent-preset-standing', targets: ['host'],
+  apiVersion: 1, name: '@redspark/rsh-agent-preset-standing', targets: ['host'],
   requires: ['agentPresets'], provides: [],
   resolve(input) {
     const config = configSchema.parse(input)

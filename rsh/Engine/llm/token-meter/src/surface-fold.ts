@@ -11,13 +11,13 @@
  * Nodes also carry durable attachment occurrences and their structural prices,
  * so `measure()` can price the request representation sent to the model.
  *
- * @module @deepseek-ai/dsh-token-meter/surface-fold
+ * @module @redspark/rsh-token-meter/surface-fold
  */
 
-import { deriveEventMessage } from '@deepseek-ai/dsh-session/native'
-import type { SessionSeq, SurfaceEvent } from '@deepseek-ai/dsh-session/native'
-import type { ContentBlock, Message } from '@deepseek-ai/dsh-llm/native'
-import type { ImageAttachmentRef } from '@deepseek-ai/dsh-attachment/native'
+import { deriveEventMessage } from '@redspark/rsh-session/native'
+import type { SessionSeq, SurfaceEvent } from '@redspark/rsh-session/native'
+import type { ContentBlock, Message } from '@redspark/rsh-llm/native'
+import type { ImageAttachmentRef } from '@redspark/rsh-attachment/native'
 import { estimateMessage, estimateStructuralBlock } from './estimate.ts'
 
 type FileAttachmentRef = Extract<ContentBlock, { type: 'file' }>['attachment']

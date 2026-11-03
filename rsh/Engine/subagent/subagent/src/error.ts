@@ -1,10 +1,10 @@
 /**
  * Typed failures shared by subagent service and provider operations.
  *
- * @module @deepseek-ai/dsh-subagent
+ * @module @redspark/rsh-subagent
  */
 
-import { HarnessError } from '@deepseek-ai/dsh-llm'
+import { HarnessError } from '@redspark/rsh-llm'
 
 /** Typed failure for the subagent seam. */
 export class SubagentError extends HarnessError {

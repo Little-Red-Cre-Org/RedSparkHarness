@@ -1,12 +1,12 @@
 /** Raw Responses transport for one SIWC-bound Native Codex operation. */
 
-import { attributionHeaders, LlmError } from '@deepseek-ai/dsh-llm/native'
+import { attributionHeaders, LlmError } from '@redspark/rsh-llm/native'
 import type {
   NativeResponsesGenerationCapture,
   NativeResponsesJsonValue,
   NativeResponsesRoute,
   NativeResponsesTransport,
-} from '@deepseek-ai/dsh-native-model-execution/responses-transport'
+} from '@redspark/rsh-native-model-execution/responses-transport'
 import { siwcResponsesPayload } from './siwc.ts'
 import { parseCodexRateLimitEvent, parseCodexRateLimitHeaders } from './rate-limits.ts'
 import type { CodexUsageIdentity, CodexUsageObservation } from './rate-limits.ts'

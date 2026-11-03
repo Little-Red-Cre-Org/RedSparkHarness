@@ -1,6 +1,6 @@
 /** Schema reads and immutable drafts for native provider editors. */
-import Schema from '@deepseek-ai/schemastery'
-import type { ModelSchemaNode, ModelSettingsSchemaOperations } from '@deepseek-ai/dsh-client-ui-primitives'
+import Schema from '@redspark/schemastery'
+import type { ModelSchemaNode, ModelSettingsSchemaOperations } from '@redspark/rsh-client-ui-primitives'
 
 type SchemaFields = ModelSchemaNode & {
   readonly dict?: Readonly<Record<string, ModelSchemaNode>>

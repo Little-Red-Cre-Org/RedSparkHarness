@@ -1,14 +1,14 @@
 /** Catalog and parse Native-captured tools for Codex app-server and Responses API calls.
- * @module @deepseek-ai/dsh-codex-app-server/src/dynamic-tools
+ * @module @redspark/rsh-codex-app-server/src/dynamic-tools
  */
 
-import { ToolCallId } from '@deepseek-ai/dsh-llm/native'
-import type { JsonValue } from '@deepseek-ai/dsh-util-values'
+import { ToolCallId } from '@redspark/rsh-llm/native'
+import type { JsonValue } from '@redspark/rsh-util-values'
 import type {
   NativeExternalJsonValue,
   NativeExternalSubagentModelOperations,
   NativeExternalToolCall,
-} from '@deepseek-ai/dsh-native-subagent/native'
+} from '@redspark/rsh-native-subagent/native'
 import type { NativeResponsesGatewayLimits } from './responses-gateway.ts'
 
 /** Codex app-server 0.162.1 function entry accepted by `thread/start.dynamicTools`. */

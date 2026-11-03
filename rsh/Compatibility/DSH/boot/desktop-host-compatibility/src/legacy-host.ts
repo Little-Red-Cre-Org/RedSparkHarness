@@ -2,13 +2,13 @@
 import { existsSync, realpathSync, writeFileSync } from 'node:fs'
 import { dirname, join, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import type { Context } from '@deepseek-ai/cordis'
-import type { PatchOptions } from '@deepseek-ai/cordis-plugin-include'
-import { boot, composeEntries, loadLayeredEnv, loadProfileDirectory, loadOverlayPatches } from '@deepseek-ai/dsh-app-boot'
-import { provideCmdline } from '@deepseek-ai/dsh-cmdline'
-import { DSH_LAUNCH_ENVIRONMENT_KEY } from '@deepseek-ai/dsh-launch-environment'
-import type {} from '@deepseek-ai/dsh-api-gateway'
-import type { ConnectionFetchHandler } from '@deepseek-ai/dsh-client-connection'
+import type { Context } from '@redspark/cordis'
+import type { PatchOptions } from '@redspark/cordis-plugin-include'
+import { boot, composeEntries, loadLayeredEnv, loadProfileDirectory, loadOverlayPatches } from '@redspark/rsh-app-boot'
+import { provideCmdline } from '@redspark/rsh-cmdline'
+import { RSH_LAUNCH_ENVIRONMENT_KEY } from '@redspark/rsh-launch-environment'
+import type {} from '@redspark/rsh-api-gateway'
+import type { ConnectionFetchHandler } from '@redspark/rsh-client-connection'
 import { createDesktopAssetHandler, DESKTOP_STREAM_PATH } from './web-assets.ts'
 import type { DesktopHostRuntime } from './runtime.ts'
 
@@ -33,7 +33,7 @@ function isProjectPath(projectDir: string, target: string): boolean {
 }
 
 function desktopPatches(runtimeDir: string, projectDir: string, allowLinkedPackages: boolean): PatchOptions[] {
-  const dshRoot = dirname(packageManifestPath(runtimeDir, '@deepseek-ai/dsh'))
+  const dshRoot = dirname(packageManifestPath(runtimeDir, '@redspark/rsh'))
   const profile = loadProfileDirectory('dsh desktop', projectDir, join(dshRoot, 'package.json'))
   for (const layer of profile.layers) {
     if (!allowLinkedPackages && !isProjectPath(projectDir, layer.packageDir) && !isProjectPath(runtimeDir, layer.packageDir)) {
@@ -128,7 +128,7 @@ export async function createLegacyDesktopRuntime(
     allowLinkedPackages,
   )), (hostCtx) => {
     current = hostCtx
-    hostCtx.provide(DSH_LAUNCH_ENVIRONMENT_KEY, environment)
+    hostCtx.provide(RSH_LAUNCH_ENVIRONMENT_KEY, environment)
     provideCmdline(hostCtx, { args: [], exit: () => {} })
   })
   const connection = ctx.get('connection')

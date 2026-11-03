@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { Context } from '@deepseek-ai/cordis'
-import { scopeTarget } from '@deepseek-ai/dsh-scope'
-import { ToolCallId } from '@deepseek-ai/dsh-llm'
-import SessionStore, { Session, SessionId } from '@deepseek-ai/dsh-session'
-import type { ToolExecution, ToolExecutionResult, ToolExecutionToken } from '@deepseek-ai/dsh-tools'
-import * as ToolsInvariant from '@deepseek-ai/dsh-tools/invariant'
-import InvariantRegistry from '@deepseek-ai/dsh-invariants'
+import { Context } from '@redspark/cordis'
+import { scopeTarget } from '@redspark/rsh-scope'
+import { ToolCallId } from '@redspark/rsh-llm'
+import SessionStore, { Session, SessionId } from '@redspark/rsh-session'
+import type { ToolExecution, ToolExecutionResult, ToolExecutionToken } from '@redspark/rsh-tools'
+import * as ToolsInvariant from '@redspark/rsh-tools/invariant'
+import InvariantRegistry from '@redspark/rsh-invariants'
 
 const testToolSignal = new AbortController().signal
 

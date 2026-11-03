@@ -1,5 +1,5 @@
 {
-  "name": "@deepseek-ai/dsh-e2b",
+  "name": "@redspark/rsh-e2b",
   "description": "Shared E2B sandbox lifecycle for RedSpark Harness provider adapters",
   "version": "1.0.0",
   "publishConfig": {
@@ -27,30 +27,30 @@
   ],
   "license": "MIT",
   "peerDependencies": {
-    "@deepseek-ai/cordis": "workspace:^",
-    "@deepseek-ai/dsh-http-proxy": "workspace:^"
+    "@redspark/cordis": "workspace:^",
+    "@redspark/rsh-http-proxy": "workspace:^"
   },
   "dependencies": {
-    "@deepseek-ai/schemastery": "workspace:^",
+    "@redspark/schemastery": "workspace:^",
     "e2b": "2.29.1"
   },
   "devDependencies": {
-    "@deepseek-ai/cordis": "workspace:^",
-    "@deepseek-ai/dsh-agent": "workspace:^",
-    "@deepseek-ai/dsh-agent-loop-testkit": "workspace:^",
-    "@deepseek-ai/dsh-app-boot": "workspace:^",
-    "@deepseek-ai/dsh-bash-local": "workspace:^",
-    "@deepseek-ai/dsh-fs-e2b": "workspace:^",
-    "@deepseek-ai/dsh-loader-smoke": "workspace:^",
-    "@deepseek-ai/dsh-lsp": "workspace:^",
-    "@deepseek-ai/dsh-lsp-stdio": "workspace:^",
-    "@deepseek-ai/dsh-sandbox-policy": "workspace:^",
-    "@deepseek-ai/dsh-session": "workspace:^",
-    "@deepseek-ai/dsh-session-projection": "workspace:^",
-    "@deepseek-ai/dsh-subprocess-e2b": "workspace:^",
-    "@deepseek-ai/dsh-terminal": "workspace:^",
-    "@deepseek-ai/dsh-terminal-bash": "workspace:^",
-    "@deepseek-ai/dsh-http-proxy": "workspace:^",
-    "@deepseek-ai/dsh-launch-environment": "workspace:^"
+    "@redspark/cordis": "workspace:^",
+    "@redspark/rsh-agent": "workspace:^",
+    "@redspark/rsh-agent-loop-testkit": "workspace:^",
+    "@redspark/rsh-app-boot": "workspace:^",
+    "@redspark/rsh-bash-local": "workspace:^",
+    "@redspark/rsh-fs-e2b": "workspace:^",
+    "@redspark/rsh-loader-smoke": "workspace:^",
+    "@redspark/rsh-lsp": "workspace:^",
+    "@redspark/rsh-lsp-stdio": "workspace:^",
+    "@redspark/rsh-sandbox-policy": "workspace:^",
+    "@redspark/rsh-session": "workspace:^",
+    "@redspark/rsh-session-projection": "workspace:^",
+    "@redspark/rsh-subprocess-e2b": "workspace:^",
+    "@redspark/rsh-terminal": "workspace:^",
+    "@redspark/rsh-terminal-bash": "workspace:^",
+    "@redspark/rsh-http-proxy": "workspace:^",
+    "@redspark/rsh-launch-environment": "workspace:^"
   }
 }

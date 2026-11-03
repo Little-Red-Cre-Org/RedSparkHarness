@@ -1,6 +1,6 @@
 /** Client Cordis plugin that publishes browser observations directly to the Inspector Worker. */
 
-import type { Context } from '@deepseek-ai/cordis'
+import type { Context } from '@redspark/cordis'
 import { parseInspectorClientBootstrap } from '../shared/bridge/control-codec.ts'
 import { createInspectorService, type InspectorService as SharedInspectorService } from '../shared/service.ts'
 import { publishCordisTree } from './inspection/cordis.ts'
@@ -22,10 +22,10 @@ export interface InspectorService extends SharedInspectorService {}
 
 declare global {
   /** Host-injected Inspector Client connection parameters. */
-  var __DSH_INSPECTOR__: unknown
+  var __RSH_INSPECTOR__: unknown
 }
 
-declare module '@deepseek-ai/cordis' {
+declare module '@redspark/cordis' {
   interface Context {
     /** Publish Client-realm observations and query the shared Inspector state. */
     inspector: InspectorService
@@ -43,7 +43,7 @@ export const inject: string[] = []
  * @param ctx - Client Cordis context whose page identity and lifecycle own the source.
  */
 export async function apply(ctx: Context): Promise<void> {
-  const injected = globalThis.__DSH_INSPECTOR__
+  const injected = globalThis.__RSH_INSPECTOR__
   if (injected === undefined) {
     throw new Error('experimental inspector: Host bootstrap is missing')
   }

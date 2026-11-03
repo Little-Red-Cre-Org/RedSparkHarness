@@ -1,2 +1,2 @@
-/** Browser-safe Schedule vocabulary. @module @deepseek-ai/dsh-schedule/client */
+/** Browser-safe Schedule vocabulary. @module @redspark/rsh-schedule/client */
 export type * from './types.ts'

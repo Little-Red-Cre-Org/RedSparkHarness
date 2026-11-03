@@ -1,12 +1,12 @@
 - id: spill-local
-  name: '@deepseek-ai/dsh-spill-local'
+  name: '@redspark/rsh-spill-local'
   config:
-    root: !!js process.env.DSH_SNAPSHOT_SPILL_ROOT ?? '.spill'
+    root: !!js process.env.RSH_SNAPSHOT_SPILL_ROOT ?? '.spill'
     cleanupPeriodDays: 0
 
 - insert:
     - id: session-reference
-      name: '@deepseek-ai/dsh-session-reference'
+      name: '@redspark/rsh-session-reference'
       config:
         maxReferenceBytes: 360
     - id: reference-source-fixture
@@ -16,5 +16,5 @@
     - id: snapshot-spill-locators
       name: ../../../rsh/Scripts/snapshot-spill-locators.ts
       config:
-        root: !!js process.env.DSH_SNAPSHOT_SPILL_ROOT
-        locatorRoot: !!js process.env.DSH_SNAPSHOT_SPILL_LOCATOR_ROOT
+        root: !!js process.env.RSH_SNAPSHOT_SPILL_ROOT
+        locatorRoot: !!js process.env.RSH_SNAPSHOT_SPILL_LOCATOR_ROOT

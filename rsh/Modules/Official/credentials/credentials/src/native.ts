@@ -1,8 +1,8 @@
 /** Framework-independent credential definition for native providers and consumers. */
 import type { CredentialInfo, CredentialKey, CredentialMetadataMigration, CredentialRecord, CredentialRef } from './native-types.ts'
-import type {} from '@deepseek-ai/dsh-native-runtime'
+import type {} from '@redspark/rsh-native-runtime'
 
-declare module '@deepseek-ai/dsh-native-runtime' {
+declare module '@redspark/rsh-native-runtime' {
   interface NativeServices { credentials: NativeCredentials }
   interface NativeEvents {
     /**

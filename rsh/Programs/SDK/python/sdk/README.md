@@ -2,10 +2,10 @@
 
 English | [中文](README.zh.md)
 
-Python subprocess SDK for driving RedSpark Harness over newline-delimited JSON-RPC on stdio. Install `deepseek-harness-sdk`; it installs the exact same-version `deepseek-harness-runtime-bin` wheel for the current platform.
+Python subprocess SDK for driving RedSpark Harness over newline-delimited JSON-RPC on stdio. Install `redspark-harness-sdk`; it installs the exact same-version `redspark-harness-runtime-bin` wheel for the current platform.
 
 ```sh
-python -m pip install deepseek-harness-sdk
+python -m pip install redspark-harness-sdk
 ```
 
 The native-sdk profile composes the production in-process subagent tool. Session-tree subscriptions receive its accepted child events and real `subagent.finished` results after one-shot completion, cancellation, failure, and continuable residency settlement; interrupting a turn alone does not finish a still-resident child, and run results retain root-only response projection. Background children return a Jobs handle after actual readiness and survive ordinary parent turns; job_output/job_kill provide output and cancellation controls. The profile installs send_message and interrupt_agent; setting the subagent tool backgroundMode to continuable admits durable child work, supports follow-up steering and interruption, and cold-resumes the same child after a process restart. A settled continuable child contributes a durable subagent-settled notice to the parent's next turn, after actual cleanup. SDK wire catalog discovery remains unsupported; the profile's model-visible `list_agents` tool is a separate capability.
@@ -14,13 +14,13 @@ The native-sdk profile composes the production in-process subagent tool. Session
 
 The Python SDK has no separate application entrypoint. By default, it launches the bundled `dsh` CLI with `--profile sdk`. A new standard `sdk` profile selects the Native Runtime; an existing profile keeps the runtime declared by its `package.json`. The selected profile owns the JSON-RPC server, agent composition, credentials, persistence, tools, and shutdown behavior. `native-sdk` remains an explicit Native alias.
 
-Every launch requires an explicit Harness home. Pass `dsh_home` or provide a non-empty `DSH_HOME` in the child environment. The SDK deliberately never discovers `~/.dsh`.
+Every launch requires an explicit Harness home. Pass `rsh_home` or provide a non-empty `RSH_HOME` in the child environment. The SDK deliberately never discovers `~/.dsh`.
 
 ```py
-from deepseek_harness import DeepSeekHarness
+from redspark_harness import RedSparkHarness
 
-with DeepSeekHarness(
-    dsh_home="/absolute/path/to/isolated-dsh-home",
+with RedSparkHarness(
+    rsh_home="/absolute/path/to/isolated-dsh-home",
     cwd="/absolute/path/to/workspace",
     provider="deepseek-official",
     model="deepseek-v4-flash",
@@ -32,7 +32,7 @@ with DeepSeekHarness(
 print(result.final_response)
 ```
 
-`DeepSeekHarness` starts lazily and reuses its runtime until `close()` or context-manager exit. The initial profile handshake has an independent 30-second default bound through `initialize_timeout_seconds`; ordinary turns remain unbounded unless `request_timeout_seconds` is set. A timeout names the selected profile and includes retained runtime diagnostics. `cwd` is the agent workspace; `runtime_cwd` independently selects the subprocess working directory. Both become absolute before launch. `provider`, `model`, optional `reasoning_effort`, and optional positive `max_tokens` are sent during JSON-RPC initialization. For the Native SDK profile, optional positive `max_steps` is negotiated with the server; the response must report a positive effective cap no greater than the request. Compatibility Cordis servers reject this Native-only field. `base_url` and `api_key` explicitly override `DEEPSEEK_BASE_URL` and `DEEPSEEK_API_KEY` in the child environment.
+`RedSparkHarness` starts lazily and reuses its runtime until `close()` or context-manager exit. The initial profile handshake has an independent 30-second default bound through `initialize_timeout_seconds`; ordinary turns remain unbounded unless `request_timeout_seconds` is set. A timeout names the selected profile and includes retained runtime diagnostics. `cwd` is the agent workspace; `runtime_cwd` independently selects the subprocess working directory. Both become absolute before launch. `provider`, `model`, optional `reasoning_effort`, and optional positive `max_tokens` are sent during JSON-RPC initialization. For the Native SDK profile, optional positive `max_steps` is negotiated with the server; the response must report a positive effective cap no greater than the request. Compatibility Cordis servers reject this Native-only field. `base_url` and `api_key` explicitly override `DEEPSEEK_BASE_URL` and `DEEPSEEK_API_KEY` in the child environment.
 
 With a Native profile (`native-sdk` or a new standard `sdk` profile), `Session.cancel()` and `HarnessClient.session_cancel(session_id)` await cancellation of the admitted turn and return False when none is active. `on_notification` receives live `session.chunk` notifications before the durable assistant event. Compatibility profiles reject this native-only cancellation method.
 
@@ -53,18 +53,18 @@ Native session-tree subscriptions observe admitted roots and their delegated des
 Persistent customization belongs to a `dsh` profile. Create an explicit Cordis profile and install an external bundle with the runtime wheel's `dsh` command:
 
 ```sh
-export DSH_HOME=/absolute/path/to/isolated-dsh-home
+export RSH_HOME=/absolute/path/to/isolated-dsh-home
 dsh --profile legacy-sdk --from-default-profile sdk --help
 dsh plugin --profile legacy-sdk add file:/absolute/path/to/my-plugin-bundle
 ```
 
-The custom `legacy-sdk` name keeps the Cordis application explicit. The `file:` form installs the local bundle into the profile package tree, where its peer imports reach the bundled installation fallback. The profile manifest records installed dependencies and ordered bundle layers; its `$DSH_HOME/profiles/legacy-sdk/cordis.patch.yml` is the persistent user patch. `dsh plugin` refuses Native profiles; edit their `rsh.profile.json` installations instead. `dsh plugin` needs `pnpm` only when managing external packages. Running the SDK does not require system Node.js.
+The custom `legacy-sdk` name keeps the Cordis application explicit. The `file:` form installs the local bundle into the profile package tree, where its peer imports reach the bundled installation fallback. The profile manifest records installed dependencies and ordered bundle layers; its `$RSH_HOME/profiles/legacy-sdk/cordis.patch.yml` is the persistent user patch. `dsh plugin` refuses Native profiles; edit their `rsh.profile.json` installations instead. `dsh plugin` needs `pnpm` only when managing external packages. Running the SDK does not require system Node.js.
 
 For an invocation-specific change, pass one or more patch files. They become absolute and are forwarded in order after the profile and home patch layers:
 
 ```py
-with DeepSeekHarness(
-    dsh_home="/absolute/path/to/isolated-dsh-home",
+with RedSparkHarness(
+    rsh_home="/absolute/path/to/isolated-dsh-home",
     profile="sdk",
     patches=("/absolute/path/to/first.patch.json", "/absolute/path/to/last.patch.json"),
 ) as harness:
@@ -73,7 +73,7 @@ with DeepSeekHarness(
 
 For a new standard `sdk` profile, Native patches are versioned JSON files with `formatVersion: 1` and `installations` rows, for example `{"formatVersion":1,"installations":[{"id":"app","config":{"systemPrompt":"Follow the project instructions."}}]}`. Existing profile manifests remain authoritative and are not rewritten. The [CLI reference](../../../CLI/reference/README.md) documents accepted fields and explicit legacy profile creation.
 
-`profile` may select another existing profile, but that composition must retain `@deepseek-ai/dsh-sdk-app` or another `@deepseek-ai/dsh-sdk-jsonrpc-server` row. Misconfiguration fails during CLI boot or SDK initialization; there is no complete-config fallback. `dsh_bin` may select another `dsh` executable while preserving the same profile grammar. Arbitrary argv replacement remains an internal fake-runtime test adapter, not public API.
+`profile` may select another existing profile, but that composition must retain `@redspark/rsh-sdk-app` or another `@redspark/rsh-sdk-jsonrpc-server` row. Misconfiguration fails during CLI boot or SDK initialization; there is no complete-config fallback. `dsh_bin` may select another `dsh` executable while preserving the same profile grammar. Arbitrary argv replacement remains an internal fake-runtime test adapter, not public API.
 
 `provider` selects a provider route registered by the chosen runtime composition; `model` is the model id resolved by that adapter. `reasoning_effort` is an optional non-empty adapter-owned identifier for that exact route; omission preserves the model's own default. `max_tokens` is an optional positive per-request output-token cap for the root agent and its in-process descendants; omission leaves the provider default in control. Native SDK `max_steps` limits the existing Native Headless turn loop and is clamped to the selected profile ceiling; omit it for compatibility Cordis runtimes, which reject the field explicitly. Initialization rejects a missing adapter, unavailable model, or unsupported effort before a prompt runs. Compaction summaries keep the separate limit configured by their compaction plugin. The bundled default composition registers `deepseek-official`. A custom composition can mount `llm-pi-ai`, configure provider-specific credentials/endpoints there, and select any provider/model present in pi-ai's installed catalog.
 

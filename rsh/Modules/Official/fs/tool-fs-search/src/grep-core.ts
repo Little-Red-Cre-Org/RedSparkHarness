@@ -1,8 +1,8 @@
 /** Shared grep argument validation, discovery parsing and retained result formatting. */
-import type { RetainedItems } from '@deepseek-ai/dsh-output-retention'
+import type { RetainedItems } from '@redspark/rsh-output-retention'
 import { SearchError } from './ripgrep-core.ts'
 import type { GrepMatch } from './ripgrep-core.ts'
-import type { SpillRef } from '@deepseek-ai/dsh-spill/native'
+import type { SpillRef } from '@redspark/rsh-spill/native'
 
 /**
  * Default cap on flat matches retained inline by one `grep` call (the

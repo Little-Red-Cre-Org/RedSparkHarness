@@ -1,14 +1,14 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { Context } from '@deepseek-ai/cordis'
-import { NativeHost, NativeScope, resolveInstallation, type NativePlugin } from '@deepseek-ai/dsh-native-runtime'
-import { stubSettingsScope, type StubSettingsScope } from '@deepseek-ai/dsh-client-test-runtime'
+import { Context } from '@redspark/cordis'
+import { NativeHost, NativeScope, resolveInstallation, type NativePlugin } from '@redspark/rsh-native-runtime'
+import { stubSettingsScope, type StubSettingsScope } from '@redspark/rsh-client-test-runtime'
 import type {
   ThemeSettings,
   ThemeSnapshot,
   ThemeTokenOverrides,
-} from '@deepseek-ai/dsh-client-ui-theme/client'
-import { ThemeRuntime } from '@deepseek-ai/dsh-client-ui-theme/client'
+} from '@redspark/rsh-client-ui-theme/client'
+import { ThemeRuntime } from '@redspark/rsh-client-ui-theme/client'
 import { plugin as nativeThemePlugin, type NativeThemeService } from '../src/native.ts'
 
 const make = (host = stubSettingsScope<ThemeSettings>()): {

@@ -1,6 +1,6 @@
 {
-  "name": "@deepseek-ai/dsh-shell-env",
-  "description": "Tool-independent managed DSH_* shell environment registry",
+  "name": "@redspark/rsh-shell-env",
+  "description": "Tool-independent managed RSH_* shell environment registry",
   "version": "1.0.0",
   "publishConfig": {
     "access": "public"
@@ -39,28 +39,28 @@
   ],
   "license": "MIT",
   "peerDependencies": {
-    "@deepseek-ai/dsh-shell": "workspace:^",
-    "@deepseek-ai/dsh-home-paths": "workspace:^",
-    "@deepseek-ai/dsh-tools": "workspace:^",
-    "@deepseek-ai/cordis": "workspace:^"
+    "@redspark/rsh-shell": "workspace:^",
+    "@redspark/rsh-home-paths": "workspace:^",
+    "@redspark/rsh-tools": "workspace:^",
+    "@redspark/cordis": "workspace:^"
   },
   "peerDependenciesMeta": {
-    "@deepseek-ai/dsh-tools": { "optional": true },
-    "@deepseek-ai/cordis": { "optional": true }
+    "@redspark/rsh-tools": { "optional": true },
+    "@redspark/cordis": { "optional": true }
   },
   "dependencies": {
-    "@deepseek-ai/dsh-shell": "workspace:^",
-    "@deepseek-ai/dsh-home-paths": "workspace:^",
-    "@deepseek-ai/dsh-native-runtime": "workspace:^",
-    "@deepseek-ai/dsh-native-tools": "workspace:^",
-    "@deepseek-ai/schemastery": "workspace:^"
+    "@redspark/rsh-shell": "workspace:^",
+    "@redspark/rsh-home-paths": "workspace:^",
+    "@redspark/rsh-native-runtime": "workspace:^",
+    "@redspark/rsh-native-tools": "workspace:^",
+    "@redspark/schemastery": "workspace:^"
   },
   "devDependencies": {
-    "@deepseek-ai/dsh-agent": "workspace:^",
-    "@deepseek-ai/dsh-shell": "workspace:^",
-    "@deepseek-ai/dsh-llm": "workspace:^",
-    "@deepseek-ai/dsh-home-paths": "workspace:^",
-    "@deepseek-ai/dsh-tools": "workspace:^",
-    "@deepseek-ai/cordis": "workspace:^"
+    "@redspark/rsh-agent": "workspace:^",
+    "@redspark/rsh-shell": "workspace:^",
+    "@redspark/rsh-llm": "workspace:^",
+    "@redspark/rsh-home-paths": "workspace:^",
+    "@redspark/rsh-tools": "workspace:^",
+    "@redspark/cordis": "workspace:^"
   }
 }

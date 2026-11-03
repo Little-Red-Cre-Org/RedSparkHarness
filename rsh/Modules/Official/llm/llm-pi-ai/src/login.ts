@@ -1,7 +1,7 @@
 /** Cordis registration for shared pi-ai authorization flows. */
 
-import type { Context } from '@deepseek-ai/cordis'
-import type {} from '@deepseek-ai/dsh-authorization'
+import type { Context } from '@redspark/cordis'
+import type {} from '@redspark/rsh-authorization'
 import type { PiAiAuthInjection } from './adapter.ts'
 import { createPiAiFlows } from './login-core.ts'
 

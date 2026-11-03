@@ -4,7 +4,7 @@
  * Folding activity per day is what lets a cross-session view answer "how much did I use, and
  * when" without loading every Session log each time: the roster reads this projection's state.
  *
- * @module @deepseek-ai/dsh-context-insight/activity
+ * @module @redspark/rsh-context-insight/activity
  */
 
 import { z } from 'zod'

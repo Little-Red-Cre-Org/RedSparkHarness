@@ -3,7 +3,7 @@ description: "Extensible desktop-pet registry, Agent-state presentation, and Gen
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-client-ui-pet
+# @redspark/rsh-client-ui-pet
 
 English | [中文](README.zh.md)
 

@@ -1,5 +1,5 @@
 {
-  "name": "@deepseek-ai/dsh-tool-str-replace-editor",
+  "name": "@redspark/rsh-tool-str-replace-editor",
   "description": "Model-facing view, create, literal replace, and line insert tool over the Harness filesystem service",
   "version": "1.0.0",
   "publishConfig": {
@@ -33,29 +33,29 @@
   ],
   "license": "MIT",
   "peerDependencies": {
-    "@deepseek-ai/dsh-fs": "workspace:^",
-    "@deepseek-ai/dsh-sandbox": "workspace:^",
-    "@deepseek-ai/dsh-sandbox-policy": "workspace:^",
-    "@deepseek-ai/dsh-tools": "workspace:^",
-    "@deepseek-ai/cordis": "workspace:^"
+    "@redspark/rsh-fs": "workspace:^",
+    "@redspark/rsh-sandbox": "workspace:^",
+    "@redspark/rsh-sandbox-policy": "workspace:^",
+    "@redspark/rsh-tools": "workspace:^",
+    "@redspark/cordis": "workspace:^"
   },
   "dependencies": {
-    "@deepseek-ai/schemastery": "workspace:^"
+    "@redspark/schemastery": "workspace:^"
   },
   "devDependencies": {
-    "@deepseek-ai/dsh-agent": "workspace:^",
-    "@deepseek-ai/dsh-agent-loop-testkit": "workspace:^",
-    "@deepseek-ai/dsh-fs": "workspace:^",
-    "@deepseek-ai/dsh-fs-local": "workspace:^",
-    "@deepseek-ai/dsh-fs-observation-policy": "workspace:^",
-    "@deepseek-ai/dsh-fs-sandbox": "workspace:^",
-    "@deepseek-ai/dsh-llm": "workspace:^",
-    "@deepseek-ai/dsh-sandbox": "workspace:^",
-    "@deepseek-ai/dsh-sandbox-policy": "workspace:^",
-    "@deepseek-ai/dsh-session": "workspace:^",
-    "@deepseek-ai/dsh-system-prompt": "workspace:^",
-    "@deepseek-ai/dsh-tools": "workspace:^",
-    "@deepseek-ai/cordis": "workspace:^",
-    "@deepseek-ai/dsh-session-projection": "workspace:^"
+    "@redspark/rsh-agent": "workspace:^",
+    "@redspark/rsh-agent-loop-testkit": "workspace:^",
+    "@redspark/rsh-fs": "workspace:^",
+    "@redspark/rsh-fs-local": "workspace:^",
+    "@redspark/rsh-fs-observation-policy": "workspace:^",
+    "@redspark/rsh-fs-sandbox": "workspace:^",
+    "@redspark/rsh-llm": "workspace:^",
+    "@redspark/rsh-sandbox": "workspace:^",
+    "@redspark/rsh-sandbox-policy": "workspace:^",
+    "@redspark/rsh-session": "workspace:^",
+    "@redspark/rsh-system-prompt": "workspace:^",
+    "@redspark/rsh-tools": "workspace:^",
+    "@redspark/cordis": "workspace:^",
+    "@redspark/rsh-session-projection": "workspace:^"
   }
 }

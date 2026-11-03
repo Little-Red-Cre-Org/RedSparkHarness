@@ -4,9 +4,9 @@ English | [中文](subagent.zh.md)
 
 The subagent seam lets an agent delegate work to a child agent. Like [bash](shell.md), it is **one optional capability**, not part of the agent loop, so its types live here rather than in [core.md](core.md). It differs from the other capability seams because **multiple provider implementations coexist** in one context, registered by name (`ctx.subagents`), while bash allows only one executor. Its registry follows the [LLM adapter registry](llm-streaming.md), not the single-service bash executor.
 
-Service Definition: [dsh-subagent](../../Engine/subagent/subagent) (`ctx.subagents` + the vocabulary below). Engine Service Providers are sibling packages (`dsh-subagent-spawn-in-process` and `dsh-subagent-fork-in-process`); the Cordis ACP subprocess provider is a separate [Compatibility package](../../Compatibility/DSH/subagent/subagent-acp). The Claude Code product adapter is an [Official Module](../../Modules/Official/subagent/subagent-claude-code/README.md) with a bounded Native driver and a retained Cordis compatibility entry. The legacy DSH SDK provider remains a separate [Compatibility package](../../Compatibility/DSH/subagent/subagent-dsh-sdk) so Engine does not depend on a Program client. The model-facing Consumers are [dsh-tool-subagent](../../Engine/subagent/tool-subagent) (per-provider delegation) and [dsh-tool-subagent-control](../../Engine/subagent/tool-subagent-control) (the optional global `send_message`, `interrupt_agent`, and `list_agents` controls). The same `ctx.subagents` service owns continuable-child orchestration through an internal activation manager and read-only child and descendant discovery straight from the session store and optional session persistence. Product-provider rationale lives in [the Codex and Claude Code Agent Note](../../../.agents/notes/implemented/feature/2026-08-04-claude-code-and-codex-subagent-backends.md); common-seam rationale lives in [the subagent Agent Note](../../../.agents/notes/implemented/feature/2026-06-21-subagent-capability-seam.md), [the continuable subagents Agent Note](../../../.agents/notes/implemented/feature/2026-07-28-continuable-subagent-conversations.md), and [the adjacent-Agent messaging Agent Note](../../../.agents/notes/implemented/architecture/2026-08-27-adjacent-agent-steer-messaging.md); [the archived list-identity-projection record](../../../.agents/notes/archived/architecture/2026-08-06-subagent-list-identity-projection.md) documents the original list-identity decision.
+Service Definition: [dsh-subagent](../../Engine/subagent/subagent) (`ctx.subagents` + the vocabulary below). Engine Service Providers are sibling packages (`dsh-subagent-spawn-in-process` and `dsh-subagent-fork-in-process`); the Cordis ACP subprocess provider is a separate [Compatibility package](../../Compatibility/DSH/subagent/subagent-acp). The Claude Code product adapter is an [Official Module](../../Modules/Official/subagent/subagent-claude-code/README.md) with a bounded Native driver and a retained Cordis compatibility entry. The legacy DSH SDK provider remains a separate [Compatibility package](../../Compatibility/DSH/subagent/subagent-rsh-sdk) so Engine does not depend on a Program client. The model-facing Consumers are [dsh-tool-subagent](../../Engine/subagent/tool-subagent) (per-provider delegation) and [dsh-tool-subagent-control](../../Engine/subagent/tool-subagent-control) (the optional global `send_message`, `interrupt_agent`, and `list_agents` controls). The same `ctx.subagents` service owns continuable-child orchestration through an internal activation manager and read-only child and descendant discovery straight from the session store and optional session persistence. Product-provider rationale lives in [the Codex and Claude Code Agent Note](../../../.agents/notes/implemented/feature/2026-08-04-claude-code-and-codex-subagent-backends.md); common-seam rationale lives in [the subagent Agent Note](../../../.agents/notes/implemented/feature/2026-06-21-subagent-capability-seam.md), [the continuable subagents Agent Note](../../../.agents/notes/implemented/feature/2026-07-28-continuable-subagent-conversations.md), and [the adjacent-Agent messaging Agent Note](../../../.agents/notes/implemented/architecture/2026-08-27-adjacent-agent-steer-messaging.md); [the archived list-identity-projection record](../../../.agents/notes/archived/architecture/2026-08-06-subagent-list-identity-projection.md) documents the original list-identity decision.
 
-The Official Native Codex module [`@deepseek-ai/dsh-codex-app-server`](../../Modules/Official/subagent/codex-app-server/README.md) uses the Engine-captured Responses transport for its one-shot product path and rejects before child startup when the selected generation lacks that transport or cannot enforce the parent `maxTokens` ceiling. The SIWC Provider can supply the capture capability when this route is explicitly composed; shipped Native profiles still omit the Codex external driver. The explicitly installed legacy Cordis route remains [`@deepseek-ai/dsh-subagent-codex`](../../Compatibility/DSH/bridge/subagent-codex/README.md).
+The Official Native Codex module [`@redspark/rsh-codex-app-server`](../../Modules/Official/subagent/codex-app-server/README.md) uses the Engine-captured Responses transport for its one-shot product path and rejects before child startup when the selected generation lacks that transport or cannot enforce the parent `maxTokens` ceiling. The SIWC Provider can supply the capture capability when this route is explicitly composed; shipped Native profiles still omit the Codex external driver. The explicitly installed legacy Cordis route remains [`@redspark/rsh-subagent-codex`](../../Compatibility/DSH/bridge/subagent-codex/README.md).
 
 Sources: [`rsh/Engine/subagent/subagent/src/types.ts`](../../Engine/subagent/subagent/src/types.ts), [`rsh/Engine/subagent/subagent/src/index.ts`](../../Engine/subagent/subagent/src/index.ts), [`rsh/Engine/subagent/subagent/src/continuation.ts`](../../Engine/subagent/subagent/src/continuation.ts), and [`rsh/Engine/subagent/native-subagent/src/external-driver.ts`](../../Engine/subagent/native-subagent/src/external-driver.ts)
 
@@ -125,7 +125,7 @@ interface NativeExternalSubagentDriver {
 
 ### ACP policy metadata
 
-`@deepseek-ai/dsh-acp-protocol` defines version-1 `_meta` values under `com.deepseek.ai/dsh-native-subagent`. Client initialize metadata declares permission-relay support; server metadata reports `maxSteps`, `maxTokens`, and supported permission modes. A session policy requires a positive safe-integer `maxSteps`, an optional positive safe-integer `maxTokens`, and `permissionMode: 'deny' | 'parent-relay'`. Readers reject unknown extension fields and unsupported versions. The library validates and encodes ACP metadata; the consuming Program converts accepted policy into the Engine's durable `execution/policy` event and owns transport and enforcement.
+`@redspark/rsh-acp-protocol` defines version-1 `_meta` values under `com.deepseek.ai/dsh-native-subagent`. Client initialize metadata declares permission-relay support; server metadata reports `maxSteps`, `maxTokens`, and supported permission modes. A session policy requires a positive safe-integer `maxSteps`, an optional positive safe-integer `maxTokens`, and `permissionMode: 'deny' | 'parent-relay'`. Readers reject unknown extension fields and unsupported versions. The library validates and encodes ACP metadata; the consuming Program converts accepted policy into the Engine's durable `execution/policy` event and owns transport and enforcement.
 
 ```ts type-equiv
 /** Permission behavior requested for a child Session over ACP. */
@@ -205,7 +205,7 @@ interface NativeAcpChildRuntimeRequest {
 ```
 
 ```ts type-equiv
-/** Started, managed Native ACP process and its private DSH_HOME cleanup. */
+/** Started, managed Native ACP process and its private RSH_HOME cleanup. */
 interface NativeAcpChildRuntime {
   /** Whole-range-owned child and ACP stdio streams. */
   readonly child: ChildConnectionHandle
@@ -213,7 +213,7 @@ interface NativeAcpChildRuntime {
   readonly enforcement: SandboxEnforcement
   /** Close stdin and settle the complete managed process range. */
   shutdown(): Promise<void>
-  /** Confirm shutdown, then remove the launcher's private DSH_HOME. */
+  /** Confirm shutdown, then remove the launcher's private RSH_HOME. */
   dispose(): Promise<void>
 }
 ```
@@ -545,14 +545,14 @@ interface SubagentResult {
 }
 ```
 
-`SubagentStopReason` is a [merge-extensible derived union](core.md#the-map--derived-union-pattern). Providers add variants by declaration-merging `SubagentStopReasonMap` on `@deepseek-ai/dsh-subagent-protocol`; consumers branch on known cases and treat an unknown terminal reason as a failure:
+`SubagentStopReason` is a [merge-extensible derived union](core.md#the-map--derived-union-pattern). Providers add variants by declaration-merging `SubagentStopReasonMap` on `@redspark/rsh-subagent-protocol`; consumers branch on known cases and treat an unknown terminal reason as a failure:
 
 ```ts type-equiv
 /**
  * Why a subagent run ended. Merge-extensible (a backend may add variants);
  * consumers branch on the known cases and fall through `default`. Providers
  * extend this map through declaration merging on
- * `@deepseek-ai/dsh-subagent-protocol`. The known cases mirror the harness
+ * `@redspark/rsh-subagent-protocol`. The known cases mirror the harness
  * turn-end vocabulary so the tool layer can map a non-`completed` result to an
  * `isError` tool result.
  */
@@ -928,7 +928,7 @@ A published child settled. Scope-filtered dispatch uses the same delegating pare
  * parent carrier as `subagent/start`, so the lifecycle pair reaches the
  * same scoped audience.
  * @param info - the run identity and terminal outcome.
- * @dshScopeScan unsupported
+ * @rshScopeScan unsupported
  * @mode emit
  */
 'subagent/end'(this: Scoped<SubagentRuntime>, info: SubagentRunEndInfo): void
@@ -986,7 +986,7 @@ A provider established a published child. For in-process providers, `ctx.agents.
  * parent-scoped listener observes only its own delegations. Paired with
  * `subagent/end`.
  * @param info - the provider and published child identity.
- * @dshScopeScan unsupported
+ * @rshScopeScan unsupported
  * @mode emit
  */
 'subagent/start'(this: Scoped<SubagentRuntime>, info: SubagentRunInfo): void

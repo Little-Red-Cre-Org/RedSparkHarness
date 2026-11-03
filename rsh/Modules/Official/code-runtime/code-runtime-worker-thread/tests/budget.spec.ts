@@ -1,8 +1,8 @@
 /** Host budget decisions use controlled clocks and ELU samples; worker execution and binding transport stay real. */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { Context } from '@deepseek-ai/cordis'
-import { WorkerThreadCodeRuntime } from '@deepseek-ai/dsh-code-runtime-worker-thread'
-import type { CodeRunResult } from '@deepseek-ai/dsh-code-runtime'
+import { Context } from '@redspark/cordis'
+import { WorkerThreadCodeRuntime } from '@redspark/rsh-code-runtime-worker-thread'
+import type { CodeRunResult } from '@redspark/rsh-code-runtime'
 
 const meter = vi.hoisted(() => ({ sample: vi.fn() }))
 

@@ -1,9 +1,9 @@
 /** Native sole Provider composing SQLite search with exact Session queries. */
 
-import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
-import { createNativeSessionQueryRuntime, createNativeSessionQuerySource } from '@deepseek-ai/dsh-session-query/native'
-import { SessionQueryError } from '@deepseek-ai/dsh-session-query/native'
-import type {} from '@deepseek-ai/dsh-session-projection-cache/native'
+import type { NativePlugin } from '@redspark/rsh-native-runtime'
+import { createNativeSessionQueryRuntime, createNativeSessionQuerySource } from '@redspark/rsh-session-query/native'
+import { SessionQueryError } from '@redspark/rsh-session-query/native'
+import type {} from '@redspark/rsh-session-projection-cache/native'
 import {
   resolveSessionQuerySqliteConfig,
   SqliteSessionQueryCore,
@@ -44,7 +44,7 @@ export function resolveNativeSessionQuerySqliteConfig(input: unknown): ResolvedS
 /** Native SQLite provider owns one exact source, search index, and query service. */
 export const plugin: NativePlugin = {
   apiVersion: 1,
-  name: '@deepseek-ai/dsh-session-query-sqlite',
+  name: '@redspark/rsh-session-query-sqlite',
   targets: ['host'],
   requires: ['activeSessions'],
   optional: ['sessionPersistence', 'sessionProjections', 'sessionProjectionCache'],

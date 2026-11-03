@@ -3,11 +3,11 @@ export type { ToolCallOwnerProps, ToolImagesOwnerProps } from '../../tool-render
 /** Tool UI slot declarations and their composed component props. */
 import type {
   HostObservable, InjectFace, PropsLocale, PropsRenderSlots, PropsRuntime,
-} from '@deepseek-ai/dsh-client-ui-slots'
-import type { RemoteHostFacts } from '@deepseek-ai/dsh-api-remotes/client'
-import type {} from '@deepseek-ai/dsh-client-locale/client'
+} from '@redspark/rsh-client-ui-slots'
+import type { RemoteHostFacts } from '@redspark/rsh-api-remotes/client'
+import type {} from '@redspark/rsh-client-locale/client'
 
-declare module '@deepseek-ai/dsh-client-ui-slots' {
+declare module '@redspark/rsh-client-ui-slots' {
   interface SlotMap {
     /**
      * Keyed atomic Tool call view, dispatched by the wire Tool name. Register

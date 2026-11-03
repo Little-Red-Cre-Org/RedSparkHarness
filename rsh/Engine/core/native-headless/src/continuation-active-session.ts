@@ -1,8 +1,8 @@
 /** Active Session access and admission hooks backed by the Program's exclusive resident writer. */
-import type { NativeAgent, InboxTarget } from '@deepseek-ai/dsh-native-agent'
-import type { MessageId, TextBlock, UserMessage } from '@deepseek-ai/dsh-llm/native'
-import type { SessionEvent, TurnEndReason } from '@deepseek-ai/dsh-session/native'
-import { NativeStepAdmission, type NativeActiveSessionOwner, type NativeStepAdmissionHook, type NativeRootSessionOperations } from '@deepseek-ai/dsh-native-session-execution'
+import type { NativeAgent, InboxTarget } from '@redspark/rsh-native-agent'
+import type { MessageId, TextBlock, UserMessage } from '@redspark/rsh-llm/native'
+import type { SessionEvent, TurnEndReason } from '@redspark/rsh-session/native'
+import { NativeStepAdmission, type NativeActiveSessionOwner, type NativeStepAdmissionHook, type NativeRootSessionOperations } from '@redspark/rsh-native-session-execution'
 import type { NativeContinuationSession } from './continuation-session.ts'
 
 interface IdleListener {

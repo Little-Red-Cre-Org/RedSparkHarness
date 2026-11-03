@@ -1,15 +1,15 @@
 /** Command identity and localized input spelling over the effective Host catalog. */
-import type { CommandDescriptor } from '@deepseek-ai/dsh-commands/types'
-import type { TranslateNS } from '@deepseek-ai/dsh-client-locale/client'
+import type { CommandDescriptor } from '@redspark/rsh-commands/types'
+import type { TranslateNS } from '@redspark/rsh-client-locale/client'
 import { en, zh } from './locales.ts'
 
 const BUILTINS = {
-  goal: '@deepseek-ai/dsh-command-goal',
-  plan: '@deepseek-ai/dsh-plan-mode',
-  feedback: '@deepseek-ai/dsh-command-feedback',
-  compact: '@deepseek-ai/dsh-command-compact',
-  permission: '@deepseek-ai/dsh-permission-presets',
-  export: '@deepseek-ai/dsh-session-log-export',
+  goal: '@redspark/rsh-command-goal',
+  plan: '@redspark/rsh-plan-mode',
+  feedback: '@redspark/rsh-command-feedback',
+  compact: '@redspark/rsh-command-compact',
+  permission: '@redspark/rsh-permission-presets',
+  export: '@redspark/rsh-session-log-export',
 } as const
 
 /** Names whose first-party definitions have localized client presentation. */

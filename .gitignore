@@ -29,8 +29,8 @@ mise.toml
 dist-exe/
 /dist/
 rsh/Programs/Desktop/.desktop-build/
-rsh/Programs/SDK/python/sdk-runtime/src/deepseek_harness_runtime/runtime/deepseek-harness-sdk-runtime-*
-rsh/Programs/SDK/python/sdk-runtime/src/deepseek_harness_runtime/runtime/node/
+rsh/Programs/SDK/python/sdk-runtime/src/redspark_harness_runtime/runtime/redspark-harness-sdk-runtime-*
+rsh/Programs/SDK/python/sdk-runtime/src/redspark_harness_runtime/runtime/node/
 rsh/**/__pycache__/
 rsh/**/.pytest_cache/
 rsh/Programs/Web/application/dist/

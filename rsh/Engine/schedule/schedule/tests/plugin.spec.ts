@@ -1,18 +1,18 @@
 import { describe, expect, it } from 'vitest'
-import { Context } from '@deepseek-ai/cordis'
-import Loader from '@deepseek-ai/cordis-plugin-loader'
-import { agentEvents } from '@deepseek-ai/dsh-agent'
-import AgentLoop from '@deepseek-ai/dsh-agent-loop'
-import { mountAgentLoopTestDependencies } from '@deepseek-ai/dsh-agent-loop-testkit'
-import { ToolCallId } from '@deepseek-ai/dsh-llm'
-import { SessionLogOffset, SessionId } from '@deepseek-ai/dsh-session'
-import type { SessionEvent, SessionHeader } from '@deepseek-ai/dsh-session'
+import { Context } from '@redspark/cordis'
+import Loader from '@redspark/cordis-plugin-loader'
+import { agentEvents } from '@redspark/rsh-agent'
+import AgentLoop from '@redspark/rsh-agent-loop'
+import { mountAgentLoopTestDependencies } from '@redspark/rsh-agent-loop-testkit'
+import { ToolCallId } from '@redspark/rsh-llm'
+import { SessionLogOffset, SessionId } from '@redspark/rsh-session'
+import type { SessionEvent, SessionHeader } from '@redspark/rsh-session'
 import {
   SessionPersistence,
   SessionPersistenceNotFoundError,
   SessionPersistenceRevision,
-} from '@deepseek-ai/dsh-session-persistence'
-import type { SessionAccess, SessionHandle, SessionPersistenceSnapshot } from '@deepseek-ai/dsh-session-persistence'
+} from '@redspark/rsh-session-persistence'
+import type { SessionAccess, SessionHandle, SessionPersistenceSnapshot } from '@redspark/rsh-session-persistence'
 import * as toolSchedule from '../src/index.ts'
 
 interface StoredProbeSession {

@@ -1,9 +1,9 @@
 /** Native application Provider for displaying pending questions and accepting wire answers. */
 import { parseUserQuestionAnswer } from './answer.ts'
 import { randomUUID } from 'node:crypto'
-import { brandString } from '@deepseek-ai/dsh-brand'
-import type { NativeAgent } from '@deepseek-ai/dsh-native-agent'
-import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
+import { brandString } from '@redspark/rsh-brand'
+import type { NativeAgent } from '@redspark/rsh-native-agent'
+import type { NativePlugin } from '@redspark/rsh-native-runtime'
 import type { AskUserQuestionAnswer, NativeQuestionRequestId as QuestionId } from './protocol.ts'
 import { UserQuestionError, type NativeUserQuestionAnswerer, type NativeUserQuestionRequest } from './native.ts'
 
@@ -123,7 +123,7 @@ export class NativeQuestionBroker implements NativeUserQuestionAnswerer {
   }
 }
 
-declare module '@deepseek-ai/dsh-native-runtime' {
+declare module '@redspark/rsh-native-runtime' {
   interface NativeServices { userQuestionBroker: NativeQuestionBroker }
 }
 

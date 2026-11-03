@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
-import type { NativeModelControls, NativeSessionImage } from '@deepseek-ai/dsh-client-native-session/native'
-import type { SessionId } from '@deepseek-ai/dsh-session/types'
+import type { NativeModelControls, NativeSessionImage } from '@redspark/rsh-client-native-session/native'
+import type { SessionId } from '@redspark/rsh-session/types'
 import { afterEach, expect, it, vi } from 'vitest'
 import { NativeComposerAttachments, NativeMessageImage } from '../src/attachments.tsx'
 
@@ -80,9 +80,11 @@ it('filters picked and dropped files by limits and opens a loaded Session image'
   const second = new File(['b'], 'second.jpg', { type: 'image/jpeg' })
   const countOverflow = new File(['c'], 'third.jpg', { type: 'image/jpeg' })
   let rerenderAttachments = (): void => {}
+  const onReject = vi.fn()
   const attachmentView = render(<form><NativeComposerAttachments
     files={files}
     onChange={(next) => { files = next; rerenderAttachments() }}
+    onReject={onReject}
     limits={limits}
     disabled={false}
     t={translate}
@@ -90,6 +92,7 @@ it('filters picked and dropped files by limits and opens a loaded Session image'
   rerenderAttachments = () => { attachmentView.rerender(<form><NativeComposerAttachments
     files={files}
     onChange={(next) => { files = next; rerenderAttachments() }}
+    onReject={onReject}
     limits={limits}
     disabled={false}
     t={translate}
@@ -98,7 +101,13 @@ it('filters picked and dropped files by limits and opens a loaded Session image'
   const input = screen.getByLabelText('Add images')
   fireEvent.change(input, { target: { files: [first, overBatch, unsupported, oversized, second, countOverflow] } })
   expect(files).toEqual([first, second])
-  expect(screen.getByText('Unsupported image type.')).toBeTruthy()
+  // A non-raster file is no longer an image-rail rejection: it is handed to the
+  // general-file rail, which stages it. `attachmentRejectedType` now describes
+  // only a file the image rules refuse *after* routing, which cannot happen for
+  // a file this rail never claims.
+  expect(onReject).toHaveBeenCalledTimes(1)
+  expect(onReject.mock.calls[0]?.[0]).toEqual([unsupported])
+  expect(screen.queryByText('Unsupported image type.')).toBeNull()
   expect(screen.getByText('Image exceeds the per-image limit.')).toBeTruthy()
   expect(screen.getByText('Images exceed the message size limit.')).toBeTruthy()
   expect(screen.getByText('Image count limit reached.')).toBeTruthy()

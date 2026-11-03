@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest'
 import {
   JsonRpcLineTransport as CoreTransport,
   JsonRpcResponseError as CoreResponseError,
-} from '@deepseek-ai/dsh-json-rpc-line'
+} from '@redspark/rsh-json-rpc-line'
 import { JsonRpcLineTransport, JsonRpcResponseError } from '../src/index.ts'
 
 describe('SDK protocol transport exports', () => {

@@ -1,13 +1,13 @@
 /**
  * Native tool-result pruner Definition and Provider over the shared
  * head/middle/tail pruning and shadow-price protocol.
- * @module @deepseek-ai/dsh-compaction-tool-result-pruner/native
+ * @module @redspark/rsh-compaction-tool-result-pruner/native
  */
 
-import type { ContentBlock } from '@deepseek-ai/dsh-llm/native'
-import type { Session } from '@deepseek-ai/dsh-session/native'
-import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
-import type {} from '@deepseek-ai/dsh-token-meter/native'
+import type { ContentBlock } from '@redspark/rsh-llm/native'
+import type { Session } from '@redspark/rsh-session/native'
+import type { NativePlugin } from '@redspark/rsh-native-runtime'
+import type {} from '@redspark/rsh-token-meter/native'
 import { resolveConfig } from './config.ts'
 import { measureContent, pruneContent, pruneSessionSurface } from './core.ts'
 import type { PruneResult, ResolvedConfig } from './types.ts'
@@ -46,7 +46,7 @@ export interface NativeToolResultPrunerOperations {
   pruneSession(owner: NativePruneOwner): PruneResult
 }
 
-declare module '@deepseek-ai/dsh-native-runtime' {
+declare module '@redspark/rsh-native-runtime' {
   interface NativeServices { toolResultPruner: NativeToolResultPrunerOperations }
 }
 
@@ -66,7 +66,7 @@ export function resolveNativeToolResultPrunerConfig(input: unknown): ResolvedCon
 
 /** Install the deterministic pruner over the selected token meter. */
 export const plugin: NativePlugin = {
-  apiVersion: 1, name: '@deepseek-ai/dsh-compaction-tool-result-pruner', targets: ['host'],
+  apiVersion: 1, name: '@redspark/rsh-compaction-tool-result-pruner', targets: ['host'],
   requires: ['tokenMeter'], provides: ['toolResultPruner'],
   resolve(input) {
     const config = resolveNativeToolResultPrunerConfig(input)

@@ -1,9 +1,9 @@
 import { expect, it } from 'vitest'
-import { NativeScope } from '@deepseek-ai/dsh-native-runtime'
-import { SESSION_FORMAT_VERSION, Session, SessionId, type SessionEvent } from '@deepseek-ai/dsh-session/native'
-import type { NativeActiveSessionOperations, NativeActiveSessionOwner } from '@deepseek-ai/dsh-native-session-execution/active-session-protocol'
-import type { DeepSeekLlmApiExtensionRequest } from '@deepseek-ai/dsh-deepseek-llm-api-extensions/types'
-import type { NativeDeepSeekLlmApiExtensions } from '@deepseek-ai/dsh-deepseek-llm-api-extensions/native'
+import { NativeScope } from '@redspark/rsh-native-runtime'
+import { SESSION_FORMAT_VERSION, Session, SessionId, type SessionEvent } from '@redspark/rsh-session/native'
+import type { NativeActiveSessionOperations, NativeActiveSessionOwner } from '@redspark/rsh-native-session-execution/active-session-protocol'
+import type { DeepSeekLlmApiExtensionRequest } from '@redspark/rsh-deepseek-llm-api-extensions/types'
+import type { NativeDeepSeekLlmApiExtensions } from '@redspark/rsh-deepseek-llm-api-extensions/native'
 import { plugin as NativeSessionLog } from '../src/native.ts'
 
 declare const nativeRegistry: NativeDeepSeekLlmApiExtensions

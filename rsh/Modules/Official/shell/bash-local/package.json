@@ -1,5 +1,5 @@
 {
-  "name": "@deepseek-ai/dsh-bash-local",
+  "name": "@redspark/rsh-bash-local",
   "description": "Local-subprocess implementation of the RedSpark Harness bash executor seam",
   "version": "1.0.0",
   "publishConfig": {
@@ -49,32 +49,32 @@
   ],
   "license": "MIT",
   "peerDependencies": {
-    "@deepseek-ai/dsh-compat-settings-definition": "workspace:^",
-    "@deepseek-ai/dsh-shell": "workspace:^",
-    "@deepseek-ai/dsh-subprocess": "workspace:^",
-    "@deepseek-ai/dsh-timeout": "workspace:^",
-    "@deepseek-ai/cordis": "workspace:^"
+    "@redspark/rsh-compat-settings-definition": "workspace:^",
+    "@redspark/rsh-shell": "workspace:^",
+    "@redspark/rsh-subprocess": "workspace:^",
+    "@redspark/rsh-timeout": "workspace:^",
+    "@redspark/cordis": "workspace:^"
   },
   "peerDependenciesMeta": {
-    "@deepseek-ai/cordis": {
+    "@redspark/cordis": {
       "optional": true
     },
-    "@deepseek-ai/dsh-compat-settings-definition": {
+    "@redspark/rsh-compat-settings-definition": {
       "optional": true
     }
   },
   "dependencies": {
-    "@deepseek-ai/dsh-native-runtime": "workspace:^",
-    "@deepseek-ai/dsh-shell-process-local": "workspace:^",
-    "@deepseek-ai/schemastery": "workspace:^"
+    "@redspark/rsh-native-runtime": "workspace:^",
+    "@redspark/rsh-shell-process-local": "workspace:^",
+    "@redspark/schemastery": "workspace:^"
   },
   "devDependencies": {
-    "@deepseek-ai/dsh-compat-settings-definition": "workspace:^",
-    "@deepseek-ai/dsh-shell": "workspace:^",
-    "@deepseek-ai/dsh-subprocess": "workspace:^",
-    "@deepseek-ai/dsh-subprocess-local": "workspace:^",
-    "@deepseek-ai/dsh-timeout": "workspace:^",
-    "@deepseek-ai/cordis": "workspace:^",
-    "@deepseek-ai/dsh-settings": "workspace:^"
+    "@redspark/rsh-compat-settings-definition": "workspace:^",
+    "@redspark/rsh-shell": "workspace:^",
+    "@redspark/rsh-subprocess": "workspace:^",
+    "@redspark/rsh-subprocess-local": "workspace:^",
+    "@redspark/rsh-timeout": "workspace:^",
+    "@redspark/cordis": "workspace:^",
+    "@redspark/rsh-settings": "workspace:^"
   }
 }

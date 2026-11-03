@@ -3,14 +3,14 @@ import { randomUUID } from 'node:crypto'
 import { availableParallelism } from 'node:os'
 import * as vm from 'node:vm'
 import z from 'zod'
-import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
-import type { NativeAgentRegistry } from '@deepseek-ai/dsh-native-agent'
-import type { NativeToolExecution } from '@deepseek-ai/dsh-native-tools'
+import type { NativePlugin } from '@redspark/rsh-native-runtime'
+import type { NativeAgentRegistry } from '@redspark/rsh-native-agent'
+import type { NativeToolExecution } from '@redspark/rsh-native-tools'
 import type { NativeExternalSubagentApprovalOutcome, NativeExternalSubagentApprovalRequest,
-  NativeSubagentOperations, NativeSubagentRequest, NativeSubagentRun } from '@deepseek-ai/dsh-native-subagent/native'
-import type { NativeWorkflowProvider, NativeWorkflowStartRequest, WorkflowRun } from '@deepseek-ai/dsh-workflow/native'
-import { WorkflowRunId } from '@deepseek-ai/dsh-workflow/types'
-import { WorkflowError } from '@deepseek-ai/dsh-workflow/errors'
+  NativeSubagentOperations, NativeSubagentRequest, NativeSubagentRun } from '@redspark/rsh-native-subagent/native'
+import type { NativeWorkflowProvider, NativeWorkflowStartRequest, WorkflowRun } from '@redspark/rsh-workflow/native'
+import { WorkflowRunId } from '@redspark/rsh-workflow/types'
+import { WorkflowError } from '@redspark/rsh-workflow/errors'
 import { WorkerRun, type WorkflowHostChildren, type WorkflowHostContext } from './host.ts'
 import { validateMeta } from './meta.ts'
 
@@ -163,7 +163,7 @@ export class NativeWorkflowWorkerProvider implements NativeWorkflowProvider {
 
 /** Native workflow execution Provider; worker lifecycle belongs to its installation. */
 export const plugin: NativePlugin = {
-  apiVersion: 1, name: '@deepseek-ai/dsh-workflow-worker-thread', targets: ['host'],
+  apiVersion: 1, name: '@redspark/rsh-workflow-worker-thread', targets: ['host'],
   requires: ['workflow', 'agents', 'subagents'], provides: [],
   resolve(input) {
     const config = resolveNativeWorkflowWorkerConfig(input)

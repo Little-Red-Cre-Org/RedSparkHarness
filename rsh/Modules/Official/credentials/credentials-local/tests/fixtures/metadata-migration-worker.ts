@@ -1,6 +1,6 @@
 import { NativeLocalCredentialProvider } from '../../src/backend.ts'
-import { credentialKey } from '@deepseek-ai/dsh-credentials/native'
-import { createLaunchEnvironmentSnapshot } from '@deepseek-ai/dsh-launch-environment/native'
+import { credentialKey } from '@redspark/rsh-credentials/native'
+import { createLaunchEnvironmentSnapshot } from '@redspark/rsh-launch-environment/native'
 
 type Role = 'holder' | 'contender'
 

@@ -1,10 +1,10 @@
 /** Native fixture cleanup remains active after assertion failure and without a started client. */
 import { afterAll, describe, expect } from 'vitest'
-import { ok } from '@deepseek-ai/dsh-remote-mock'
-import type { SessionId } from '@deepseek-ai/dsh-session/types'
+import { ok } from '@redspark/rsh-remote-mock'
+import type { SessionId } from '@redspark/rsh-session/types'
 import { createClientTest, webApp, type TestClient } from '../src/assembly/index.ts'
 
-const test = createClientTest({ roster: webApp.closure(['@deepseek-ai/dsh-api-gateway']) })
+const test = createClientTest({ roster: webApp.closure(['@redspark/rsh-api-gateway']) })
 const clients: TestClient[] = []
 const expired: (() => Promise<TestClient>)[] = []
 
@@ -17,7 +17,7 @@ afterAll(async () => {
   for (const start of expired) {
     await expect(start()).rejects.toThrow('after its test fixture closed')
   }
-  expect('__DSH_TRANSPORT__' in globalThis).toBe(false)
+  expect('__RSH_TRANSPORT__' in globalThis).toBe(false)
 })
 
 describe('createClientTest', () => {
@@ -46,7 +46,7 @@ describe('createClientTest', () => {
   test('does not boot an unused start fixture', ({ mock, start }) => {
     expired.push(start)
     expect(mock.log.streams()).toEqual([])
-    expect('__DSH_TRANSPORT__' in globalThis).toBe(false)
+    expect('__RSH_TRANSPORT__' in globalThis).toBe(false)
   })
 
   test('owns a fresh mock when only the mock fixture is requested', ({ mock }) => {
@@ -56,9 +56,9 @@ describe('createClientTest', () => {
   })
 })
 
-const missingConnection = createClientTest({ roster: webApp.pick(['@deepseek-ai/dsh-typert-registry']) })
+const missingConnection = createClientTest({ roster: webApp.pick(['@redspark/rsh-typert-registry']) })
 missingConnection('keeps a rejected startup with its caller and releases its globals', async ({ start }) => {
   expired.push(start)
   await expect(start()).rejects.toThrow('provides no `connection` service')
-  expect('__DSH_TRANSPORT__' in globalThis).toBe(false)
+  expect('__RSH_TRANSPORT__' in globalThis).toBe(false)
 })

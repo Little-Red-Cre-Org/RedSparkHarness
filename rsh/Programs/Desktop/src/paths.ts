@@ -1,7 +1,7 @@
 /** Filesystem ownership for the Electron-managed desktop installation. */
 
 import { join } from 'node:path'
-import { resolveDshHome } from '@deepseek-ai/dsh-home-paths'
+import { resolveRshHome } from '@redspark/rsh-home-paths'
 
 /** Stable desktop installation paths under the shared Harness home. */
 export interface DesktopPaths {
@@ -30,25 +30,25 @@ export interface DesktopPaths {
  * names the produced artifact and is never written back into the asar.
  * Electron refuses to override a `userData` that has already been read, so the
  * caller must apply this before the first `app` path access.
- * @param dshHome - Harness home shared with npm-installed dsh.
+ * @param rshHome - Harness home shared with npm-installed dsh.
  * @returns absolute user-data directory under the Harness home.
  */
-export function desktopUserDataPath(dshHome: string = resolveDshHome()): string {
-  return join(dshHome, 'desktop', 'user-data')
+export function desktopUserDataPath(rshHome: string = resolveRshHome()): string {
+  return join(rshHome, 'desktop', 'user-data')
 }
 
 /**
  * Resolve every Electron-owned path without changing the shared data roots.
- * @param dshHome - Harness home shared with npm-installed dsh.
+ * @param rshHome - Harness home shared with npm-installed dsh.
  * @returns immutable desktop path set.
  */
-export function resolveDesktopPaths(dshHome: string = resolveDshHome()): DesktopPaths {
-  const root = join(dshHome, 'desktop')
+export function resolveDesktopPaths(rshHome: string = resolveRshHome()): DesktopPaths {
+  const root = join(rshHome, 'desktop')
   const pnpm = join(root, 'pnpm')
   return {
     root,
-    profile: join(dshHome, 'profiles', 'desktop'),
-    lock: join(dshHome, 'profiles', 'desktop', 'lock'),
+    profile: join(rshHome, 'profiles', 'desktop'),
+    lock: join(rshHome, 'profiles', 'desktop', 'lock'),
     pnpm: {
       root: pnpm,
       store: join(pnpm, 'store'),

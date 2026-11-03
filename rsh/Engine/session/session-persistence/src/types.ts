@@ -1,5 +1,5 @@
 /** Provider-neutral Session persistence observations and operation options. */
-import type { SessionEvent, SessionHeader, SessionLogOffset } from '@deepseek-ai/dsh-session/native'
+import type { SessionEvent, SessionHeader, SessionLogOffset } from '@redspark/rsh-session/native'
 import type { SessionPersistenceRevision } from './revision.ts'
 
 /**

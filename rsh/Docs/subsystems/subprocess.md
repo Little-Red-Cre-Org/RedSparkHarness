@@ -2,7 +2,7 @@
 
 English | [中文](subprocess.zh.md)
 
-The subprocess seam is split across a Service Definition ([dsh-subprocess](../../Core/subprocess/subprocess), `ctx.subprocess`) and Service Provider ([dsh-subprocess-local](../../Core/subprocess/subprocess-local)); its Consumers are other capability seams and out-of-process backends: the [bash executor family](shell.md) uses collected batch output, LSP uses raw protocol pipes, the PTY backend uses the terminal primitive, and the ACP subagent backend uses piped ndjson plus inherited stderr. This seam owns the managed `DSH_*` environment namespace, the shared credential scrub (`scrubbedParentEnv`), and the `CollectedOutput` shape; [dsh-shell](../../Modules/Official/shell/shell) re-exports the vocabulary so bash consumers keep one import root.
+The subprocess seam is split across a Service Definition ([dsh-subprocess](../../Core/subprocess/subprocess), `ctx.subprocess`) and Service Provider ([dsh-subprocess-local](../../Core/subprocess/subprocess-local)); its Consumers are other capability seams and out-of-process backends: the [bash executor family](shell.md) uses collected batch output, LSP uses raw protocol pipes, the PTY backend uses the terminal primitive, and the ACP subagent backend uses piped ndjson plus inherited stderr. This seam owns the managed `RSH_*` environment namespace, the shared credential scrub (`scrubbedParentEnv`), and the `CollectedOutput` shape; [dsh-shell](../../Modules/Official/shell/shell) re-exports the vocabulary so bash consumers keep one import root.
 
 Source: [`rsh/Core/subprocess/subprocess/src/types.ts`](../../Core/subprocess/subprocess/src/types.ts) and [`rsh/Core/subprocess/subprocess/src/index.ts`](../../Core/subprocess/subprocess/src/index.ts)
 
@@ -12,16 +12,16 @@ One provider's spawn working directories, executable paths, ordinary processes, 
 
 ## Managed environment namespace and captured output
 
-`DSH_*` variables are Harness-owned child-process facts; implementations discard ambient `DSH_*` names before the caller's explicit `env` merges, so a current fact arrives only as a deliberate string entry, while an explicit `undefined` tombstone removes an ordinary ambient value. Each collected stream reports its truncation and spill-recovery state through `CollectedOutput`.
+`RSH_*` variables are Harness-owned child-process facts; implementations discard ambient `RSH_*` names before the caller's explicit `env` merges, so a current fact arrives only as a deliberate string entry, while an explicit `undefined` tombstone removes an ordinary ambient value. Each collected stream reports its truncation and spill-recovery state through `CollectedOutput`.
 
 ```ts type-equiv
-/** One environment key inside the managed {@link DSH_ENV_PREFIX} namespace. */
-type DshEnvironmentKey = `${typeof DSH_ENV_PREFIX}${string}`
+/** One environment key inside the managed {@link RSH_ENV_PREFIX} namespace. */
+type RshEnvironmentKey = `${typeof RSH_ENV_PREFIX}${string}`
 ```
 
 ```ts type-equiv
 /** Trusted RedSpark Harness variables for one child-process execution. */
-type DshEnvironment = Readonly<Record<DshEnvironmentKey, string>>
+type RshEnvironment = Readonly<Record<RshEnvironmentKey, string>>
 ```
 
 ```ts type-equiv
@@ -127,7 +127,7 @@ interface SubprocessSpawnSpec {
    * Explicit environment entries merged onto the implementation's scrubbed
    * parent base (see `scrubbedParentEnv`), with no namespace validation. A
    * string is a deliberate caller opt-in, so a forwarded credential-shaped
-   * entry or current `DSH_*` fact survives the scrub; `undefined` is a
+   * entry or current `RSH_*` fact survives the scrub; `undefined` is a
    * tombstone that removes an ordinary ambient entry from the child.
    */
   env?: NodeJS.ProcessEnv | undefined

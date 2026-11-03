@@ -1,5 +1,5 @@
 {
-  "name": "@deepseek-ai/dsh-native-model-execution",
+  "name": "@redspark/rsh-native-model-execution",
   "description": "Native model stream execution and Session recording",
   "version": "1.0.0",
   "publishConfig": {
@@ -66,9 +66,9 @@
   ],
   "license": "MIT",
   "dependencies": {
-    "@deepseek-ai/dsh-llm": "workspace:^",
-    "@deepseek-ai/dsh-native-runtime": "workspace:^",
-    "@deepseek-ai/dsh-session": "workspace:^",
-    "@deepseek-ai/dsh-util-values": "workspace:^"
+    "@redspark/rsh-llm": "workspace:^",
+    "@redspark/rsh-native-runtime": "workspace:^",
+    "@redspark/rsh-session": "workspace:^",
+    "@redspark/rsh-util-values": "workspace:^"
   }
 }

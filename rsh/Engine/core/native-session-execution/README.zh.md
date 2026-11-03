@@ -3,7 +3,7 @@ description: "具有确切所有权及贡献移除等待语义的原生活动 Se
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-native-session-execution
+# @redspark/rsh-native-session-execution
 
 [English](README.md) | 中文
 

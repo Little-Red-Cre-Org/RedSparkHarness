@@ -2,7 +2,7 @@
 import type { TodoItem } from './todo-types.ts'
 export type { TodoItem } from './todo-types.ts'
 
-declare module '@deepseek-ai/dsh-session-projection/types' {
+declare module '@redspark/rsh-session-projection/types' {
   interface SessionProjectionStateMap {
     todos: TodoItem[] | null
   }

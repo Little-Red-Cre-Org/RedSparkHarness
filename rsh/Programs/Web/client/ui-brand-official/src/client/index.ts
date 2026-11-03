@@ -1,7 +1,7 @@
 /** Official RedSpark Harness occupants for the generic browser-brand slots. */
-import type { Context as ClientContext } from '@deepseek-ai/cordis'
-import type {} from '@deepseek-ai/dsh-client-ui-renderer/client'
-import type {} from '@deepseek-ai/dsh-client-ui-sidebar/client'
+import type { Context as ClientContext } from '@redspark/cordis'
+import type {} from '@redspark/rsh-client-ui-renderer/client'
+import type {} from '@redspark/rsh-client-ui-sidebar/client'
 import { OfficialBrandMark } from './Brand.tsx'
 
 /** Required service: the UI slot registry. */
@@ -13,7 +13,7 @@ export const inject = ['slots']
  * @param ctx - Client root context.
  */
 export function apply(ctx: ClientContext): void {
-  if (process.env.DSH_CLIENT_BUILD_PROFILE !== 'official') return
+  if (process.env.RSH_CLIENT_BUILD_PROFILE !== 'official') return
   ctx.slots.inject('sidebar.brand.mark', function* () {
     yield ctx.slots.register({ name: 'sidebar.brand.mark' }, OfficialBrandMark)
   })

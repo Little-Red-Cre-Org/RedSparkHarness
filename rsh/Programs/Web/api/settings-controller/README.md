@@ -8,7 +8,7 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-`@deepseek-ai/dsh-api-settings-controller` exposes generated `ctx.remote.settings`, `ctx.remote.credentials`, and `ctx.remote.authorization` namespaces for browser configuration surfaces. It returns redacted settings and credential metadata, supports settings and credential writes without returning secret values, streams provider-owned sign-in conversations, and opens provider-owned settings or Agent preset locations on the Host desktop. When a provider is absent, the namespace remains registered and returns an actionable configuration error.
+`@redspark/rsh-api-settings-controller` exposes generated `ctx.remote.settings`, `ctx.remote.credentials`, and `ctx.remote.authorization` namespaces for browser configuration surfaces. It returns redacted settings and credential metadata, supports settings and credential writes without returning secret values, streams provider-owned sign-in conversations, and opens provider-owned settings or Agent preset locations on the Host desktop. When a provider is absent, the namespace remains registered and returns an actionable configuration error.
 
 ## Table of Contents
 
@@ -43,7 +43,7 @@ Mount this package as a Loader entry in a profile that serves browser configurat
 | `nativeOpen` | platform-detected | Whether Agent preset directories can be handed to a native desktop opener |
 | `authorizationKeys` | `[]` | Credential keys whose registered account flows the browser may list and start |
 
-The generated [configuration catalog](../../../../Docs/config-catalog.md#deepseek-aidsh-api-settings-controller) is the exhaustive source for accepted fields and their JSDoc.
+The generated [configuration catalog](../../../../Docs/config-catalog.md#redsparkrsh-api-settings-controller) is the exhaustive source for accepted fields and their JSDoc.
 
 -----
 

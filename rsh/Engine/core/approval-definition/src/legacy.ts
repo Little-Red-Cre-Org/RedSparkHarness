@@ -1,8 +1,8 @@
 /** Framework-free legacy approval contracts and durable policy projection. */
-import { type Branded } from '@deepseek-ai/dsh-brand'
-import type { ToolCallId } from '@deepseek-ai/dsh-llm/native'
-import type { Session } from '@deepseek-ai/dsh-session/native'
-import type {} from '@deepseek-ai/dsh-session/types'
+import { type Branded } from '@redspark/rsh-brand'
+import type { ToolCallId } from '@redspark/rsh-llm/native'
+import type { Session } from '@redspark/rsh-session/native'
+import type {} from '@redspark/rsh-session/types'
 import { sessionApprovalPolicy } from './index.ts'
 
 /** One-shot outcome returned by the compatibility answerer chain. */
@@ -86,7 +86,7 @@ export interface ApprovalServiceDefinition<AgentOwner> {
   overrideOf(session: Session): ApprovalPolicy | undefined
 }
 
-declare module '@deepseek-ai/dsh-session/types' {
+declare module '@redspark/rsh-session/types' {
   interface SessionEventMap {
     /** One compatibility approval question before its matching decision. */
     'approval/asked': {

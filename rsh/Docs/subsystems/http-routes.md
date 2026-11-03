@@ -2,7 +2,7 @@
 
 English | [中文](http-routes.zh.md)
 
-`@deepseek-ai/dsh-http-routes` defines Node HTTP handlers and the shared route table used by the selected Cordis Web and Native Web listeners. Its Host and Native entries contain no Cordis declarations; the browser-safe index-injection values are exported from `./client`. The [Cordis bridge](../../Compatibility/DSH/bridge/http-routes-cordis/README.md) keeps the legacy `ctx.webServer` and event declarations separate from these contracts.
+`@redspark/rsh-http-routes` defines Node HTTP handlers and the shared route table used by the selected Cordis Web and Native Web listeners. Its Host and Native entries contain no Cordis declarations; the browser-safe index-injection values are exported from `./client`. The [Cordis bridge](../../Compatibility/DSH/bridge/http-routes-cordis/README.md) keeps the legacy `ctx.webServer` and event declarations separate from these contracts.
 
 ## Definitions
 

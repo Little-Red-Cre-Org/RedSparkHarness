@@ -1,6 +1,6 @@
-import type { Context } from '@deepseek-ai/cordis'
-import type {} from '@deepseek-ai/dsh-compat-settings-definition'
-import type {} from '@deepseek-ai/dsh-agent-default-model'
+import type { Context } from '@redspark/cordis'
+import type {} from '@redspark/rsh-compat-settings-definition'
+import type {} from '@redspark/rsh-agent-default-model'
 
 /**
  * Cordis adapter for the optional default-model Settings source and writer.
@@ -10,8 +10,8 @@ import type {} from '@deepseek-ai/dsh-agent-default-model'
  */
 export async function apply(ctx: Context): Promise<void> {
   const [service, settings] = await Promise.all([
-    import('@deepseek-ai/dsh-agent-default-model'),
-    import('@deepseek-ai/dsh-agent-default-model/compat-settings'),
+    import('@redspark/rsh-agent-default-model'),
+    import('@redspark/rsh-agent-default-model/compat-settings'),
   ]).catch((cause: unknown) => {
     throw new Error('The selected default-model Settings adapter requires its Engine peer.', { cause })
   })

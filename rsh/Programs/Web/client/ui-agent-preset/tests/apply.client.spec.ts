@@ -5,15 +5,15 @@
  * that are already showing, so a default set from one converges the other.
  */
 
-import { Context } from '@deepseek-ai/cordis'
+import { Context } from '@redspark/cordis'
 import { describe, expect, it, vi } from 'vitest'
-import { resolveSlotLabel } from '@deepseek-ai/dsh-client-ui-slots'
-import { SlotRegistry } from '@deepseek-ai/dsh-client-ui-renderer/client'
-import { LocaleRuntime } from '@deepseek-ai/dsh-client-locale/client'
-import { RemoteError, TestRemote } from '@deepseek-ai/dsh-client-test-runtime'
-import { SessionId } from '@deepseek-ai/dsh-session'
-import { apply as settingsApply, inject as settingsInject } from '@deepseek-ai/dsh-client-ui-settings/client'
-import { apply, inject } from '@deepseek-ai/dsh-client-ui-agent-preset/client'
+import { resolveSlotLabel } from '@redspark/rsh-client-ui-slots'
+import { SlotRegistry } from '@redspark/rsh-client-ui-renderer/client'
+import { LocaleRuntime } from '@redspark/rsh-client-locale/client'
+import { RemoteError, TestRemote } from '@redspark/rsh-client-test-runtime'
+import { SessionId } from '@redspark/rsh-session'
+import { apply as settingsApply, inject as settingsInject } from '@redspark/rsh-client-ui-settings/client'
+import { apply, inject } from '@redspark/rsh-client-ui-agent-preset/client'
 import { AgentPresetLabel } from '../src/client/AgentPresetLabel.tsx'
 import type { AgentPresetLabelInjected } from '../src/client/AgentPresetLabel.tsx'
 import { AgentPresetSection } from '../src/client/AgentPresetSection.tsx'
@@ -733,7 +733,7 @@ describe('AgentPresetSeatController reconciliation', () => {
   })
 
   it('keeps the bare cause of a mount failure, not the frame that names the preset again', async () => {
-    const reason = 'failed to import loader entry ctx (@deepseek-ai/dsh-gone): Cannot find package'
+    const reason = 'failed to import loader entry ctx (@redspark/rsh-gone): Cannot find package'
     const controller = new AgentPresetSeatController({
       remote: {
         agentPresets: {

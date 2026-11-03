@@ -1,10 +1,10 @@
 /** Native todo Consumer over the selected Tool registry and authoritative Session. */
-import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
-import type {} from '@deepseek-ai/dsh-native-tools/native'
-import type { JsonSchemaNode } from '@deepseek-ai/dsh-native-tools/json-schema'
-import type { NativeValueToolContribution } from '@deepseek-ai/dsh-native-tools'
-import type { NativeActiveSessionOperations, NativeActiveSessionOwner } from '@deepseek-ai/dsh-native-session-execution'
-import type {} from '@deepseek-ai/dsh-native-session-execution/native'
+import type { NativePlugin } from '@redspark/rsh-native-runtime'
+import type {} from '@redspark/rsh-native-tools/native'
+import type { JsonSchemaNode } from '@redspark/rsh-native-tools/json-schema'
+import type { NativeValueToolContribution } from '@redspark/rsh-native-tools'
+import type { NativeActiveSessionOperations, NativeActiveSessionOwner } from '@redspark/rsh-native-session-execution'
+import type {} from '@redspark/rsh-native-session-execution/native'
 import { describe, toTodoList, foldTodos } from './todo-core.ts'
 import type { TodoItem } from './todo-types.ts'
 export type { TodoItem } from './todo-types.ts'
@@ -71,7 +71,7 @@ function contribution(allowParallel: boolean, active: NativeActiveSessionOperati
 
 /** Scoped registration; disposal cancels and drains admitted todo calls. */
 export const plugin: NativePlugin = {
-  apiVersion: 1, name: '@deepseek-ai/dsh-tool-todo', targets: ['host'], requires: ['tools', 'activeSessions'], provides: [],
+  apiVersion: 1, name: '@redspark/rsh-tool-todo', targets: ['host'], requires: ['tools', 'activeSessions'], provides: [],
   resolve(input) {
     if (typeof input !== 'object' || input === null || Array.isArray(input)) throw new Error('tool-todo: configuration must be an object')
     const config = input as Record<string, unknown>

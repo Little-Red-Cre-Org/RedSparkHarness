@@ -1,10 +1,10 @@
 /** Browser attachment plugin: fills conversation's composer and image slots. */
-import type { Context as ClientContext } from '@deepseek-ai/cordis'
-import type {} from '@deepseek-ai/dsh-client-ui-chat/client'
-import type {} from '@deepseek-ai/dsh-client-ui-conversation/client'
-import type {} from '@deepseek-ai/dsh-client-ui-renderer/client'
-import type {} from '@deepseek-ai/dsh-client-ui-tool/client'
-import type {} from '@deepseek-ai/dsh-client-ui-trajectory/client'
+import type { Context as ClientContext } from '@redspark/cordis'
+import type {} from '@redspark/rsh-client-ui-chat/client'
+import type {} from '@redspark/rsh-client-ui-conversation/client'
+import type {} from '@redspark/rsh-client-ui-renderer/client'
+import type {} from '@redspark/rsh-client-ui-tool/client'
+import type {} from '@redspark/rsh-client-ui-trajectory/client'
 import { ComposerAttachments } from './ComposerAttachments.tsx'
 import { MessageImages } from './MessageImages.tsx'
 

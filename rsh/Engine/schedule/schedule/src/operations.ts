@@ -1,7 +1,7 @@
 /** Shared durable Schedule management operations for Cordis and Native owners. */
 
-import { SessionLogOffset } from '@deepseek-ai/dsh-session/native'
-import type { SessionEvent } from '@deepseek-ai/dsh-session/native'
+import { SessionLogOffset } from '@redspark/rsh-session/native'
+import type { SessionEvent } from '@redspark/rsh-session/native'
 import {
   allocateScheduleId,
   createAfterScheduleRecord,

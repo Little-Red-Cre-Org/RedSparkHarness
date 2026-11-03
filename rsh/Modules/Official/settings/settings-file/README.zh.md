@@ -3,7 +3,7 @@ description: "面向用户与维护者的文件型设置提供方：选择、配
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-settings-file
+# @redspark/rsh-settings-file
 
 [English](README.md) | 中文
 
@@ -34,7 +34,7 @@ kind: "package-reference"
 ### 最小配置
 
 ```yaml
-- name: '@deepseek-ai/dsh-settings-file'
+- name: '@redspark/rsh-settings-file'
   config:
     path: /absolute/path/to/settings.yaml
 ```
@@ -42,13 +42,13 @@ kind: "package-reference"
 | 字段 | 默认值 | 含义 |
 |---|---|---|
 | `path` | `<harness home>/settings.yaml` | 设置文档路径；扩展名决定格式（`.yaml`、`.yml` 或 `.json`） |
-| `dshHome` | `$DSH_HOME` 或 `~/.dsh` | `path` 省略时使用的 harness home |
+| `rshHome` | `$RSH_HOME` 或 `~/.dsh` | `path` 省略时使用的 harness home |
 | `watch` | `true` | 监听文档并热发布外部编辑 |
 | `debounceMs` | `100` | watcher 写入稳定窗口（毫秒） |
 
-生成的[配置目录](../../../../Docs/config-catalog.zh.md#deepseek-aidsh-settings-file)是每个受支持字段及其 JSDoc 的穷尽式真源。
+生成的[配置目录](../../../../Docs/config-catalog.zh.md#redsparkrsh-settings-file)是每个受支持字段及其 JSDoc 的穷尽式真源。
 
-原生 Host 入口通过 `@deepseek-ai/dsh-settings/native` 提供相同的文件位置、YAML/JSON 格式、原子读改写与外部编辑监听。它保留未知 namespace 分节，拒绝覆盖非法文件；原生 Consumer 负责校验自己的 namespace。`@deepseek-ai/dsh-settings-file/native` 还导出 `resolveNativeSettingsConfig` 和 `parseNativeSettingsDocument`，供需要复用 Provider 路径与解析规则、但不启动 Host 的读取方使用。每个已注册用户分节变化时都会携带递增后的 revision 发出 `settings/document-updated`，即使解析值保持相等。
+原生 Host 入口通过 `@redspark/rsh-settings/native` 提供相同的文件位置、YAML/JSON 格式、原子读改写与外部编辑监听。它保留未知 namespace 分节，拒绝覆盖非法文件；原生 Consumer 负责校验自己的 namespace。`@redspark/rsh-settings-file/native` 还导出 `resolveNativeSettingsConfig` 和 `parseNativeSettingsDocument`，供需要复用 Provider 路径与解析规则、但不启动 Host 的读取方使用。每个已注册用户分节变化时都会携带递增后的 revision 发出 `settings/document-updated`，即使解析值保持相等。
 
 ### 编辑文档
 
@@ -94,7 +94,7 @@ kind: "package-reference"
 | [`src/index.ts`](src/index.ts) | 提供方：spec 解析、加载/解析、写锁下的读-改-写、watcher 生命周期、YAML/JSON 渲染 |
 | [`src/native.ts`](src/native.ts) | 原生提供方：文件存储、锁、监听器与 Host 生命周期 |
 | [`src/yaml-patch.ts`](src/yaml-patch.ts) | 共用的保留注释的 YAML 叶节点编辑 |
-| — | 不发布运行时不变式伴生入口；文件往返、watcher 时序与原子写入行为由包测试证明，进程内提交关系归 `@deepseek-ai/dsh-settings` 所有。 |
+| — | 不发布运行时不变式伴生入口；文件往返、watcher 时序与原子写入行为由包测试证明，进程内提交关系归 `@redspark/rsh-settings` 所有。 |
 
 ### 文档生命周期
 
@@ -117,8 +117,8 @@ YAML 渲染把缓存文本解析成可变的保留注释树，再对一个 names
 - [设置子系统参考](../../../../Docs/subsystems/settings.zh.md)——namespace、解析顺序、descriptor 与变更提交。
 - [设置包映射](../README.zh.md)——用户设置能力的两个包。
 - [原子写入](../../../../Core/util/atomic-write/README.zh.md)——每次写入都使用的写锁与原子替换。
-- [主目录路径](../../../../Core/util/home-paths/README.zh.md)——`$DSH_HOME` 解析与规范化监听路径。
-- [生成配置目录](../../../../Docs/config-catalog.zh.md#deepseek-aidsh-settings-file)——每个受支持配置字段及其源声明。
+- [主目录路径](../../../../Core/util/home-paths/README.zh.md)——`$RSH_HOME` 解析与规范化监听路径。
+- [生成配置目录](../../../../Docs/config-catalog.zh.md#redsparkrsh-settings-file)——每个受支持配置字段及其源声明。
 
 -----
 

@@ -3,7 +3,7 @@
  * newline-delimited JSON-RPC on stdio like the real `dsh-acp-agent` bin, but
  * every behavior — how prompts settle, whether session/new rejects, which
  * session logs get persisted, what filesystem noise to leave — comes from a
- * `behavior.json` sitting NEXT to the `$DSH_SNAPSHOT_FILE` fixture, so a spec
+ * `behavior.json` sitting NEXT to the `$RSH_SNAPSHOT_FILE` fixture, so a spec
  * scripts a whole subprocess run from data. The specs launch it through the
  * REAL `runScenario` spawn path (tsx loader, temp cwd, env plumbing), so the
  * harness plumbing is exercised for real; only the agent behind the protocol
@@ -25,7 +25,7 @@ import { createInterface } from 'node:readline'
 
 /** One scripted session log: a transcript path under the sessions root plus its JSONL lines. */
 interface ScriptedLog {
-  /** Path relative to `$DSH_SNAPSHOT_SESSIONS_ROOT`, e.g. `project/session/session.jsonl`. */
+  /** Path relative to `$RSH_SNAPSHOT_SESSIONS_ROOT`, e.g. `project/session/session.jsonl`. */
   file: string
   /**
    * The JSONL records. String templates `{{CWD}}` and `{{SID}}` are replaced
@@ -49,7 +49,7 @@ interface Behavior {
   persistLogsOnCancel?: boolean
   /** Before responding to a prompt, send a `session/request_permission` request and echo its outcome as a chunk. */
   permissionProbe?: boolean
-  /** Echo the `DSH_SNAPSHOT_*` env the harness set as a chunk (spec-side env-plumbing assertions). */
+  /** Echo the `RSH_SNAPSHOT_*` env the harness set as a chunk (spec-side env-plumbing assertions). */
   echoEnv?: boolean
   /** Echo the sorted cwd listing as a chunk (spec-side workspace-seeding assertions). */
   echoWorkspace?: boolean
@@ -67,8 +67,8 @@ interface Behavior {
   deleteSessionsRoot?: boolean
 }
 
-const sessionsRoot = process.env.DSH_SNAPSHOT_SESSIONS_ROOT ?? ''
-const fixtureFile = process.env.DSH_SNAPSHOT_FILE ?? ''
+const sessionsRoot = process.env.RSH_SNAPSHOT_SESSIONS_ROOT ?? ''
+const fixtureFile = process.env.RSH_SNAPSHOT_FILE ?? ''
 const behavior: Behavior = fixtureFile === ''
   ? {}
   : JSON.parse(readFileSync(join(dirname(fixtureFile), 'behavior.json'), 'utf8')) as Behavior
@@ -145,12 +145,12 @@ async function handlePrompt(id: number | string): Promise<void> {
   chunk('thinking about it')
   if (behavior.echoEnv === true) {
     chunk(`env:${JSON.stringify({
-      mode: process.env.DSH_SNAPSHOT,
-      override: process.env.DSH_SNAPSHOT_OVERRIDE ?? null,
-      childFiles: process.env.DSH_SNAPSHOT_CHILD_FILES ?? null,
-      spillRoot: process.env.DSH_SNAPSHOT_SPILL_ROOT ?? null,
+      mode: process.env.RSH_SNAPSHOT,
+      override: process.env.RSH_SNAPSHOT_OVERRIDE ?? null,
+      childFiles: process.env.RSH_SNAPSHOT_CHILD_FILES ?? null,
+      spillRoot: process.env.RSH_SNAPSHOT_SPILL_ROOT ?? null,
       // Scenario-supplied deployment env (the `Scenario.env` layering hook).
-      permissionMode: process.env.DSH_PERMISSION_MODE ?? null,
+      permissionMode: process.env.RSH_PERMISSION_MODE ?? null,
     })}`)
   }
   if (behavior.echoWorkspace === true) {

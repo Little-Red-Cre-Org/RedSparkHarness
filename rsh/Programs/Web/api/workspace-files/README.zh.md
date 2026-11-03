@@ -3,7 +3,7 @@ description: "面向 Web GUI 的工作区文件服务：通过组合文件系统
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-api-workspace-files
+# @redspark/rsh-api-workspace-files
 
 [English](README.md) | 中文
 
@@ -68,7 +68,7 @@ kind: "package-reference"
 | `maxLines` | `5000` | 页大小的缺省值与上限（行）；更大的 `limit` 被拒绝 |
 | `maxEntries` | `2000` | 返回目录条目数上限；其余丢弃并报告截断 |
 
-生成的[配置目录](../../../../Docs/config-catalog.zh.md#deepseek-aidsh-api-workspace-files)是每个可接受字段及其 JSDoc 的完备来源。
+生成的[配置目录](../../../../Docs/config-catalog.zh.md#redsparkrsh-api-workspace-files)是每个可接受字段及其 JSDoc 的完备来源。
 
 ### 失败
 

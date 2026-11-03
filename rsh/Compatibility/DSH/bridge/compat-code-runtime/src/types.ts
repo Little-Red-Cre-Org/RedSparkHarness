@@ -7,4 +7,4 @@ export type {
   CodeRunFailure,
   CodeRunRequest,
   CodeRunResult,
-} from '@deepseek-ai/dsh-code-runtime-definition'
+} from '@redspark/rsh-code-runtime-definition'

@@ -1,13 +1,14 @@
 /** Native conversation image loading and draft-file presentation. */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { RefObject } from 'react'
-import { AttachmentRail, DropOverlay, ImageLightbox, MessageImage } from '@deepseek-ai/dsh-client-ui-attachment/native'
-import type { AttachmentRailItem, ImageLoader, MessageImageLabels } from '@deepseek-ai/dsh-client-ui-attachment/native'
-import { fileSizeText, IconCloseFill14 } from '@deepseek-ai/dsh-client-ui-primitives'
-import type { TranslateNS } from '@deepseek-ai/dsh-client-ui-slots'
-import type { NativeSessionImage } from '@deepseek-ai/dsh-client-native-session/native'
-import type { NativeModelControls } from '@deepseek-ai/dsh-client-native-session/native'
-import type { SessionId } from '@deepseek-ai/dsh-session/types'
+import { AttachmentRail, DropOverlay, ImageLightbox, MessageImage } from '@redspark/rsh-client-ui-attachment/native'
+import type { AttachmentRailItem, ImageLoader, MessageImageLabels } from '@redspark/rsh-client-ui-attachment/native'
+import { fileSizeText, IconCloseFill14 } from '@redspark/rsh-client-ui-primitives'
+import type { TranslateNS } from '@redspark/rsh-client-ui-slots'
+import type { NativeSessionImage } from '@redspark/rsh-client-native-session/native'
+import type { NativeModelControls } from '@redspark/rsh-client-native-session/native'
+import type { SessionId } from '@redspark/rsh-session/types'
+import { stagedFileReady, type StagedFileDraft } from './composer-files.ts'
 import css from './attachments.module.css'
 
 type Translate = TranslateNS<'nativeApplication'>
@@ -99,18 +100,94 @@ export function NativeComposerImagePicker({ inputRef, disabled, t }: {
   </button>
 }
 
+/** Round '📎' button that opens the composer's general-file input.
+ * @param props.inputRef - file input rendered by `NativeComposerFiles`.
+ * @param props.disabled - whether the composer rejects new files.
+ * @param props.t - native application translation callback.
+ * @returns the general-file picker button.
+ */
+export function NativeComposerFilePicker({ inputRef, disabled, t }: {
+  inputRef: RefObject<HTMLInputElement>
+  disabled: boolean
+  t: Translate
+}) {
+  return <button type="button" className={css.picker} disabled={disabled} title={t('attachFile')}
+    aria-label={t('attachFile')} onClick={() => { inputRef.current?.click() }}>
+    <span aria-hidden>⇪</span>
+  </button>
+}
+
+/** General-file rail above the composer: one chip per staged file, removable, with a retry on failure.
+ *
+ * The rail never uploads: the operator's send is the one action that stages
+ * bytes, so a file the Host refuses keeps its chip and its selection.
+ * @param props.drafts - staged drafts in operator order.
+ * @param props.onRemove - drop one draft from the rail.
+ * @param props.onRetry - clear the recorded failure so the next send uploads it again.
+ * @param props.disabled - whether the composer rejects changes.
+ * @param props.inputRef - file input shared with a toolbar `NativeComposerFilePicker`; renders inline when omitted.
+ * @param props.t - native application translation callback.
+ * @returns the file controls and their rail.
+ */
+export function NativeComposerFiles({ drafts, onChange, onRemove, onRetry, disabled, inputRef: sharedInputRef, t }: {
+  drafts: readonly StagedFileDraft[]
+  onChange: (files: readonly File[]) => void
+  onRemove: (file: File) => void
+  onRetry: (file: File) => void
+  disabled: boolean
+  inputRef?: RefObject<HTMLInputElement> | undefined
+  t: Translate
+}) {
+  const ownInputRef = useRef<HTMLInputElement | null>(null)
+  const inputRef = sharedInputRef ?? ownInputRef
+  if (drafts.length === 0 && sharedInputRef !== undefined) return null
+  return <div className={css.fileRail}>
+    <input
+      ref={inputRef}
+      className={css.input}
+      type="file"
+      multiple
+      aria-label={t('files')}
+      disabled={disabled}
+      onChange={(event) => {
+        onChange(Array.from(event.target.files ?? []))
+        event.currentTarget.value = ''
+      }}
+    />
+    {sharedInputRef === undefined && <NativeComposerFilePicker inputRef={inputRef} disabled={disabled} t={t} />}
+    {drafts.map(draft => <span key={`${draft.file.name}:${String(draft.file.size)}:${String(draft.file.lastModified)}`}
+      className={css.fileChip} data-state={stagedFileReady(draft) ? 'ready' : draft.error === undefined ? 'pending' : 'failed'}>
+      <span className={css.fileName} title={draft.file.name}>{draft.file.name || t('file')}</span>
+      <span className={css.fileMeta}>{fileSizeText(draft.file.size)}</span>
+      {draft.error === undefined ? null
+        : <button type="button" className={css.fileAction} disabled={disabled}
+          aria-label={t('fileRetryNamed', { name: draft.file.name || t('file') })}
+          title={t('fileUploadFailed')}
+          onClick={() => { onRetry(draft.file) }}>{t('fileRetry')}</button>}
+      <button type="button" className={css.fileAction} disabled={disabled}
+        aria-label={t('fileRemoveNamed', { name: draft.file.name || t('file') })}
+        onClick={() => { onRemove(draft.file) }}>
+        <IconCloseFill14 size={12} />
+      </button>
+    </span>)}
+  </div>
+}
+
 /** Limit-checked Native Client composer file picker, drop target, paste target and attachment rail.
  * @param props.files - current composer image files.
  * @param props.onChange - replace the composer image files.
+ * @param props.onReject - report files this rail refused, so the pending-file rail can explain them.
  * @param props.limits - Host-advertised image limits.
  * @param props.disabled - whether the composer rejects new image files.
  * @param props.inputRef - file input shared with a toolbar `NativeComposerImagePicker`; the picker renders inline when omitted.
  * @param props.t - native application translation callback.
  * @returns image controls and the attachment rail.
  */
-export function NativeComposerAttachments({ files, onChange, limits, disabled, inputRef: sharedInputRef, t }: {
+export function NativeComposerAttachments({ files, onChange, onReject, limits, disabled, inputRef: sharedInputRef, t }: {
   files: readonly File[]
   onChange: (files: readonly File[]) => void
+  /** Files delivered here that the image rules refused; the general-file rail stages them instead. */
+  onReject?: ((files: readonly File[]) => void) | undefined
   limits: ImageLimits
   disabled: boolean
   inputRef?: RefObject<HTMLInputElement> | undefined
@@ -149,10 +226,19 @@ export function NativeComposerAttachments({ files, onChange, limits, disabled, i
 
   const addFiles = useCallback((incoming: readonly File[]) => {
     if (disabled) return
-    const { accepted, rejected } = filterFiles([...files, ...incoming], limits)
+    // A drop or paste mixes both kinds. Hand the non-image ones to the general
+    // file rail instead of reporting them as unsupported image types, which is
+    // what the image rules alone would do.
+    const isRaster = (candidate: File): boolean => limits.mediaTypes.includes(
+      candidate.type as (typeof limits.mediaTypes)[number])
+    const raster = incoming.filter(isRaster)
+    const other = incoming.filter(candidate => !isRaster(candidate))
+    if (other.length > 0) onReject?.(other)
+    if (raster.length === 0) return
+    const { accepted, rejected } = filterFiles([...files, ...raster], limits)
     if (accepted.length !== files.length) onChange(accepted)
     setNotices(rejected)
-  }, [disabled, files, limits, onChange])
+  }, [disabled, files, limits, onChange, onReject])
 
   useEffect(() => {
     if (disabled) return

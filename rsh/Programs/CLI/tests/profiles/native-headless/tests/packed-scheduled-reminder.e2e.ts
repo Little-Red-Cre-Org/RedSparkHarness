@@ -7,8 +7,8 @@ import { pathToFileURL } from 'node:url'
 import { execa } from 'execa'
 import { expect, it } from 'vitest'
 
-const PACKED_BIN = process.env.DSH_PACKED_DSH_BIN
-const CONSUMER_ROOT = process.env.DSH_PACKED_CONSUMER_ROOT
+const PACKED_BIN = process.env.RSH_PACKED_BIN
+const CONSUMER_ROOT = process.env.RSH_PACKED_CONSUMER_ROOT
 const SESSION_ID = 'packed-native-scheduled-reminder'
 const FIRST_TASK = 'Create the scheduled reminder from the tool fixture.'
 const COLD_TASK = 'Continue this session after restart.'
@@ -23,10 +23,10 @@ type RunResult = { readonly sessionId: string; readonly finalResponse: string; r
 type HarnessNotification = { readonly method: string; readonly params: { readonly sessionId?: string; readonly event?: JsonObject } }
 type NotificationSubscription = { tryNext(): HarnessNotification | undefined; close(): void }
 type InstalledSdk = {
-  DeepSeekHarness: new (options: {
+  RedSparkHarness: new (options: {
     readonly profile: 'native-sdk'
-    readonly dshBin: string
-    readonly dshHome: string
+    readonly rshBin: string
+    readonly rshHome: string
     readonly patches: string[]
     readonly cwd: string
     readonly provider: 'fixture'
@@ -130,18 +130,18 @@ it.skipIf(PACKED_BIN === undefined || CONSUMER_ROOT === undefined)(
     const installedBin = await realpath(packedBin)
     const binRelative = relative(installedRoot, installedBin)
     expect(binRelative.startsWith('..' + sep) || isAbsolute(binRelative)).toBe(false)
-    expect(binRelative.split(sep)).toEqual(['node_modules', '@deepseek-ai', 'dsh', 'lib', 'bin.js'])
+    expect(binRelative.split(sep)).toEqual(['node_modules', '@redspark', 'rsh', 'lib', 'bin.js'])
     const consumerRequire = createRequire(join(installedRoot, 'package.json'))
-    const sdkClientPath = await realpath(consumerRequire.resolve('@deepseek-ai/dsh-sdk-client'))
+    const sdkClientPath = await realpath(consumerRequire.resolve('@redspark/rsh-sdk-client'))
     const sdkRelative = relative(installedRoot, sdkClientPath)
     expect(sdkRelative.startsWith('..' + sep) || isAbsolute(sdkRelative)).toBe(false)
-    expect(sdkRelative.split(sep).slice(0, 3)).toEqual(['node_modules', '@deepseek-ai', 'dsh-sdk-client'])
-    for (const packageName of ['@deepseek-ai/dsh-task-scheduler', '@deepseek-ai/dsh-schedule']) {
+    expect(sdkRelative.split(sep).slice(0, 3)).toEqual(['node_modules', '@redspark', 'rsh-sdk-client'])
+    for (const packageName of ['@redspark/rsh-task-scheduler', '@redspark/rsh-schedule']) {
       const packagePath = await realpath(consumerRequire.resolve(packageName + '/package.json'))
       const packageRelative = relative(installedRoot, packagePath)
       expect(packageRelative.startsWith('..' + sep) || isAbsolute(packageRelative)).toBe(false)
     }
-    const { DeepSeekHarness } = await import(pathToFileURL(sdkClientPath).href) as InstalledSdk
+    const { RedSparkHarness } = await import(pathToFileURL(sdkClientPath).href) as InstalledSdk
 
     const root = await mkdtemp(join(installedRoot, '.dsh-p4-scheduled-reminder-'))
     const home = join(root, 'home')
@@ -151,7 +151,7 @@ it.skipIf(PACKED_BIN === undefined || CONSUMER_ROOT === undefined)(
     let server: ReturnType<typeof createServer> | undefined
     try {
       await mkdir(workspace, { recursive: true })
-      const childEnv: NodeJS.ProcessEnv = { ...process.env, DSH_HOME: home, DSH_TELEMETRY_DISABLED: '1',
+      const childEnv: NodeJS.ProcessEnv = { ...process.env, RSH_HOME: home, RSH_TELEMETRY_DISABLED: '1',
         PACKED_SCHEDULE_FIXTURE_KEY: 'packed-local-fixture-key' }
       delete childEnv.NODE_OPTIONS
       delete childEnv.NODE_PATH
@@ -164,9 +164,9 @@ it.skipIf(PACKED_BIN === undefined || CONSUMER_ROOT === undefined)(
       const profileConfig = join(home, 'profiles', 'native-sdk', 'rsh.profile.json')
       const composition = JSON.parse(await readFile(profileConfig, 'utf8')) as { installations: JsonObject[] }
       composition.installations.push(
-        { id: 'task-scheduler', plugin: '@deepseek-ai/dsh-task-scheduler', scope: 'root',
+        { id: 'task-scheduler', plugin: '@redspark/rsh-task-scheduler', scope: 'root',
           config: { path: join(home, 'profiles', 'native-sdk', 'task-scheduler.sqlite') } },
-        { id: 'schedule', plugin: '@deepseek-ai/dsh-schedule', scope: 'root' },
+        { id: 'schedule', plugin: '@redspark/rsh-schedule', scope: 'root' },
       )
       await writeFile(profileConfig, JSON.stringify(composition))
 
@@ -205,9 +205,9 @@ it.skipIf(PACKED_BIN === undefined || CONSUMER_ROOT === undefined)(
           baseURL, models: [{ id: MODEL }] } } } },
       ] }))
 
-      const options = { profile: 'native-sdk' as const, dshBin: installedBin, dshHome: home, patches: [patch],
+      const options = { profile: 'native-sdk' as const, rshBin: installedBin, rshHome: home, patches: [patch],
         cwd: workspace, provider: 'fixture' as const, model: MODEL, env: childEnv, requestTimeoutMs: 20_000 }
-      const firstHarness = new DeepSeekHarness(options)
+      const firstHarness = new RedSparkHarness(options)
       let first: RunResult
       try { first = await firstHarness.session(SESSION_ID).run(FIRST_TASK) }
       finally { await firstHarness.close() }
@@ -227,7 +227,7 @@ it.skipIf(PACKED_BIN === undefined || CONSUMER_ROOT === undefined)(
       await new Promise<void>(resolve => setTimeout(resolve, dueInMs + 200))
 
       const requestsBeforeRestore = requests.length
-      const coldHarness = new DeepSeekHarness(options)
+      const coldHarness = new RedSparkHarness(options)
       const subscription = coldHarness.client.subscribeSessionTree(SESSION_ID)
       let recovery: RunResult
       const wireEvents: JsonObject[] = []

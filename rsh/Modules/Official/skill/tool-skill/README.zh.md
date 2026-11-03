@@ -3,7 +3,7 @@ description: "面向模型的 skill（技能）目录与加载工具，供希望
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-tool-skill
+# @redspark/rsh-tool-skill
 
 [English](README.md) | 中文
 
@@ -36,16 +36,16 @@ agent 可以在会话期间发现并加载 skill。在首次请求前，如果�
 与 skill 注册表和至少一个提供方一起加载该插件。唯一配置项限制目录中渲染的规范化描述长度。
 
 ```yaml
-- name: '@deepseek-ai/dsh-skill'
-- name: '@deepseek-ai/dsh-skill-filesystem'
-- name: '@deepseek-ai/dsh-tool-skill'
+- name: '@redspark/rsh-skill'
+- name: '@redspark/rsh-skill-filesystem'
+- name: '@redspark/rsh-tool-skill'
 ```
 
 | 字段 | 默认值 | 含义 |
 |---|---|---|
 | `catalogDescriptionMaxLength` | `500` | 会话目录中渲染的规范化描述最大长度；最小为 3 |
 
-生成的[配置目录](../../../../Docs/config-catalog.zh.md#deepseek-aidsh-tool-skill)是每个受支持字段的穷尽式真源。
+生成的[配置目录](../../../../Docs/config-catalog.zh.md#redsparkrsh-tool-skill)是每个受支持字段的穷尽式真源。
 
 Native Host profile 会与 Native `dsh-skill`、`dsh-native-tools` 和 request-context 提供方一起选择本包的 `./native` 入口。Native 消费方提供 `skillInvocations` 供手动 Skill 路由使用：调用方必须传入同一个 `requestContexts` 注册表、该 consumer 的安装 scope 必须包含所选 Agent scope，并且精确的 request-context 注册必须在加载前后仍是最近的可见胜者，才会接受允许用户调用的 Skill。匹配的指令通过共享 request-context 服务准备；目录发布仍会检查本轮捕获的精确 `skill` 工具注册。
 
@@ -101,7 +101,7 @@ Native Host profile 会与 Native `dsh-skill`、`dsh-native-tools` 和 request-c
 
 - [skill 子系统参考](../../../../Docs/subsystems/skills.zh.md)——目录背后的注册表与提供方词汇。
 - [skill 包](../skill/README.zh.md)——注册表与共享的 `renderSkillContent` 渲染。
-- [生成工具目录](../../../../Docs/tool-catalog.zh.md#deepseek-aidsh-tool-skill)——模型接收的精确 `skill` schema。
+- [生成工具目录](../../../../Docs/tool-catalog.zh.md#redsparkrsh-tool-skill)——模型接收的精确 `skill` schema。
 - [用户显式 skill 调用 Agent Note](../../../../../.agents/notes/archived/feature/2026-08-08-user-explicit-skill-invocation.md)——`/name` 手势设计。
 
 -----
@@ -113,7 +113,7 @@ Native Host profile 会与 Native `dsh-skill`、`dsh-native-tools` 和 request-c
 
 #### 模型看到什么
 
-如果存在模型可调用 skill，且可见的正是这个 `skill` 工具，agent 会在第一个请求之前收到下方目录模板，其中包含每个已排序 skill 的一条随数据而定的条目。该目录是一条持久的用户角色消息。后续成员关系、描述或可见性的变化会使用同一个 `<available_skills>` 信封追加完整替换；删除所有 skill 时，会追加一个空信封，并明确指示不得使用旧名称。模板的结尾一句是防止双重加载的规则：用户显式的手势边界（下文的 pre-step 监听器）会把同一份 `renderSkillContent` 输出（共享自 `@deepseek-ai/dsh-skill`）内联注入，目录则告诉模型遵循该块，而不是再经工具重新加载该 skill；替换目录模板的两个分支——包括清空后的目录——都携带同一条防双重加载规则。
+如果存在模型可调用 skill，且可见的正是这个 `skill` 工具，agent 会在第一个请求之前收到下方目录模板，其中包含每个已排序 skill 的一条随数据而定的条目。该目录是一条持久的用户角色消息。后续成员关系、描述或可见性的变化会使用同一个 `<available_skills>` 信封追加完整替换；删除所有 skill 时，会追加一个空信封，并明确指示不得使用旧名称。模板的结尾一句是防止双重加载的规则：用户显式的手势边界（下文的 pre-step 监听器）会把同一份 `renderSkillContent` 输出（共享自 `@redspark/rsh-skill`）内联注入，目录则告诉模型遵循该块，而不是再经工具重新加载该 skill；替换目录模板的两个分支——包括清空后的目录——都携带同一条防双重加载规则。
 
 ##### Skill 目录模板
 
@@ -142,7 +142,7 @@ A user may also invoke a skill directly; its <skill_content> block then appears 
 
 #### 模型看到什么
 
-模型会看到生成的 [`skill` schema](../../../../Docs/tool-catalog.zh.md#deepseek-aidsh-tool-skill)。
+模型会看到生成的 [`skill` schema](../../../../Docs/tool-catalog.zh.md#redsparkrsh-tool-skill)。
 
 #### Token 影响
 

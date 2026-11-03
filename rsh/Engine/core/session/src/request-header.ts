@@ -7,7 +7,7 @@
  * @module dsh-session/request-header
  */
 
-import type { LlmCallConfig, ToolSchema } from '@deepseek-ai/dsh-llm/native'
+import type { LlmCallConfig, ToolSchema } from '@redspark/rsh-llm/native'
 import type { EpochHeader, SessionEvent } from './types.ts'
 
 /**

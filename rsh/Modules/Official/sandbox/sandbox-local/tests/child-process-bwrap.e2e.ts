@@ -4,9 +4,9 @@ import { mkdtemp, rm } from 'node:fs/promises'
 import { homedir, tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
-import type { SandboxPolicy } from '@deepseek-ai/dsh-sandbox'
-import { canonicalPath } from '@deepseek-ai/dsh-sandbox/native'
-import type { ProcessSandboxChildPaths } from '@deepseek-ai/dsh-sandbox/native'
+import type { SandboxPolicy } from '@redspark/rsh-sandbox'
+import { canonicalPath } from '@redspark/rsh-sandbox/native'
+import type { ProcessSandboxChildPaths } from '@redspark/rsh-sandbox/native'
 import { bwrapProfileArgs } from '../src/profiles.ts'
 import { LocalSandboxBackend, resolveConfig } from '../src/backend.ts'
 
@@ -14,7 +14,7 @@ const probe = process.platform === 'linux'
   ? spawnSync('bwrap', [...bwrapProfileArgs({ mode: 'read-only', workspaceRoot: '/' }), '--', 'true'], { timeout: 5_000, stdio: 'ignore' })
   : undefined
 const bwrapUsable = probe?.status === 0
-if (process.platform === 'linux' && process.env.DSH_REQUIRE_BWRAP_E2E === '1' && !bwrapUsable) {
+if (process.platform === 'linux' && process.env.RSH_REQUIRE_BWRAP_E2E === '1' && !bwrapUsable) {
   throw new Error('sandbox-local: required bwrap e2e probe failed')
 }
 
@@ -52,7 +52,7 @@ function runChild(
   return spawnSync(confined.argv[0] as string, confined.argv.slice(1), {
     timeout: 30_000,
     encoding: 'utf8',
-    env: { ...process.env, DSH_CHILD_CWD: paths.cwd, DSH_CHILD_HOME: paths.privateHome, ...extraEnv },
+    env: { ...process.env, RSH_CHILD_CWD: paths.cwd, RSH_CHILD_HOME: paths.privateHome, ...extraEnv },
   })
 }
 
@@ -70,14 +70,14 @@ describe.skipIf(process.platform !== 'linux' || !bwrapUsable)('sandbox-local: SD
     writeFileSync(join(cwd, 'visible.txt'), 'cwd-visible')
 
     const result = runChild(sandbox, { mode: 'workspace-write', workspaceRoot: workspace }, { cwd, privateHome }, [
-      'test "$PWD" = "$DSH_CHILD_CWD"',
-      'test "$(cat "$DSH_CHILD_HOME/provider.json")" = \'{"provider":"fixture"}\'',
-      'printf home-ok > "$DSH_CHILD_HOME/owned.txt"',
-      'printf workspace-ok > "$DSH_PARENT_WORKSPACE/owned.txt"',
-      'test ! -e "$DSH_HOST_SIBLING/host-only.txt"',
-      'test "$(cat "$DSH_CHILD_CWD/visible.txt")" = cwd-visible',
+      'test "$PWD" = "$RSH_CHILD_CWD"',
+      'test "$(cat "$RSH_CHILD_HOME/provider.json")" = \'{"provider":"fixture"}\'',
+      'printf home-ok > "$RSH_CHILD_HOME/owned.txt"',
+      'printf workspace-ok > "$RSH_PARENT_WORKSPACE/owned.txt"',
+      'test ! -e "$RSH_HOST_SIBLING/host-only.txt"',
+      'test "$(cat "$RSH_CHILD_CWD/visible.txt")" = cwd-visible',
       'if printf denied > denied.txt 2>/dev/null; then exit 21; fi',
-    ], { DSH_PARENT_WORKSPACE: workspace, DSH_HOST_SIBLING: hostSibling })
+    ], { RSH_PARENT_WORKSPACE: workspace, RSH_HOST_SIBLING: hostSibling })
 
     expect(result.status).toBe(0)
     expect(readFileSync(join(privateHome, 'owned.txt'), 'utf8')).toBe('home-ok')
@@ -95,10 +95,10 @@ describe.skipIf(process.platform !== 'linux' || !bwrapUsable)('sandbox-local: SD
     writeFileSync(join(cwd, 'visible.txt'), 'cwd-visible')
 
     const result = runChild(sandbox, { mode: 'read-only', workspaceRoot: privateHome }, { cwd, privateHome }, [
-      'test "$PWD" = "$DSH_CHILD_CWD"',
-      'test "$(cat "$DSH_CHILD_HOME/provider.json")" = \'{"provider":"fixture"}\'',
-      'test "$(cat "$DSH_CHILD_CWD/visible.txt")" = cwd-visible',
-      'printf home-ok > "$DSH_CHILD_HOME/owned.txt"',
+      'test "$PWD" = "$RSH_CHILD_CWD"',
+      'test "$(cat "$RSH_CHILD_HOME/provider.json")" = \'{"provider":"fixture"}\'',
+      'test "$(cat "$RSH_CHILD_CWD/visible.txt")" = cwd-visible',
+      'printf home-ok > "$RSH_CHILD_HOME/owned.txt"',
       'if printf denied > denied.txt 2>/dev/null; then exit 22; fi',
     ])
 

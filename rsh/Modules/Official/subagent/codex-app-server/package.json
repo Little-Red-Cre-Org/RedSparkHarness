@@ -1,5 +1,5 @@
 {
-  "name": "@deepseek-ai/dsh-codex-app-server",
+  "name": "@redspark/rsh-codex-app-server",
   "description": "Official Codex app-server product Provider for Native external subagents",
   "version": "1.0.0",
   "publishConfig": { "access": "public" },
@@ -21,18 +21,18 @@
   "files": ["lib/index.js", "lib/native.js", "lib/wire.js", "lib/shared-*.js", "lib/types/**/*.d.ts"],
   "license": "MIT",
   "dependencies": {
-    "@deepseek-ai/dsh-json-rpc-line": "workspace:^",
-    "@deepseek-ai/dsh-native-model-execution": "workspace:^",
-    "@deepseek-ai/dsh-native-runtime": "workspace:^",
-    "@deepseek-ai/dsh-native-tools": "workspace:^",
-    "@deepseek-ai/dsh-subprocess": "workspace:^",
-    "@deepseek-ai/dsh-timeout": "workspace:^",
+    "@redspark/rsh-json-rpc-line": "workspace:^",
+    "@redspark/rsh-native-model-execution": "workspace:^",
+    "@redspark/rsh-native-runtime": "workspace:^",
+    "@redspark/rsh-native-tools": "workspace:^",
+    "@redspark/rsh-subprocess": "workspace:^",
+    "@redspark/rsh-timeout": "workspace:^",
     "@openai/codex": "0.162.1",
     "eventsource-parser": "^3.1.0"
   },
   "peerDependencies": {
-    "@deepseek-ai/dsh-llm": "workspace:^",
-    "@deepseek-ai/dsh-native-subagent": "workspace:^"
+    "@redspark/rsh-llm": "workspace:^",
+    "@redspark/rsh-native-subagent": "workspace:^"
   },
   "dsh": {
     "native": {
@@ -45,9 +45,9 @@
     }
   },
   "devDependencies": {
-    "@deepseek-ai/dsh-llm": "workspace:^",
-    "@deepseek-ai/dsh-native-subagent": "workspace:^",
-    "@deepseek-ai/dsh-subprocess-local": "workspace:^",
-    "@deepseek-ai/dsh-util-values": "workspace:^"
+    "@redspark/rsh-llm": "workspace:^",
+    "@redspark/rsh-native-subagent": "workspace:^",
+    "@redspark/rsh-subprocess-local": "workspace:^",
+    "@redspark/rsh-util-values": "workspace:^"
   }
 }

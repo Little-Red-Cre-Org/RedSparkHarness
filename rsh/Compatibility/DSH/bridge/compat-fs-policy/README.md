@@ -3,7 +3,7 @@ description: "Native filesystem events can use the existing observation policy w
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-compat-fs-policy
+# @redspark/rsh-compat-fs-policy
 
 English | [中文](README.zh.md)
 

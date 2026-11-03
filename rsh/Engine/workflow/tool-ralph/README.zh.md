@@ -3,7 +3,7 @@ description: "面向模型的 ralph 工具：固定前台 agent loop（智能体
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-tool-ralph
+# @redspark/rsh-tool-ralph
 
 [English](README.md) | 中文
 
@@ -44,9 +44,9 @@ kind: "package-reference"
 | `maxHandoffChars` | `16384` | 一份 Round 报告序列化后的最大字符数。 |
 | `maxResultChars` | `16384` | 返回给父级的完整成功结果最大字符数。 |
 
-生成的[配置目录](../../../Docs/config-catalog.zh.md#deepseek-aidsh-tool-ralph)是所有 Cordis 配置字段的穷尽式真源。在 Cordis 组合中，选定的提供方必须支持结构化输出并报告 `inheritsParentContext: false`；Native profile 则会显式选择 `workflowProvider` 与 `subagentProvider`，并要求 Native Tools registry 承载结构化报告调用。
+生成的[配置目录](../../../Docs/config-catalog.zh.md#redsparkrsh-tool-ralph)是所有 Cordis 配置字段的穷尽式真源。在 Cordis 组合中，选定的提供方必须支持结构化输出并报告 `inheritsParentContext: false`；Native profile 则会显式选择 `workflowProvider` 与 `subagentProvider`，并要求 Native Tools registry 承载结构化报告调用。
 
-Native profile 会挂载 `@deepseek-ai/dsh-tool-ralph/native`；已发布组合选择 `worker-thread` workflow Provider 与 `spawn` NativeSubagent Provider。Ralph 仍是共享 Workflow Definition 与 Subagent 执行权威的前台 Consumer。
+Native profile 会挂载 `@redspark/rsh-tool-ralph/native`；已发布组合选择 `worker-thread` workflow Provider 与 `spawn` NativeSubagent Provider。Ralph 仍是共享 Workflow Definition 与 Subagent 执行权威的前台 Consumer。
 
 -----
 
@@ -131,7 +131,7 @@ Use the ralph tool ONLY when the direct human explicitly asks for a Ralph loop o
 
 #### 模型看到什么
 
-已生成的 [`ralph` schema](../../../Docs/tool-catalog.zh.md#deepseek-aidsh-tool-ralph) 公开一个必填 `objective` 字符串与一个可选 `maxRounds` 数字。提供方选择、交接大小、报告 schema、工作流脚本与编排行为均由部署侧控制，不在调用 schema 中。
+已生成的 [`ralph` schema](../../../Docs/tool-catalog.zh.md#redsparkrsh-tool-ralph) 公开一个必填 `objective` 字符串与一个可选 `maxRounds` 数字。提供方选择、交接大小、报告 schema、工作流脚本与编排行为均由部署侧控制，不在调用 schema 中。
 
 #### Token 影响
 

@@ -1,16 +1,16 @@
 /**
  * Whole-client test carrier: boots an {@link AssemblyPlan} through the
  * production `bootClient` over an in-process module table, with a
- * `RemoteMock` installed as the Connection carrier through `__DSH_TRANSPORT__.rpc`.
- * @module @deepseek-ai/dsh-client-test-runtime/src/assembly/test-client
+ * `RemoteMock` installed as the Connection carrier through `__RSH_TRANSPORT__.rpc`.
+ * @module @redspark/rsh-client-test-runtime/src/assembly/test-client
  */
-import { Context, type Plugin } from '@deepseek-ai/cordis'
-import type { Entry } from '@deepseek-ai/cordis-plugin-loader'
-import { tearDownEntryFiber } from '@deepseek-ai/dsh-client-hmr/client'
-import type { ClientTransportHooks, ConnectionHandle } from '@deepseek-ai/dsh-client-connection/client'
-import { bootClient } from '@deepseek-ai/dsh-web-compatibility/src/boot-client.ts'
-import { mountClient } from '@deepseek-ai/dsh-web-compatibility/src/mount.ts'
-import type { RemoteMock } from '@deepseek-ai/dsh-remote-mock'
+import { Context, type Plugin } from '@redspark/cordis'
+import type { Entry } from '@redspark/cordis-plugin-loader'
+import { tearDownEntryFiber } from '@redspark/rsh-client-hmr/client'
+import type { ClientTransportHooks, ConnectionHandle } from '@redspark/rsh-client-connection/client'
+import { bootClient } from '@redspark/rsh-web-compatibility/src/boot-client.ts'
+import { mountClient } from '@redspark/rsh-web-compatibility/src/mount.ts'
+import type { RemoteMock } from '@redspark/rsh-remote-mock'
 import { act } from '@testing-library/react'
 import { createInProcessModules, loadPluginModules } from './modules.ts'
 import { assertPlan, graphFromRoster, type AssemblyPlan } from './roster.ts'
@@ -31,7 +31,7 @@ export interface TestClientOptions {
 
 /** Page global the connection plugin reads its carrier from. */
 interface TransportGlobal {
-  __DSH_TRANSPORT__?: ClientTransportHooks
+  __RSH_TRANSPORT__?: ClientTransportHooks
 }
 
 const transportGlobal = globalThis as TransportGlobal
@@ -55,7 +55,7 @@ class SharedGlobals {
    * @param transport - carrier the next `connection` apply reads.
    */
   install(transport: ClientTransportHooks): void {
-    transportGlobal.__DSH_TRANSPORT__ = transport
+    transportGlobal.__RSH_TRANSPORT__ = transport
   }
 
   /**
@@ -65,7 +65,7 @@ class SharedGlobals {
    */
   acquire(transport: ClientTransportHooks): () => void {
     if (this.holders === 0) {
-      this.previousTransport = transportGlobal.__DSH_TRANSPORT__
+      this.previousTransport = transportGlobal.__RSH_TRANSPORT__
       this.removeShims = installJsdomShims()
     }
     this.holders += 1
@@ -75,8 +75,8 @@ class SharedGlobals {
       if (this.holders > 0) return
       this.removeShims?.()
       this.removeShims = undefined
-      if (this.previousTransport === undefined) delete transportGlobal.__DSH_TRANSPORT__
-      else transportGlobal.__DSH_TRANSPORT__ = this.previousTransport
+      if (this.previousTransport === undefined) delete transportGlobal.__RSH_TRANSPORT__
+      else transportGlobal.__RSH_TRANSPORT__ = this.previousTransport
       this.previousTransport = undefined
     }
   }
@@ -197,7 +197,7 @@ export class TestClient {
    * Load the roster's modules, then, holding this worker's boot turn, install
    * the mock as the Connection carrier and the jsdom shims and boot through
    * `bootClient` over the synthesized boot graph; afterwards optionally mount
-   * and wait for the connection. The `@deepseek-ai/dsh-api-remotes` row is
+   * and wait for the connection. The `@redspark/rsh-api-remotes` row is
    * dropped from the roster: its generated Remote clients exist only in built
    * `lib/`, and the `remote.<ns>` services the roster injects (plus the
    * namespaces the mock has rules for at this point) are provided as

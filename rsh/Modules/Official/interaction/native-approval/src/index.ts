@@ -1,13 +1,13 @@
 /** Native tool-approval policy, answerer dispatch, and durable audit vocabulary. */
-import type { NativeAgentRegistry } from '@deepseek-ai/dsh-native-agent'
-import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
+import type { NativeAgentRegistry } from '@redspark/rsh-native-agent'
+import type { NativePlugin } from '@redspark/rsh-native-runtime'
 import type {
   NativeApprovalAnswerer,
   NativeApprovalAnswererResult,
   NativeApprovalAnswererRequest,
   NativeApprovalRequest,
   NativeApprovalServiceDefinition,
-} from '@deepseek-ai/dsh-approval-definition'
+} from '@redspark/rsh-approval-definition'
 import * as approvalTypes from './types.ts'
 
 export {
@@ -186,7 +186,7 @@ export class NativeApprovalService implements NativeApprovalServiceDefinition {
 
 /** Native approval Provider with explicit deployment policy and answerer registration. */
 export const plugin: NativePlugin = {
-  apiVersion: 1, name: '@deepseek-ai/dsh-native-approval', targets: ['host'],
+  apiVersion: 1, name: '@redspark/rsh-native-approval', targets: ['host'],
   requires: ['agents'], provides: ['approval'],
   resolve(input) {
     const config = resolveConfig(input)

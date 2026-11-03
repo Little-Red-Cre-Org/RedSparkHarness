@@ -1,8 +1,8 @@
 /** Cordis-free validation and projections shared by both Session feedback Providers. */
 import { Buffer } from 'node:buffer'
 import { z } from 'zod'
-import { FEEDBACK_CATEGORIES } from '@deepseek-ai/dsh-command-feedback/types'
-import type { SessionEvent, SessionId } from '@deepseek-ai/dsh-session/types'
+import { FEEDBACK_CATEGORIES } from '@redspark/rsh-command-feedback/types'
+import type { SessionEvent, SessionId } from '@redspark/rsh-session/types'
 import type {
   MessageFeedbackFailure, MessageFeedbackItem, MessageFeedbackNoteBlank,
   MessageFeedbackNoteTooLarge, MessageFeedbackRejected, MessageFeedbackSuccess,

@@ -1,17 +1,17 @@
 /** Native file-backed settings Provider. */
-import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
+import type { NativePlugin } from '@redspark/rsh-native-runtime'
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { dirname, extname, join, resolve } from 'node:path'
 import { Document, parseDocument } from 'yaml'
 import { patchNode } from './yaml-patch.ts'
 import { watch as watchFile } from 'chokidar'
-import { NativeSettings } from '@deepseek-ai/dsh-settings/native'
-import type { NativeSettingsSection } from '@deepseek-ai/dsh-settings-definition/native'
-import type {} from '@deepseek-ai/dsh-settings-definition/native'
+import { NativeSettings } from '@redspark/rsh-settings/native'
+import type { NativeSettingsSection } from '@redspark/rsh-settings-definition/native'
+import type {} from '@redspark/rsh-settings-definition/native'
 
 interface NativeConfig {
   path?: string
-  dshHome?: string
+  rshHome?: string
   watch?: boolean
   debounceMs?: number
 }
@@ -27,17 +27,17 @@ export function resolveNativeSettingsConfig(input: unknown): NativeConfig {
   if (typeof input !== 'object' || input === null || Array.isArray(input)) throw new TypeError('settings-file: native configuration must be an object')
   const value = input as Record<string, unknown>
   for (const key of Object.keys(value)) {
-    if (!['path', 'dshHome', 'watch', 'debounceMs'].includes(key)) throw new TypeError('settings-file: unknown native configuration field ' + JSON.stringify(key))
+    if (!['path', 'rshHome', 'watch', 'debounceMs'].includes(key)) throw new TypeError('settings-file: unknown native configuration field ' + JSON.stringify(key))
   }
   if (value['path'] !== undefined && typeof value['path'] !== 'string') throw new TypeError('settings-file: path must be a string')
-  if (value['dshHome'] !== undefined && typeof value['dshHome'] !== 'string') throw new TypeError('settings-file: dshHome must be a string')
+  if (value['rshHome'] !== undefined && typeof value['rshHome'] !== 'string') throw new TypeError('settings-file: rshHome must be a string')
   if (value['watch'] !== undefined && typeof value['watch'] !== 'boolean') throw new TypeError('settings-file: watch must be a boolean')
   if (value['debounceMs'] !== undefined && (typeof value['debounceMs'] !== 'number' || !Number.isFinite(value['debounceMs']) || value['debounceMs'] < 0)) {
     throw new TypeError('settings-file: debounceMs must be a non-negative finite number')
   }
   return {
     ...(value['path'] === undefined ? {} : { path: value['path'] }),
-    ...(value['dshHome'] === undefined ? {} : { dshHome: value['dshHome'] }),
+    ...(value['rshHome'] === undefined ? {} : { rshHome: value['rshHome'] }),
     ...(value['watch'] === undefined ? {} : { watch: value['watch'] }),
     ...(value['debounceMs'] === undefined ? {} : { debounceMs: value['debounceMs'] }),
   }
@@ -46,7 +46,7 @@ export function resolveNativeSettingsConfig(input: unknown): NativeConfig {
 /** Native file-backed settings Provider selected by native Host profiles. */
 export const plugin: NativePlugin = {
   apiVersion: 1,
-  name: '@deepseek-ai/dsh-settings-file',
+  name: '@redspark/rsh-settings-file',
   targets: ['host'],
   requires: [],
   provides: ['settings'],
@@ -61,11 +61,11 @@ export const plugin: NativePlugin = {
     const watch = config.watch ?? true
     const debounceMs = config.debounceMs ?? 100
     return async (context) => {
-      const [{ withFileLock, writeFileAtomic }, { resolveDshHome }] = await Promise.all([
-        import('@deepseek-ai/dsh-atomic-write'),
-        import('@deepseek-ai/dsh-home-paths'),
+      const [{ withFileLock, writeFileAtomic }, { resolveRshHome }] = await Promise.all([
+        import('@redspark/rsh-atomic-write'),
+        import('@redspark/rsh-home-paths'),
       ])
-      const filename = configuredFilename ?? resolve(join(resolveDshHome(config.dshHome), 'settings.yaml'))
+      const filename = configuredFilename ?? resolve(join(resolveRshHome(config.rshHome), 'settings.yaml'))
       let closed = false
       const settings = new NativeSettings({
         documentPath: filename,

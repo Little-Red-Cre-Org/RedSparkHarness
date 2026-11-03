@@ -1,7 +1,7 @@
-import { lastAssistantStreamChunk } from '@deepseek-ai/dsh-llm/assistant-stream'
-import type { AssistantMessage, TokenUsage } from '@deepseek-ai/dsh-llm/types'
-import type {} from '@deepseek-ai/dsh-llm-retry/types'
-import type { SessionEvent } from '@deepseek-ai/dsh-session/types'
+import { lastAssistantStreamChunk } from '@redspark/rsh-llm/assistant-stream'
+import type { AssistantMessage, TokenUsage } from '@redspark/rsh-llm/types'
+import type {} from '@redspark/rsh-llm-retry/types'
+import type { SessionEvent } from '@redspark/rsh-session/types'
 
 /** One provider/model route that contributed a billed request attempt. */
 export interface TurnTokenUsageRoute {

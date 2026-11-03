@@ -2,10 +2,10 @@
 import { readFile, readdir } from 'node:fs/promises'
 import { createRequire } from 'node:module'
 import { dirname, join } from 'node:path'
-import z from '@deepseek-ai/schemastery'
-import { BUNDLED_SKILL_RANK } from '@deepseek-ai/dsh-skill/shared'
-import type { UserMessage } from '@deepseek-ai/dsh-llm/message'
-import type { SkillCandidate, SkillProvider } from '@deepseek-ai/dsh-skill/types'
+import z from '@redspark/schemastery'
+import { BUNDLED_SKILL_RANK } from '@redspark/rsh-skill/shared'
+import type { UserMessage } from '@redspark/rsh-llm/message'
+import type { SkillCandidate, SkillProvider } from '@redspark/rsh-skill/types'
 
 const PROVIDER_NAME = 'archify'
 /** Stable name of the built-in Archify skill. */
@@ -25,7 +25,7 @@ const archifyManifest = require.resolve('@tt-a1i/archify-dsh/package.json')
 const ARCHIFY_SKILL_DIRECTORY = join(dirname(archifyManifest), 'skills', ARCHIFY_SKILL_NAME)
 const ARCHIFY_SKILL_FILE = join(ARCHIFY_SKILL_DIRECTORY, 'SKILL.md')
 /** Shell variable that exposes the installed skill directory to managed commands. */
-export const ARCHIFY_SKILL_DIRECTORY_ENV = 'DSH_ARCHIFY_SKILL_DIR' as const
+export const ARCHIFY_SKILL_DIRECTORY_ENV = 'RSH_ARCHIFY_SKILL_DIR' as const
 const RESOURCE_BASE = {
   kind: 'opaque',
   description: `the pinned Archify package directory, available to shell commands as ${ARCHIFY_SKILL_DIRECTORY_ENV}`,

@@ -3,7 +3,7 @@ description: "面向用户与维护者的本地工作区 @file 补全提供方�
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-file-reference-local
+# @redspark/rsh-file-reference-local
 
 [English](README.md) | 中文
 
@@ -32,7 +32,7 @@ agent（智能体）及宿主 UI 可以用各 agent 本地工作区中经过排�
 默认设置适合典型工作区，因此最小挂载无需任何配置：
 
 ```yaml
-- name: '@deepseek-ai/dsh-file-reference-local'
+- name: '@redspark/rsh-file-reference-local'
   config:
     maxResults: 20
 ```
@@ -89,7 +89,7 @@ agent（智能体）及宿主 UI 可以用各 agent 本地工作区中经过排�
 
 - [文件引用 seam](../file-reference/README.zh.md)——本提供方所实现的服务约定、Native 提供方入口与 `@file` 语法。
 - [会话引用子系统](../../../Docs/subsystems/session-reference.zh.md)——宿主 UI 背后的共享文件引用约定。
-- [文件系统工具目录](../../../Docs/tool-catalog.zh.md#deepseek-aidsh-tool-fs)——发现能力必须匹配其命名空间的 `read` 工具。
+- [文件系统工具目录](../../../Docs/tool-catalog.zh.md#redsparkrsh-tool-fs)——发现能力必须匹配其命名空间的 `read` 工具。
 - [上下文组地图](../README.zh.md)——相邻的请求上下文包。
 
 -----

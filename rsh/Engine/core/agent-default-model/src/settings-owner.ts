@@ -1,5 +1,5 @@
-import type { Context } from '@deepseek-ai/cordis'
-import { requireSymbolValue, setSymbolValue } from '@deepseek-ai/dsh-util-values'
+import type { Context } from '@redspark/cordis'
+import { requireSymbolValue, setSymbolValue } from '@redspark/rsh-util-values'
 
 /** One engine service's private bridge to its legacy Settings adapter. */
 export interface SettingsOwner<Binding> {
@@ -9,7 +9,7 @@ export interface SettingsOwner<Binding> {
   binding: Binding
 }
 
-const SETTINGS_OWNER = Symbol.for('@deepseek-ai/dsh-agent-default-model/compat-settings-owner')
+const SETTINGS_OWNER = Symbol.for('@redspark/rsh-agent-default-model/compat-settings-owner')
 
 /**
  * Retain this service's original owner and private adapter operations.

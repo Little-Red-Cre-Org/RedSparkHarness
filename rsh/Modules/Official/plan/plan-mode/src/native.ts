@@ -13,20 +13,20 @@
  * Agent Note:
  * - .agents/notes/implemented/architecture/2026-10-08-native-session-title-and-plan-mode.md
  *
- * @module @deepseek-ai/dsh-plan-mode/native
+ * @module @redspark/rsh-plan-mode/native
  */
 
-import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
-import type { NativeAgent } from '@deepseek-ai/dsh-native-agent'
-import { brandString } from '@deepseek-ai/dsh-brand'
-import type { CommandDefinitionId } from '@deepseek-ai/dsh-commands/native'
-import { createUserMessage } from '@deepseek-ai/dsh-llm/native'
-import type { MessageId } from '@deepseek-ai/dsh-llm/native'
-import type { NativeActiveSessionOwner } from '@deepseek-ai/dsh-native-session-execution'
-import type {} from '@deepseek-ai/dsh-native-session-execution/native'
-import type { SessionEvent } from '@deepseek-ai/dsh-session/types'
-import type {} from '@deepseek-ai/dsh-native-tools/native'
-import { UserQuestionError } from '@deepseek-ai/dsh-user-questions/native'
+import type { NativePlugin } from '@redspark/rsh-native-runtime'
+import type { NativeAgent } from '@redspark/rsh-native-agent'
+import { brandString } from '@redspark/rsh-brand'
+import type { CommandDefinitionId } from '@redspark/rsh-commands/native'
+import { createUserMessage } from '@redspark/rsh-llm/native'
+import type { MessageId } from '@redspark/rsh-llm/native'
+import type { NativeActiveSessionOwner } from '@redspark/rsh-native-session-execution'
+import type {} from '@redspark/rsh-native-session-execution/native'
+import type { SessionEvent } from '@redspark/rsh-session/types'
+import type {} from '@redspark/rsh-native-tools/native'
+import { UserQuestionError } from '@redspark/rsh-user-questions/native'
 import type {} from './common.ts'
 import {
   EXIT_APPROVED_TEXT, EXIT_DESCRIPTION, EXIT_PLAN_ARGUMENT_DESCRIPTION, EXIT_PLAN_MODE, PLAN_COMMAND_DESCRIPTION,
@@ -89,7 +89,7 @@ export interface NativePlanMode {
   select(owner: NativeActiveSessionOwner, active: boolean, signal: AbortSignal): Promise<NativePlanModeSelection>
 }
 
-declare module '@deepseek-ai/dsh-native-runtime' {
+declare module '@redspark/rsh-native-runtime' {
   interface NativeServices {
     /** Logged plan mode, its guidance notices, the `/plan` command, and the exit tool. */
     planMode: NativePlanMode
@@ -115,7 +115,7 @@ function applyPlanEvent(state: NativePlanState, event: SessionEvent): void {
 /** Native plan-mode plugin over the selected tool registry and active session owners. */
 export const plugin: NativePlugin = {
   apiVersion: 1,
-  name: '@deepseek-ai/dsh-plan-mode',
+  name: '@redspark/rsh-plan-mode',
   targets: ['host'],
   requires: ['tools', 'activeSessions'],
   optional: ['commands', 'userQuestions'],
@@ -308,7 +308,7 @@ export const plugin: NativePlugin = {
 
       if (commands !== undefined) {
         context.effect(commands.register({
-          definitionId: brandString<CommandDefinitionId>('@deepseek-ai/dsh-plan-mode'),
+          definitionId: brandString<CommandDefinitionId>('@redspark/rsh-plan-mode'),
           name: PLAN_COMMAND_NAME,
           description: PLAN_COMMAND_DESCRIPTION,
           input: { hint: PLAN_COMMAND_HINT, attachments: true },

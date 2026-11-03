@@ -1,5 +1,5 @@
 /** Legacy Chat adapter for the shared Cordis-free reasoning disclosure. */
-import { ChatReasoningDisclosure } from '@deepseek-ai/dsh-client-ui-primitives'
+import { ChatReasoningDisclosure } from '@redspark/rsh-client-ui-primitives'
 import type { ChatViewSlotProps } from '../contract/slots.ts'
 
 /** Render one assistant reasoning block using the owning Chat locale.

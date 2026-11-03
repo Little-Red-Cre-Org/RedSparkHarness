@@ -3,7 +3,7 @@ description: "Cordis-free Native browser boot API and framework-free progress pa
 kind: "package-library"
 ---
 
-# @deepseek-ai/dsh-client-web
+# @redspark/rsh-client-web
 
 English | [中文](README.zh.md)
 
@@ -27,7 +27,7 @@ English | [中文](README.zh.md)
 
 Use `bootNativeClient` when a Host has selected Client rows and supplied their browser module graph. The call imports each selected module, validates its Native plugin export, resolves the composition, and mounts the required `clientRenderer`. The returned host owns the composition lifetime: call and await `stop()` on navigation or shutdown, or call `replace()` with the full successor selection and module graph during reload.
 
-The optional `AbortSignal` prevents activation after a pending import settles and stops an active composition when aborted. `./boot-page` exposes the shared framework-free loading page; `./base.css` exposes the browser base styles. `@deepseek-ai/dsh-web-compatibility` owns `AppWebEntry`, Cordis Loader startup, and the shared module table. The default Web `index.html` uses the Native API, while the compatibility package builds its legacy page and worker preview separately.
+The optional `AbortSignal` prevents activation after a pending import settles and stops an active composition when aborted. `./boot-page` exposes the shared framework-free loading page; `./base.css` exposes the browser base styles. `@redspark/rsh-web-compatibility` owns `AppWebEntry`, Cordis Loader startup, and the shared module table. The default Web `index.html` uses the Native API, while the compatibility package builds its legacy page and worker preview separately.
 
 The shell base styles apply automatic CJK/Latin spacing to ordinary content in supporting browsers. Semantic code and terminal, diff, read, and search output containers retain literal source spacing and column alignment; browsers without `text-autospace` support ignore both declarations.
 

@@ -3,7 +3,7 @@ description: "The shared Typert Remote protocol: decorators, wire descriptors, c
 kind: "package-library"
 ---
 
-# @deepseek-ai/dsh-typert-protocol
+# @redspark/rsh-typert-protocol
 
 English | [中文](README.zh.md)
 
@@ -34,7 +34,7 @@ Cordis is an optional peer: the package root imports Cordis to define `TypertRem
 A business package marks a public instance method with `@Remote` (or `@RemoteScope(key)` when the receiver comes from a scoped Context), and the owning service either extends `TypertRemoteService` or declares a `typertRemote` binding through `bindTypertRemote()`:
 
 ```text
-import { Remote, TypertRemoteService } from '@deepseek-ai/dsh-typert-protocol'
+import { Remote, TypertRemoteService } from '@redspark/rsh-typert-protocol'
 
 export class GoalService extends TypertRemoteService {
   @Remote
@@ -55,9 +55,9 @@ Complex Host objects cannot cross the wire directly. A business package declares
 One class carries every Remote failure: `RemoteError`, holding a stable `<domain>/<reason>` code and the details typed for that code. This package declares the universal carrier codes (`gateway/bad-request`, `gateway/cancelled`, `gateway/internal`) and owns `RemoteErrorDetailsMap`, the merge-extensible table every other package extends beside its own throwing code:
 
 ```text
-import type {} from '@deepseek-ai/dsh-typert-protocol/types'
+import type {} from '@redspark/rsh-typert-protocol/types'
 
-declare module '@deepseek-ai/dsh-typert-protocol/types' {
+declare module '@redspark/rsh-typert-protocol/types' {
   interface RemoteErrorDetailsMap {
     'goal/not-found': { readonly goalId: string }
   }
@@ -65,7 +65,7 @@ declare module '@deepseek-ai/dsh-typert-protocol/types' {
 throw new RemoteError('goal/not-found', `goal "${id}" does not exist`, { goalId: id })
 ```
 
-Augment `RemoteErrorDetailsMap` through `@deepseek-ai/dsh-typert-protocol/types`, which owns the declaration. A type-only import loads that declaration before augmentation; the package root re-exports it.
+Augment `RemoteErrorDetailsMap` through `@redspark/rsh-typert-protocol/types`, which owns the declaration. A type-only import loads that declaration before augmentation; the package root re-exports it.
 
 An owner throws at the failure point; no package writes an error-class family or an exit-mapping function. A caller discriminates by `code` — never by `instanceof` — and a `code` branch narrows `details` with no cast, because `RemoteFailure` is the code-discriminated union of `RemoteError` instances. Infrastructure that must recognize a failure carried across a module or realm copy of the class calls `remoteErrorOf(value)`, which reads a structural marker instead of the prototype chain.
 

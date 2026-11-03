@@ -1,10 +1,10 @@
 /** Background browser upload implementation for Blob and byte-stream bodies. */
 
-import { Service, type Context } from '@deepseek-ai/cordis'
-import { bytesToBase64 } from '@deepseek-ai/dsh-util-crypto'
-import { RemoteError } from '@deepseek-ai/dsh-typert-protocol'
-import type { RemoteResult } from '@deepseek-ai/dsh-typert-protocol'
-import type { SessionId } from '@deepseek-ai/dsh-session/types'
+import { Service, type Context } from '@redspark/cordis'
+import { bytesToBase64 } from '@redspark/rsh-util-crypto'
+import { RemoteError } from '@redspark/rsh-typert-protocol'
+import type { RemoteResult } from '@redspark/rsh-typert-protocol'
+import type { SessionId } from '@redspark/rsh-session/types'
 import { FILE_UPLOAD_PATH } from '../protocol.ts'
 import type {
   ClientFileUploadHooks, EncodedFileUploadRequest, FileUploadFetch, FileUploadValue,
@@ -151,7 +151,7 @@ export function fileUploadWorker(
 }
 
 interface ClientFileUploadGlobal {
-  __DSH_FILE_UPLOAD__?: ClientFileUploadHooks
+  __RSH_FILE_UPLOAD__?: ClientFileUploadHooks
 }
 
 interface FileUploadTransport {
@@ -166,7 +166,7 @@ export class FileUploadRuntime extends Service implements FileUploadService {
   /** @param ctx - providing Client context. */
   constructor(ctx: Context) {
     super(ctx, 'fileUpload')
-    const hook = (globalThis as ClientFileUploadGlobal).__DSH_FILE_UPLOAD__
+    const hook = (globalThis as ClientFileUploadGlobal).__RSH_FILE_UPLOAD__
     this.available = hook !== undefined || !isFixturePage()
     this.transport = hook === undefined ? workerTransport() : customTransport(hook.fetch)
   }

@@ -1,6 +1,6 @@
 /** Cordis-free trusted Native Webhook rule registration. */
-import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
-import type { NativeRootRouteId } from '@deepseek-ai/dsh-native-session-execution/root-route'
+import type { NativePlugin } from '@redspark/rsh-native-runtime'
+import type { NativeRootRouteId } from '@redspark/rsh-native-session-execution/root-route'
 import type { WebhookRule, VerifiedWebhookDelivery, WebhookSessionRequest } from './types.ts'
 
 /** Native host operations for trusted provider rules. */
@@ -20,7 +20,7 @@ export interface NativeWebhookRuleOperations {
   dispatch<K extends string>(delivery: VerifiedWebhookDelivery<K>, route: NativeRootRouteId): Promise<void>
 }
 
-declare module '@deepseek-ai/dsh-native-runtime' {
+declare module '@redspark/rsh-native-runtime' {
   interface NativeServices { webhookRules: NativeWebhookRuleOperations }
 }
 

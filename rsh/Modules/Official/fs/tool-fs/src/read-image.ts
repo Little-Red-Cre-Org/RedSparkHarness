@@ -8,18 +8,18 @@
  * image-reading tool is useful only when the exact calling route can inspect
  * its result, so unknown capability refuses instead of relying on an adapter
  * failure after filesystem and attachment work.
- * @module @deepseek-ai/dsh-tool-fs/src/read-image
+ * @module @redspark/rsh-tool-fs/src/read-image
  */
 
 import { basename, extname } from 'node:path'
 import { imagePresentationMeta } from './presentation-meta.ts'
-import type { Context } from '@deepseek-ai/cordis'
-import { AttachmentError, AttachmentId } from '@deepseek-ai/dsh-attachment'
-import type { AttachmentStore, ImageAttachmentRef, ImageMediaType } from '@deepseek-ai/dsh-attachment'
-import type { ContentBlock } from '@deepseek-ai/dsh-llm'
-import { defineTool } from '@deepseek-ai/dsh-tools'
-import type { GenericCallView, ToolExecution } from '@deepseek-ai/dsh-tools'
-import type {} from '@deepseek-ai/dsh-fs'
+import type { Context } from '@redspark/cordis'
+import { AttachmentError, AttachmentId } from '@redspark/rsh-attachment'
+import type { AttachmentStore, ImageAttachmentRef, ImageMediaType } from '@redspark/rsh-attachment'
+import type { ContentBlock } from '@redspark/rsh-llm'
+import { defineTool } from '@redspark/rsh-tools'
+import type { GenericCallView, ToolExecution } from '@redspark/rsh-tools'
+import type {} from '@redspark/rsh-fs'
 import { formatImageReadOutput, imageMediaTypeForPath, imageStorageError, sniffImageMediaType } from './read-image-core.ts'
 import { resolveRegularReadTarget } from './read-target.ts'
 

@@ -1,10 +1,10 @@
 /** Signed GitHub HTTP adapter for the provider-neutral webhook runtime. */
 
-import type { Context } from '@deepseek-ai/cordis'
-import { credentialRef } from '@deepseek-ai/dsh-credentials'
-import type { HttpRoute } from '@deepseek-ai/dsh-http-routes/host'
-import type {} from '@deepseek-ai/dsh-http-routes-cordis'
-import z from '@deepseek-ai/schemastery'
+import type { Context } from '@redspark/cordis'
+import { credentialRef } from '@redspark/rsh-credentials'
+import type { HttpRoute } from '@redspark/rsh-http-routes/host'
+import type {} from '@redspark/rsh-http-routes-cordis'
+import z from '@redspark/schemastery'
 import { createGitHubWebhookHandler } from './handler.ts'
 
 export type * from './types.ts'

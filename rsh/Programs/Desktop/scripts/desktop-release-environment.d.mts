@@ -1,11 +1,11 @@
 /** Environment variable that supplies the Electron application identifier. */
-export const DESKTOP_APP_ID_ENV: 'DSH_DESKTOP_APP_ID'
+export const DESKTOP_APP_ID_ENV: 'RSH_DESKTOP_APP_ID'
 
 /** Environment variable that supplies electron-builder's macOS certificate qualifier. */
-export const MACOS_SIGNING_IDENTITY_ENV: 'DSH_DESKTOP_MACOS_SIGNING_IDENTITY'
+export const MACOS_SIGNING_IDENTITY_ENV: 'RSH_DESKTOP_MACOS_SIGNING_IDENTITY'
 
 /** Environment variable that supplies the expected Apple Developer Team ID. */
-export const MACOS_TEAM_ID_ENV: 'DSH_DESKTOP_MACOS_TEAM_ID'
+export const MACOS_TEAM_ID_ENV: 'RSH_DESKTOP_MACOS_TEAM_ID'
 
 /** Public identity expected on a macOS release. */
 export interface MacOSSigningEnvironment {

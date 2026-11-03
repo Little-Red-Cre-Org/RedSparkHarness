@@ -4,12 +4,12 @@ import { createServer } from 'node:http'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
-import { Context } from '@deepseek-ai/cordis'
-import Include from '@deepseek-ai/cordis-plugin-include'
-import Loader from '@deepseek-ai/cordis-plugin-loader'
-import { HttpRouteTable } from '@deepseek-ai/dsh-http-routes'
-import type { HttpWebServer } from '@deepseek-ai/dsh-http-routes-cordis'
-import type {} from '@deepseek-ai/dsh-http-routes-cordis'
+import { Context } from '@redspark/cordis'
+import Include from '@redspark/cordis-plugin-include'
+import Loader from '@redspark/cordis-plugin-loader'
+import { HttpRouteTable } from '@redspark/rsh-http-routes'
+import type { HttpWebServer } from '@redspark/rsh-http-routes-cordis'
+import type {} from '@redspark/rsh-http-routes-cordis'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import * as GitHubAdapter from '../src/index.ts'
 
@@ -36,11 +36,11 @@ describe('real Loader composition', () => {
     await writeFile(configPath, [
       '- name: fixture-dependencies',
       '- name: fixture-http-routes',
-      "- name: '@deepseek-ai/dsh-webhook-github'",
+      "- name: '@redspark/rsh-webhook-github'",
       '  config:',
       '    source: loader',
       '    path: /github',
-      '    secretEnv: DSH_GITHUB_WEBHOOK_SECRET',
+      '    secretEnv: RSH_GITHUB_WEBHOOK_SECRET',
       '    maxBodyBytes: 1024',
       '',
     ].join('\n'))
@@ -72,7 +72,7 @@ describe('real Loader composition', () => {
     const modules = new Map<string, unknown>([
       ['fixture-dependencies', dependencies],
       ['fixture-http-routes', routeProvider],
-      ['@deepseek-ai/dsh-webhook-github', GitHubAdapter],
+      ['@redspark/rsh-webhook-github', GitHubAdapter],
     ])
     context.loader.internal = {
       version: 'v2',

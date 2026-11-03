@@ -1,8 +1,8 @@
 /** Leading-signature allow-list applied before encoded bytes reach Sharp. */
 
 import sharp, { type Sharp } from 'sharp'
-import { AttachmentError } from '@deepseek-ai/dsh-attachment/error'
-import type { ImageMediaType } from '@deepseek-ai/dsh-attachment/types'
+import { AttachmentError } from '@redspark/rsh-attachment/error'
+import type { ImageMediaType } from '@redspark/rsh-attachment/types'
 
 const PNG_SIGNATURE = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a] as const
 const JPEG_SIGNATURE = [0xff, 0xd8, 0xff] as const

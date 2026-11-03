@@ -8,9 +8,9 @@
  * @module dsh-llm-deepseek/translate
  */
 
-import { brandString } from '@deepseek-ai/dsh-brand'
-import { EMPTY_RESPONSE_CODE, LlmError } from '@deepseek-ai/dsh-llm/native'
-import type { ContentBlock, FinishReason, StreamChunk, TokenUsage, ToolCallId } from '@deepseek-ai/dsh-llm/native'
+import { brandString } from '@redspark/rsh-brand'
+import { EMPTY_RESPONSE_CODE, LlmError } from '@redspark/rsh-llm/native'
+import type { ContentBlock, FinishReason, StreamChunk, TokenUsage, ToolCallId } from '@redspark/rsh-llm/native'
 import { DONE } from './sse.ts'
 import type { WireChunk, WireUsage } from './types.ts'
 

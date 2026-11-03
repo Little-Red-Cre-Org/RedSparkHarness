@@ -19,21 +19,21 @@
  * Agent Note:
  * - .agents/notes/implemented/simplification/2026-07-22-plan-specific-collaboration-state.md
  *
- * @module @deepseek-ai/dsh-plan-mode
+ * @module @redspark/rsh-plan-mode
  */
 
-import { Context, Service } from '@deepseek-ai/cordis'
-import { brandString } from '@deepseek-ai/dsh-brand'
+import { Context, Service } from '@redspark/cordis'
+import { brandString } from '@redspark/rsh-brand'
 import { z as zod } from 'zod'
 import type { ZodType } from 'zod'
-import type { Agent, PreStepDecision } from '@deepseek-ai/dsh-agent'
-import { createUserMessage } from '@deepseek-ai/dsh-llm'
-import type { Session, UserMessage } from '@deepseek-ai/dsh-session'
-import { defineTool } from '@deepseek-ai/dsh-tools'
-import { UserQuestionError } from '@deepseek-ai/dsh-user-questions'
-import type { CommandDefinitionId, CommandId } from '@deepseek-ai/dsh-commands'
-import type {} from '@deepseek-ai/dsh-session-projection'
-import type { ProjectionDefinition } from '@deepseek-ai/dsh-session-projection'
+import type { Agent, PreStepDecision } from '@redspark/rsh-agent'
+import { createUserMessage } from '@redspark/rsh-llm'
+import type { Session, UserMessage } from '@redspark/rsh-session'
+import { defineTool } from '@redspark/rsh-tools'
+import { UserQuestionError } from '@redspark/rsh-user-questions'
+import type { CommandDefinitionId, CommandId } from '@redspark/rsh-commands'
+import type {} from '@redspark/rsh-session-projection'
+import type { ProjectionDefinition } from '@redspark/rsh-session-projection'
 import type { PlanProjection, PlanUnitState } from './types.ts'
 import {
   EXIT_APPROVED_TEXT, EXIT_DESCRIPTION, EXIT_PLAN_ARGUMENT_DESCRIPTION, EXIT_PLAN_MODE, firstHeading,
@@ -45,7 +45,7 @@ export type * from './types.ts'
 export { EXIT_PLAN_MODE, resolveConfig } from './common.ts'
 export type { PlanModeConfig } from './common.ts'
 
-declare module '@deepseek-ai/cordis' {
+declare module '@redspark/cordis' {
   interface Context {
     planMode: PlanModeController
   }
@@ -158,7 +158,7 @@ export class PlanModeController extends Service {
     // The command child activates only when a command registry is composed.
     ctx.inject(['commands'], (commandCtx) => {
       commandCtx.commands.register({
-        definitionId: brandString<CommandDefinitionId>('@deepseek-ai/dsh-plan-mode'),
+        definitionId: brandString<CommandDefinitionId>('@redspark/rsh-plan-mode'),
         name: PLAN_COMMAND_NAME,
         description: PLAN_COMMAND_DESCRIPTION,
         input: { hint: PLAN_COMMAND_HINT, attachments: true },

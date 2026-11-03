@@ -43,7 +43,7 @@ SDK 家族让另一进程通过按换行分帧的 JSON-RPC 驱动完整的 RedSp
 - [SDK 应用组合包](../../../Compatibility/DSH/bundle/sdk-app/README.zh.md)——启动 JSON-RPC 服务器的 `dsh --profile sdk` 应用。
 - [架构](../../../Docs/architecture.zh.md) — 打包后的 Python 客户端为何启动相同的具名 profile。
 - [SDK 项目工具链移除](../../../../.agents/notes/archived/simplification/2026-08-11-remove-sdk-project-toolchain.md) — 本组为何从不创建、配置或构建开发者项目。
-- [SDK subagent 提供方](../../../Compatibility/DSH/subagent/subagent-dsh-sdk/README.zh.md) — harness 内部使用 TypeScript 客户端的提供方。
+- [SDK subagent 提供方](../../../Compatibility/DSH/subagent/subagent-rsh-sdk/README.zh.md) — harness 内部使用 TypeScript 客户端的提供方。
 
 <a id="dev-note"></a>
 ## 开发备注

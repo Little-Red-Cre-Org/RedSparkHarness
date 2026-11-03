@@ -1,5 +1,5 @@
 {
-  "name": "@deepseek-ai/dsh-native-runtime",
+  "name": "@redspark/rsh-native-runtime",
   "description": "Portable RSH native plugin planning, scoped services and resource ownership",
   "version": "1.0.0",
   "publishConfig": { "access": "public" },
@@ -9,7 +9,7 @@
     "directory": "rsh/Core/runtime-diagnostics/native-runtime"
   },
   "type": "module",
-  "dependencies": { "@deepseek-ai/dsh-brand": "workspace:^" },
+  "dependencies": { "@redspark/rsh-brand": "workspace:^" },
   "main": "lib/index.js",
   "types": "lib/types/index.d.ts",
   "exports": {

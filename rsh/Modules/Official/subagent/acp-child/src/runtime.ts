@@ -1,10 +1,10 @@
 /** Program-owned launch seam for the fixed Native ACP child profile. */
 
-import type { ChildConnectionHandle } from '@deepseek-ai/dsh-subprocess/native'
-import type { SandboxExecutionPolicy, SandboxEnforcement } from '@deepseek-ai/dsh-sandbox/native-types'
-import type { ReasoningEffortId } from '@deepseek-ai/dsh-llm/native'
-import type { SessionId } from '@deepseek-ai/dsh-session/native'
-import type {} from '@deepseek-ai/dsh-native-runtime'
+import type { ChildConnectionHandle } from '@redspark/rsh-subprocess/native'
+import type { SandboxExecutionPolicy, SandboxEnforcement } from '@redspark/rsh-sandbox/native-types'
+import type { ReasoningEffortId } from '@redspark/rsh-llm/native'
+import type { SessionId } from '@redspark/rsh-session/native'
+import type {} from '@redspark/rsh-native-runtime'
 
 /** Exact selected child route and policy passed to the fixed CLI launcher. */
 export interface NativeAcpChildRuntimeRequest {
@@ -40,7 +40,7 @@ export interface NativeAcpChildRuntimeRequest {
   readonly parentPolicy: SandboxExecutionPolicy
 }
 
-/** Started, managed Native ACP process and its private DSH_HOME cleanup. */
+/** Started, managed Native ACP process and its private RSH_HOME cleanup. */
 export interface NativeAcpChildRuntime {
   /** Whole-range-owned child and ACP stdio streams. */
   readonly child: ChildConnectionHandle
@@ -48,7 +48,7 @@ export interface NativeAcpChildRuntime {
   readonly enforcement: SandboxEnforcement
   /** Close stdin and settle the complete managed process range. */
   shutdown(): Promise<void>
-  /** Confirm shutdown, then remove the launcher's private DSH_HOME. */
+  /** Confirm shutdown, then remove the launcher's private RSH_HOME. */
   dispose(): Promise<void>
 }
 
@@ -63,6 +63,6 @@ export interface NativeAcpChildRuntimeLauncher {
   launch(request: NativeAcpChildRuntimeRequest, signal: AbortSignal): Promise<NativeAcpChildRuntime>
 }
 
-declare module '@deepseek-ai/dsh-native-runtime' {
+declare module '@redspark/rsh-native-runtime' {
   interface NativeServices { acpChildRuntimeLauncher: NativeAcpChildRuntimeLauncher }
 }

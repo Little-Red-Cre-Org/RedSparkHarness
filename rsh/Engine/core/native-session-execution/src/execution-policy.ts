@@ -1,9 +1,9 @@
 /** Durable execution limits and permission requirements shared by Native Session consumers. */
-import type { SessionEvent, SessionEventMap } from '@deepseek-ai/dsh-session/native'
-import type { NativeAgent } from '@deepseek-ai/dsh-native-agent'
-import type { ToolCallId } from '@deepseek-ai/dsh-llm/native'
-import type { Session } from '@deepseek-ai/dsh-session/native'
-import type { NativeApprovalRequestId, NativeApprovalOutcome } from '@deepseek-ai/dsh-approval-definition'
+import type { SessionEvent, SessionEventMap } from '@redspark/rsh-session/native'
+import type { NativeAgent } from '@redspark/rsh-native-agent'
+import type { ToolCallId } from '@redspark/rsh-llm/native'
+import type { Session } from '@redspark/rsh-session/native'
+import type { NativeApprovalRequestId, NativeApprovalOutcome } from '@redspark/rsh-approval-definition'
 
 /** Permission handling required by one accepted Session execution policy. */
 export type NativeSessionExecutionPermission =
@@ -60,7 +60,7 @@ export interface NativeSessionOwnerApproval {
   authorize(request: NativeSessionOwnerApprovalRequest): Promise<NativeApprovalOutcome>
 }
 
-declare module '@deepseek-ai/dsh-session/types' {
+declare module '@redspark/rsh-session/types' {
   interface SessionEventMap {
     /** Required execution authority; consumers must refuse to run when they cannot enforce it. */
     'execution/policy': NativeSessionExecutionPolicy

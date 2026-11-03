@@ -1,5 +1,5 @@
 {
-  "name": "@deepseek-ai/dsh-session-telemetry",
+  "name": "@redspark/rsh-session-telemetry",
   "description": "SessionTelemetryBackend seam for the RedSpark Harness: session-event capture, projection, redaction, and handoff to a reporting backend",
   "version": "1.0.0",
   "publishConfig": {
@@ -41,24 +41,24 @@
   ],
   "license": "MIT",
   "peerDependencies": {
-    "@deepseek-ai/dsh-agent": "workspace:^",
-    "@deepseek-ai/dsh-session": "workspace:^",
-    "@deepseek-ai/cordis": "workspace:^",
-    "@deepseek-ai/dsh-command-feedback": "workspace:^",
-    "@deepseek-ai/dsh-message-feedback": "workspace:^",
-    "@deepseek-ai/dsh-native-runtime": "workspace:^"
+    "@redspark/rsh-agent": "workspace:^",
+    "@redspark/rsh-session": "workspace:^",
+    "@redspark/cordis": "workspace:^",
+    "@redspark/rsh-command-feedback": "workspace:^",
+    "@redspark/rsh-message-feedback": "workspace:^",
+    "@redspark/rsh-native-runtime": "workspace:^"
   },
   "peerDependenciesMeta": {
-    "@deepseek-ai/dsh-agent": { "optional": true },
-    "@deepseek-ai/cordis": { "optional": true }
+    "@redspark/rsh-agent": { "optional": true },
+    "@redspark/cordis": { "optional": true }
   },
   "devDependencies": {
-    "@deepseek-ai/dsh-agent": "workspace:^",
-    "@deepseek-ai/dsh-session": "workspace:^",
-    "@deepseek-ai/cordis": "workspace:^",
-    "@deepseek-ai/dsh-command-feedback": "workspace:^",
-    "@deepseek-ai/dsh-message-feedback": "workspace:^",
-    "@deepseek-ai/dsh-native-runtime": "workspace:^"
+    "@redspark/rsh-agent": "workspace:^",
+    "@redspark/rsh-session": "workspace:^",
+    "@redspark/cordis": "workspace:^",
+    "@redspark/rsh-command-feedback": "workspace:^",
+    "@redspark/rsh-message-feedback": "workspace:^",
+    "@redspark/rsh-native-runtime": "workspace:^"
   },
   "scripts": { "bundle": "tsdown" }
 }

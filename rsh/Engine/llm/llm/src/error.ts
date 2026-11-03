@@ -1,9 +1,9 @@
-import { HarnessError } from '@deepseek-ai/dsh-errors'
+import { HarnessError } from '@redspark/rsh-errors'
 import type { LlmFailure } from './types.ts'
 import type { ProviderRequestId } from './brand.ts'
 import { normalizeApiKey } from './api-key.ts'
 /** Provider-neutral model failure codes and classification. */
-export { HarnessError, errorChain, isHarnessError } from '@deepseek-ai/dsh-errors'
+export { HarnessError, errorChain, isHarnessError } from '@redspark/rsh-errors'
 
 /** Canonical provider-neutral code for a model request rejected because its context window was exceeded. */
 export const CONTEXT_WINDOW_EXCEEDED_CODE = 'CONTEXT_WINDOW_EXCEEDED'

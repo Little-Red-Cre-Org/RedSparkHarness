@@ -1,4 +1,4 @@
-/** Duplicate-install-safe value helpers. @module @deepseek-ai/dsh-util-values */
+/** Duplicate-install-safe value helpers. @module @redspark/rsh-util-values */
 
 /** A value that round-trips through JSON without loss. */
 export type JsonValue = null | boolean | number | string | JsonValue[] | { [key: string]: JsonValue }

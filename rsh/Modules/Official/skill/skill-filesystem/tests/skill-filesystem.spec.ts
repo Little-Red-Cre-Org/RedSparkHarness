@@ -2,9 +2,9 @@ import { afterEach, describe, expect, it } from 'vitest'
 import { lstat, mkdir, readdir, readFile, realpath, rename, rm, stat, symlink, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import { tmpdir } from 'node:os'
-import { Context } from '@deepseek-ai/cordis'
-import SkillRegistry from '@deepseek-ai/dsh-skill'
-import { FileSystem, FsError, FsVersion, type FsDirEntry, type FsEditOutcome, type FsEditRequest, type FsInfo, type FsPathInfo, type FsTarget, type FsWriteOutcome } from '@deepseek-ai/dsh-fs'
+import { Context } from '@redspark/cordis'
+import SkillRegistry from '@redspark/rsh-skill'
+import { FileSystem, FsError, FsVersion, type FsDirEntry, type FsEditOutcome, type FsEditRequest, type FsInfo, type FsPathInfo, type FsTarget, type FsWriteOutcome } from '@redspark/rsh-fs'
 import * as SkillFileSystem from '../src/index.ts'
 
 /** Every temp dir created by this file, removed after each test. */
@@ -154,7 +154,7 @@ async function setupLocal(home: string, config: Partial<SkillFileSystem.Config> 
   const ctx = new Context()
   await ctx.plugin(SkillRegistry)
   await ctx.plugin(SkillFileSystem, {
-    dshHome: join(home, '.dsh'),
+    rshHome: join(home, '.dsh'),
     agentsHome: join(home, '.agents'),
     watch: false,
     ...config,
@@ -187,10 +187,10 @@ describe('FileSystemSkillProvider', () => {
     await mkdir(join(project, '.git'), { recursive: true })
 
     await writeSkill(join(home, '.agents/skills'), 'same', 'user agents skill')
-    await writeSkill(join(home, '.dsh/skills'), 'same', 'user dsh skill')
+    await writeSkill(join(home, '.rsh/skills'), 'same', 'user dsh skill')
     await writeSkill(custom, 'same', 'custom skill')
     await writeSkill(join(project, '.agents/skills'), 'same', 'project agents skill')
-    await writeSkill(join(project, '.dsh/skills'), 'same', 'project dsh skill')
+    await writeSkill(join(project, '.rsh/skills'), 'same', 'project dsh skill')
     await writeSkill(custom, 'custom-only', 'custom only')
     await writeSkill(join(home, '.dsh/skills/.system'), 'hidden-system', 'hidden system')
 
@@ -207,13 +207,13 @@ describe('FileSystemSkillProvider', () => {
     ])
     expect(skills.find(skill => skill.name === 'custom-only')?.description).toBe('custom only')
     expect(skills.find(skill => skill.name === 'same')?.description).toBe('project dsh skill')
-    expect(skills.find(skill => skill.name === 'same')?.source).toBe('project-dsh')
+    expect(skills.find(skill => skill.name === 'same')?.source).toBe('project-rsh')
     expect(skills.find(skill => skill.name === 'hidden-system')).toBeUndefined()
     expect(skills.find(skill => skill.name === 'bundled-only')).toMatchObject({ source: 'bundled' })
     expect((await ctx.skills.get('bundled-only'))?.content).toBe('Use the skill.')
 
     const noGit = await tempDir('skill-no-git')
-    await writeSkill(join(noGit, '.dsh/skills'), 'fallback-root', 'Fallback root')
+    await writeSkill(join(noGit, '.rsh/skills'), 'fallback-root', 'Fallback root')
     expect((await ctx.skills.list({ cwd: noGit })).map(skill => skill.name)).toContain('fallback-root')
   })
 
@@ -223,9 +223,9 @@ describe('FileSystemSkillProvider', () => {
     const custom = await tempDir('skill-runtime-custom')
     await mkdir(join(project, '.git'), { recursive: true })
 
-    await writeSkill(join(project, '.dsh/skills'), 'project-name', 'Project wins')
+    await writeSkill(join(project, '.rsh/skills'), 'project-name', 'Project wins')
     await writeSkill(custom, 'runtime-name', 'Custom loses')
-    await writeSkill(join(home, '.dsh/skills'), 'runtime-name', 'User loses')
+    await writeSkill(join(home, '.rsh/skills'), 'runtime-name', 'User loses')
 
     const ctx = await setupLocal(home, { customSkillDirs: [custom] })
     ctx.skills.register({
@@ -247,7 +247,7 @@ describe('FileSystemSkillProvider', () => {
 
   it('parses flat skills and filters invalid skills from the invocation-neutral listing', async () => {
     const home = await tempDir('skill-flat')
-    const root = join(home, '.dsh/skills')
+    const root = join(home, '.rsh/skills')
     await writeFlatSkill(root, 'flat-skill', 'flat description', 'Flat instructions.')
     await writeFile(join(root, 'rich-skill.md'), [
       '---',
@@ -312,7 +312,7 @@ describe('FileSystemSkillProvider', () => {
 
   it('accepts the documented boolean spellings for invocation frontmatter', async () => {
     const home = await tempDir('skill-invocation-booleans')
-    const root = join(home, '.dsh/skills')
+    const root = join(home, '.rsh/skills')
     await mkdir(root, { recursive: true })
     const truthy = ['true', 'TRUE', '"true"', 'yes', 'ON', '1', '"1"']
     const falsy = ['false', 'FALSE', '"false"', 'no', 'OFF', '0', '"0"']
@@ -357,7 +357,7 @@ describe('FileSystemSkillProvider', () => {
 
   it('rejects legacy and invalid invocation frontmatter without hiding valid siblings', async () => {
     const home = await tempDir('skill-invalid-invocation')
-    const root = join(home, '.dsh/skills')
+    const root = join(home, '.rsh/skills')
     await writeSkill(root, 'good-skill', 'Good skill')
     const invalid = [
       ['legacy-model', 'disableModelInvocation: true'],
@@ -377,7 +377,7 @@ describe('FileSystemSkillProvider', () => {
 
   it('supports CRLF frontmatter and ignores delimiter-looking text inside YAML values', async () => {
     const home = await tempDir('skill-frontmatter-crlf')
-    const root = join(home, '.dsh/skills')
+    const root = join(home, '.rsh/skills')
     await mkdir(root, { recursive: true })
     await writeFile(join(root, 'crlf-skill.md'), [
       '---',
@@ -409,7 +409,7 @@ describe('FileSystemSkillProvider', () => {
 
   it('skips invalid YAML skill files without hiding valid siblings', async () => {
     const home = await tempDir('skill-invalid-yaml')
-    const root = join(home, '.dsh/skills')
+    const root = join(home, '.rsh/skills')
     await writeSkill(root, 'good-skill', 'Good skill')
     await writeFile(join(root, 'bad-yaml.md'), '---\nname: bad-yaml\ndescription: [unclosed\n---\n\nBad body.\n')
 
@@ -423,7 +423,7 @@ describe('FileSystemSkillProvider', () => {
     const external = await tempDir('skill-symlink-external')
     await writeSkill(external, 'linked-dir', 'Linked directory')
     await writeFlatSkill(external, 'linked-flat', 'Linked flat')
-    await mkdir(join(home, '.dsh/skills'), { recursive: true })
+    await mkdir(join(home, '.rsh/skills'), { recursive: true })
     await symlink(join(external, 'linked-dir'), join(home, '.dsh/skills/linked-dir'))
     await symlink(join(external, 'linked-flat.md'), join(home, '.dsh/skills/linked-flat.md'))
     await symlink(join(external, 'missing'), join(home, '.dsh/skills/broken-link'))
@@ -438,7 +438,7 @@ describe('FileSystemSkillProvider', () => {
         }
       })
     }
-    const fiber = ctx.plugin(SkillFileSystem, { dshHome: join(home, '.dsh'), agentsHome: join(home, '.agents'), watch: false })
+    const fiber = ctx.plugin(SkillFileSystem, { rshHome: join(home, '.dsh'), agentsHome: join(home, '.agents'), watch: false })
     await fiber
 
     try {
@@ -449,7 +449,7 @@ describe('FileSystemSkillProvider', () => {
         expect(catalog.find(skill => skill.name === name)?.path).toBe(path)
         const loaded = await ctx.skills.get(name)
         expect(loaded?.path).toBe(path)
-        expect(loaded?.resourceBase).toEqual({ kind: 'directory', path: name === 'linked-dir' ? join(home, '.dsh/skills', name) : join(home, '.dsh/skills') })
+        expect(loaded?.resourceBase).toEqual({ kind: 'directory', path: name === 'linked-dir' ? join(home, '.rsh/skills', name) : join(home, '.rsh/skills') })
         expect((await lstat(path)).isFile()).toBe(true)
       }
       await writeFile(join(external, 'replacement.md'), '---\nname: linked-flat\ndescription: Replacement\n---\n\nReplacement body.\n')
@@ -465,7 +465,7 @@ describe('FileSystemSkillProvider', () => {
     const home = await tempDir('skill-read-fs')
     const project = await tempDir('skill-project-root-backend')
     const nestedCwd = join(project, 'rsh/app')
-    const root = join(home, '.dsh/skills')
+    const root = join(home, '.rsh/skills')
     await mkdir(nestedCwd, { recursive: true })
     await writeFlatSkill(root, 'text-skill', 'Text skill', 'Text body.')
     await writeFlatSkill(root, 'resolve-fail', 'Resolve fail', 'Resolve body.')
@@ -492,11 +492,11 @@ describe('FileSystemSkillProvider', () => {
       size: 0,
     })
     await ctx.plugin(SkillRegistry)
-    await ctx.plugin(SkillFileSystem, { dshHome: join(home, '.dsh'), agentsHome: join(home, '.agents'), watch: false })
+    await ctx.plugin(SkillFileSystem, { rshHome: join(home, '.dsh'), agentsHome: join(home, '.agents'), watch: false })
 
     expect((await ctx.skills.list({ cwd: nestedCwd })).map(skill => [skill.name, skill.source])).toEqual([
       ['backend-root', 'project-agents'],
-      ['text-skill', 'user-dsh'],
+      ['text-skill', 'user-rsh'],
     ])
     expect(fs.listDirCalls).toBeGreaterThan(0)
     expect(await ctx.skills.get('binary-skill')).toBeUndefined()
@@ -509,7 +509,7 @@ describe('FileSystemSkillProvider', () => {
     bundledFs.failResolvePaths.add(bundled)
     await bundledCtx.plugin(SkillRegistry)
     await bundledCtx.plugin(SkillFileSystem, {
-      dshHome: join(home, '.dsh'),
+      rshHome: join(home, '.dsh'),
       agentsHome: join(home, '.agents'),
       bundledSkillDir: bundled,
     })
@@ -525,7 +525,7 @@ describe('FileSystemSkillProvider', () => {
     const fs = ctx.fs as TestFileSystem
     await ctx.plugin(SkillRegistry)
     await ctx.plugin(SkillFileSystem, {
-      dshHome: join(home, '.dsh'),
+      rshHome: join(home, '.dsh'),
       agentsHome: join(home, '.agents'),
       watch: false,
     })
@@ -561,7 +561,7 @@ describe('FileSystemSkillProvider', () => {
     const fs = ctx.fs as TestFileSystem
     await ctx.plugin(SkillRegistry)
     await ctx.plugin(SkillFileSystem, {
-      dshHome: join(home, '.dsh'),
+      rshHome: join(home, '.dsh'),
       agentsHome: join(home, '.agents'),
       watch: false,
     })
@@ -604,13 +604,13 @@ describe('FileSystemSkillProvider', () => {
 
   it('forwards cancellation to filesystem reads while loading a skill', async () => {
     const home = await tempDir('skill-read-abort')
-    await writeSkill(join(home, '.dsh/skills'), 'abortable-skill', 'Abortable skill')
+    await writeSkill(join(home, '.rsh/skills'), 'abortable-skill', 'Abortable skill')
 
     const ctx = new Context()
     await ctx.plugin(TestFileSystem)
     const fs = ctx.fs as TestFileSystem
     await ctx.plugin(SkillRegistry)
-    await ctx.plugin(SkillFileSystem, { dshHome: join(home, '.dsh'), agentsHome: join(home, '.agents'), watch: false })
+    await ctx.plugin(SkillFileSystem, { rshHome: join(home, '.dsh'), agentsHome: join(home, '.agents'), watch: false })
     expect((await ctx.skills.list()).map(skill => skill.name)).toEqual(['abortable-skill'])
 
     fs.statSignals = []
@@ -643,7 +643,7 @@ describe('FileSystemSkillProvider', () => {
     const ctx = new Context()
     await ctx.plugin(SkillRegistry)
     const fiber = await ctx.plugin(SkillFileSystem, {
-      dshHome: join(home, '.dsh'),
+      rshHome: join(home, '.dsh'),
       agentsHome: join(home, '.agents'),
       watch: true,
       watchStabilityThresholdMs: 20,
@@ -751,7 +751,7 @@ describe('FileSystemSkillProvider', () => {
     const ctx = new Context()
     await ctx.plugin(SkillRegistry)
     const fiber = await ctx.plugin(SkillFileSystem, {
-      dshHome: join(home, '.dsh'),
+      rshHome: join(home, '.dsh'),
       agentsHome: join(home, '.agents'),
       customSkillDirs: [join(first, '.agents/skills')],
       watch: true,
@@ -773,7 +773,7 @@ describe('FileSystemSkillProvider', () => {
     const noWatch = new Context()
     await noWatch.plugin(SkillRegistry)
     await noWatch.plugin(SkillFileSystem, {
-      dshHome: join(home, '.dsh'),
+      rshHome: join(home, '.dsh'),
       agentsHome: join(home, '.agents'),
       watch: false,
       watchMaxProjects: 1,
@@ -792,7 +792,7 @@ describe('FileSystemSkillProvider', () => {
     let provider!: SkillFileSystem.FileSystemSkillProvider
     const disposeProvider = ctx.skills.registerProvider((control) => {
       provider = new SkillFileSystem.FileSystemSkillProvider(ctx, control, {
-        dshHome: join(home, '.dsh'),
+        rshHome: join(home, '.dsh'),
         agentsHome: join(home, '.agents'),
         customSkillDirs: [nonDirectoryRoot],
         watch: true,
@@ -818,14 +818,14 @@ describe('FileSystemSkillProvider', () => {
   it('refreshes frontmatter through a followed skill symlink', { timeout: 10000 }, async () => {
     const home = await tempDir('skill-watch-symlink-home')
     const external = await tempDir('skill-watch-symlink-external')
-    const root = join(home, '.dsh/skills')
+    const root = join(home, '.rsh/skills')
     await writeSkill(external, 'linked-skill', 'First linked description')
     await mkdir(root, { recursive: true })
     await symlink(join(external, 'linked-skill'), join(root, 'linked-skill'))
     const ctx = new Context()
     await ctx.plugin(SkillRegistry)
     const fiber = await ctx.plugin(SkillFileSystem, {
-      dshHome: join(home, '.dsh'),
+      rshHome: join(home, '.dsh'),
       agentsHome: join(home, '.agents'),
       watch: true,
       watchFollowSymlinks: true,
@@ -855,16 +855,16 @@ describe('FileSystemSkillProvider', () => {
   })
 
   it('uses default home root resolution without exposing builtin skills', async () => {
-    const previousDshHome = process.env.DSH_HOME
-    const previousAgentsHome = process.env.DSH_AGENTS_HOME
-    const previousBundledSkillDir = process.env.DSH_BUNDLED_SKILL_DIR
+    const previousRshHome = process.env.RSH_HOME
+    const previousAgentsHome = process.env.RSH_AGENTS_HOME
+    const previousBundledSkillDir = process.env.RSH_BUNDLED_SKILL_DIR
     const envHome = await tempDir('skill-env-home')
     try {
-      process.env.DSH_HOME = join(envHome, '.dsh')
-      process.env.DSH_AGENTS_HOME = join(envHome, '.agents')
+      process.env.RSH_HOME = join(envHome, '.dsh')
+      process.env.RSH_AGENTS_HOME = join(envHome, '.agents')
       const bundled = join(envHome, 'bundled-skills')
-      process.env.DSH_BUNDLED_SKILL_DIR = bundled
-      await writeSkill(join(envHome, '.dsh/skills'), 'env-skill', 'Env skill')
+      process.env.RSH_BUNDLED_SKILL_DIR = bundled
+      await writeSkill(join(envHome, '.rsh/skills'), 'env-skill', 'Env skill')
       await writeSkill(bundled, 'env-bundled-skill', 'Env bundled skill')
       const ctx = new Context()
       await ctx.plugin(SkillRegistry)
@@ -887,34 +887,34 @@ describe('FileSystemSkillProvider', () => {
       expect((await isolated.skills.list()).map(skill => skill.name)).toEqual(['custom-isolated-skill'])
       await isolated.fiber.dispose()
 
-      process.env.DSH_HOME = join(envHome, 'empty-dsh')
-      delete process.env.DSH_BUNDLED_SKILL_DIR
-      process.env.DSH_AGENTS_HOME = join(envHome, 'empty-agents')
+      process.env.RSH_HOME = join(envHome, 'empty-dsh')
+      delete process.env.RSH_BUNDLED_SKILL_DIR
+      process.env.RSH_AGENTS_HOME = join(envHome, 'empty-agents')
       const empty = new Context()
       await empty.plugin(SkillRegistry)
       SkillFileSystem.apply(empty, { watch: false })
       expect(await empty.skills.list()).toEqual([])
 
-      delete process.env.DSH_AGENTS_HOME
+      delete process.env.RSH_AGENTS_HOME
       expect(new SkillFileSystem.FileSystemSkillProvider(empty, {
         signal: new AbortController().signal,
         invalidate() {},
-      }, { dshHome: join(envHome, 'empty-dsh') }).name).toBe('filesystem')
+      }, { rshHome: join(envHome, 'empty-dsh') }).name).toBe('filesystem')
     } finally {
-      if (previousDshHome === undefined) {
-        delete process.env.DSH_HOME
+      if (previousRshHome === undefined) {
+        delete process.env.RSH_HOME
       } else {
-        process.env.DSH_HOME = previousDshHome
+        process.env.RSH_HOME = previousRshHome
       }
       if (previousAgentsHome === undefined) {
-        delete process.env.DSH_AGENTS_HOME
+        delete process.env.RSH_AGENTS_HOME
       } else {
-        process.env.DSH_AGENTS_HOME = previousAgentsHome
+        process.env.RSH_AGENTS_HOME = previousAgentsHome
       }
       if (previousBundledSkillDir === undefined) {
-        delete process.env.DSH_BUNDLED_SKILL_DIR
+        delete process.env.RSH_BUNDLED_SKILL_DIR
       } else {
-        process.env.DSH_BUNDLED_SKILL_DIR = previousBundledSkillDir
+        process.env.RSH_BUNDLED_SKILL_DIR = previousBundledSkillDir
       }
     }
   })

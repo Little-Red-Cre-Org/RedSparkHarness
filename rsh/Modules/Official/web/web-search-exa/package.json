@@ -1,5 +1,5 @@
 {
-  "name": "@deepseek-ai/dsh-web-search-exa",
+  "name": "@redspark/rsh-web-search-exa",
   "description": "Exa-backed search provider for the RedSpark Harness web capability seam (ctx.web)",
   "version": "1.0.0",
   "publishConfig": {
@@ -48,23 +48,23 @@
   ],
   "license": "MIT",
   "peerDependencies": {
-    "@deepseek-ai/dsh-launch-environment": "workspace:^",
-    "@deepseek-ai/dsh-web": "workspace:^",
-    "@deepseek-ai/cordis": "workspace:^",
-    "@deepseek-ai/dsh-native-runtime": "workspace:^"
+    "@redspark/rsh-launch-environment": "workspace:^",
+    "@redspark/rsh-web": "workspace:^",
+    "@redspark/cordis": "workspace:^",
+    "@redspark/rsh-native-runtime": "workspace:^"
   },
   "dependencies": {
-    "@deepseek-ai/schemastery": "workspace:^"
+    "@redspark/schemastery": "workspace:^"
   },
   "devDependencies": {
-    "@deepseek-ai/dsh-launch-environment": "workspace:^",
-    "@deepseek-ai/dsh-web": "workspace:^",
-    "@deepseek-ai/cordis": "workspace:^",
-    "@deepseek-ai/dsh-http-proxy": "workspace:^",
-    "@deepseek-ai/dsh-native-runtime": "workspace:^"
+    "@redspark/rsh-launch-environment": "workspace:^",
+    "@redspark/rsh-web": "workspace:^",
+    "@redspark/cordis": "workspace:^",
+    "@redspark/rsh-http-proxy": "workspace:^",
+    "@redspark/rsh-native-runtime": "workspace:^"
   },
   "peerDependenciesMeta": {
-    "@deepseek-ai/cordis": {
+    "@redspark/cordis": {
       "optional": true
     }
   }

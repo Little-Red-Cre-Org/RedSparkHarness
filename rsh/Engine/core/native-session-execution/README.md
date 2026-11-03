@@ -3,7 +3,7 @@ description: "Native active Session execution routing with exact ownership and q
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-native-session-execution
+# @redspark/rsh-native-session-execution
 
 English | [中文](README.zh.md)
 

@@ -1,6 +1,6 @@
 import { describe, expect, expectTypeOf, it, vi } from 'vitest'
-import { Context } from '@deepseek-ai/cordis'
-import { createSystemMessage, createUserMessage, ToolCallId, createMessage, createToolResultMessage, MessageId, ReasoningEffortId } from '@deepseek-ai/dsh-llm'
+import { Context } from '@redspark/cordis'
+import { createSystemMessage, createUserMessage, ToolCallId, createMessage, createToolResultMessage, MessageId, ReasoningEffortId } from '@redspark/rsh-llm'
 import SessionStore, {
   adoptSessionEvent,
   SESSION_FORMAT_VERSION,
@@ -10,8 +10,8 @@ import SessionStore, {
   SessionLogOffset,
   SessionSeq,
   snapshotSessionEvent,
-} from '@deepseek-ai/dsh-session'
-import type { CreateSessionOptions, SessionEventType, SessionHeader, SessionSurface } from '@deepseek-ai/dsh-session'
+} from '@redspark/rsh-session'
+import type { CreateSessionOptions, SessionEventType, SessionHeader, SessionSurface } from '@redspark/rsh-session'
 
 describe('Session', () => {
   it('exposes one stable readonly surface view', () => {
@@ -479,7 +479,7 @@ describe('Session', () => {
       data: {
         turn: 1,
         step: 1,
-        message: createSystemMessage('You are terse.', '@deepseek-ai/dsh-system-prompt'),
+        message: createSystemMessage('You are terse.', '@redspark/rsh-system-prompt'),
       },
     } as unknown as SessionEvent
     const adopted = adoptSessionEvent(event)

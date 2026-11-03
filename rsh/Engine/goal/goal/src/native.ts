@@ -1,10 +1,10 @@
 /** Native same-session Goal state over the selected Program's sole Session writer. */
 import { randomUUID } from 'node:crypto'
 import { z } from 'zod'
-import type { SessionSeq } from '@deepseek-ai/dsh-session/native'
-import type { NativeAgent, NativeAgentRegistry } from '@deepseek-ai/dsh-native-agent'
-import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
-import type { NativeActiveSessionOperations, NativeActiveSessionOwner } from '@deepseek-ai/dsh-native-session-execution'
+import type { SessionSeq } from '@redspark/rsh-session/native'
+import type { NativeAgent, NativeAgentRegistry } from '@redspark/rsh-native-agent'
+import type { NativePlugin } from '@redspark/rsh-native-runtime'
+import type { NativeActiveSessionOperations, NativeActiveSessionOwner } from '@redspark/rsh-native-session-execution'
 import { applyGoalEvent, emptyGoalFoldState, type GoalFoldState } from './fold.ts'
 import type { FoldedGoal, GoalChangeMeta, GoalOperation } from './facts.ts'
 import { GOAL_CHANGE_VERSION, GoalError, GoalId } from './runtime.ts'
@@ -137,7 +137,7 @@ export interface NativeScheduledGoalHost {
   registerExecutor(executor: NativeScheduledGoalExecutor): () => Promise<void>
 }
 
-declare module '@deepseek-ai/dsh-native-runtime' {
+declare module '@redspark/rsh-native-runtime' {
   interface NativeServices { goals: NativeGoalOperations }
 }
 
@@ -159,7 +159,7 @@ export class NativeGoalRegistry implements NativeGoalOperations {
       if (this.closing) throw new Error('native-goal: registry is closing')
       const state: OwnerState = { owner, activation: 'disarmed', releaseRetain: undefined, mutation: Promise.resolve(),
         fold: emptyGoalFoldState(), stopEvents: () => {}, pendingChanges: new Set() }
-      const buffered: import('@deepseek-ai/dsh-session/native').SessionEvent[] = []
+      const buffered: import('@redspark/rsh-session/native').SessionEvent[] = []
       let initialized = false
       state.stopEvents = owner.onEvent((event) => {
         if (initialized) {
@@ -345,7 +345,7 @@ export class NativeGoalRegistry implements NativeGoalOperations {
 
 /** Native Goal Provider; continuation driving belongs to its separate Consumer. */
 export const plugin: NativePlugin = {
-  apiVersion: 1, name: '@deepseek-ai/dsh-goal', targets: ['host'], requires: ['agents', 'activeSessions'], provides: ['goals'],
+  apiVersion: 1, name: '@redspark/rsh-goal', targets: ['host'], requires: ['agents', 'activeSessions'], provides: ['goals'],
   resolve(input) {
     const config = resolveNativeGoalConfig(input)
     return (context) => {

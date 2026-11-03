@@ -5,14 +5,14 @@
  * failure codes and Remote namespaces stay in the apply world.
  */
 
-import type { Context as ClientContext } from '@deepseek-ai/cordis'
+import type { Context as ClientContext } from '@redspark/cordis'
 import type {
   SettingsPathOpView,
-} from '@deepseek-ai/dsh-api-remotes/client'
+} from '@redspark/rsh-api-remotes/client'
 import type {
   ModelSettingsOperations, ModelSettingsWriteOutcome,
-} from '@deepseek-ai/dsh-client-ui-primitives'
-import type { ModelDiscoveryOutcome } from '@deepseek-ai/dsh-client-ui-primitives'
+} from '@redspark/rsh-client-ui-primitives'
+import type { ModelDiscoveryOutcome } from '@redspark/rsh-client-ui-primitives'
 
 /** What one namespace write answered. */
 export type SettingsWriteOutcome = ModelSettingsWriteOutcome

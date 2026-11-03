@@ -1,14 +1,14 @@
 /** Cordis-free durable local attachment operations. */
 import { join } from 'node:path'
-import { admitEncodedFile, admitPromptContent, validateImageBatch } from '@deepseek-ai/dsh-attachment/admission'
-import { isAttachmentError, type AttachmentError } from '@deepseek-ai/dsh-attachment/error'
+import { admitEncodedFile, admitPromptContent, validateImageBatch } from '@redspark/rsh-attachment/admission'
+import { isAttachmentError, type AttachmentError } from '@redspark/rsh-attachment/error'
 import type {
   AdmittedPromptContentPart, AttachmentAdmissionPart, AttachmentOperations, EncodedFileAttachment,
   FileAttachmentRef, ImageAttachmentLimits, ImageAttachmentRef, ImageRequestPolicy,
   RequestImageAttachment, SaveFileAttachment, SaveFileStreamAttachment, SaveImageAttachment,
   StoredImageAttachment,
-} from '@deepseek-ai/dsh-attachment/types'
-import { resolveDshHome } from '@deepseek-ai/dsh-home-paths'
+} from '@redspark/rsh-attachment/types'
+import { resolveRshHome } from '@redspark/rsh-home-paths'
 import { CompressionLimiter } from './compression-limiter.ts'
 import { type Config, resolveConfig } from './config.ts'
 import { readFileStreamVerbatim, saveFileStreamVerbatim, saveFileVerbatim, storedFilePath } from './file-store.ts'
@@ -37,14 +37,14 @@ export class LocalAttachmentBackend implements AttachmentOperations {
     config: Config,
     readImage?: (ref: ImageAttachmentRef, signal?: AbortSignal) => Promise<StoredImageAttachment>,
   ) {
-    const dshHome = resolveDshHome(config.dshHome)
-    this.root = join(dshHome, 'attachments', 'v1')
+    const rshHome = resolveRshHome(config.rshHome)
+    this.root = join(rshHome, 'attachments', 'v1')
     const resolved = resolveConfig(config)
     this.imageLimits = resolved.imageLimits
     this.normalizationPolicy = resolved.normalizationPolicy
     this.imageCompressionConcurrency = resolved.imageCompressionConcurrency
     this.compression = new CompressionLimiter(resolved.imageCompressionConcurrency)
-    this.requests = new LocalImageRequestStore(dshHome, this.compression, readImage ?? ((ref, signal) => this.readImage(ref, signal)))
+    this.requests = new LocalImageRequestStore(rshHome, this.compression, readImage ?? ((ref, signal) => this.readImage(ref, signal)))
   }
 
   /**

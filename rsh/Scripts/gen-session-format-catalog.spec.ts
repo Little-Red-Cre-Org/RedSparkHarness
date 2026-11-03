@@ -22,7 +22,7 @@ function fixture(edges: Array<[number, number]>): string {
   const catalogDependencies: Record<string, string> = {}
   for (const [from, to] of edges) {
     const dir = join(root, `rsh/Engine/session/session-format-v${from}-to-v${to}`)
-    const name = `@deepseek-ai/dsh-session-format-v${from}-to-v${to}`
+    const name = `@redspark/rsh-session-format-v${from}-to-v${to}`
     mkdirSync(dir, { recursive: true })
     catalogDependencies[name] = 'workspace:^'
     writeFileSync(join(dir, 'package.json'), JSON.stringify({
@@ -36,10 +36,10 @@ function fixture(edges: Array<[number, number]>): string {
         targetRestorer: `restoreReleasedV${to}Artifact`,
       } },
       dependencies: from === 0
-        ? { '@deepseek-ai/dsh-session-format': 'workspace:^' }
+        ? { '@redspark/rsh-session-format': 'workspace:^' }
         : {
-          '@deepseek-ai/dsh-session-format': 'workspace:^',
-          [`@deepseek-ai/dsh-session-format-v${from - 1}-to-v${from}`]: 'workspace:^',
+          '@redspark/rsh-session-format': 'workspace:^',
+          [`@redspark/rsh-session-format-v${from - 1}-to-v${from}`]: 'workspace:^',
         },
     }))
   }
@@ -47,8 +47,8 @@ function fixture(edges: Array<[number, number]>): string {
   mkdirSync(catalog, { recursive: true })
   writeFileSync(join(catalog, 'package.json'), JSON.stringify({
     dependencies: catalogDependencies,
-    peerDependencies: { '@deepseek-ai/dsh-session': 'workspace:^' },
-    devDependencies: { '@deepseek-ai/dsh-session': 'workspace:^' },
+    peerDependencies: { '@redspark/rsh-session': 'workspace:^' },
+    devDependencies: { '@redspark/rsh-session': 'workspace:^' },
   }))
   return root
 }
@@ -101,14 +101,14 @@ describe('session format catalog generator', () => {
     const output = renderSessionFormatCatalog(declarations, version)
 
     expect(declarations.map(item => [item.from, item.to])).toEqual([[0, 1], [1, 2]])
-    expect(output).toContain("from '@deepseek-ai/dsh-session-format-v0-to-v1'")
+    expect(output).toContain("from '@redspark/rsh-session-format-v0-to-v1'")
     expect(output).toContain('currentVersion: 2')
     expect(output).toContain('currentEncoder: releasedV2SessionFormatCodec')
     expect(output).toContain('restoreReleasedV2Artifact(artifact, KNOWN_SESSION_EVENT_TYPES)')
     expect(output).toContain('restoreTransformedCurrent(artifact)')
     expect(output).toContain('assertReleasedV2Header(header)')
     expect(output).toContain('validateInstalledCurrentSessionHeader(header)')
-    expect(output).toContain("from '@deepseek-ai/dsh-session/native'")
+    expect(output).toContain("from '@redspark/rsh-session/native'")
     expect(output).toContain("from './current.ts'")
     const imports = output.split('\n').filter(line => line.startsWith('import {'))
     expect(imports.filter(line => line.includes('releasedV1SessionFormatCodec'))).toHaveLength(1)
@@ -132,21 +132,21 @@ describe('session format catalog generator', () => {
   it('requires every later edge to depend on the package that owns its source codec', () => {
     const root = fixture([[0, 1], [1, 2]])
     const manifest = edgeManifest(root, 1, 2)
-    delete manifest.value.dependencies['@deepseek-ai/dsh-session-format-v0-to-v1']
+    delete manifest.value.dependencies['@redspark/rsh-session-format-v0-to-v1']
     writeFileSync(manifest.path, JSON.stringify(manifest.value))
 
     expect(() => collectSessionFormatMigrations(root, 2))
-      .toThrow(/must depend on @deepseek-ai\/dsh-session-format-v0-to-v1/)
+      .toThrow(/must depend on @redspark\/dsh-session-format-v0-to-v1/)
   })
 
   it('requires the package name to identify its declared adjacent edge', () => {
     const root = fixture([[0, 1], [1, 2]])
     const manifest = edgeManifest(root, 1, 2)
-    manifest.value['name'] = '@deepseek-ai/dsh-session-format-other'
+    manifest.value['name'] = '@redspark/rsh-session-format-other'
     writeFileSync(manifest.path, JSON.stringify(manifest.value))
 
     expect(() => collectSessionFormatMigrations(root, 2))
-      .toThrow(/name must be @deepseek-ai\/dsh-session-format-v1-to-v2/)
+      .toThrow(/name must be @redspark\/dsh-session-format-v1-to-v2/)
   })
 
   it('requires the catalog to share the installed Session package as a peer', () => {
@@ -157,11 +157,11 @@ describe('session format catalog generator', () => {
       peerDependencies: Record<string, string>
       devDependencies: Record<string, string>
     }
-    manifest.dependencies['@deepseek-ai/dsh-session'] = 'workspace:^'
-    delete manifest.peerDependencies['@deepseek-ai/dsh-session']
+    manifest.dependencies['@redspark/rsh-session'] = 'workspace:^'
+    delete manifest.peerDependencies['@redspark/rsh-session']
     writeFileSync(path, JSON.stringify(manifest))
 
     expect(() => collectSessionFormatMigrations(root, 2))
-      .toThrow(/must share @deepseek-ai\/dsh-session through peer \+ dev dependencies/)
+      .toThrow(/must share @redspark\/dsh-session through peer \+ dev dependencies/)
   })
 })

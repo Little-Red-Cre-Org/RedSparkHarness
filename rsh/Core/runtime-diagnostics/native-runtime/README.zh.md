@@ -3,7 +3,7 @@ description: "可移植的原生插件计划、作用域服务和所属异步清
 kind: "package-library"
 ---
 
-# @deepseek-ai/dsh-native-runtime
+# @redspark/rsh-native-runtime
 
 [English](README.md) | 中文
 
@@ -30,7 +30,7 @@ kind: "package-library"
 
 `resolveInstallation(requests, target)` 在解析配置前检查版本、目标、Provider 冲突、缺失依赖和依赖环。插件的 `resolve(config)` 验证配置而不获取资源，并返回激活函数。Consumer 仅读取已声明的服务，选择自身作用域或祖先中最近的 Provider；独立根隔离 realm。只有激活成功且声明的全部服务存在后，Provider 才可见。
 
-Service Definition 包在 `@deepseek-ai/dsh-native-runtime` 包根入口扩展 `NativeServices`，事件 Definition 包扩展 `NativeEvents`。Host 和事件总线使用相同的合并后声明。包根还声明 `pluginInventory`，由启动器提供只读安装清单。
+Service Definition 包在 `@redspark/rsh-native-runtime` 包根入口扩展 `NativeServices`，事件 Definition 包扩展 `NativeEvents`。Host 和事件总线使用相同的合并后声明。包根还声明 `pluginInventory`，由启动器提供只读安装清单。
 
 <a id="package-provenance"></a>
 ### 包来源

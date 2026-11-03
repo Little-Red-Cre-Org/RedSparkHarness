@@ -1,8 +1,8 @@
 /** The native Perplexity provider keeps the Cordis configuration, key fallback, and request shape. */
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { NativeHost, NativeScope, resolveInstallation, type NativePlugin } from '@deepseek-ai/dsh-native-runtime'
-import { createLaunchEnvironmentSnapshot, launchEnvironmentProvider } from '@deepseek-ai/dsh-launch-environment/native'
-import { plugin as webPlugin, type NativeWebOperation, type NativeWebService } from '@deepseek-ai/dsh-web/native'
+import { NativeHost, NativeScope, resolveInstallation, type NativePlugin } from '@redspark/rsh-native-runtime'
+import { createLaunchEnvironmentSnapshot, launchEnvironmentProvider } from '@redspark/rsh-launch-environment/native'
+import { plugin as webPlugin, type NativeWebOperation, type NativeWebService } from '@redspark/rsh-web/native'
 import { plugin } from '../src/native.ts'
 
 const hosts: NativeHost[] = []

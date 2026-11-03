@@ -3,7 +3,7 @@ description: "面向 RedSpark 客户端的可扩展桌宠注册表、Agent 状�
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-client-ui-pet
+# @redspark/rsh-client-ui-pet
 
 [English](README.md) | 中文
 

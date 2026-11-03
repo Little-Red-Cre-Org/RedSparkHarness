@@ -1,7 +1,7 @@
 import { useEffect, useId, useMemo, useState } from 'react'
-import type { NativePluginInventory, NativePluginInventoryEntry, NativeSessionClient } from '@deepseek-ai/dsh-client-native-session/native'
-import { IconChevronDownOutline14, IconSearchOutline16, Tag } from '@deepseek-ai/dsh-client-ui-primitives'
-import type { TagTone } from '@deepseek-ai/dsh-client-ui-primitives'
+import type { NativePluginInventory, NativePluginInventoryEntry, NativeSessionClient } from '@redspark/rsh-client-native-session/native'
+import { IconChevronDownOutline14, IconSearchOutline16, Tag } from '@redspark/rsh-client-ui-primitives'
+import type { TagTone } from '@redspark/rsh-client-ui-primitives'
 import type { ConversationLocaleKey } from './locales.ts'
 import css from './plugin-inventory-tab.module.css'
 
@@ -168,5 +168,5 @@ function Fact({ label, value }: { readonly label: string; readonly value: string
 
 function shortName(name: string): string {
   const unscoped = name.startsWith('@') ? name.slice(name.indexOf('/') + 1) : name
-  return unscoped.replace(/^cordis:/, '').replace(/^cordis-plugin-/, '').replace(/^dsh-(?:host-|client-)?/, '')
+  return unscoped.replace(/^cordis:/, '').replace(/^cordis-plugin-/, '').replace(/^rsh-(?:host-|client-)?/, '')
 }

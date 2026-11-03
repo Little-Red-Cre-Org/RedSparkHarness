@@ -6,9 +6,9 @@
  * type-only.
  */
 
-import type {} from '@deepseek-ai/dsh-api-session-controller/remote-events'
-import type {} from '@deepseek-ai/dsh-goal/compatibility-events'
-import type { TypertForwardableEventEntry } from '@deepseek-ai/dsh-typert-protocol'
+import type {} from '@redspark/rsh-api-session-controller/remote-events'
+import type {} from '@redspark/rsh-goal/compatibility-events'
+import type { TypertForwardableEventEntry } from '@redspark/rsh-typert-protocol'
 
 /**
  * Host events this application forwards without renaming. The explicit mode is

@@ -5,11 +5,11 @@ import { dirname, join } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { execa } from 'execa'
 import { expect, it } from 'vitest'
-import { JsonlSessionBackend } from '@deepseek-ai/dsh-session-persistence-jsonl'
-import { SESSION_FORMAT_VERSION } from '@deepseek-ai/dsh-session/native'
-import { deriveReplayScript, parseSessionLog } from '@deepseek-ai/dsh-llm-replay'
+import { JsonlSessionBackend } from '@redspark/rsh-session-persistence-jsonl'
+import { SESSION_FORMAT_VERSION } from '@redspark/rsh-session/native'
+import { deriveReplayScript, parseSessionLog } from '@redspark/rsh-llm-replay'
 import { formatSystemPromptSnapshot, formatToolSchemasSnapshot, normalizeSessionSnapshot, redactSessionSnapshotIds,
-  normalizedSystemPrompts, normalizedToolSchemas, sessionFixtureName } from '@deepseek-ai/dsh-session-snapshot'
+  normalizedSystemPrompts, normalizedToolSchemas, sessionFixtureName } from '@redspark/rsh-session-snapshot'
 import { ensureShippedNativeProfile, shippedNativeProfileComposition } from '../../rsh/Programs/CLI/src/native-profile-template.ts'
 
 const root = fileURLToPath(new URL('../../', import.meta.url))
@@ -28,7 +28,7 @@ it('replays a human answer through the shipped native-headless profile and durab
   try {
     ensureShippedNativeProfile('native-headless', home)
     const modules = join(home, 'profiles/native-headless/node_modules')
-    mkdirSync(join(modules, '@deepseek-ai'), { recursive: true })
+    mkdirSync(join(modules, '@redspark'), { recursive: true })
     mkdirSync(workspace)
     for (const [name, path] of [
       ['native-headless', 'rsh/Engine/core/native-headless'], ['native-agent', 'rsh/Engine/core/native-agent'],
@@ -40,7 +40,7 @@ it('replays a human answer through the shipped native-headless profile and durab
       ['user-question-broker', 'rsh/Modules/Official/interaction/user-question-broker'],
       ['tool-ask-user', 'rsh/Modules/Official/interaction/tool-ask-user'],
     ] as const) {
-      const link = join(modules, '@deepseek-ai', `dsh-${name}`)
+      const link = join(modules, '@redspark', `dsh-${name}`)
       symlinkSync(join(root, path), link, 'junction')
       links.push(link)
     }
@@ -67,11 +67,11 @@ it('replays a human answer through the shipped native-headless profile and durab
     const keep = new Set(['app', 'agents', 'tools', 'model-execution', 'storage', 'fs', 'policy'])
     const composition = shippedNativeProfileComposition(home, 'native-headless')
     writeFileSync(join(home, 'profiles/native-headless/rsh.profile.json'), JSON.stringify({ ...composition, installations: [
-      ...composition.installations.filter(row => keep.has(row.id)).map(row => row.id === 'fs' ? { ...row, plugin: '@deepseek-ai/dsh-fs-local' } : row),
-      { id: 'session-execution', plugin: '@deepseek-ai/dsh-native-session-execution', scope: 'root' },
-      { id: 'questions', plugin: '@deepseek-ai/dsh-user-questions', scope: 'root' },
-      { id: 'broker', plugin: '@deepseek-ai/dsh-user-question-broker', scope: 'root' },
-      { id: 'question-tool', plugin: '@deepseek-ai/dsh-tool-ask-user', scope: 'root' },
+      ...composition.installations.filter(row => keep.has(row.id)).map(row => row.id === 'fs' ? { ...row, plugin: '@redspark/rsh-fs-local' } : row),
+      { id: 'session-execution', plugin: '@redspark/rsh-native-session-execution', scope: 'root' },
+      { id: 'questions', plugin: '@redspark/rsh-user-questions', scope: 'root' },
+      { id: 'broker', plugin: '@redspark/rsh-user-question-broker', scope: 'root' },
+      { id: 'question-tool', plugin: '@redspark/rsh-tool-ask-user', scope: 'root' },
       { id: 'model', plugin: 'question-fixture-model', scope: 'root', config: { script: deriveReplayScript(recorded) } },
     ] }))
     writeFileSync(patch, JSON.stringify({ formatVersion: 1, installations: [
@@ -81,7 +81,7 @@ it('replays a human answer through the shipped native-headless profile and durab
     ] }))
     const child = await execa(process.execPath, ['--import', pathToFileURL(join(root, 'rsh/Programs/CLI/tests/fixtures/deny-cordis-context-register.mjs')).href,
       join(root, 'rsh/Programs/CLI/lib/bin.js'), '--profile', 'native-headless', '--patch', patch, initial.data.content[0].text],
-    { env: { ...process.env, DSH_HOME: home }, reject: false, timeout: 30_000 })
+    { env: { ...process.env, RSH_HOME: home }, reject: false, timeout: 30_000 })
     expect(child.exitCode, child.stderr).toBe(0)
     expect(child.stdout).toBe('answered')
     const storage = new JsonlSessionBackend({ root: sessions, compression: 'none' })
@@ -107,7 +107,7 @@ it('replays a human answer through the shipped native-headless profile and durab
       [join(scenario, 'system-prompt.expected.md'), formatSystemPromptSnapshot(prompts[0], prompts.slice(1))],
       [join(scenario, 'tool-schemas.expected.json'), formatToolSchemasSnapshot(schemas[0], schemas.slice(1))],
     ] as const) {
-      if (process.env.DSH_SNAPSHOT === 'refresh') writeFileSync(path, value)
+      if (process.env.RSH_SNAPSHOT === 'refresh') writeFileSync(path, value)
       else expect(value).toBe(readFileSync(path, 'utf8'))
     }
   } finally {

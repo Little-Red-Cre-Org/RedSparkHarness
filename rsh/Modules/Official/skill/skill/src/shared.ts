@@ -1,5 +1,5 @@
 /** Pure skill identity, visibility, validation, and rendering shared by Native and Cordis entries. */
-import { assertNever } from '@deepseek-ai/dsh-util-values'
+import { assertNever } from '@redspark/rsh-util-values'
 import type {
   SkillCandidate,
   SkillDefinition,

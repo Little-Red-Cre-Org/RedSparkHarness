@@ -1,6 +1,6 @@
-import { Context, Exporter, Formatter, Logger, Message } from '@deepseek-ai/cordis'
-import { Time } from '@deepseek-ai/cosmokit'
-import z from '@deepseek-ai/schemastery'
+import { Context, Exporter, Formatter, Logger, Message } from '@redspark/cordis'
+import { Time } from '@redspark/cosmokit'
+import z from '@redspark/schemastery'
 
 /** Terminal color support level compatible with supports-color. */
 export type ColorSupportLevel = 0 | 1 | 2 | 3

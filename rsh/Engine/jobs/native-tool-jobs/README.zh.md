@@ -3,7 +3,7 @@ description: "面向模型的原生 Agent 后台任务控制工具。"
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-native-tool-jobs
+# @redspark/rsh-native-tool-jobs
 
 [English](README.md) | 中文
 
@@ -52,7 +52,7 @@ kind: "package-reference"
 - 截断后的输出会包含省略标记；`job_output` 会在字节预算内保留状态行。
 - Agent 释放时，它的任务会被取消并排空。单次运行的原生 headless 应用在每轮结束时释放 Agent，所以任务不能跨 CLI 调用继续运行。
 - 原生 shell、subagent 与 workflow Producer 必须自行登记 runner；此包只提供控制工具。
-- 随附的 `native-headless` profile 包含原生 Jobs controls 和 `spawn` Subagent Provider，但没有面向模型的 `@deepseek-ai/dsh-tool-subagent` Consumer。因此，模型直接请求后台 Subagent job 时，profile 还需要安装该 Consumer；这是 profile 组合缺口，不是缺少 Jobs registry 或 control 实现。
+- 随附的 `native-headless` profile 包含原生 Jobs controls 和 `spawn` Subagent Provider，但没有面向模型的 `@redspark/rsh-tool-subagent` Consumer。因此，模型直接请求后台 Subagent job 时，profile 还需要安装该 Consumer；这是 profile 组合缺口，不是缺少 Jobs registry 或 control 实现。
 
 不发布 invariant companion，因为此包没有独立于任务与工具注册表的状态。
 

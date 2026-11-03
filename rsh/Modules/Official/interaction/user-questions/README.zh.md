@@ -3,7 +3,7 @@ description: "基于 waterfall 的问答服务，用于工具、权限插件、�
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-user-questions
+# @redspark/rsh-user-questions
 
 [English](README.md) | 中文
 
@@ -44,7 +44,7 @@ kind: "package-reference"
 
 `./native` 入口通过选定的 `agents` 与 `activeSessions` 提供 `userQuestions`。每个请求必须携带当前执行的准确 Agent 与 Session；仅根调用可以提问，包括恢复为根的历史子 Session。回答者按 scope 选择，通过 `next()` 委托并保留上游取消信号。移除时取消下游呈现并等待其释放。纯 `./protocol` 入口拥有共享问题与回答值；`./types` 保留兼容事件。
 
-选择 `@deepseek-ai/dsh-user-question-broker` 作为待回答问题的 Provider。认证应用通过其 `userQuestionBroker` 服务订阅，使用原 Agent 与不透明请求 id 回答。格式错误或过期回答会被拒绝；移除最后一个接收者会取消待回答问题。原生应用必须提供传输；此能力组不装配 SDK、ACP 或 Web 回答端。
+选择 `@redspark/rsh-user-question-broker` 作为待回答问题的 Provider。认证应用通过其 `userQuestionBroker` 服务订阅，使用原 Agent 与不透明请求 id 回答。格式错误或过期回答会被拒绝；移除最后一个接收者会取消待回答问题。原生应用必须提供传输；此能力组不装配 SDK、ACP 或 Web 回答端。
 
 ### 呈现意图
 
@@ -53,7 +53,7 @@ kind: "package-reference"
 <a id="role"></a>
 ## 职责
 
-这是 Service Definition 包。`@deepseek-ai/dsh-tool-ask-user` 等 Consumer 依赖此服务；Web Client 通过 Remote Events 贡献带 Agent scope 的回答者。循环保持不变：工具调用等待 waterfall 结果，该结果随后恢复正常的 agent loop（智能体循环）。
+这是 Service Definition 包。`@redspark/rsh-tool-ask-user` 等 Consumer 依赖此服务；Web Client 通过 Remote Events 贡献带 Agent scope 的回答者。循环保持不变：工具调用等待 waterfall 结果，该结果随后恢复正常的 agent loop（智能体循环）。
 
 <a id="model-experience"></a>
 ## 模型体验

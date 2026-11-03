@@ -1,11 +1,11 @@
 /**
  * Public type vocabulary of the workspace entity: the `WorkspaceId` brand and
  * the `Workspace` consumer interface. The native and compatibility Providers share this vocabulary.
- * @module @deepseek-ai/dsh-workspace-definition
+ * @module @redspark/rsh-workspace-definition
  */
 
-import type { Branded } from '@deepseek-ai/dsh-brand'
-import type { SessionId } from '@deepseek-ai/dsh-session/types'
+import type { Branded } from '@redspark/rsh-brand'
+import type { SessionId } from '@redspark/rsh-session/types'
 
 /**
  * Identifies one workspace record. A generated uuid, never the path: path

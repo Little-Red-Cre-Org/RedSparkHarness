@@ -6,53 +6,53 @@ import { open, opendir, readdir, readlink, realpath, stat } from 'node:fs/promis
 import { posix, relative, sep, win32 } from 'node:path'
 import type { FileHandle } from 'node:fs/promises'
 import { TextDecoder } from 'node:util'
-import { brandString } from '@deepseek-ai/dsh-brand'
-import schemastery from '@deepseek-ai/schemastery'
+import { brandString } from '@redspark/rsh-brand'
+import schemastery from '@redspark/schemastery'
 import { z } from 'zod'
 import { NativeSessionFeed } from './follow.ts'
 import type { NativePendingSubmission, NativeSubmissionAcknowledgement, NativeSubmissionEditResult, NativeSubmissionPromotionResult,
-  NativeSubmissionsSnapshot, NativeSubmissionRequestId } from '@deepseek-ai/dsh-client-native-session/follow-types'
-import type { Branded } from '@deepseek-ai/dsh-brand'
-import type { NativePlugin, NativePluginInventory } from '@deepseek-ai/dsh-native-runtime'
-import type {} from '@deepseek-ai/dsh-native-agent/native'
-import { foldNativeInboxEvent } from '@deepseek-ai/dsh-native-agent/inbox'
-import type { NativeInboxState } from '@deepseek-ai/dsh-native-agent/inbox'
-import type {} from '@deepseek-ai/dsh-native-model-execution/native'
-import type {} from '@deepseek-ai/dsh-native-session-execution/native'
-import type {} from '@deepseek-ai/dsh-llm-pi-ai/native'
-import type {} from '@deepseek-ai/dsh-authorization/native'
-import { readNativeSessionHistory } from '@deepseek-ai/dsh-native-session-execution/read-history'
-import { foldSessionTitle } from '@deepseek-ai/dsh-session-title/native'
-import type { NativeSessionTitles } from '@deepseek-ai/dsh-session-title/native'
+  NativeSubmissionsSnapshot, NativeSubmissionRequestId } from '@redspark/rsh-client-native-session/follow-types'
+import type { Branded } from '@redspark/rsh-brand'
+import type { NativePlugin, NativePluginInventory } from '@redspark/rsh-native-runtime'
+import type {} from '@redspark/rsh-native-agent/native'
+import { foldNativeInboxEvent } from '@redspark/rsh-native-agent/inbox'
+import type { NativeInboxState } from '@redspark/rsh-native-agent/inbox'
+import type {} from '@redspark/rsh-native-model-execution/native'
+import type {} from '@redspark/rsh-native-session-execution/native'
+import type {} from '@redspark/rsh-llm-pi-ai/native'
+import type {} from '@redspark/rsh-authorization/native'
+import { readNativeSessionHistory } from '@redspark/rsh-native-session-execution/read-history'
+import { foldSessionTitle } from '@redspark/rsh-session-title/native'
+import type { NativeSessionTitles } from '@redspark/rsh-session-title/native'
 import { createNativeHeadlessApplication, resolveNativeHeadlessConfig, type Config as TurnConfig,
-  type NativeHeadlessApplication } from '@deepseek-ai/dsh-native-headless/native'
-import { NativeConnectionRequestOwner, type ConnectionRpcResult } from '@deepseek-ai/dsh-client-connection/native-host'
-import type { NativeActiveSessionOperations, NativeActiveSessionOwner } from '@deepseek-ai/dsh-native-session-execution'
-import type { NativeStagedFileBlock, NativeStagedFileReceiptId } from '@deepseek-ai/dsh-native-session-execution'
-import type { NativeSessionPersistenceOperations } from '@deepseek-ai/dsh-session-persistence/native'
-import type { SessionEvent } from '@deepseek-ai/dsh-session/types'
-import { SessionId } from '@deepseek-ai/dsh-session/native'
-import { SessionSeq } from '@deepseek-ai/dsh-session/types'
-import type { WorkspaceId } from '@deepseek-ai/dsh-workspace-definition'
-import type { WorkspaceRegistryRuntime } from '@deepseek-ai/dsh-workspace/native'
-import type {} from '@deepseek-ai/dsh-workspace/native'
-import type { NativeModelDirectory } from '@deepseek-ai/dsh-native-model-execution/model-directory'
-import type { ModelSelection } from '@deepseek-ai/dsh-native-model-execution/model-selection'
-import type { NativeModelSelectionOperations } from '@deepseek-ai/dsh-native-model-selection/native'
-import type { NativeAgentPresetOperations } from '@deepseek-ai/dsh-agent-presets/native'
-import { NativeAgentPresetError } from '@deepseek-ai/dsh-agent-presets/native'
-import { foldNativeAgentPresetFacts } from '@deepseek-ai/dsh-agent-presets/selection'
-import type { NativePermissionPresetOperations } from '@deepseek-ai/dsh-permission-presets/native-definition'
-import type { NativePlanMode } from '@deepseek-ai/dsh-plan-mode/native'
-import type { NativeRootRouteId } from '@deepseek-ai/dsh-native-session-execution/root-route'
-import type { NativeAgent, NativeAgentExecution } from '@deepseek-ai/dsh-native-agent'
-import { createUserMessage, freezeMessage, MessageId, normalizeLlmFailure } from '@deepseek-ai/dsh-llm/native'
-import type { ContentBlock, TextBlock } from '@deepseek-ai/dsh-llm/native'
-import { isImageAdmissionError, type AttachmentOperations } from '@deepseek-ai/dsh-attachment/native'
-import { deriveEventMessage, foldSurface, isAppendSurfaceEvent } from '@deepseek-ai/dsh-session/surface'
-import type { FileSystemOperations, FsObservation, FsPathInfo, FsTarget } from '@deepseek-ai/dsh-fs/native'
-import { FsVersion } from '@deepseek-ai/dsh-fs/types'
-import type {} from '@deepseek-ai/dsh-fs/native'
+  type NativeHeadlessApplication } from '@redspark/rsh-native-headless/native'
+import { NativeConnectionRequestOwner, type ConnectionRpcResult } from '@redspark/rsh-client-connection/native-host'
+import type { NativeActiveSessionOperations, NativeActiveSessionOwner } from '@redspark/rsh-native-session-execution'
+import type { NativeStagedFileBlock, NativeStagedFileReceiptId } from '@redspark/rsh-native-session-execution'
+import type { NativeSessionPersistenceOperations } from '@redspark/rsh-session-persistence/native'
+import type { SessionEvent } from '@redspark/rsh-session/types'
+import { SessionId } from '@redspark/rsh-session/native'
+import { SessionSeq } from '@redspark/rsh-session/types'
+import type { WorkspaceId } from '@redspark/rsh-workspace-definition'
+import type { WorkspaceRegistryRuntime } from '@redspark/rsh-workspace/native'
+import type {} from '@redspark/rsh-workspace/native'
+import type { NativeModelDirectory } from '@redspark/rsh-native-model-execution/model-directory'
+import type { ModelSelection } from '@redspark/rsh-native-model-execution/model-selection'
+import type { NativeModelSelectionOperations } from '@redspark/rsh-native-model-selection/native'
+import type { NativeAgentPresetOperations } from '@redspark/rsh-agent-presets/native'
+import { NativeAgentPresetError } from '@redspark/rsh-agent-presets/native'
+import { foldNativeAgentPresetFacts } from '@redspark/rsh-agent-presets/selection'
+import type { NativePermissionPresetOperations } from '@redspark/rsh-permission-presets/native-definition'
+import type { NativePlanMode } from '@redspark/rsh-plan-mode/native'
+import type { NativeRootRouteId } from '@redspark/rsh-native-session-execution/root-route'
+import type { NativeAgent, NativeAgentExecution } from '@redspark/rsh-native-agent'
+import { createUserMessage, freezeMessage, MessageId, normalizeLlmFailure } from '@redspark/rsh-llm/native'
+import type { ContentBlock, TextBlock } from '@redspark/rsh-llm/native'
+import { isImageAdmissionError, type AttachmentOperations } from '@redspark/rsh-attachment/native'
+import { deriveEventMessage, foldSurface, isAppendSurfaceEvent } from '@redspark/rsh-session/surface'
+import type { FileSystemOperations, FsObservation, FsPathInfo, FsTarget } from '@redspark/rsh-fs/native'
+import { FsVersion } from '@redspark/rsh-fs/types'
+import type {} from '@redspark/rsh-fs/native'
 import type {
   WorkspaceDirectoryEntry,
   WorkspaceDirectoryListing,
@@ -61,36 +61,37 @@ import type {
   WorkspaceFileStat,
   WorkspaceFileText,
   WorkspaceFileWatchFrame,
-} from '@deepseek-ai/dsh-api-workspace-files/native-types'
-import { cutWorkspaceFilePage } from '@deepseek-ai/dsh-api-workspace-files/native-helpers'
+} from '@redspark/rsh-api-workspace-files/native-types'
+import { cutWorkspaceFilePage } from '@redspark/rsh-api-workspace-files/native-helpers'
 
 import { NativeWebHumanInteraction } from './human.ts'
-import type { NativeApprovalServiceDefinition } from '@deepseek-ai/dsh-approval-definition'
-import type { NativeUserQuestionRegistry } from '@deepseek-ai/dsh-user-questions/native'
-import type { NativeContext } from '@deepseek-ai/dsh-native-runtime'
-import type { NativeWebHumanId } from '@deepseek-ai/dsh-client-native-session/human'
-import { credentialRef } from '@deepseek-ai/dsh-credentials/native'
-import { parseCredentialKey } from '@deepseek-ai/dsh-credentials/native'
-import type { CredentialInfo, NativeCredentials } from '@deepseek-ai/dsh-credentials/native'
-import type {} from '@deepseek-ai/dsh-credentials/native'
-import { canOpenNativePath, openNativePath, openNativeTextFile } from '@deepseek-ai/dsh-native-command'
-import { NativeSettingsConflictError } from '@deepseek-ai/dsh-settings/native'
-import type { NativeSettingsPathOp, NativeSettingsScope, NativeSettingsSection, NativeSettingsService } from '@deepseek-ai/dsh-settings-definition/native'
-import type { NativeCommandOperations } from '@deepseek-ai/dsh-commands/native'
-import type { NativeSessionFeedbackOperations } from '@deepseek-ai/dsh-command-feedback/native-definition'
-import type { FeedbackRecord } from '@deepseek-ai/dsh-command-feedback/types'
-import { FEEDBACK_CATEGORIES } from '@deepseek-ai/dsh-command-feedback/types'
-import type { NativeMessageFeedbackOperations } from '@deepseek-ai/dsh-message-feedback/native-definition'
-import type { MessageFeedbackDeleteRequest, MessageFeedbackListRequest, MessageFeedbackPutRequest } from '@deepseek-ai/dsh-message-feedback/types'
-import type {} from '@deepseek-ai/dsh-command-feedback/native-definition'
-import type {} from '@deepseek-ai/dsh-message-feedback/native-definition'
-import type { NativeScope } from '@deepseek-ai/dsh-native-runtime'
-import type {} from '@deepseek-ai/dsh-settings-definition/native'
+import type { NativeApprovalServiceDefinition } from '@redspark/rsh-approval-definition'
+import type { NativeUserQuestionRegistry } from '@redspark/rsh-user-questions/native'
+import type { NativeContext } from '@redspark/rsh-native-runtime'
+import type { NativeWebHumanId } from '@redspark/rsh-client-native-session/human'
+import { credentialRef } from '@redspark/rsh-credentials/native'
+import { parseCredentialKey } from '@redspark/rsh-credentials/native'
+import type { CredentialInfo, NativeCredentials } from '@redspark/rsh-credentials/native'
+import type {} from '@redspark/rsh-credentials/native'
+import { canOpenNativePath, openNativePath, openNativeTextFile } from '@redspark/rsh-native-command'
+import { NativeSettingsConflictError } from '@redspark/rsh-settings/native'
+import type { NativeSettingsPathOp, NativeSettingsScope, NativeSettingsSection, NativeSettingsService } from '@redspark/rsh-settings-definition/native'
+import type { NativeCommandOperations } from '@redspark/rsh-commands/native'
+import type { NativeSessionFeedbackOperations } from '@redspark/rsh-command-feedback/native-definition'
+import type { FeedbackRecord } from '@redspark/rsh-command-feedback/types'
+import { FEEDBACK_CATEGORIES } from '@redspark/rsh-command-feedback/types'
+import type { NativeMessageFeedbackOperations } from '@redspark/rsh-message-feedback/native-definition'
+import type { MessageFeedbackDeleteRequest, MessageFeedbackListRequest, MessageFeedbackPutRequest } from '@redspark/rsh-message-feedback/types'
+import type {} from '@redspark/rsh-command-feedback/native-definition'
+import type {} from '@redspark/rsh-message-feedback/native-definition'
+import type { NativeFileReferenceOperations } from '@redspark/rsh-file-reference/native'
+import type { NativeScope } from '@redspark/rsh-native-runtime'
+import type {} from '@redspark/rsh-settings-definition/native'
 import { NativeWebAccounts, NativeWebAuthorization } from './authorization.ts'
 import { NativeWebModels } from './models.ts'
 import { NativeWebSettingsEvents } from './settings-events.ts'
 import { NativeSessionListFeed } from './session-list-follow.ts'
-import type { NativeSessionListItem, NativeSessionSearchItem, NativeSessionSearchPage } from '@deepseek-ai/dsh-client-native-session/list-types'
+import type { NativeSessionListItem, NativeSessionSearchItem, NativeSessionSearchPage } from '@redspark/rsh-client-native-session/list-types'
 import { NativeWebWorkspaceService, resolveNativeWorkspaceTrustSettings, type NativeWorkspaceTrustSettings } from './workspaces.ts'
 import { NativeWebDirectoryService } from './directories.ts'
 
@@ -163,8 +164,10 @@ const nativeWorkspaceFileRead = nativeWorkspaceFilePath.extend({
   range: z.strictObject({ offset: z.number().optional(), limit: z.number().optional() }),
 })
 const nativeWorkspaceFileRelated = nativeWorkspaceFilePath.extend({ relativePath: z.string().min(1) })
+/** One `@`-mention query: path text after `@` or `@"`, empty for the workspace root. */
+const nativeWorkspaceFileSearch = z.strictObject({ sessionId: z.string().min(1).max(256), query: z.string() })
 
-declare module '@deepseek-ai/dsh-native-runtime' {
+declare module '@redspark/rsh-native-runtime' {
   interface NativeServices {
     /** Browser Session requests and their owned cancellation. */
     nativeWebSession: NativeWebSessionService
@@ -457,6 +460,7 @@ const endpoints = new Set(['session/list', 'session/history', 'session/create', 
   'workspaces/archive-session', 'workspaces/search', 'workspaces/connect',
   'directories/pick', 'directories/list', 'directories/create-directory',
   'session/files/list', 'session/files/stat', 'session/files/read', 'session/files/read-all', 'session/files/read-related',
+  'session/files/search',
   'feedback/session-record', 'feedback/message-list', 'feedback/message-put', 'feedback/message-delete'])
 const modelSelectionInput = z.strictObject({
   provider: z.string().min(1), model: z.string().min(1), reasoningEffort: z.string().min(1).optional(),
@@ -509,6 +513,8 @@ export interface NativeWebSelectionProviders {
   readonly commands?: NativeCommandOperations | undefined
   readonly sessionFeedback?: NativeSessionFeedbackOperations | undefined
   readonly messageFeedback?: NativeMessageFeedbackOperations | undefined
+  /** Ranked `@`-mention candidates; absent leaves the search endpoint empty. */
+  readonly fileReferences?: NativeFileReferenceOperations | undefined
   readonly commandScope?: NativeScope | undefined
   readonly workspaceRegistry?: WorkspaceRegistryRuntime | undefined
   readonly workspaceTrusted?: ((path: string) => boolean) | undefined
@@ -1492,6 +1498,39 @@ export class NativeWebSessionService {
     }
   }
 
+  /**
+   * Rank `@`-mention candidates inside one Session's workspace.
+   *
+   * The ranking, directory descent, exclusion set and result cap all belong to
+   * the file-reference Provider: it owns the bounded index and reuses it across
+   * a turn of typing. This endpoint therefore contributes only the authorization
+   * step (resolving the exact live Agent and Session) and never reads file
+   * contents or walks the tree itself.
+   *
+   * Only a root invocation may search: a subagent session has no composer of its
+   * own, and widening this would let it enumerate files it cannot otherwise see.
+   * @param id - Session whose workspace bounds discovery.
+   * @param query - path text after `@` or `@"`; empty lists the workspace root.
+   * @param signal - caller cancellation.
+   * @returns ranked workspace-relative candidates, or none when no Provider is installed.
+   */
+  private async searchWorkspaceFiles(id: SessionId, query: string, signal: AbortSignal): Promise<{
+    readonly candidates: readonly { readonly path: string; readonly kind: 'file' | 'directory' }[]
+  }> {
+    const fileReferences = this.selections.fileReferences
+    if (fileReferences === undefined) return { candidates: [] }
+    const owner = this.active.owners().find(candidate => candidate.session.id === id && candidate.invocation === 'root')
+    if (owner === undefined) throw new Error('native web session: file search requires an attached root owner')
+    if (this.active.owner(owner.agent, owner.session) !== owner) {
+      throw new Error('native web session: file search lost its exact root owner')
+    }
+    signal.throwIfAborted()
+    const candidates = await fileReferences.list(owner.agent, owner.session, query, signal)
+    return {
+      candidates: candidates.map(candidate => ({ path: candidate.path, kind: candidate.kind })),
+    }
+  }
+
   private async listWorkspaceFiles(id: SessionId, path: string, signal: AbortSignal): Promise<WorkspaceDirectoryListing> {
     const rootPath = await this.workspaceFileRoot(id, signal)
     const located = await this.inspectWorkspaceFilePath(rootPath, path, signal, true)
@@ -1603,6 +1642,10 @@ export class NativeWebSessionService {
     if (endpoint === 'session/files/read-related') {
       const request = nativeWorkspaceFileRelated.parse(payload)
       return this.readRelatedWorkspaceFile(sessionId(request.sessionId), request.path, request.relativePath, signal)
+    }
+    if (endpoint === 'session/files/search') {
+      const request = nativeWorkspaceFileSearch.parse(payload)
+      return this.searchWorkspaceFiles(sessionId(request.sessionId), request.query, signal)
     }
     throw new Error('native Session workspace file endpoint is unsupported')
   }
@@ -2315,9 +2358,9 @@ function pluginInventory(inventory: NativePluginInventory | undefined, payload: 
 
 /** Native Host Session installer; the Web Host remains the selected application. */
 export const plugin: NativePlugin = {
-  apiVersion: 1, name: '@deepseek-ai/dsh-native-web-session-controller', targets: ['host'],
+  apiVersion: 1, name: '@redspark/rsh-native-web-session-controller', targets: ['host'],
   requires: ['hostConnection', 'fs', 'sessionPersistence', 'modelExecution', 'agents', 'sessionExecution', 'activeSessions', 'workspaceRegistry'],
-  optional: ['tools', 'promptSections', 'sandboxPolicy', 'approval', 'codeRuntime', 'timeContext', 'tmuxContext', 'modelSelection', 'modelDirectory', 'modelSettings', 'agentPresets', 'planMode', 'permissionPresets', 'agentInstructions', 'userQuestions', 'attachments', 'settings', 'credentials', 'authorization', 'accounts', 'sessionTitles', 'commands', 'pluginInventory', 'requestContexts', 'sessionFeedback', 'messageFeedback'],
+  optional: ['tools', 'promptSections', 'sandboxPolicy', 'approval', 'codeRuntime', 'timeContext', 'tmuxContext', 'modelSelection', 'modelDirectory', 'modelSettings', 'agentPresets', 'planMode', 'permissionPresets', 'agentInstructions', 'userQuestions', 'attachments', 'settings', 'credentials', 'authorization', 'accounts', 'sessionTitles', 'commands', 'pluginInventory', 'requestContexts', 'sessionFeedback', 'messageFeedback', 'fileReferences'],
   provides: ['nativeWebSession', 'rootExecution'],
   resolve(input) {
     const config = resolveNativeWebSessionConfig(input)
@@ -2388,6 +2431,7 @@ export const plugin: NativePlugin = {
           settings: context.optional('settings'), credentials: context.optional('credentials'), titles: context.optional('sessionTitles'),
           commands: context.optional('commands'), commandScope: context.scope,
           sessionFeedback: context.optional('sessionFeedback'), messageFeedback: context.optional('messageFeedback'),
+          fileReferences: context.optional('fileReferences'),
           workspaceRegistry, workspaceTrusted: path => workspaceService.trusted(path),
           executionFor: agent => context.require('agents').execution(agent),
           models: models === undefined ? undefined : { selection: models, executionFor: agent => context.require('agents').execution(agent) } },

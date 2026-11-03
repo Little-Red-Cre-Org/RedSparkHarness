@@ -31,7 +31,7 @@ env:
   DOCS_REPOSITORY_REF: master
   # CI runs must never report to the production telemetry endpoint baked
   # into rsh/Programs/CLI/cordis.yml (AppCLIEntry disables the row when set).
-  DSH_TELEMETRY_DISABLED: '1'
+  RSH_TELEMETRY_DISABLED: '1'
 
 jobs:
   build:

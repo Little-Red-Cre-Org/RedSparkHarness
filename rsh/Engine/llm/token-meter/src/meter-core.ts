@@ -1,7 +1,7 @@
 /** Shared durable replay estimator used by native and compatibility Providers. */
-import { assembleAssistantStream, type ContentBlock, type LlmImageRequestPricing, type Message, type TokenUsage } from '@deepseek-ai/dsh-llm/native'
-import { deepFreeze } from '@deepseek-ai/dsh-util-values'
-import { canonicalHeader, headerEquals, isSurfaceEvent, SessionLogOffset, SessionSeq, type EpochHeader, type Session, type SessionEvent, type SessionLogOffset as SessionLogOffsetType } from '@deepseek-ai/dsh-session/native'
+import { assembleAssistantStream, type ContentBlock, type LlmImageRequestPricing, type Message, type TokenUsage } from '@redspark/rsh-llm/native'
+import { deepFreeze } from '@redspark/rsh-util-values'
+import { canonicalHeader, headerEquals, isSurfaceEvent, SessionLogOffset, SessionSeq, type EpochHeader, type Session, type SessionEvent, type SessionLogOffset as SessionLogOffsetType } from '@redspark/rsh-session/native'
 import type { TokenMeasurement, TokenMeasurementBaseline } from './meter-types.ts'
 import { estimateContent, estimateMessage, estimateToolsTokens, ROLE_OVERHEAD } from './estimate.ts'
 import { commitSurfaceTokens, planSurfaceTokens, type MeterSurfaceNode } from './surface-fold.ts'

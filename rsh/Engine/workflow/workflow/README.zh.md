@@ -3,7 +3,7 @@ description: "工作流编排能力：运行由模型编写的、扇出 subagent
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-workflow
+# @redspark/rsh-workflow
 
 [English](README.md) | 中文
 
@@ -31,7 +31,7 @@ kind: "package-reference"
 
 模型通过 `dsh-tool-workflow` 的 `workflow` 工具触达该能力；该工具拥有调用 schema 与结果包络，引擎提供其下的执行。一次工具调用提交 `meta`、`script` 与可选 `args`，运行完成时返回 `{ runId, agentsStarted, result }`。工具会阻塞父级轮次直到整个工作流结算，因此模型只看到最终结果，永远不会看到中间子 agent 消息。
 
-Native 组合会分别安装 `@deepseek-ai/dsh-workflow/native` Definition、一个选定的执行 Provider 与面向模型的 Consumer。worker Provider 经由 Program 已有的 NativeSubagent 与 Session executor 委派工作，因此不会创建第二套 Agent loop 或 Session owner。Native Definition 使用 provider-neutral 的 `@deepseek-ai/dsh-workflow/types` 运行句柄；可选的 `@deepseek-ai/dsh-agent` peer 仅供旧 Cordis 入口使用。
+Native 组合会分别安装 `@redspark/rsh-workflow/native` Definition、一个选定的执行 Provider 与面向模型的 Consumer。worker Provider 经由 Program 已有的 NativeSubagent 与 Session executor 委派工作，因此不会创建第二套 Agent loop 或 Session owner。Native Definition 使用 provider-neutral 的 `@redspark/rsh-workflow/types` 运行句柄；可选的 `@redspark/rsh-agent` peer 仅供旧 Cordis 入口使用。
 
 ### 运行工作流脚本
 
@@ -50,7 +50,7 @@ return { reviewed: reviews.length }
 
 ### 编程方式运行
 
-Cordis 消费方可以直接通过 `ctx.workflowEngine.start({ script, meta, args?, parent, signal? })` 启动运行；这个旧入口使用可选的 `@deepseek-ai/dsh-agent` peer。Native 消费方通过 `context.require('workflow').start(name, request)` 选择 Provider，并可在不安装该 peer 的情况下消费 `./native` Definition。两条路径都会把每个子 agent 归属于调用它的 agent，并接受取消；选定的实现会在发布运行前校验 meta 块并解析脚本。
+Cordis 消费方可以直接通过 `ctx.workflowEngine.start({ script, meta, args?, parent, signal? })` 启动运行；这个旧入口使用可选的 `@redspark/rsh-agent` peer。Native 消费方通过 `context.require('workflow').start(name, request)` 选择 Provider，并可在不安装该 peer 的情况下消费 `./native` Definition。两条路径都会把每个子 agent 归属于调用它的 agent，并接受取消；选定的实现会在发布运行前校验 meta 块并解析脚本。
 
 返回的运行公开 `id`、`meta`、`result`、`cancel(reason?)` 与 `dispose()`。result 绝不拒绝：脚本失败以 `stopReason: 'error'` 兑现，取消以 `'cancelled'` 兑现。调用方拥有该运行——每条路径都要调用 `dispose()`；它会取消剩余工作，并等待选定 Provider 的脚本与子任务清理策略。必要时，Native Provider 会在脚本宽限期之后继续等待已接受子 Session 清理。
 

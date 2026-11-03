@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { Context } from '@deepseek-ai/cordis'
+import { Context } from '@redspark/cordis'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { apply } from '../src/client/index.ts'
 import { ClientRealmSource } from '../src/client/inspection/realm.ts'
@@ -72,13 +72,13 @@ describe('experimental Inspector Client plugin', () => {
     globalThis.WebSocket = nativeWebSocket
     globalThis.fetch = nativeFetch
     sessionStorage.clear()
-    delete globalThis.__DSH_INSPECTOR__
-    Reflect.deleteProperty(globalThis, '__DSH_BOOT__')
+    delete globalThis.__RSH_INSPECTOR__
+    Reflect.deleteProperty(globalThis, '__RSH_BOOT__')
   })
 
   it('provides ctx.inspector and sends observations after the Worker accepts the source', async () => {
     globalThis.WebSocket = FakeWebSocket as unknown as typeof WebSocket
-    globalThis.__DSH_INSPECTOR__ = bootstrap
+    globalThis.__RSH_INSPECTOR__ = bootstrap
     const ctx = new Context()
     const fiber = ctx.plugin({ apply })
     await fiber.await()
@@ -159,7 +159,7 @@ describe('experimental Inspector Client plugin', () => {
 
   it('keeps the realm source id and rotates the transport generation on reconnect', async () => {
     globalThis.WebSocket = FakeWebSocket as unknown as typeof WebSocket
-    globalThis.__DSH_INSPECTOR__ = bootstrap
+    globalThis.__RSH_INSPECTOR__ = bootstrap
     const ctx = new Context()
     const fiber = ctx.plugin({ apply })
     await fiber.await()
@@ -184,7 +184,7 @@ describe('experimental Inspector Client plugin', () => {
 
   it('keeps the logical source id when the Client plugin is recreated after a page refresh', async () => {
     globalThis.WebSocket = FakeWebSocket as unknown as typeof WebSocket
-    globalThis.__DSH_INSPECTOR__ = bootstrap
+    globalThis.__RSH_INSPECTOR__ = bootstrap
     const firstContext = new Context()
     const firstFiber = firstContext.plugin({ apply })
     await firstFiber.await()
@@ -253,7 +253,7 @@ describe('experimental Inspector Client plugin', () => {
 
   it('falls back to a page-lifetime source id when session storage is unavailable', async () => {
     globalThis.WebSocket = FakeWebSocket as unknown as typeof WebSocket
-    globalThis.__DSH_INSPECTOR__ = bootstrap
+    globalThis.__RSH_INSPECTOR__ = bootstrap
     vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
       throw new DOMException('storage disabled', 'SecurityError')
     })
@@ -270,7 +270,7 @@ describe('experimental Inspector Client plugin', () => {
 
   it('cancels an outstanding Client Runtime operation without sending a late response', async () => {
     globalThis.WebSocket = FakeWebSocket as unknown as typeof WebSocket
-    globalThis.__DSH_INSPECTOR__ = bootstrap
+    globalThis.__RSH_INSPECTOR__ = bootstrap
     const ctx = new Context()
     const fiber = ctx.plugin({ apply })
     await fiber.await()
@@ -325,7 +325,7 @@ describe('experimental Inspector Client plugin', () => {
 
   it('does not report queue loss again after a replacement absorbs it', async () => {
     globalThis.WebSocket = FakeWebSocket as unknown as typeof WebSocket
-    globalThis.__DSH_INSPECTOR__ = { ...bootstrap, maxQueuedRecords: 1 }
+    globalThis.__RSH_INSPECTOR__ = { ...bootstrap, maxQueuedRecords: 1 }
     const ctx = new Context()
     const fiber = ctx.plugin({ apply })
     await fiber.await()
@@ -361,12 +361,12 @@ describe('experimental Inspector Client plugin', () => {
 
   it('discovers and serves its built Client bundle through the source protocol', async () => {
     globalThis.WebSocket = FakeWebSocket as unknown as typeof WebSocket
-    globalThis.__DSH_INSPECTOR__ = bootstrap
-    Reflect.set(globalThis, '__DSH_BOOT__', {
+    globalThis.__RSH_INSPECTOR__ = bootstrap
+    Reflect.set(globalThis, '__RSH_BOOT__', {
       rev: 'graph',
       entries: [{
-        id: '@deepseek-ai/dsh-experimental-inspector',
-        url: '/plugins/@deepseek-ai/dsh-experimental-inspector/client.js?rev=bundle-rev',
+        id: '@redspark/rsh-experimental-inspector',
+        url: '/plugins/@redspark/rsh-experimental-inspector/client.js?rev=bundle-rev',
         rev: 'bundle-rev',
       }],
     })
@@ -409,9 +409,9 @@ describe('experimental Inspector Client plugin', () => {
         outcome?: { result?: { scripts?: Array<{ scriptKey: string; url: string; sourceMapUrl: string }> } }
       }).find(frame => frame.requestId === 'source-request-1')
       const script = response?.outcome?.result?.scripts?.[0]
-      expect(script?.url).toContain('/plugins/@deepseek-ai/dsh-experimental-inspector/client.js?rev=bundle-rev')
+      expect(script?.url).toContain('/plugins/@redspark/rsh-experimental-inspector/client.js?rev=bundle-rev')
       expect(script?.sourceMapUrl)
-        .toContain('/plugins/@deepseek-ai/dsh-experimental-inspector/client.js.map?rev=bundle-rev')
+        .toContain('/plugins/@redspark/rsh-experimental-inspector/client.js.map?rev=bundle-rev')
       scriptKey = script?.scriptKey
     })
     socket.receive({
@@ -446,7 +446,7 @@ describe('experimental Inspector Client plugin', () => {
 
   it('closes the Client source when a later plugin registration fails', async () => {
     globalThis.WebSocket = FakeWebSocket as unknown as typeof WebSocket
-    globalThis.__DSH_INSPECTOR__ = bootstrap
+    globalThis.__RSH_INSPECTOR__ = bootstrap
     const ctx = new Context()
     ctx.provide('inspector', {
       publish: () => undefined,

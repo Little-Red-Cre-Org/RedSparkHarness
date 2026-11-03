@@ -1,5 +1,5 @@
 /** Durable desktop-pet preferences shared by the Host schema and browser runtime. */
-import z from '@deepseek-ai/schemastery'
+import z from '@redspark/schemastery'
 
 /** Settings namespace owned by the desktop-pet plugin. */
 export const PET_SETTINGS_NAMESPACE = 'ui-pet'

@@ -3,21 +3,21 @@ import { createRequire } from 'node:module'
 import { dirname, resolve } from 'node:path'
 import { PassThrough } from 'node:stream'
 import { fileURLToPath } from 'node:url'
-import { Context } from '@deepseek-ai/cordis'
-import Loader from '@deepseek-ai/cordis-plugin-loader'
+import { Context } from '@redspark/cordis'
+import Loader from '@redspark/cordis-plugin-loader'
 import * as yaml from 'js-yaml'
 import { describe, expect, it, vi } from 'vitest'
-import type { Agent } from '@deepseek-ai/dsh-agent'
-import type { ContentBlock } from '@deepseek-ai/dsh-llm'
-import SubagentRuntime from '@deepseek-ai/dsh-subagent'
-import SessionProjectionRegistry from '@deepseek-ai/dsh-session-projection'
-import { MAX_TIMER_DELAY_MS } from '@deepseek-ai/dsh-timeout'
+import type { Agent } from '@redspark/rsh-agent'
+import type { ContentBlock } from '@redspark/rsh-llm'
+import SubagentRuntime from '@redspark/rsh-subagent'
+import SessionProjectionRegistry from '@redspark/rsh-session-projection'
+import { MAX_TIMER_DELAY_MS } from '@redspark/rsh-timeout'
 import type {
   SubprocessHandle,
   SubprocessOutcome,
   SubprocessSpawnSpec,
-} from '@deepseek-ai/dsh-subprocess'
-import LocalSubprocessRuntime from '@deepseek-ai/dsh-subprocess-local'
+} from '@redspark/rsh-subprocess'
+import LocalSubprocessRuntime from '@redspark/rsh-subprocess-local'
 import * as codex from '../src/index.ts'
 import {
   CODEX_PERMISSION_MODES,
@@ -397,12 +397,12 @@ describe('task admission and package contracts', () => {
     }
     expect(manifest.dsh?.bundle?.patch).toBe('./cordis.patch.yml')
     expect(manifest.files).toContain('cordis.patch.yml')
-    expect(manifest.dependencies).toHaveProperty('@deepseek-ai/dsh-codex-app-server', 'workspace:^')
-    expect(manifest.dependencies).not.toHaveProperty('@deepseek-ai/dsh-json-rpc-line')
+    expect(manifest.dependencies).toHaveProperty('@redspark/rsh-codex-app-server', 'workspace:^')
+    expect(manifest.dependencies).not.toHaveProperty('@redspark/rsh-json-rpc-line')
     expect(manifest.dependencies).not.toHaveProperty('@openai/codex')
-    expect(manifest.dependencies).not.toHaveProperty('@deepseek-ai/dsh-subagent-claude-code')
+    expect(manifest.dependencies).not.toHaveProperty('@redspark/rsh-subagent-claude-code')
     expect(officialManifest.dependencies).toHaveProperty('@openai/codex', CODEX_VERSION)
-    expect(officialManifest.dependencies).toHaveProperty('@deepseek-ai/dsh-json-rpc-line', 'workspace:^')
+    expect(officialManifest.dependencies).toHaveProperty('@redspark/rsh-json-rpc-line', 'workspace:^')
     expect(officialManifest.files).toContain('lib/wire.js')
 
     const codexPackageJson = createRequire(officialPackageJson).resolve('@openai/codex/package.json')
@@ -441,7 +441,7 @@ describe('task admission and package contracts', () => {
       : []
     expect(rows).toEqual([{
       id: 'subagent-codex',
-      name: '@deepseek-ai/dsh-subagent-codex',
+      name: '@redspark/rsh-subagent-codex',
     }])
     expect(JSON.stringify(rows)).not.toContain('tool-subagent')
   })
@@ -499,10 +499,10 @@ describe('task admission and package contracts', () => {
     vi.spyOn(ctx.subprocess, 'spawn').mockImplementation((spec) => {
       spawnSpecs.push(spec)
       spec.signal?.addEventListener('abort', () => {
-        if (spec.env?.DSH_CODEX_INSTANCE === 'safe') safeChild.terminate()
+        if (spec.env?.RSH_CODEX_INSTANCE === 'safe') safeChild.terminate()
         else bypassChild.terminate()
       }, { once: true })
-      return spec.env?.DSH_CODEX_INSTANCE === 'safe'
+      return spec.env?.RSH_CODEX_INSTANCE === 'safe'
         ? safeChild.handle
         : bypassChild.handle
     })
@@ -517,14 +517,14 @@ describe('task admission and package contracts', () => {
     const safeFiber = await ctx.plugin(codex, {
       providerName: 'codex-safe',
       model: 'codex-safe-model',
-      env: { DSH_CODEX_INSTANCE: 'safe' },
+      env: { RSH_CODEX_INSTANCE: 'safe' },
       permissionMode: 'never',
       disposeGraceMs: 11,
     })
     const bypassFiber = await ctx.plugin(codex, {
       providerName: 'codex-bypass',
       model: 'codex-bypass-model',
-      env: { DSH_CODEX_INSTANCE: 'bypass' },
+      env: { RSH_CODEX_INSTANCE: 'bypass' },
       permissionMode: 'dangerously-bypass-approvals-and-sandbox',
       disposeGraceMs: 29,
     })
@@ -578,7 +578,7 @@ describe('task admission and package contracts', () => {
       stopReason: 'aborted',
     })
     expect(spawnSpecs.map(spec => ({
-      instance: spec.env?.DSH_CODEX_INSTANCE,
+      instance: spec.env?.RSH_CODEX_INSTANCE,
       graceMs: spec.graceMs,
     }))).toEqual([
       { instance: 'safe', graceMs: 11 },
@@ -768,7 +768,7 @@ describe('CodexAppServerWire', () => {
     const initialize = await child.peer.nextMethod('initialize')
     expect(initialize.params).toEqual({
       clientInfo: {
-        name: 'deepseek-harness',
+        name: 'redspark-harness',
         title: 'RedSpark Harness',
         version: '0.0.1',
       },

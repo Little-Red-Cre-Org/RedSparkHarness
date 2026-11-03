@@ -1,5 +1,5 @@
 {
-  "name": "@deepseek-ai/dsh-client-ui-settings-models",
+  "name": "@redspark/rsh-client-ui-settings-models",
   "description": "Models settings and shared product-onboarding dialogs over existing settings and credential joins",
   "version": "1.0.0",
   "publishConfig": {
@@ -28,9 +28,9 @@
   "dsh": {
     "client": {
       "inject": [
-        "@deepseek-ai/dsh-client-ui-settings",
-        "@deepseek-ai/dsh-client-locale",
-        "@deepseek-ai/dsh-api-remotes"
+        "@redspark/rsh-client-ui-settings",
+        "@redspark/rsh-client-locale",
+        "@redspark/rsh-api-remotes"
       ],
       "platform": "web"
     }
@@ -41,22 +41,22 @@
   },
   "license": "MIT",
   "peerDependencies": {
-    "@deepseek-ai/cordis": "workspace:^"
+    "@redspark/cordis": "workspace:^"
   },
   "devDependencies": {
-    "@deepseek-ai/dsh-remote-mock": "workspace:^",
-    "@deepseek-ai/dsh-api-remotes": "workspace:^",
-    "@deepseek-ai/dsh-client-locale": "workspace:^",
-    "@deepseek-ai/dsh-client-store": "workspace:^",
-    "@deepseek-ai/dsh-client-test-runtime": "workspace:^",
-    "@deepseek-ai/dsh-client-ui-primitives": "workspace:^",
-    "@deepseek-ai/dsh-client-ui-settings": "workspace:^",
-    "@deepseek-ai/dsh-client-ui-slots": "workspace:^",
+    "@redspark/rsh-remote-mock": "workspace:^",
+    "@redspark/rsh-api-remotes": "workspace:^",
+    "@redspark/rsh-client-locale": "workspace:^",
+    "@redspark/rsh-client-store": "workspace:^",
+    "@redspark/rsh-client-test-runtime": "workspace:^",
+    "@redspark/rsh-client-ui-primitives": "workspace:^",
+    "@redspark/rsh-client-ui-settings": "workspace:^",
+    "@redspark/rsh-client-ui-slots": "workspace:^",
     "@types/react": "~18.3.1",
-    "@deepseek-ai/cordis": "workspace:^",
+    "@redspark/cordis": "workspace:^",
     "react": "^18.2.0",
-    "@deepseek-ai/dsh-client-ui-renderer": "workspace:^",
-    "@deepseek-ai/dsh-util-values": "workspace:^"
+    "@redspark/rsh-client-ui-renderer": "workspace:^",
+    "@redspark/rsh-util-values": "workspace:^"
   },
   "files": [
     "lib/index.js",

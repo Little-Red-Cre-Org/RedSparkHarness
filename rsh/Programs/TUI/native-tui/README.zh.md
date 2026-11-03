@@ -3,7 +3,7 @@ description: "通过显式原生配置运行可恢复的终端对话。"
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-native-tui
+# @redspark/rsh-native-tui
 
 [English](README.md) | 中文
 

@@ -5,13 +5,13 @@ import type {
   ScopedStandardSourceBinding,
   SlotScopeAdapter,
   StandardSourceBinding,
-} from '@deepseek-ai/dsh-client-ui-slots'
-import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
-import type { SessionHeader, SessionId } from '@deepseek-ai/dsh-session/types'
-import type { MessageId } from '@deepseek-ai/dsh-llm/brand'
-import { workspaceTitleOf } from '@deepseek-ai/dsh-util-workspace-path'
-import type { NativeSessionListItem } from '@deepseek-ai/dsh-client-native-session/native'
-import type {} from '@deepseek-ai/dsh-client-ui-renderer/native'
+} from '@redspark/rsh-client-ui-slots'
+import type { NativePlugin } from '@redspark/rsh-native-runtime'
+import type { SessionHeader, SessionId } from '@redspark/rsh-session/types'
+import type { MessageId } from '@redspark/rsh-llm/brand'
+import { workspaceTitleOf } from '@redspark/rsh-util-workspace-path'
+import type { NativeSessionListItem } from '@redspark/rsh-client-native-session/native'
+import type {} from '@redspark/rsh-client-ui-renderer/native'
 import { renderSessionArea } from './client/session-provider.tsx'
 
 /** Owner currency of the per-message action strip inside the Native transcript. */
@@ -20,7 +20,7 @@ export interface NativeMessageActionsOwnerProps {
   messageId: MessageId
 }
 
-declare module '@deepseek-ai/dsh-client-ui-slots' {
+declare module '@redspark/rsh-client-ui-slots' {
   interface SlotMap {
     /** Actions adjacent to the Native Session presentation header. */
     'native.conversation.actions': { kind: 'list'; scope: 'root' }
@@ -122,7 +122,7 @@ export interface NativeConversationService {
   refreshTitle(id: SessionId): Promise<void>
 }
 
-declare module '@deepseek-ai/dsh-native-runtime' {
+declare module '@redspark/rsh-native-runtime' {
   interface NativeServices {
     /** Sole Session and Agent UI authority supplied by Native Application. */
     clientNativeConversation: NativeConversationService
@@ -131,12 +131,12 @@ declare module '@deepseek-ai/dsh-native-runtime' {
   }
 }
 
-export type { SessionId } from '@deepseek-ai/dsh-session/types'
+export type { SessionId } from '@redspark/rsh-session/types'
 
 /** Native Session presentation adapter; it does not own list or Session state. */
 export const plugin: NativePlugin = {
   apiVersion: 1,
-  name: '@deepseek-ai/dsh-client-ui-session',
+  name: '@redspark/rsh-client-ui-session',
   targets: ['client'],
   requires: ['clientNativeConversation', 'clientSlots'],
   provides: ['clientNativeSessionPresentation'],

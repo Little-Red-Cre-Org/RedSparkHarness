@@ -3,7 +3,7 @@ description: "The native one-shot Subagent Definition and selected in-process sp
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-native-subagent
+# @redspark/rsh-native-subagent
 
 [English](README.md) | 中文
 

@@ -2,10 +2,10 @@
 
 export type {
   ContentBlock,
-  DeepSeekHarnessOptions,
+  RshHarnessOptions,
   HarnessClientOptions,
   HarnessNotification,
-  NativeDeepSeekHarnessOptions,
+  NativeRshHarnessOptions,
   NotificationFilter,
   NativeExternalOperationEvent,
   NativeExternalOperationSessionEvent,
@@ -16,4 +16,4 @@ export type {
   SdkApprovalOutcome,
   SdkApprovalHandler,
   SdkPromptContentBlock,
-} from '@deepseek-ai/dsh-sdk-runtime'
+} from '@redspark/rsh-sdk-runtime'

@@ -1,8 +1,8 @@
 import { describe, expect, it, vi } from 'vitest'
-import { Context } from '@deepseek-ai/cordis'
-import z from '@deepseek-ai/schemastery'
+import { Context } from '@redspark/cordis'
+import z from '@redspark/schemastery'
 import { SettingsProvider, SettingsConflictError, type SettingsNamespace, type SettingsScope, type SettingsUpdateSource } from '../src/index.ts'
-import { deepEqualJson } from '@deepseek-ai/dsh-util-values'
+import { deepEqualJson } from '@redspark/rsh-util-values'
 import { MemorySettings } from './memory.ts'
 
 export async function typeCheckSettingsNamespaceInputs(context: Context): Promise<void> {

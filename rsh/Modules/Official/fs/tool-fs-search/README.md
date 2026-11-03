@@ -3,7 +3,7 @@ description: "The model-facing glob and grep discovery tools for users and maint
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-tool-fs-search
+# @redspark/rsh-tool-fs-search
 
 English | [中文](README.zh.md)
 
@@ -34,11 +34,11 @@ The package root is the Cordis compatibility entry; native compositions should i
 A subprocess backend, then the tools; the spill backend is optional and makes capped results fully recoverable.
 
 ```yaml
-- name: '@deepseek-ai/dsh-subprocess-local'
-- name: '@deepseek-ai/dsh-tool-fs-search'
+- name: '@redspark/rsh-subprocess-local'
+- name: '@redspark/rsh-tool-fs-search'
   config:
     sampleOverCapGlobResults: false
-- name: '@deepseek-ai/dsh-spill-local'
+- name: '@redspark/rsh-spill-local'
 ```
 
 `sampleOverCapGlobResults` is required and has no fallback: deployments choose the over-cap ordering contract explicitly. When formatted spill succeeds, both modes preserve the complete sorted list in the spill artifact.
@@ -68,7 +68,7 @@ Routine budgets stay out of the model-facing schema: a model that needs surround
 | `stderrMaxBytes` | `65536` | Diagnostic-tail budget for `rg` stderr |
 | `searchMetaMaxBytes` | `65536` | Max bytes of one search's serialized `presentationMeta`; trailing groups/paths drop past it |
 
-The generated [configuration catalog](../../../../Docs/config-catalog.md#deepseek-aidsh-tool-fs-search) is the exhaustive source for every accepted field and its JSDoc.
+The generated [configuration catalog](../../../../Docs/config-catalog.md#redsparkrsh-tool-fs-search) is the exhaustive source for every accepted field and its JSDoc.
 
 ### Deployment requirement
 
@@ -125,7 +125,7 @@ Read these pages when the package-level contract is not enough. They move from t
 - [Subprocess capability](../../../../Docs/subsystems/subprocess.md) — the spawn seam these tools execute through.
 - [Spill store](../../spill/spill/README.md) — the optional backend that makes capped results fully recoverable.
 - [Timeout utility](../../../../Core/util/timeout/README.md) — the `MAX_TIMER_DELAY_MS` bound on the terminate grace.
-- [Generated tool catalog](../../../../Docs/tool-catalog.md#deepseek-aidsh-tool-fs-search) — the exhaustive schemas this package registers.
+- [Generated tool catalog](../../../../Docs/tool-catalog.md#redsparkrsh-tool-fs-search) — the exhaustive schemas this package registers.
 
 -----
 
@@ -168,7 +168,7 @@ Prefix-stable while the visible tool set, plugin scope, sampling choice, and gui
 
 #### What the model sees
 
-The glob description states the configured over-cap ordering. The generated [`glob` and `grep` schemas](../../../../Docs/tool-catalog.md#deepseek-aidsh-tool-fs-search) use `sampleOverCapGlobResults: true`; the tools are registered unconditionally.
+The glob description states the configured over-cap ordering. The generated [`glob` and `grep` schemas](../../../../Docs/tool-catalog.md#redsparkrsh-tool-fs-search) use `sampleOverCapGlobResults: true`; the tools are registered unconditionally.
 
 #### Token effect
 

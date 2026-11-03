@@ -1,7 +1,7 @@
 /**
  * Electron child-process entry: boots the desktop project without a listening
  * socket and carries API plus validated Web assets over framed byte pipes.
- * @module @deepseek-ai/dsh-desktop-host
+ * @module @redspark/rsh-desktop-host
  */
 
 import { mkdirSync, readFileSync } from 'node:fs'
@@ -9,7 +9,7 @@ import { once } from 'node:events'
 import { createRequire } from 'node:module'
 import { join, resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
-import { profileDirectoryRuntime } from '@deepseek-ai/dsh/native-profile'
+import { profileDirectoryRuntime } from '@redspark/rsh/native-profile'
 import type { DesktopHostRuntime } from './runtime.ts'
 import { openDesktopHostPipes } from './pipes.ts'
 import {
@@ -44,7 +44,7 @@ export type DesktopHostCommand = {
 export type DesktopHostEvent = {
   readonly type: 'ready'
   readonly protocolVersion: typeof DESKTOP_HOST_PROTOCOL_VERSION
-  readonly dshVersion: string
+  readonly rshVersion: string
 } | {
   readonly type: 'fatal'
   readonly errorType: 'AggregateError' | 'Error' | 'RangeError' | 'SyntaxError' | 'TypeError' | 'UnknownError' | 'ValidationError'
@@ -57,7 +57,7 @@ type DesktopHostFailure = Extract<DesktopHostEvent, { type: 'fatal' }>
 const errorTypes = new Set<DesktopHostFailure['errorType']>([
   'AggregateError', 'Error', 'RangeError', 'SyntaxError', 'TypeError', 'ValidationError',
 ])
-const COMPATIBILITY_HOST_PACKAGE = '@deepseek-ai/dsh-desktop-host-compatibility'
+const COMPATIBILITY_HOST_PACKAGE = '@redspark/rsh-desktop-host-compatibility'
 
 async function createCompatibilityRuntime(
   runtimeDir: string, projectDir: string, allowLinkedPackages: boolean,
@@ -69,7 +69,7 @@ async function createCompatibilityRuntime(
   } catch (error) {
     throw new Error('dsh desktop: legacy bundles require the separately installed Desktop compatibility Host; profile files were preserved', { cause: error })
   }
-  const compatibility = await import(pathToFileURL(entry).href) as typeof import('@deepseek-ai/dsh-desktop-host-compatibility')
+  const compatibility = await import(pathToFileURL(entry).href) as typeof import('@redspark/rsh-desktop-host-compatibility')
   return compatibility.createLegacyDesktopRuntime(runtimeDir, projectDir, allowLinkedPackages)
 }
 
@@ -118,7 +118,7 @@ function errorChain(error: unknown): Error[] {
 /** Controller returned to tests and the self-executing process entry. */
 export interface DesktopHostController {
   /** Installed dsh version carried by this host. */
-  readonly dshVersion: string
+  readonly rshVersion: string
   /** Dispatch one custom-protocol request and stream its response to the response pipe. */
   fetch(command: DesktopHostFetchCommand, body: ReadableStream<Uint8Array> | null): Promise<void>
   /** Abort one in-flight request. */
@@ -136,8 +136,8 @@ function isDesktopHostCommand(message: unknown): message is DesktopHostCommand {
     && (message as Record<string, unknown>).type === 'shutdown'
 }
 
-function dshVersion(runtimeDir: string): string {
-  const value: unknown = JSON.parse(readFileSync(join(runtimeDir, 'node_modules', '@deepseek-ai', 'dsh', 'package.json'), 'utf8'))
+function rshVersion(runtimeDir: string): string {
+  const value: unknown = JSON.parse(readFileSync(join(runtimeDir, 'node_modules', '@redspark', 'rsh', 'package.json'), 'utf8'))
   if (!isRecord(value) || typeof value.version !== 'string') throw new Error('dsh desktop: installed dsh manifest has no version')
   return value.version
 }
@@ -163,7 +163,7 @@ export async function runDesktopHost(
   const absoluteProject = resolve(projectDir)
   mkdirSync(absoluteProject, { recursive: true })
   const absoluteRuntime = resolve(runtimeDir)
-  const version = dshVersion(absoluteRuntime)
+  const version = rshVersion(absoluteRuntime)
   const allowLinkedPackages = options.allowLinkedPackages === true
   const runtime = profileDirectoryRuntime(absoluteProject) === 'native'
     ? await import('./native-host.ts').then(module => module.createNativeDesktopRuntime(absoluteRuntime, absoluteProject, allowLinkedPackages))
@@ -181,7 +181,7 @@ export async function runDesktopHost(
   }
 
   return {
-    dshVersion: version,
+    rshVersion: version,
     cancel(streamId) {
       requests.get(streamId)?.abort()
     },
@@ -267,7 +267,7 @@ async function main(): Promise<void> {
   send({
     type: 'ready',
     protocolVersion: DESKTOP_HOST_PROTOCOL_VERSION,
-    dshVersion: controller.dshVersion,
+    rshVersion: controller.rshVersion,
   })
   const decoder = new DesktopHostRequestDecoder()
   const requestBodies = new Map<number, ReadableStreamDefaultController<Uint8Array>>()

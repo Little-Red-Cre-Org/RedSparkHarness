@@ -2,13 +2,13 @@ import { mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { expect, it } from 'vitest'
-import { NativeScope } from '@deepseek-ai/dsh-native-runtime'
-import { NativeAgentPresetRegistry } from '@deepseek-ai/dsh-agent-presets/native'
+import { NativeScope } from '@redspark/rsh-native-runtime'
+import { NativeAgentPresetRegistry } from '@redspark/rsh-agent-presets/native'
 import { NativeWebSettingsEvents } from '../src/settings-events.ts'
 import { NativeWebSessionService, resolveNativeWebSessionConfig } from '../src/native.ts'
-import type { NativeHeadlessApplication } from '@deepseek-ai/dsh-native-headless/native'
-import type { NativeSessionPersistenceOperations } from '@deepseek-ai/dsh-session-persistence/native'
-import type { NativeActiveSessionOperations } from '@deepseek-ai/dsh-native-session-execution'
+import type { NativeHeadlessApplication } from '@redspark/rsh-native-headless/native'
+import type { NativeSessionPersistenceOperations } from '@redspark/rsh-session-persistence/native'
+import type { NativeActiveSessionOperations } from '@redspark/rsh-native-session-execution'
 
 it('reads, copies and deletes native preset folders and publishes each roster update', async () => {
   const home = await mkdtemp(join(tmpdir(), 'dsh-native-agent-presets-'))

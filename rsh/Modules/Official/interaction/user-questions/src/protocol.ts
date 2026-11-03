@@ -1,5 +1,5 @@
 /** Framework-free human question and answer values shared by all application interfaces. */
-import type { Branded } from '@deepseek-ai/dsh-brand'
+import type { Branded } from '@redspark/rsh-brand'
 
 /** Opaque identity of one pending human interaction. */
 export type NativeQuestionRequestId = Branded<'NativeQuestionRequestId'>

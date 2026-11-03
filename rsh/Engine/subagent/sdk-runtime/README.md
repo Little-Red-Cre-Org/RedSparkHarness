@@ -3,7 +3,7 @@ description: "Engine-owned, provider-neutral TypeScript SDK protocol runtime and
 kind: "package-library"
 ---
 
-# @deepseek-ai/dsh-sdk-runtime
+# @redspark/rsh-sdk-runtime
 
 English | [中文](README.zh.md)
 
@@ -25,7 +25,7 @@ English | [中文](README.zh.md)
 <a id="use-this-package"></a>
 ## Use this package
 
-The package exports the shared `HarnessClient`, `DeepSeekHarness`, Session handle, result and notification types, and the runtime seam used by the Native child Module. Its `NativeExternalOperationEvent` export is the canonical Engine union, and `NativeExternalOperationSessionEvent` is the corresponding required-on-read `SessionEvent` envelope. It depends on the named [SDK wire protocol](../sdk-protocol/README.md), Core's `ChildConnection`, and the canonical Native Subagent type package; its native entry adds only the `sdkChildRuntimeLauncher` service contract to the Native Host type surface. The launcher remains implemented by Programs so this Engine package neither locates `dsh` nor accepts caller-controlled argv.
+The package exports the shared `HarnessClient`, `RedSparkHarness`, Session handle, result and notification types, and the runtime seam used by the Native child Module. Its `NativeExternalOperationEvent` export is the canonical Engine union, and `NativeExternalOperationSessionEvent` is the corresponding required-on-read `SessionEvent` envelope. It depends on the named [SDK wire protocol](../sdk-protocol/README.md), Core's `ChildConnection`, and the canonical Native Subagent type package; its native entry adds only the `sdkChildRuntimeLauncher` service contract to the Native Host type surface. The launcher remains implemented by Programs so this Engine package neither locates `dsh` nor accepts caller-controlled argv.
 
 The `createNativeSdkChildHarness` helper binds the same client implementation to a Program-selected runtime and managed connection. A run performs the protocol initialize handshake before prompts, and requested `maxSteps` must be negotiated by the Native server at an effective positive value no greater than the requested cap. `maxTokens` retains its per-model-output meaning. Session cancel, steer, fork, notification subscriptions, EOF handling, and managed-range disposal all use the shared implementation.
 
@@ -80,4 +80,4 @@ Each child Session has its own request history; this transport does not alter re
 <a id="dev-note"></a>
 ### Dev Note
 
-The public package names remain `@deepseek-ai/dsh-sdk-runtime` and `@deepseek-ai/dsh-sdk-client`; moving the shared implementation does not add a second transport or alter the caller-facing Program facade.
+The public package names remain `@redspark/rsh-sdk-runtime` and `@redspark/rsh-sdk-client`; moving the shared implementation does not add a second transport or alter the caller-facing Program facade.

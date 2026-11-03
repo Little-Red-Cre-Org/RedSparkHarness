@@ -1,8 +1,8 @@
 /** Host registration for the browser theme preference and pre-plugin palette. */
 
-import type { Context } from '@deepseek-ai/cordis'
-import type {} from '@deepseek-ai/dsh-http-routes-cordis'
-import type {} from '@deepseek-ai/dsh-compat-settings-definition'
+import type { Context } from '@redspark/cordis'
+import type {} from '@redspark/rsh-http-routes-cordis'
+import type {} from '@redspark/rsh-compat-settings-definition'
 import { bootThemeInjection } from './boot-theme.ts'
 import {
   DEFAULT_FONT_SIZE, DEFAULT_PREFERENCE, THEME_SETTINGS_NAMESPACE, ThemeSettingsSchema,

@@ -1,8 +1,8 @@
-import type { Context } from '@deepseek-ai/cordis'
+import type { Context } from '@redspark/cordis'
 import type {
   ConversationMatch, ConversationNodeDefinition, RequestView,
-} from '@deepseek-ai/dsh-client-ui-conversation/native-types'
-import type {} from '@deepseek-ai/dsh-compaction/types'
+} from '@redspark/rsh-client-ui-conversation/native-types'
+import type {} from '@redspark/rsh-compaction/types'
 import { trajectoryNode } from './trajectory-definition-common.ts'
 
 interface CompactionState {

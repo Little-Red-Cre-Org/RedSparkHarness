@@ -1,11 +1,11 @@
 /**
  * Internal sandbox-result classification helpers.
  *
- * @module @deepseek-ai/dsh-bash-sandbox/helpers
+ * @module @redspark/rsh-bash-sandbox/helpers
  */
 
-import type { ShellRunResult } from '@deepseek-ai/dsh-shell/native'
-export { classifyRunnerFailure, isRunnerSpawnFailure } from '@deepseek-ai/dsh-sandbox/native'
+import type { ShellRunResult } from '@redspark/rsh-shell/native'
+export { classifyRunnerFailure, isRunnerSpawnFailure } from '@redspark/rsh-sandbox/native'
 
 /**
  * Classify a failed run against the selected backend's denial dialect.

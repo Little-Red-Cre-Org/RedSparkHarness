@@ -331,11 +331,11 @@ beforeEach(() => {
   vi.clearAllMocks()
   vi.useFakeTimers()
   harness.reset()
-  vi.stubEnv('DSH_DESKTOP_NODE_BINARY', 'test-node')
-  vi.stubEnv('DSH_DESKTOP_PNPM_ENTRY', 'test-pnpm')
-  vi.stubEnv('DSH_DESKTOP_DSH_DIR', 'test-runtime')
+  vi.stubEnv('RSH_DESKTOP_NODE_BINARY', 'test-node')
+  vi.stubEnv('RSH_DESKTOP_PNPM_ENTRY', 'test-pnpm')
+  vi.stubEnv('RSH_DESKTOP_RSH_DIR', 'test-runtime')
   vi.stubGlobal('process', { ...process, resourcesPath: resources })
-  vi.stubEnv('DSH_DESKTOP_HOST_INSPECT_PORT', undefined)
+  vi.stubEnv('RSH_DESKTOP_HOST_INSPECT_PORT', undefined)
 })
 
 afterEach(async () => {
@@ -472,7 +472,7 @@ describe('desktop main startup', () => {
     const normalPage = new JSDOM(readFileSync(new URL('../renderer/startup.html', import.meta.url), 'utf8'), {
       runScripts: 'outside-only',
     })
-    Object.defineProperty(normalPage.window, 'dshDesktop', { value: {
+    Object.defineProperty(normalPage.window, 'rshDesktop', { value: {
       protocolVersion: 1,
       locale: async () => resolveDesktopLocale('en'),
       backend: { status: async () => state, subscribe: () => () => {} },

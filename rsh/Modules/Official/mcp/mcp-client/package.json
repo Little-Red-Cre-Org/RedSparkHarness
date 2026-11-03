@@ -1,5 +1,5 @@
 {
-  "name": "@deepseek-ai/dsh-mcp-client",
+  "name": "@redspark/rsh-mcp-client",
   "description": "MCP client bridge: connects to MCP servers and registers their tools on ctx.tools",
   "version": "1.0.0",
   "publishConfig": {
@@ -43,34 +43,34 @@
   ],
   "license": "MIT",
   "peerDependencies": {
-    "@deepseek-ai/dsh-scope": "workspace:^",
-    "@deepseek-ai/dsh-tools": "workspace:^",
-    "@deepseek-ai/cordis": "workspace:^"
+    "@redspark/rsh-scope": "workspace:^",
+    "@redspark/rsh-tools": "workspace:^",
+    "@redspark/cordis": "workspace:^"
   },
   "dependencies": {
     "@agentclientprotocol/sdk": "1.4.0",
     "@modelcontextprotocol/sdk": "^1.32.1",
-    "@deepseek-ai/schemastery": "workspace:^",
+    "@redspark/schemastery": "workspace:^",
     "zod": "^4.4.3",
-    "@deepseek-ai/dsh-native-runtime": "workspace:^",
-    "@deepseek-ai/dsh-native-tools": "workspace:^",
-    "@deepseek-ai/dsh-native-model-execution": "workspace:^",
-    "@deepseek-ai/dsh-util-values": "workspace:^",
-    "@deepseek-ai/dsh-attachment": "workspace:^",
-    "@deepseek-ai/dsh-llm": "workspace:^",
-    "@deepseek-ai/dsh-subprocess": "workspace:^",
-    "@deepseek-ai/dsh-timeout": "workspace:^"
+    "@redspark/rsh-native-runtime": "workspace:^",
+    "@redspark/rsh-native-tools": "workspace:^",
+    "@redspark/rsh-native-model-execution": "workspace:^",
+    "@redspark/rsh-util-values": "workspace:^",
+    "@redspark/rsh-attachment": "workspace:^",
+    "@redspark/rsh-llm": "workspace:^",
+    "@redspark/rsh-subprocess": "workspace:^",
+    "@redspark/rsh-timeout": "workspace:^"
   },
   "devDependencies": {
-    "@deepseek-ai/dsh-attachment-local": "workspace:^",
-    "@deepseek-ai/dsh-scope": "workspace:^",
-    "@deepseek-ai/dsh-tools": "workspace:^",
+    "@redspark/rsh-attachment-local": "workspace:^",
+    "@redspark/rsh-scope": "workspace:^",
+    "@redspark/rsh-tools": "workspace:^",
     "@modelcontextprotocol/server-everything": "^2026.7.4",
     "@modelcontextprotocol/server-filesystem": "^2026.7.4",
-    "@deepseek-ai/cordis": "workspace:^",
-    "@deepseek-ai/dsh-http-proxy": "workspace:^",
-    "@deepseek-ai/dsh-native-agent": "workspace:^",
-    "@deepseek-ai/dsh-session": "workspace:^"
+    "@redspark/cordis": "workspace:^",
+    "@redspark/rsh-http-proxy": "workspace:^",
+    "@redspark/rsh-native-agent": "workspace:^",
+    "@redspark/rsh-session": "workspace:^"
   },
   "dsh": {
     "native": {
@@ -90,13 +90,13 @@
     }
   },
   "peerDependenciesMeta": {
-    "@deepseek-ai/dsh-scope": {
+    "@redspark/rsh-scope": {
       "optional": true
     },
-    "@deepseek-ai/dsh-tools": {
+    "@redspark/rsh-tools": {
       "optional": true
     },
-    "@deepseek-ai/cordis": {
+    "@redspark/cordis": {
       "optional": true
     }
   }

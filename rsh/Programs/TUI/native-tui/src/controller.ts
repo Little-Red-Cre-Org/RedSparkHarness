@@ -1,18 +1,18 @@
 /** Terminal conversation admission, cancellation and durable observation without Ink resources. */
-import type { NativeHeadlessApplication } from '@deepseek-ai/dsh-native-headless/native'
-import { SessionId } from '@deepseek-ai/dsh-session/native'
-import type { UserMessage } from '@deepseek-ai/dsh-llm/native'
-import type { SessionEvent } from '@deepseek-ai/dsh-session/types'
+import type { NativeHeadlessApplication } from '@redspark/rsh-native-headless/native'
+import { SessionId } from '@redspark/rsh-session/native'
+import type { UserMessage } from '@redspark/rsh-llm/native'
+import type { SessionEvent } from '@redspark/rsh-session/types'
 import type { TerminalInteraction, TerminalState } from './presentation.ts'
 import { resolveNativeTuiArgs, type Config } from './config.ts'
 import { terminalCopy } from './locale.ts'
 import type { TerminalModelOperations, TerminalModelState } from './models.ts'
-import type { NativeModelSelectionRequest } from '@deepseek-ai/dsh-native-model-selection/types'
-import { applyModelSelectionProjection, type ModelSelectionProjectionState } from '@deepseek-ai/dsh-native-model-execution/model-selection'
+import type { NativeModelSelectionRequest } from '@redspark/rsh-native-model-selection/types'
+import { applyModelSelectionProjection, type ModelSelectionProjectionState } from '@redspark/rsh-native-model-execution/model-selection'
 import { TerminalHumanInteraction, type TerminalHumanPrompt } from './human.ts'
 import type { TerminalPresetOperations, TerminalPresetState } from './presets.ts'
-import type { NativeAgentPresetSelectionRequest } from '@deepseek-ai/dsh-agent-presets/selection'
-import type { CommandDescriptor, CommandExecution } from '@deepseek-ai/dsh-commands/native'
+import type { NativeAgentPresetSelectionRequest } from '@redspark/rsh-agent-presets/selection'
+import type { CommandDescriptor, CommandExecution } from '@redspark/rsh-commands/native'
 
 /** Human command operations routed through the selected root Session owner. */
 export interface TerminalCommandOperations {

@@ -2,13 +2,13 @@
 
 import type { IncomingMessage, ServerResponse } from 'node:http'
 import { Webhooks } from '@octokit/webhooks'
-import { snapshotJsonValue } from '@deepseek-ai/dsh-util-values'
-import type { HttpRoute } from '@deepseek-ai/dsh-http-routes/host'
+import { snapshotJsonValue } from '@redspark/rsh-util-values'
+import type { HttpRoute } from '@redspark/rsh-http-routes/host'
 import {
   WebhookDeliveryId,
   WebhookSourceId,
-} from '@deepseek-ai/dsh-webhook/definition'
-import type { VerifiedWebhookDelivery } from '@deepseek-ai/dsh-webhook/types'
+} from '@redspark/rsh-webhook/definition'
+import type { VerifiedWebhookDelivery } from '@redspark/rsh-webhook/types'
 import { readBoundedUtf8Body, WebhookHttpError } from './body.ts'
 import type { GitHubJsonObject } from './types.ts'
 

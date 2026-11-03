@@ -1,5 +1,5 @@
-import { Context } from '@deepseek-ai/cordis'
-import { SettingsProvider, type SettingsNamespace } from '@deepseek-ai/dsh-settings'
+import { Context } from '@redspark/cordis'
+import { SettingsProvider, type SettingsNamespace } from '@redspark/rsh-settings'
 import { describe, expect, it } from 'vitest'
 import { apply, PET_SETTINGS_NAMESPACE } from '../src/index.ts'
 

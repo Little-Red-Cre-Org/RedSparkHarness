@@ -1,20 +1,20 @@
 /** Real Program composition shared by model intent and carrier tests. */
 import { mkdtemp, rm, writeFile } from 'node:fs/promises'
-import type { NativeSessionPersistenceOperations } from '@deepseek-ai/dsh-session-persistence/native'
+import type { NativeSessionPersistenceOperations } from '@redspark/rsh-session-persistence/native'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { brandString } from '@deepseek-ai/dsh-brand'
-import { NativeHost, NativeScope, resolveInstallation, type NativePlugin } from '@deepseek-ai/dsh-native-runtime'
-import { localFilesystemPlugin } from '@deepseek-ai/dsh-fs-local/native'
-import { plugin as storagePlugin } from '@deepseek-ai/dsh-session-persistence-jsonl/native'
-import { plugin as agentPlugin } from '@deepseek-ai/dsh-native-agent'
-import { plugin as executionPlugin, type NativeRootExecutionOperations, type NativeRootRouteId, type NativeActiveSessionOperations } from '@deepseek-ai/dsh-native-session-execution'
-import { plugin as modelExecutionPlugin } from '@deepseek-ai/dsh-native-model-execution/native'
-import type { NativeModel } from '@deepseek-ai/dsh-native-model-execution'
-import { createNativeHeadlessApplication, plugin as appPlugin } from '@deepseek-ai/dsh-native-headless/native'
-import { plugin as instructionsPlugin } from '@deepseek-ai/dsh-agent-instructions/native'
-import { SessionId, type SessionEvent } from '@deepseek-ai/dsh-session/native'
-import { type LlmResolvedModelInfo, type ReasoningEffortId } from '@deepseek-ai/dsh-llm/native'
+import { brandString } from '@redspark/rsh-brand'
+import { NativeHost, NativeScope, resolveInstallation, type NativePlugin } from '@redspark/rsh-native-runtime'
+import { localFilesystemPlugin } from '@redspark/rsh-fs-local/native'
+import { plugin as storagePlugin } from '@redspark/rsh-session-persistence-jsonl/native'
+import { plugin as agentPlugin } from '@redspark/rsh-native-agent'
+import { plugin as executionPlugin, type NativeRootExecutionOperations, type NativeRootRouteId, type NativeActiveSessionOperations } from '@redspark/rsh-native-session-execution'
+import { plugin as modelExecutionPlugin } from '@redspark/rsh-native-model-execution/native'
+import type { NativeModel } from '@redspark/rsh-native-model-execution'
+import { createNativeHeadlessApplication, plugin as appPlugin } from '@redspark/rsh-native-headless/native'
+import { plugin as instructionsPlugin } from '@redspark/rsh-agent-instructions/native'
+import { SessionId, type SessionEvent } from '@redspark/rsh-session/native'
+import { type LlmResolvedModelInfo, type ReasoningEffortId } from '@redspark/rsh-llm/native'
 import { plugin } from '../src/native.ts'
 import type { NativeModelSelectionOperations } from '../src/definition.ts'
 
@@ -69,7 +69,7 @@ export async function fixture(resolve: (provider: string, model: string, signal:
   }
   const host = new NativeHost(resolveInstallation([
     { plugin: capture, scope, config: undefined }, { plugin, scope, config: undefined },
-    { plugin: instructionsPlugin, scope, config: { maxBytes: 65_536, dshHome: home } },
+    { plugin: instructionsPlugin, scope, config: { maxBytes: 65_536, rshHome: home } },
     { plugin: application, scope, config: appConfig },
     { plugin: executionPlugin, scope, config: undefined }, { plugin: agentPlugin, scope, config: undefined },
     { plugin: modelExecutionPlugin, scope, config: undefined }, { plugin: models, scope, config: undefined },

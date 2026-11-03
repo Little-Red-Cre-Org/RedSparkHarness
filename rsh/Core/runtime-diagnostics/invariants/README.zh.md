@@ -3,7 +3,7 @@ description: "用于实时组合的运行时不变量检查：运行包自有检
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-invariants
+# @redspark/rsh-invariants
 
 [English](README.md) | 中文
 
@@ -36,11 +36,11 @@ kind: "package-reference"
 注册表默认启用，并在没有过滤器的情况下检查每个已注册的包。用 `enabled` 作全局开关，用 `package_allowlist` 只接纳指定包，用 `package_blocklist` 在 allowlist 匹配之后排除包——blocklist 匹配优先于 allowlist 匹配。模式是区分大小写的 JavaScript 正则表达式源（除非自带 `^` 与 `$`，否则不锚定）；无效、空白或重复的条目会使服务启动失败，而不是被跳过。
 
 ```yaml
-- name: '@deepseek-ai/dsh-invariants'
+- name: '@redspark/rsh-invariants'
   config:
     enabled: true
     package_allowlist:
-      - '^@deepseek-ai/dsh-'
+      - '^@redspark/rsh-'
 ```
 
 | 字段 | 默认值 | 含义 |
@@ -49,7 +49,7 @@ kind: "package-reference"
 | `package_allowlist` | `[]` | 接纳包名的正则源；为空则全部接纳 |
 | `package_blocklist` | `[]` | 在 allowlist 匹配之后排除包名的正则源 |
 
-生成的[配置目录](../../../Docs/config-catalog.zh.md#deepseek-aidsh-invariants)是每个受支持字段及其 JSDoc 的穷尽式真源。
+生成的[配置目录](../../../Docs/config-catalog.zh.md#redsparkrsh-invariants)是每个受支持字段及其 JSDoc 的穷尽式真源。
 
 ### 运行哪些检查
 
@@ -75,9 +75,9 @@ kind: "package-reference"
 配套入口就是挂载在注册表旁的普通插件。它声明所需的服务，并以其包的精确 npm 名称注册；注册表会先完成其设置再完成注册。
 
 ```ts
-import type { Context } from '@deepseek-ai/cordis'
-import InvariantRegistry from '@deepseek-ai/dsh-invariants'
-import * as SessionInvariant from '@deepseek-ai/dsh-session/invariant'
+import type { Context } from '@redspark/cordis'
+import InvariantRegistry from '@redspark/rsh-invariants'
+import * as SessionInvariant from '@redspark/rsh-session/invariant'
 
 declare const ctx: Context
 
@@ -127,7 +127,7 @@ ctx.plugin(SessionInvariant)
 当包级约定不够用时阅读以下页面。它们从生成的服务参考逐步进入决策证据与组地图。
 
 - [运行时不变量子系统](../../../Docs/subsystems/invariants.zh.md)——`Config`、installer、服务与配套入口约定的生成参考。
-- [生成的配置目录](../../../Docs/config-catalog.zh.md#deepseek-aidsh-invariants)——每个受支持配置字段及其源声明。
+- [生成的配置目录](../../../Docs/config-catalog.zh.md#redsparkrsh-invariants)——每个受支持配置字段及其源声明。
 - [运行时不变量约定 Agent Note](../../../../.agents/notes/implemented/architecture/2026-07-19-package-invariant-runtime-contracts.zh.md)——运行时不变量可以断言什么，以及强制配套入口接线的机械门禁。
 - [runtime-diagnostics 组地图](../../../../README.zh.md)——相邻的诊断包。
 

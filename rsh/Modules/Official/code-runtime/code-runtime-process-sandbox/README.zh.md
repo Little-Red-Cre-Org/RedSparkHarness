@@ -3,7 +3,7 @@ description: "通过原生进程沙箱运行模型编写的 TypeScript，并限�
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-code-runtime-process-sandbox
+# @redspark/rsh-code-runtime-process-sandbox
 
 [English](README.md) | 中文
 

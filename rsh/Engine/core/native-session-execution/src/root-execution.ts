@@ -1,16 +1,16 @@
 /** Program-selected root execution with immutable routing and exact maintenance ownership. */
-import type { NativeAgentPresetFacts, NativeAgentPresetSelectionRequest } from '@deepseek-ai/dsh-agent-presets/selection'
+import type { NativeAgentPresetFacts, NativeAgentPresetSelectionRequest } from '@redspark/rsh-agent-presets/selection'
 import type { NativeRootRouteId } from './root-route.ts'
 export type { NativeRootRouteId } from './root-route.ts'
-import type { UserMessage } from '@deepseek-ai/dsh-llm/native'
-import type { SessionEvent, SessionId, SessionSeq } from '@deepseek-ai/dsh-session/native'
-import type { WorkspaceId } from '@deepseek-ai/dsh-workspace-definition'
+import type { UserMessage } from '@redspark/rsh-llm/native'
+import type { SessionEvent, SessionId, SessionSeq } from '@redspark/rsh-session/native'
+import type { WorkspaceId } from '@redspark/rsh-workspace-definition'
 import type { NativeActiveSessionOwner } from './active-session.ts'
 import type { NativeSessionConfiguration, NativeSessionTurnResult } from './index.ts'
-import type { SessionDeletionId, SessionDeletionReceipt } from '@deepseek-ai/dsh-session-persistence/native'
+import type { SessionDeletionId, SessionDeletionReceipt } from '@redspark/rsh-session-persistence/native'
 import type { NativeSessionOwnerApproval } from './execution-policy.ts'
-import type { Branded } from '@deepseek-ai/dsh-brand'
-import type { MessageId } from '@deepseek-ai/dsh-llm/native'
+import type { Branded } from '@redspark/rsh-brand'
+import type { MessageId } from '@redspark/rsh-llm/native'
 
 /** Program-local identity returned for one staged file upload. */
 export type NativeStagedFileReceiptId = Branded<'NativeStagedFileReceiptId'>
@@ -273,7 +273,7 @@ export interface NativeRootExecutionOperations {
     signal: AbortSignal): Promise<NativeAgentPresetFacts>
 }
 
-declare module '@deepseek-ai/dsh-native-runtime' {
+declare module '@redspark/rsh-native-runtime' {
   interface NativeServices {
     rootExecution: NativeRootExecutionOperations
   }

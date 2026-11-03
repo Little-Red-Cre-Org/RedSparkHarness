@@ -3,7 +3,7 @@ description: "Native 的 standard 预设可以通过 Cordis 桥接运行随包�
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-native-persona
+# @redspark/rsh-native-persona
 
 [English](README.md) | 中文
 

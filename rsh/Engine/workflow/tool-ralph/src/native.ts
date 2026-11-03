@@ -1,13 +1,13 @@
 /** Native fixed-script Ralph Consumer over the shared workflow and fresh Subagent Definitions. */
 import z from 'zod'
-import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
-import type { NativeToolExecution } from '@deepseek-ai/dsh-native-tools'
-import type { NativeSubagentOperations } from '@deepseek-ai/dsh-native-subagent/native'
-import type { NativeWorkflowOperations } from '@deepseek-ai/dsh-workflow/native'
-import { runNativeForegroundWorkflow } from '@deepseek-ai/dsh-tool-workflow/foreground'
-import type { JsonValue } from '@deepseek-ai/dsh-util-values'
-import type { WorkflowRunId } from '@deepseek-ai/dsh-workflow/types'
-import type {} from '@deepseek-ai/dsh-native-prompt/native'
+import type { NativePlugin } from '@redspark/rsh-native-runtime'
+import type { NativeToolExecution } from '@redspark/rsh-native-tools'
+import type { NativeSubagentOperations } from '@redspark/rsh-native-subagent/native'
+import type { NativeWorkflowOperations } from '@redspark/rsh-workflow/native'
+import { runNativeForegroundWorkflow } from '@redspark/rsh-tool-workflow/foreground'
+import type { JsonValue } from '@redspark/rsh-util-values'
+import type { WorkflowRunId } from '@redspark/rsh-workflow/types'
+import type {} from '@redspark/rsh-native-prompt/native'
 import { RALPH_META, RALPH_SCRIPT, DESCRIPTION, resolveMaxRounds, readRunResult, stopReasonError, renderResult,
   renderRoundFailure, type RalphRunResult } from './runtime.ts'
 
@@ -64,7 +64,7 @@ export async function executeNativeRalph(workflow: NativeWorkflowOperations, sub
 
 /** Fixed-script Consumer; installation disposal cancels and drains its accepted executions. */
 export const plugin: NativePlugin = {
-  apiVersion: 1, name: '@deepseek-ai/dsh-tool-ralph', targets: ['host'],
+  apiVersion: 1, name: '@redspark/rsh-tool-ralph', targets: ['host'],
   requires: ['tools', 'workflow', 'subagents', 'promptSections'], provides: [],
   resolve(input) {
     const config = resolveNativeRalphConfig(input)

@@ -3,7 +3,7 @@ description: "Pure shared Subagent descriptors, assistant-output folding, stop-r
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-subagent-protocol
+# @redspark/rsh-subagent-protocol
 
 [English](README.md) | 中文
 

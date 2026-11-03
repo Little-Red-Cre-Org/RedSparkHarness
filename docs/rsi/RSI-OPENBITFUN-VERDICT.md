@@ -47,7 +47,7 @@ lib.rs:71 | pub mod session_state;
 `src/crates/adapters/dsh-adapter/src/lib.rs:1-7` 原文：
 
 ```rust
-//! DeepSeek Harness (`dsh`) bundle source adapter.
+//! RedSpark Harness (`dsh`) bundle source adapter.
 //!
 //! The production surface is intentionally small: load a `dsh`-compatible
 //! managed package (its `package.json` bundle/profile declaration and any
@@ -59,12 +59,12 @@ lib.rs:71 | pub mod session_state;
 `session.rs:1` 更直接：
 
 ```rust
-//! Read-only DeepSeek Harness v0 transcripts; no Cordis or CLI execution.
+//! Read-only RedSpark Harness v0 transcripts; no Cordis or CLI execution.
 ```
 
 它只做两件事：
 1. **插件源投影**：把一份 `package.json` 里 `dsh.bundle.patch` / `dsh.profile.bundles` 声明的 Cordis 插件行，投影成 OpenBitFun 的"插件源"（`source_adapter.rs:307 pub fn load_dsh_package_adapter`）。
-2. **会话导入**：只读 `$DSH_HOME/sessions/**/session.jsonl`（`session.rs:14 SOURCE_REVISION = "dsh-session-v1"`，`session.rs:23 ECOSYSTEM = "deepseek-harness"`，`session.rs:62` 只匹配 `session.jsonl` 或 `session.jsonl.zstd`）。
+2. **会话导入**：只读 `$RSH_HOME/sessions/**/session.jsonl`（`session.rs:14 SOURCE_REVISION = "dsh-session-v1"`，`session.rs:23 ECOSYSTEM = "redspark-harness"`，`session.rs:62` 只匹配 `session.jsonl` 或 `session.jsonl.zstd`）。
 
 **它跟"把 RSI 引擎接进来"没有关系。** 它接的是 dsh 的**配置文件和历史记录**，不是 dsh 的运行时。
 
@@ -141,21 +141,21 @@ command
 BuiltinAcpClientPreset {
     id: "dsh",
     command: "dsh",
-    args: &["--profile", DSH_BUNDLED_PROFILE],
+    args: &["--profile", RSH_BUNDLED_PROFILE],
     tool_command: "dsh",
-    install_package: Some("@deepseek-ai/dsh"),
+    install_package: Some("@redspark/dsh"),
     adapter_package: None,
     adapter_bin: None,
-    bundled_profile: Some(DSH_BUNDLED_PROFILE),
+    bundled_profile: Some(RSH_BUNDLED_PROFILE),
 },
 ```
 
-`DSH_BUNDLED_PROFILE = "openbitfun-acp"`（`builtin_clients.rs:31`）。
+`RSH_BUNDLED_PROFILE = "openbitfun-acp"`（`builtin_clients.rs:31`）。
 
 旁边的注释（`builtin_clients.rs:44-48`）是整个判断的核心，原文：
 
 ```
-// DeepSeek Harness (dsh) — the harness has no ACP entry point of its own,
+// RedSpark Harness (dsh) — the harness has no ACP entry point of its own,
 // so OpenBitFun ships one as a dsh PROFILE (packages/dsh-acp) and launches it
 // through the user's own installation. The model and the API key stay in
 // dsh, where the user configured them; OpenBitFun stores neither.
@@ -167,7 +167,7 @@ BuiltinAcpClientPreset {
 - `bin.ts:1-12`：`#!/usr/bin/env node` … `dsh-acp-ide [--config path]` … 「**Stdout is reserved for JSON-RPC, so diagnostics go only to stderr**」
 - `src/` 共 **1,540 行 TypeScript**：`bridge.ts` 53,174B / `app.ts` 10,006B / `tool-view.ts` 5,524B / `codec.ts` 2,653B / `bin.ts` 1,226B
 - `app.ts:1-17` 自己组装 `agent-spine-demo` + `dsh-tools` + `dsh-tools` 的持久化/查询 + `./bridge.ts`
-- `client/dsh_profile.rs:1-18` 负责把构建产物**幂等地**拷进 `$DSH_HOME/profiles/`（内容 digest 判重），远程工作区也有一份（`ensure_bundled_profile_remote`）
+- `client/dsh_profile.rs:1-18` 负责把构建产物**幂等地**拷进 `$RSH_HOME/profiles/`（内容 digest 判重），远程工作区也有一份（`ensure_bundled_profile_remote`）
 
 **这就是模板，而且它解决的正是我们的问题：一个没有 stdio ACP 入口的引擎，怎么被 OpenBitFun 接进去。**
 
@@ -342,8 +342,8 @@ desktop/Cargo.toml                                        workspace members=54
 desktop/src/crates/interfaces/acp/src/lib.rs              ACP client + server
 desktop/src/crates/interfaces/acp/src/client/config.rs    AcpClientConfig（无 url 字段）
 desktop/src/crates/interfaces/acp/src/client/manager.rs   :1811 传输二选一；:1757 stdio 子进程
-desktop/src/crates/interfaces/acp/src/client/builtin_clients.rs  :31 DSH_BUNDLED_PROFILE；:50 dsh 预设
-desktop/src/crates/interfaces/acp/src/client/dsh_profile.rs      把桥拷进 $DSH_HOME/profiles
+desktop/src/crates/interfaces/acp/src/client/builtin_clients.rs  :31 RSH_BUNDLED_PROFILE；:50 dsh 预设
+desktop/src/crates/interfaces/acp/src/client/dsh_profile.rs      把桥拷进 $RSH_HOME/profiles
 desktop/packages/dsh-acp/src/                            1540 行 TS 的 stdio 桥（模板）
 desktop/src/crates/adapters/dsh-adapter/src/lib.rs       只读投影，不是 agent 接入
 desktop/src/crates/execution/agent-runtime/src/          77 文件 / 1.37MB，OpenBitFun 自己的引擎

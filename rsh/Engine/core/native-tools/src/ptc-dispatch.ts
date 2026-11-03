@@ -1,6 +1,6 @@
 /** Native nested calls sharing scoped admission and the application's Session writer. */
-import { createUserMessage, HarnessError, ToolCallId, type UserMessage } from '@deepseek-ai/dsh-llm/native'
-import { deepFreeze, snapshotJsonValue } from '@deepseek-ai/dsh-util-values'
+import { createUserMessage, HarnessError, ToolCallId, type UserMessage } from '@redspark/rsh-llm/native'
+import { deepFreeze, snapshotJsonValue } from '@redspark/rsh-util-values'
 import type { NativeToolExecution, NativeToolExecutionSnapshot, NativeToolRegistry, NativeToolResult } from './index.ts'
 import { createOrderedDispatchLane, type OrderedDispatch } from './ordered-dispatch.ts'
 

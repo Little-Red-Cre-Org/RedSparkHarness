@@ -3,7 +3,7 @@ description: "原生文件系统事件可使用现有观察策略，而不重复
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-compat-fs-policy
+# @redspark/rsh-compat-fs-policy
 
 [English](README.md) | 中文
 

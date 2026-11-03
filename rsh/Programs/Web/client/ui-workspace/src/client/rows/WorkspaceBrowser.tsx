@@ -14,12 +14,12 @@ import clsx from 'clsx'
 import {
   Button, IconPersonalizationOutline16, IconProjectAddOutline16, Menu, Modal, Tooltip,
   ProjectRowItem, SearchResultItem, SessionNodeItem, WorkspaceSectionEmpty, WorkspaceSectionHeader,
-} from '@deepseek-ai/dsh-client-ui-primitives'
+} from '@redspark/rsh-client-ui-primitives'
 import type {
   SessionListState, SessionSearchResultItem,
-} from '@deepseek-ai/dsh-api-session-controller/client'
-import type { WorkspaceId, WorkspaceView } from '@deepseek-ai/dsh-api-workspace-controller/client'
-import type { SessionId } from '@deepseek-ai/dsh-session/types'
+} from '@redspark/rsh-api-session-controller/client'
+import type { WorkspaceId, WorkspaceView } from '@redspark/rsh-api-workspace-controller/client'
+import type { SessionId } from '@redspark/rsh-session/types'
 import type { WorkspaceBrowserProps } from '../contract/slots.ts'
 import type { SessionNode, SessionOrderBy } from '../tree.ts'
 import {

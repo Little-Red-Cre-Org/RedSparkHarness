@@ -7,7 +7,7 @@ import { NativeLocalAttachmentStore } from '../src/native.ts'
 
 it('closes a paused file stream without waiting for its consumer to resume', async () => {
   const home = await mkdtemp(join(tmpdir(), 'rsh-native-attachment-stream-'))
-  const service = new NativeLocalAttachmentStore(new LocalAttachmentBackend({ dshHome: home }))
+  const service = new NativeLocalAttachmentStore(new LocalAttachmentBackend({ rshHome: home }))
   try {
     const ref = await service.saveFile({ data: new Uint8Array(256 * 1024), name: 'large.bin' })
     const stream = service.readFileStream(ref)[Symbol.asyncIterator]()
@@ -15,7 +15,7 @@ it('closes a paused file stream without waiting for its consumer to resume', asy
     await service.close()
     await expect(stream.next()).rejects.toThrow('provider is closing')
     const cleanupFailure = new Error('file stream close failed')
-    const backend = new LocalAttachmentBackend({ dshHome: home })
+    const backend = new LocalAttachmentBackend({ rshHome: home })
     backend.readFileStream = () => ({
       [Symbol.asyncIterator]: () => ({
         next: async () => ({ done: false, value: Uint8Array.of(1) }),

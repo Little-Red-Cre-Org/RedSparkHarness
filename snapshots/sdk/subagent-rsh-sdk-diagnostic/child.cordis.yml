@@ -1,0 +1,18 @@
+# SDK-profile patch for the deterministic diagnostic child runtime.
+
+- id: llm-deepseek
+  name: '@redspark/rsh-llm-deepseek'
+  disabled: true
+
+- id: agent-instructions
+  name: '@redspark/rsh-agent-instructions'
+  disabled: true
+
+- id: system-prompt
+  name: '@redspark/rsh-system-prompt'
+  config:
+    personaPrefix: 'Return the scripted DSH SDK failure.'
+
+- insert:
+    - id: child-mock-llm
+      name: '../../../rsh/Compatibility/DSH/subagent/subagent-rsh-sdk/tests/fixtures/loader/child-mock-llm.ts'

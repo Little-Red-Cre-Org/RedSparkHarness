@@ -1,10 +1,10 @@
 /** Cordis-free Native declaration for file-reference discovery. */
-import type { NativeAgent } from '@deepseek-ai/dsh-native-agent'
-import type {} from '@deepseek-ai/dsh-native-runtime'
-import type { Session } from '@deepseek-ai/dsh-session/native'
+import type { NativeAgent } from '@redspark/rsh-native-agent'
+import type {} from '@redspark/rsh-native-runtime'
+import type { Session } from '@redspark/rsh-session/native'
 import type { FileReferenceCandidate } from './types.ts'
 
-declare module '@deepseek-ai/dsh-native-runtime' {
+declare module '@redspark/rsh-native-runtime' {
   interface NativeServices { fileReferences: NativeFileReferenceOperations }
 }
 

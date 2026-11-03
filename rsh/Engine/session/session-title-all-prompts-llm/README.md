@@ -3,7 +3,7 @@ description: "All-messages LLM session-title provider for users and maintainers 
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-session-title-all-prompts-llm
+# @redspark/rsh-session-title-all-prompts-llm
 
 English | [中文](README.zh.md)
 
@@ -37,7 +37,7 @@ The `./native` entry is the same provider for native profiles: it requires `sess
 
 ### Configuration
 
-The plugin accepts the complete required [shared LLM configuration](../session-title-llm/README.md#configuration): `targetWords`, `targetCjkCharacters`, `maxInputBytes`, `maxOutputTokens`, `timeoutMs`, and the optional paired `provider`/`model` route. Omit both to inherit the exact route from each current logged main request, or set both to route title generation independently. The generated [configuration catalog](../../../Docs/config-catalog.md#deepseek-aidsh-session-title-all-prompts-llm) is the exhaustive source for every accepted field.
+The plugin accepts the complete required [shared LLM configuration](../session-title-llm/README.md#configuration): `targetWords`, `targetCjkCharacters`, `maxInputBytes`, `maxOutputTokens`, `timeoutMs`, and the optional paired `provider`/`model` route. Omit both to inherit the exact route from each current logged main request, or set both to route title generation independently. The generated [configuration catalog](../../../Docs/config-catalog.md#redsparkrsh-session-title-all-prompts-llm) is the exhaustive source for every accepted field.
 
 ### Failures and recovery
 

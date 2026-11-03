@@ -1,7 +1,7 @@
 /** Observable contiguous Session event window consumed by domain assemblers. */
-import { notifySubscribers, type ObservableSnapshot } from '@deepseek-ai/dsh-client-store'
-import type { LlmAttemptId } from '@deepseek-ai/dsh-llm/brand'
-import type { SessionEvent } from '@deepseek-ai/dsh-session/types'
+import { notifySubscribers, type ObservableSnapshot } from '@redspark/rsh-client-store'
+import type { LlmAttemptId } from '@redspark/rsh-llm/brand'
+import type { SessionEvent } from '@redspark/rsh-session/types'
 import type { AssistantLiveChunkEvent } from '../../client-event-types.ts'
 export type { AssistantLiveChunkEvent, SessionEventLike } from '../../client-event-types.ts'
 

@@ -3,14 +3,14 @@
  * with logged model context without vetoing or rewriting calls. Configuration
  * and chain semantics live in the package README; rationale lives in the
  * repeat-tool-reminder Agent Note.
- * @module @deepseek-ai/dsh-repeat-tool-reminder
+ * @module @redspark/rsh-repeat-tool-reminder
  */
 
-import type { Context } from '@deepseek-ai/cordis'
-import type z from '@deepseek-ai/schemastery'
-import type { Agent, PreStepDecision } from '@deepseek-ai/dsh-agent'
-import type { UserMessage } from '@deepseek-ai/dsh-session'
-import type { PostToolDecision, ToolExecution } from '@deepseek-ai/dsh-tools'
+import type { Context } from '@redspark/cordis'
+import type z from '@redspark/schemastery'
+import type { Agent, PreStepDecision } from '@redspark/rsh-agent'
+import type { UserMessage } from '@redspark/rsh-session'
+import type { PostToolDecision, ToolExecution } from '@redspark/rsh-tools'
 import { compileRepeatToolReminder, repeatToolReminderSchema, repeatToolReminderSettings, type RepeatChain } from './core.ts'
 
 export const name = 'repeat-tool-reminder'

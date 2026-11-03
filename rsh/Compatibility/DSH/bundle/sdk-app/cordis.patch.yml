@@ -11,12 +11,12 @@
 
 - insert:
     - id: sdk-app-startup
-      name: '@deepseek-ai/dsh-sdk-app'
+      name: '@redspark/rsh-sdk-app'
       config:
         profile: sdk
 
     - id: sdk-jsonrpc-server
-      name: '@deepseek-ai/dsh-sdk-jsonrpc-server'
+      name: '@redspark/rsh-sdk-jsonrpc-server'
       inject: [sdkAppStartup, loader]
       config:
-        maxTokensAsSuccess: !!js "process.env.DSH_MAX_TOKENS_AS_SUCCESS === undefined ? true : JSON.parse(process.env.DSH_MAX_TOKENS_AS_SUCCESS)"
+        maxTokensAsSuccess: !!js "process.env.RSH_MAX_TOKENS_AS_SUCCESS === undefined ? true : JSON.parse(process.env.RSH_MAX_TOKENS_AS_SUCCESS)"

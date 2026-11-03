@@ -3,7 +3,7 @@ description: "Drive durable native Sessions through the standard ACP protocol."
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-native-acp
+# @redspark/rsh-native-acp
 
 English | [中文](README.zh.md)
 

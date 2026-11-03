@@ -3,7 +3,7 @@ description: "面向用户与维护者的授权 flow 注册表：获取配置无
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-authorization
+# @redspark/rsh-authorization
 
 [English](README.md) | 中文
 
@@ -36,9 +36,9 @@ kind: "package-reference"
 你的插件为它持有的每个凭据声明一个 flow，以该 flow 写入的 `<scope>/<id>` 凭据记录为键——scope 点名你的插件，id 点名它拥有的一条凭据：
 
 ```ts
-import type { Context } from '@deepseek-ai/cordis'
-import type { AuthorizationSession } from '@deepseek-ai/dsh-authorization'
-import { credentialKey } from '@deepseek-ai/dsh-credentials'
+import type { Context } from '@redspark/cordis'
+import type { AuthorizationSession } from '@redspark/rsh-authorization'
+import { credentialKey } from '@redspark/rsh-credentials'
 
 declare const ctx: Context
 declare const exchangeCode: (code: string, signal: AbortSignal) => Promise<{ token: string }>
@@ -70,7 +70,7 @@ flow 声明它写入的凭据记录、面向用户的标签以及它提供的登
 
 ### 原生 Host 入口
 
-原生 Host 组合从 `@deepseek-ai/dsh-authorization/native` 导入 `plugin`，并与 credentials Provider 一起安装。`NativeAuthorization` 返回的尝试可通过 `frames()` 重放对话，供重新连接的界面恢复显示。取消、移除 flow 和释放 Provider 会等待 `run()` 及其已接纳的凭据写入完成后再释放键。
+原生 Host 组合从 `@redspark/rsh-authorization/native` 导入 `plugin`，并与 credentials Provider 一起安装。`NativeAuthorization` 返回的尝试可通过 `frames()` 重放对话，供重新连接的界面恢复显示。取消、移除 flow 和释放 Provider 会等待 `run()` 及其已接纳的凭据写入完成后再释放键。
 
 ### 可能出错的地方
 

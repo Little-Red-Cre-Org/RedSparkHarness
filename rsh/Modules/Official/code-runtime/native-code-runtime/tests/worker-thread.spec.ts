@@ -2,7 +2,7 @@
 import { EventEmitter } from 'node:events'
 import type { PassThrough } from 'node:stream'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { Session, SessionId, SESSION_FORMAT_VERSION } from '@deepseek-ai/dsh-session/native'
+import { Session, SessionId, SESSION_FORMAT_VERSION } from '@redspark/rsh-session/native'
 import type { CodeBindingNamespace, CodeJsonValue, NativeCodeRunRequest } from '../src/types.ts'
 import { encodeWorkerJson } from '../src/worker-json.ts'
 import { NativeWorkerThreadCodeRuntime, resolveNativeWorkerThreadConfig, runWithExecutionStartObserver } from '../src/worker-thread.ts'

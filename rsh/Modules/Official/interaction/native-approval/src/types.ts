@@ -1,7 +1,7 @@
 /** Native approval names re-exported from the framework-free Definition package. */
 export {
   NativeApprovalRequestId,
-} from '@deepseek-ai/dsh-approval-definition'
+} from '@redspark/rsh-approval-definition'
 export type {
   NativeApprovalAnswerer,
   NativeApprovalAnswererResult,
@@ -12,4 +12,4 @@ export type {
   NativeApprovalRequest,
   NativeApprovalServiceDefinition,
   NativeApprovalSessionGrant,
-} from '@deepseek-ai/dsh-approval-definition'
+} from '@redspark/rsh-approval-definition'

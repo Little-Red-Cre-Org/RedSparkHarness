@@ -11,8 +11,8 @@ import type {
   RequestView,
   ToolCallBlock,
   ToolResultNode,
-} from '@deepseek-ai/dsh-client-ui-conversation/native-types'
-import type { ImageAttachmentRef } from '@deepseek-ai/dsh-attachment/types'
+} from '@redspark/rsh-client-ui-conversation/native-types'
+import type { ImageAttachmentRef } from '@redspark/rsh-attachment/types'
 import type {
   TrajectoryCellProps,
   TrajectorySourceBlock,

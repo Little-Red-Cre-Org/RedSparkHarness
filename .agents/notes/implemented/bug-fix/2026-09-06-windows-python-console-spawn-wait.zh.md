@@ -10,7 +10,7 @@ Python 安装的 `dsh.exe` 控制台命令会在初始化 profile 前间歇性�
 
 ## 决策
 
-[Python 控制台入口](../../../../rsh/Programs/SDK/python/sdk-runtime/src/deepseek_harness_runtime/__init__.py) 在 Windows 上使用 `subprocess.run`，继承标准流与环境，等待运行时结束，再以运行时状态退出。POSIX 保留 `os.execvpe` 进程替换。Windows CRT exec 并非 POSIX 进程替换；显式启动并等待的路径避开观测到的原生 exec 操作。
+[Python 控制台入口](../../../../rsh/Programs/SDK/python/sdk-runtime/src/redspark_harness_runtime/__init__.py) 在 Windows 上使用 `subprocess.run`，继承标准流与环境，等待运行时结束，再以运行时状态退出。POSIX 保留 `os.execvpe` 进程替换。Windows CRT exec 并非 POSIX 进程替换；显式启动并等待的路径避开观测到的原生 exec 操作。
 
 [安装后 wheel 冒烟测试](../../../../rsh/Scripts/smoke-python-runtime.py) 在 profile 安装失败时，同时报告十进制、无符号 32 位十六进制状态与捕获的标准流。这保留普通命令失败和原生进程异常的区别。
 

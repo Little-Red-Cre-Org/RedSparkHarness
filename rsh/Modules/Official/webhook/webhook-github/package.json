@@ -1,5 +1,5 @@
 {
-  "name": "@deepseek-ai/dsh-webhook-github",
+  "name": "@redspark/rsh-webhook-github",
   "description": "Signed GitHub webhook ingress for Cordis and Native trusted-rule execution",
   "version": "1.0.0",
   "publishConfig": {
@@ -47,37 +47,37 @@
   ],
   "license": "MIT",
   "peerDependencies": {
-    "@deepseek-ai/cordis": "workspace:^",
-    "@deepseek-ai/dsh-credentials": "workspace:^",
-    "@deepseek-ai/dsh-http-routes": "workspace:^",
-    "@deepseek-ai/dsh-http-routes-cordis": "workspace:^",
-    "@deepseek-ai/dsh-llm": "workspace:^",
-    "@deepseek-ai/dsh-native-runtime": "workspace:^",
-    "@deepseek-ai/dsh-native-session-execution": "workspace:^",
-    "@deepseek-ai/dsh-session": "workspace:^",
-    "@deepseek-ai/dsh-webhook": "workspace:^"
+    "@redspark/cordis": "workspace:^",
+    "@redspark/rsh-credentials": "workspace:^",
+    "@redspark/rsh-http-routes": "workspace:^",
+    "@redspark/rsh-http-routes-cordis": "workspace:^",
+    "@redspark/rsh-llm": "workspace:^",
+    "@redspark/rsh-native-runtime": "workspace:^",
+    "@redspark/rsh-native-session-execution": "workspace:^",
+    "@redspark/rsh-session": "workspace:^",
+    "@redspark/rsh-webhook": "workspace:^"
   },
   "peerDependenciesMeta": {
-    "@deepseek-ai/cordis": { "optional": true },
-    "@deepseek-ai/dsh-http-routes-cordis": { "optional": true }
+    "@redspark/cordis": { "optional": true },
+    "@redspark/rsh-http-routes-cordis": { "optional": true }
   },
   "dependencies": {
-    "@deepseek-ai/dsh-util-values": "workspace:^",
-    "@deepseek-ai/schemastery": "workspace:^",
+    "@redspark/rsh-util-values": "workspace:^",
+    "@redspark/schemastery": "workspace:^",
     "zod": "^4.4.3",
     "@octokit/webhooks": "^14.2.0"
   },
   "devDependencies": {
-    "@deepseek-ai/cordis": "workspace:^",
-    "@deepseek-ai/cordis-plugin-include": "workspace:^",
-    "@deepseek-ai/cordis-plugin-loader": "workspace:^",
-    "@deepseek-ai/dsh-credentials": "workspace:^",
-    "@deepseek-ai/dsh-http-routes": "workspace:^",
-    "@deepseek-ai/dsh-http-routes-cordis": "workspace:^",
-    "@deepseek-ai/dsh-llm": "workspace:^",
-    "@deepseek-ai/dsh-native-runtime": "workspace:^",
-    "@deepseek-ai/dsh-native-session-execution": "workspace:^",
-    "@deepseek-ai/dsh-session": "workspace:^",
-    "@deepseek-ai/dsh-webhook": "workspace:^"
+    "@redspark/cordis": "workspace:^",
+    "@redspark/cordis-plugin-include": "workspace:^",
+    "@redspark/cordis-plugin-loader": "workspace:^",
+    "@redspark/rsh-credentials": "workspace:^",
+    "@redspark/rsh-http-routes": "workspace:^",
+    "@redspark/rsh-http-routes-cordis": "workspace:^",
+    "@redspark/rsh-llm": "workspace:^",
+    "@redspark/rsh-native-runtime": "workspace:^",
+    "@redspark/rsh-native-session-execution": "workspace:^",
+    "@redspark/rsh-session": "workspace:^",
+    "@redspark/rsh-webhook": "workspace:^"
   }
 }

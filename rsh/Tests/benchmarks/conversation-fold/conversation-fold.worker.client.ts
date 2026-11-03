@@ -1,11 +1,11 @@
 /** Compiled worker for the cold Client conversation-fold benchmark. */
 
 import { performance } from 'node:perf_hooks'
-import { AssistantStreamAccumulator } from '@deepseek-ai/dsh-llm/assistant-stream'
-import type { StreamChunk } from '@deepseek-ai/dsh-llm'
-import type { SessionEvent } from '@deepseek-ai/dsh-session/types'
-import type { ChatSnapshot } from '@deepseek-ai/dsh-client-ui-chat/client'
-import type { SessionEventLikeEntry } from '@deepseek-ai/dsh-api-session-controller/client'
+import { AssistantStreamAccumulator } from '@redspark/rsh-llm/assistant-stream'
+import type { StreamChunk } from '@redspark/rsh-llm'
+import type { SessionEvent } from '@redspark/rsh-session/types'
+import type { ChatSnapshot } from '@redspark/rsh-client-ui-chat/client'
+import type { SessionEventLikeEntry } from '@redspark/rsh-api-session-controller/client'
 // These Client-only fold modules have no plain-Node package export and are compiled into this worker.
 import { ConversationNodeAssembler } from '../../../Programs/Web/client/ui-conversation/src/client/conversation/assembler.ts'
 import { inspectRequestPrompt } from '../../../Programs/Web/client/ui-conversation/src/client/contract/request-inspection.ts'
@@ -174,10 +174,10 @@ function positiveInteger(value: string | undefined, label: string): number {
 }
 
 assertBuiltBenchmarkRuntime(import.meta.url, {
-  '@deepseek-ai/dsh-client-store': import.meta.resolve('@deepseek-ai/dsh-client-store'),
-  '@deepseek-ai/dsh-llm/assistant-stream': import.meta.resolve('@deepseek-ai/dsh-llm/assistant-stream'),
-  '@deepseek-ai/dsh-session/surface': import.meta.resolve('@deepseek-ai/dsh-session/surface'),
-  '@deepseek-ai/dsh-token-meter/client': import.meta.resolve('@deepseek-ai/dsh-token-meter/client'),
+  '@redspark/rsh-client-store': import.meta.resolve('@redspark/rsh-client-store'),
+  '@redspark/rsh-llm/assistant-stream': import.meta.resolve('@redspark/rsh-llm/assistant-stream'),
+  '@redspark/rsh-session/surface': import.meta.resolve('@redspark/rsh-session/surface'),
+  '@redspark/rsh-token-meter/client': import.meta.resolve('@redspark/rsh-token-meter/client'),
 })
 const [turnsValue, smallDeltasValue, largeDeltasValue, attemptsValue] = process.argv.slice(2)
 const turns = positiveInteger(turnsValue, 'turns')

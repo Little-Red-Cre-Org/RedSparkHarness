@@ -1,12 +1,12 @@
 /** Native filesystem service and policy events; importing this entry registers no provider. */
-import type {} from '@deepseek-ai/dsh-native-runtime'
+import type {} from '@redspark/rsh-native-runtime'
 import type { FileSystemOperations } from './operations.ts'
 import type { FsObservation, FsTarget, FsVersion, FsWriteIntent } from './types.ts'
 
 export { FileSystemOperations } from './operations.ts'
 export * from './types.ts'
 
-declare module '@deepseek-ai/dsh-native-runtime' {
+declare module '@redspark/rsh-native-runtime' {
   interface NativeServices {
     fs: FileSystemOperations
     fsObservationPolicy: { readonly kind: 'observed-state' }

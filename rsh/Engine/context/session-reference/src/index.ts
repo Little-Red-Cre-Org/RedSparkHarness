@@ -2,24 +2,24 @@
  * Cross-session snapshot preparation. Hosts adapt mentions into structured
  * references; this service owns exact reads, projection, budgets, and durable context.
  *
- * @module @deepseek-ai/dsh-session-reference
+ * @module @redspark/rsh-session-reference
  */
 
-import { Context } from '@deepseek-ai/cordis'
-import z from '@deepseek-ai/schemastery'
-import type { Agent, PreStepDecision } from '@deepseek-ai/dsh-agent'
-import { Remote, TypertRemoteService } from '@deepseek-ai/dsh-typert-protocol'
-import type {} from '@deepseek-ai/dsh-spill'
-import { freezeMessage, LlmError } from '@deepseek-ai/dsh-llm'
-import type { ContentBlock, LlmResolvedModelInfo, UserMessage } from '@deepseek-ai/dsh-llm'
-import { SessionLogOffset } from '@deepseek-ai/dsh-session'
+import { Context } from '@redspark/cordis'
+import z from '@redspark/schemastery'
+import type { Agent, PreStepDecision } from '@redspark/rsh-agent'
+import { Remote, TypertRemoteService } from '@redspark/rsh-typert-protocol'
+import type {} from '@redspark/rsh-spill'
+import { freezeMessage, LlmError } from '@redspark/rsh-llm'
+import type { ContentBlock, LlmResolvedModelInfo, UserMessage } from '@redspark/rsh-llm'
+import { SessionLogOffset } from '@redspark/rsh-session'
 // Type-only: the `title` projection key plus the live registry and durable
 // cache Context merges — the two projection faces discovery labels from.
-import type { ProjectionSnapshot } from '@deepseek-ai/dsh-session-projection'
-import type {} from '@deepseek-ai/dsh-session-projection-cache'
-import type {} from '@deepseek-ai/dsh-session-title'
-import type {} from '@deepseek-ai/dsh-system-prompt'
-import type { SessionRecord } from '@deepseek-ai/dsh-session-query'
+import type { ProjectionSnapshot } from '@redspark/rsh-session-projection'
+import type {} from '@redspark/rsh-session-projection-cache'
+import type {} from '@redspark/rsh-session-title'
+import type {} from '@redspark/rsh-system-prompt'
+import type { SessionRecord } from '@redspark/rsh-session-query'
 import { prepareReferenceInput, prepareReferencedMessage } from './prepared-context.ts'
 import {
   DEFAULT_CANDIDATE_LIMIT,
@@ -52,7 +52,7 @@ export {
 
 const DEFAULT_REFERENCE_CONTEXT_FRACTION = 0.2
 
-declare module '@deepseek-ai/cordis' {
+declare module '@redspark/cordis' {
   interface Context {
     sessionReferenceResolver: SessionReferenceResolver
   }

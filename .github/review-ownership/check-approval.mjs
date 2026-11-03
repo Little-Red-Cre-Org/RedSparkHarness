@@ -89,7 +89,7 @@ export function createGitHubApi({ token, apiUrl = 'https://api.github.com', fetc
         Accept: 'application/vnd.github+json',
         Authorization: `Bearer ${token}`,
         'Content-Type': 'application/json',
-        'User-Agent': 'deepseek-harness-weighted-approval',
+        'User-Agent': 'redspark-harness-weighted-approval',
         'X-GitHub-Api-Version': API_VERSION,
       },
       ...(body === undefined ? {} : { body: JSON.stringify(body) }),

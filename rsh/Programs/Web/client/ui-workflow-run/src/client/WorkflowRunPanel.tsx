@@ -1,7 +1,7 @@
-import type { PropsLocale, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
-import type { SessionListState } from '@deepseek-ai/dsh-api-session-controller/client'
-import { shallowEqual } from '@deepseek-ai/dsh-client-store'
-import type { SessionId } from '@deepseek-ai/dsh-session/types'
+import type { PropsLocale, PropsRuntime } from '@redspark/rsh-client-ui-slots'
+import type { SessionListState } from '@redspark/rsh-api-session-controller/client'
+import { shallowEqual } from '@redspark/rsh-client-store'
+import type { SessionId } from '@redspark/rsh-session/types'
 import { WorkflowRunView } from '../WorkflowRunView.tsx'
 import type { WorkflowRunPhaseData } from './workflow-definition.ts'
 

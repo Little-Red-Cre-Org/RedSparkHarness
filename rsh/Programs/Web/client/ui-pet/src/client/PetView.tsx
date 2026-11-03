@@ -1,9 +1,9 @@
 /** State-aware RedSpark companion for hero and floating Conversation placements. */
 import { useEffect, useRef, useState } from 'react'
-import type { SessionSnapshot } from '@deepseek-ai/dsh-api-session-controller/client'
-import type { ObservableSnapshot } from '@deepseek-ai/dsh-client-store'
-import type { InjectFace, PropsLocale, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
-import { ChatMascotHero } from '@deepseek-ai/dsh-client-ui-primitives'
+import type { SessionSnapshot } from '@redspark/rsh-api-session-controller/client'
+import type { ObservableSnapshot } from '@redspark/rsh-client-store'
+import type { InjectFace, PropsLocale, PropsRuntime } from '@redspark/rsh-client-ui-slots'
+import { ChatMascotHero } from '@redspark/rsh-client-ui-primitives'
 import type { PetKey } from './locales.ts'
 import type { PetActivity, PetSnapshot } from './runtime.ts'
 import { desktopBridge } from './desktop-bridge.ts'

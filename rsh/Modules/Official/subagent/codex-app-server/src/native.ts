@@ -1,7 +1,7 @@
-import type { NativeContext, NativePlugin } from '@deepseek-ai/dsh-native-runtime'
-import { MAX_TIMER_DELAY_MS } from '@deepseek-ai/dsh-timeout'
+import type { NativeContext, NativePlugin } from '@redspark/rsh-native-runtime'
+import { MAX_TIMER_DELAY_MS } from '@redspark/rsh-timeout'
 import type { NativeExternalSubagentDriver, NativeExternalSubagentRun,
-  NativeExternalSubagentRequest, NativeExternalSubagentOutcome } from '@deepseek-ai/dsh-native-subagent/native'
+  NativeExternalSubagentRequest, NativeExternalSubagentOutcome } from '@redspark/rsh-native-subagent/native'
 import { startNativeCodexProductRun } from './native-product-run.ts'
 import type { NativeResponsesGatewayLimits } from './responses-gateway.ts'
 import type { CodexRunStopReason } from './run.ts'
@@ -185,7 +185,7 @@ function installDriver(context: NativeContext, config: CodexConfig): void {
 /** Official Native Codex app-server Provider for Engine's external-child authority. */
 export const plugin: NativePlugin = {
   apiVersion: 1,
-  name: '@deepseek-ai/dsh-codex-app-server',
+  name: '@redspark/rsh-codex-app-server',
   targets: ['host'],
   requires: ['childConnection'],
   provides: ['externalSubagentDriver'],

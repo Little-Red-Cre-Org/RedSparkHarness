@@ -13,7 +13,7 @@ function project(documentation: string, generic: boolean = false) {
   const directory = join(root, 'rsh/Modules/Official/fixture/service')
   mkdirSync(join(directory, 'src'), { recursive: true })
   writeFileSync(join(root, 'tsconfig.host.json'), JSON.stringify({ files: [], references: [{ path: './rsh/Modules/Official/fixture/service' }] }))
-  writeFileSync(join(directory, 'package.json'), JSON.stringify({ name: '@deepseek-ai/dsh-fixture-service', private: true,
+  writeFileSync(join(directory, 'package.json'), JSON.stringify({ name: '@redspark/rsh-fixture-service', private: true,
     type: 'module', exports: { '.': { types: './lib/types/index.d.ts', default: './lib/index.js' } } }))
   writeFileSync(join(directory, 'tsconfig.json'), JSON.stringify({ compilerOptions: { composite: true,
     module: 'ESNext', moduleResolution: 'Bundler', rootDir: 'src', target: 'ES2022' }, include: ['src'] }))
@@ -38,7 +38,7 @@ function project(documentation: string, generic: boolean = false) {
       /** @inheritdoc */
       abstract read(id: string): Promise<string>
     }
-    declare module '@deepseek-ai/cordis' { interface Context { fixture: ${generic ? 'Operations<string>' : 'FixtureService'} } }
+    declare module '@redspark/cordis' { interface Context { fixture: ${generic ? 'Operations<string>' : 'FixtureService'} } }
   `)
   try { return collectServices(root, policy) }
   finally { rmSync(root, { recursive: true, force: true }) }

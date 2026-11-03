@@ -1,7 +1,7 @@
 /** Shared checkpoint lifecycle matching for compatibility and Native readers. */
 
-import { SessionLogOffset } from '@deepseek-ai/dsh-session/native'
-import type { SessionHeader, SessionLogOffset as SessionLogOffsetValue } from '@deepseek-ai/dsh-session/native'
+import { SessionLogOffset } from '@redspark/rsh-session/native'
+import type { SessionHeader, SessionLogOffset as SessionLogOffsetValue } from '@redspark/rsh-session/native'
 import type { CheckpointIdentity } from './spec.ts'
 
 /** Complete identity written by the current cache generation. */

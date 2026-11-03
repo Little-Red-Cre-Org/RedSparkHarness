@@ -2,19 +2,19 @@
  * Types for the TypeScript SDK client: launch options, notification shapes,
  * and owned activity results.
  *
- * @module @deepseek-ai/dsh-sdk-runtime/types
+ * @module @redspark/rsh-sdk-runtime/types
  */
 
-import type { ContentBlock, ReasoningEffortId } from '@deepseek-ai/dsh-llm/native'
-import type { NativeExternalOperationEvent } from '@deepseek-ai/dsh-native-subagent/native'
+import type { ContentBlock, ReasoningEffortId } from '@redspark/rsh-llm/native'
+import type { NativeExternalOperationEvent } from '@redspark/rsh-native-subagent/native'
 import type {
   ApprovalRequestParams,
   LegacySdkPromptContentBlock,
   NativeSdkPromptContentBlock,
   SessionUploadFileResult,
   SdkPromptContentBlock,
-} from '@deepseek-ai/dsh-sdk-protocol'
-import type { SessionEvent } from '@deepseek-ai/dsh-session/native'
+} from '@redspark/rsh-sdk-protocol'
+import type { SessionEvent } from '@redspark/rsh-session/native'
 
 /** Generic process settings supplied by the selected Program launcher. */
 export interface RuntimeProcessOptions {
@@ -52,20 +52,20 @@ export type SdkApprovalHandler = (
 /** Launch and timeout options for {@link HarnessClient}. */
 export interface HarnessClientOptions {
   /** Absolute or caller-relative dsh CLI module; omitted resolves this package's same-version dependency. */
-  dshBin?: string
+  rshBin?: string
   /** Named profile serving the SDK protocol (default `sdk`). */
   profile?: string
   /** Ordered per-launch profile patches; relative paths resolve before spawn. */
   patches?: string[]
   /** Explicit Harness home for this child; relative paths resolve before spawn. */
-  dshHome?: string
+  rshHome?: string
   /** Working directory for the dsh process itself. */
   processCwd?: string
   /**
    * The complete child environment, read when {@link HarnessClient.start}
    * spawns. `undefined` reads the parent env at that time; passing an object
    * reads that object at spawn and replaces the parent environment entirely, so callers own
-   * credential policy (see `scrubbedParentEnv` in `@deepseek-ai/dsh-subprocess`
+   * credential policy (see `scrubbedParentEnv` in `@redspark/rsh-subprocess`
    * for the shared scrub-then-merge base). The standard Program launcher adds
    * the host `SystemRoot` on Windows when the supplied environment omits it.
    */
@@ -84,8 +84,8 @@ export interface HarnessClientOptions {
   disposeGraceMs?: number
 }
 
-/** Options for the high-level {@link DeepSeekHarness} wrapper. */
-export interface DeepSeekHarnessOptions extends HarnessClientOptions {
+/** Options for the high-level {@link RedSparkHarness} wrapper. */
+export interface RshHarnessOptions extends HarnessClientOptions {
   /** Workspace cwd recorded on every SDK-created session (default: the process cwd, else `process.cwd()`). */
   cwd?: string
   /** Provider route for SDK-created agents (default `deepseek-official`). */
@@ -105,7 +105,7 @@ export interface DeepSeekHarnessOptions extends HarnessClientOptions {
 }
 
 /** Native Host options that retain the standard dsh launcher and fix the `native-sdk` profile. */
-export interface NativeDeepSeekHarnessOptions extends Omit<DeepSeekHarnessOptions, 'dshBin' | 'profile' | 'patches'> {}
+export interface NativeRshHarnessOptions extends Omit<RshHarnessOptions, 'rshBin' | 'profile' | 'patches'> {}
 
 /** One owned session activity interval, from enqueue receipt through idle. */
 export interface RunResult {

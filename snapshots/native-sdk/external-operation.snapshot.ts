@@ -6,14 +6,14 @@ import { fileURLToPath } from 'node:url'
 import { execa } from 'execa'
 import { createServer, type ServerResponse } from 'node:http'
 import { expect, it } from 'vitest'
-import { DeepSeekHarness, type NativeExternalOperationSessionEvent } from '@deepseek-ai/dsh-sdk-client'
-import { parseSessionLog } from '@deepseek-ai/dsh-llm-replay'
-import { serializeNativeExternalJson } from '@deepseek-ai/dsh-native-subagent'
-import { SESSION_FORMAT_VERSION } from '@deepseek-ai/dsh-session/native'
-import { JsonlSessionBackend } from '@deepseek-ai/dsh-session-persistence-jsonl'
+import { RedSparkHarness, type NativeExternalOperationSessionEvent } from '@redspark/rsh-sdk-client'
+import { parseSessionLog } from '@redspark/rsh-llm-replay'
+import { serializeNativeExternalJson } from '@redspark/rsh-native-subagent'
+import { SESSION_FORMAT_VERSION } from '@redspark/rsh-session/native'
+import { JsonlSessionBackend } from '@redspark/rsh-session-persistence-jsonl'
 import { shippedNativeProfileComposition } from '../../rsh/Programs/CLI/src/native-profile-template.ts'
 import { assertWorkspaceOutsideTemp, outsideTempWorkspaceParent } from '../../rsh/Scripts/snapshot-workspace-parent.ts'
-import { SessionId } from '@deepseek-ai/dsh-session/native'
+import { SessionId } from '@redspark/rsh-session/native'
 import { captureExpectedWorkspaceSnapshot, captureWorkspaceSnapshot, formatSystemPromptSnapshot,
   formatToolSchemasSnapshot, normalizedSystemPrompts, normalizedToolSchemas, normalizeSessionSnapshot,
   parseSessionFixtureName, redactSessionSnapshotIds, sessionFixtureName, sessionFixtureNames }
@@ -90,7 +90,7 @@ function normalizeExternalRequestBodies(raw: string, cwdAliases: readonly string
 }
 
 it('projects external child facts through both SDKs and cold-restores the native Session', async () => {
-  const mode = process.env.DSH_SNAPSHOT
+  const mode = process.env.RSH_SNAPSHOT
   const fixtureNames = readdirSync(scenario).filter(name => parseSessionFixtureName(name) !== undefined)
   const selectedName = fixtureNames.length === 0 ? undefined : sessionFixtureNames(fixtureNames)[0]
   const fixture = selectedName === undefined ? undefined : join(scenario, selectedName)
@@ -165,7 +165,7 @@ it('projects external child facts through both SDKs and cold-restores the native
   try {
     mkdirSync(workspace, { recursive: true })
     mkdirSync(profile, { recursive: true })
-    mkdirSync(join(profileModules, '@deepseek-ai'), { recursive: true })
+    mkdirSync(join(profileModules, '@redspark'), { recursive: true })
     writeFileSync(join(profile, 'package.json'), JSON.stringify({ name: 'native-sdk-external-operation-profile', private: true,
       dsh: { profile: { runtime: 'native', config: 'rsh.profile.json' } } }))
     const composition = shippedNativeProfileComposition(home, 'native-sdk')
@@ -179,16 +179,16 @@ it('projects external child facts through both SDKs and cold-restores the native
     writeFileSync(join(profile, 'rsh.profile.json'), JSON.stringify({ ...composition, installations: [
       ...composition.installations,
       { id: 'external-driver', scope: 'root', plugin: 'native-sdk-external-operation-driver', config: driverConfig, disabled: true },
-      { id: 'policy', scope: 'root', plugin: '@deepseek-ai/dsh-fs-observation-policy', disabled: true },
-      { id: 'file-tools', scope: 'root', plugin: '@deepseek-ai/dsh-tool-fs', disabled: true },
+      { id: 'policy', scope: 'root', plugin: '@redspark/rsh-fs-observation-policy', disabled: true },
+      { id: 'file-tools', scope: 'root', plugin: '@redspark/rsh-tool-fs', disabled: true },
     ] }))
 
     for (const [name, path] of [
-      ['dsh-native-subagent', 'rsh/Engine/subagent/native-subagent'],
-      ['dsh-fs-observation-policy', 'rsh/Modules/Official/fs/fs-observation-policy'],
-      ['dsh-tool-fs', 'rsh/Modules/Official/fs/tool-fs'],
+      ['rsh-native-subagent', 'rsh/Engine/subagent/native-subagent'],
+      ['rsh-fs-observation-policy', 'rsh/Modules/Official/fs/fs-observation-policy'],
+      ['rsh-tool-fs', 'rsh/Modules/Official/fs/tool-fs'],
     ] as const) {
-      const link = join(profileModules, '@deepseek-ai', name)
+      const link = join(profileModules, '@redspark', name)
       symlinkSync(join(root, path), link, 'junction')
       links.push(link)
     }
@@ -238,9 +238,9 @@ it('projects external child facts through both SDKs and cold-restores the native
       { id: 'policy', disabled: false },
       { id: 'file-tools', disabled: false },
     ] }))
-    const options = { profile: 'native-sdk', dshBin: join(root, 'rsh/Programs/CLI/lib/bin.js'), dshHome: home,
+    const options = { profile: 'native-sdk', rshBin: join(root, 'rsh/Programs/CLI/lib/bin.js'), rshHome: home,
       patches: [modelPatch, externalPatch], cwd: workspace, provider: 'fixture', model: 'fixture-model',
-      env: { ...process.env, NATIVE_SDK_FIXTURE_KEY: 'fixture-key', DSH_TELEMETRY_DISABLED: '1' }, requestTimeoutMs: 20_000 }
+      env: { ...process.env, NATIVE_SDK_FIXTURE_KEY: 'fixture-key', RSH_TELEMETRY_DISABLED: '1' }, requestTimeoutMs: 20_000 }
     const launcher = join(home, process.platform === 'win32' ? 'dsh.cmd' : 'dsh')
     writeFileSync(launcher, process.platform === 'win32'
       ? `@echo off\r\n"${process.execPath}" "${join(root, 'rsh/Programs/CLI/lib/bin.js')}" %*\r\n`
@@ -252,8 +252,8 @@ it('projects external child facts through both SDKs and cold-restores the native
 
     let first: CarrierRun
     let recovery: CarrierRun
-    if (process.env.DSH_NATIVE_SDK_PYTHON !== undefined) {
-      const result = await execa(process.env.DSH_NATIVE_SDK_PYTHON, [join(scenario, 'client.py'), launcher, home,
+    if (process.env.RSH_NATIVE_SDK_PYTHON !== undefined) {
+      const result = await execa(process.env.RSH_NATIVE_SDK_PYTHON, [join(scenario, 'client.py'), launcher, home,
         workspace, modelPatch, externalPatch, sessionId, firstTask, coldTask], {
         env: { ...process.env, PYTHONPATH: join(root, 'rsh/Programs/SDK/python/sdk/src'), NATIVE_SDK_FIXTURE_KEY: 'fixture-key' },
         timeout: 60_000,
@@ -262,10 +262,10 @@ it('projects external child facts through both SDKs and cold-restores the native
       first = output.first
       recovery = output.recovery
     } else {
-      const initial = new DeepSeekHarness(options)
+      const initial = new RedSparkHarness(options)
       try { first = await initial.session(sessionId).run(firstTask) }
       finally { await initial.close() }
-      const cold = new DeepSeekHarness(options)
+      const cold = new RedSparkHarness(options)
       try { recovery = await cold.session(sessionId).run(coldTask) }
       finally { await cold.close() }
     }

@@ -1,12 +1,12 @@
 /** Native filesystem observation policy; the invoking session owns observation identity. */
-import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
-import type {} from '@deepseek-ai/dsh-fs/native'
+import type { NativePlugin } from '@redspark/rsh-native-runtime'
+import type {} from '@redspark/rsh-fs/native'
 import { ObservedStateGate } from './gate.ts'
 
 /** Read-before-edit and compare-and-swap guard registration. */
 export const plugin: NativePlugin = {
   apiVersion: 1,
-  name: '@deepseek-ai/dsh-fs-observation-policy',
+  name: '@redspark/rsh-fs-observation-policy',
   targets: ['host'],
   requires: [],
   provides: ['fsObservationPolicy'],

@@ -3,7 +3,7 @@ description: "The host-filesystem backend for ctx.fs for deployments and maintai
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-fs-local
+# @redspark/rsh-fs-local
 
 English | [中文](README.zh.md)
 
@@ -27,9 +27,9 @@ Use `dsh-fs-local` to read, list, atomically write, and edit files on the host f
 
 Mount this backend when a composition needs `ctx.fs` backed by the real host filesystem and accepts a process-local implementation. The common path is explicit: load the backend, give it a base directory, and the model-facing tools (`dsh-tool-fs`) or your own plugins can read, write, and edit files.
 
-`@deepseek-ai/dsh-fs-local/backend` exposes `LocalFileSystemBackend` for direct composition with explicit `cwd` and `diffBasisMaxBytes`. The Cordis service delegates to one instance of this same implementation. `resolveLocalFilesystemConfig(input)` validates configuration and captures defaults before construction. Direct callers use `close()` to stop I/O admission, cancel operations, close paused text streams and await cleanup. Completed writes remain committed. The package still declares compatibility dependencies; this subpath alone does not establish a Cordis-free installation.
+`@redspark/rsh-fs-local/backend` exposes `LocalFileSystemBackend` for direct composition with explicit `cwd` and `diffBasisMaxBytes`. The Cordis service delegates to one instance of this same implementation. `resolveLocalFilesystemConfig(input)` validates configuration and captures defaults before construction. Direct callers use `close()` to stop I/O admission, cancel operations, close paused text streams and await cleanup. Completed writes remain committed. The package still declares compatibility dependencies; this subpath alone does not establish a Cordis-free installation.
 
-`@deepseek-ai/dsh-fs-local/native` exports `localFilesystemPlugin` for `resolveInstallation`. It provides the explicitly selected `fs` service on Host, binds cancellation to its installation and awaits backend cleanup on removal or stop. Cordis registration uses the same backend and owns its shutdown through an effect. Current application profiles still use their existing composition.
+`@redspark/rsh-fs-local/native` exports `localFilesystemPlugin` for `resolveInstallation`. It provides the explicitly selected `fs` service on Host, binds cancellation to its installation and awaits backend cleanup on removal or stop. Cordis registration uses the same backend and owns its shutdown through an effect. Current application profiles still use their existing composition.
 
 ### When to choose it
 
@@ -40,7 +40,7 @@ Choose `fs-local` for ordinary host-file access in a single process. Choose [`fs
 Load the backend with a base directory; relative paths resolve against it, and absolute paths ignore it.
 
 ```yaml
-- name: '@deepseek-ai/dsh-fs-local'
+- name: '@redspark/rsh-fs-local'
   config:
     cwd: /absolute/path/to/workspace
 ```
@@ -50,7 +50,7 @@ Load the backend with a base directory; relative paths resolve against it, and a
 | `cwd` | `process.cwd()` | Base directory for relative paths |
 | `diffBasisMaxBytes` | `10 MiB` | UTF-8 byte limit per overwrite-diff side; larger overwrites return `before: null` |
 
-The generated [configuration catalog](../../../../Docs/config-catalog.md#deepseek-aidsh-fs-local) is the exhaustive source for every accepted field and its JSDoc.
+The generated [configuration catalog](../../../../Docs/config-catalog.md#redsparkrsh-fs-local) is the exhaustive source for every accepted field and its JSDoc.
 
 ### What you can do
 

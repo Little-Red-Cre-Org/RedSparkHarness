@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { LlmAttemptId, createAssistantMessage } from '@deepseek-ai/dsh-llm'
-import { SessionSeq, type SessionEvent } from '@deepseek-ai/dsh-session'
+import { LlmAttemptId, createAssistantMessage } from '@redspark/rsh-llm'
+import { SessionSeq, type SessionEvent } from '@redspark/rsh-session'
 import type {
   SessionAssistantStreamBaseline,
   SessionAssistantStreamFrame,

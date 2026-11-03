@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
-import { ClientModuleSystem, parseBootManifest, type ClientModuleLoaderTarget, type WebBootGraph } from '@deepseek-ai/dsh-client-modules/native'
-import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
+import { ClientModuleSystem, parseBootManifest, type ClientModuleLoaderTarget, type WebBootGraph } from '@redspark/rsh-client-modules/native'
+import type { NativePlugin } from '@redspark/rsh-native-runtime'
 import { describe, expect, it } from 'vitest'
 import { bootNativeClient } from '../src/native-boot.ts'
 

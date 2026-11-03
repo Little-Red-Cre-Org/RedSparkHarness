@@ -3,7 +3,7 @@ description: "Share portable code-run requests and provider operations between c
 kind: "package-library"
 ---
 
-# @deepseek-ai/dsh-code-runtime-definition
+# @redspark/rsh-code-runtime-definition
 
 English | [中文](README.zh.md)
 
@@ -33,7 +33,7 @@ This package lets code-runtime Providers implement one request and result contra
 Import the portable types when implementing a backend or declaring a Consumer dependency:
 
 ```ts
-import type { CodeRunRequest, CodeRuntimeDefinition, NativeCodeRunRequest } from '@deepseek-ai/dsh-code-runtime-definition'
+import type { CodeRunRequest, CodeRuntimeDefinition, NativeCodeRunRequest } from '@redspark/rsh-code-runtime-definition'
 ```
 
 ## Implementation

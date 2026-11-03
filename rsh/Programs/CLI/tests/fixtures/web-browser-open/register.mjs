@@ -20,7 +20,7 @@ registerHooks({
 })
 
 // The SSH case has no opener helper to stop the long-lived Web process.
-if (process.env.DSH_BROWSER_OPEN_TEST_EXIT_ON_READY === '1') {
+if (process.env.RSH_BROWSER_OPEN_TEST_EXIT_ON_READY === '1') {
   const originalLog = console.log
   console.log = (...args) => {
     originalLog(...args)
@@ -30,7 +30,7 @@ if (process.env.DSH_BROWSER_OPEN_TEST_EXIT_ON_READY === '1') {
   }
 }
 
-if (process.env.DSH_BROWSER_OPEN_TEST_EXIT_ON_FAILURE === '1') {
+if (process.env.RSH_BROWSER_OPEN_TEST_EXIT_ON_FAILURE === '1') {
   const originalError = console.error
   console.error = (...args) => {
     originalError(...args)

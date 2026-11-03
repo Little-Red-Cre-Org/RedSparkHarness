@@ -120,12 +120,12 @@ Source: [`rsh/Compatibility/DSH/bridge/compat-user-approval/src/types.ts`](../..
 
 #### `approval/request` — waterfall
 
-Ask composed answerers for one decision. Return an outcome to claim it or call `next()` to delegate. Scope-filtered dispatch (`@deepseek-ai/dsh-scope`) limits listeners to the requesting Agent's scope.
+Ask composed answerers for one decision. Return an outcome to claim it or call `next()` to delegate. Scope-filtered dispatch (`@redspark/rsh-scope`) limits listeners to the requesting Agent's scope.
 
 ```ts cordis-catalog
 /**
  * Ask composed answerers for one decision. Return an outcome to claim it or call `next()` to delegate.
- * Scope-filtered dispatch (`@deepseek-ai/dsh-scope`) limits listeners to the requesting Agent's scope.
+ * Scope-filtered dispatch (`@redspark/rsh-scope`) limits listeners to the requesting Agent's scope.
  * @param req - pending approval request.
  * @mode waterfall
  */

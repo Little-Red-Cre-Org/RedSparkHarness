@@ -173,7 +173,7 @@ export function collectCordisSourceUses(
   const record = (node: ts.Node, expression: ts.Expression | undefined, symbols: string[], kind: EdgeKind): void => {
     if (expression === undefined || !ts.isStringLiteralLike(expression)) return
     const specifier = expression.text
-    if (!(specifier === '@deepseek-ai/cordis' || specifier.startsWith('@deepseek-ai/cordis-'))) return
+    if (!(specifier === '@redspark/cordis' || specifier.startsWith('@redspark/cordis-'))) return
     const position = source.getLineAndCharacterOfPosition(node.getStart(source))
     uses.push({ owner, fileName: source.fileName, face, line: position.line + 1, specifier, kind, symbols })
   }
@@ -278,7 +278,7 @@ export function sourceImportViolations(
         : { resolvedWorkspacePath: resolve(resolvedPath) }),
     })
 
-    if (declaredPackageName === '@deepseek-ai/cordis' && strictCordisOwners.has(pathKey(importer.directory))) {
+    if (declaredPackageName === '@redspark/cordis' && strictCordisOwners.has(pathKey(importer.directory))) {
       violations.push(`${location}: ${face} native source owner ${importer.name} imports Cordis via ${JSON.stringify(specifier)}`)
     }
 
@@ -314,7 +314,7 @@ export function sourceImportViolations(
         `${location}: ${face} alias ${JSON.stringify(specifier)} resolves to ${targetOwner.name}, not ${expectedPackage.name}`,
       )
     }
-    if (targetOwner.name === '@deepseek-ai/cordis' && strictCordisOwners.has(pathKey(importer.directory))) {
+    if (targetOwner.name === '@redspark/cordis' && strictCordisOwners.has(pathKey(importer.directory))) {
       violations.push(`${location}: ${face} native source owner ${importer.name} resolves to Cordis via ${JSON.stringify(specifier)}`)
     }
 

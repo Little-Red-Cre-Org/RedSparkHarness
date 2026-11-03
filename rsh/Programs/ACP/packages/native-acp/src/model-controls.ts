@@ -1,9 +1,9 @@
 /** ACP configuration projected from the selected native Session and model Providers. */
 import { RequestError, type SessionConfigOption } from '@agentclientprotocol/sdk'
-import type { NativeActiveSessionOwner } from '@deepseek-ai/dsh-native-session-execution'
-import type { NativeModelDirectory } from '@deepseek-ai/dsh-native-model-execution/model-directory'
-import type { ModelSelection } from '@deepseek-ai/dsh-native-model-execution/model-selection'
-import type { NativeModelSelectionOperations } from '@deepseek-ai/dsh-native-model-selection'
+import type { NativeActiveSessionOwner } from '@redspark/rsh-native-session-execution'
+import type { NativeModelDirectory } from '@redspark/rsh-native-model-execution/model-directory'
+import type { ModelSelection } from '@redspark/rsh-native-model-execution/model-selection'
+import type { NativeModelSelectionOperations } from '@redspark/rsh-native-model-selection'
 
 /** Protocol projection only; the selected Provider owns all durable choices. */
 export class NativeAcpModelControls {

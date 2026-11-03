@@ -3,7 +3,7 @@ description: "Shared native confinement and result classification for shell Prov
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-shell-sandbox-core
+# @redspark/rsh-shell-sandbox-core
 
 English | [中文](README.zh.md)
 

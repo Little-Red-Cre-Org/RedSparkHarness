@@ -3,7 +3,7 @@ description: "The file-backed settings provider for users and maintainers choosi
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-settings-file
+# @redspark/rsh-settings-file
 
 English | [中文](README.zh.md)
 
@@ -34,7 +34,7 @@ Choose it as the default user-settings store: one human-readable document that u
 ### Minimal configuration
 
 ```yaml
-- name: '@deepseek-ai/dsh-settings-file'
+- name: '@redspark/rsh-settings-file'
   config:
     path: /absolute/path/to/settings.yaml
 ```
@@ -42,13 +42,13 @@ Choose it as the default user-settings store: one human-readable document that u
 | Field | Default | Meaning |
 |---|---|---|
 | `path` | `<harness home>/settings.yaml` | Settings document path; the extension picks the format (`.yaml`, `.yml`, or `.json`) |
-| `dshHome` | `$DSH_HOME` or `~/.dsh` | Harness home used when `path` is omitted |
+| `rshHome` | `$RSH_HOME` or `~/.dsh` | Harness home used when `path` is omitted |
 | `watch` | `true` | Watch the document and hot-publish external edits |
 | `debounceMs` | `100` | Watcher write-settle window, in milliseconds |
 
-The generated [configuration catalog](../../../../Docs/config-catalog.md#deepseek-aidsh-settings-file) is the exhaustive source for every accepted field and its JSDoc.
+The generated [configuration catalog](../../../../Docs/config-catalog.md#redsparkrsh-settings-file) is the exhaustive source for every accepted field and its JSDoc.
 
-The native Host entry provides the same file location, YAML/JSON formats, atomic read-modify-write and external-edit watcher through `@deepseek-ai/dsh-settings/native`. It preserves unknown namespace sections and refuses an invalid file instead of overwriting it; native Consumers own their namespace validation. `@deepseek-ai/dsh-settings-file/native` also exports `resolveNativeSettingsConfig` and `parseNativeSettingsDocument` for readers that need the provider's path and parse rules without starting a Host. Each changed registered user section emits `settings/document-updated` with its incremented revision, even when its resolved value remains equal.
+The native Host entry provides the same file location, YAML/JSON formats, atomic read-modify-write and external-edit watcher through `@redspark/rsh-settings/native`. It preserves unknown namespace sections and refuses an invalid file instead of overwriting it; native Consumers own their namespace validation. `@redspark/rsh-settings-file/native` also exports `resolveNativeSettingsConfig` and `parseNativeSettingsDocument` for readers that need the provider's path and parse rules without starting a Host. Each changed registered user section emits `settings/document-updated` with its incremented revision, even when its resolved value remains equal.
 
 ### Editing the document
 
@@ -94,7 +94,7 @@ This section explains the design decisions behind the provider and points at the
 | [`src/index.ts`](src/index.ts) | Provider: spec resolution, load/parse, read-modify-write under the writer lock, watcher lifecycle, YAML/JSON rendering |
 | [`src/native.ts`](src/native.ts) | Native Provider: file storage, lock, watcher and Host lifecycle |
 | [`src/yaml-patch.ts`](src/yaml-patch.ts) | Shared comment-preserving YAML leaf edits |
-| — | No runtime invariant companion is published; this provider's contracts are file round-trip, watcher timing, and atomic-write behavior — IO effects proven by package tests; the in-process commit relation is owned by `@deepseek-ai/dsh-settings`. |
+| — | No runtime invariant companion is published; this provider's contracts are file round-trip, watcher timing, and atomic-write behavior — IO effects proven by package tests; the in-process commit relation is owned by `@redspark/rsh-settings`. |
 
 ### Document lifecycle
 
@@ -117,8 +117,8 @@ Read these pages when the provider-level contract is not enough. They move from 
 - [Settings subsystem reference](../../../../Docs/subsystems/settings.md) — namespaces, resolution order, descriptors, and change commits.
 - [Settings package map](../README.md) — the two packages of the user-settings capability.
 - [Atomic write](../../../../Core/util/atomic-write/README.md) — the writer lock and atomic replacement every write uses.
-- [Home paths](../../../../Core/util/home-paths/README.md) — `$DSH_HOME` resolution and canonical watch paths.
-- [Generated configuration catalog](../../../../Docs/config-catalog.md#deepseek-aidsh-settings-file) — every accepted config field and its source declaration.
+- [Home paths](../../../../Core/util/home-paths/README.md) — `$RSH_HOME` resolution and canonical watch paths.
+- [Generated configuration catalog](../../../../Docs/config-catalog.md#redsparkrsh-settings-file) — every accepted config field and its source declaration.
 
 -----
 

@@ -6,8 +6,8 @@
  * dsh.client declaration.
  */
 
-import type { Context } from '@deepseek-ai/cordis'
-import type {} from '@deepseek-ai/dsh-system-prompt'
+import type { Context } from '@redspark/cordis'
+import type {} from '@redspark/rsh-system-prompt'
 import { registerPresentOpen } from './present-open.ts'
 
 /** Services required for file-reference guidance and authenticated native opens of declared files. */

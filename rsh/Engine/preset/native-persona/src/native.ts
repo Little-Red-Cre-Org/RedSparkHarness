@@ -1,7 +1,7 @@
 /** Native Host row hosting the shipped Cordis persona plugin. */
-import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
-import { apply as applyPersona } from '@deepseek-ai/dsh-persona'
-import { nativePluginForCordis } from '@deepseek-ai/dsh-cordis-bridge/native'
+import type { NativePlugin } from '@redspark/rsh-native-runtime'
+import { apply as applyPersona } from '@redspark/rsh-persona'
+import { nativePluginForCordis } from '@redspark/rsh-cordis-bridge/native'
 import { personaServices } from './services.ts'
 
 /**
@@ -10,7 +10,7 @@ import { personaServices } from './services.ts'
  * The row declares `promptSections` because the bridged plugin reads it; without that the
  * installation would plan against a Native service the preset may not mount.
  */
-export const plugin: NativePlugin = nativePluginForCordis('@deepseek-ai/dsh-native-persona', (context, config) => ({
+export const plugin: NativePlugin = nativePluginForCordis('@redspark/rsh-native-persona', (context, config) => ({
   plugin: { name: 'persona', apply: applyPersona },
   config,
   services: personaServices(context),

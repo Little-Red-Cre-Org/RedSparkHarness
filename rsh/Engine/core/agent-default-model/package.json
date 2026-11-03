@@ -1,5 +1,5 @@
 {
-  "name": "@deepseek-ai/dsh-agent-default-model",
+  "name": "@redspark/rsh-agent-default-model",
   "description": "Default model selection shared by Agent entry points",
   "version": "1.0.0",
   "publishConfig": {
@@ -33,21 +33,21 @@
   ],
   "license": "MIT",
   "dependencies": {
-    "@deepseek-ai/dsh-util-values": "workspace:^",
-    "@deepseek-ai/schemastery": "workspace:^"
+    "@redspark/rsh-util-values": "workspace:^",
+    "@redspark/schemastery": "workspace:^"
   },
   "peerDependencies": {
-    "@deepseek-ai/dsh-agent": "workspace:^",
-    "@deepseek-ai/dsh-settings-definition": "workspace:^",
-    "@deepseek-ai/dsh-llm": "workspace:^",
-    "@deepseek-ai/cordis": "workspace:^"
+    "@redspark/rsh-agent": "workspace:^",
+    "@redspark/rsh-settings-definition": "workspace:^",
+    "@redspark/rsh-llm": "workspace:^",
+    "@redspark/cordis": "workspace:^"
   },
   "devDependencies": {
-    "@deepseek-ai/dsh-agent": "workspace:^",
-    "@deepseek-ai/dsh-settings-definition": "workspace:^",
-    "@deepseek-ai/dsh-llm": "workspace:^",
-    "@deepseek-ai/dsh-settings": "workspace:^",
-    "@deepseek-ai/dsh-compat-settings-adapters": "workspace:^",
-    "@deepseek-ai/cordis": "workspace:^"
+    "@redspark/rsh-agent": "workspace:^",
+    "@redspark/rsh-settings-definition": "workspace:^",
+    "@redspark/rsh-llm": "workspace:^",
+    "@redspark/rsh-settings": "workspace:^",
+    "@redspark/rsh-compat-settings-adapters": "workspace:^",
+    "@redspark/cordis": "workspace:^"
   }
 }

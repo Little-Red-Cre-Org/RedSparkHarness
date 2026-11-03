@@ -1,7 +1,7 @@
 /** Immutable launch environment values for native and legacy hosts. */
-import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
+import type { NativePlugin } from '@redspark/rsh-native-runtime'
 
-declare module '@deepseek-ai/dsh-native-runtime' {
+declare module '@redspark/rsh-native-runtime' {
   interface NativeServices { launchEnvironment: LaunchEnvironmentSnapshot }
 }
 
@@ -116,7 +116,7 @@ export function launchedThroughSsh(environment: LaunchEnvironmentSnapshot): bool
 export function launchEnvironmentProvider(snapshot: LaunchEnvironmentSnapshot): NativePlugin {
   return {
     apiVersion: 1,
-    name: '@deepseek-ai/dsh-launch-environment',
+    name: '@redspark/rsh-launch-environment',
     targets: ['host'],
     requires: [],
     provides: ['launchEnvironment'],

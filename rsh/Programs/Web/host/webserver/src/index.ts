@@ -1,5 +1,5 @@
 /**
- * @deepseek-ai/dsh-host-webserver — node:http route registration with optional
+ * @redspark/rsh-host-webserver — node:http route registration with optional
  * gzip, index injection, and one fallback seat. It knows no harness concepts
  * and serves no files; the composing application owns dist serving. Electron
  * uses file:// plus IPC instead, and this package never prints the URL.
@@ -10,20 +10,20 @@ import { createServer } from 'node:http'
 import type { IncomingMessage, ServerResponse, Server } from 'node:http'
 import type { AddressInfo } from 'node:net'
 import type { Duplex } from 'node:stream'
-import { Context, Service } from '@deepseek-ai/cordis'
-import type { HttpRoute, HttpUpgradeRoute } from '@deepseek-ai/dsh-http-routes/host'
-import { HttpRouteTable } from '@deepseek-ai/dsh-http-routes'
-import type { HttpWebServer, HttpWebServerConfig } from '@deepseek-ai/dsh-http-routes-cordis'
-import z from '@deepseek-ai/schemastery'
+import { Context, Service } from '@redspark/cordis'
+import type { HttpRoute, HttpUpgradeRoute } from '@redspark/rsh-http-routes/host'
+import { HttpRouteTable } from '@redspark/rsh-http-routes'
+import type { HttpWebServer, HttpWebServerConfig } from '@redspark/rsh-http-routes-cordis'
+import z from '@redspark/schemastery'
 import compressionMiddleware from 'compression'
 import Negotiator from 'negotiator'
 import { renderIndexInjections } from './injections.ts'
-import type { IndexInjection } from '@deepseek-ai/dsh-http-routes/client'
+import type { IndexInjection } from '@redspark/rsh-http-routes/client'
 
 export { renderIndexInjections } from './injections.ts'
-export type { IndexInjection, IndexInjectionPlacement } from '@deepseek-ai/dsh-http-routes/client'
-export type { WebRoute, WebRouteKind, WebUpgradeRoute } from '@deepseek-ai/dsh-http-routes-cordis'
-export type { HttpWebServerConfig as Config } from '@deepseek-ai/dsh-http-routes-cordis'
+export type { IndexInjection, IndexInjectionPlacement } from '@redspark/rsh-http-routes/client'
+export type { WebRoute, WebRouteKind, WebUpgradeRoute } from '@redspark/rsh-http-routes-cordis'
+export type { HttpWebServerConfig as Config } from '@redspark/rsh-http-routes-cordis'
 type Config = HttpWebServerConfig
 
 const DEFAULT_COMPRESSION = 'none' as const

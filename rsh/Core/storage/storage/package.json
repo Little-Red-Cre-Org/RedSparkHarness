@@ -1,5 +1,5 @@
 {
-  "name": "@deepseek-ai/dsh-storage",
+  "name": "@redspark/rsh-storage",
   "description": "Storage hub (ctx.storage): named backend registry plus mounted data-form facilities for the RedSpark Harness",
   "version": "1.0.0",
   "publishConfig": {
@@ -38,13 +38,13 @@
   ],
   "license": "MIT",
   "peerDependencies": {
-    "@deepseek-ai/cordis": "workspace:^"
+    "@redspark/cordis": "workspace:^"
   },
   "devDependencies": {
-    "@deepseek-ai/cordis": "workspace:^"
+    "@redspark/cordis": "workspace:^"
   },
   "dependencies": {
-    "@deepseek-ai/dsh-native-runtime": "workspace:^"
+    "@redspark/rsh-native-runtime": "workspace:^"
   },
   "dsh": {
     "native": {
@@ -61,7 +61,7 @@
     }
   },
   "peerDependenciesMeta": {
-    "@deepseek-ai/cordis": {
+    "@redspark/cordis": {
       "optional": true
     }
   }

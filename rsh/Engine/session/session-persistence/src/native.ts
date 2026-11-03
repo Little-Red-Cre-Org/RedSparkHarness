@@ -2,7 +2,7 @@
 export { SessionDeletionId } from './deletion.ts'
 export type { SessionDeletionReceipt, NativeSessionDeletionOperations } from './deletion.ts'
 import type { NativeSessionDeletionOperations } from './deletion.ts'
-export type { SessionHeader } from '@deepseek-ai/dsh-session/native'
+export type { SessionHeader } from '@redspark/rsh-session/native'
 export { SessionPersistenceRevision } from './revision.ts'
 export type { SessionPersistenceRevision as PersistenceRevision } from './revision.ts'
 export type {
@@ -43,10 +43,10 @@ export type {
   SessionStorageMetadata,
 } from './types.ts'
 
-import type { SessionHeader, SessionId } from '@deepseek-ai/dsh-session/native'
+import type { SessionHeader, SessionId } from '@redspark/rsh-session/native'
 import type { SessionHandle, SessionAccess } from './handle.ts'
 import type { SessionPersistenceCreateOptions, SessionPersistenceListOptions, SessionPersistenceOpenOptions, SessionPersistenceSnapshot, SessionPersistenceStatOptions } from './types.ts'
-import type {} from '@deepseek-ai/dsh-native-runtime'
+import type {} from '@redspark/rsh-native-runtime'
 
 /**
  * Durable append-only session storage addressed through per-session handles.
@@ -133,7 +133,7 @@ export interface NativeSessionPersistenceOperations {
   list(options?: SessionPersistenceListOptions): Promise<readonly SessionPersistenceSnapshot[]>
 }
 
-declare module '@deepseek-ai/dsh-native-runtime' {
+declare module '@redspark/rsh-native-runtime' {
   interface NativeServices {
     sessionPersistence: NativeSessionPersistenceOperations
   }

@@ -6,11 +6,11 @@
  * browser half-entry's re-export) for client aggregates — with zero content
  * duplication.
  *
- * @module @deepseek-ai/dsh-permission-presets/types
+ * @module @redspark/rsh-permission-presets/types
  */
 
-import type {} from '@deepseek-ai/dsh-session-projection/types'
-import type {} from '@deepseek-ai/dsh-session/types'
+import type {} from '@redspark/rsh-session-projection/types'
+import type {} from '@redspark/rsh-session/types'
 
 /** The select-option shape a presentation layer advertises for one preset (or for the derived `custom` state). */
 export interface PresetOption {
@@ -34,7 +34,7 @@ export interface PermissionSelect {
   currentValue: string
 }
 
-declare module '@deepseek-ai/dsh-session-projection/types' {
+declare module '@redspark/rsh-session-projection/types' {
   interface SessionProjectionMap {
     /**
      * The session's permission select, folded from the three whole-value
@@ -46,7 +46,7 @@ declare module '@deepseek-ai/dsh-session-projection/types' {
   }
 }
 
-declare module '@deepseek-ai/dsh-session/types' {
+declare module '@redspark/rsh-session/types' {
   interface SessionEventMap {
     /**
      * Records the selected preset as durable, log-only user intent. The knob

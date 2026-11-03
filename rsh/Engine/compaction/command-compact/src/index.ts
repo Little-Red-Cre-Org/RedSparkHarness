@@ -1,12 +1,12 @@
 /**
  * Human-facing `/compact` command over the backend-independent compaction seam.
- * @module @deepseek-ai/dsh-command-compact
+ * @module @redspark/rsh-command-compact
  */
 
-import type { Context } from '@deepseek-ai/cordis'
-import { CommandDefinitionId } from '@deepseek-ai/dsh-commands/brand'
-import type {} from '@deepseek-ai/dsh-compaction'
-import type { CommandInvocation, CommandResult } from '@deepseek-ai/dsh-commands'
+import type { Context } from '@redspark/cordis'
+import { CommandDefinitionId } from '@redspark/rsh-commands/brand'
+import type {} from '@redspark/rsh-compaction'
+import type { CommandInvocation, CommandResult } from '@redspark/rsh-commands'
 import { COMPACT_COMMAND_DESCRIPTION, COMPACT_COMMAND_NAME, COMPACT_DEFINITION_ID, executeCompact } from './common.ts'
 
 export const name = 'command-compact'

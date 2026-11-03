@@ -1,7 +1,7 @@
 /** Native model tools over the shared workspace-authorized query operations. */
-import type { JsonValue } from '@deepseek-ai/dsh-util-values'
-import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
-import type { NativeToolExecution, NativeValueToolContribution } from '@deepseek-ai/dsh-native-tools'
+import type { JsonValue } from '@redspark/rsh-util-values'
+import type { NativePlugin } from '@redspark/rsh-native-runtime'
+import type { NativeToolExecution, NativeValueToolContribution } from '@redspark/rsh-native-tools'
 import { operations } from './operations.ts'
 import { toolInput } from './input.ts'
 import {
@@ -11,11 +11,11 @@ import {
 } from './config.ts'
 import type { ResolvedSessionQueryToolConfig, SessionQueryToolConfig } from './config.ts'
 import type { SessionQueryToolInvocation, SessionQueryToolServices } from './runtime.ts'
-import type {} from '@deepseek-ai/dsh-native-agent/turn-boundary'
-import type {} from '@deepseek-ai/dsh-native-prompt/native'
-import type {} from '@deepseek-ai/dsh-session-query/native'
-import type {} from '@deepseek-ai/dsh-session-projection/native'
-import type {} from '@deepseek-ai/dsh-native-tools/native'
+import type {} from '@redspark/rsh-native-agent/turn-boundary'
+import type {} from '@redspark/rsh-native-prompt/native'
+import type {} from '@redspark/rsh-session-query/native'
+import type {} from '@redspark/rsh-session-projection/native'
+import type {} from '@redspark/rsh-native-tools/native'
 
 const PROMPT_TEXT =
   'Use session_search to find relevant work from prior sessions, or session_event_search to search earlier '
@@ -91,7 +91,7 @@ function textTool<Args>(
 /** Register the Native Consumer over the selected query and projection services. */
 export const plugin: NativePlugin = {
   apiVersion: 1,
-  name: '@deepseek-ai/dsh-tool-session-query',
+  name: '@redspark/rsh-tool-session-query',
   targets: ['host'],
   requires: ['sessionQuery', 'sessionProjections', 'tools', 'promptSections'],
   provides: [],

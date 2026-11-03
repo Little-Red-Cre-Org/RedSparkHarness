@@ -7,10 +7,10 @@ export {
   isPlainJsonArray,
   isPlainJsonRecord,
   validateJsonSchemaValue,
-} from '@deepseek-ai/dsh-native-tools/json-schema'
+} from '@redspark/rsh-native-tools/json-schema'
 export type {
   JsonSchemaNode,
   JsonSchemaScalar,
   JsonSchemaType,
   ObjectJsonSchema,
-} from '@deepseek-ai/dsh-native-tools/json-schema'
+} from '@redspark/rsh-native-tools/json-schema'

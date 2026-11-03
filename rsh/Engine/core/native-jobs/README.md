@@ -3,7 +3,7 @@ description: "Native Agent-owned background job registry with cooperative cancel
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-native-jobs
+# @redspark/rsh-native-jobs
 
 English | [中文](README.zh.md)
 

@@ -9,8 +9,8 @@
 import { fileURLToPath } from 'node:url'
 import type { Browser, Page } from 'playwright'
 import { chromium } from 'playwright'
-import { createSystemMessage } from '@deepseek-ai/dsh-llm'
-import { SESSION_FORMAT_VERSION } from '@deepseek-ai/dsh-session'
+import { createSystemMessage } from '@redspark/rsh-llm'
+import { SESSION_FORMAT_VERSION } from '@redspark/rsh-session'
 import { afterAll, beforeAll, describe, expect, it, onTestFailed } from 'vitest'
 import {
   assertFixtureInventory, captureStableAria, compareOrRefreshGolden,
@@ -50,7 +50,7 @@ function buildSeed(turns: number): string {
     if (turn === 1) {
       at({
         type: 'system/message',
-        data: { turn, step: 1, message: createSystemMessage('', '@deepseek-ai/dsh-system-prompt') },
+        data: { turn, step: 1, message: createSystemMessage('', '@redspark/rsh-system-prompt') },
         surfaceOp: 'append',
       })
     }

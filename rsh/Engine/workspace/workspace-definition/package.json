@@ -1,5 +1,5 @@
 {
-  "name": "@deepseek-ai/dsh-workspace-definition",
+  "name": "@redspark/rsh-workspace-definition",
   "description": "Framework-independent Workspace identity and consumer operations",
   "version": "1.0.0",
   "publishConfig": {
@@ -26,7 +26,7 @@
   ],
   "license": "MIT",
   "dependencies": {
-    "@deepseek-ai/dsh-brand": "workspace:^",
-    "@deepseek-ai/dsh-session": "workspace:^"
+    "@redspark/rsh-brand": "workspace:^",
+    "@redspark/rsh-session": "workspace:^"
   }
 }

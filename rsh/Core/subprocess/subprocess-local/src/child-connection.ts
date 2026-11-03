@@ -1,6 +1,6 @@
 /** Standalone local child connection owner for clients that do not mount NativeHost. */
 
-import type { ChildConnectionDefinition } from '@deepseek-ai/dsh-subprocess/native'
+import type { ChildConnectionDefinition } from '@redspark/rsh-subprocess/native'
 import { LocalSubprocessController } from './controller.ts'
 
 /** Local child-connection capability plus its owned process-manager lifetime. */

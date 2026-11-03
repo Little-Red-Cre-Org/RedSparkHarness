@@ -1,9 +1,9 @@
 /** One-shot cold session read through the handle-based persistence seam. */
 
-import { interruptedTurnClosers } from '@deepseek-ai/dsh-session/native'
-import type { SessionEvent, SessionHeader, SessionId, SessionLogOffset, SessionSeedEventState } from '@deepseek-ai/dsh-session/native'
-import type { NativeSessionPersistenceOperations } from '@deepseek-ai/dsh-session-persistence/native'
-import type { SessionHandleReadResult } from '@deepseek-ai/dsh-session-persistence/native'
+import { interruptedTurnClosers } from '@redspark/rsh-session/native'
+import type { SessionEvent, SessionHeader, SessionId, SessionLogOffset, SessionSeedEventState } from '@redspark/rsh-session/native'
+import type { NativeSessionPersistenceOperations } from '@redspark/rsh-session-persistence/native'
+import type { SessionHandleReadResult } from '@redspark/rsh-session-persistence/native'
 
 /** A stored session log balanced for read-only viewing. */
 export interface ColdSessionLog {

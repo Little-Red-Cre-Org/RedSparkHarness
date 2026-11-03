@@ -6,15 +6,15 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { expect, it } from 'vitest'
-import { DeepSeekHarness, type HarnessNotification, type RunResult } from '@deepseek-ai/dsh-sdk-client'
-import { parseSessionLog } from '@deepseek-ai/dsh-llm-replay'
-import type { SessionEvent } from '@deepseek-ai/dsh-session'
-import { deadline } from '@deepseek-ai/dsh-timeout'
+import { RedSparkHarness, type HarnessNotification, type RunResult } from '@redspark/rsh-sdk-client'
+import { parseSessionLog } from '@redspark/rsh-llm-replay'
+import type { SessionEvent } from '@redspark/rsh-session'
+import { deadline } from '@redspark/rsh-timeout'
 import { shippedNativeProfileComposition } from '../../rsh/Programs/CLI/src/native-profile-template.ts'
 import {
   formatSystemPromptSnapshot, formatToolSchemasSnapshot, normalizedSystemPrompts, normalizedToolSchemas,
   normalizeSessionSnapshot, redactSessionSnapshotIds,
-} from '@deepseek-ai/dsh-session-snapshot'
+} from '@redspark/rsh-session-snapshot'
 
 const root = fileURLToPath(new URL('../../', import.meta.url))
 const scenario = join(root, 'snapshots/native-sdk/goal-control')
@@ -264,7 +264,7 @@ it('projects Goal interruption and cold rearm through both native SDKs', async (
   const shippedGoal = shippedNativeProfileComposition(home, 'native-headless').installations
     .filter(row => ['goal', 'goal-round-driver', 'tool-goal'].includes(row.id))
   expect(shippedGoal.map(row => row.plugin)).toEqual([
-    '@deepseek-ai/dsh-goal', '@deepseek-ai/dsh-goal-round-driver', '@deepseek-ai/dsh-tool-goal',
+    '@redspark/rsh-goal', '@redspark/rsh-goal-round-driver', '@redspark/rsh-tool-goal',
   ])
   writeFileSync(join(profile, 'package.json'), JSON.stringify({ name: 'native-sdk-goal-fixture', private: true,
     dsh: { profile: { runtime: 'native', config: 'rsh.profile.json' } } }))
@@ -281,23 +281,23 @@ it('projects Goal interruption and cold rearm through both native SDKs', async (
     { id: 'pi-ai', config: { providers: { fixture: { apiKeyEnv: 'NATIVE_SDK_FIXTURE_KEY', api: 'openai-completions',
       baseURL: `${controlUrl}/v1`, models: [{ id: 'fixture-model', input: ['text'] }] } } } },
   ] }))
-  const harness = new DeepSeekHarness({ profile: 'native-sdk', dshBin: join(root, 'rsh/Programs/CLI/lib/bin.js'),
-    dshHome: home, patches: [patch], cwd: workspace, provider: 'fixture', model: 'fixture-model',
-    env: { ...process.env, NATIVE_SDK_FIXTURE_KEY: 'fixture-key', DSH_TELEMETRY_DISABLED: '1' },
+  const harness = new RedSparkHarness({ profile: 'native-sdk', rshBin: join(root, 'rsh/Programs/CLI/lib/bin.js'),
+    rshHome: home, patches: [patch], cwd: workspace, provider: 'fixture', model: 'fixture-model',
+    env: { ...process.env, NATIVE_SDK_FIXTURE_KEY: 'fixture-key', RSH_TELEMETRY_DISABLED: '1' },
     requestTimeoutMs: 20_000 })
   const serializeRun = (result: RunResult) => ({ finalResponse: result.finalResponse, events: result.events,
     notifications: result.notifications })
   try {
     let runs: Record<string, ReturnType<typeof serializeRun>>
     let goalProjection: HarnessNotification
-    if (process.env.DSH_NATIVE_SDK_PYTHON !== undefined) {
+    if (process.env.RSH_NATIVE_SDK_PYTHON !== undefined) {
       updateStage('run Python SDK Goal lifecycle')
       const launcher = join(home, process.platform === 'win32' ? 'dsh.cmd' : 'dsh')
       writeFileSync(launcher, process.platform === 'win32'
         ? `@echo off\r\n"${process.execPath}" "${join(root, 'rsh/Programs/CLI/lib/bin.js')}" %*\r\n`
         : `#!/bin/sh\nexec "${process.execPath}" "${join(root, 'rsh/Programs/CLI/lib/bin.js')}" "$@"\n`)
       if (process.platform !== 'win32') chmodSync(launcher, 0o700)
-      const python = await execa(process.env.DSH_NATIVE_SDK_PYTHON, [join(root, 'snapshots/native-sdk/text-turn/client.py'),
+      const python = await execa(process.env.RSH_NATIVE_SDK_PYTHON, [join(root, 'snapshots/native-sdk/text-turn/client.py'),
         launcher, home, workspace, patch, task, 'goal-control'], {
         env: { ...process.env, PYTHONPATH: join(root, 'rsh/Programs/SDK/python/sdk/src'),
           NATIVE_SDK_FIXTURE_KEY: 'fixture-key', NATIVE_SDK_GOAL_CONTROL_URL: controlUrl },
@@ -344,7 +344,7 @@ it('projects Goal interruption and cold rearm through both native SDKs', async (
       updateStage('close original SDK Host')
       await harness.close()
       const restoredOptions = { ...harness.client.options, cwd: workspace, provider: 'fixture', model: 'fixture-model' }
-      const restored = new DeepSeekHarness(restoredOptions)
+      const restored = new RedSparkHarness(restoredOptions)
       let cold: RunResult
       let rearmed: RunResult
       try {
@@ -580,7 +580,7 @@ it('projects Goal interruption and cold rearm through both native SDKs', async (
     const modelEvidence = `${JSON.stringify(admissions.map(({ input, round, outcome, retainedInputs }) => ({
       input, round: round ?? null, outcome, retainedInputs,
     })), null, 2)}\n`
-    if (process.env.DSH_SNAPSHOT === 'refresh') {
+    if (process.env.RSH_SNAPSHOT === 'refresh') {
       writeFileSync(fixture, normalized)
       writeFileSync(join(scenario, 'system-prompt.expected.md'), prompt)
       writeFileSync(join(scenario, 'tool-schemas.expected.json'), toolSchemas)

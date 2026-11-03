@@ -8,7 +8,7 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-`@deepseek-ai/dsh-api-session-controller` owns the Host `ctx.sessionController` service and the generated Client `session`, `skills`, and `fileReferences` Remote namespaces. It serves Session lifecycle and history, the Host-generation model catalog, workspace-path opening, user-invocable skill discovery, and Agent-scoped file references. Use it through API Gateway when a Client needs operations addressed by a Session.
+`@redspark/rsh-api-session-controller` owns the Host `ctx.sessionController` service and the generated Client `session`, `skills`, and `fileReferences` Remote namespaces. It serves Session lifecycle and history, the Host-generation model catalog, workspace-path opening, user-invocable skill discovery, and Agent-scoped file references. Use it through API Gateway when a Client needs operations addressed by a Session.
 
 ## Table of Contents
 
@@ -38,7 +38,7 @@ The Session object also carries local submission echoes: `session.beginSubmissio
 <a id="cordis-free-client-event-types"></a>
 ## Cordis-free Client event types
 
-`@deepseek-ai/dsh-api-session-controller/client-event-types` exports the durable and transient event types used by Client event-window consumers. The type-only entry does not load the Session Client runtime.
+`@redspark/rsh-api-session-controller/client-event-types` exports the durable and transient event types used by Client event-window consumers. The type-only entry does not load the Session Client runtime.
 
 
 The user-invocable `skills/list` metadata includes the winning provider’s optional instruction-file `path`. The composer can preview that file without loading every skill body or activating a cold Agent.
@@ -57,7 +57,7 @@ The user-invocable `skills/list` metadata includes the winning provider’s opti
 |---|---:|---|
 | `nativeOpen` | platform-detected | Whether Session workspace paths can be handed to a native desktop opener |
 
-The generated [configuration catalog](../../../../Docs/config-catalog.md#deepseek-aidsh-api-session-controller) is the exhaustive source for accepted fields and their JSDoc.
+The generated [configuration catalog](../../../../Docs/config-catalog.md#redsparkrsh-api-session-controller) is the exhaustive source for accepted fields and their JSDoc.
 
 -----
 

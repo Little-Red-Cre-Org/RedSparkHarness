@@ -8,8 +8,8 @@ Python packages for driving RedSpark Harness as a subprocess. The client SDK com
 
 | Directory | Dist / module | Role |
 |---|---|---|
-| [sdk](sdk/README.md) | `deepseek-harness-sdk` / `deepseek_harness` | High-level turns API and lower-level JSON-RPC client |
-| [sdk-runtime](sdk-runtime/README.md) | `deepseek-harness-runtime-bin` / `deepseek_harness_runtime` | Bundled `dsh` CLI executable and native sidecars |
+| [sdk](sdk/README.md) | `redspark-harness-sdk` / `redspark_harness` | High-level turns API and lower-level JSON-RPC client |
+| [sdk-runtime](sdk-runtime/README.md) | `redspark-harness-runtime-bin` / `redspark_harness_runtime` | Bundled `dsh` CLI executable and native sidecars |
 
 ## Behavior
 

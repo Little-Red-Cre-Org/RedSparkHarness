@@ -1,6 +1,6 @@
 /**
  * Resolve the public SDK launch configuration to one dsh subprocess.
- * @module @deepseek-ai/dsh-sdk-client/launch
+ * @module @redspark/rsh-sdk-client/launch
  */
 
 import { existsSync, readFileSync } from 'node:fs'
@@ -51,56 +51,56 @@ function manifest(url: string): PackageManifest {
 
 /**
  * Resolve and version-check a dsh executable from package manifests.
- * @param dshManifestUrl - resolved URL of the dsh package manifest.
+ * @param rshManifestUrl - resolved URL of the dsh package manifest.
  * @param clientManifestUrl - resolved URL of the SDK client manifest.
  * @returns the absolute dsh executable path.
  */
-export function resolveDshBinFromManifests(dshManifestUrl: string, clientManifestUrl: string): string {
-  const dshManifest = manifest(dshManifestUrl)
+export function resolveRshBinFromManifests(rshManifestUrl: string, clientManifestUrl: string): string {
+  const rshManifest = manifest(rshManifestUrl)
   const clientManifest = manifest(clientManifestUrl)
-  if (typeof dshManifest.version !== 'string' || dshManifest.version !== clientManifest.version) {
-    throw new Error(`dsh SDK client ${String(clientManifest.version)} requires the same dsh version, got ${String(dshManifest.version)}`)
+  if (typeof rshManifest.version !== 'string' || rshManifest.version !== clientManifest.version) {
+    throw new Error(`dsh SDK client ${String(clientManifest.version)} requires the same dsh version, got ${String(rshManifest.version)}`)
   }
-  const bin = typeof dshManifest.bin === 'object' && dshManifest.bin !== null
-    ? (dshManifest.bin as Record<string, unknown>).dsh
-    : dshManifest.bin
-  if (typeof bin !== 'string' || bin === '') throw new Error('@deepseek-ai/dsh declares no dsh executable')
-  return resolve(dirname(fileURLToPath(dshManifestUrl)), bin)
+  const bin = typeof rshManifest.bin === 'object' && rshManifest.bin !== null
+    ? (rshManifest.bin as Record<string, unknown>).dsh
+    : rshManifest.bin
+  if (typeof bin !== 'string' || bin === '') throw new Error('@redspark/rsh declares no dsh executable')
+  return resolve(dirname(fileURLToPath(rshManifestUrl)), bin)
 }
 
 /**
  * Resolve and version-check the built dsh executable installed with this SDK.
  * @returns the absolute built executable path, whether or not it exists in a source checkout.
  */
-export function installedDshBin(): string {
-  return resolveDshBinFromManifests(
-    import.meta.resolve('@deepseek-ai/dsh/package.json'),
+export function installedRshBin(): string {
+  return resolveRshBinFromManifests(
+    import.meta.resolve('@redspark/rsh/package.json'),
     new URL('../package.json', import.meta.url).href,
   )
 }
 
 /**
  * Resolve the Node launch for one same-version dsh package.
- * @param dshManifestUrl - Resolved URL of the dsh package manifest.
+ * @param rshManifestUrl - Resolved URL of the dsh package manifest.
  * @param clientManifestUrl - Resolved URL of the SDK client manifest.
  * @param options - Optional source-loader override for tests.
  * @returns The built entry or the source entry configured with tsx.
  */
-export function resolveDshNodeLaunchFromManifests(
-  dshManifestUrl: string,
+export function resolveRshNodeLaunchFromManifests(
+  rshManifestUrl: string,
   clientManifestUrl: string,
   options: DshNodeLaunchOptions = {},
 ): DshNodeLaunch {
-  const bin = resolveDshBinFromManifests(dshManifestUrl, clientManifestUrl)
+  const bin = resolveRshBinFromManifests(rshManifestUrl, clientManifestUrl)
   if (existsSync(bin)) return { nodeArgs: [bin], environment: {} }
 
-  const packageDir = dirname(fileURLToPath(dshManifestUrl))
+  const packageDir = dirname(fileURLToPath(rshManifestUrl))
   const sourceBin = resolve(packageDir, 'src/bin.ts')
   const sourceTsconfig = resolve(packageDir, 'tsconfig.json')
   const sourceFiles = [sourceBin, sourceTsconfig]
   if (sourceFiles.some(path => !existsSync(path))) {
     throw new Error(
-      `@deepseek-ai/dsh is missing its built executable ${bin} and complete source launch files ${sourceFiles.join(', ')}`,
+      `@redspark/rsh is missing its built executable ${bin} and complete source launch files ${sourceFiles.join(', ')}`,
     )
   }
   const loader = options.sourceLoaderUrl ?? import.meta.resolve('tsx/esm')
@@ -114,9 +114,9 @@ export function resolveDshNodeLaunchFromManifests(
  * Resolve the installed dsh package to a built or source Node launch.
  * @returns the launch descriptor for the current checkout or installed package.
  */
-function installedDshNodeLaunch(): DshNodeLaunch {
-  return resolveDshNodeLaunchFromManifests(
-    import.meta.resolve('@deepseek-ai/dsh/package.json'),
+function installedRshNodeLaunch(): DshNodeLaunch {
+  return resolveRshNodeLaunchFromManifests(
+    import.meta.resolve('@redspark/rsh/package.json'),
     new URL('../package.json', import.meta.url).href,
   )
 }
@@ -127,16 +127,16 @@ function installedDshNodeLaunch(): DshNodeLaunch {
  * @param callerCwd - parent-process directory used for lexical resolution.
  * @returns one generic subprocess spec for the JSON-RPC transport.
  */
-export function resolveDshLaunch(
+export function resolveRshLaunch(
   options: HarnessClientOptions = {},
   callerCwd: string = process.cwd(),
 ): RuntimeProcessOptions {
   const profile = options.profile ?? 'sdk'
-  const dshHome = options.dshHome === undefined ? undefined : resolve(callerCwd, options.dshHome)
+  const rshHome = options.rshHome === undefined ? undefined : resolve(callerCwd, options.rshHome)
   const childEnvironment = options.env ?? process.env
-  const dshLaunch = options.dshBin === undefined
-    ? installedDshNodeLaunch()
-    : { nodeArgs: [resolve(callerCwd, options.dshBin)], environment: {} }
+  const dshLaunch = options.rshBin === undefined
+    ? installedRshNodeLaunch()
+    : { nodeArgs: [resolve(callerCwd, options.rshBin)], environment: {} }
   const patches = [
     ...(options.patches ?? []).map(path => resolve(callerCwd, path)),
   ]
@@ -151,7 +151,7 @@ export function resolveDshLaunch(
           ? { SystemRoot: process.env.SystemRoot } : {}),
         ...childEnvironment,
         ...dshLaunch.environment,
-        ...dshHome === undefined ? {} : { DSH_HOME: dshHome },
+        ...rshHome === undefined ? {} : { RSH_HOME: rshHome },
       }
     },
     description: `dsh profile ${JSON.stringify(profile)}`,

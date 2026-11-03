@@ -1,5 +1,5 @@
 /** Typed product text for the native interactive terminal. */
-import { CHINESE_ROWS, ENGLISH_ROWS } from '@deepseek-ai/dsh-terminal-ui'
+import { CHINESE_ROWS, ENGLISH_ROWS } from '@redspark/rsh-terminal-ui'
 
 const english = {
   rows: ENGLISH_ROWS, working: 'Working', idle: 'Ready', queued: 'queued', hint: 'Enter send · Esc stop · Ctrl+C stop/exit',

@@ -2,5 +2,5 @@
 # side as of the last confirmed-consistent state. Both languages carry equal authority;
 # after editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write rsh/Docs/subsystems/http-routes.md
-http-routes.md: 8791641ac236d0f9eaf43da38549ddfe2cdf941c
-http-routes.zh.md: 0440fd1daf319d02a08366f42282dac93e775749
+http-routes.md: f98d4185e3f69250d05a0916b8fd61b5b1aeacb0
+http-routes.zh.md: 1f1f43f4a888702b5b4bbd8503c2c1f12a9e62bc

@@ -10,8 +10,8 @@ import { randomUUID } from 'node:crypto';
 import React from 'react';
 import { probeTerminalBg } from './theme.js';
 import { render } from 'ink';
-import { installModelSelection } from '@deepseek-ai/dsh-agent';
-import { SessionId } from '@deepseek-ai/dsh-session';
+import { installModelSelection } from '@redspark/rsh-agent';
+import { SessionId } from '@redspark/rsh-session';
 import { App, ResumePicker } from './ui.js';
 
 /**

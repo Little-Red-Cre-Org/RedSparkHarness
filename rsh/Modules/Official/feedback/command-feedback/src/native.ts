@@ -1,10 +1,10 @@
 /** Native durable Session feedback Provider and `/feedback` command Consumer. */
 import { isDeepStrictEqual } from 'node:util'
-import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
-import type { NativeActiveSessionOwner } from '@deepseek-ai/dsh-native-session-execution'
-import { CommandDefinitionId } from '@deepseek-ai/dsh-commands/native'
-import { getOrCreateAnonymousUserId } from '@deepseek-ai/dsh-anonymous-user-id'
-import { SessionLogOffset } from '@deepseek-ai/dsh-session/types'
+import type { NativePlugin } from '@redspark/rsh-native-runtime'
+import type { NativeActiveSessionOwner } from '@redspark/rsh-native-session-execution'
+import { CommandDefinitionId } from '@redspark/rsh-commands/native'
+import { getOrCreateAnonymousUserId } from '@redspark/rsh-anonymous-user-id'
+import { SessionLogOffset } from '@redspark/rsh-session/types'
 import type { FeedbackRecord, SessionFeedbackRecordResult } from './types.ts'
 import type { NativeSessionFeedbackOperations } from './native-definition.ts'
 import type {} from './native-definition.ts'
@@ -12,7 +12,7 @@ import type {} from './native-definition.ts'
 /** Native feedback Provider: one committed log event, no model turn. */
 export const plugin: NativePlugin = {
   apiVersion: 1,
-  name: '@deepseek-ai/dsh-command-feedback',
+  name: '@redspark/rsh-command-feedback',
   targets: ['host'],
   requires: ['activeSessions'],
   optional: ['commands'],
@@ -54,7 +54,7 @@ export const plugin: NativePlugin = {
       context.provide('sessionFeedback', operations)
       const commands = context.optional('commands')
       if (commands !== undefined) context.effect(commands.register({
-        definitionId: CommandDefinitionId('@deepseek-ai/dsh-command-feedback'),
+        definitionId: CommandDefinitionId('@redspark/rsh-command-feedback'),
         name: 'feedback',
         description: 'Record feedback about this session',
         input: { hint: '<text>' },

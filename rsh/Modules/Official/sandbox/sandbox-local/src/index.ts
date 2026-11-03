@@ -1,12 +1,12 @@
 /**
  * Cordis adapter for the shared local process-sandbox backend.
- * @module @deepseek-ai/dsh-sandbox-local
+ * @module @redspark/rsh-sandbox-local
  */
 
-import { Context } from '@deepseek-ai/cordis'
-import z from '@deepseek-ai/schemastery'
-import { SandboxProvider } from '@deepseek-ai/dsh-sandbox'
-import type { ConfinedArgv, SandboxPolicy } from '@deepseek-ai/dsh-sandbox/native'
+import { Context } from '@redspark/cordis'
+import z from '@redspark/schemastery'
+import { SandboxProvider } from '@redspark/rsh-sandbox'
+import type { ConfinedArgv, SandboxPolicy } from '@redspark/rsh-sandbox/native'
 import { LocalSandboxBackend, resolveConfig } from './backend.ts'
 import type { Config, SandboxInternals } from './backend.ts'
 

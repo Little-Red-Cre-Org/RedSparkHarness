@@ -1,13 +1,13 @@
 /** Cordis-free access to durable images and deterministic request variants. */
 import { join } from 'node:path'
-import { dshCachePath, resolveDshHome } from '@deepseek-ai/dsh-home-paths'
+import { rshCachePath, resolveRshHome } from '@redspark/rsh-home-paths'
 import type {
   ImageAttachmentRef,
   ImageRequestAttachmentStore,
   ImageRequestPolicy,
   RequestImageAttachment,
   StoredImageAttachment,
-} from '@deepseek-ai/dsh-attachment/types'
+} from '@redspark/rsh-attachment/types'
 import { CompressionLimiter, compressionFailure } from './compression-limiter.ts'
 import { readRequestImageFile, requestImageVariantId } from './request-image.ts'
 import { normalizedImagePath, readImageFile } from './store.ts'
@@ -92,7 +92,7 @@ export class LocalImageRequestStore implements ImageRequestAttachmentStore {
   private readonly requestInflight = new Map<string, SharedRequest<RequestImageAttachment>>()
 
   /**
-   * @param home - explicit Harness home; omission follows the normal DSH_HOME resolution.
+   * @param home - explicit Harness home; omission follows the normal RSH_HOME resolution.
    * @param compression - positive concurrency or a queue shared with image admission.
    * @param readImage - existing provider read implementation; omission reads this store's immutable objects.
    */
@@ -104,9 +104,9 @@ export class LocalImageRequestStore implements ImageRequestAttachmentStore {
     if (typeof compression === 'number' && (!Number.isSafeInteger(compression) || compression < 1)) {
       throw new Error('attachment-local: image request concurrency must be a positive integer')
     }
-    const dshHome = resolveDshHome(home)
-    this.root = join(dshHome, 'attachments', 'v1')
-    this.cacheRoot = dshCachePath({ dshHome }, 'attachments')
+    const rshHome = resolveRshHome(home)
+    this.root = join(rshHome, 'attachments', 'v1')
+    this.cacheRoot = rshCachePath({ rshHome }, 'attachments')
     this.compression = typeof compression === 'number' ? new CompressionLimiter(compression) : compression
     this.readImage = readImage ?? ((ref, signal) => readImageFile(this.root, ref, signal))
   }

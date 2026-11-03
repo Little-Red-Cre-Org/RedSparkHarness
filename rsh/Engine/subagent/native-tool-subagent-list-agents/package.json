@@ -1,5 +1,5 @@
 {
-  "name": "@deepseek-ai/dsh-native-tool-subagent-list-agents",
+  "name": "@redspark/rsh-native-tool-subagent-list-agents",
   "description": "Read-only native continuable subagent directory",
   "version": "1.0.0",
   "publishConfig": {
@@ -45,8 +45,8 @@
   ],
   "license": "MIT",
   "dependencies": {
-    "@deepseek-ai/dsh-native-runtime": "workspace:^",
-    "@deepseek-ai/dsh-native-tools": "workspace:^",
-    "@deepseek-ai/dsh-native-subagent": "workspace:^"
+    "@redspark/rsh-native-runtime": "workspace:^",
+    "@redspark/rsh-native-tools": "workspace:^",
+    "@redspark/rsh-native-subagent": "workspace:^"
   }
 }

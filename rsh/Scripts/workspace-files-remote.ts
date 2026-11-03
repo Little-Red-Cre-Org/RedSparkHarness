@@ -4,7 +4,7 @@ import { mkdirSync, writeFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { WorkspaceTypertGenerator } from '../Core/typert/generator/src/workspace.ts'
 
-const PACKAGE = '@deepseek-ai/dsh-api-workspace-files'
+const PACKAGE = '@redspark/rsh-api-workspace-files'
 
 /** Generate the Remote modules imported by the workspace-files Client sources. */
 export function generateWorkspaceFilesRemoteArtifacts(): void {

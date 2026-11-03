@@ -9,16 +9,16 @@
  */
 
 import { describe, expect, it, vi } from 'vitest'
-import { Context } from '@deepseek-ai/cordis'
-import AgentRegistry, { agentEvents } from '@deepseek-ai/dsh-agent'
-import type { Agent, AgentStatus } from '@deepseek-ai/dsh-agent'
-import { createUserMessage } from '@deepseek-ai/dsh-llm'
-import SessionStore from '@deepseek-ai/dsh-session'
-import type { Session } from '@deepseek-ai/dsh-session'
-import SessionProjectionRegistry from '@deepseek-ai/dsh-session-projection'
-import GoalService, { GoalId, applyGoalProjection, foldGoal, goalProjectionDefinition } from '@deepseek-ai/dsh-goal'
-import type { GoalProjection, GoalProjectionState, GoalRef } from '@deepseek-ai/dsh-goal'
-import { unsupportedInbox } from '@deepseek-ai/dsh-agent-loop-testkit'
+import { Context } from '@redspark/cordis'
+import AgentRegistry, { agentEvents } from '@redspark/rsh-agent'
+import type { Agent, AgentStatus } from '@redspark/rsh-agent'
+import { createUserMessage } from '@redspark/rsh-llm'
+import SessionStore from '@redspark/rsh-session'
+import type { Session } from '@redspark/rsh-session'
+import SessionProjectionRegistry from '@redspark/rsh-session-projection'
+import GoalService, { GoalId, applyGoalProjection, foldGoal, goalProjectionDefinition } from '@redspark/rsh-goal'
+import type { GoalProjection, GoalProjectionState, GoalRef } from '@redspark/rsh-goal'
+import { unsupportedInbox } from '@redspark/rsh-agent-loop-testkit'
 
 interface Bench {
   ctx: Context

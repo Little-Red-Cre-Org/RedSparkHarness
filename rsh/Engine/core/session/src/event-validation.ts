@@ -1,6 +1,6 @@
 /** Browser-safe current Session event admission and identified-message validation. */
-import { deepFreeze } from '@deepseek-ai/dsh-util-values'
-import type { Message } from '@deepseek-ai/dsh-llm/native'
+import { deepFreeze } from '@redspark/rsh-util-values'
+import type { Message } from '@redspark/rsh-llm/native'
 import type { SessionEvent, SurfaceEventType } from './types.ts'
 import { validateSessionEventData, validateSurfaceMetadata } from './surface.ts'
 import { KNOWN_SESSION_EVENT_TYPES } from './known-event-types.ts'

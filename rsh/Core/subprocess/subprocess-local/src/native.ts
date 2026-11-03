@@ -1,12 +1,12 @@
 /** Native host Provider for the managed subprocess capability. */
-import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
-export type {} from '@deepseek-ai/dsh-subprocess/native'
+import type { NativePlugin } from '@redspark/rsh-native-runtime'
+export type {} from '@redspark/rsh-subprocess/native'
 import { LocalSubprocessController } from './controller.ts'
 
 /** Explicit local process owner with the same lifecycle semantics as the Cordis adapter. */
 export const plugin: NativePlugin = {
   apiVersion: 1,
-  name: '@deepseek-ai/dsh-subprocess-local',
+  name: '@redspark/rsh-subprocess-local',
   targets: ['host'],
   requires: [],
   provides: ['subprocess', 'childConnection'],

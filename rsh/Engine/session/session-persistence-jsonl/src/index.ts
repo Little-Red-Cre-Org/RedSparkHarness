@@ -1,18 +1,18 @@
 /**
  * Cordis service adapter for the shared JSONL session backend.
- * @module @deepseek-ai/dsh-session-persistence-jsonl
+ * @module @redspark/rsh-session-persistence-jsonl
  */
 
-import { Context } from '@deepseek-ai/cordis'
-import z from '@deepseek-ai/schemastery'
+import { Context } from '@redspark/cordis'
+import z from '@redspark/schemastery'
 import {
   SessionPersistence, type NativeSessionDeletionOperations,
   type SessionAccess, type SessionHandle,
   type SessionPersistenceCreateOptions, type SessionPersistenceListOptions,
   type SessionPersistenceOpenOptions, type SessionPersistenceSnapshot,
   type SessionPersistenceStatOptions,
-} from '@deepseek-ai/dsh-session-persistence'
-import type { SessionHeader, SessionId } from '@deepseek-ai/dsh-session'
+} from '@redspark/rsh-session-persistence'
+import type { SessionHeader, SessionId } from '@redspark/rsh-session'
 import { JsonlSessionBackend, JsonlCompressionSchema, type Config } from './backend.ts'
 
 export { JsonlSessionBackend, JsonlCompressionSchema } from './backend.ts'

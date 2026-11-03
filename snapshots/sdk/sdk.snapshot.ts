@@ -1,11 +1,11 @@
 /**
  * Keyless snapshot coverage for the TypeScript SDK path: each scenario spawns
  * the real `dsh --profile legacy-sdk` runtime through
- * `@deepseek-ai/dsh-sdk-client`, drives one turn over stdio JSON-RPC,
+ * `@redspark/rsh-sdk-client`, drives one turn over stdio JSON-RPC,
  * and pins the SDK `RunResult`, the complete notification stream, and the
  * persisted session logs. Replay serves recorded model
- * responses via `llm-replay` (`cordis.snapshot.yml`); `DSH_SNAPSHOT=record`
- * re-records against the live API; `DSH_SNAPSHOT=refresh` replays committed
+ * responses via `llm-replay` (`cordis.snapshot.yml`); `RSH_SNAPSHOT=record`
+ * re-records against the live API; `RSH_SNAPSHOT=refresh` replays committed
  * fixtures and rewrites expected outputs.
  */
 
@@ -52,16 +52,16 @@ import {
   type NormalizeContext,
   type SnapshotManifest,
   type WorkspaceSnapshotEntry,
-} from '@deepseek-ai/dsh-session-snapshot'
+} from '@redspark/rsh-session-snapshot'
 import {
-  DeepSeekHarness,
+  RedSparkHarness,
   type HarnessNotification,
   type NotificationSubscription,
   type RunResult,
   type SdkPromptContentBlock,
-} from '@deepseek-ai/dsh-sdk-client'
-import { SESSION_FORMAT_VERSION } from '@deepseek-ai/dsh-session'
-import { initProfile, PROFILE_TEMPLATES, resolveProfileDir } from '@deepseek-ai/dsh-app-boot'
+} from '@redspark/rsh-sdk-client'
+import { SESSION_FORMAT_VERSION } from '@redspark/rsh-session'
+import { initProfile, PROFILE_TEMPLATES, resolveProfileDir } from '@redspark/rsh-app-boot'
 
 const corpusRoot = fileURLToPath(new URL('../', import.meta.url))
 const snapshotPackageAnchor = fileURLToPath(new URL('../../rsh/Programs/CLI/package.json', import.meta.url))
@@ -76,7 +76,7 @@ const MINIMAL_BASH_DESCRIPTION = `Run commands in a bash shell
 * Please avoid commands that may produce a very large amount of output.
 * Please run long lived commands in the background, e.g. 'sleep 10 &' or start a server in the background.`
 
-const mode = process.env.DSH_SNAPSHOT ?? 'replay'
+const mode = process.env.RSH_SNAPSHOT ?? 'replay'
 const recording = mode === 'record'
 const refreshing = mode === 'refresh'
 const sessionWriteMode = recording ? 'record' : refreshing ? 'refresh' : 'replay'
@@ -89,11 +89,11 @@ const RUNTIME_WORKSPACE_ENTRIES = [
   '.snapshot-patches',
 ] as const
 const dshSdkDiagnosticChildPatch = fileURLToPath(new URL(
-  './subagent-dsh-sdk-diagnostic/child.cordis.yml',
+  './subagent-rsh-sdk-diagnostic/child.cordis.yml',
   import.meta.url,
 ))
 const dshSdkChildConfig = fileURLToPath(new URL(
-  '../../rsh/Compatibility/DSH/subagent/subagent-dsh-sdk/tests/fixtures/loader/child.patch.yml',
+  '../../rsh/Compatibility/DSH/subagent/subagent-rsh-sdk/tests/fixtures/loader/child.patch.yml',
   import.meta.url,
 ))
 
@@ -132,13 +132,13 @@ const SDK_ASSERTIONS: Readonly<Record<string, SdkAssertions>> = {
     expectedTools: { run_code: ['code', 'description'] },
   },
   'subagent-continuable': {
-    environment: { DSH_SNAPSHOT_HUMAN_STEER: '1' },
+    environment: { RSH_SNAPSHOT_HUMAN_STEER: '1' },
   },
-  'subagent-dsh-sdk-diagnostic': {
-    environment: { DSH_TEST_CHILD_PATCH: dshSdkDiagnosticChildPatch },
+  'subagent-rsh-sdk-diagnostic': {
+    environment: { RSH_TEST_CHILD_PATCH: dshSdkDiagnosticChildPatch },
   },
   'persistent-tools': {
-    environment: { DSH_SYSTEM_PROMPT: MINIMAL_SYSTEM_PROMPT },
+    environment: { RSH_SYSTEM_PROMPT: MINIMAL_SYSTEM_PROMPT },
     expectedTools: { bash: ['command'], str_replace_editor: ['command', 'path'] },
     expectedSystem: MINIMAL_SYSTEM_PROMPT,
     expectedToolDescriptions: { bash: MINIMAL_BASH_DESCRIPTION },
@@ -147,8 +147,8 @@ const SDK_ASSERTIONS: Readonly<Record<string, SdkAssertions>> = {
       excludes: ['workspace-write'],
     },
   },
-  'subagent-dsh-sdk-dynamic-route': {
-    environment: { DSH_TEST_PARENT_PROVIDER: 'deepseek-official' },
+  'subagent-rsh-sdk-dynamic-route': {
+    environment: { RSH_TEST_PARENT_PROVIDER: 'deepseek-official' },
     dshSdkChild: {
       config: dshSdkChildConfig,
       agentConfig: {
@@ -315,7 +315,7 @@ function assembledRuntimeContexts(log: PersistedLog): string[] {
     }
     if (event.type !== 'user/message'
       || event.data?.source?.kind !== 'plugin'
-      || event.data.source.plugin !== '@deepseek-ai/dsh-system-prompt') return []
+      || event.data.source.plugin !== '@redspark/rsh-system-prompt') return []
     return event.data.content?.flatMap(block => block.type === 'text' && typeof block.text === 'string' ? [block.text] : []) ?? []
   })
 }
@@ -548,14 +548,14 @@ async function runScenario(scenario: CorpusScenario): Promise<{
       .flatMap(path => [path, JSON.stringify(path).slice(1, -1)]),
     ...(process.platform === 'win32' ? [cwd.replaceAll('\\', '/')] : []),
   ])]
-  const dshHome = join(cwd, '.dsh')
-  initializeSdkCompatibilityProfile(dshHome, 'legacy-sdk')
-  if (scenario.name === 'subagent-dsh-sdk-diagnostic') {
+  const rshHome = join(cwd, '.dsh')
+  initializeSdkCompatibilityProfile(rshHome, 'legacy-sdk')
+  if (scenario.name === 'subagent-rsh-sdk-diagnostic') {
     for (const childName of ['foreground', 'background']) {
-      initializeSdkCompatibilityProfile(join(dshHome, 'children', childName), 'sdk')
+      initializeSdkCompatibilityProfile(join(rshHome, 'children', childName), 'sdk')
     }
   }
-  const sessionsRoot = join(dshHome, 'sessions')
+  const sessionsRoot = join(rshHome, 'sessions')
   const replayFixtures = recording ? [] : await hydrateReplayFixtures(scenario, cwd)
   const fixtureContents = await Promise.all((await fixtureFiles(scenario)).map(file => readFile(file, 'utf8')))
   const primaryFixture = fixtureContents[0]
@@ -575,8 +575,8 @@ async function runScenario(scenario: CorpusScenario): Promise<{
     initializeSdkCompatibilityProfile(childHome, 'sdk')
     childSessionsRoot = join(childHome, 'sessions')
     childEnvironment = {
-      DSH_TEST_CHILD_PATCHES: JSON.stringify([childPatch]),
-      DSH_TEST_CHILD_HOME: childHome,
+      RSH_TEST_CHILD_PATCHES: JSON.stringify([childPatch]),
+      RSH_TEST_CHILD_HOME: childHome,
     }
   }
   const workspaceDir = join(scenario.dir, 'workspace')
@@ -591,28 +591,28 @@ async function runScenario(scenario: CorpusScenario): Promise<{
   const [parentFixture, ...childFixtures] = replayFixtures
   const env: Record<string, string> = {
     ...Object.fromEntries(Object.entries(process.env).filter(([, value]) => value !== undefined)) as Record<string, string>,
-    DSH_SNAPSHOT: mode,
-    DSH_SNAPSHOT_PROVIDER: route.provider,
-    DSH_SNAPSHOT_MODEL: route.model,
-    DSH_TELEMETRY_DISABLED: '1',
-    DSH_AGENTS_HOME: join(cwd, '.agents'),
+    RSH_SNAPSHOT: mode,
+    RSH_SNAPSHOT_PROVIDER: route.provider,
+    RSH_SNAPSHOT_MODEL: route.model,
+    RSH_TELEMETRY_DISABLED: '1',
+    RSH_AGENTS_HOME: join(cwd, '.agents'),
     NODE_OPTIONS: [process.env.NODE_OPTIONS, '--disable-warning=ExperimentalWarning'].filter(Boolean).join(' '),
     ...parentFixture === undefined ? {} : {
-      DSH_SNAPSHOT_FILE: parentFixture,
-      ...childFixtures.length > 0 ? { DSH_SNAPSHOT_CHILD_FILES: childFixtures.join(delimiter) } : {},
+      RSH_SNAPSHOT_FILE: parentFixture,
+      ...childFixtures.length > 0 ? { RSH_SNAPSHOT_CHILD_FILES: childFixtures.join(delimiter) } : {},
     },
     ...!recording && scenario.manifest.replay?.override === true
-      ? { DSH_SNAPSHOT_OVERRIDE: join(scenario.dir, 'replay.override.json') }
+      ? { RSH_SNAPSHOT_OVERRIDE: join(scenario.dir, 'replay.override.json') }
       : {},
     ...scenario.manifest.environment,
     ...assertions.environment,
     ...childEnvironment,
   }
 
-  const harness = new DeepSeekHarness({
+  const harness = new RedSparkHarness({
     profile: 'legacy-sdk',
     patches,
-    dshHome,
+    rshHome,
     processCwd: cwd,
     env,
     requestTimeoutMs: 110_000,
@@ -654,7 +654,7 @@ async function runScenario(scenario: CorpusScenario): Promise<{
           },
         })
         results.push(result)
-        if (scenario.manifest.environment?.DSH_SNAPSHOT_FEEDBACK === '1') {
+        if (scenario.manifest.environment?.RSH_SNAPSHOT_FEEDBACK === '1') {
           const feedback = result.events.filter(event => event.type.startsWith('feedback/'))
           expect(feedback.map(event => event.type)).toEqual([
             'feedback/record', 'feedback/record', 'feedback/message-put', 'feedback/message-put', 'feedback/message-delete',
@@ -689,8 +689,8 @@ async function runScenario(scenario: CorpusScenario): Promise<{
 }
 
 /** Order logs parent-first, children by creation time (fixture layout order). */
-function orderLogs(logs: PersistedLog[], expectedCount: number, separateDshSdkChild: boolean): PersistedLog[] {
-  if (separateDshSdkChild) {
+function orderLogs(logs: PersistedLog[], expectedCount: number, separateRshSdkChild: boolean): PersistedLog[] {
+  if (separateRshSdkChild) {
     expect(logs).toHaveLength(expectedCount)
     return logs
   }

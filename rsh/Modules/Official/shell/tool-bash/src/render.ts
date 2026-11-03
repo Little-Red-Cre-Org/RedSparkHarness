@@ -1,12 +1,12 @@
 /**
  * Model-facing result rendering for the bash tool.
  *
- * @module @deepseek-ai/dsh-tool-bash/render
+ * @module @redspark/rsh-tool-bash/render
  */
 
-import type { ShellProcessRead, ShellRunResult, ShellSandboxInfo, CollectedOutput } from '@deepseek-ai/dsh-shell/native'
-import type { SandboxMode } from '@deepseek-ai/dsh-sandbox/native'
-import { escalationHintMarker, sandboxDenialMarker } from '@deepseek-ai/dsh-sandbox/native'
+import type { ShellProcessRead, ShellRunResult, ShellSandboxInfo, CollectedOutput } from '@redspark/rsh-shell/native'
+import type { SandboxMode } from '@redspark/rsh-sandbox/native'
+import { escalationHintMarker, sandboxDenialMarker } from '@redspark/rsh-sandbox/native'
 
 /** Append the truncation notice (with the full-output spill path) to a stream's text. */
 function streamText(output: CollectedOutput): string {
@@ -96,8 +96,8 @@ export function renderProcessRead(
 
 /**
  * The exit-status parse is the shared marker-contract half of the shell-tool
- * rendering story, owned by `@deepseek-ai/dsh-shell` so `dsh-tool-pwsh` reuses
+ * rendering story, owned by `@redspark/rsh-shell` so `dsh-tool-pwsh` reuses
  * it (its renderer emits the same markers). Re-exported here to keep
  * `render.ts` a single import root for bash-tool consumers.
  */
-export { parseExitStatus, type ParsedExitStatus } from '@deepseek-ai/dsh-shell/native'
+export { parseExitStatus, type ParsedExitStatus } from '@redspark/rsh-shell/native'

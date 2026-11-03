@@ -10,13 +10,13 @@
 import type { Readable, Writable } from 'node:stream'
 
 /** Namespace prefix reserved for RedSpark Harness-managed child environment facts. */
-export const DSH_ENV_PREFIX = 'DSH_' as const
+export const RSH_ENV_PREFIX = 'RSH_' as const
 
-/** One environment key inside the managed {@link DSH_ENV_PREFIX} namespace. */
-export type DshEnvironmentKey = `${typeof DSH_ENV_PREFIX}${string}`
+/** One environment key inside the managed {@link RSH_ENV_PREFIX} namespace. */
+export type RshEnvironmentKey = `${typeof RSH_ENV_PREFIX}${string}`
 
 /** Trusted RedSpark Harness variables for one child-process execution. */
-export type DshEnvironment = Readonly<Record<DshEnvironmentKey, string>>
+export type RshEnvironment = Readonly<Record<RshEnvironmentKey, string>>
 
 /** One captured stream: the (possibly truncated) text plus recovery info. */
 export interface CollectedOutput {
@@ -105,7 +105,7 @@ export interface SubprocessSpawnSpec {
    * Explicit environment entries merged onto the implementation's scrubbed
    * parent base (see `scrubbedParentEnv`), with no namespace validation. A
    * string is a deliberate caller opt-in, so a forwarded credential-shaped
-   * entry or current `DSH_*` fact survives the scrub; `undefined` is a
+   * entry or current `RSH_*` fact survives the scrub; `undefined` is a
    * tombstone that removes an ordinary ambient entry from the child.
    */
   env?: NodeJS.ProcessEnv | undefined
@@ -239,7 +239,7 @@ export interface ChildConnectionHandle extends SubprocessHandle {
 
 /**
  * Signals supported by the terminal-process primitive. Kept member-identical
- * to `TerminalSignal` in `@deepseek-ai/dsh-terminal` without a cross-seam dependency;
+ * to `TerminalSignal` in `@redspark/rsh-terminal` without a cross-seam dependency;
  * change both together.
  */
 export type SubprocessTerminalSignal = 'SIGINT' | 'SIGTERM' | 'SIGKILL' | 'SIGTSTP' | 'SIGHUP'

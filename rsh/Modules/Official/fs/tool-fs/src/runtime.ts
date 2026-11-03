@@ -1,6 +1,6 @@
 /** RSH loader adapter for the model-facing filesystem tool Consumer. */
 
-import { adaptFilesystemPlugin } from '@deepseek-ai/dsh-fs'
+import { adaptFilesystemPlugin } from '@redspark/rsh-fs'
 import { apply, Config, inject, name } from './index.ts'
 
 /**
@@ -8,7 +8,7 @@ import { apply, Config, inject, name } from './index.ts'
  * @returns the adapted Cordis plugin entry.
  */
 export default adaptFilesystemPlugin({
-  packageName: '@deepseek-ai/dsh-tool-fs',
+  packageName: '@redspark/rsh-tool-fs',
   apiVersion: 1,
   role: 'consumer',
   capability: 'filesystem',

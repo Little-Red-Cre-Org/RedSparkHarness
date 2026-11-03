@@ -3,7 +3,7 @@ description: "提供按作用域管理的 Native request-context Provider，由�
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-request-context
+# @redspark/rsh-request-context
 
 [English](README.md) | 中文
 
@@ -38,7 +38,7 @@ Native request-context Provider 提供按作用域管理的持久模型请求上
 {
   "formatVersion": 1,
   "installations": [
-    { "id": "request-context", "plugin": "@deepseek-ai/dsh-request-context", "scope": "root" }
+    { "id": "request-context", "plugin": "@redspark/rsh-request-context", "scope": "root" }
   ]
 }
 ```

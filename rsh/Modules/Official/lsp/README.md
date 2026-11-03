@@ -36,7 +36,7 @@ Providers register capabilities, not tools: `tool-lsp` is the only owner of the 
 ## Related documentation
 
 - [LSP navigation subsystem](../../../Docs/subsystems/lsp.md) — operations, coordinates, requests and results, and `LspError` codes.
-- [Generated tool catalog](../../../Docs/tool-catalog.md#deepseek-aidsh-tool-lsp) — the `lsp` schema the model receives.
+- [Generated tool catalog](../../../Docs/tool-catalog.md#redsparkrsh-tool-lsp) — the `lsp` schema the model receives.
 
 -----
 

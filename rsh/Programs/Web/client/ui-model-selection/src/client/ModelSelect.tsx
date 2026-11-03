@@ -4,8 +4,8 @@ import {
   ModelPicker,
   type ModelPickerLocaleKey,
   type ModelPickerSelection,
-} from '@deepseek-ai/dsh-client-ui-primitives'
-import type { PropsLocale } from '@deepseek-ai/dsh-client-ui-slots'
+} from '@redspark/rsh-client-ui-primitives'
+import type { PropsLocale } from '@redspark/rsh-client-ui-slots'
 import type { ModelSelectInjected } from './slots.ts'
 
 /** Render the shared picker from the Session model directory. */

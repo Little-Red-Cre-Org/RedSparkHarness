@@ -1,7 +1,7 @@
 /** Cordis-free acceptance folding and wire conversion shared by both request Consumers. */
-import { KNOWN_SESSION_EVENT_TYPES, SessionSeq } from '@deepseek-ai/dsh-session/native'
-import type { Session, SessionEvent, SessionId, SessionSeq as SessionSeqType, SessionSeqCursor, SurfaceOp } from '@deepseek-ai/dsh-session/native'
-import type { JsonValue } from '@deepseek-ai/dsh-util-values'
+import { KNOWN_SESSION_EVENT_TYPES, SessionSeq } from '@redspark/rsh-session/native'
+import type { Session, SessionEvent, SessionId, SessionSeq as SessionSeqType, SessionSeqCursor, SurfaceOp } from '@redspark/rsh-session/native'
+import type { JsonValue } from '@redspark/rsh-util-values'
 import type {
   DeepSeekSessionLogExtension,
   DeepSeekSessionLogWireEvent,

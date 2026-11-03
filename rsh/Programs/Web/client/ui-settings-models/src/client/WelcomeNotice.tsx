@@ -2,9 +2,9 @@
 
 import { useCallback, useEffect, useRef } from 'react'
 import type { ReactNode } from 'react'
-import type { SnapshotStore } from '@deepseek-ai/dsh-client-store'
-import type { InjectFace, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
-import { OnboardingModal, WelcomeNoticeView } from '@deepseek-ai/dsh-client-ui-primitives'
+import type { SnapshotStore } from '@redspark/rsh-client-store'
+import type { InjectFace, PropsRuntime } from '@redspark/rsh-client-ui-slots'
+import { OnboardingModal, WelcomeNoticeView } from '@redspark/rsh-client-ui-primitives'
 import type { WelcomeNoticeState, WelcomeNoticeStore } from './welcome-store.ts'
 import type { en } from './locales.ts'
 

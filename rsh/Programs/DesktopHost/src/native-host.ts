@@ -4,11 +4,11 @@ import { createRequire } from 'node:module'
 import { join } from 'node:path'
 import {
   expandNativeProfilePresets, loadNativeProfile, readNativeProfile, profileDirectoryReloadMode,
-} from '@deepseek-ai/dsh/native-profile'
-import { createNativeHostConnectionRegistry, type ConnectionFetchHandler } from '@deepseek-ai/dsh-client-connection/native-host'
-import { createNativeDesktopAssetHandler, prepareNativeClientBundle } from '@deepseek-ai/dsh-native-web-assets'
-import type {} from '@deepseek-ai/dsh-native-web-session-controller'
-import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
+} from '@redspark/rsh/native-profile'
+import { createNativeHostConnectionRegistry, type ConnectionFetchHandler } from '@redspark/rsh-client-connection/native-host'
+import { createNativeDesktopAssetHandler, prepareNativeClientBundle } from '@redspark/rsh-native-web-assets'
+import type {} from '@redspark/rsh-native-web-session-controller'
+import type { NativePlugin } from '@redspark/rsh-native-runtime'
 import type { DesktopHostRuntime } from './runtime.ts'
 
 /**
@@ -49,11 +49,11 @@ export async function createNativeDesktopRuntime(
   const root = profile.scopes.find(scope => scope.parent === undefined)
   if (root === undefined) throw new Error('dsh desktop: native profile has no root scope')
   const bundleRuntimeDir = allowLinkedPackages
-    ? realpathSync(join(runtimeDir, 'node_modules', '@deepseek-ai', 'dsh'))
+    ? realpathSync(join(runtimeDir, 'node_modules', '@redspark', 'rsh'))
     : runtimeDir
   const bundle = await prepareNativeClientBundle(projectDir, bundleRuntimeDir, !allowLinkedPackages)
   if (bundle === undefined) throw new Error('dsh desktop: native Host requires rsh.client.json')
-  const assets = createNativeDesktopAssetHandler(runtimeDir, bundle, 'globalThis.__DSH_TRANSPORT__={ownsHost:true}')
+  const assets = createNativeDesktopAssetHandler(runtimeDir, bundle, 'globalThis.__RSH_TRANSPORT__={ownsHost:true}')
   const channels = new Map<string, ConnectionFetchHandler>()
   let api: ConnectionFetchHandler | undefined
   const carrier: NativePlugin = {

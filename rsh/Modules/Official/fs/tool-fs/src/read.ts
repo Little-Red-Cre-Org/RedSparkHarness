@@ -1,13 +1,13 @@
 /**
  * Model-facing UTF-8 read. It performs one provider stat for type, routing, and observed version,
  * streams large or size-unknown files, renders a bounded window, then emits the observation.
- * @module @deepseek-ai/dsh-tool-fs/src/read
+ * @module @redspark/rsh-tool-fs/src/read
  */
 
-import type { Context } from '@deepseek-ai/cordis'
-import { defineTool } from '@deepseek-ai/dsh-tools'
-import type { GenericCallView, ReadResultView, ToolResult } from '@deepseek-ai/dsh-tools'
-import type {} from '@deepseek-ai/dsh-fs'
+import type { Context } from '@redspark/cordis'
+import { defineTool } from '@redspark/rsh-tools'
+import type { GenericCallView, ReadResultView, ToolResult } from '@redspark/rsh-tools'
+import type {} from '@redspark/rsh-fs'
 import { buildWindow, formatReadOutput, readMetaFromMeta } from './read-render.ts'
 import { readPresentationMeta } from './presentation-meta.ts'
 import { resolveRegularReadTarget } from './read-target.ts'

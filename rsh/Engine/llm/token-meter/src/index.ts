@@ -1,9 +1,9 @@
 /** Compatibility token-meter Service and Session projection installation. */
-import { Context, Service } from '@deepseek-ai/cordis'
-import z from '@deepseek-ai/schemastery'
-import type { EpochHeader, Session } from '@deepseek-ai/dsh-session'
-import type { Message } from '@deepseek-ai/dsh-llm'
-import type {} from '@deepseek-ai/dsh-session-projection'
+import { Context, Service } from '@redspark/cordis'
+import z from '@redspark/schemastery'
+import type { EpochHeader, Session } from '@redspark/rsh-session'
+import type { Message } from '@redspark/rsh-llm'
+import type {} from '@redspark/rsh-session-projection'
 import type { TokenMeterConfig, TokenMeasurement } from './types.ts'
 import { contextBreakdownProjectionDefinition } from './breakdown-projection.ts'
 import { contextPressureProjectionDefinition, tokenUsageProjectionDefinition } from './usage-projection.ts'
@@ -19,7 +19,7 @@ function validateConfigKeys(config: TokenMeterConfig): void {
   }
 }
 
-declare module '@deepseek-ai/cordis' {
+declare module '@redspark/cordis' {
   interface Context {
     tokenMeter: TokenMeter
   }

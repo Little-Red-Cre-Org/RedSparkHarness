@@ -1,9 +1,9 @@
 /** Native schedule Client decodes the selected Host's unary and SSE responses. */
 import { expect, it } from 'vitest'
-import { NativeHost, NativeScope, resolveInstallation, type NativePlugin } from '@deepseek-ai/dsh-native-runtime'
-import type { ClientConnectionRpc } from '@deepseek-ai/dsh-client-connection/native'
-import { createUserMessage, MessageId } from '@deepseek-ai/dsh-llm/native'
-import type { SessionId } from '@deepseek-ai/dsh-session/types'
+import { NativeHost, NativeScope, resolveInstallation, type NativePlugin } from '@redspark/rsh-native-runtime'
+import type { ClientConnectionRpc } from '@redspark/rsh-client-connection/native'
+import { createUserMessage, MessageId } from '@redspark/rsh-llm/native'
+import type { SessionId } from '@redspark/rsh-session/types'
 import type { NativeScheduleFrame, NativeScheduledJob } from '../src/schedule-types.ts'
 import { createNativeSessionClient, nativeSubmissionRequestId, plugin as nativeSessionClient, type NativeSessionClient } from '../src/native.ts'
 
@@ -30,7 +30,8 @@ it('reads a typed slash-command catalog for the selected Session', async () => {
 it('lists schedule rows and decodes follow frames until caller cancellation', async () => {
   const scope = new NativeScope()
   const jobs: NativeScheduledJob[] = [{ id: 'job-1', sessionId: 'owner' as NativeScheduledJob['sessionId'], title: 'Review',
-    state: 'active', schedule: '2026-10-11T12:00:00+08:00', timeZone: 'UTC+08:00', nextRunAt: 1791691200000 }]
+    state: 'active', schedule: '2026-10-11T12:00:00+08:00', timeZone: 'UTC+08:00', nextRunAt: 1791691200000,
+    controllable: true }]
   const frames: NativeScheduleFrame[] = [
     { type: 'baseline', jobs },
     { type: 'upsert', job: { ...jobs[0]!, state: 'paused' } },

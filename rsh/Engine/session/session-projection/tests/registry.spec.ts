@@ -8,9 +8,9 @@
  */
 
 import { describe, expect, it, vi } from 'vitest'
-import { Context } from '@deepseek-ai/cordis'
-import { NativeHost, NativeScope, resolveInstallation, type NativePlugin, type NativeServices } from '@deepseek-ai/dsh-native-runtime'
-import type { NativeActiveSessionOperations, NativeActiveSessionOwner } from '@deepseek-ai/dsh-native-session-execution/active-session-protocol'
+import { Context } from '@redspark/cordis'
+import { NativeHost, NativeScope, resolveInstallation, type NativePlugin, type NativeServices } from '@redspark/rsh-native-runtime'
+import type { NativeActiveSessionOperations, NativeActiveSessionOwner } from '@redspark/rsh-native-session-execution/active-session-protocol'
 import { z } from 'zod'
 import SessionStore, {
   SESSION_FORMAT_VERSION,
@@ -18,15 +18,15 @@ import SessionStore, {
   SessionId,
   SessionLogOffset,
   SessionSeq,
-} from '@deepseek-ai/dsh-session'
-import type { SessionEvent, SessionHeader } from '@deepseek-ai/dsh-session'
-import { Session as NativeSession, SessionId as NativeSessionId } from '@deepseek-ai/dsh-session/native'
-import SessionProjectionRegistry from '@deepseek-ai/dsh-session-projection'
-import type { ProjectionDefinition } from '@deepseek-ai/dsh-session-projection'
+} from '@redspark/rsh-session'
+import type { SessionEvent, SessionHeader } from '@redspark/rsh-session'
+import { Session as NativeSession, SessionId as NativeSessionId } from '@redspark/rsh-session/native'
+import SessionProjectionRegistry from '@redspark/rsh-session-projection'
+import type { ProjectionDefinition } from '@redspark/rsh-session-projection'
 import { ProjectionRegistryCore } from '../src/registry-core.ts'
 import { NativeSessionProjectionRegistry, plugin as nativeProjectionPlugin } from '../src/native.ts'
 
-declare module '@deepseek-ai/dsh-session-projection/types' {
+declare module '@redspark/rsh-session-projection/types' {
   interface SessionProjectionStateMap {
     'test/marks': MarksState
     'test/count': number
@@ -40,7 +40,7 @@ declare module '@deepseek-ai/dsh-session-projection/types' {
   }
 }
 
-declare module '@deepseek-ai/dsh-session/types' {
+declare module '@redspark/rsh-session/types' {
   interface SessionEventMap {
     'test/mark': { marks: string[] }
   }

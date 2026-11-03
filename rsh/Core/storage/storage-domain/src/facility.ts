@@ -1,5 +1,5 @@
 /** Shared domain facility preserves schema validation, exact backend units and the existing write-chain runtime. */
-import type { BackendRegistry } from '@deepseek-ai/dsh-storage/backend'
+import type { BackendRegistry } from '@redspark/rsh-storage/backend'
 import { DomainError } from './error.ts'
 import { descriptorOf, type DomainSpec } from './spec.ts'
 import { DomainImpl, type Domain, type DomainRuntimeEffects } from './domain.ts'

@@ -9,11 +9,11 @@ import { globSync, readFileSync } from 'node:fs'
 import { dirname, resolve, sep } from 'node:path'
 import { RELEASE_MANIFEST_GLOBS } from './workspace-manifest-globs.ts'
 
-const SCOPE = '@deepseek-ai/dsh-'
+const SCOPE = '@redspark/rsh-'
 
 /** One harness package and its in-repo peer-dependency edges. */
 export interface PackageGraphNode {
-  /** Package name with the `@deepseek-ai/dsh-` prefix removed. */
+  /** Package name with the `@redspark/rsh-` prefix removed. */
   short: string
   /** Full npm package name. */
   name: string

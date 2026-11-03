@@ -1,14 +1,14 @@
 /**
  * Default one-shot summarization and durable checkpoint framing.
  *
- * @module @deepseek-ai/dsh-compaction-basic/summarizer
+ * @module @redspark/rsh-compaction-basic/summarizer
  */
 
-import { contentHasImage, createUserMessage, BlockAssembler, LlmError } from '@deepseek-ai/dsh-llm/native'
+import { contentHasImage, createUserMessage, BlockAssembler, LlmError } from '@redspark/rsh-llm/native'
 import type {
   ContentBlock, FinishReason, GenerateOptions, LlmCallConfig, Message, StreamChunk, TokenUsage, ToolSchema,
-} from '@deepseek-ai/dsh-llm/native'
-import type { Session } from '@deepseek-ai/dsh-session/native'
+} from '@redspark/rsh-llm/native'
+import type { Session } from '@redspark/rsh-session/native'
 
 /** Model stream the summarizer calls once; Cordis `ctx.llm` and the native `model` service both satisfy it. */
 export type SummaryStream = (options: GenerateOptions) => AsyncIterable<StreamChunk>

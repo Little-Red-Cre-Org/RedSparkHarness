@@ -1,5 +1,5 @@
 /** Per-session filesystem observations shared by Cordis and native policy installers. */
-import { FsError, type FsObservation, type FsTarget, type FsVersion, type FsWriteIntent } from '@deepseek-ai/dsh-fs/types'
+import { FsError, type FsObservation, type FsTarget, type FsVersion, type FsWriteIntent } from '@redspark/rsh-fs/types'
 import type { FsObservationActor } from './types.ts'
 
 /** One installation's read-before-edit and version-guard decisions. */

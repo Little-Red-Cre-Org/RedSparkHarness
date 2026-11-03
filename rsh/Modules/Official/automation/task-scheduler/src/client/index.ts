@@ -1,22 +1,22 @@
 /** Plugin-owned GUI mounted through the existing Settings and Remote extension points. */
-import type { Context } from '@deepseek-ai/cordis'
-import type {} from '@deepseek-ai/dsh-api-remotes/client'
-import type {} from '@deepseek-ai/dsh-client-ui-settings/client'
-import type {} from '@deepseek-ai/dsh-client-ui-renderer/client'
-import type {} from '@deepseek-ai/dsh-client-locale/client'
-import type { RemoteResult } from '@deepseek-ai/dsh-typert-protocol'
-import contribution from '@deepseek-ai/dsh-task-scheduler/remote'
+import type { Context } from '@redspark/cordis'
+import type {} from '@redspark/rsh-api-remotes/client'
+import type {} from '@redspark/rsh-client-ui-settings/client'
+import type {} from '@redspark/rsh-client-ui-renderer/client'
+import type {} from '@redspark/rsh-client-locale/client'
+import type { RemoteResult } from '@redspark/rsh-typert-protocol'
+import contribution from '@redspark/rsh-task-scheduler/remote'
 import { createSchedulerController } from './controller.ts'
 import { SchedulerPanel } from './Panel.tsx'
 import { NoticePanel } from './NoticePanel.tsx'
 import { createNoticeController } from './notices.ts'
 import { nativeNoticeContent, noticeStatus } from './native-notice.ts'
-import type {} from '@deepseek-ai/dsh-client-ui-workspace/client'
-import type { SessionId } from '@deepseek-ai/dsh-session/types'
-import type { IWorkspaces } from '@deepseek-ai/dsh-api-workspace-controller/client'
+import type {} from '@redspark/rsh-client-ui-workspace/client'
+import type { SessionId } from '@redspark/rsh-session/types'
+import type { IWorkspaces } from '@redspark/rsh-api-workspace-controller/client'
 import { en, zh, type SchedulerKey } from './locales.ts'
 
-declare module '@deepseek-ai/dsh-client-ui-slots' {
+declare module '@redspark/rsh-client-ui-slots' {
   interface LocaleNamespaceMap {
     taskScheduler: SchedulerKey
   }
@@ -89,7 +89,7 @@ export async function apply(ctx: Context): Promise<() => Promise<void>> {
       const notifications = new Set<Notification>()
       const notices = createNoticeController({
         dismiss: (id) => {
-          const desktop = (globalThis as unknown as { dshDesktop?: { notifyTask?: (value: unknown) => Promise<void> } }).dshDesktop
+          const desktop = (globalThis as unknown as { rshDesktop?: { notifyTask?: (value: unknown) => Promise<void> } }).rshDesktop
           void desktop?.notifyTask?.({ dismissId: id }).catch(() => {})
           for (const notification of notifications) if (notification.tag === `task-scheduler:${id}`) notification.close()
         },
@@ -106,9 +106,9 @@ export async function apply(ctx: Context): Promise<() => Promise<void>> {
         notify: (item, open) => {
           if (item.phase === 'due') return
           const content = nativeNoticeContent(item, t)
-          const desktop = (globalThis as unknown as { dshDesktop?: {
+          const desktop = (globalThis as unknown as { rshDesktop?: {
             notifyTask?: (value: { id: string; title: string; body: string; status: string; time: number }) => Promise<void>
-          } }).dshDesktop
+          } }).rshDesktop
           if (desktop?.notifyTask) {
             void desktop.notifyTask({ id: item.id, title: item.title, body: item.directReminder ? item.body : t('nativeOpenResult'),
               status: t(noticeStatus(item)), time: item.time })

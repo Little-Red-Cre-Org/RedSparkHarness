@@ -1,14 +1,14 @@
 /** Native permission presets persist through the exact Program-owned Session writer. */
 import { z } from 'zod'
-import type { NativeActiveSessionOperations, NativeActiveSessionOwner } from '@deepseek-ai/dsh-native-session-execution'
-import type { NativeAgentRegistry } from '@deepseek-ai/dsh-native-agent'
-import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
-import { sessionApprovalPolicy } from '@deepseek-ai/dsh-approval-definition'
-import type {} from '@deepseek-ai/dsh-sandbox/native-types'
+import type { NativeActiveSessionOperations, NativeActiveSessionOwner } from '@redspark/rsh-native-session-execution'
+import type { NativeAgentRegistry } from '@redspark/rsh-native-agent'
+import type { NativePlugin } from '@redspark/rsh-native-runtime'
+import { sessionApprovalPolicy } from '@redspark/rsh-approval-definition'
+import type {} from '@redspark/rsh-sandbox/native-types'
 import type {} from './native-definition.ts'
 import type { NativePermissionPresetControls, NativePermissionPresetOperations, NativePermissionPresetSpec } from './native-definition.ts'
 import { CUSTOM_PRESET, defaultPermissionPresets } from './presets.ts'
-import type {} from '@deepseek-ai/dsh-native-sandbox-policy/native'
+import type {} from '@redspark/rsh-native-sandbox-policy/native'
 
 const presetSpec = z.strictObject({
   sandbox: z.enum(['read-only', 'workspace-write', 'danger-full-access']),
@@ -28,7 +28,7 @@ function resolveConfig(input: unknown): Readonly<Record<string, Readonly<NativeP
 /** Native host preset Provider. */
 export const plugin: NativePlugin = {
   apiVersion: 1,
-  name: '@deepseek-ai/dsh-permission-presets',
+  name: '@redspark/rsh-permission-presets',
   targets: ['host'],
   requires: ['activeSessions', 'agents', 'sandboxPolicy', 'approval'],
   provides: ['permissionPresets'],

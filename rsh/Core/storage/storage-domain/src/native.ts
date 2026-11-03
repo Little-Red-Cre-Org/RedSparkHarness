@@ -1,7 +1,7 @@
 /** Native domain Provider uses the shared validated facility and post-durability change facts. */
 import { z } from 'zod'
-import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
-import type {} from '@deepseek-ai/dsh-storage/native'
+import type { NativePlugin } from '@redspark/rsh-native-runtime'
+import type {} from '@redspark/rsh-storage/native'
 import { DomainFacilityCore, type DomainFacilityConfiguration } from './facility.ts'
 import type { DomainChanged } from './event-types.ts'
 
@@ -25,7 +25,7 @@ export function resolveNativeDomainConfiguration(input: unknown): DomainFacility
   return Object.freeze({ backend: value.backend, routes: Object.freeze(value.routes) })
 }
 
-declare module '@deepseek-ai/dsh-native-runtime' {
+declare module '@redspark/rsh-native-runtime' {
   interface NativeServices { storageDomain: DomainFacilityCore }
   interface NativeEvents {
     /**
@@ -39,7 +39,7 @@ declare module '@deepseek-ai/dsh-native-runtime' {
 
 /** Native domain Provider waits for the selected backend readiness authority rather than registration order. */
 export const plugin: NativePlugin = {
-  apiVersion: 1, name: '@deepseek-ai/dsh-storage-domain', targets: ['host'],
+  apiVersion: 1, name: '@redspark/rsh-storage-domain', targets: ['host'],
   requires: ['storage', 'storageBackendsReady'], provides: ['storageDomain'],
   resolve(input) {
     const config = resolveNativeDomainConfiguration(input)

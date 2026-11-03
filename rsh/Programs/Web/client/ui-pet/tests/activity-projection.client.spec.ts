@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest'
-import type { Context } from '@deepseek-ai/cordis'
-import { ConversationNodeAssembler } from '@deepseek-ai/dsh-client-ui-conversation/client'
-import type { ConversationNodeDefinition, ConversationViewDefinition } from '@deepseek-ai/dsh-client-ui-conversation/client'
-import type { SessionEvent } from '@deepseek-ai/dsh-session/types'
+import type { Context } from '@redspark/cordis'
+import { ConversationNodeAssembler } from '@redspark/rsh-client-ui-conversation/client'
+import type { ConversationNodeDefinition, ConversationViewDefinition } from '@redspark/rsh-client-ui-conversation/client'
+import type { SessionEvent } from '@redspark/rsh-session/types'
 import { createPetActivityBuilder, registerPetProjection, type PetLifecycle } from '../src/client/activity-projection.ts'
 
 function harness() {

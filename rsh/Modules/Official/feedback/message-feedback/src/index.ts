@@ -1,18 +1,18 @@
 /**
  * Canonical Session-log feedback for finalized assistant messages.
- * @module @deepseek-ai/dsh-message-feedback
+ * @module @redspark/rsh-message-feedback
  */
 
 import { randomUUID } from 'node:crypto'
 import { isDeepStrictEqual } from 'node:util'
-import { Context, Service } from '@deepseek-ai/cordis'
-import s from '@deepseek-ai/schemastery'
-import { SessionSeq } from '@deepseek-ai/dsh-session/types'
-import { deriveEventMessage, isAppendSurfaceEvent } from '@deepseek-ai/dsh-session/surface'
-import type { SessionEvent, SessionId } from '@deepseek-ai/dsh-session/types'
-import type {} from '@deepseek-ai/dsh-session'
-import type { SessionInspection } from '@deepseek-ai/dsh-session-persistence'
-import { TypertRemoteService, Remote } from '@deepseek-ai/dsh-typert-protocol'
+import { Context, Service } from '@redspark/cordis'
+import s from '@redspark/schemastery'
+import { SessionSeq } from '@redspark/rsh-session/types'
+import { deriveEventMessage, isAppendSurfaceEvent } from '@redspark/rsh-session/surface'
+import type { SessionEvent, SessionId } from '@redspark/rsh-session/types'
+import type {} from '@redspark/rsh-session'
+import type { SessionInspection } from '@redspark/rsh-session-persistence'
+import { TypertRemoteService, Remote } from '@redspark/rsh-typert-protocol'
 import type {
   MessageFeedbackDeleteRequest,
   MessageFeedbackDeleteResult,
@@ -34,7 +34,7 @@ export interface Config {
   readonly maxNoteBytes: number
 }
 
-declare module '@deepseek-ai/cordis' {
+declare module '@redspark/cordis' {
   interface Context {
     messageFeedback: MessageFeedbackService
   }

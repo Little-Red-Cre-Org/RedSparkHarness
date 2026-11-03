@@ -14,10 +14,10 @@
  * more than the row it targeted.
  */
 
-import type { Context as ClientContext } from '@deepseek-ai/cordis'
+import type { Context as ClientContext } from '@redspark/cordis'
 // Type-only: pulls the ctx.remote merge into this program.
-import type {} from '@deepseek-ai/dsh-api-remotes/client'
-import { createSnapshotStore, type SnapshotStore } from '@deepseek-ai/dsh-client-store'
+import type {} from '@redspark/rsh-api-remotes/client'
+import { createSnapshotStore, type SnapshotStore } from '@redspark/rsh-client-store'
 import { beginRosterRead, writeDefaultPreset, writeModeSelectionEnabled } from './settings-store.ts'
 
 /** Ids a preset directory may be named, mirroring the host's own rule. */

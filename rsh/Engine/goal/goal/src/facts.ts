@@ -43,13 +43,13 @@ export interface GoalMessageSource {
   readonly round: number
 }
 
-declare module '@deepseek-ai/dsh-llm/message' {
+declare module '@redspark/rsh-llm/message' {
   interface MessageSourceMap {
     goal: GoalMessageSource
   }
 }
 
-declare module '@deepseek-ai/dsh-session/types' {
+declare module '@redspark/rsh-session/types' {
   interface SessionEventMap {
     /**
      * Complete post-mutation goal state or clear tombstone.

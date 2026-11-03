@@ -1,8 +1,8 @@
 /** Raster inspection: full decode at admission, header-only probe on verified reads. */
 
 import type { Sharp } from 'sharp'
-import { AttachmentError } from '@deepseek-ai/dsh-attachment/error'
-import type { ImageMediaType } from '@deepseek-ai/dsh-attachment/types'
+import { AttachmentError } from '@redspark/rsh-attachment/error'
+import type { ImageMediaType } from '@redspark/rsh-attachment/types'
 import { openSupportedImage } from './signature.ts'
 
 /** Decoded metadata from a supported image. */

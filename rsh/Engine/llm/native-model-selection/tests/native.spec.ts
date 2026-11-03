@@ -1,8 +1,8 @@
 /** Actual Program maintenance owns model intent, persistence and async admission. */
 import { expect, it } from 'vitest'
-import { SessionId } from '@deepseek-ai/dsh-session/native'
-import { ReasoningEffortId, createUserMessage, type GenerateOptions } from '@deepseek-ai/dsh-llm/native'
-import type { NativeModel } from '@deepseek-ai/dsh-native-model-execution'
+import { SessionId } from '@redspark/rsh-session/native'
+import { ReasoningEffortId, createUserMessage, type GenerateOptions } from '@redspark/rsh-llm/native'
+import type { NativeModel } from '@redspark/rsh-native-model-execution'
 import { fixture, readEvents } from './native-fixture.ts'
 
 it('uses prepared defaults instead of advisory defaults and changes them after a cold restoration', async () => {

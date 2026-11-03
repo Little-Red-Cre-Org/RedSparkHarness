@@ -3,7 +3,7 @@ description: "Native SDK JSON-RPC application over the shared Session executor."
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-native-sdk-server
+# @redspark/rsh-native-sdk-server
 
 English | [中文](README.zh.md)
 

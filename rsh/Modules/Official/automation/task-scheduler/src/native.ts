@@ -1,11 +1,11 @@
 /** Opt-in native scheduled Agent work with scoped management and durable SQLite claims. */
 import { isAbsolute } from 'node:path'
 import { z } from 'zod'
-import { brandString } from '@deepseek-ai/dsh-brand'
-import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
-import type {} from '@deepseek-ai/dsh-native-tools/native'
-import type { NativeAgent } from '@deepseek-ai/dsh-native-agent'
-import type { NativeActiveSessionOwner } from '@deepseek-ai/dsh-native-session-execution'
+import { brandString } from '@redspark/rsh-brand'
+import type { NativePlugin } from '@redspark/rsh-native-runtime'
+import type {} from '@redspark/rsh-native-tools/native'
+import type { NativeAgent } from '@redspark/rsh-native-agent'
+import type { NativeActiveSessionOwner } from '@redspark/rsh-native-session-execution'
 import type { TaskId, SchedulerOptions } from './types.ts'
 import { TaskStore } from './store.ts'
 import { NativeTaskSchedulerRegistry } from './native-registry.ts'
@@ -45,7 +45,7 @@ export function resolveNativeTaskSchedulerConfig(input: unknown): NativeTaskSche
 
 /** Complete native Definition/Provider and scoped model-tool Consumer. */
 export const plugin: NativePlugin = {
-  apiVersion: 1, name: '@deepseek-ai/dsh-task-scheduler', targets: ['host'],
+  apiVersion: 1, name: '@redspark/rsh-task-scheduler', targets: ['host'],
   requires: ['rootExecution', 'activeSessions', 'agents', 'tools'], optional: [], provides: ['taskScheduler', 'scheduledGoalHost'],
   resolve(input) {
     const config = resolveNativeTaskSchedulerConfig(input)

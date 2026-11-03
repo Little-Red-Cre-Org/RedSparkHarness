@@ -2,7 +2,7 @@
  * Host half of open-in-app: three routes on the composition's `webServer`
  * serving the resolved application catalog, per-application icons, and the
  * launch endpoint the browser split button
- * (`@deepseek-ai/dsh-client-ui-open-in-app`) posts to.
+ * (`@redspark/rsh-client-ui-open-in-app`) posts to.
  *
  * Security has one home, here. Every route asks the composition's
  * `connection` service for a rejection first (`requestRejection`): its
@@ -23,11 +23,11 @@
 import type { IncomingMessage, ServerResponse } from 'node:http'
 import { isAbsolute } from 'node:path'
 import { stat } from 'node:fs/promises'
-import type { Context } from '@deepseek-ai/cordis'
-import type {} from '@deepseek-ai/dsh-http-routes-cordis'
-import type {} from '@deepseek-ai/dsh-subprocess'
-import { launchedThroughSsh, launchEnvironmentOf } from '@deepseek-ai/dsh-launch-environment'
-import z from '@deepseek-ai/schemastery'
+import type { Context } from '@redspark/cordis'
+import type {} from '@redspark/rsh-http-routes-cordis'
+import type {} from '@redspark/rsh-subprocess'
+import { launchedThroughSsh, launchEnvironmentOf } from '@redspark/rsh-launch-environment'
+import z from '@redspark/schemastery'
 import { OPEN_IN_APP_CATALOG, type OpenInAppApp } from './catalog.ts'
 import {
   launchResolved, resolveLaunch, resolveOpenInAppApps,

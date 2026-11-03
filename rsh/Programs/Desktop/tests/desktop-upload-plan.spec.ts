@@ -79,12 +79,12 @@ async function fixture(
     artifactsRoot,
     environment: environment === 'test'
       ? {
-        DSH_DESKTOP_AUTO_UPDATE_ENV: 'test',
+        RSH_DESKTOP_AUTO_UPDATE_ENV: 'test',
         DOWNLOAD_TEST_ORIGIN: TEST_ORIGIN,
         DOWNLOAD_TEST_COS_BUCKET: TEST_BUCKET,
       }
       : {
-        DSH_DESKTOP_AUTO_UPDATE_ENV: 'production',
+        RSH_DESKTOP_AUTO_UPDATE_ENV: 'production',
         DOWNLOAD_PROD_COS_BUCKET: PRODUCTION_BUCKET,
       },
   }
@@ -178,7 +178,7 @@ describe('desktop upload plan', () => {
     await expect(createDesktopUploadPlan('mac-x64', {
       ...productionPaths,
       environment: {
-        DSH_DESKTOP_AUTO_UPDATE_ENV: 'test',
+        RSH_DESKTOP_AUTO_UPDATE_ENV: 'test',
         DOWNLOAD_TEST_ORIGIN: TEST_ORIGIN,
         DOWNLOAD_TEST_COS_BUCKET: TEST_BUCKET,
       },

@@ -3,7 +3,7 @@ description: "不依赖服务的共享错误码与诊断渲染。"
 kind: "package-library"
 ---
 
-# @deepseek-ai/dsh-errors
+# @redspark/rsh-errors
 
 [English](README.md) | 中文
 

@@ -1,5 +1,5 @@
 import { expect, it } from 'vitest'
-import { NativeHost, NativeScope, resolveInstallation, type NativePlugin, type NativeServices } from '@deepseek-ai/dsh-native-runtime'
+import { NativeHost, NativeScope, resolveInstallation, type NativePlugin, type NativeServices } from '@redspark/rsh-native-runtime'
 import {
   SessionId,
   SessionLogOffset,
@@ -8,9 +8,9 @@ import {
   type Session,
   type SessionEvent,
   type SessionHeader,
-} from '@deepseek-ai/dsh-session/native'
-import { NativeAgentId } from '@deepseek-ai/dsh-native-agent'
-import type { NativeToolExecution, NativeValueToolContribution } from '@deepseek-ai/dsh-native-tools'
+} from '@redspark/rsh-session/native'
+import { NativeAgentId } from '@redspark/rsh-native-agent'
+import type { NativeToolExecution, NativeValueToolContribution } from '@redspark/rsh-native-tools'
 import type {
   SessionEventSearchRequest,
   SessionEventTraceObservation,
@@ -18,12 +18,12 @@ import type {
   SessionLineageTrace,
   SessionQueryOperations,
   SessionRecord,
-} from '@deepseek-ai/dsh-session-query/native'
+} from '@redspark/rsh-session-query/native'
 import { DEFAULT_SEARCH_TIMEOUT_MS, plugin, resolveNativeToolSessionQueryConfig } from '../src/native.ts'
-import type {} from '@deepseek-ai/dsh-native-agent/turn-boundary'
-import type {} from '@deepseek-ai/dsh-native-prompt/native'
-import type {} from '@deepseek-ai/dsh-session-projection/native'
-import type {} from '@deepseek-ai/dsh-native-tools/native'
+import type {} from '@redspark/rsh-native-agent/turn-boundary'
+import type {} from '@redspark/rsh-native-prompt/native'
+import type {} from '@redspark/rsh-session-projection/native'
+import type {} from '@redspark/rsh-native-tools/native'
 
 function serviceProvider<K extends keyof NativeServices>(key: K, service: NativeServices[K], suffix = ''): NativePlugin {
   return {
@@ -140,7 +140,7 @@ it.each([
   ]
   expect(installations.map(request => request.plugin?.name)).toEqual([
     'fixture-sessionQuery', 'fixture-sessionProjections', 'fixture-promptSections', 'fixture-tools',
-    '@deepseek-ai/dsh-tool-session-query',
+    '@redspark/rsh-tool-session-query',
   ])
   const host = new NativeHost(resolveInstallation(installations, 'host'))
   await host.start()

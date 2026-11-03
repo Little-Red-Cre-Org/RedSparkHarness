@@ -1,0 +1,42 @@
+# SDK-profile patch for the child runtime in the cwd-inheritance proof.
+
+# Shared recorded child headers use the Bash tool set on every host.
+- id: bash-sandbox
+  disabled: false
+
+- id: pwsh-sandbox
+  disabled: true
+
+- id: tool-bash
+  disabled: false
+
+- id: tool-pwsh
+  disabled: true
+
+- id: llm-deepseek
+  name: '@redspark/rsh-llm-deepseek'
+  disabled: true
+
+- id: system-prompt
+  name: '@redspark/rsh-system-prompt'
+  config:
+    personaPrefix: 'Echo where you run.'
+
+- id: agent-instructions
+  name: '@redspark/rsh-agent-instructions'
+  disabled: true
+
+- id: skill-filesystem
+  name: '@redspark/rsh-skill-filesystem'
+  config:
+    includeDefaultRoots: false
+
+- id: session-persistence-jsonl
+  name: '@redspark/rsh-session-persistence-jsonl'
+  config:
+    root: !!js rshHomePath('sessions')
+    compression: none
+
+- insert:
+    - id: child-mock-llm
+      name: './child-mock-llm.ts'

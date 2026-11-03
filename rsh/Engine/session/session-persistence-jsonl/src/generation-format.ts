@@ -1,6 +1,6 @@
 /** Canonical JSONL generation names and their physical compression suffixes. */
 
-import { parseSessionFormatLogFilename, sessionFormatLogFilename } from '@deepseek-ai/dsh-session-format'
+import { parseSessionFormatLogFilename, sessionFormatLogFilename } from '@redspark/rsh-session-format'
 
 /** Physical encoding selected for JSONL session artifacts. */
 export type JsonlCompression = 'zstd' | 'none'

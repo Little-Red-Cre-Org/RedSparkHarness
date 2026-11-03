@@ -11,17 +11,17 @@
  * between this module and one in-package caller, not something a plugin may
  * depend on.
  *
- * @module @deepseek-ai/dsh-subagent/lifecycle
+ * @module @redspark/rsh-subagent/lifecycle
  */
 
 import { randomUUID } from 'node:crypto'
-import type { Context } from '@deepseek-ai/cordis'
-import type { Agent } from '@deepseek-ai/dsh-agent'
-import type { ContentBlock } from '@deepseek-ai/dsh-llm'
-import { foldConsumedWork } from '@deepseek-ai/dsh-agent'
-import { subagentEpochStopReason } from '@deepseek-ai/dsh-subagent-protocol'
-import { SessionLogOffset } from '@deepseek-ai/dsh-session'
-import type { SessionEvent, SessionId, SessionLogOffset as SessionLogOffsetType } from '@deepseek-ai/dsh-session'
+import type { Context } from '@redspark/cordis'
+import type { Agent } from '@redspark/rsh-agent'
+import type { ContentBlock } from '@redspark/rsh-llm'
+import { foldConsumedWork } from '@redspark/rsh-agent'
+import { subagentEpochStopReason } from '@redspark/rsh-subagent-protocol'
+import { SessionLogOffset } from '@redspark/rsh-session'
+import type { SessionEvent, SessionId, SessionLogOffset as SessionLogOffsetType } from '@redspark/rsh-session'
 import { finalAssistantOutput } from './assistant-output.ts'
 import { SubagentRunId } from './types.ts'
 import type { SubagentResult, SubagentRun, SubagentRunEndInfo, SubagentRunInfo } from './types.ts'

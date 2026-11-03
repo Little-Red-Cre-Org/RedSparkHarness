@@ -3,7 +3,7 @@
  * real CLI process under the shared subprocess owner, map only strict SDK
  * success to completion, and dispose to whole-range quiescence.
  *
- * @module @deepseek-ai/dsh-subagent-claude-code/controller
+ * @module @redspark/rsh-subagent-claude-code/controller
  */
 
 import {
@@ -15,7 +15,7 @@ import {
   type SDKResultMessage,
   type SpawnOptions,
 } from '@anthropic-ai/claude-agent-sdk'
-import type { ContentBlock } from '@deepseek-ai/dsh-llm/native'
+import type { ContentBlock } from '@redspark/rsh-llm/native'
 import { realpathSync } from 'node:fs'
 import { isAbsolute, relative, resolve, sep } from 'node:path'
 import {
@@ -23,7 +23,7 @@ import {
   type SubprocessHandle,
   type SubprocessOutcome,
   type SubprocessSpawnSpec,
-} from '@deepseek-ai/dsh-subprocess/native'
+} from '@redspark/rsh-subprocess/native'
 import {
   claudeSpawnSpec,
   ManagedClaudeCodeProcess,

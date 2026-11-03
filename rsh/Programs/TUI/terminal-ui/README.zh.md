@@ -3,7 +3,7 @@ description: "共享的安全终端消息展示组件。"
 kind: "package-library"
 ---
 
-# @deepseek-ai/dsh-terminal-ui
+# @redspark/rsh-terminal-ui
 
 [English](README.md) | 中文
 

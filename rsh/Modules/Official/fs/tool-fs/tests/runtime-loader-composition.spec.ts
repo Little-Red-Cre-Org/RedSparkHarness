@@ -5,19 +5,19 @@ import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
-import { Context } from '@deepseek-ai/cordis'
-import Loader from '@deepseek-ai/cordis-plugin-loader'
-import Include from '@deepseek-ai/cordis-plugin-include'
-import SandboxPolicyService from '@deepseek-ai/dsh-sandbox-policy'
-import SessionProjectionRegistry from '@deepseek-ai/dsh-session-projection'
-import type {} from '@deepseek-ai/dsh-sandbox'
-import SystemPrompt from '@deepseek-ai/dsh-system-prompt'
-import { ToolCallId } from '@deepseek-ai/dsh-llm'
-import ToolRuntime from '@deepseek-ai/dsh-tools'
-import RshPluginHost from '@deepseek-ai/dsh-plugin-host'
-import FsPolicyRuntime from '@deepseek-ai/dsh-fs-observation-policy/runtime'
-import FsSandboxRuntime from '@deepseek-ai/dsh-fs-sandbox/runtime'
-import ToolFsRuntime from '@deepseek-ai/dsh-tool-fs/runtime'
+import { Context } from '@redspark/cordis'
+import Loader from '@redspark/cordis-plugin-loader'
+import Include from '@redspark/cordis-plugin-include'
+import SandboxPolicyService from '@redspark/rsh-sandbox-policy'
+import SessionProjectionRegistry from '@redspark/rsh-session-projection'
+import type {} from '@redspark/rsh-sandbox'
+import SystemPrompt from '@redspark/rsh-system-prompt'
+import { ToolCallId } from '@redspark/rsh-llm'
+import ToolRuntime from '@redspark/rsh-tools'
+import RshPluginHost from '@redspark/rsh-plugin-host'
+import FsPolicyRuntime from '@redspark/rsh-fs-observation-policy/runtime'
+import FsSandboxRuntime from '@redspark/rsh-fs-sandbox/runtime'
+import ToolFsRuntime from '@redspark/rsh-tool-fs/runtime'
 
 let root: string | undefined
 let ctx: Context | undefined
@@ -110,9 +110,9 @@ describe('filesystem runtime adapters through Loader', () => {
     expect(context.fs).toBeDefined()
     expect(context.tools.schemas().map(schema => schema.name).sort()).toEqual(['edit', 'read', 'write'])
     expect(context.pluginHost.entries().map(entry => entry.packageName).sort()).toEqual([
-      '@deepseek-ai/dsh-fs-observation-policy',
-      '@deepseek-ai/dsh-fs-sandbox',
-      '@deepseek-ai/dsh-tool-fs',
+      '@redspark/rsh-fs-observation-policy',
+      '@redspark/rsh-fs-sandbox',
+      '@redspark/rsh-tool-fs',
     ])
     expect((await readLines(context) as { lines: unknown[] }).lines).toHaveLength(3)
 

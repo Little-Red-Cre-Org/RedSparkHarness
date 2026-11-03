@@ -1,6 +1,6 @@
 /** Cordis-free Native Agent identity and event types. */
-import type { Branded } from '@deepseek-ai/dsh-brand'
-import type { NativeScope } from '@deepseek-ai/dsh-native-runtime'
+import type { Branded } from '@redspark/rsh-brand'
+import type { NativeScope } from '@redspark/rsh-native-runtime'
 
 /** Opaque identity for one live native Agent. */
 export type NativeAgentId = Branded<'NativeAgentId'>

@@ -1,6 +1,6 @@
 /** Stateless bounded history reads over the selected live owner or persistence Provider. */
-import type { SessionId, SessionHeader, SessionEvent } from '@deepseek-ai/dsh-session/types'
-import type { NativeSessionPersistenceOperations } from '@deepseek-ai/dsh-session-persistence/native'
+import type { SessionId, SessionHeader, SessionEvent } from '@redspark/rsh-session/types'
+import type { NativeSessionPersistenceOperations } from '@redspark/rsh-session-persistence/native'
 import type { NativeActiveSessionOperations } from './active-session.ts'
 
 /** Reader cleanup failure remains distinguishable from an ordinary refused observation. */

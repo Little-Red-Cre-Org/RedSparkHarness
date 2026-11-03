@@ -1,7 +1,7 @@
 /** Browser entry binding the generated Team Remote artifact to its Client UI. */
 
-import agentTeamsRemote from '@deepseek-ai/dsh-experimental-agent-team/remote'
-import type { Context as ClientContext } from '@deepseek-ai/cordis'
+import agentTeamsRemote from '@redspark/rsh-experimental-agent-team/remote'
+import type { Context as ClientContext } from '@redspark/cordis'
 import { mountAgentTeamUi } from './mount.ts'
 
 export { inject } from './mount.ts'

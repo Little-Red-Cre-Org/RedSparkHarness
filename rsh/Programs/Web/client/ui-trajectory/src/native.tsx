@@ -2,8 +2,8 @@
 
 import { useMemo, useState } from 'react'
 import type { CSSProperties } from 'react'
-import { en as commonEn, formatLocaleTemplate, zh as commonZh } from '@deepseek-ai/dsh-client-locale/dictionary'
-import type { SessionEvent } from '@deepseek-ai/dsh-session/types'
+import { en as commonEn, formatLocaleTemplate, zh as commonZh } from '@redspark/rsh-client-locale/dictionary'
+import type { SessionEvent } from '@redspark/rsh-session/types'
 import { TrajectoryTable } from './client/TrajectoryTable.tsx'
 import type { TrajectoryTableProps } from './client/TrajectoryTable.tsx'
 import { TrajectoryTimeline } from './client/TrajectoryTimeline.tsx'

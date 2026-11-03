@@ -3,7 +3,7 @@ description: "面向部署方的 OpenTelemetry 会话遥测后端说明，用于
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-session-telemetry-otel
+# @redspark/rsh-session-telemetry-otel
 
 [English](README.md) | 中文
 
@@ -27,7 +27,7 @@ kind: "package-reference"
 
 当部署方需要通过 OpenTelemetry 日志导出会话记录时挂载此插件。选择一个模式、给导出器一个端点，并决定是否在 seam 上挂载脱敏规则。
 
-Native Host 在显式 profile 中选择本包的 `./native` 入口；随 CLI 提供的 Native profile 模板不会安装它。Native 入口要求 `launchEnvironment`，默认使用 `FEEDBACK_ONLY`；除非配置或进程级强制关闭已禁用它，否则必须提供 `exporter.url`。非空的进程级 `DSH_TELEMETRY_DISABLED` 值会强制使用 `DISABLED`，不受插件配置覆盖。
+Native Host 在显式 profile 中选择本包的 `./native` 入口；随 CLI 提供的 Native profile 模板不会安装它。Native 入口要求 `launchEnvironment`，默认使用 `FEEDBACK_ONLY`；除非配置或进程级强制关闭已禁用它，否则必须提供 `exporter.url`。非空的进程级 `RSH_TELEMETRY_DISABLED` 值会强制使用 `DISABLED`，不受插件配置覆盖。
 
 ### 模式
 
@@ -46,7 +46,7 @@ Cordis TypeScript 配置使用导出的 `SessionTelemetryMode` 枚举；Native �
 
 ```yaml
 - id: sessionTelemetry-otel
-  name: '@deepseek-ai/dsh-session-telemetry-otel'
+  name: '@redspark/rsh-session-telemetry-otel'
   config:
     mode: FEEDBACK_ONLY       # optional; defaults to FEEDBACK_ONLY
     shutdownTimeoutMillis: 3000 # optional; defaults to 3000
@@ -90,7 +90,7 @@ Native Host 关闭时会停止接纳提交、排空已接纳的反馈捕获，�
 
 ### 设计理念
 
-后端是对 OTel JS SDK 的薄适配层：它拥有反馈授权、资源身份与外层关闭截止时间。权威 ledger 记录使用 `@deepseek-ai/dsh-session-telemetry-otel` 插桩作用域；此后端不捕获运维记录。资源身份携带 `service.name`/`service.version`（来自 `dsh-llm` 的 `APP_IDENTITY`）以及匿名 `user.id`（来自 `$DSH_HOME/.anonymous-user-id`），按导出批次携带一次，而非逐条记录。
+后端是对 OTel JS SDK 的薄适配层：它拥有反馈授权、资源身份与外层关闭截止时间。权威 ledger 记录使用 `@redspark/rsh-session-telemetry-otel` 插桩作用域；此后端不捕获运维记录。资源身份携带 `service.name`/`service.version`（来自 `dsh-llm` 的 `APP_IDENTITY`）以及匿名 `user.id`（来自 `$RSH_HOME/.anonymous-user-id`），按导出批次携带一次，而非逐条记录。
 
 ### 源码地图
 
@@ -119,7 +119,7 @@ Cordis 入口使用包含存储历史的按需协调器。Native 入口在反馈
 - [会话遥测 seam](../session-telemetry/README.zh.md)——捕获约定、记录词汇与脱敏 waterfall。
 - [会话遥测子系统](../../../Docs/subsystems/session-telemetry.zh.md)——能力拆分与类型声明。
 - [匿名用户身份](../../../Core/identity/anonymous-user-id/README.zh.md)——作为 OTel Resource `user.id` 上报的 id。
-- [生成配置目录](../../../Docs/config-catalog.zh.md#deepseek-aidsh-session-telemetry-otel)——每个受支持配置字段及其源声明。
+- [生成配置目录](../../../Docs/config-catalog.zh.md#redsparkrsh-session-telemetry-otel)——每个受支持配置字段及其源声明。
 
 -----
 

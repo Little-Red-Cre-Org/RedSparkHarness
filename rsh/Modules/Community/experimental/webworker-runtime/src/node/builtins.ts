@@ -88,7 +88,7 @@ const BUILTINS: Record<string, StaticModuleFactory> = {
 
 /** Exact package or subpath specifiers served by worker stubs and fakes. */
 const EXTERNALS: Record<string, StaticModuleFactory> = {
-  '@deepseek-ai/node-addon-system/flock': () => systemFlock,
+  '@redspark/node-addon-system/flock': () => systemFlock,
   'koffi': () => koffi,
   'sharp': () => sharp,
   'node-pty': () => nodePty,

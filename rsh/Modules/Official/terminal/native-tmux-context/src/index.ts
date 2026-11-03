@@ -1,8 +1,8 @@
 /** Read-only tmux location queries for Native Headless requests. */
-import { createUserMessage, type UserMessage } from '@deepseek-ai/dsh-llm/native'
-import type { Session, SessionEvent } from '@deepseek-ai/dsh-session/native'
-import type { NativeTmuxContext, NativeTmuxContextRequest } from '@deepseek-ai/dsh-tmux-context-definition'
-import type { ShellOperations, ShellRunResult } from '@deepseek-ai/dsh-shell/native'
+import { createUserMessage, type UserMessage } from '@redspark/rsh-llm/native'
+import type { Session, SessionEvent } from '@redspark/rsh-session/native'
+import type { NativeTmuxContext, NativeTmuxContextRequest } from '@redspark/rsh-tmux-context-definition'
+import type { ShellOperations, ShellRunResult } from '@redspark/rsh-shell/native'
 
 /** Optional refresh floor for changed tmux readings. */
 export interface Config {

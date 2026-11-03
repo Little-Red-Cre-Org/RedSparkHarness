@@ -6,11 +6,11 @@ import { createHmac } from 'node:crypto'
 import { fileURLToPath } from 'node:url'
 import { execa } from 'execa'
 import { expect, it } from 'vitest'
-import { SESSION_FORMAT_VERSION } from '@deepseek-ai/dsh-session/native'
-import { JsonlSessionBackend } from '@deepseek-ai/dsh-session-persistence-jsonl'
-import { parseSessionLog } from '@deepseek-ai/dsh-llm-replay'
+import { SESSION_FORMAT_VERSION } from '@redspark/rsh-session/native'
+import { JsonlSessionBackend } from '@redspark/rsh-session-persistence-jsonl'
+import { parseSessionLog } from '@redspark/rsh-llm-replay'
 import { formatSystemPromptSnapshot, formatToolSchemasSnapshot, normalizeSessionSnapshot, redactSessionSnapshotIds,
-  normalizedSystemPrompts, normalizedToolSchemas, sessionFixtureName } from '@deepseek-ai/dsh-session-snapshot'
+  normalizedSystemPrompts, normalizedToolSchemas, sessionFixtureName } from '@redspark/rsh-session-snapshot'
 import { shippedNativeProfileComposition } from '../../rsh/Programs/CLI/src/native-profile-template.ts'
 
 const root = fileURLToPath(new URL('../../', import.meta.url))
@@ -118,7 +118,7 @@ it('records a signed GitHub notice through the shipped native-web profile and cl
   mkdirSync(profile, { recursive: true })
   mkdirSync(workspace)
   mkdirSync(sessions)
-  const modules = join(profile, 'node_modules/@deepseek-ai')
+  const modules = join(profile, 'node_modules/@redspark')
   mkdirSync(modules, { recursive: true })
   try {
     for (const [name, path] of [
@@ -154,8 +154,8 @@ it('records a signed GitHub notice through the shipped native-web profile and cl
     writeFileSync(join(profile, 'package.json'), JSON.stringify({ name: 'native-github-webhook-snapshot', private: true,
       dsh: { profile: { runtime: 'native', config: 'rsh.profile.json' } } }))
     writeFileSync(join(profile, 'rsh.client.json'), JSON.stringify({ formatVersion: 1, installations: [
-      { id: 'connection', plugin: '@deepseek-ai/dsh-client-connection' },
-      { id: 'session', plugin: '@deepseek-ai/dsh-client-native-session' },
+      { id: 'connection', plugin: '@redspark/rsh-client-connection' },
+      { id: 'session', plugin: '@redspark/rsh-client-native-session' },
     ] }))
     const fixtureModel = join(profile, 'node_modules/native-github-webhook-model')
     mkdirSync(fixtureModel)
@@ -198,19 +198,19 @@ it('records a signed GitHub notice through the shipped native-web profile and cl
     writeFileSync(join(profile, 'rsh.profile.json'), JSON.stringify({ ...shipped,
       scopes: [{ id: 'root' }, { id: 'standard', parent: 'root' }],
       installations: [
-        ...installations.map(([id, name, config]) => ({ id, plugin: `@deepseek-ai/dsh-${name}`, scope: 'root',
+        ...installations.map(([id, name, config]) => ({ id, plugin: `@redspark/rsh-${name}`, scope: 'root',
           ...(id === 'preset-standard' ? { scope: 'standard' } : {}),
           ...(config === undefined ? {} : { config }) })),
         { id: 'model', plugin: 'native-github-webhook-model', scope: 'root', config: { audit } },
         { id: 'github-rule', plugin: 'native-github-webhook-rule', scope: 'root', config: { workspacePath: workspace } },
-        { id: 'github-webhook', plugin: '@deepseek-ai/dsh-webhook-github', scope: 'root', config: {
-          source: 'snapshot', path: '/github', secretEnv: 'DSH_GITHUB_WEBHOOK_SECRET', maxBodyBytes: 2048, rootRoute: 'root',
+        { id: 'github-webhook', plugin: '@redspark/rsh-webhook-github', scope: 'root', config: {
+          source: 'snapshot', path: '/github', secretEnv: 'RSH_GITHUB_WEBHOOK_SECRET', maxBodyBytes: 2048, rootRoute: 'root',
         } },
       ],
     }))
 
     const child = execa(process.execPath, [join(root, 'rsh/Programs/CLI/lib/bin.js'), '--profile', 'native-web'], {
-      cwd: root, env: { ...process.env, DSH_HOME: home, DSH_TELEMETRY_DISABLED: '1', DSH_GITHUB_WEBHOOK_SECRET: 'snapshot-github-secret' },
+      cwd: root, env: { ...process.env, RSH_HOME: home, RSH_TELEMETRY_DISABLED: '1', RSH_GITHUB_WEBHOOK_SECRET: 'snapshot-github-secret' },
       reject: false,
     })
     let address = ''
@@ -286,7 +286,7 @@ it('records a signed GitHub notice through the shipped native-web profile and cl
         [join(scenario, 'tool-schemas.expected.json'), formatToolSchemasSnapshot(schemas[0], schemas.slice(1))],
       ] as const
       for (const [path, value] of outputs) {
-        if (process.env.DSH_SNAPSHOT === 'refresh') writeFileSync(path, value)
+        if (process.env.RSH_SNAPSHOT === 'refresh') writeFileSync(path, value)
         else expect(value).toBe(readFileSync(path, 'utf8'))
       }
     } finally {

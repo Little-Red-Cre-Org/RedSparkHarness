@@ -2,7 +2,7 @@
 
 [English](http-routes.md) | 中文
 
-`@deepseek-ai/dsh-http-routes` 定义 Node HTTP handler 与共享路由表，供所选 Cordis Web 和 Native Web listener 使用。其 Host 与 Native 入口不含 Cordis 声明；浏览器安全的 index 注入值从 `./client` 导出。[Cordis bridge](../../Compatibility/DSH/bridge/http-routes-cordis/README.zh.md) 将旧式 `ctx.webServer` 与 event 声明单独保留在这些约定之外。
+`@redspark/rsh-http-routes` 定义 Node HTTP handler 与共享路由表，供所选 Cordis Web 和 Native Web listener 使用。其 Host 与 Native 入口不含 Cordis 声明；浏览器安全的 index 注入值从 `./client` 导出。[Cordis bridge](../../Compatibility/DSH/bridge/http-routes-cordis/README.zh.md) 将旧式 `ctx.webServer` 与 event 声明单独保留在这些约定之外。
 
 ## 定义
 

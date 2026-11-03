@@ -3,13 +3,13 @@
  * API. Exports the `LlmRuntime` default, the abstract `LlmAdapter` for
  * provider backends, and `BlockAssembler` for chunk assembly.
  *
- * @module @deepseek-ai/dsh-llm
+ * @module @redspark/rsh-llm
  */
 
-import type {} from '@deepseek-ai/dsh-typert-protocol/types'
-import { Context } from '@deepseek-ai/cordis'
-import { Remote, RemoteError, TypertRemoteService } from '@deepseek-ai/dsh-typert-protocol'
-import { deepFreeze } from '@deepseek-ai/dsh-util-values'
+import type {} from '@redspark/rsh-typert-protocol/types'
+import { Context } from '@redspark/cordis'
+import { Remote, RemoteError, TypertRemoteService } from '@redspark/rsh-typert-protocol'
+import { deepFreeze } from '@redspark/rsh-util-values'
 import type {
   GenerateOptions,
   LlmConfigurableProvider,
@@ -35,9 +35,9 @@ import { normalizeLlmFailure } from './adapter-failure.ts'
 import {
   contentHasFile, contentHasImage, fileHandleText, projectFilesToText, projectImagesForTextModel,
 } from './content.ts'
-import type { FileAttachmentRef } from '@deepseek-ai/dsh-attachment/types'
+import type { FileAttachmentRef } from '@redspark/rsh-attachment/types'
 
-declare module '@deepseek-ai/dsh-typert-protocol/types' {
+declare module '@redspark/rsh-typert-protocol/types' {
   interface RemoteErrorDetailsMap {
     /** A draft provider interrogation refused or failed. */
     'llm/model-discovery-rejected': {
@@ -76,7 +76,7 @@ export { BlockAssembler } from './assembler.ts'
 export { callConfigEquals, isAgentLoopRequest, markAgentLoopRequest } from './call-config.ts'
 export type { LlmCallConfig, LlmCallConfigAdapterDefaults } from './call-config.ts'
 
-declare module '@deepseek-ai/cordis' {
+declare module '@redspark/cordis' {
   interface Context {
     llm: LlmRuntime
   }

@@ -3,7 +3,7 @@ description: "Goal surface for the Web GUI: a composer strip for goal status and
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-client-ui-goal
+# @redspark/rsh-client-ui-goal
 
 English | [中文](README.zh.md)
 
@@ -29,7 +29,7 @@ Mount this plugin alongside `ui-conversation` and the goal domain package; the s
 
 ### Native display
 
-Import `NativeGoalBar` and `goalFromSessionEvents` from `@deepseek-ai/dsh-client-ui-goal/native`. The projection reads the selected Session's existing events and returns no goal before creation or after clear. The bar shows objective, durable phase, and admitted-round progress, including completed goals; it does not read process-local activation or perform goal operations.
+Import `NativeGoalBar` and `goalFromSessionEvents` from `@redspark/rsh-client-ui-goal/native`. The projection reads the selected Session's existing events and returns no goal before creation or after clear. The bar shows objective, durable phase, and admitted-round progress, including completed goals; it does not read process-local activation or perform goal operations.
 
 ### The command-input bubble
 

@@ -27,11 +27,11 @@ uv run --project rsh/Programs/SDK/python/sdk pytest
 
 `rsh/Programs/SDK/python/sdk/tests/test_bundled_runtime.py` exercises available bundled carriers and skips a carrier when its artifact has not been built. For repository-wide test policy, see [Testing](../../../Docs/testing.md).
 
-That suite drives fake runtime peers. `rsh/Scripts/smoke-python-runtime.py` drives the packaged runtime instead. The `python-runtime` CI jobs build Linux x64 and Windows x64 on pull requests, and Linux arm64 plus both macOS architectures on master pushes. Each selected target installs the matching SDK and runtime wheels into a new Python 3.10 virtual environment, runs outside the checkout with `PYTHONPATH` and `DSH_RUNTIME_MODE` unset, proves that both modules and the executable came from those distributions, and then runs every keyless scenario. A focused local source-SDK run can select one built executable and scenario:
+That suite drives fake runtime peers. `rsh/Scripts/smoke-python-runtime.py` drives the packaged runtime instead. The `python-runtime` CI jobs build Linux x64 and Windows x64 on pull requests, and Linux arm64 plus both macOS architectures on master pushes. Each selected target installs the matching SDK and runtime wheels into a new Python 3.10 virtual environment, runs outside the checkout with `PYTHONPATH` and `RSH_RUNTIME_MODE` unset, proves that both modules and the executable came from those distributions, and then runs every keyless scenario. A focused local source-SDK run can select one built executable and scenario:
 
 ```sh
 uv run --project rsh/Programs/SDK/python/sdk python rsh/Scripts/smoke-python-runtime.py \
-  --scenario sdk-minimal --exe dist-exe/deepseek-harness-sdk-runtime-macos-arm64
+  --scenario sdk-minimal --exe dist-exe/redspark-harness-sdk-runtime-macos-arm64
 ```
 
 The installed `sdk-native` scenario also replays the shared staged-files Session through `session.upload_file`, prompt and steer receipt consumption, `read_file`, and a cold runtime process. It compares model-visible handles with the canonical Session and verifies exact returned file contents. This keyless scenario uses a deterministic fixture model; the separate `sdk-live` scenario covers provider-backed behavior.
@@ -43,26 +43,26 @@ Trusted pull requests and master pushes also run `--scenario sdk-live --installe
 An interactive smoke test needs `DEEPSEEK_API_KEY` in the environment or repository-root `.env`:
 
 ```python
-from deepseek_harness import DeepSeekHarness
+from redspark_harness import RedSparkHarness
 
-with DeepSeekHarness(dsh_home="/absolute/path/to/test-dsh-home") as harness:
+with RedSparkHarness(rsh_home="/absolute/path/to/test-dsh-home") as harness:
     print(harness.run("say hi").final_response)
 ```
 
-Alternatively export a non-empty `DSH_HOME`. The SDK rejects a launch that would silently use `~/.dsh`.
+Alternatively export a non-empty `RSH_HOME`. The SDK rejects a launch that would silently use `~/.dsh`.
 
 ## Run against Node source
 
 Repository contributors can select either development route; both execute the normal `dsh --profile sdk` launcher:
 
-- Set `DSH_RUNTIME_MODE=node` to use the built Node carrier on system Node `>=22.19`. The build script refreshes this carrier, but distributions never include or auto-select it.
-- Set `dsh_bin` to the absolute built `rsh/Programs/CLI/lib/bin.js` path to exercise the checkout's CLI directly. Supply an explicit `dsh_home`, plus `profile` and ordered `patches` as needed.
+- Set `RSH_RUNTIME_MODE=node` to use the built Node carrier on system Node `>=22.19`. The build script refreshes this carrier, but distributions never include or auto-select it.
+- Set `dsh_bin` to the absolute built `rsh/Programs/CLI/lib/bin.js` path to exercise the checkout's CLI directly. Supply an explicit `rsh_home`, plus `profile` and ordered `patches` as needed.
 
 `rsh/Programs/SDK/python/sdk/tests/manual_sdk_agent_smoke.py` uses the internal `_launch_args` test adapter to exercise the unbuilt TypeScript CLI under tsx. Arbitrary argv replacement is intentionally absent from the public SDK.
 
 ## Build distributions
 
-The root `package.json` version is authoritative for both Python distributions. The staging script injects that version into both wheels and pins the SDK to the same `deepseek-harness-runtime-bin` version.
+The root `package.json` version is authoritative for both Python distributions. The staging script injects that version into both wheels and pins the SDK to the same `redspark-harness-runtime-bin` version.
 
 Build the pure SDK wheel once and one runtime wheel on each native platform:
 
@@ -75,10 +75,10 @@ print(release["pep440_version"](release["repository_version"]()))
 PY
 )"
 python rsh/Scripts/build-python-release.py --package sdk --output-dir dist-python
-python rsh/Scripts/build-python-release.py --package runtime --platform macos-arm64 --runtime-exe dist-exe/deepseek-harness-sdk-runtime-macos-arm64 --output-dir dist-python
+python rsh/Scripts/build-python-release.py --package runtime --platform macos-arm64 --runtime-exe dist-exe/redspark-harness-sdk-runtime-macos-arm64 --output-dir dist-python
 pip install \
-  "dist-python/deepseek_harness_sdk-$version-py3-none-any.whl" \
-  "dist-python/deepseek_harness_runtime_bin-$version-py3-none-macosx_14_0_arm64.whl"
+  "dist-python/redspark_harness_sdk-$version-py3-none-any.whl" \
+  "dist-python/redspark_harness_runtime_bin-$version-py3-none-macosx_14_0_arm64.whl"
 ```
 
 The runtime distribution is wheel-only. The release pipeline publishes five platform wheels with the pure SDK wheel: Linux x64, Linux arm64, macOS 14 or newer on arm64 and x64, and Windows x64 (`win_amd64`). A `python-v<repository-version>` tag is accepted only when it matches the repository version; prerelease repository versions such as `0.0.1-rc.1` use their normalized PEP 440 spelling, such as `0.0.1rc1`, inside wheel filenames and metadata.

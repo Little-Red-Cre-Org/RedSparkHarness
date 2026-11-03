@@ -1,7 +1,7 @@
 /** Host registration for browser Chat preferences. */
 
-import type { Context } from '@deepseek-ai/cordis'
-import type {} from '@deepseek-ai/dsh-compat-settings-definition'
+import type { Context } from '@redspark/cordis'
+import type {} from '@redspark/rsh-compat-settings-definition'
 import { CHAT_SETTINGS_NAMESPACE, ChatSettingsSchema } from './chat-settings.ts'
 
 export {

@@ -82,7 +82,7 @@ function page(locale = 'en', initial: Promise<DesktopBackendState> = Promise.res
   const legacy = { list: vi.fn(async () => [{ name: 'legacy-plugin', version: '1.0.0', enabled: true }]),
     add: vi.fn(), toggle: vi.fn(), remove: vi.fn(), update: vi.fn(), disableAll: vi.fn() }
   const getLocale = vi.fn(async () => resolveDesktopLocale(locale))
-  Object.defineProperty(dom.window, 'dshDesktop', { value: {
+  Object.defineProperty(dom.window, 'rshDesktop', { value: {
     locale: getLocale, backend, plugins: { ...legacy, native },
   } })
   const element = (selector: string): HTMLElement => {

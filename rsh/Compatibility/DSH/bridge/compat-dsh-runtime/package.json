@@ -1,5 +1,5 @@
 {
-  "name": "@deepseek-ai/dsh-compat-dsh-runtime",
+  "name": "@redspark/rsh-compat-dsh-runtime",
   "description": "Optional Cordis host for explicitly supported native DSH compatibility adapters",
   "version": "1.0.0",
   "publishConfig": { "access": "public" },
@@ -16,7 +16,7 @@
       "targets": ["host"],
       "requires": [],
       "optional": [],
-      "provides": ["compatDshRuntime"]
+      "provides": ["compatRshRuntime"]
     }
   },
   "main": "lib/index.js",
@@ -28,11 +28,11 @@
   },
   "files": ["lib/index.js", "lib/types/**/*.d.ts"],
   "license": "MIT",
-  "peerDependencies": { "@deepseek-ai/cordis": "workspace:^" },
-  "devDependencies": { "@deepseek-ai/cordis": "workspace:^" },
+  "peerDependencies": { "@redspark/cordis": "workspace:^" },
+  "devDependencies": { "@redspark/cordis": "workspace:^" },
   "dependencies": {
-    "@deepseek-ai/cordis-plugin-loader": "workspace:^",
-    "@deepseek-ai/dsh-native-runtime": "workspace:^",
-    "@deepseek-ai/dsh-plugin-host": "workspace:^"
+    "@redspark/cordis-plugin-loader": "workspace:^",
+    "@redspark/rsh-native-runtime": "workspace:^",
+    "@redspark/rsh-plugin-host": "workspace:^"
   }
 }

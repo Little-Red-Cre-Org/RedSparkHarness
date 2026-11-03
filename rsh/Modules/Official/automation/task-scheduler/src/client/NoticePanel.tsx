@@ -1,8 +1,8 @@
 /** Always-available sidebar entry and a persistent, actionable reminder dialog. */
 import { useState, type ReactNode } from 'react'
-import { Modal } from '@deepseek-ai/dsh-client-ui-primitives'
-import type { InjectFace, PropsLocale, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
-import type {} from '@deepseek-ai/dsh-client-ui-sidebar/client'
+import { Modal } from '@redspark/rsh-client-ui-primitives'
+import type { InjectFace, PropsLocale, PropsRuntime } from '@redspark/rsh-client-ui-slots'
+import type {} from '@redspark/rsh-client-ui-sidebar/client'
 import type { createNoticeController } from './notices.ts'
 import css from './panel.module.css'
 import { SchedulerPanel, type PanelInjected } from './Panel.tsx'
@@ -34,7 +34,7 @@ export function NoticePanel(props: NoticeProps): ReactNode {
   const [creating, setCreating] = useState(false)
   const state = useNotices(s => s)
   const [deleting, setDeleting] = useState<string | null>(null)
-  const desktop = typeof (globalThis as { dshDesktop?: { notifyTask?: unknown } }).dshDesktop?.notifyTask === 'function'
+  const desktop = typeof (globalThis as { rshDesktop?: { notifyTask?: unknown } }).rshDesktop?.notifyTask === 'function'
   const [permission, setPermission] = useState(typeof Notification === 'undefined' ? 'unsupported' : Notification.permission)
   const enable = async (): Promise<void> => {
     try { setPermission(await Notification.requestPermission()) } catch { setPermission('denied') }

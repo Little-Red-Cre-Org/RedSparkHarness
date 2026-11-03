@@ -1,5 +1,5 @@
 {
-  "name": "@deepseek-ai/dsh-tool-code-runtime",
+  "name": "@redspark/rsh-tool-code-runtime",
   "description": "Native run_code tool over the selected code runtime",
   "version": "1.0.0",
   "publishConfig": { "access": "public" },
@@ -16,17 +16,17 @@
   "files": ["lib/index.js", "lib/native.js", "lib/types/**/*.d.ts"],
   "license": "MIT",
   "dependencies": {
-    "@deepseek-ai/dsh-native-runtime": "workspace:^",
-    "@deepseek-ai/dsh-native-tools": "workspace:^",
-    "@deepseek-ai/dsh-native-prompt": "workspace:^",
-    "@deepseek-ai/dsh-code-runtime-definition": "workspace:^",
-    "@deepseek-ai/dsh-fs": "workspace:^",
-    "@deepseek-ai/dsh-native-sandbox-policy": "workspace:^"
+    "@redspark/rsh-native-runtime": "workspace:^",
+    "@redspark/rsh-native-tools": "workspace:^",
+    "@redspark/rsh-native-prompt": "workspace:^",
+    "@redspark/rsh-code-runtime-definition": "workspace:^",
+    "@redspark/rsh-fs": "workspace:^",
+    "@redspark/rsh-native-sandbox-policy": "workspace:^"
   },
   "devDependencies": {
-    "@deepseek-ai/dsh-fs-local": "workspace:^",
-    "@deepseek-ai/dsh-native-agent": "workspace:^",
-    "@deepseek-ai/dsh-session": "workspace:^",
-    "@deepseek-ai/dsh-llm": "workspace:^"
+    "@redspark/rsh-fs-local": "workspace:^",
+    "@redspark/rsh-native-agent": "workspace:^",
+    "@redspark/rsh-session": "workspace:^",
+    "@redspark/rsh-llm": "workspace:^"
   }
 }

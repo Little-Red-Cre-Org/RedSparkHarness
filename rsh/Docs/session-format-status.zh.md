@@ -30,7 +30,7 @@ latestReleasedVersion: 3
 evidenceTag: dsh-v0.1.5-alpha.1
 ```
 
-证据：[已发布产品版本](https://github.com/deepseek-harness/deepseek-harness/releases/tag/dsh-v0.1.5-alpha.1)及[对应标签的写入器源码](https://github.com/deepseek-harness/deepseek-harness/blob/dsh-v0.1.5-alpha.1/packages/core/session/src/types.ts)。
+证据：[已发布产品版本](https://github.com/redspark-harness/redspark-harness/releases/tag/dsh-v0.1.5-alpha.1)及[对应标签的写入器源码](https://github.com/redspark-harness/redspark-harness/blob/dsh-v0.1.5-alpha.1/packages/core/session/src/types.ts)。
 
 <a id="updating-the-record"></a>
 ## 更新记录

@@ -1,8 +1,8 @@
 /** Compatibility adapters over the shared search process and retention implementation. */
-import type {} from '@deepseek-ai/dsh-subprocess'
-import type { Context } from '@deepseek-ai/cordis'
-import type { ToolExecution } from '@deepseek-ai/dsh-tools'
-import type { SaveTextSpill, SpillRef } from '@deepseek-ai/dsh-spill'
+import type {} from '@redspark/rsh-subprocess'
+import type { Context } from '@redspark/cordis'
+import type { ToolExecution } from '@redspark/rsh-tools'
+import type { SaveTextSpill, SpillRef } from '@redspark/rsh-spill'
 import { runRipgrep as runCore } from './ripgrep-core.ts'
 import type { RipgrepRun } from './ripgrep-core.ts'
 export * from './ripgrep-core.ts'

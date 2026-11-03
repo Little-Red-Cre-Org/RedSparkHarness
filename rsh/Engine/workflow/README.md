@@ -35,9 +35,9 @@ The workflow group lets an agent run a model-authored orchestration script that 
 ## Related documentation
 
 - [Workflow subsystem](../../Docs/subsystems/workflow.md) — the seam's types, start request, and `workflow/*` events.
-- [Generated tool catalog](../../Docs/tool-catalog.md#deepseek-aidsh-tool-workflow) — the `workflow` tool schema the model receives.
-- [Generated tool catalog](../../Docs/tool-catalog.md#deepseek-aidsh-tool-ralph) — the `ralph` tool schema the model receives.
-- [Generated configuration catalog](../../Docs/config-catalog.md#deepseek-aidsh-workflow-worker-thread) — every accepted engine config field.
+- [Generated tool catalog](../../Docs/tool-catalog.md#redsparkrsh-tool-workflow) — the `workflow` tool schema the model receives.
+- [Generated tool catalog](../../Docs/tool-catalog.md#redsparkrsh-tool-ralph) — the `ralph` tool schema the model receives.
+- [Generated configuration catalog](../../Docs/config-catalog.md#redsparkrsh-workflow-worker-thread) — every accepted engine config field.
 - [Dynamic workflows Agent Note](../../../.agents/notes/implemented/feature/2026-07-05-dynamic-workflows.md) — the seam design and its decisions.
 - [Harness-level goal-based execution Agent Note](../../../.agents/notes/implemented/feature/2026-07-16-harness-level-loop.md) — the fixed fresh-agent loop design and deferred work.
 

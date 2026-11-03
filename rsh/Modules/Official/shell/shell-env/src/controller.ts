@@ -1,26 +1,26 @@
 /** Managed shell environment values shared by Cordis and native Providers. */
-import { DSH_HOME_ENV, resolveDshHome } from '@deepseek-ai/dsh-home-paths'
-import { DSH_ENV_PREFIX } from '@deepseek-ai/dsh-shell/native'
-import type { DshEnvironment, DshEnvironmentKey } from '@deepseek-ai/dsh-shell/native'
+import { RSH_HOME_ENV, resolveRshHome } from '@redspark/rsh-home-paths'
+import { RSH_ENV_PREFIX } from '@redspark/rsh-shell/native'
+import type { RshEnvironment, RshEnvironmentKey } from '@redspark/rsh-shell/native'
 import type { ShellEnvContributor, ShellEnvironment, ShellEnvVariable, ShellEnvVariableInfo } from './definition.ts'
 
-const DSH_SHELL_KEY = `${DSH_ENV_PREFIX}SHELL` as const
-const DSH_SESSION_ID_KEY = `${DSH_ENV_PREFIX}SESSION_ID` as const
-const RESERVED_KEYS = new Set<DshEnvironmentKey>([DSH_HOME_ENV, DSH_SHELL_KEY, DSH_SESSION_ID_KEY])
+const RSH_SHELL_KEY = `${RSH_ENV_PREFIX}SHELL` as const
+const RSH_SESSION_ID_KEY = `${RSH_ENV_PREFIX}SESSION_ID` as const
+const RESERVED_KEYS = new Set<RshEnvironmentKey>([RSH_HOME_ENV, RSH_SHELL_KEY, RSH_SESSION_ID_KEY])
 const KEY_SUFFIX = /^[A-Z][A-Z0-9_]*$/
 
 /** Registry mechanics independent of the plugin lifecycle that owns each disposer. */
 export class ShellEnvController<Execution> implements ShellEnvironment<Execution> {
   private readonly contributors = new Map<string, ShellEnvContributor<Execution>>()
-  private readonly keyOwners = new Map<DshEnvironmentKey, string>()
-  private readonly dshHome: string
+  private readonly keyOwners = new Map<RshEnvironmentKey, string>()
+  private readonly rshHome: string
 
   /**
    * @param configuredHome - explicit Harness home, otherwise the normal home precedence applies.
    * @param sessionId - obtain the current Session id, or undefined outside an Agent call.
    */
   constructor(configuredHome: string | undefined, private readonly sessionId: (execution: Execution) => string | undefined) {
-    this.dshHome = resolveDshHome(configuredHome)
+    this.rshHome = resolveRshHome(configuredHome)
   }
 
   /**
@@ -33,9 +33,9 @@ export class ShellEnvController<Execution> implements ShellEnvironment<Execution
     if (this.contributors.has(contributor.name)) {
       throw new Error(`bash env contributor "${contributor.name}" is already registered`)
     }
-    const variables = Object.entries(contributor.variables) as [DshEnvironmentKey, ShellEnvVariable][]
+    const variables = Object.entries(contributor.variables) as [RshEnvironmentKey, ShellEnvVariable][]
     for (const [key, variable] of variables) {
-      if (!key.startsWith(DSH_ENV_PREFIX) || !KEY_SUFFIX.test(key.slice(DSH_ENV_PREFIX.length))) {
+      if (!key.startsWith(RSH_ENV_PREFIX) || !KEY_SUFFIX.test(key.slice(RSH_ENV_PREFIX.length))) {
         throw new Error(`bash env contributor "${contributor.name}" declared invalid key "${key}"`)
       }
       if (RESERVED_KEYS.has(key)) {
@@ -63,17 +63,17 @@ export class ShellEnvController<Execution> implements ShellEnvironment<Execution
    * @param execution - current shell tool invocation.
    * @returns sorted built-in and contributed facts.
    */
-  collect(execution: Execution): DshEnvironment {
-    const values: Record<DshEnvironmentKey, string> = {
-      [DSH_HOME_ENV]: this.dshHome,
-      [DSH_SHELL_KEY]: '1',
+  collect(execution: Execution): RshEnvironment {
+    const values: Record<RshEnvironmentKey, string> = {
+      [RSH_HOME_ENV]: this.rshHome,
+      [RSH_SHELL_KEY]: '1',
     }
     const sessionId = this.sessionId(execution)
-    if (sessionId !== undefined) values[DSH_SESSION_ID_KEY] = sessionId
+    if (sessionId !== undefined) values[RSH_SESSION_ID_KEY] = sessionId
     for (const contributor of [...this.contributors.values()].sort((left, right) => left.name.localeCompare(right.name))) {
       const resolved = contributor.resolve(execution)
       for (const [rawKey, value] of Object.entries(resolved)) {
-        const key = rawKey as DshEnvironmentKey
+        const key = rawKey as RshEnvironmentKey
         if (!Object.hasOwn(contributor.variables, key)) {
           throw new Error(`bash env contributor "${contributor.name}" returned undeclared key "${key}"`)
         }
@@ -93,7 +93,7 @@ export class ShellEnvController<Execution> implements ShellEnvironment<Execution
   list(): ShellEnvVariableInfo[] {
     return [...this.contributors.values()]
       .flatMap(contributor => Object.entries(contributor.variables).map(([key, variable]) => ({
-        contributor: contributor.name, description: variable.description, key: key as DshEnvironmentKey,
+        contributor: contributor.name, description: variable.description, key: key as RshEnvironmentKey,
       })))
       .sort((left, right) => left.key.localeCompare(right.key))
   }

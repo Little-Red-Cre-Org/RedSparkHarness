@@ -8,7 +8,7 @@ kind: "package-reference"
 
 ## 概述
 
-`@deepseek-ai/dsh-api-settings-controller` 为浏览器配置界面提供生成的 `ctx.remote.settings`、`ctx.remote.credentials` 与 `ctx.remote.authorization` namespace。它返回脱敏的 settings 与凭据元数据，支持不回传机密值的写入，流式传送提供方自有的登录会话，并在 Host 桌面打开由提供方持有的 settings 或 Agent preset 位置。提供方缺失时，namespace 仍会注册，并返回可操作的配置错误。
+`@redspark/rsh-api-settings-controller` 为浏览器配置界面提供生成的 `ctx.remote.settings`、`ctx.remote.credentials` 与 `ctx.remote.authorization` namespace。它返回脱敏的 settings 与凭据元数据，支持不回传机密值的写入，流式传送提供方自有的登录会话，并在 Host 桌面打开由提供方持有的 settings 或 Agent preset 位置。提供方缺失时，namespace 仍会注册，并返回可操作的配置错误。
 
 ## 目录
 
@@ -43,7 +43,7 @@ kind: "package-reference"
 | `nativeOpen` | 平台探测 | Agent preset 目录能否交给原生桌面打开器 |
 | `authorizationKeys` | `[]` | 浏览器可以列出和启动的已注册账号流的凭据 key |
 
-生成的[配置目录](../../../../Docs/config-catalog.zh.md#deepseek-aidsh-api-settings-controller)是所有受支持字段及其 JSDoc 的完整来源。
+生成的[配置目录](../../../../Docs/config-catalog.zh.md#redsparkrsh-api-settings-controller)是所有受支持字段及其 JSDoc 的完整来源。
 
 -----
 

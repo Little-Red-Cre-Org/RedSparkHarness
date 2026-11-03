@@ -1,10 +1,10 @@
 /** Extensible pet registry, durable preference owner, and activity override source. */
-import type { Context } from '@deepseek-ai/cordis'
-import type { ObservableSnapshot } from '@deepseek-ai/dsh-client-store'
-import type { SettingsScope } from '@deepseek-ai/dsh-client-ui-settings/client'
-import type { SessionId } from '@deepseek-ai/dsh-session/types'
-import type { JsonValue } from '@deepseek-ai/dsh-util-values'
-import { randomUUID } from '@deepseek-ai/dsh-util-crypto'
+import type { Context } from '@redspark/cordis'
+import type { ObservableSnapshot } from '@redspark/rsh-client-store'
+import type { SettingsScope } from '@redspark/rsh-client-ui-settings/client'
+import type { SessionId } from '@redspark/rsh-session/types'
+import type { JsonValue } from '@redspark/rsh-util-values'
+import { randomUUID } from '@redspark/rsh-util-crypto'
 import {
   DEFAULT_PET_ID, DEFAULT_PET_VARIANT, MAX_CUSTOM_PETS, type PetSettings,
 } from '../pet-settings.ts'
@@ -246,7 +246,7 @@ export class PetRuntime {
   }
 }
 
-declare module '@deepseek-ai/cordis' {
+declare module '@redspark/cordis' {
   interface Context { pet: PetRuntime }
   interface Events {
     /**

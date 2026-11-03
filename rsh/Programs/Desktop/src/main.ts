@@ -17,7 +17,7 @@ import {
   type IpcMainInvokeEvent,
 } from 'electron'
 import { desktopUserDataPath, resolveDesktopPaths } from './paths.ts'
-import { setCliPackageRoot } from '@deepseek-ai/dsh/native-profile'
+import { setCliPackageRoot } from '@redspark/rsh/native-profile'
 import { DesktopProjectManager, type DesktopProjectHooks } from './project-manager.ts'
 import { DesktopHostProcess } from './host-process.ts'
 import { desktopHostEnvironment } from './host-environment.ts'
@@ -103,20 +103,20 @@ interface RuntimeResources {
 
 function runtimeResources(): RuntimeResources {
   const development = !app.isPackaged
-  const node = (development ? process.env.DSH_DESKTOP_NODE_BINARY : undefined)
+  const node = (development ? process.env.RSH_DESKTOP_NODE_BINARY : undefined)
     ?? join(process.resourcesPath, 'runtime', 'node', process.platform === 'win32' ? 'node.exe' : 'node')
-  const pnpm = (development ? process.env.DSH_DESKTOP_PNPM_ENTRY : undefined)
+  const pnpm = (development ? process.env.RSH_DESKTOP_PNPM_ENTRY : undefined)
     ?? join(process.resourcesPath, 'runtime', 'pnpm', 'bin', 'pnpm.mjs')
-  const dsh = (development ? process.env.DSH_DESKTOP_DSH_DIR : undefined) ?? join(process.resourcesPath, 'dsh')
+  const dsh = (development ? process.env.RSH_DESKTOP_RSH_DIR : undefined) ?? join(process.resourcesPath, 'dsh')
   return { node, pnpm, dsh }
 }
 
 function developmentHostInspectPort(enabled: boolean): number | undefined {
-  const configured = process.env.DSH_DESKTOP_HOST_INSPECT_PORT
+  const configured = process.env.RSH_DESKTOP_HOST_INSPECT_PORT
   if (!enabled || configured === undefined || configured === '') return undefined
   const port = Number(configured)
   if (!Number.isSafeInteger(port) || port < 1 || port > 65_535) {
-    throw new Error('dsh desktop: DSH_DESKTOP_HOST_INSPECT_PORT must be an integer from 1 through 65535')
+    throw new Error('dsh desktop: RSH_DESKTOP_HOST_INSPECT_PORT must be an integer from 1 through 65535')
   }
   return port
 }
@@ -274,7 +274,7 @@ async function main(): Promise<void> {
   // Template resolution defaults to this module's own package, which the bundle replaces with the
   // Desktop application; name the installed CLI so the composition builders read its manifest.
   // `resources.dsh` is the runtime root, so the CLI package sits one node_modules level below it.
-  setCliPackageRoot(join(resources.dsh, 'node_modules', '@deepseek-ai', 'dsh'))
+  setCliPackageRoot(join(resources.dsh, 'node_modules', '@redspark', 'rsh'))
   const paths = resolveDesktopPaths()
   const development = app.isPackaged ? undefined : join(app.getAppPath(), '.desktop-build', 'development', 'project')
   const activeProject = development ?? paths.profile
@@ -830,7 +830,7 @@ async function main(): Promise<void> {
   // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
   if (quitting) return
   // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-  if (mainWindow !== undefined && development !== undefined && process.env.DSH_DESKTOP_OPEN_DEVTOOLS !== '0') {
+  if (mainWindow !== undefined && development !== undefined && process.env.RSH_DESKTOP_OPEN_DEVTOOLS !== '0') {
     mainWindow.webContents.openDevTools({ mode: 'detach' })
   }
   publishUpdate(updateState)
@@ -847,7 +847,7 @@ const ownsDesktopInstance = claimDesktopSingleInstance(app, () => { focusPrimary
 
 if (ownsDesktopInstance) void app.whenReady().then(main).catch(async (error: unknown) => {
   const logged = logDesktopError('Desktop initialization failed', error)
-  const diagnosticFile = process.env.DSH_DESKTOP_DIAGNOSTIC_FILE
+  const diagnosticFile = process.env.RSH_DESKTOP_DIAGNOSTIC_FILE
   if (diagnosticFile !== undefined) {
     await writeFile(diagnosticFile, `${error instanceof Error ? error.stack ?? error.message : String(error)}\n`).catch(() => undefined)
   }

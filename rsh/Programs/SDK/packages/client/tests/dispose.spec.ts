@@ -2,7 +2,7 @@
 
 import { PassThrough } from 'node:stream'
 import { describe, expect, it } from 'vitest'
-import { disposeChildConnection, type ChildConnectionHandle } from '@deepseek-ai/dsh-subprocess/native'
+import { disposeChildConnection, type ChildConnectionHandle } from '@redspark/rsh-subprocess/native'
 
 interface ConnectionScript {
   readonly exitsOn: 'eof' | 'terminate' | 'never'

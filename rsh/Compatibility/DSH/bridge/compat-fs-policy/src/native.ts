@@ -1,41 +1,41 @@
 /** Explicit Cordis observation policy forwarding one native event direction. */
 import { createRequire } from 'node:module'
-import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
-import { validateSupportManifest, type CompatPackageManifest } from '@deepseek-ai/dsh-compat-dsh-runtime/native'
-import type {} from '@deepseek-ai/dsh-fs'
-import type {} from '@deepseek-ai/dsh-fs/native'
-import * as LegacyPolicy from '@deepseek-ai/dsh-fs-observation-policy'
+import type { NativePlugin } from '@redspark/rsh-native-runtime'
+import { validateSupportManifest, type CompatPackageManifest } from '@redspark/rsh-compat-dsh-runtime/native'
+import type {} from '@redspark/rsh-fs'
+import type {} from '@redspark/rsh-fs/native'
+import * as LegacyPolicy from '@redspark/rsh-fs-observation-policy'
 
 /**
  * Reject a changed policy declaration before mounting its Cordis plugin.
  * @param manifest - selected package metadata.
  */
 export function validateLegacyPolicyManifest(manifest: CompatPackageManifest): void {
-  validateSupportManifest('@deepseek-ai/dsh-fs-observation-policy', manifest)
+  validateSupportManifest('@redspark/rsh-fs-observation-policy', manifest)
 }
 
 /** Native event policy slot implemented by the selected legacy plugin. */
 export const plugin: NativePlugin = {
   apiVersion: 1,
-  name: '@deepseek-ai/dsh-compat-fs-policy',
+  name: '@redspark/rsh-compat-fs-policy',
   targets: ['host'],
-  requires: ['compatDshRuntime'],
+  requires: ['compatRshRuntime'],
   provides: ['fsObservationPolicy'],
   resolve(input) {
     if (input !== undefined && (typeof input !== 'object' || input === null || Array.isArray(input) || Object.keys(input).length > 0)) {
       throw new Error('compat-fs-policy: configuration must be empty')
     }
     const require = createRequire(import.meta.url)
-    validateLegacyPolicyManifest(require('@deepseek-ai/dsh-fs-observation-policy/package.json') as CompatPackageManifest)
+    validateLegacyPolicyManifest(require('@redspark/rsh-fs-observation-policy/package.json') as CompatPackageManifest)
     return async (native) => {
-      const runtime = native.require('compatDshRuntime')
-      const mount = runtime.mount('@deepseek-ai/dsh-fs-observation-policy', LegacyPolicy)
+      const runtime = native.require('compatRshRuntime')
+      const mount = runtime.mount('@redspark/rsh-fs-observation-policy', LegacyPolicy)
       native.own(() => mount.dispose())
       await mount.ready
       const legacy = runtime.context
       let listeners: (() => Promise<void>)[] = []
       const attach = (): void => {
-        if (listeners.length > 0 || native.signal.aborted || !runtime.isEnabled('@deepseek-ai/dsh-fs-observation-policy')) return
+        if (listeners.length > 0 || native.signal.aborted || !runtime.isEnabled('@redspark/rsh-fs-observation-policy')) return
         listeners = [
           native.on('fs/write-intent', (target, actor) => legacy.waterfall('fs/write-intent', target, actor, () => undefined)),
           native.on('fs/edit-intent', (target, actor) => legacy.waterfall('fs/edit-intent', target, actor, () => undefined)),

@@ -1,5 +1,5 @@
 {
-  "name": "@deepseek-ai/dsh-token-meter",
+  "name": "@redspark/rsh-token-meter",
   "description": "Replay-aware token measurement service (ctx.tokenMeter) for the RedSpark Harness",
   "version": "1.0.0",
   "publishConfig": {
@@ -38,27 +38,27 @@
   ],
   "license": "MIT",
   "peerDependencies": {
-    "@deepseek-ai/cordis": "workspace:^",
-    "@deepseek-ai/dsh-compaction": "workspace:^",
-    "@deepseek-ai/dsh-llm": "workspace:^",
-    "@deepseek-ai/dsh-llm-retry": "workspace:^",
-    "@deepseek-ai/dsh-session": "workspace:^",
-    "@deepseek-ai/dsh-session-projection": "workspace:^"
+    "@redspark/cordis": "workspace:^",
+    "@redspark/rsh-compaction": "workspace:^",
+    "@redspark/rsh-llm": "workspace:^",
+    "@redspark/rsh-llm-retry": "workspace:^",
+    "@redspark/rsh-session": "workspace:^",
+    "@redspark/rsh-session-projection": "workspace:^"
   },
   "dependencies": {
-    "@deepseek-ai/dsh-util-values": "workspace:^",
-    "@deepseek-ai/schemastery": "workspace:^",
+    "@redspark/rsh-util-values": "workspace:^",
+    "@redspark/schemastery": "workspace:^",
     "zod": "^4.4.3",
-    "@deepseek-ai/dsh-native-runtime": "workspace:^",
-    "@deepseek-ai/dsh-native-model-execution": "workspace:^"
+    "@redspark/rsh-native-runtime": "workspace:^",
+    "@redspark/rsh-native-model-execution": "workspace:^"
   },
   "devDependencies": {
-    "@deepseek-ai/cordis": "workspace:^",
-    "@deepseek-ai/dsh-compaction": "workspace:^",
-    "@deepseek-ai/dsh-llm": "workspace:^",
-    "@deepseek-ai/dsh-llm-retry": "workspace:^",
-    "@deepseek-ai/dsh-session": "workspace:^",
-    "@deepseek-ai/dsh-session-projection": "workspace:^"
+    "@redspark/cordis": "workspace:^",
+    "@redspark/rsh-compaction": "workspace:^",
+    "@redspark/rsh-llm": "workspace:^",
+    "@redspark/rsh-llm-retry": "workspace:^",
+    "@redspark/rsh-session": "workspace:^",
+    "@redspark/rsh-session-projection": "workspace:^"
   },
   "dsh": {
     "native": {
@@ -77,16 +77,16 @@
     }
   },
   "peerDependenciesMeta": {
-    "@deepseek-ai/cordis": {
+    "@redspark/cordis": {
       "optional": true
     },
-    "@deepseek-ai/dsh-compaction": {
+    "@redspark/rsh-compaction": {
       "optional": true
     },
-    "@deepseek-ai/dsh-llm-retry": {
+    "@redspark/rsh-llm-retry": {
       "optional": true
     },
-    "@deepseek-ai/dsh-session-projection": {
+    "@redspark/rsh-session-projection": {
       "optional": true
     }
   }

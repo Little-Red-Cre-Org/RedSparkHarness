@@ -3,7 +3,7 @@ description: "供运行时包使用的无损 JSON 校验、分离式快照、sym
 kind: "package-library"
 ---
 
-# @deepseek-ai/dsh-util-values
+# @redspark/rsh-util-values
 
 [English](README.md) | 中文
 
@@ -29,9 +29,9 @@ kind: "package-library"
 当包专属的 `Symbol.for()` 键必须跨重复安装的包副本保持一致时，使用 `setSymbolValue()` 和 `getSymbolValue()`。当调用方需要在缺值时立即失败，可使用 `requireSymbolValue()`。值保存在调用方对象的不可枚举、不可写属性中；本包不维护注册表。
 
 ```ts
-import { getSymbolValue, setSymbolValue } from '@deepseek-ai/dsh-util-values'
+import { getSymbolValue, setSymbolValue } from '@redspark/rsh-util-values'
 
-const key = Symbol.for('@deepseek-ai/example/private-value')
+const key = Symbol.for('@redspark/example/private-value')
 const target = {}
 setSymbolValue(target, key, { value: 1 })
 const retained = getSymbolValue(target, key) as { value: number } | undefined
@@ -42,7 +42,7 @@ const retained = getSymbolValue(target, key) as { value: number } | undefined
 需要 predicate 时使用 `isJsonValue()`，还需要分离副本时使用 `snapshotJsonValue()`。两者只接受无损 JSON 根值：`null`、布尔值、除负零外的有限数字、字符串、稠密的内建数组，以及只含可枚举字符串键的普通或 null-prototype 记录。循环、稀疏数组、自有 symbol 属性或自有不可枚举属性、函数和 class 实例都会被拒绝。
 
 ```ts
-import { isJsonValue, snapshotJsonValue, type JsonValue } from '@deepseek-ai/dsh-util-values'
+import { isJsonValue, snapshotJsonValue, type JsonValue } from '@redspark/rsh-util-values'
 
 declare const input: unknown
 

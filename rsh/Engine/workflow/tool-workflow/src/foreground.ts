@@ -1,6 +1,6 @@
 /** Shared foreground lifecycle and durable member recording for native workflow Consumers. */
-import type { NativeWorkflowOperations, NativeWorkflowObserver, NativeWorkflowStartRequest } from '@deepseek-ai/dsh-workflow/native'
-import type { WorkflowResult, WorkflowRunId } from '@deepseek-ai/dsh-workflow/types'
+import type { NativeWorkflowOperations, NativeWorkflowObserver, NativeWorkflowStartRequest } from '@redspark/rsh-workflow/native'
+import type { WorkflowResult, WorkflowRunId } from '@redspark/rsh-workflow/types'
 import type {} from './types.ts'
 
 /** Worker settlement after Consumer-owned progress recording and disposal. */

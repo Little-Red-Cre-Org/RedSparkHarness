@@ -3,7 +3,7 @@ description: "按 preset cordis.yml 文件进行按会话的 agent（智能体�
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-agent-presets
+# @redspark/rsh-agent-presets
 
 [English](README.md) | 中文
 
@@ -31,10 +31,10 @@ kind: "package-reference"
 
 ### 原生 preset 目录
 
-原生 CLI 先扫描随包交付的 preset 根目录，再扫描 `<dshHome>/.agent-presets`；重复 id 由优先级更高的根目录胜出。每个 preset 目录可包含共享的 `preset.yml` 显示元数据和 `agent.native.json` 组装文件。原生文件使用版本 1；每项包含 `id`、`plugin`，以及可选的 `config` 和 `disabled`。CLI 会将每项分配到 preset 的子 scope，且不会读取 `agent.cordis.yml`。
+原生 CLI 先扫描随包交付的 preset 根目录，再扫描 `<rshHome>/.agent-presets`；重复 id 由优先级更高的根目录胜出。每个 preset 目录可包含共享的 `preset.yml` 显示元数据和 `agent.native.json` 组装文件。原生文件使用版本 1；每项包含 `id`、`plugin`，以及可选的 `config` 和 `disabled`。CLI 会将每项分配到 preset 的子 scope，且不会读取 `agent.cordis.yml`。
 
 ```json
-{ "formatVersion": 1, "installations": [ { "id": "tools", "plugin": "@deepseek-ai/dsh-native-tools", "config": {} } ] }
+{ "formatVersion": 1, "installations": [ { "id": "tools", "plugin": "@redspark/rsh-native-tools", "config": {} } ] }
 ```
 
 缺少 `agent.native.json` 的目录显示为 `needs-migration`；文件无效、启用的插件包无法由 profile 解析，或启用行要求的服务 profile 未提供时显示为 `invalid`。Registry 的 `catalog()` 会重新扫描 Host 持有的根目录，并返回默认值以及不含目录路径或安装项的目录显示信息、信任级别和状态摘要。`read()` 返回目录元数据与原始组装文件文本；profile 独有的常驻组装没有文件内容。`copy()` 会将已就绪目录及其资源复制到第一个用户根目录，保留描述、替换显示名、移除排序位置，并收紧复制后文件权限。`delete()` 与 `directory()` 只解析用户目录；随包交付的目录保持只读。CLI 会将根目录路径仅提供给 Host Registry。
@@ -47,14 +47,14 @@ kind: "package-reference"
 
 从 preset 组装的会话会运行该 preset `agent.cordis.yml` 所列插件：它的工具、提示词段落与 skill。加入同一 preset 的会话共享一份已安装的组装，且各会话的状态彼此隔离。subagent 会加入其父方的组装，因此它看到的工具与提示词段落和创建它的 agent 相同。
 
-可选的 preset 来自三类来源：本包 `presets/` 下随包交付的 preset、已配置的根目录，以及你自己放在 `<dshHome>/.agent-presets` 下的 preset。选择器会展示每个 preset 的显示名与描述；组装无法加载的 preset 会连同原因一起列出而不是被隐藏，因此你能看到该修什么或删什么。
+可选的 preset 来自三类来源：本包 `presets/` 下随包交付的 preset、已配置的根目录，以及你自己放在 `<rshHome>/.agent-presets` 下的 preset。选择器会展示每个 preset 的显示名与描述；组装无法加载的 preset 会连同原因一起列出而不是被隐藏，因此你能看到该修什么或删什么。
 
 ### 最小配置
 
 插件需要一个 `default` preset id，并在 `roots` 中扫描 preset：
 
 ```yaml
-- name: '@deepseek-ai/dsh-agent-presets'
+- name: '@redspark/rsh-agent-presets'
   config:
     default: standard
     roots:
@@ -67,9 +67,9 @@ kind: "package-reference"
 | `default` | 必填 | 部署 fallback preset id；模式选择关闭或没有用户默认值覆盖时使用 |
 | `roots` | `[]` | 按优先级排列的扫描目录；每项提供 `path`（开头的 `~` 会展开）与 `trust`（默认为 `user`） |
 | `includeShippedRoot` | `true` | 在全部已配置根目录之前，前置本包随附的 preset 作为 `system` 根目录 |
-| `includeUserRoot` | `true` | 在全部已配置根目录之后追加 `<dshHome>/.agent-presets` 作为 `user` 根目录 |
+| `includeUserRoot` | `true` | 在全部已配置根目录之后追加 `<rshHome>/.agent-presets` 作为 `user` 根目录 |
 
-生成的[配置目录](../../../Docs/config-catalog.zh.md#deepseek-aidsh-agent-presets)是每个受支持字段及其 JSDoc 的穷尽式真源。
+生成的[配置目录](../../../Docs/config-catalog.zh.md#redsparkrsh-agent-presets)是每个受支持字段及其 JSDoc 的穷尽式真源。
 
 随附根目录前置在全部已配置根目录之前，因此即使补丁替换 roster 配置，内置集合仍然可用并赢得重复 id。`includeShippedRoot: false` 会为完全自行提供 preset 的部署移除内置集合。`includeUserRoot: false` 会移除推导出的可写根目录；钉住确切 roster 的测试会同时关闭两个推导根目录。
 
@@ -164,7 +164,7 @@ agent-presets:
 - [Scope 子系统](../../../Docs/subsystems/scope.zh.md)——scope key 与 agent 加入所经由的父链。
 - [系统提示词子系统](../../../Docs/subsystems/system-prompt.zh.md)——preset 提示词段落如何注册与组装。
 - [会话包映射](../../session/README.zh.md)——preset 切换所追加的持久会话记录。
-- [生成的配置目录](../../../Docs/config-catalog.zh.md#deepseek-aidsh-agent-presets)——每个受支持配置字段及其源声明。
+- [生成的配置目录](../../../Docs/config-catalog.zh.md#redsparkrsh-agent-presets)——每个受支持配置字段及其源声明。
 - [按会话组装 agent preset 的 Agent Note](../../../../.agents/notes/implemented/architecture/2026-08-03-per-session-agent-presets.zh.md)——设计理由与备选方案。
 
 -----

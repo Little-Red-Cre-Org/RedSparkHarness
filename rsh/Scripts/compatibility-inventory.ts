@@ -7,8 +7,8 @@ import { PACKAGE_MANIFEST_GLOBS, WORKSPACE_MANIFEST_GLOBS } from './workspace-ma
 import { mixedNativeEntryDirectories, mixedNativeLibraryDirectories, nativePackageDirectories, nativeSafeSourceSubpaths } from './native-package-policy.ts'
 
 const root = resolve(import.meta.dirname, '..', '..')
-const CORDIS_PACKAGES = /(?:^|\/)(?:@deepseek-ai\/)?(?:cordis|cordis-)|^@cordisjs\//u
-const DSH_PACKAGES = /^@deepseek-ai\/dsh-/u
+const CORDIS_PACKAGES = /(?:^|\/)(?:@redspark\/)?(?:cordis|cordis-)|^@cordisjs\//u
+const RSH_PACKAGES = /^@redspark\/dsh-/u
 
 /** Migration disposition; a mixed package still owns a compatibility entry. */
 export type InventoryClass = 'native-migrated' | 'native-mixed' | 'framework-free' | 'compatibility-retained' | 'test-tooling' | 'migration-required'
@@ -178,7 +178,7 @@ export function collectCompatibilityPackageRows(rootPath: string, sourceUses: re
           name, section, range,
           optional: section === 'optionalDependencies' || (section === 'peerDependencies' && manifest.peerDependenciesMeta?.[name]?.optional === true),
         })))
-    const dshDependencies = deps.filter(dep => DSH_PACKAGES.test(dep))
+    const dshDependencies = deps.filter(dep => RSH_PACKAGES.test(dep))
     const ownerUses = sourceUses.filter(use => use.owner === name)
     const testCordisUses = ownerUses.filter(use => isTestPath(rel(use.fileName, rootPath))).length
     const productionCordisUses = ownerUses.length - testCordisUses

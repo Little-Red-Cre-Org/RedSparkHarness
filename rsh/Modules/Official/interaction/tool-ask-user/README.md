@@ -3,7 +3,7 @@ description: "The model-facing ask_user_question tool over the user-questions se
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-tool-ask-user
+# @redspark/rsh-tool-ask-user
 
 English | [中文](README.zh.md)
 
@@ -96,7 +96,7 @@ The `render` output projects the structured value to a single text block via `JS
 Read these pages when the package-level contract is not enough. They move from the tool surface to the seam contract and its answerer waterfall.
 
 - [User interaction subsystem reference](../../../../Docs/subsystems/user-questions.md) — the service contract, question vocabulary, and answerer waterfall behind this tool.
-- [Tool catalog](../../../../Docs/tool-catalog.md#deepseek-aidsh-tool-ask-user) — the generated `ask_user_question` schema.
+- [Tool catalog](../../../../Docs/tool-catalog.md#redsparkrsh-tool-ask-user) — the generated `ask_user_question` schema.
 - [user-questions package](../user-questions/README.md) — the seam this tool consumes.
 - [Interaction group map](../README.md) — adjacent approval and command surfaces.
 
@@ -109,7 +109,7 @@ Read these pages when the package-level contract is not enough. They move from t
 
 #### What the model sees
 
-The model sees the generated [`ask_user_question` schema](../../../../Docs/tool-catalog.md#deepseek-aidsh-tool-ask-user), including question ids, prompts, headings, options, and multi-select flags.
+The model sees the generated [`ask_user_question` schema](../../../../Docs/tool-catalog.md#redsparkrsh-tool-ask-user), including question ids, prompts, headings, options, and multi-select flags.
 
 #### Token effect
 

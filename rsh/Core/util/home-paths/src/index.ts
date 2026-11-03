@@ -1,7 +1,7 @@
 /**
  * Shared filesystem path helpers for RedSpark Harness user data.
  *
- * @module @deepseek-ai/dsh-home-paths
+ * @module @redspark/rsh-home-paths
  */
 
 import { opendir, realpath } from 'node:fs/promises'
@@ -14,24 +14,24 @@ import { basename, dirname, join, resolve } from 'node:path'
  * Deliberately not `.dsh`: a RedSpark install keeps its sessions, settings,
  * caches and profiles entirely apart from a RedSpark Harness install on the
  * same machine, so the two can be run side by side without either reading
- * the other's state. Upstream identifiers inside the code (`DSH_HOME`,
- * `@deepseek-ai/*`, the `dsh` CLI) stay as they are so this fork can keep
+ * the other's state. Upstream identifiers inside the code (`RSH_HOME`,
+ * `@redspark/*`, the `dsh` CLI) stay as they are so this fork can keep
  * tracking upstream; only the on-disk root moves.
  */
-export const DSH_HOME_DIR_NAME = '.redspark'
+export const RSH_HOME_DIR_NAME = '.redspark'
 
 /** Stable user-facing display form for the default RedSpark Harness home. */
-export const DEFAULT_DSH_HOME_DISPLAY = `~/${DSH_HOME_DIR_NAME}`
+export const DEFAULT_RSH_HOME_DISPLAY = `~/${RSH_HOME_DIR_NAME}`
 
 /**
- * On-disk directory name of the upstream DeepSeek Harness home this fork must
+ * On-disk directory name of the upstream RedSpark Harness home this fork must
  * never treat as its own. Kept as a literal because it names another product's
  * root, not a constant this package owns.
  */
 const UPSTREAM_DSH_HOME_DIR_NAME = '.dsh'
 
 /** Environment variable that overrides the default RedSpark Harness home. */
-export const DSH_HOME_ENV = 'DSH_HOME'
+export const RSH_HOME_ENV = 'RSH_HOME'
 
 /**
  * Give a native filesystem watcher one canonical spelling of a path, even
@@ -74,8 +74,8 @@ export async function canonicalizeWatchPath(path: string): Promise<string> {
  * Resolve the default RedSpark Harness home using Node's platform path rules.
  * @returns the absolute default harness home path.
  */
-export function defaultDshHome(): string {
-  return join(homedir(), DSH_HOME_DIR_NAME)
+export function defaultRshHome(): string {
+  return join(homedir(), RSH_HOME_DIR_NAME)
 }
 
 /**
@@ -92,25 +92,25 @@ export function expandHomePath(path: string): string {
 /**
  * Resolve the single-root RedSpark Harness home.
  *
- * Precedence, highest first: an explicit configured path, `$DSH_HOME`, then
+ * Precedence, highest first: an explicit configured path, `$RSH_HOME`, then
  * `~/.dsh`. The harness keeps all user data under one root. An empty or
- * whitespace-only `$DSH_HOME` is treated as unset, so a blank override never
+ * whitespace-only `$RSH_HOME` is treated as unset, so a blank override never
  * resolves the home to the current working directory.
  * @param configured - explicit harness-home override, which has highest precedence.
- * @param env - environment mapping used to read `DSH_HOME`.
+ * @param env - environment mapping used to read `RSH_HOME`.
  * @returns the normalized absolute harness home path.
  */
-export function resolveDshHome(configured?: string, env: Record<string, string | undefined> = process.env): string {
-  const fromEnv = inheritableDshHome(env[DSH_HOME_ENV])
-  const selected = configured ?? fromEnv ?? defaultDshHome()
+export function resolveRshHome(configured?: string, env: Record<string, string | undefined> = process.env): string {
+  const fromEnv = inheritableRshHome(env[RSH_HOME_ENV])
+  const selected = configured ?? fromEnv ?? defaultRshHome()
   return resolve(expandHomePath(selected))
 }
 
 /**
- * Reject an inherited `$DSH_HOME` that names an upstream DSH home.
+ * Reject an inherited `$RSH_HOME` that names an upstream DSH home.
  *
- * A process started from a shell inside upstream DeepSeek Harness inherits
- * `DSH_HOME=~/.dsh`, and a developer may have exported it once for the `dsh`
+ * A process started from a shell inside upstream RedSpark Harness inherits
+ * `RSH_HOME=~/.dsh`, and a developer may have exported it once for the `dsh`
  * CLI. Honouring it here would point RedSpark Harness at another product's
  * sessions, credentials and settings, which is the one thing the renamed
  * default root exists to prevent. The upstream home is recognisable by its
@@ -119,15 +119,15 @@ export function resolveDshHome(configured?: string, env: Record<string, string |
  * deliberate migration target stays expressible.
  *
  * The inherited home is the one beside the user's own directory, so the
- * segment alone is not enough: a test isolates itself by pointing `DSH_HOME`
+ * segment alone is not enough: a test isolates itself by pointing `RSH_HOME`
  * at `<tempdir>/.dsh`, and dropping that would make every test share the real
  * home — which is how the CI runner accumulated profiles it never asked for.
  * Drop the value only when its parent is the user's home directory.
- * @param value - ambient `$DSH_HOME`, possibly absent or blank.
+ * @param value - ambient `$RSH_HOME`, possibly absent or blank.
  * @returns the accepted value, or undefined when the ambient value is absent,
  * blank, or points at an upstream DSH home.
  */
-function inheritableDshHome(value: string | undefined): string | undefined {
+function inheritableRshHome(value: string | undefined): string | undefined {
   if (value === undefined || value.trim().length === 0) return undefined
   const normalized = value.trim().replace(/[\\/]+$/u, '')
   if (basename(normalized) !== UPSTREAM_DSH_HOME_DIR_NAME) return value
@@ -135,7 +135,7 @@ function inheritableDshHome(value: string | undefined): string | undefined {
 }
 
 export {
-  resolveDshProfileDirectoryExecution, resolveDshProfileExecution, validateDshProfileName,
+  resolveRshProfileDirectoryExecution, resolveRshProfileExecution, validateRshProfileName,
 } from './profile-runtime.ts'
 export type { DshProfileExecution } from './profile-runtime.ts'
 
@@ -144,8 +144,8 @@ export type { DshProfileExecution } from './profile-runtime.ts'
  * @param segments - path segments appended to the Harness home; an empty list returns the home itself.
  * @returns the normalized absolute joined path.
  */
-export function dshHomePath(...segments: string[]): string {
-  return join(resolveDshHome(), ...segments)
+export function rshHomePath(...segments: string[]): string {
+  return join(resolveRshHome(), ...segments)
 }
 
 /**
@@ -154,19 +154,19 @@ export function dshHomePath(...segments: string[]): string {
  * @param segments - additional path segments after the first child, if any.
  * @returns the normalized absolute cache path.
  */
-export function dshCachePath(optionsOrSegment: { dshHome?: string } | string = {}, ...segments: string[]): string {
-  if (typeof optionsOrSegment === 'string') return dshHomePath('cache', optionsOrSegment, ...segments)
-  return join(resolveDshHome(optionsOrSegment.dshHome), 'cache', ...segments)
+export function rshCachePath(optionsOrSegment: { rshHome?: string } | string = {}, ...segments: string[]): string {
+  if (typeof optionsOrSegment === 'string') return rshHomePath('cache', optionsOrSegment, ...segments)
+  return join(resolveRshHome(optionsOrSegment.rshHome), 'cache', ...segments)
 }
 
 /**
  * Describe a resolved harness home symbolically for user-facing display.
  *
  * It never returns an absolute machine path: the default home is labelled
- * `~/.dsh`, and any configured home is labelled `$DSH_HOME`.
- * @param resolvedHome - the absolute path returned by {@link resolveDshHome}.
- * @returns `~/.dsh` for the default home, otherwise `$DSH_HOME`.
+ * `~/.redspark`, and any configured home is labelled `$RSH_HOME`.
+ * @param resolvedHome - the absolute path returned by {@link resolveRshHome}.
+ * @returns `~/.redspark` for the default home, otherwise `$RSH_HOME`.
  */
 export function dshHomeDisplay(resolvedHome: string): string {
-  return resolvedHome === resolve(defaultDshHome()) ? DEFAULT_DSH_HOME_DISPLAY : `$${DSH_HOME_ENV}`
+  return resolvedHome === resolve(defaultRshHome()) ? DEFAULT_RSH_HOME_DISPLAY : `$${RSH_HOME_ENV}`
 }

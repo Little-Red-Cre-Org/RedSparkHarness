@@ -1,6 +1,6 @@
 /** Cordis-free process-sandbox policy types shared by native providers. */
-import type { SessionId } from '@deepseek-ai/dsh-session/native'
-import type {} from '@deepseek-ai/dsh-session/types'
+import type { SessionId } from '@redspark/rsh-session/native'
+import type {} from '@redspark/rsh-session/types'
 
 /**
  * File-effect policy for confined processes. `read-only` permits only required
@@ -10,7 +10,7 @@ import type {} from '@deepseek-ai/dsh-session/types'
  */
 export type SandboxMode = 'read-only' | 'workspace-write' | 'danger-full-access'
 
-declare module '@deepseek-ai/dsh-session/types' {
+declare module '@redspark/rsh-session/types' {
   interface SessionEventMap {
     /** Durable, log-only mode override folded by every native and compatibility policy consumer. */
     'sandbox/mode': {

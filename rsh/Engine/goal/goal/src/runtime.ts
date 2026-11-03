@@ -1,6 +1,6 @@
 /** Runtime constructors and protocol constants for the goal domain. */
 
-import { HarnessError } from '@deepseek-ai/dsh-llm/native'
+import { HarnessError } from '@redspark/rsh-llm/native'
 import type { GoalErrorCode } from './facts.ts'
 
 export { GOAL_CHANGE_VERSION, GoalId } from './replay-runtime.ts'

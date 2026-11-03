@@ -3,7 +3,7 @@ description: "web 访问服务（ctx.web）：部署方与插件作者如何通�
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-web
+# @redspark/rsh-web
 
 [English](README.md) | 中文
 
@@ -33,12 +33,12 @@ kind: "package-reference"
 
 ### 最小配置
 
-加载服务并让唯一挂载的后端自动选择，或用 `searchProvider`／`fetchProvider` 固定提供方 id。环境变量 `$DSH_WEB_SEARCH_PROVIDER` 与 `$DSH_WEB_FETCH_PROVIDER` 提供相同字段，不是另一条优先级链。
+加载服务并让唯一挂载的后端自动选择，或用 `searchProvider`／`fetchProvider` 固定提供方 id。环境变量 `$RSH_WEB_SEARCH_PROVIDER` 与 `$RSH_WEB_FETCH_PROVIDER` 提供相同字段，不是另一条优先级链。
 
 ```yaml
-- name: '@deepseek-ai/dsh-web'
-- name: '@deepseek-ai/dsh-web-search-exa'
-- name: '@deepseek-ai/dsh-web-fetch-http'
+- name: '@redspark/rsh-web'
+- name: '@redspark/rsh-web-search-exa'
+- name: '@redspark/rsh-web-fetch-http'
 ```
 
 | 字段 | 默认值 | 含义 |
@@ -46,7 +46,7 @@ kind: "package-reference"
 | `searchProvider` | （未设置） | 固定的搜索提供方 id；未设置时仅在恰好一个可用时自动选择 |
 | `fetchProvider` | （未设置） | 固定的抓取提供方 id；未设置时仅在恰好一个可用时自动选择 |
 
-生成的[配置目录](../../../../Docs/config-catalog.zh.md#deepseek-aidsh-web)是每个受支持字段及其 JSDoc 的穷尽式真源。
+生成的[配置目录](../../../../Docs/config-catalog.zh.md#redsparkrsh-web)是每个受支持字段及其 JSDoc 的穷尽式真源。
 
 ### 搜索与抓取
 
@@ -83,7 +83,7 @@ const page = await ctx.web.fetch({ url: 'https://example.com' })
 
 ### 原生入口
 
-原生组合导入 `./native`。该入口提供 `web` 服务并依赖 `launchEnvironment`，复用共享 `selection.ts` 中相同的选择规则、重复 id 拒绝、`maxResults` 截断与 `WebError` 错误码。配置中的固定选择优先于从 process 层读取的 `$DSH_WEB_SEARCH_PROVIDER` / `$DSH_WEB_FETCH_PROVIDER`。原生 Provider 会收到发起调用的取消信号与 Session `appendEvent`；移除 Provider 时会关闭其准入、取消已接受的操作，并在其结束后完成。随附的 `native-headless`、`native-web` 与 `native-tui` 组合以 `searchProvider: deepseek-official` 与 `fetchProvider: http` 安装它（[Agent Note](../../../../../.agents/notes/implemented/architecture/2026-10-08-native-web-tools.zh.md)）。
+原生组合导入 `./native`。该入口提供 `web` 服务并依赖 `launchEnvironment`，复用共享 `selection.ts` 中相同的选择规则、重复 id 拒绝、`maxResults` 截断与 `WebError` 错误码。配置中的固定选择优先于从 process 层读取的 `$RSH_WEB_SEARCH_PROVIDER` / `$RSH_WEB_FETCH_PROVIDER`。原生 Provider 会收到发起调用的取消信号与 Session `appendEvent`；移除 Provider 时会关闭其准入、取消已接受的操作，并在其结束后完成。随附的 `native-headless`、`native-web` 与 `native-tui` 组合以 `searchProvider: deepseek-official` 与 `fetchProvider: http` 安装它（[Agent Note](../../../../../.agents/notes/implemented/architecture/2026-10-08-native-web-tools.zh.md)）。
 
 -----
 
@@ -132,7 +132,7 @@ const page = await ctx.web.fetch({ url: 'https://example.com' })
 - [web 包映射](../README.zh.md)——六包家族与各角色。
 - [dsh-tool-web](../tool-web/README.zh.md)——构建于本服务之上的面向模型 `web_search` 与 `web_fetch` 工具。
 - [dsh-web-fetch-http](../web-fetch-http/README.zh.md)——已交付的匿名 HTTP(S) 抓取后端。
-- [生成配置目录](../../../../Docs/config-catalog.zh.md#deepseek-aidsh-web)——每个受支持配置字段及其源声明。
+- [生成配置目录](../../../../Docs/config-catalog.zh.md#redsparkrsh-web)——每个受支持配置字段及其源声明。
 - [web 能力 seam 决策](../../../../../.agents/notes/implemented/architecture/2026-06-24-web-capability-seam.zh.md)——搜索与抓取为何共用一项提供方选择服务。
 
 -----

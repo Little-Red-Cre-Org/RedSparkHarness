@@ -1,13 +1,13 @@
 /** Explicit native Web page entry; the legacy Loader is loaded only by index.html. */
-import '@deepseek-ai/dsh-client-web/base.css'
-import { BootPage } from '@deepseek-ai/dsh-client-web/boot-page'
+import '@redspark/rsh-client-web/base.css'
+import { BootPage } from '@redspark/rsh-client-web/boot-page'
 import { bootNativeClientEntry } from './native-entry.ts'
 
 const container = document.getElementById('root')
 if (container === null) throw new Error('native web: missing #root')
 const root = container
 const page = new BootPage(root)
-const injected = (globalThis as { __DSH_NATIVE_CLIENT_BOOT__?: unknown }).__DSH_NATIVE_CLIENT_BOOT__
+const injected = (globalThis as { __RSH_NATIVE_CLIENT_BOOT__?: unknown }).__RSH_NATIVE_CLIENT_BOOT__
 
 function showFailure(reason: unknown): void {
   root.dataset.nativeBootState = 'failed'

@@ -1,5 +1,5 @@
 {
-  "name": "@deepseek-ai/dsh-typert-registry",
+  "name": "@redspark/rsh-typert-registry",
   "description": "Runtime registry for generated package reflection and Zod schemas",
   "version": "1.0.0",
   "publishConfig": {
@@ -51,10 +51,10 @@
     "zod": "^4.4.3"
   },
   "peerDependencies": {
-    "@deepseek-ai/cordis": "workspace:^"
+    "@redspark/cordis": "workspace:^"
   },
   "devDependencies": {
-    "@deepseek-ai/cordis": "workspace:^",
-    "@deepseek-ai/dsh-typert-protocol": "workspace:^"
+    "@redspark/cordis": "workspace:^",
+    "@redspark/rsh-typert-protocol": "workspace:^"
   }
 }

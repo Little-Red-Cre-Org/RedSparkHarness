@@ -17,10 +17,10 @@ import {
 import type {
   ClientConnectionRpc, ConnectionRpcResult,
 } from '../src/rpc.ts'
-import type { DirectoryListing } from '@deepseek-ai/dsh-host-directory-picker/types'
+import type { DirectoryListing } from '@redspark/rsh-host-directory-picker/types'
 import type {
   ModelCatalog, ModelSelection, SessionAssistantStreamFrame,
-} from '@deepseek-ai/dsh-api-session-controller/types'
+} from '@redspark/rsh-api-session-controller/types'
 
 const sid = (id: string): SessionId => id as SessionId
 type WorkspaceId = string & { readonly __fixtureWorkspaceId: 'WorkspaceId' }
@@ -732,7 +732,7 @@ describe('createFixtureApi', () => {
     const webSearch = results.find(event => event.data.turn === 70)
     expect(webSearch).toHaveProperty('data.meta.truncated', true)
     expect(webSearch).toHaveProperty('data.meta.sources', expect.arrayContaining([
-      expect.objectContaining({ url: 'https://github.com/deepseek-ai/deepseek-harness' }),
+      expect.objectContaining({ url: 'https://github.com/deepseek-ai/redspark-harness' }),
     ]))
     expect(results.find(event => event.data.turn === 71)).toMatchObject({
       data: { meta: { url: 'https://www.deepseek.com/blog/harness-architecture', statusCode: 200 } },

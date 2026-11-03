@@ -3,7 +3,7 @@ description: "Lossless JSON validation, detached snapshots, symbol-keyed values,
 kind: "package-library"
 ---
 
-# @deepseek-ai/dsh-util-values
+# @redspark/rsh-util-values
 
 English | [中文](README.zh.md)
 
@@ -29,9 +29,9 @@ English | [中文](README.zh.md)
 Use `setSymbolValue()` and `getSymbolValue()` when a package-specific `Symbol.for()` key must survive duplicate package copies. Use `requireSymbolValue()` when the caller owns a fail-loud missing-value path. The value lives on the caller's object as a non-enumerable, non-writable property; this package stores no registry.
 
 ```ts
-import { getSymbolValue, setSymbolValue } from '@deepseek-ai/dsh-util-values'
+import { getSymbolValue, setSymbolValue } from '@redspark/rsh-util-values'
 
-const key = Symbol.for('@deepseek-ai/example/private-value')
+const key = Symbol.for('@redspark/example/private-value')
 const target = {}
 setSymbolValue(target, key, { value: 1 })
 const retained = getSymbolValue(target, key) as { value: number } | undefined
@@ -42,7 +42,7 @@ const retained = getSymbolValue(target, key) as { value: number } | undefined
 Use `isJsonValue()` for a predicate and `snapshotJsonValue()` when the caller also needs a detached copy. Both accept only lossless JSON roots: `null`, booleans, finite numbers other than negative zero, strings, dense intrinsic arrays, and plain or null-prototype records with enumerable string keys. Cycles, sparse arrays, symbol or non-enumerable own properties, functions, and class instances are rejected.
 
 ```ts
-import { isJsonValue, snapshotJsonValue, type JsonValue } from '@deepseek-ai/dsh-util-values'
+import { isJsonValue, snapshotJsonValue, type JsonValue } from '@redspark/rsh-util-values'
 
 declare const input: unknown
 

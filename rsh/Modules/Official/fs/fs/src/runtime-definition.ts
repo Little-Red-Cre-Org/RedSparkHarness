@@ -1,6 +1,6 @@
 /** RSH loader adapter for the filesystem service Definition. */
 
-import { adaptCordisPlugin } from '@deepseek-ai/dsh-plugin-host'
+import { adaptCordisPlugin } from '@redspark/rsh-plugin-host'
 import { FileSystem } from './index.ts'
 
 /**
@@ -8,7 +8,7 @@ import { FileSystem } from './index.ts'
  * @returns the adapted Cordis plugin entry.
  */
 export default adaptCordisPlugin({
-  packageName: '@deepseek-ai/dsh-fs',
+  packageName: '@redspark/rsh-fs',
   apiVersion: 1,
   role: 'definition',
   capability: 'filesystem',

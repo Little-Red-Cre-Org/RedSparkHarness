@@ -6,13 +6,13 @@
  * deferral — the stage follows list.current), binding identity, breadcrumb
  * projection, create.
  */
-import { Context } from '@deepseek-ai/cordis'
+import { Context } from '@redspark/cordis'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import type { SessionId } from '@deepseek-ai/dsh-api-remotes/client'
-import { RemoteError } from '@deepseek-ai/dsh-typert-protocol'
-import { LlmAttemptId } from '@deepseek-ai/dsh-llm'
-import { RemoteStreamCarrierError } from '@deepseek-ai/dsh-api-gateway/client'
-import { SESSION_FORMAT_VERSION, SessionSeq } from '@deepseek-ai/dsh-session/types'
+import type { SessionId } from '@redspark/rsh-api-remotes/client'
+import { RemoteError } from '@redspark/rsh-typert-protocol'
+import { LlmAttemptId } from '@redspark/rsh-llm'
+import { RemoteStreamCarrierError } from '@redspark/rsh-api-gateway/client'
+import { SESSION_FORMAT_VERSION, SessionSeq } from '@redspark/rsh-session/types'
 import { ClientSessions, SessionCreateError } from '../src/client/sessions/service.ts'
 import { scopeOf } from '../src/client/scope.ts'
 import type { SessionFollowFrame } from '../src/types.ts'

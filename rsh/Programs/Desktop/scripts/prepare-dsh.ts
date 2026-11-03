@@ -30,7 +30,7 @@ import { prepareRuntimePatches } from './prepare-runtime-patches.ts'
 
 const APP_ROOT = resolve(import.meta.dirname, '..')
 const BUILD_PATHS = resolveDesktopTargetBuildPaths()
-const DSH_OUTPUT_ROOT = BUILD_PATHS.dsh
+const RSH_OUTPUT_ROOT = BUILD_PATHS.dsh
 const BUILD_ROOT = mkdtempSync(join(tmpdir(), 'dsh-desktop-runtime-'))
 const STORE_ROOT = join(BUILD_ROOT, 'store')
 const RUNTIME_ROOT = BUILD_PATHS.runtime
@@ -47,9 +47,9 @@ function manifestVersion(path: string, subject: string): string {
 
 function desktopRelease(): DesktopRelease {
   const version = manifestVersion(join(APP_ROOT, 'package.json'), 'desktop package')
-  const dshVersion = manifestVersion(resolve(APP_ROOT, '..', '..', '..', 'package.json'), 'root dsh package')
-  if (version !== dshVersion) {
-    throw new Error(`desktop runtime: Electron ${version} must bind the same version of @deepseek-ai/dsh, found ${dshVersion}`)
+  const rshVersion = manifestVersion(resolve(APP_ROOT, '..', '..', '..', 'package.json'), 'root dsh package')
+  if (version !== rshVersion) {
+    throw new Error(`desktop runtime: Electron ${version} must bind the same version of @redspark/rsh, found ${rshVersion}`)
   }
   const runtime = JSON.parse(readFileSync(join(RUNTIME_ROOT, 'versions.json'), 'utf8')) as Record<string, unknown>
   return parseDesktopRelease({
@@ -81,7 +81,7 @@ function runPnpm(args: readonly string[]): Promise<void> {
       cwd: BUILD_ROOT,
       env: {
         ...Object.fromEntries(Object.entries(process.env).filter(([name]) => (
-          name !== 'NODE_OPTIONS' && name !== 'NODE_PATH' && !/^DSH_DESKTOP_/u.test(name) && !/^(?:npm|pnpm|corepack)_/iu.test(name)
+          name !== 'NODE_OPTIONS' && name !== 'NODE_PATH' && !/^RSH_DESKTOP_/u.test(name) && !/^(?:npm|pnpm|corepack)_/iu.test(name)
         ))),
         NPM_CONFIG_REGISTRY: 'https://registry.npmjs.org/',
         NPM_CONFIG_STORE_DIR: STORE_ROOT,
@@ -102,7 +102,7 @@ function runPnpm(args: readonly string[]): Promise<void> {
 }
 
 async function main(): Promise<void> {
-  rmSync(DSH_OUTPUT_ROOT, { recursive: true, force: true })
+  rmSync(RSH_OUTPUT_ROOT, { recursive: true, force: true })
   rmSync(PNPM_BUILD_STATE, { recursive: true, force: true })
   mkdirSync(STORE_ROOT, { recursive: true })
   try {
@@ -121,38 +121,38 @@ async function main(): Promise<void> {
     const targetName = resolveDesktopBuildTarget()
     const target = { platform: process.platform, arch: targetName.endsWith('arm64') ? 'arm64' : 'x64' }
     const modules = join(BUILD_ROOT, 'node_modules')
-    mkdirSync(DSH_OUTPUT_ROOT, { recursive: true })
-    cpSync(modules, join(DSH_OUTPUT_ROOT, 'node_modules'), {
+    mkdirSync(RSH_OUTPUT_ROOT, { recursive: true })
+    cpSync(modules, join(RSH_OUTPUT_ROOT, 'node_modules'), {
       recursive: true, dereference: true,
       filter: source => desktopRuntimeFileExclusion(relative(modules, source), target) === undefined,
     })
-    cpSync(join(BUILD_ROOT, DESKTOP_PACKAGES_DIR), join(DSH_OUTPUT_ROOT, DESKTOP_PACKAGES_DIR), { recursive: true })
-    copyFileSync(join(BUILD_ROOT, DESKTOP_PACKAGE_SET_FILE), join(DSH_OUTPUT_ROOT, DESKTOP_PACKAGE_SET_FILE))
-    writeFileSync(join(DSH_OUTPUT_ROOT, 'package.json'), `${JSON.stringify({
-      name: '@deepseek-ai/dsh-desktop-runtime', private: true, version: release.version, type: 'module',
+    cpSync(join(BUILD_ROOT, DESKTOP_PACKAGES_DIR), join(RSH_OUTPUT_ROOT, DESKTOP_PACKAGES_DIR), { recursive: true })
+    copyFileSync(join(BUILD_ROOT, DESKTOP_PACKAGE_SET_FILE), join(RSH_OUTPUT_ROOT, DESKTOP_PACKAGE_SET_FILE))
+    writeFileSync(join(RSH_OUTPUT_ROOT, 'package.json'), `${JSON.stringify({
+      name: '@redspark/rsh-desktop-runtime', private: true, version: release.version, type: 'module',
       dependencies: Object.fromEntries(packageSet.packages.map(entry => [entry.name, entry.version])),
     }, undefined, 2)}\n`)
     for (const file of DESKTOP_HOST_RUNTIME_FILES) {
-      if (!existsSync(join(DSH_OUTPUT_ROOT, 'node_modules', DESKTOP_HOST_PACKAGE, file))) {
+      if (!existsSync(join(RSH_OUTPUT_ROOT, 'node_modules', DESKTOP_HOST_PACKAGE, file))) {
         throw new Error(`desktop runtime: missing private Host file ${file}`)
       }
     }
     if (process.platform === 'darwin') {
-      await signMacOSRuntime(DSH_OUTPUT_ROOT, resolveDesktopAppId(process.env), resolveMacOSSigningEnvironment(process.env))
+      await signMacOSRuntime(RSH_OUTPUT_ROOT, resolveDesktopAppId(process.env), resolveMacOSSigningEnvironment(process.env))
     }
-    writeDesktopRuntime(DSH_OUTPUT_ROOT, release, packageSet.packages.map(entry => entry.name), target, packageSet.assembly)
-    const descriptor = await verifyDesktopRuntime(DSH_OUTPUT_ROOT, release.version, target)
+    writeDesktopRuntime(RSH_OUTPUT_ROOT, release, packageSet.packages.map(entry => entry.name), target, packageSet.assembly)
+    const descriptor = await verifyDesktopRuntime(RSH_OUTPUT_ROOT, release.version, target)
     await new Promise<void>((accept, reject) => {
-      execFile(NODE, [join(APP_ROOT, 'tests/fixtures/runtime-payload-smoke.mjs'), DSH_OUTPUT_ROOT],
+      execFile(NODE, [join(APP_ROOT, 'tests/fixtures/runtime-payload-smoke.mjs'), RSH_OUTPUT_ROOT],
         { timeout: 120_000, env: { ...process.env, NODE_OPTIONS: '' } }, (error, stdout, stderr) => {
           if (error !== null) reject(new Error(`desktop native payload smoke failed: ${stderr}`, { cause: error }))
           else { process.stdout.write(stdout); accept() }
         })
     })
-    await smokeDesktopRuntime(DSH_OUTPUT_ROOT, NODE, descriptor)
-    await verifyDesktopRuntime(DSH_OUTPUT_ROOT, release.version, target)
+    await smokeDesktopRuntime(RSH_OUTPUT_ROOT, NODE, descriptor)
+    await verifyDesktopRuntime(RSH_OUTPUT_ROOT, release.version, target)
   } catch (error) {
-    rmSync(DSH_OUTPUT_ROOT, { recursive: true, force: true })
+    rmSync(RSH_OUTPUT_ROOT, { recursive: true, force: true })
     throw error
   } finally {
     rmSync(BUILD_ROOT, { recursive: true, force: true })

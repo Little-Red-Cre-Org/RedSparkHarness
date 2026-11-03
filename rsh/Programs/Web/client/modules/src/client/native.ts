@@ -4,5 +4,5 @@ export { exactPackageSpecifier, parseBootManifest, stripClientSuffix } from './m
 export type {
   BootManifest, BootModuleRow, BootPluginRow, ClientBootstrapModule, ClientBundleRegistration,
   ClientModuleCreateOptions, ClientModuleLoader, ClientModuleLoaderTarget, ClientModuleRecord,
-  ClientModuleSystemOptions, DshWindow, WebBootEntry, WebBootGraph,
+  ClientModuleSystemOptions, RshWindow, WebBootEntry, WebBootGraph,
 } from './manifest.ts'

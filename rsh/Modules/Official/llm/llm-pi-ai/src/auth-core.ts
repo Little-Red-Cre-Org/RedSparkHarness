@@ -13,10 +13,10 @@ import { resolve as resolvePath } from 'node:path'
 import type { AuthContext, Credential, CredentialInfo, CredentialStore } from '@earendil-works/pi-ai'
 import {
   credentialKey, credentialKeyId, credentialKeyScope, credentialRef, isCredentialKeySegment, isCredentialRefName,
-} from '@deepseek-ai/dsh-credentials/native'
-import type { CredentialKey, CredentialRecord, NativeCredentials } from '@deepseek-ai/dsh-credentials/native'
-import type { LaunchEnvironmentSnapshot } from '@deepseek-ai/dsh-launch-environment/native'
-import { LlmError } from '@deepseek-ai/dsh-llm/native'
+} from '@redspark/rsh-credentials/native'
+import type { CredentialKey, CredentialRecord, NativeCredentials } from '@redspark/rsh-credentials/native'
+import type { LaunchEnvironmentSnapshot } from '@redspark/rsh-launch-environment/native'
+import { LlmError } from '@redspark/rsh-llm/native'
 import { migrateExistingSiwcRegistration } from './siwc.ts'
 import type { SiwcRegistrationStore } from './siwc.ts'
 

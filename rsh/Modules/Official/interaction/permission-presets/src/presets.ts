@@ -1,6 +1,6 @@
 /** Framework-neutral permission preset facts shared by Cordis and Native Providers. */
-import type { NativeApprovalPolicy } from '@deepseek-ai/dsh-approval-definition'
-import type { SandboxMode } from '@deepseek-ai/dsh-sandbox/native-types'
+import type { NativeApprovalPolicy } from '@redspark/rsh-approval-definition'
+import type { SandboxMode } from '@redspark/rsh-sandbox/native-types'
 
 /**
  * Derived current value when effective knobs match no configured preset.

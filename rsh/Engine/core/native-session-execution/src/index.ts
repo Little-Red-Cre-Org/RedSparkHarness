@@ -1,15 +1,15 @@
 /** Native routing from active Session ownership to the selected shared turn executor. */
-import { NativeAgentId, type NativeAgent, type NativeAgentRegistry } from '@deepseek-ai/dsh-native-agent'
-import type { Disposer, NativePlugin } from '@deepseek-ai/dsh-native-runtime'
-import type { ReasoningEffortId, StreamChunk, UserMessage } from '@deepseek-ai/dsh-llm/native'
-import type { Session, SessionEvent, SessionId } from '@deepseek-ai/dsh-session/native'
+import { NativeAgentId, type NativeAgent, type NativeAgentRegistry } from '@redspark/rsh-native-agent'
+import type { Disposer, NativePlugin } from '@redspark/rsh-native-runtime'
+import type { ReasoningEffortId, StreamChunk, UserMessage } from '@redspark/rsh-llm/native'
+import type { Session, SessionEvent, SessionId } from '@redspark/rsh-session/native'
 import type { NativeSessionContinuations } from './continuation.ts'
 import { NativeActiveSessionRegistry } from './active-session-registry.ts'
-import type { NativeExternalToolOperations, NativeToolDelegationContext } from '@deepseek-ai/dsh-native-tools'
+import type { NativeExternalToolOperations, NativeToolDelegationContext } from '@redspark/rsh-native-tools'
 import type { NativeResponsesOperationCapture, NativeResponsesPreparedGeneration, NativeResponsesRoute,
-  NativeResponsesTransport } from '@deepseek-ai/dsh-native-model-execution/responses-transport'
+  NativeResponsesTransport } from '@redspark/rsh-native-model-execution/responses-transport'
 export type { NativeResponsesOperationCapture, NativeResponsesPreparedGeneration, NativeResponsesRoute,
-  NativeResponsesTransport } from '@deepseek-ai/dsh-native-model-execution/responses-transport'
+  NativeResponsesTransport } from '@redspark/rsh-native-model-execution/responses-transport'
 
 export type * from './continuation.ts'
 export type * from './root-execution.ts'
@@ -192,7 +192,7 @@ export interface NativeSessionExecutionOperations {
   delegate(agent: NativeAgent, session: Session, request: NativeSessionDelegation, signal: AbortSignal): Promise<NativeSessionTurnResult>
 }
 
-declare module '@deepseek-ai/dsh-native-runtime' {
+declare module '@redspark/rsh-native-runtime' {
   interface NativeServices {
     sessionExecution: NativeSessionExecutionOperations
   }
@@ -583,7 +583,7 @@ export class NativeSessionExecutionRegistry implements NativeSessionExecutionOpe
 
 /** Native Session execution Provider; Programs contribute their existing active executors. */
 export const plugin: NativePlugin = {
-  apiVersion: 1, name: '@deepseek-ai/dsh-native-session-execution', targets: ['host'],
+  apiVersion: 1, name: '@redspark/rsh-native-session-execution', targets: ['host'],
   requires: ['agents'], provides: ['sessionExecution', 'activeSessions'],
   resolve(input) {
     if (input !== undefined && (typeof input !== 'object' || input === null || Array.isArray(input) || Object.keys(input).length > 0)) {

@@ -2,14 +2,14 @@
 import { isDeepStrictEqual } from 'node:util'
 import { randomUUID } from 'node:crypto'
 import { z } from 'zod'
-import { SessionLogOffset, SessionSeq } from '@deepseek-ai/dsh-session/types'
-import { deriveEventMessage, isAppendSurfaceEvent } from '@deepseek-ai/dsh-session/surface'
-import { SessionPersistenceNotFoundError } from '@deepseek-ai/dsh-session-persistence/native'
-import type { SessionEvent, SessionId } from '@deepseek-ai/dsh-session/types'
-import type { NativePlugin, NativeScope } from '@deepseek-ai/dsh-native-runtime'
-import type { NativeActiveSessionOperations, NativeActiveSessionOwner } from '@deepseek-ai/dsh-native-session-execution'
-import type { NativeSessionPersistenceOperations, SessionInspection } from '@deepseek-ai/dsh-session-persistence/native'
-import type { NativeFeedbackCommit } from '@deepseek-ai/dsh-command-feedback/native-definition'
+import { SessionLogOffset, SessionSeq } from '@redspark/rsh-session/types'
+import { deriveEventMessage, isAppendSurfaceEvent } from '@redspark/rsh-session/surface'
+import { SessionPersistenceNotFoundError } from '@redspark/rsh-session-persistence/native'
+import type { SessionEvent, SessionId } from '@redspark/rsh-session/types'
+import type { NativePlugin, NativeScope } from '@redspark/rsh-native-runtime'
+import type { NativeActiveSessionOperations, NativeActiveSessionOwner } from '@redspark/rsh-native-session-execution'
+import type { NativeSessionPersistenceOperations, SessionInspection } from '@redspark/rsh-session-persistence/native'
+import type { NativeFeedbackCommit } from '@redspark/rsh-command-feedback/native-definition'
 import type { NativeMessageFeedbackOperations } from './native-definition.ts'
 import type {
   MessageFeedbackDeleteRequest, MessageFeedbackDeleteResult,
@@ -18,8 +18,8 @@ import type {
 } from './types.ts'
 import { currentItems, rejected, resolveNote, snapshotItem, success, versionConflict,
   type Append, type FeedbackEvent, type MissingSession } from './shared.ts'
-import type {} from '@deepseek-ai/dsh-command-feedback/native-definition'
-import type {} from '@deepseek-ai/dsh-session/native'
+import type {} from '@redspark/rsh-command-feedback/native-definition'
+import type {} from '@redspark/rsh-session/native'
 
 interface NativeConfig { readonly maxNoteBytes: number }
 type Operation<T> = (events: readonly SessionEvent[], append: Append) => T | Promise<T>
@@ -31,7 +31,7 @@ function parseConfig(input: unknown): NativeConfig {
 /** Native Provider for canonical per-message feedback. */
 export const plugin: NativePlugin = {
   apiVersion: 1,
-  name: '@deepseek-ai/dsh-message-feedback',
+  name: '@redspark/rsh-message-feedback',
   targets: ['host'],
   requires: ['sessionPersistence', 'activeSessions'],
   provides: ['messageFeedback'],

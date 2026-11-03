@@ -1,8 +1,8 @@
 /** Strict JSON profile and overlay validation before native plugin discovery. */
 import {
-  resolveDshProfileDirectoryExecution, resolveDshProfileExecution, resolveDshHome,
-} from '@deepseek-ai/dsh-home-paths'
-export { validateDshProfileName as validateProfileName } from '@deepseek-ai/dsh-home-paths'
+  resolveRshProfileDirectoryExecution, resolveRshProfileExecution, resolveRshHome,
+} from '@redspark/rsh-home-paths'
+export { validateRshProfileName as validateProfileName } from '@redspark/rsh-home-paths'
 
 /** Scope identity and optional parent in a native profile. */
 export interface NativeProfileScope {
@@ -149,8 +149,8 @@ export function applyNativeProfilePatches(profile: NativeProfileConfig, values: 
  * @returns the selected profile runtime; a missing manifest retains legacy initialization, while an existing manifest needs
  * an explicit marker or a legacy bundle list.
  */
-export function profileRuntime(name: string, home: string = resolveDshHome()): 'native' | 'legacy' {
-  return resolveDshProfileExecution(name, home).runtime
+export function profileRuntime(name: string, home: string = resolveRshHome()): 'native' | 'legacy' {
+  return resolveRshProfileExecution(name, home).runtime
 }
 
 /**
@@ -159,8 +159,8 @@ export function profileRuntime(name: string, home: string = resolveDshHome()): '
  * @param home - Harness home containing its manifest.
  * @returns live only when configReload explicitly selects it; otherwise startup.
  */
-export function nativeProfileReloadMode(name: string, home: string = resolveDshHome()): 'live' | 'startup' {
-  const execution = resolveDshProfileExecution(name, home)
+export function nativeProfileReloadMode(name: string, home: string = resolveRshHome()): 'live' | 'startup' {
+  const execution = resolveRshProfileExecution(name, home)
   if (execution.runtime !== 'native') throw new Error(`dsh: profile ${name} does not select native execution`)
   return execution.reload
 }
@@ -171,7 +171,7 @@ export function nativeProfileReloadMode(name: string, home: string = resolveDshH
  * @returns native only when the package explicitly selects rsh.profile.json.
  */
 export function profileDirectoryRuntime(profileDir: string): 'native' | 'legacy' {
-  return resolveDshProfileDirectoryExecution(profileDir).runtime
+  return resolveRshProfileDirectoryExecution(profileDir).runtime
 }
 
 /**
@@ -180,7 +180,7 @@ export function profileDirectoryRuntime(profileDir: string): 'native' | 'legacy'
  * @returns the explicit reload lifetime, or startup when omitted.
  */
 export function profileDirectoryReloadMode(profileDir: string): 'startup' | 'live' {
-  const execution = resolveDshProfileDirectoryExecution(profileDir)
+  const execution = resolveRshProfileDirectoryExecution(profileDir)
   if (execution.runtime !== 'native') throw new Error('dsh: profile does not select native execution')
   return execution.reload
 }

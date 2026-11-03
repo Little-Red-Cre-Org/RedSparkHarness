@@ -3,7 +3,7 @@ description: "在认证的原生 HTTP Host 后运行选定的无 Cordis Web Clie
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-native-web-host
+# @redspark/rsh-native-web-host
 
 [English](README.md) | 中文
 
@@ -27,7 +27,7 @@ kind: "package-reference"
 <a id="configuration"></a>
 ## 配置
 
-原生 profile 使用 `projectDir` 和 `runtimeDir` 选择本包。`projectDir` 包含 `rsh.client.json`；`runtimeDir` 包含已安装的 `@deepseek-ai/dsh-web-frontend` 分发包和选中的原生 Client 包。可选的 `transportScript`、监听器 `host` 与 `port`、请求大小上限、受信 authority、浏览器 cookie 生命周期和 `clientReload` 模式都会在激活前校验。`clientReload: live` 监视 profile 文件，完整构建候选图，并且只在构建成功后通过认证的 `/api/native-client/reload` 路由发布。监听器默认绑定 loopback 并请求操作系统分配端口；application 打印带令牌的 URL 后等待 NativeHost 关闭信号。
+原生 profile 使用 `projectDir` 和 `runtimeDir` 选择本包。`projectDir` 包含 `rsh.client.json`；`runtimeDir` 包含已安装的 `@redspark/rsh-web-frontend` 分发包和选中的原生 Client 包。可选的 `transportScript`、监听器 `host` 与 `port`、请求大小上限、受信 authority、浏览器 cookie 生命周期和 `clientReload` 模式都会在激活前校验。`clientReload: live` 监视 profile 文件，完整构建候选图，并且只在构建成功后通过认证的 `/api/native-client/reload` 路由发布。监听器默认绑定 loopback 并请求操作系统分配端口；application 打印带令牌的 URL 后等待 NativeHost 关闭信号。
 
 <a id="understand-the-implementation"></a>
 ## 实现说明

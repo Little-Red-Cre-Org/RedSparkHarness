@@ -1,11 +1,11 @@
 /** Authenticated read-only browser access to Agent-owned background jobs. */
 import { z } from 'zod'
-import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
-import type {} from '@deepseek-ai/dsh-client-connection/native-host'
-import type { NativeAgentRegistry } from '@deepseek-ai/dsh-native-agent'
-import type { NativeJobRegistry, NativeJobSnapshot } from '@deepseek-ai/dsh-native-jobs'
-import type { NativeSessionJob, NativeSessionJobsFrame } from '@deepseek-ai/dsh-client-native-session/jobs-types'
-import type { SessionId } from '@deepseek-ai/dsh-session/types'
+import type { NativePlugin } from '@redspark/rsh-native-runtime'
+import type {} from '@redspark/rsh-client-connection/native-host'
+import type { NativeAgentRegistry } from '@redspark/rsh-native-agent'
+import type { NativeJobRegistry, NativeJobSnapshot } from '@redspark/rsh-native-jobs'
+import type { NativeSessionJob, NativeSessionJobsFrame } from '@redspark/rsh-client-native-session/jobs-types'
+import type { SessionId } from '@redspark/rsh-session/types'
 
 const emptyRequest = z.strictObject({})
 const jobsEndpoints = new Set(['session/jobs/list'])
@@ -229,7 +229,7 @@ export class NativeJobsController {
  */
 export const plugin: NativePlugin = {
   apiVersion: 1,
-  name: '@deepseek-ai/dsh-native-jobs-controller',
+  name: '@redspark/rsh-native-jobs-controller',
   targets: ['host'],
   requires: ['hostConnection', 'agents', 'jobs'],
   optional: [],

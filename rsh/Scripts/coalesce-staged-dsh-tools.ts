@@ -6,7 +6,7 @@ import { lstat, readFile, readdir, rm } from 'node:fs/promises'
 import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 
-const PACKAGE_NAME = '@deepseek-ai/dsh-tools'
+const PACKAGE_NAME = '@redspark/rsh-tools'
 const CLOSURE_IMPORTER = 'rsh/Programs/SDK/python/sdk-runtime'
 const REPOSITORY_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..')
 
@@ -47,7 +47,7 @@ type DependencyResolution = { url: string } | { error: string }
  * @param repositoryRoot - workspace root containing the package importers and lockfile.
  * @returns the number of nested package copies removed.
  */
-export async function coalesceStagedDshToolsPeer(
+export async function coalesceStagedRshToolsPeer(
   staging: string,
   repositoryRoot = REPOSITORY_ROOT,
 ): Promise<number> {

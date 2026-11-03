@@ -1,6 +1,6 @@
 /** Pure Tool card vocabulary shared by native and compatibility renderers. */
-import type { ContentBlock } from '@deepseek-ai/dsh-llm/native'
-import type { ImageAttachmentRef } from '@deepseek-ai/dsh-attachment/types'
+import type { ContentBlock } from '@redspark/rsh-llm/native'
+import type { ImageAttachmentRef } from '@redspark/rsh-attachment/types'
 
 /** A tool result paired (when in-window) with its call head. */
 export interface ToolResultNode {

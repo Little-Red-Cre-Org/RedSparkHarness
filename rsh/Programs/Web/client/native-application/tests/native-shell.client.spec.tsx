@@ -1,16 +1,16 @@
 // @vitest-environment jsdom
 import { act, cleanup, createEvent, fireEvent, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, expect, it, vi } from 'vitest'
-import { NativeHost, NativeScope, resolveInstallation, type NativePlugin } from '@deepseek-ai/dsh-native-runtime'
-import { SESSION_FORMAT_VERSION, SessionSeq, type SessionEvent, type SessionHeader, type SessionId } from '@deepseek-ai/dsh-session/types'
-import { NativeSessionRpcError } from '@deepseek-ai/dsh-client-native-session/native'
+import { NativeHost, NativeScope, resolveInstallation, type NativePlugin } from '@redspark/rsh-native-runtime'
+import { SESSION_FORMAT_VERSION, SessionSeq, type SessionEvent, type SessionHeader, type SessionId } from '@redspark/rsh-session/types'
+import { NativeSessionRpcError } from '@redspark/rsh-client-native-session/native'
 import type {
   NativePendingSubmission, NativeSubmissionsSnapshot, NativeScheduleClient, NativeSessionClient,
   NativeSessionListFrame, NativeSessionListItem, NativeSettingsEvent,
-} from '@deepseek-ai/dsh-client-native-session/native'
+} from '@redspark/rsh-client-native-session/native'
 import type {
   NativeDirectoryPickerClient, NativeWorkspace, NativeWorkspaceBaseline, NativeWorkspaceClient, NativeWorkspaceFrame,
-} from '@deepseek-ai/dsh-client-native-session/workspaces'
+} from '@redspark/rsh-client-native-session/workspaces'
 import { plugin as application } from '../src/native.ts'
 import { plugin as locale } from '../../locale/src/native.ts'
 import { plugin as renderer } from '../../ui-renderer/src/native.ts'
@@ -70,6 +70,11 @@ const sessionProvider = (
   resolve: () => (context) => {
     const schedules: NativeScheduleClient = {
       list: async () => [],
+      // The schedule catalog is read-only in this shell, so the change verbs
+      // exist to satisfy the client contract; they are never reached here.
+      pause: async () => [],
+      resume: async () => [],
+      delete: async () => [],
       follow: async function* () { yield { type: 'baseline', jobs: [] } },
     }
     context.provide('clientNativeSession', client)
@@ -106,7 +111,7 @@ afterEach(() => {
   cleanup()
   document.body.replaceChildren()
   localStorage.clear()
-  document.head.querySelectorAll('style[data-plugin="@deepseek-ai/dsh-client-ui-theme"], meta[name="theme-color"]')
+  document.head.querySelectorAll('style[data-plugin="@redspark/rsh-client-ui-theme"], meta[name="theme-color"]')
     .forEach((element) => { element.remove() })
   document.documentElement.removeAttribute('lang')
   document.documentElement.style.removeProperty('color-scheme')
@@ -123,7 +128,7 @@ it.each([
   initialLocale, interleaveStartup, preferences,
 }) => {
   localStorage.setItem('dsh.native.onboarding.welcome', '2026-08-13.1')
-  vi.stubEnv('DSH_CLIENT_TITLE', 'Product')
+  vi.stubEnv('RSH_CLIENT_TITLE', 'Product')
   vi.stubGlobal('innerWidth', 1280)
   vi.stubGlobal('ResizeObserver', ResizeObserverStub)
   const languageListeners = new Set<EventListener>()
@@ -606,7 +611,7 @@ it.each([
     firstRow.focus()
     tree.focus()
     expect(document.activeElement).toBe(betaRow)
-    expect(document.head.querySelectorAll('style[data-plugin="@deepseek-ai/dsh-client-ui-theme"]')).toHaveLength(7)
+    expect(document.head.querySelectorAll('style[data-plugin="@redspark/rsh-client-ui-theme"]')).toHaveLength(7)
     fireEvent.click(betaRow)
     await waitFor(() => { expect(document.title).toBe('Beta — Product') })
     connectWorkspace.mockClear()
@@ -958,7 +963,7 @@ it.each([
 
     await host.stop()
     expect(container.childElementCount).toBe(0)
-    expect(document.head.querySelectorAll('style[data-plugin="@deepseek-ai/dsh-client-ui-theme"]')).toHaveLength(0)
+    expect(document.head.querySelectorAll('style[data-plugin="@redspark/rsh-client-ui-theme"]')).toHaveLength(0)
     expect(document.head.querySelector('meta[name="theme-color"]')).toBeNull()
     expect(document.documentElement.lang).toBe(originalLanguage)
     expect(document.documentElement.style.getPropertyValue('color-scheme')).toBe('')

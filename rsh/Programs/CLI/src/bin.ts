@@ -1,14 +1,14 @@
 #!/usr/bin/env node
 /**
  * Command-line entry for dsh.
- * @module @deepseek-ai/dsh/bin
+ * @module @redspark/rsh/bin
  */
 
 /* v8 ignore file -- built-bin acceptance exercises this self-executing dispatch. */
 
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
-import { parseDshArgs } from './args.ts'
+import { parseRshArgs } from './args.ts'
 import { ensureShippedNativeProfile } from './native-profile-template.ts'
 import { requireCompatibilityRuntime } from './compatibility-runtime.ts'
 
@@ -27,7 +27,7 @@ function readVersion(): string {
  * @returns a promise that settles when the selected command mode finishes.
  */
 export async function runCli(): Promise<void> {
-  const invocation = parseDshArgs(process.argv.slice(2), readVersion())
+  const invocation = parseRshArgs(process.argv.slice(2), readVersion())
   if (invocation.mode === 'profile' || invocation.mode === 'dump-config') {
     ensureShippedNativeProfile(invocation.profile)
   }
@@ -48,7 +48,7 @@ export async function runCli(): Promise<void> {
       }
       requireCompatibilityRuntime()
       const { runProfile } = await import('./profile-boot.ts')
-      const { loadLayeredEnv } = await import('@deepseek-ai/dsh-launch-environment/layers')
+      const { loadLayeredEnv } = await import('@redspark/rsh-launch-environment/layers')
       await runProfile({
         environment: loadLayeredEnv('dsh'),
         profile: invocation.profile,

@@ -1,4 +1,4 @@
-import type { ConversationNodeContext } from '@deepseek-ai/dsh-client-ui-conversation/native-types'
+import type { ConversationNodeContext } from '@redspark/rsh-client-ui-conversation/native-types'
 import type {
   TrajectoryContribution, TrajectoryConversationViewNode,
 } from './trajectory-contract.ts'

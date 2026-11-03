@@ -1,19 +1,19 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { Context } from '@deepseek-ai/cordis'
+import { Context } from '@redspark/cordis'
 import { mkdir, mkdtemp, readFile, rm, stat, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
-import { credentialRef } from '@deepseek-ai/dsh-credentials'
-import { createLaunchEnvironmentSnapshot, DSH_LAUNCH_ENVIRONMENT_KEY } from '@deepseek-ai/dsh-launch-environment'
-import type { CredentialRef } from '@deepseek-ai/dsh-credentials'
+import { credentialRef } from '@redspark/rsh-credentials'
+import { createLaunchEnvironmentSnapshot, RSH_LAUNCH_ENVIRONMENT_KEY } from '@redspark/rsh-launch-environment'
+import type { CredentialRef } from '@redspark/rsh-credentials'
 import { LocalCredentialProvider, resolveSpec } from '../src/index.ts'
 
 function writeCredentials(file: string, text: string): Promise<void> {
   return writeFile(file, text, { mode: 0o600 })
 }
 
-const KEY = credentialRef('DSH_CRED_TEST')
-const OTHER = credentialRef('DSH_CRED_OTHER')
+const KEY = credentialRef('RSH_CRED_TEST')
+const OTHER = credentialRef('RSH_CRED_OTHER')
 
 const cleanups: Array<() => Promise<void>> = []
 
@@ -48,12 +48,12 @@ function updates(ctx: Context): CredentialRef[] {
 
 describe('resolveSpec', () => {
   it('defaults to .credentials.yaml under the harness home with watching on', () => {
-    const spec = resolveSpec({ dshHome: '/custom/home' })
+    const spec = resolveSpec({ rshHome: '/custom/home' })
     expect(spec).toEqual({ filename: resolve('/custom/home/.credentials.yaml'), watch: true, debounceMs: 100 })
   })
 
   it('lets an explicit path win over the home', () => {
-    const spec = resolveSpec({ path: '/etc/dsh/creds.yaml', dshHome: '/ignored', watch: false, debounceMs: 5 })
+    const spec = resolveSpec({ path: '/etc/dsh/creds.yaml', rshHome: '/ignored', watch: false, debounceMs: 5 })
     expect(spec).toEqual({ filename: resolve('/etc/dsh/creds.yaml'), watch: false, debounceMs: 5 })
   })
 })
@@ -69,7 +69,7 @@ describe('layering and reads', () => {
   it('serves file entries alongside comments and quoted values', async () => {
     const dir = await tempDir()
     const path = join(dir, '.credentials.yaml')
-    await writeCredentials(path, 'version: 1\nrefs:\n  # notes\n  DSH_CRED_TEST: plain\n  DSH_CRED_OTHER: "with space"\n')
+    await writeCredentials(path, 'version: 1\nrefs:\n  # notes\n  RSH_CRED_TEST: plain\n  RSH_CRED_OTHER: "with space"\n')
     const ctx = await boot({ path, watch: false })
     expect(await ctx.credentials.resolve(KEY)).toEqual({ value: 'plain', source: 'file' })
     expect(await ctx.credentials.resolve(OTHER)).toEqual({ value: 'with space', source: 'file' })
@@ -79,9 +79,9 @@ describe('layering and reads', () => {
   it('lets a non-empty process environment win read-only over the file', async () => {
     const dir = await tempDir()
     const path = join(dir, '.credentials.yaml')
-    await writeCredentials(path, 'version: 1\nrefs:\n  DSH_CRED_TEST: from-file\n')
+    await writeCredentials(path, 'version: 1\nrefs:\n  RSH_CRED_TEST: from-file\n')
     const ctx = await boot({ path, watch: false })
-    vi.stubEnv('DSH_CRED_TEST', 'from-env')
+    vi.stubEnv('RSH_CRED_TEST', 'from-env')
     expect(await ctx.credentials.resolve(KEY)).toEqual({ value: 'from-env', source: 'env' })
     expect(await ctx.credentials.describe(KEY)).toEqual({ configured: true, source: 'env', writable: false })
   })
@@ -89,9 +89,9 @@ describe('layering and reads', () => {
   it('treats an empty environment value as absent, falling through to the file', async () => {
     const dir = await tempDir()
     const path = join(dir, '.credentials.yaml')
-    await writeCredentials(path, 'version: 1\nrefs:\n  DSH_CRED_TEST: stored\n')
+    await writeCredentials(path, 'version: 1\nrefs:\n  RSH_CRED_TEST: stored\n')
     const ctx = await boot({ path, watch: false })
-    vi.stubEnv('DSH_CRED_TEST', '')
+    vi.stubEnv('RSH_CRED_TEST', '')
     expect(await ctx.credentials.resolve(KEY)).toEqual({ value: 'stored', source: 'file' })
     expect(await ctx.credentials.describe(KEY)).toEqual({ configured: true, source: 'file', writable: true })
   })
@@ -106,14 +106,14 @@ describe('layering and reads', () => {
 })
 
 describe('layer ladder', () => {
-  // inherited process env > .credentials.yaml > $DSH_HOME/.env, and the
+  // inherited process env > .credentials.yaml > $RSH_HOME/.env, and the
   // invoking directory's .env supplies no credential at all.
   async function bootLayered(
     path: string,
     layers: Parameters<typeof createLaunchEnvironmentSnapshot>[0],
   ): Promise<Context> {
     const ctx = new Context()
-    ctx.provide(DSH_LAUNCH_ENVIRONMENT_KEY, createLaunchEnvironmentSnapshot(layers))
+    ctx.provide(RSH_LAUNCH_ENVIRONMENT_KEY, createLaunchEnvironmentSnapshot(layers))
     const fiber = ctx.plugin(LocalCredentialProvider, { path, watch: false })
     cleanups.push(async () => { await fiber.dispose() })
     await fiber
@@ -123,10 +123,10 @@ describe('layer ladder', () => {
   it('lets the stored value beat the user .env, so a UI write takes effect immediately', async () => {
     const dir = await tempDir()
     const path = join(dir, '.credentials.yaml')
-    await writeCredentials(path, 'version: 1\nrefs:\n  DSH_CRED_TEST: stored\n')
+    await writeCredentials(path, 'version: 1\nrefs:\n  RSH_CRED_TEST: stored\n')
     const ctx = await bootLayered(path, [
       { source: 'process', values: {} },
-      { source: 'user-env', path: '/home/.dsh/.env', values: { DSH_CRED_TEST: 'older-user-env' } },
+      { source: 'user-env', path: '/home/.dsh/.env', values: { RSH_CRED_TEST: 'older-user-env' } },
     ])
     expect(await ctx.credentials.resolve(KEY)).toEqual({ value: 'stored', source: 'file' })
     // A key sitting in the user's .env does not make the stored one
@@ -140,7 +140,7 @@ describe('layer ladder', () => {
     const dir = await tempDir()
     const ctx = await bootLayered(join(dir, '.credentials.yaml'), [
       { source: 'process', values: {} },
-      { source: 'user-env', path: '/home/.dsh/.env', values: { DSH_CRED_TEST: 'from-user-env' } },
+      { source: 'user-env', path: '/home/.dsh/.env', values: { RSH_CRED_TEST: 'from-user-env' } },
     ])
     expect(await ctx.credentials.resolve(KEY)).toEqual({ value: 'from-user-env', source: 'user-env' })
     // Writable: storing a key replaces it as the effective one.
@@ -155,14 +155,14 @@ describe('layer ladder', () => {
     // wins) and below the managed store, which a stored key must never lose to.
     const layers = [
       { source: 'process' as const, values: {} },
-      { source: 'project-env' as const, path: '/work/.env', values: { DSH_CRED_TEST: 'from-project' } },
-      { source: 'user-env' as const, path: '/home/.dsh/.env', values: { DSH_CRED_TEST: 'from-user' } },
+      { source: 'project-env' as const, path: '/work/.env', values: { RSH_CRED_TEST: 'from-project' } },
+      { source: 'user-env' as const, path: '/home/.dsh/.env', values: { RSH_CRED_TEST: 'from-user' } },
     ]
     const bare = await bootLayered(path, layers)
     expect(await bare.credentials.resolve(KEY)).toEqual({ value: 'from-project', source: 'project-env' })
     expect(await bare.credentials.describe(KEY)).toEqual({ configured: true, source: 'project-env', writable: true })
 
-    await writeCredentials(path, 'version: 1\nrefs:\n  DSH_CRED_TEST: stored\n')
+    await writeCredentials(path, 'version: 1\nrefs:\n  RSH_CRED_TEST: stored\n')
     const stored = await bootLayered(path, layers)
     expect(await stored.credentials.resolve(KEY)).toEqual({ value: 'stored', source: 'file' })
   })
@@ -170,7 +170,7 @@ describe('layer ladder', () => {
   it.skipIf(process.platform === 'win32')('refuses a document other OS users can read', async () => {
     const dir = await tempDir()
     const path = join(dir, '.credentials.yaml')
-    await writeFile(path, 'version: 1\nrefs:\n  DSH_CRED_TEST: leaked\n', { mode: 0o644 })
+    await writeFile(path, 'version: 1\nrefs:\n  RSH_CRED_TEST: leaked\n', { mode: 0o644 })
     const ctx = new Context()
     // Before the contents are read at all: serving secrets out of a
     // world-readable file would make the 0600 the provider writes meaningless.
@@ -211,10 +211,10 @@ describe('layer ladder', () => {
   it('lets only the inherited environment shadow the store, read-only', async () => {
     const dir = await tempDir()
     const path = join(dir, '.credentials.yaml')
-    await writeCredentials(path, 'version: 1\nrefs:\n  DSH_CRED_TEST: stored\n')
+    await writeCredentials(path, 'version: 1\nrefs:\n  RSH_CRED_TEST: stored\n')
     const ctx = await bootLayered(path, [
-      { source: 'process', values: { DSH_CRED_TEST: 'from-shell' } },
-      { source: 'user-env', path: '/home/.dsh/.env', values: { DSH_CRED_TEST: 'from-user-env' } },
+      { source: 'process', values: { RSH_CRED_TEST: 'from-shell' } },
+      { source: 'user-env', path: '/home/.dsh/.env', values: { RSH_CRED_TEST: 'from-user-env' } },
     ])
     expect(await ctx.credentials.resolve(KEY)).toEqual({ value: 'from-shell', source: 'env' })
     expect(await ctx.credentials.describe(KEY)).toEqual({ configured: true, source: 'env', writable: false })
@@ -228,16 +228,16 @@ describe('document validation', () => {
   // "the secret I stored has no effect".
   it.each([
     ['a non-mapping root', 'just a string\n', /must be a mapping/],
-    ['a sequence root', '- DSH_CRED_TEST\n', /must be a mapping/],
+    ['a sequence root', '- RSH_CRED_TEST\n', /must be a mapping/],
     // A flat document the boot migration cannot prove it understands is
     // refused by name rather than read as an empty store or rewritten: a
     // silently ignored document would surface as an authentication failure on
     // the first request instead of at load. (The recognized all-string flat
     // layout upgrades in place instead — migration.spec owns that path.)
-    ['the flat layout with a non-string value', 'DSH_CRED_TEST: [nope]\n', /nest the existing 1 entry under/],
-    ['the flat layout with several entries and a non-string value', 'DSH_CRED_TEST: a\nDSH_CRED_OTHER: [b]\n',
+    ['the flat layout with a non-string value', 'RSH_CRED_TEST: [nope]\n', /nest the existing 1 entry under/],
+    ['the flat layout with several entries and a non-string value', 'RSH_CRED_TEST: a\nDSH_CRED_OTHER: [b]\n',
       /nest the existing 2 entries under/],
-    ['the flat layout with an empty value', 'DSH_CRED_TEST: ""\n', /pre-release flat layout/],
+    ['the flat layout with an empty value', 'RSH_CRED_TEST: ""\n', /pre-release flat layout/],
     ['the flat layout with an unaddressable key', 'not-a-ref: value\n', /pre-release flat layout/],
     ['the flat layout with a non-string key', '1: a\n', /pre-release flat layout/],
     ['the flat layout under document directives', '%YAML 1.2\n---\nDSH_CRED_TEST: a\n',
@@ -246,8 +246,8 @@ describe('document validation', () => {
     ['an unknown top-level key', 'version: 1\nsecrets: {}\n', /unknown top-level key "secrets"/],
     ['a non-mapping refs section', 'version: 1\nrefs: nope\n', /"refs" .* must be a mapping/],
     ['a key that is not a POSIX identifier', 'version: 1\nrefs:\n  not-a-ref: value\n', /credential ref/],
-    ['a non-string value', 'version: 1\nrefs:\n  DSH_CRED_TEST: 123\n', /must be a string/],
-    ['an empty value', 'version: 1\nrefs:\n  DSH_CRED_TEST: ""\n', /is empty/],
+    ['a non-string value', 'version: 1\nrefs:\n  RSH_CRED_TEST: 123\n', /must be a string/],
+    ['an empty value', 'version: 1\nrefs:\n  RSH_CRED_TEST: ""\n', /is empty/],
     ['a record key that is not scoped', 'version: 1\nrecords:\n  codex:\n    kind: grant\n    payload: 1\n',
       /must be "<scope>\/<id>"/],
     ['a record that is not a mapping', 'version: 1\nrecords:\n  llm-pi-ai/codex: token\n',
@@ -270,8 +270,8 @@ describe('document validation', () => {
       + '    env: nope\n', /non-mapping env/],
     ['an api-key record env value that is empty', 'version: 1\nrecords:\n  llm-pi-ai/acme:\n    kind: api-key\n'
       + '    env:\n      AWS_PROFILE: ""\n', /env "AWS_PROFILE" .* must be a non-empty string/],
-    ['duplicate keys', 'version: 1\nrefs:\n  DSH_CRED_TEST: one\n  DSH_CRED_TEST: two\n', /invalid document/],
-    ['malformed yaml', 'DSH_CRED_TEST: "unterminated\n', /invalid document/],
+    ['duplicate keys', 'version: 1\nrefs:\n  RSH_CRED_TEST: one\n  RSH_CRED_TEST: two\n', /invalid document/],
+    ['malformed yaml', 'RSH_CRED_TEST: "unterminated\n', /invalid document/],
   ])('fails boot on %s', async (_case, text, message) => {
     const dir = await tempDir()
     const path = join(dir, '.credentials.yaml')
@@ -287,7 +287,7 @@ describe('document validation', () => {
     // The yaml parser's own message quotes the offending source line, which in
     // this document is the secret itself. Boot stderr and the watcher's logger
     // both receive whatever this throws.
-    await writeCredentials(path, `DSH_CRED_TEST: "${secret}\n`)
+    await writeCredentials(path, `RSH_CRED_TEST: "${secret}\n`)
     let failure: unknown
     try {
       await new Context().plugin(LocalCredentialProvider, { path, watch: false })
@@ -317,7 +317,7 @@ describe('document writes', () => {
     const ctx = await boot({ path, watch: false })
     const seen = updates(ctx)
     await ctx.credentials.set(KEY, 'sk-fresh')
-    expect(await readFile(path, 'utf8')).toBe('version: 1\nrefs:\n  DSH_CRED_TEST: sk-fresh\n')
+    expect(await readFile(path, 'utf8')).toBe('version: 1\nrefs:\n  RSH_CRED_TEST: sk-fresh\n')
     if (process.platform !== 'win32') expect((await stat(path)).mode & 0o777).toBe(0o600)
     expect(await ctx.credentials.resolve(KEY)).toEqual({ value: 'sk-fresh', source: 'file' })
     expect(seen).toEqual([KEY])
@@ -326,12 +326,12 @@ describe('document writes', () => {
   it('patches one entry, preserving comments and every untouched entry', async () => {
     const dir = await tempDir()
     const path = join(dir, '.credentials.yaml')
-    await writeCredentials(path, 'version: 1\nrefs:\n  # deployment notes\n  DSH_CRED_OTHER: keep\n\n  # the one under edit\n  DSH_CRED_TEST: old\n')
+    await writeCredentials(path, 'version: 1\nrefs:\n  # deployment notes\n  RSH_CRED_OTHER: keep\n\n  # the one under edit\n  RSH_CRED_TEST: old\n')
     const ctx = await boot({ path, watch: false })
     await ctx.credentials.set(KEY, 'new value!')
     expect(await readFile(path, 'utf8')).toBe(
-      'version: 1\nrefs:\n  # deployment notes\n  DSH_CRED_OTHER: keep\n\n'
-      + '  # the one under edit\n  DSH_CRED_TEST: new value!\n',
+      'version: 1\nrefs:\n  # deployment notes\n  RSH_CRED_OTHER: keep\n\n'
+      + '  # the one under edit\n  RSH_CRED_TEST: new value!\n',
     )
   })
 
@@ -355,11 +355,11 @@ describe('document writes', () => {
     // Comments above an entry are that entry's annotation and go with it when
     // it is removed — including anything above the document's first entry.
     // Every other entry keeps its own comments.
-    await writeCredentials(path, 'version: 1\nrefs:\n  # about the doomed one\n  DSH_CRED_TEST: gone\n  # about the survivor\n  DSH_CRED_OTHER: stays\n')
+    await writeCredentials(path, 'version: 1\nrefs:\n  # about the doomed one\n  RSH_CRED_TEST: gone\n  # about the survivor\n  RSH_CRED_OTHER: stays\n')
     const ctx = await boot({ path, watch: false })
     const seen = updates(ctx)
     await ctx.credentials.unset(KEY)
-    expect(await readFile(path, 'utf8')).toBe('version: 1\nrefs:\n  # about the survivor\n  DSH_CRED_OTHER: stays\n')
+    expect(await readFile(path, 'utf8')).toBe('version: 1\nrefs:\n  # about the survivor\n  RSH_CRED_OTHER: stays\n')
     await ctx.credentials.unset(KEY)
     expect(seen).toEqual([KEY])
   })
@@ -367,12 +367,12 @@ describe('document writes', () => {
   it('rejects empty values and writes the environment would shadow', async () => {
     const dir = await tempDir()
     const path = join(dir, '.credentials.yaml')
-    await writeCredentials(path, 'version: 1\nrefs:\n  DSH_CRED_TEST: stored\n')
+    await writeCredentials(path, 'version: 1\nrefs:\n  RSH_CRED_TEST: stored\n')
     const ctx = await boot({ path, watch: false })
 
     await expect(ctx.credentials.set(KEY, '')).rejects.toThrow(/empty value/)
 
-    vi.stubEnv('DSH_CRED_TEST', 'shadowing')
+    vi.stubEnv('RSH_CRED_TEST', 'shadowing')
     await expect(ctx.credentials.set(KEY, 'next')).rejects.toThrow(/shadowed/)
     await expect(ctx.credentials.unset(KEY)).rejects.toThrow(/shadowed/)
   })
@@ -380,7 +380,7 @@ describe('document writes', () => {
   it('leaves an empty mapping after unsetting the only entry', async () => {
     const dir = await tempDir()
     const path = join(dir, '.credentials.yaml')
-    await writeCredentials(path, 'version: 1\nrefs:\n  DSH_CRED_TEST: only\n')
+    await writeCredentials(path, 'version: 1\nrefs:\n  RSH_CRED_TEST: only\n')
     const ctx = await boot({ path, watch: false })
     await ctx.credentials.unset(KEY)
     expect(await readFile(path, 'utf8')).toBe('version: 1\nrefs: {}\n')
@@ -395,7 +395,7 @@ describe('document writes', () => {
     const ctx = await boot({ path, watch: false })
     // An external editor left the document unparsable: the read-modify-write
     // must refuse rather than overwrite content it cannot understand.
-    await writeCredentials(path, 'DSH_CRED_TEST: "unterminated\n')
+    await writeCredentials(path, 'RSH_CRED_TEST: "unterminated\n')
     await expect(ctx.credentials.set(OTHER, 'lands')).rejects.toThrow(/invalid document/)
   })
 
@@ -407,7 +407,7 @@ describe('document writes', () => {
     const good = ctx.credentials.set(OTHER, 'lands')
     await bad
     await good
-    expect(await readFile(path, 'utf8')).toBe('version: 1\nrefs:\n  DSH_CRED_OTHER: lands\n')
+    expect(await readFile(path, 'utf8')).toBe('version: 1\nrefs:\n  RSH_CRED_OTHER: lands\n')
   })
 
   it('serializes concurrent writes so both land in the one document', async () => {
@@ -418,7 +418,7 @@ describe('document writes', () => {
       ctx.credentials.set(KEY, 'one'),
       ctx.credentials.set(OTHER, 'two'),
     ])
-    expect(await readFile(path, 'utf8')).toBe('version: 1\nrefs:\n  DSH_CRED_TEST: one\n  DSH_CRED_OTHER: two\n')
+    expect(await readFile(path, 'utf8')).toBe('version: 1\nrefs:\n  RSH_CRED_TEST: one\n  RSH_CRED_OTHER: two\n')
   })
 
   it('refuses writes after disposal', async () => {
@@ -439,17 +439,17 @@ describe('real hot reload', () => {
     const path = join(dir, '.credentials.yaml')
     // Watching starts on an existing document: creation racing watcher setup
     // is a chokidar readiness gap, not the reload contract under test.
-    await writeCredentials(path, 'version: 1\nrefs:\n  DSH_CRED_TEST: boot\n')
+    await writeCredentials(path, 'version: 1\nrefs:\n  RSH_CRED_TEST: boot\n')
     const ctx = await boot({ path, debounceMs: 10 })
     const seen = updates(ctx)
 
-    await writeCredentials(path, 'version: 1\nrefs:\n  DSH_CRED_TEST: live\n  DSH_CRED_OTHER: extra\n')
+    await writeCredentials(path, 'version: 1\nrefs:\n  RSH_CRED_TEST: live\n  RSH_CRED_OTHER: extra\n')
     await vi.waitFor(async () => {
       expect(await ctx.credentials.resolve(KEY)).toEqual({ value: 'live', source: 'file' })
     })
 
     // Wholesale replacement: an entry deleted on disk never lingers in memory.
-    await writeCredentials(path, 'version: 1\nrefs:\n  DSH_CRED_TEST: live\n')
+    await writeCredentials(path, 'version: 1\nrefs:\n  RSH_CRED_TEST: live\n')
     await vi.waitFor(async () => {
       expect(await ctx.credentials.resolve(OTHER)).toBeUndefined()
     })

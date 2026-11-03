@@ -1,12 +1,12 @@
 import { join, win32, posix } from 'node:path'
-import { BUNDLED_SKILL_RANK } from '@deepseek-ai/dsh-skill/shared'
-import type { SkillSource } from '@deepseek-ai/dsh-skill/types'
+import { BUNDLED_SKILL_RANK } from '@redspark/rsh-skill/shared'
+import type { SkillSource } from '@redspark/rsh-skill/types'
 import type { ResolvedConfig } from './config.ts'
 
-const PROJECT_DSH_RANK = 100
+const PROJECT_RSH_RANK = 100
 const PROJECT_AGENTS_RANK = 200
 const CUSTOM_RANK = 300
-const USER_DSH_RANK = 400
+const USER_RSH_RANK = 400
 const USER_AGENTS_RANK = 500
 
 /** One configured source directory and its catalog precedence. */
@@ -28,14 +28,14 @@ export function buildSkillRoots(config: ResolvedConfig, projectRoot?: string): S
   const roots: SkillRoot[] = []
   if (config.includeDefaultRoots && projectRoot !== undefined) {
     roots.push(
-      { path: joinInWorld(projectRoot, '.dsh/skills'), source: 'project-dsh', rank: PROJECT_DSH_RANK, projectRoot },
+      { path: joinInWorld(projectRoot, '.rsh/skills'), source: 'project-rsh', rank: PROJECT_RSH_RANK, projectRoot },
       { path: joinInWorld(projectRoot, '.agents/skills'), source: 'project-agents', rank: PROJECT_AGENTS_RANK, projectRoot },
     )
   }
   roots.push(...config.customSkillDirs.map(path => ({ path, source: 'custom' as const, rank: CUSTOM_RANK })))
   if (config.includeDefaultRoots) {
     roots.push(
-      { path: join(config.dshHome, 'skills'), source: 'user-dsh', rank: USER_DSH_RANK, skipSystem: true },
+      { path: join(config.rshHome, 'skills'), source: 'user-rsh', rank: USER_RSH_RANK, skipSystem: true },
       { path: join(config.agentsHome, 'skills'), source: 'user-agents', rank: USER_AGENTS_RANK },
     )
   }

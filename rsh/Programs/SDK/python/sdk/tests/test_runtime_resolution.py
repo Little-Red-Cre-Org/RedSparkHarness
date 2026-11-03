@@ -8,10 +8,10 @@ import sys
 from pathlib import Path
 from types import SimpleNamespace
 
-import deepseek_harness_runtime as runtime
+import redspark_harness_runtime as runtime
 import pytest
 
-from deepseek_harness_runtime import (
+from redspark_harness_runtime import (
     RUNTIME_MODE_ENV_VAR,
     bundled_package_dir,
     main,
@@ -36,9 +36,9 @@ def test_explicit_mode_wins_over_env_mode(
 ) -> None:
     runtime_dir = tmp_path / "runtime"
     runtime_dir.mkdir()
-    executable = runtime_dir / f"deepseek-harness-sdk-runtime-{platform_tag}{extension}"
+    executable = runtime_dir / f"redspark-harness-sdk-runtime-{platform_tag}{extension}"
     executable.touch()
-    (runtime_dir / f"deepseek-harness-sdk-runtime-{platform_tag}-rg{extension}").touch()
+    (runtime_dir / f"redspark-harness-sdk-runtime-{platform_tag}-rg{extension}").touch()
     monkeypatch.setattr(runtime, "bundled_package_dir", lambda: tmp_path)
     monkeypatch.setattr(runtime, "_current_platform_tag", lambda: platform_tag)
     monkeypatch.setenv(RUNTIME_MODE_ENV_VAR, "bogus")
@@ -62,10 +62,10 @@ def test_runtime_requires_spawn_helper_only_on_macos(
 ) -> None:
     runtime_dir = tmp_path / "runtime"
     runtime_dir.mkdir()
-    linux = runtime_dir / "deepseek-harness-sdk-runtime-linux-x64"
+    linux = runtime_dir / "redspark-harness-sdk-runtime-linux-x64"
     linux.touch()
     Path(f"{linux}-rg").touch()
-    macos = runtime_dir / "deepseek-harness-sdk-runtime-macos-arm64"
+    macos = runtime_dir / "redspark-harness-sdk-runtime-macos-arm64"
     macos.touch()
     Path(f"{macos}-rg").touch()
     monkeypatch.setattr(runtime, "bundled_package_dir", lambda: tmp_path)
@@ -82,9 +82,9 @@ def test_windows_runtime_uses_exe_payload_and_exe_sidecar(
 ) -> None:
     runtime_dir = tmp_path / "runtime"
     runtime_dir.mkdir()
-    executable = runtime_dir / "deepseek-harness-sdk-runtime-win-x64.exe"
+    executable = runtime_dir / "redspark-harness-sdk-runtime-win-x64.exe"
     executable.touch()
-    (runtime_dir / "deepseek-harness-sdk-runtime-win-x64-rg.exe").touch()
+    (runtime_dir / "redspark-harness-sdk-runtime-win-x64-rg.exe").touch()
     monkeypatch.setattr(runtime, "bundled_package_dir", lambda: tmp_path)
     monkeypatch.setattr(runtime, "_current_platform_tag", lambda: "win-x64")
 
@@ -113,7 +113,7 @@ def test_runtime_requires_ripgrep_sidecar(
 ) -> None:
     runtime_dir = tmp_path / "runtime"
     runtime_dir.mkdir()
-    (runtime_dir / "deepseek-harness-sdk-runtime-linux-x64").touch()
+    (runtime_dir / "redspark-harness-sdk-runtime-linux-x64").touch()
     monkeypatch.setattr(runtime, "bundled_package_dir", lambda: tmp_path)
     monkeypatch.setattr(runtime, "_current_platform_tag", lambda: "linux-x64")
 
@@ -124,7 +124,7 @@ def test_runtime_requires_ripgrep_sidecar(
 def test_node_mode_runs_the_deployed_dsh_cli(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    bin_js = tmp_path / "runtime" / "node" / "node_modules" / "@deepseek-ai" / "dsh" / "lib" / "bin.js"
+    bin_js = tmp_path / "runtime" / "node" / "node_modules" / "@redspark" / "dsh" / "lib" / "bin.js"
     bin_js.parent.mkdir(parents=True)
     bin_js.touch()
     monkeypatch.setattr(runtime, "bundled_package_dir", lambda: tmp_path)
@@ -136,25 +136,25 @@ def test_node_mode_runs_the_deployed_dsh_cli(
 def test_python_dsh_command_requires_explicit_home(
     monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    monkeypatch.delenv("DSH_HOME", raising=False)
+    monkeypatch.delenv("RSH_HOME", raising=False)
 
     with pytest.raises(SystemExit) as excinfo:
         main()
 
     assert excinfo.value.code == 2
-    assert "explicit DSH_HOME" in capsys.readouterr().err
+    assert "explicit RSH_HOME" in capsys.readouterr().err
 
 
 def test_python_dsh_command_executes_the_bundled_cli(
     monkeypatch: pytest.MonkeyPatch
 ) -> None:
     called: dict[str, object] = {}
-    monkeypatch.setenv("DSH_HOME", "/explicit/home")
+    monkeypatch.setenv("RSH_HOME", "/explicit/home")
     monkeypatch.setattr(runtime, "resolve_bundled_launch_args", lambda: ("/runtime",))
     monkeypatch.setattr(runtime, "sys", SimpleNamespace(platform="linux", argv=["dsh", "plugin", "--profile", "sdk", "list"]))
 
     def execvpe(file: str, args: tuple[str, ...], env: dict[str, str]) -> None:
-        called.update(file=file, args=args, home=env.get("DSH_HOME"))
+        called.update(file=file, args=args, home=env.get("RSH_HOME"))
 
     monkeypatch.setattr(runtime.os, "execvpe", execvpe)
 
@@ -169,7 +169,7 @@ def test_python_dsh_command_executes_the_bundled_cli(
 
 @pytest.mark.parametrize("returncode", [0, 37, 513])
 def test_windows_console_waits_and_forwards_runtime_status(monkeypatch: pytest.MonkeyPatch, returncode: int) -> None:
-    monkeypatch.setenv("DSH_HOME", "/explicit/home")
+    monkeypatch.setenv("RSH_HOME", "/explicit/home")
     monkeypatch.setattr(runtime, "sys", SimpleNamespace(platform="win32", argv=["dsh", "plugin", "argument with spaces", "中文"]))
     monkeypatch.setattr(runtime, "resolve_bundled_launch_args", lambda: ("runtime.exe",))
     called = []
@@ -203,12 +203,12 @@ def test_windows_console_branch_preserves_real_child_io_and_completion(tmp_path:
         f"raise SystemExit({returncode})\n", encoding="utf-8",
     )
     driver = (
-        "import deepseek_harness_runtime as runtime; from types import SimpleNamespace; "
+        "import redspark_harness_runtime as runtime; from types import SimpleNamespace; "
         f"runtime.sys = SimpleNamespace(platform='win32', argv=['dsh', 'argument with spaces', '中文']); "
         f"runtime.resolve_bundled_launch_args = lambda: ({sys.executable!r}, {str(child)!r}); runtime.main()"
     )
     result = subprocess.run([sys.executable, "-c", driver], capture_output=True, text=True, encoding="utf-8",
-                            env={**os.environ, "DSH_HOME": str(tmp_path), "PYTHONIOENCODING": "utf-8"}, timeout=15)
+                            env={**os.environ, "RSH_HOME": str(tmp_path), "PYTHONIOENCODING": "utf-8"}, timeout=15)
     assert result.returncode == returncode, result.stderr
     assert result.stdout == "stdout-中文\n"
     assert result.stderr == "stderr-中文\n"

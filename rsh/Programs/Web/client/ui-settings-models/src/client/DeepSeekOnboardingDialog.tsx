@@ -5,9 +5,9 @@
 
 import { useEffect } from 'react'
 import type { ReactNode } from 'react'
-import type { SnapshotStore } from '@deepseek-ai/dsh-client-store'
-import type { InjectFace, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
-import { ModelOnboardingView, OnboardingModal } from '@deepseek-ai/dsh-client-ui-primitives'
+import type { SnapshotStore } from '@redspark/rsh-client-store'
+import type { InjectFace, PropsRuntime } from '@redspark/rsh-client-ui-slots'
+import { ModelOnboardingView, OnboardingModal } from '@redspark/rsh-client-ui-primitives'
 import type { ModelsSettingsState, ModelsSettingsStore } from './store.ts'
 import { onboardingReadiness, protocolChoices } from './store.ts'
 import { isSubscriptionProvider } from './authorized-provider.ts'

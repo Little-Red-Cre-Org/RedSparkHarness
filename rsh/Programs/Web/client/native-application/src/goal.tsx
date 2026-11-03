@@ -1,8 +1,8 @@
 /** Native read-only Goal strip backed by the selected Session's event history. */
 
 import { useMemo } from 'react'
-import type { SessionEvent } from '@deepseek-ai/dsh-session/types'
-import { goalFromSessionEvents, NativeGoalBar } from '@deepseek-ai/dsh-client-ui-goal/native'
+import type { SessionEvent } from '@redspark/rsh-session/types'
+import { goalFromSessionEvents, NativeGoalBar } from '@redspark/rsh-client-ui-goal/native'
 
 /** Render the selected Session's current durable goal when one exists.
  * @param props - current event history and Native locale.

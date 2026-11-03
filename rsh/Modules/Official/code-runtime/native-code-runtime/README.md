@@ -3,7 +3,7 @@ description: "Framework-free worker-thread execution of model-written TypeScript
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-native-code-runtime
+# @redspark/rsh-native-code-runtime
 
 English | [中文](README.zh.md)
 

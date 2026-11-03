@@ -1,16 +1,16 @@
 /** Native local PTY backend for terminal allocation and awaited teardown. */
 import { isAbsolute } from 'node:path'
-import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
-import type {} from '@deepseek-ai/dsh-terminal/native'
-import type { NativeTerminalBackend, NativeTerminalSession } from '@deepseek-ai/dsh-terminal/native'
-import type {} from '@deepseek-ai/dsh-subprocess/native'
-import type {} from '@deepseek-ai/dsh-native-sandbox-policy/native'
-import type {} from '@deepseek-ai/dsh-sandbox/native'
+import type { NativePlugin } from '@redspark/rsh-native-runtime'
+import type {} from '@redspark/rsh-terminal/native'
+import type { NativeTerminalBackend, NativeTerminalSession } from '@redspark/rsh-terminal/native'
+import type {} from '@redspark/rsh-subprocess/native'
+import type {} from '@redspark/rsh-native-sandbox-policy/native'
+import type {} from '@redspark/rsh-sandbox/native'
 
 import { Config, resolveConfig, validateConfig, type ResolvedConfig } from './config.ts'
 import { LocalPtySession } from './session.ts'
 import { childEnvironment, startupSession } from './startup.ts'
-import { TerminalBackendCleanupError } from '@deepseek-ai/dsh-terminal/protocol'
+import { TerminalBackendCleanupError } from '@redspark/rsh-terminal/protocol'
 
 /** Resolve the shared shell, startup and output budgets for a native installation.
  * @param input - native profile configuration; type and graceMs retain their lifecycle spellings.
@@ -36,7 +36,7 @@ export function resolveNativeConfig(input: unknown): ResolvedConfig {
 
 /** Register the existing interactive shell implementation over native selected Providers. */
 export const plugin: NativePlugin = {
-  apiVersion: 1, name: '@deepseek-ai/dsh-terminal-bash', targets: ['host'],
+  apiVersion: 1, name: '@redspark/rsh-terminal-bash', targets: ['host'],
   requires: ['terminals', 'subprocess', 'sandboxPolicy'], optional: ['sandbox'], provides: [],
   resolve(input) {
     const config = resolveNativeConfig(input)

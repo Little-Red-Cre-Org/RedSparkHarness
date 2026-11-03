@@ -3,7 +3,7 @@ description: "The user-settings service for plugin authors and maintainers regis
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-settings
+# @redspark/rsh-settings
 
 English | [中文](README.zh.md)
 
@@ -36,12 +36,12 @@ Choose settings when a plugin's configuration should be changeable at runtime �
 The service stores nothing by itself; mount a provider such as the shipped file-backed one:
 
 ```yaml
-- name: '@deepseek-ai/dsh-settings-file'
+- name: '@redspark/rsh-settings-file'
   config:
     path: /absolute/path/to/settings.yaml
 ```
 
-`ctx.settings` appears once the provider is live. The provider README owns the full configuration surface; the generated [configuration catalog](../../../../Docs/config-catalog.md#deepseek-aidsh-settings-file) lists every accepted field.
+`ctx.settings` appears once the provider is live. The provider README owns the full configuration surface; the generated [configuration catalog](../../../../Docs/config-catalog.md#redsparkrsh-settings-file) lists every accepted field.
 
 Native Hosts use the Cordis-free `./native` definition from [dsh-settings-definition](../../../../Core/settings/settings-definition/README.md): a Provider loads the document before Consumers register namespace resolvers. Each owner reads frozen values, writes only its own user section, and observes valid committed changes. Native watcher invocations run asynchronously in commit order per callback; synchronous throws and asynchronous rejections are logged without failing a write. A watcher disposer skips queued invocations, while Host teardown waits for started callbacks to settle. A registration is exposed to a native configuration surface only when its owner supplies `presentation` metadata; the native descriptor strips schema-declared secret values and all schema defaults, and rejects presentation schemas whose secret fields cannot be reached through `object`, `dict` or `array`. Schema fields marked `credential-ref` provide the references whose values belong in Credentials. The file Provider emits `settings/document-updated` when a registered raw section changes, even if the resolved value remains equal. The Cordis compatibility face uses declaration-only [compat-settings-definition](../../../../Compatibility/DSH/bridge/compat-settings-definition/README.md) for `Context.settings` and registration options.
 

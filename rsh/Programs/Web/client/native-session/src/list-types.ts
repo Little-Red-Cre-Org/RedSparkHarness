@@ -1,5 +1,5 @@
-import type { SessionHeader, SessionId } from '@deepseek-ai/dsh-session/types'
-import type { WorkspaceId } from '@deepseek-ai/dsh-workspace-definition'
+import type { SessionHeader, SessionId } from '@redspark/rsh-session/types'
+import type { WorkspaceId } from '@redspark/rsh-workspace-definition'
 
 /** Title state returned beside, rather than merged into, a durable Session header. */
 export type NativeSessionTitleProjection =

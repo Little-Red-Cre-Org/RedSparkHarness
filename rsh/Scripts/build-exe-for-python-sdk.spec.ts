@@ -85,12 +85,12 @@ describe('Python runtime executable builder CLI', () => {
     expect(cliConfig).not.toContain('runtime-bootstrap')
     expect(cliConfig).toContain("clean: ['lib/*.js']")
     expect(cliTsconfig).not.toContain('rsh/Core/subprocess/subprocess-local')
-    expect(cliManifest.dependencies).toHaveProperty('@deepseek-ai/dsh-subprocess-local')
-    expect(cliManifest.devDependencies).not.toHaveProperty('@deepseek-ai/dsh-subprocess-local')
-    expect(runtimeManifest.dependencies).toHaveProperty('@deepseek-ai/dsh-subprocess-local')
-    expect(bootstrap).toContain("import('@deepseek-ai/dsh/lib/bin.js')")
+    expect(cliManifest.dependencies).toHaveProperty('@redspark/rsh-subprocess-local')
+    expect(cliManifest.devDependencies).not.toHaveProperty('@redspark/rsh-subprocess-local')
+    expect(runtimeManifest.dependencies).toHaveProperty('@redspark/rsh-subprocess-local')
+    expect(bootstrap).toContain("import('@redspark/rsh/lib/bin.js')")
     expect(bootstrap).toContain('await runCli()')
-    expect(bootstrap).toContain("import('@deepseek-ai/dsh-subprocess-local/runner')")
+    expect(bootstrap).toContain("import('@redspark/rsh-subprocess-local/runner')")
     expect(bootstrap).toContain('await runSelectedSubprocessRunner(selection)')
   })
 
@@ -195,21 +195,21 @@ function runStagedToolsProbe(fixture: ReturnType<typeof createStagedToolsFixture
   const probe = join(fixture.staging, 'probe.mjs')
   const helper = pathToFileURL(resolve(root, 'rsh/Scripts/coalesce-staged-dsh-tools.ts')).href
   writeFileSync(probe, `
-import { coalesceStagedDshToolsPeer } from ${JSON.stringify(helper)}
+import { coalesceStagedRshToolsPeer } from ${JSON.stringify(helper)}
 import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
 
 const staging = process.argv[2]
 try {
-  const removed = await coalesceStagedDshToolsPeer(staging, process.argv[3])
-  const rootTools = await import(pathToFileURL(join(staging, 'node_modules/@deepseek-ai/dsh-tools/lib/index.js')).href)
-  const rootNative = await import(pathToFileURL(join(staging, 'node_modules/@deepseek-ai/dsh-native-tools/lib/index.js')).href)
-  const rootSession = await import(pathToFileURL(join(staging, 'node_modules/@deepseek-ai/dsh-session/lib/index.js')).href)
-  const rootContext = await import(pathToFileURL(join(staging, 'node_modules/@deepseek-ai/dsh-context/lib/index.js')).href)
+  const removed = await coalesceStagedRshToolsPeer(staging, process.argv[3])
+  const rootTools = await import(pathToFileURL(join(staging, 'node_modules/@redspark/rsh-tools/lib/index.js')).href)
+  const rootNative = await import(pathToFileURL(join(staging, 'node_modules/@redspark/rsh-native-tools/lib/index.js')).href)
+  const rootSession = await import(pathToFileURL(join(staging, 'node_modules/@redspark/rsh-session/lib/index.js')).href)
+  const rootContext = await import(pathToFileURL(join(staging, 'node_modules/@redspark/rsh-context/lib/index.js')).href)
   const consumers = await Promise.all([
-    import(pathToFileURL(join(staging, 'node_modules/@deepseek-ai/dsh-base/lib/index.js')).href),
-    import(pathToFileURL(join(staging, 'node_modules/@deepseek-ai/dsh-base/node_modules/@deepseek-ai/dsh-agent-loop/lib/index.js')).href),
-    import(pathToFileURL(join(staging, 'node_modules/@deepseek-ai/dsh-sdk-minimal/lib/index.js')).href),
+    import(pathToFileURL(join(staging, 'node_modules/@redspark/rsh-base/lib/index.js')).href),
+    import(pathToFileURL(join(staging, 'node_modules/@redspark/rsh-base/node_modules/@redspark/rsh-agent-loop/lib/index.js')).href),
+    import(pathToFileURL(join(staging, 'node_modules/@redspark/rsh-sdk-minimal/lib/index.js')).href),
   ])
   const prepare = () => undefined
   const tools = { [rootTools.scheduler]: { prepare } }
@@ -244,21 +244,21 @@ function createStagedToolsFixture(mismatch?: ToolsFixtureMismatch) {
   temporaryDirectories.push(staging)
   const workspaceRoot = join(staging, 'workspace')
   const nodeModules = join(staging, 'node_modules')
-  const rootTools = join(nodeModules, '@deepseek-ai', 'dsh-tools')
-  const base = join(nodeModules, '@deepseek-ai', 'dsh-base')
-  const agentLoop = join(base, 'node_modules', '@deepseek-ai', 'dsh-agent-loop')
-  const minimal = join(nodeModules, '@deepseek-ai', 'dsh-sdk-minimal')
-  const agentLoopTools = join(agentLoop, 'node_modules', '@deepseek-ai', 'dsh-tools')
-  const minimalTools = join(minimal, 'node_modules', '@deepseek-ai', 'dsh-tools')
-  const agentLoopNativeTools = join(agentLoop, 'node_modules', '@deepseek-ai', 'dsh-native-tools')
-  const minimalNativeTools = join(minimal, 'node_modules', '@deepseek-ai', 'dsh-native-tools')
-  const agentLoopSession = join(agentLoop, 'node_modules', '@deepseek-ai', 'dsh-session')
-  const minimalSession = join(minimal, 'node_modules', '@deepseek-ai', 'dsh-session')
-  const agentLoopContext = join(agentLoop, 'node_modules', '@deepseek-ai', 'dsh-context')
-  const minimalContext = join(minimal, 'node_modules', '@deepseek-ai', 'dsh-context')
-  const rootNativeTools = join(nodeModules, '@deepseek-ai', 'dsh-native-tools')
-  const rootSession = join(nodeModules, '@deepseek-ai', 'dsh-session')
-  const rootContext = join(nodeModules, '@deepseek-ai', 'dsh-context')
+  const rootTools = join(nodeModules, '@redspark', 'rsh-tools')
+  const base = join(nodeModules, '@redspark', 'rsh-base')
+  const agentLoop = join(base, 'node_modules', '@redspark', 'rsh-agent-loop')
+  const minimal = join(nodeModules, '@redspark', 'rsh-sdk-minimal')
+  const agentLoopTools = join(agentLoop, 'node_modules', '@redspark', 'rsh-tools')
+  const minimalTools = join(minimal, 'node_modules', '@redspark', 'rsh-tools')
+  const agentLoopNativeTools = join(agentLoop, 'node_modules', '@redspark', 'rsh-native-tools')
+  const minimalNativeTools = join(minimal, 'node_modules', '@redspark', 'rsh-native-tools')
+  const agentLoopSession = join(agentLoop, 'node_modules', '@redspark', 'rsh-session')
+  const minimalSession = join(minimal, 'node_modules', '@redspark', 'rsh-session')
+  const agentLoopContext = join(agentLoop, 'node_modules', '@redspark', 'rsh-context')
+  const minimalContext = join(minimal, 'node_modules', '@redspark', 'rsh-context')
+  const rootNativeTools = join(nodeModules, '@redspark', 'rsh-native-tools')
+  const rootSession = join(nodeModules, '@redspark', 'rsh-session')
+  const rootContext = join(nodeModules, '@redspark', 'rsh-context')
   const rootExternalPeer = join(nodeModules, '@fixture', 'runtime-peer')
   const minimalExternalPeer = join(minimalSession, 'node_modules', '@fixture', 'runtime-peer')
   const aliasTools = join(nodeModules, '@fixture', 'dsh-tools')
@@ -267,48 +267,48 @@ function createStagedToolsFixture(mismatch?: ToolsFixtureMismatch) {
   const sessionSource = join(workspaceRoot, 'rsh/Engine/core/session')
   const contextSource = join(workspaceRoot, 'rsh/Engine/core/context')
   const closureSource = join(workspaceRoot, 'rsh/Programs/SDK/python/sdk-runtime')
-  const toolsCode = "import { nativeTools } from '@deepseek-ai/dsh-native-tools'; export const scheduler = Symbol('scheduler'); export const resolvedToolsUrl = import.meta.url; export const resolvedNativeToolsUrl = import.meta.resolve('@deepseek-ai/dsh-native-tools'); export const attachedNativeTools = nativeTools\n"
-  const nativeToolsCode = "import { getSessionScheduler } from '@deepseek-ai/dsh-session'; export const nativeTools = { getSessionScheduler }; export const resolvedNativeToolsUrl = import.meta.url\n"
-  const sessionCode = "import { scheduler } from '@deepseek-ai/dsh-tools'; import { context } from '@deepseek-ai/dsh-context'; export const getSessionScheduler = () => scheduler; export { context }; export const resolvedSessionUrl = import.meta.url; export const resolvedContextUrl = import.meta.resolve('@deepseek-ai/dsh-context')\n"
+  const toolsCode = "import { nativeTools } from '@redspark/rsh-native-tools'; export const scheduler = Symbol('scheduler'); export const resolvedToolsUrl = import.meta.url; export const resolvedNativeToolsUrl = import.meta.resolve('@redspark/rsh-native-tools'); export const attachedNativeTools = nativeTools\n"
+  const nativeToolsCode = "import { getSessionScheduler } from '@redspark/rsh-session'; export const nativeTools = { getSessionScheduler }; export const resolvedNativeToolsUrl = import.meta.url\n"
+  const sessionCode = "import { scheduler } from '@redspark/rsh-tools'; import { context } from '@redspark/rsh-context'; export const getSessionScheduler = () => scheduler; export { context }; export const resolvedSessionUrl = import.meta.url; export const resolvedContextUrl = import.meta.resolve('@redspark/rsh-context')\n"
   const contextCode = "export const context = Symbol('context'); export const resolvedContextUrl = import.meta.url\n"
   const toolsManifest = {
-    name: '@deepseek-ai/dsh-tools',
+    name: '@redspark/rsh-tools',
     version: '0.1.5-rc.2',
     type: 'module',
     exports: { '.': './lib/index.js' },
-    dependencies: { '@deepseek-ai/dsh-native-tools': 'workspace:^' },
-    peerDependencies: { '@deepseek-ai/dsh-session': 'workspace:^' },
+    dependencies: { '@redspark/rsh-native-tools': 'workspace:^' },
+    peerDependencies: { '@redspark/rsh-session': 'workspace:^' },
   }
   const nativeToolsManifest = {
-    name: '@deepseek-ai/dsh-native-tools',
+    name: '@redspark/rsh-native-tools',
     version: '0.1.5-rc.2',
     type: 'module',
     exports: { '.': './lib/index.js' },
-    dependencies: { '@deepseek-ai/dsh-session': 'workspace:^' },
+    dependencies: { '@redspark/rsh-session': 'workspace:^' },
   }
   const sessionManifest = {
-    name: '@deepseek-ai/dsh-session',
+    name: '@redspark/rsh-session',
     version: '0.1.5-rc.2',
     type: 'module',
     exports: { '.': './lib/index.js' },
     peerDependencies: {
-      '@deepseek-ai/dsh-tools': 'workspace:^',
-      '@deepseek-ai/dsh-context': 'workspace:^',
+      '@redspark/rsh-tools': 'workspace:^',
+      '@redspark/rsh-context': 'workspace:^',
       '@fixture/runtime-peer': '^1.0.0',
     },
   }
   const contextManifest = {
-    name: '@deepseek-ai/dsh-context',
+    name: '@redspark/rsh-context',
     version: '1.0.0',
     type: 'module',
     exports: { '.': './lib/index.js' },
   }
-  const closureDependencies = { '@deepseek-ai/dsh-tools': 'workspace:^' }
+  const closureDependencies = { '@redspark/rsh-tools': 'workspace:^' }
   writePackage(staging, {
     name: 'dsh-python-runtime-closure',
     dependencies: closureDependencies,
   })
-  writeFileSync(join(staging, 'runtime-bootstrap.mjs'), "import '@deepseek-ai/dsh-tools'\n")
+  writeFileSync(join(staging, 'runtime-bootstrap.mjs'), "import '@redspark/rsh-tools'\n")
   writePackage(rootTools, toolsManifest, { 'lib/index.js': toolsCode })
   writePackage(rootNativeTools, nativeToolsManifest, { 'lib/index.js': nativeToolsCode })
   writePackage(rootSession, sessionManifest, { 'lib/index.js': sessionCode })
@@ -320,18 +320,18 @@ function createStagedToolsFixture(mismatch?: ToolsFixtureMismatch) {
     exports: { '.': './index.js' },
   }, { 'index.js': 'export const peer = true\n' })
 
-  const consumerEntry = "import { scheduler, attachedNativeTools, resolvedToolsUrl, resolvedNativeToolsUrl } from '@deepseek-ai/dsh-tools'; import { getSessionScheduler, context, resolvedSessionUrl, resolvedContextUrl } from '@deepseek-ai/dsh-session'; export { scheduler }; export const resolvedModuleUrls = [resolvedToolsUrl, resolvedNativeToolsUrl, resolvedSessionUrl, resolvedContextUrl]; export const resolvePrepare = tools => tools[scheduler]?.prepare; export const sharedInstances = [attachedNativeTools, context]; export const sessionScheduler = getSessionScheduler()\n"
-  writeConsumer(base, '@deepseek-ai/dsh-base', consumerEntry, {
-    '@deepseek-ai/dsh-tools': 'workspace:^',
-    '@deepseek-ai/dsh-session': 'workspace:^',
+  const consumerEntry = "import { scheduler, attachedNativeTools, resolvedToolsUrl, resolvedNativeToolsUrl } from '@redspark/rsh-tools'; import { getSessionScheduler, context, resolvedSessionUrl, resolvedContextUrl } from '@redspark/rsh-session'; export { scheduler }; export const resolvedModuleUrls = [resolvedToolsUrl, resolvedNativeToolsUrl, resolvedSessionUrl, resolvedContextUrl]; export const resolvePrepare = tools => tools[scheduler]?.prepare; export const sharedInstances = [attachedNativeTools, context]; export const sessionScheduler = getSessionScheduler()\n"
+  writeConsumer(base, '@redspark/rsh-base', consumerEntry, {
+    '@redspark/rsh-tools': 'workspace:^',
+    '@redspark/rsh-session': 'workspace:^',
   })
-  writeConsumer(agentLoop, '@deepseek-ai/dsh-agent-loop', consumerEntry, {}, {
-    '@deepseek-ai/dsh-tools': 'workspace:^',
-    '@deepseek-ai/dsh-session': 'workspace:^',
+  writeConsumer(agentLoop, '@redspark/rsh-agent-loop', consumerEntry, {}, {
+    '@redspark/rsh-tools': 'workspace:^',
+    '@redspark/rsh-session': 'workspace:^',
   })
-  writeConsumer(minimal, '@deepseek-ai/dsh-sdk-minimal', consumerEntry, {
-    '@deepseek-ai/dsh-tools': 'workspace:^',
-    '@deepseek-ai/dsh-session': 'workspace:^',
+  writeConsumer(minimal, '@redspark/rsh-sdk-minimal', consumerEntry, {
+    '@redspark/rsh-tools': 'workspace:^',
+    '@redspark/rsh-session': 'workspace:^',
   })
 
   const nestedManifest = { ...toolsManifest, exports: mismatch === 'manifest' ? { '.': './lib/missing.js' } : toolsManifest.exports }
@@ -395,10 +395,10 @@ function linkEntries(workspaceRoot: string, importer: string, dependencies: Reco
   const importerDirectory = resolve(workspaceRoot, importer)
   return Object.fromEntries(Object.entries(dependencies).map(([name, specifier]) => {
     const sourceDirectory = resolve(workspaceRoot, {
-      '@deepseek-ai/dsh-tools': 'rsh/Engine/core/tools',
-      '@deepseek-ai/dsh-native-tools': 'rsh/Engine/core/native-tools',
-      '@deepseek-ai/dsh-session': 'rsh/Engine/core/session',
-      '@deepseek-ai/dsh-context': 'rsh/Engine/core/context',
+      '@redspark/rsh-tools': 'rsh/Engine/core/tools',
+      '@redspark/rsh-native-tools': 'rsh/Engine/core/native-tools',
+      '@redspark/rsh-session': 'rsh/Engine/core/session',
+      '@redspark/rsh-context': 'rsh/Engine/core/context',
     }[name]!)
     return [name, { specifier, version: `link:${relative(importerDirectory, sourceDirectory).replaceAll('\\', '/')}` }]
   }))

@@ -6,8 +6,8 @@ from pathlib import Path
 import sys
 from urllib.request import Request, urlopen
 
-from deepseek_harness import DeepSeekHarness, DeepSeekHarnessConfig
-from deepseek_harness.errors import JsonRpcError
+from redspark_harness import RedSparkHarness, RedSparkHarnessConfig
+from redspark_harness.errors import JsonRpcError
 
 launcher, home, workspace, patch, control_url = sys.argv[1:]
 scene = Path(__file__).parent
@@ -15,10 +15,10 @@ first_bytes = (scene / "first.txt").read_bytes()
 second_bytes = (scene / "second.txt").read_bytes()
 image_data = base64.b64encode((scene / "image.png").read_bytes()).decode("ascii")
 session_id = "sdk-staged-files"
-config = DeepSeekHarnessConfig(dsh_bin=launcher, profile="native-sdk", dsh_home=home,
+config = RedSparkHarnessConfig(dsh_bin=launcher, profile="native-sdk", rsh_home=home,
     patches=(patch,), cwd=workspace, provider="fixture", model="fixture-model",
     allowed_tools=("read_file",), request_timeout_seconds=20,
-    env={"NATIVE_SDK_FIXTURE_KEY": "fixture-key", "DSH_TELEMETRY_DISABLED": "1"})
+    env={"NATIVE_SDK_FIXTURE_KEY": "fixture-key", "RSH_TELEMETRY_DISABLED": "1"})
 
 
 def control(path, method="GET"):
@@ -31,7 +31,7 @@ def summary(result):
     return {"finalResponse": result.final_response}
 
 
-with DeepSeekHarness(config) as harness:
+with RedSparkHarness(config) as harness:
     session = harness.start_session(session_id)
     first_receipt = session.upload_file(first_bytes, "first.txt")
     try:
@@ -58,7 +58,7 @@ with DeepSeekHarness(config) as harness:
         control("/release-initial", "POST")
         first_result = pending.result(timeout=30)
 
-with DeepSeekHarness(config) as cold:
+with RedSparkHarness(config) as cold:
     cold_result = cold.start_session(session_id).run("Cold-read the first staged file again.")
 
 print(json.dumps({

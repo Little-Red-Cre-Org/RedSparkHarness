@@ -2,5 +2,5 @@
 # side as of the last confirmed-consistent state. Both languages carry equal authority;
 # after editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write rsh/Compatibility/DSH/bridge/http-routes-cordis/README.md
-README.md: 82524e9f845c48e903b25c817cc4ad4f1aa59c0a
-README.zh.md: 58b00c5f00cbc3d8d58dd610a344f5616a0b791b
+README.md: db08b74149532683f0ce1a99431aa009b565b257
+README.zh.md: 9bf017acdf637c83d36d7bba185a9b87eaf95c78

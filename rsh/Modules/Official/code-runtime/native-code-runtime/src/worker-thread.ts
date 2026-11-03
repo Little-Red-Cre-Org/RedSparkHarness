@@ -3,7 +3,7 @@
  * and bridges bindings over its message port. This is containment, not a security boundary:
  * model code has bash-equivalent trust despite an empty environment, a heap cap, measured
  * event-loop busy-time and wall-time budgets, and termination that also stops synchronous loops.
- * @module @deepseek-ai/dsh-native-code-runtime
+ * @module @redspark/rsh-native-code-runtime
  */
 
 import { Worker } from 'node:worker_threads'

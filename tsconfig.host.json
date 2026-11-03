@@ -412,7 +412,7 @@
     { "path": "./rsh/Compatibility/DSH/subagent/subagent-acp" },
     { "path": "./rsh/Modules/Official/subagent/subagent-claude-code" },
     { "path": "./rsh/Compatibility/DSH/bridge/subagent-codex" },
-    { "path": "./rsh/Compatibility/DSH/subagent/subagent-dsh-sdk" },
+    { "path": "./rsh/Compatibility/DSH/subagent/subagent-rsh-sdk" },
     { "path": "./rsh/Engine/jobs/jobs" },
     { "path": "./rsh/Engine/jobs/jobs-local" },
     { "path": "./rsh/Engine/jobs/native-tool-jobs" },

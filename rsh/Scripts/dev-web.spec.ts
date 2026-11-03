@@ -21,23 +21,23 @@ it('samples one local environment at startup without validating watcher outputs'
     await writeFile(join(root, 'rsh/Programs/Web/application/dist/index.html'), '<main></main>')
     await writeFile(join(root, 'rsh/Programs/Web/client/example/lib/client.js'), 'module.exports = {}\n')
     writeClientBuildRecord(root, {
-      DSH_CLIENT_BUILD_PROFILE: 'official',
-      DSH_CLIENT_COMMIT_HASH: 'fffffff',
-      DSH_CLIENT_TITLE: 'RedSpark Harness',
-      DSH_CLIENT_VERSION: '1.2.2',
+      RSH_CLIENT_BUILD_PROFILE: 'official',
+      RSH_CLIENT_COMMIT_HASH: 'fffffff',
+      RSH_CLIENT_TITLE: 'RedSpark Harness',
+      RSH_CLIENT_VERSION: '1.2.2',
     })
     await writeFile(join(root, 'rsh/Programs/Web/client/example/lib/client.js'), 'module.exports = { changed: true }\n')
 
     expect(devWebBuildEnvironment(root, {
       PATH: '/bin',
-      DSH_BUILD_CLIENT_PROFILE: 'official',
-      DSH_CLIENT_COMMIT_HASH: 'abc1234',
-      DSH_CLIENT_EXTRA: 'launch-value',
+      RSH_BUILD_CLIENT_PROFILE: 'official',
+      RSH_CLIENT_COMMIT_HASH: 'abc1234',
+      RSH_CLIENT_EXTRA: 'launch-value',
     })).toEqual({
       PATH: '/bin',
-      DSH_CLIENT_COMMIT_HASH: 'abc1234',
-      DSH_CLIENT_EXTRA: 'launch-value',
-      DSH_CLIENT_VERSION: '1.2.3',
+      RSH_CLIENT_COMMIT_HASH: 'abc1234',
+      RSH_CLIENT_EXTRA: 'launch-value',
+      RSH_CLIENT_VERSION: '1.2.3',
     })
   } finally {
     await rm(root, { recursive: true, force: true })

@@ -1,23 +1,23 @@
 import { afterEach, describe, expect, it } from 'vitest'
-import { Context } from '@deepseek-ai/cordis'
+import { Context } from '@redspark/cordis'
 import { mkdtemp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import type { Agent } from '@deepseek-ai/dsh-agent'
-import { createUserMessage, ToolCallId  } from '@deepseek-ai/dsh-llm'
+import type { Agent } from '@redspark/rsh-agent'
+import { createUserMessage, ToolCallId  } from '@redspark/rsh-llm'
 import SessionStore, {
   SESSION_FORMAT_VERSION,
   SessionId,
   SessionSeq,
   type Session,
-} from '@deepseek-ai/dsh-session'
-import SessionProjectionRegistry from '@deepseek-ai/dsh-session-projection'
-import { turnBoundaryProjectionDefinition } from '@deepseek-ai/dsh-agent-loop'
-import JsonlSessionPersistence from '@deepseek-ai/dsh-session-persistence-jsonl'
-import SqliteSessionQueryEngine from '@deepseek-ai/dsh-session-query-sqlite'
-import SystemPrompt from '@deepseek-ai/dsh-system-prompt'
-import ToolRuntime from '@deepseek-ai/dsh-tools'
-import * as ToolSessionQuery from '@deepseek-ai/dsh-tool-session-query'
+} from '@redspark/rsh-session'
+import SessionProjectionRegistry from '@redspark/rsh-session-projection'
+import { turnBoundaryProjectionDefinition } from '@redspark/rsh-agent-loop'
+import JsonlSessionPersistence from '@redspark/rsh-session-persistence-jsonl'
+import SqliteSessionQueryEngine from '@redspark/rsh-session-query-sqlite'
+import SystemPrompt from '@redspark/rsh-system-prompt'
+import ToolRuntime from '@redspark/rsh-tools'
+import * as ToolSessionQuery from '@redspark/rsh-tool-session-query'
 
 const temporaryDirectories: string[] = []
 const contexts: Context[] = []

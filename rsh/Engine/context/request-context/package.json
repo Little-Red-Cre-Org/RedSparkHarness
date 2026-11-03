@@ -1,5 +1,5 @@
 {
-  "name": "@deepseek-ai/dsh-request-context",
+  "name": "@redspark/rsh-request-context",
   "description": "Scoped Native provider for durable model-request context",
   "version": "1.0.0",
   "publishConfig": { "access": "public" },
@@ -16,8 +16,8 @@
   "files": ["lib/index.js", "lib/native.js", "lib/shared-*.js", "lib/types/**/*.d.ts"],
   "license": "MIT",
   "dependencies": {
-    "@deepseek-ai/dsh-llm": "workspace:^",
-    "@deepseek-ai/dsh-native-runtime": "workspace:^",
-    "@deepseek-ai/dsh-request-context-definition": "workspace:^"
+    "@redspark/rsh-llm": "workspace:^",
+    "@redspark/rsh-native-runtime": "workspace:^",
+    "@redspark/rsh-request-context-definition": "workspace:^"
   }
 }

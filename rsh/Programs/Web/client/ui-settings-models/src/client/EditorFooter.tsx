@@ -1,2 +1,2 @@
-export { EditorFooter } from '@deepseek-ai/dsh-client-ui-primitives'
-export type { EditorFooterProps } from '@deepseek-ai/dsh-client-ui-primitives'
+export { EditorFooter } from '@redspark/rsh-client-ui-primitives'
+export type { EditorFooterProps } from '@redspark/rsh-client-ui-primitives'

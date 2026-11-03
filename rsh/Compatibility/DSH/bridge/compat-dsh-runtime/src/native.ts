@@ -1,25 +1,25 @@
 /** Optional Cordis context and owned Loader entries for the DSH compatibility boundary. */
 import { createRequire } from 'node:module'
-import type { Context, Plugin } from '@deepseek-ai/cordis'
-import Loader from '@deepseek-ai/cordis-plugin-loader'
-import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
-import { adaptCordisPlugin, RshPluginHost, RSH_PLUGIN_API_VERSION } from '@deepseek-ai/dsh-plugin-host'
+import type { Context, Plugin } from '@redspark/cordis'
+import Loader from '@redspark/cordis-plugin-loader'
+import type { NativePlugin } from '@redspark/rsh-native-runtime'
+import { adaptCordisPlugin, RshPluginHost, RSH_PLUGIN_API_VERSION } from '@redspark/rsh-plugin-host'
 import { validateSupportManifest, type CompatPackageManifest } from './support.ts'
 
 const LEGACY_PLUGINS = new Set([
-  '@deepseek-ai/dsh-fs-local',
-  '@deepseek-ai/dsh-fs-observation-policy',
-  '@deepseek-ai/dsh-fs-sandbox',
-  '@deepseek-ai/dsh-tool-fs',
-  '@deepseek-ai/dsh-system-prompt',
-  '@deepseek-ai/dsh-tools',
-  '@deepseek-ai/dsh-compat-dsh-runtime/fs-adapter',
-  '@deepseek-ai/dsh-compat-dsh-runtime/sandbox-policy-adapter',
-  '@deepseek-ai/dsh-compat-dsh-runtime/fs-event-bridge',
+  '@redspark/rsh-fs-local',
+  '@redspark/rsh-fs-observation-policy',
+  '@redspark/rsh-fs-sandbox',
+  '@redspark/rsh-tool-fs',
+  '@redspark/rsh-system-prompt',
+  '@redspark/rsh-tools',
+  '@redspark/rsh-compat-dsh-runtime/fs-adapter',
+  '@redspark/rsh-compat-dsh-runtime/sandbox-policy-adapter',
+  '@redspark/rsh-compat-dsh-runtime/fs-event-bridge',
 ])
 
 /** Cordis operations exposed only to Compatibility/DSH adapters. */
-export interface CompatDshRuntime {
+export interface CompatRshRuntime {
   /** Shared Cordis service and event scope for the selected DSH adapter set. */
   readonly context: Context
   /** Start one allowlisted plugin as a shared Loader entry.
@@ -29,7 +29,7 @@ export interface CompatDshRuntime {
    * @returns its activation promise and Loader-backed mutations.
    * @throws when the host is disposed, the name is unsupported or duplicate, or activation fails.
    */
-  mount(packageName: string, plugin: Plugin, config?: unknown): CompatDshMount
+  mount(packageName: string, plugin: Plugin, config?: unknown): CompatRshMount
   /** Update one entry after draining dependent Native contributions.
    * @param packageName - mounted Loader entry name.
    * @param config - replacement Cordis configuration.
@@ -70,7 +70,7 @@ export interface CompatDshRuntime {
    * @param participant - async withdrawal and restoration functions.
    * @returns a disposer that unregisters the participant.
    */
-  registerLifecycleParticipant(participant: CompatDshLifecycleParticipant): () => void
+  registerLifecycleParticipant(participant: CompatRshLifecycleParticipant): () => void
   /**
    * Coordinate observed-event forwarding so the identical event is not sent back between buses synchronously.
    * @param scope - native scope whose event is being bridged.
@@ -83,7 +83,7 @@ export interface CompatDshRuntime {
 }
 
 /** Native contributions that follow one or more Loader entries. */
-export interface CompatDshLifecycleParticipant {
+export interface CompatRshLifecycleParticipant {
   /** Withdraw exposed resources and await work admitted through them.
    * @returns when no admitted work or listener remains.
    */
@@ -95,7 +95,7 @@ export interface CompatDshLifecycleParticipant {
 }
 
 /** Native-owned Cordis entry. Register dispose with the Native context before awaiting ready. */
-export interface CompatDshMount {
+export interface CompatRshMount {
   readonly ready: Promise<void>
   /** Update this entry's config after dependent Native work drains.
    * @param config - replacement Cordis configuration.
@@ -113,22 +113,22 @@ export interface CompatDshMount {
   dispose(): Promise<void>
 }
 
-declare module '@deepseek-ai/dsh-native-runtime' {
-  interface NativeServices { compatDshRuntime: CompatDshRuntime }
+declare module '@redspark/rsh-native-runtime' {
+  interface NativeServices { compatRshRuntime: CompatRshRuntime }
 }
 
 /** Require the verified Cordis release before creating a runtime.
  * @param manifest - manifest read from the installed Cordis package.
  */
 export function validateCordisManifest(manifest: CompatPackageManifest): void {
-  validateSupportManifest('@deepseek-ai/cordis', manifest)
+  validateSupportManifest('@redspark/cordis', manifest)
 }
 
 /** Require the verified vendored Loader release before creating a runtime.
  * @param manifest - manifest read from the installed Loader package.
  */
 export function validateLoaderManifest(manifest: CompatPackageManifest): void {
-  validateSupportManifest('@deepseek-ai/cordis-plugin-loader', manifest)
+  validateSupportManifest('@redspark/cordis-plugin-loader', manifest)
 }
 
 function resolveConfig(input: unknown): void {
@@ -147,17 +147,17 @@ interface MountState {
 /** Start the explicit, optional Cordis host as a native installation. */
 export const plugin: NativePlugin = {
   apiVersion: 1,
-  name: '@deepseek-ai/dsh-compat-dsh-runtime',
+  name: '@redspark/rsh-compat-dsh-runtime',
   targets: ['host'],
   requires: [],
-  provides: ['compatDshRuntime'],
+  provides: ['compatRshRuntime'],
   resolve(input) {
     resolveConfig(input)
     const require = createRequire(import.meta.url)
-    validateCordisManifest(require('@deepseek-ai/cordis/package.json') as CompatPackageManifest)
-    validateLoaderManifest(require('@deepseek-ai/cordis-plugin-loader/package.json') as CompatPackageManifest)
+    validateCordisManifest(require('@redspark/cordis/package.json') as CompatPackageManifest)
+    validateLoaderManifest(require('@redspark/cordis-plugin-loader/package.json') as CompatPackageManifest)
     return async (native) => {
-      const { Context } = await import('@deepseek-ai/cordis')
+      const { Context } = await import('@redspark/cordis')
       const context = new Context()
       native.own(async () => {
         await context.fiber.dispose()
@@ -167,7 +167,7 @@ export const plugin: NativePlugin = {
       await context.plugin(Loader)
       const loader = context.loader
       const mounts = new Map<string, MountState>()
-      const participants = new Set<CompatDshLifecycleParticipant>()
+      const participants = new Set<CompatRshLifecycleParticipant>()
       const activeObservations: { scope: object; target: object; observation: object; actor: object | undefined }[] = []
       let disposed = false
       // One Loader tree has one writer. Keep rejected operations from poisoning later entries in the queue.
@@ -180,7 +180,7 @@ export const plugin: NativePlugin = {
         return result
       }
       const withLifecycle = async <T>(operation: () => Promise<T>): Promise<T> => {
-        const paused: CompatDshLifecycleParticipant[] = []
+        const paused: CompatRshLifecycleParticipant[] = []
         const failures: unknown[] = []
         let result: T | undefined
         // The Native dependency graph registers policy before consumer bridges, so restore in dependency order.
@@ -221,7 +221,7 @@ export const plugin: NativePlugin = {
         }
       }
 
-      const runtime: CompatDshRuntime = {
+      const runtime: CompatRshRuntime = {
         context,
         mount(packageName, legacyPlugin, config) {
           if (disposed) throw new Error('compat-dsh-runtime: host is disposed')
@@ -381,7 +381,7 @@ export const plugin: NativePlugin = {
         if (failures.length === 1) throw failures[0]
         if (failures.length > 1) throw new AggregateError(failures, 'compat-dsh-runtime: Loader teardown failed')
       })
-      native.provide('compatDshRuntime', runtime)
+      native.provide('compatRshRuntime', runtime)
     }
   },
 }

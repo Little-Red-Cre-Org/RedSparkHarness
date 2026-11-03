@@ -1,7 +1,7 @@
 /**
  * Cordis-free compaction trigger and manual-failure vocabulary shared by the
  * Cordis Service Definition and the native compaction Definition.
- * @module @deepseek-ai/dsh-compaction/errors
+ * @module @redspark/rsh-compaction/errors
  */
 
 /** Why automatic policy is asking a backend to consider compaction. */

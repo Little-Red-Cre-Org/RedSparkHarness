@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { SessionFormatEvent } from '@deepseek-ai/dsh-session-format'
+import type { SessionFormatEvent } from '@redspark/rsh-session-format'
 import { sessionFormatCatalog } from '../src/index.ts'
 
 function deepFreeze<T>(value: T): T {
@@ -118,7 +118,7 @@ describe('first-party Session format catalog', () => {
             turn: 1, step: 1,
             message: {
               id: 'v2-to-v3-system-9673c4ed630de6c21ea6bd6b573094ea8e5e216843a1b572a68657499ad9667b',
-              role: 'system', source: { kind: 'plugin', plugin: '@deepseek-ai/dsh-system-prompt' }, content: [],
+              role: 'system', source: { kind: 'plugin', plugin: '@redspark/rsh-system-prompt' }, content: [],
             },
           },
         },

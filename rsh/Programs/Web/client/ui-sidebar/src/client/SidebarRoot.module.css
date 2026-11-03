@@ -460,6 +460,46 @@
   color: #c32132;
 }
 
+/* One card's control row: right-aligned so the destructive verb sits apart. */
+.scheduleControls {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+/*
+ * A plan control. Quiet by default so a list of cards does not read as a wall
+ * of buttons; the destructive one is only coloured on hover.
+ */
+.scheduleControl {
+  padding: 4px 10px;
+  border: 0.5px solid var(--dsw-alias-line-regular);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--dsw-alias-label-secondary);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.scheduleControl:hover {
+  background: var(--dsw-alias-bg-hover, rgba(0, 0, 0, 0.04));
+  color: var(--dsw-alias-label-primary);
+}
+
+.scheduleControl:focus-visible {
+  outline: 2px solid var(--dsw-alias-line-focus, currentColor);
+  outline-offset: 1px;
+}
+
+/* The armed delete: the second click is the one that destroys. */
+.scheduleControl[data-action='delete']:hover {
+  border-color: #c32132;
+  color: #c32132;
+}
+
 .panelRow {
   display: flex;
   align-items: center;

@@ -1,8 +1,8 @@
 /** Browser-safe Session model selection requests and durable revision facts. */
-import type { SessionSeq, SessionEvent } from '@deepseek-ai/dsh-session/types'
-import { foldModelSelection } from '@deepseek-ai/dsh-native-model-execution/model-selection'
-import type { ModelSelectionProjection, ModelSelection } from '@deepseek-ai/dsh-native-model-execution/model-selection'
-export type * from '@deepseek-ai/dsh-native-model-execution/model-selection'
+import type { SessionSeq, SessionEvent } from '@redspark/rsh-session/types'
+import { foldModelSelection } from '@redspark/rsh-native-model-execution/model-selection'
+import type { ModelSelectionProjection, ModelSelection } from '@redspark/rsh-native-model-execution/model-selection'
+export type * from '@redspark/rsh-native-model-execution/model-selection'
 
 /** Selection intent revision; request headers do not consume a later user choice. */
 export interface NativeModelSelectionState extends ModelSelectionProjection {

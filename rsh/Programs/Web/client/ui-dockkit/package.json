@@ -1,5 +1,5 @@
 {
-  "name": "@deepseek-ai/dsh-client-ui-dockkit",
+  "name": "@redspark/rsh-client-ui-dockkit",
   "description": "Docking layout kit: split-tree engine with invertible operations, and the React components that render and drive it (zero cordis)",
   "version": "1.0.0",
   "publishConfig": {
@@ -23,8 +23,8 @@
   },
   "license": "MIT",
   "devDependencies": {
-    "@deepseek-ai/dsh-brand": "workspace:^",
-    "@deepseek-ai/dsh-client-ui-primitives": "workspace:^",
+    "@redspark/rsh-brand": "workspace:^",
+    "@redspark/rsh-client-ui-primitives": "workspace:^",
     "@testing-library/react": "^16.1.0",
     "@types/react": "~18.3.1",
     "@types/react-dom": "~18.3.0",

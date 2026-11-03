@@ -1,10 +1,10 @@
 /**
  * Cordis compatibility facade for model-facing subagent delegation.
- * @module @deepseek-ai/dsh-tool-subagent
+ * @module @redspark/rsh-tool-subagent
  */
 
-import type { Context } from '@deepseek-ai/cordis'
-import type { Session } from '@deepseek-ai/dsh-session'
+import type { Context } from '@redspark/cordis'
+import type { Session } from '@redspark/rsh-session'
 import type { Config } from './config.ts'
 
 export { Config } from './config.ts'
@@ -32,7 +32,7 @@ export async function apply(ctx: Context, config: Config, session?: Session): Pr
       || cause.code !== 'ERR_MODULE_NOT_FOUND'
     ) throw cause
     throw new Error(
-      '@deepseek-ai/dsh-tool-subagent could not load its Cordis compatibility entry. '
+      '@redspark/rsh-tool-subagent could not load its Cordis compatibility entry. '
       + 'Install its optional Cordis compatibility peers and ensure the package includes its compatibility chunk.',
       { cause },
     )

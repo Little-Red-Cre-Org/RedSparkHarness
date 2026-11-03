@@ -5,19 +5,19 @@
  */
 
 /** Virtual filesystem root; `process.cwd()` and every absolute path start here. */
-export const DSH_ROOT = '/dsh'
+export const RSH_ROOT = '/dsh'
 
-/** `$DSH_HOME`: durable-state directory inside the image. */
-export const DSH_HOME = `${DSH_ROOT}/home`
+/** `$RSH_HOME`: durable-state directory inside the image. */
+export const RSH_HOME = `${RSH_ROOT}/home`
 
 /** Flat, symlink-free package tree resolved by the worker module loader. */
-export const DSH_NODE_MODULES = `${DSH_ROOT}/node_modules`
+export const RSH_NODE_MODULES = `${RSH_ROOT}/node_modules`
 
 /** Directory holding the composed cordis.yml and the agent-preset tree. */
-export const DSH_CONFIG = `${DSH_ROOT}/config`
+export const RSH_CONFIG = `${RSH_ROOT}/config`
 
 /** Default (empty) workspace directory. */
-export const DSH_WORKSPACE = `${DSH_ROOT}/workspace`
+export const RSH_WORKSPACE = `${RSH_ROOT}/workspace`
 
 /** Temporary directory reported by `os.tmpdir()`. */
-export const DSH_TMP = `${DSH_ROOT}/tmp`
+export const RSH_TMP = `${RSH_ROOT}/tmp`

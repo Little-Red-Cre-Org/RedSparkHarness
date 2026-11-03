@@ -1,15 +1,15 @@
 ---
-description: "面向以子进程方式启动 RedSpark Harness 运行时、并通过 stdio JSON-RPC 驱动 agent（智能体）轮次的调用方的 TypeScript SDK 客户端：DeepSeekHarness 运行 API 与低层 HarnessClient。"
+description: "面向以子进程方式启动 RedSpark Harness 运行时、并通过 stdio JSON-RPC 驱动 agent（智能体）轮次的调用方的 TypeScript SDK 客户端：RedSparkHarness 运行 API 与低层 HarnessClient。"
 kind: "package-library"
 ---
 
-# @deepseek-ai/dsh-sdk-client
+# @redspark/rsh-sdk-client
 
 [English](README.md) | 中文
 
 ## 概述
 
-`dsh-sdk-client` 让 TypeScript 调用方通过 stdio JSON-RPC 驱动 Harness。`DeepSeekHarness` 可打开 Session、发送文本或图片提示、推送通知流，并在 Agent 空闲后返回最后提交的根响应；`HarnessClient` 提供协议请求和订阅。`RunResult.events` 保留根 Session 上全部六种 `subagent/external-operation` variant，并原样保留所有字段。`NativeExternalOperationEvent` 是 canonical Engine union；`NativeExternalOperationSessionEvent` 添加其 Session envelope。Native Session 可在 runtime 进程重启后从持久历史重新打开。客户端默认解析同版本 `@deepseek-ai/dsh` 可执行文件，也可接受 `dshBin`；它跨多次运行持有并回收子进程，可通过 `close()` 或 `await using` 关闭。调用方选择 profile 和启动设置。
+`dsh-sdk-client` 让 TypeScript 调用方通过 stdio JSON-RPC 驱动 Harness。`RedSparkHarness` 可打开 Session、发送文本或图片提示、推送通知流，并在 Agent 空闲后返回最后提交的根响应；`HarnessClient` 提供协议请求和订阅。`RunResult.events` 保留根 Session 上全部六种 `subagent/external-operation` variant，并原样保留所有字段。`NativeExternalOperationEvent` 是 canonical Engine union；`NativeExternalOperationSessionEvent` 添加其 Session envelope。Native Session 可在 runtime 进程重启后从持久历史重新打开。客户端默认解析同版本 `@redspark/rsh` 可执行文件，也可接受 `rshBin`；它跨多次运行持有并回收子进程，可通过 `close()` 或 `await using` 关闭。调用方选择 profile 和启动设置。
 
 ## 目录
 
@@ -27,15 +27,15 @@ kind: "package-library"
 
 Native SDK 组合提供生产使用的进程内子代理工具。新建的标准 `sdk` profile 会选择此组合；已有 profile 则继续由其 manifest 中的 `package.json` 决定 runtime。Session 树订阅收到已接受的子事件及真实 `subagent.finished` 结果，覆盖一次性任务的完成、取消、失败和可持续驻留阶段结束；仅打断某一轮不会结束仍驻留的子任务，运行结果仍只投影根响应。后台子任务在真实就绪后返回 Jobs 句柄，并跨普通父回合继续执行；job_output/job_kill 提供输出与取消控制。配置安装 send_message 与 interrupt_agent；把 subagent 工具的 backgroundMode 设为 continuable 可准入持久子任务、后续引导和打断，并在进程重启后冷恢复同一子任务。可续接子任务实际清理完成后，会把持久 subagent-settled 通知加入父任务的下一个 turn。SDK wire 目录发现仍不支持；profile 的模型可见 `list_agents` 工具是独立能力。
 
-当 TypeScript 代码需要从另一进程驱动完整 Harness 运行时、且你能显式指名运行时可执行文件时，使用本客户端。常用路径极简：用启动规格构造 `DeepSeekHarness`，运行提示词，然后关闭它，使子进程总能被回收。
+当 TypeScript 代码需要从另一进程驱动完整 Harness 运行时、且你能显式指名运行时可执行文件时，使用本客户端。常用路径极简：用启动规格构造 `RedSparkHarness`，运行提示词，然后关闭它，使子进程总能被回收。
 
-### 用 DeepSeekHarness 运行 agent 轮次
+### 用 RedSparkHarness 运行 agent 轮次
 
 ```ts
-import { DeepSeekHarness } from '@deepseek-ai/dsh-sdk-client'
-import { ReasoningEffortId } from '@deepseek-ai/dsh-llm/native'
+import { RedSparkHarness } from '@redspark/rsh-sdk-client'
+import { ReasoningEffortId } from '@redspark/rsh-llm/native'
 
-await using harness = new DeepSeekHarness({
+await using harness = new RedSparkHarness({
   profile: 'sdk',
   patches: ['./sdk.patch.json'],
   provider: 'deepseek-official',
@@ -55,7 +55,7 @@ console.log(result.finalResponse)
 
 `HarnessClientOptions.onApprovalRequest` 通过 `(request, signal) => outcome` 处理 Native approval 问题。返回值可为 `allowed-once`、`rejected`、`cancelled` 或 `unavailable`；省略回调时会以 `unavailable` 关闭处理。关闭 client 或取消 parent 请求会中止 signal。回调迟到的结果会被忽略，runtime 会对该请求回复 `cancelled`。
 
-`@deepseek-ai/dsh-sdk-client/native` 为 Native Module 提供 `createNativeDeepSeekHarness(options, childConnection)`。它把 profile 固定为 `native-sdk`，仍解析同版本标准 `dsh` launcher。其 `NativeDeepSeekHarnessOptions` 不包含 `dshBin`、`profile` 或 `patches`；注入的 `childConnection` 只提供 Host 所有的受管 stdio 与完整进程范围清理能力，不用于任意可执行文件或 argv 选择。唯一的 provider-neutral SDK 协议/runtime 实现在 [Engine](../../../../Engine/subagent/sdk-runtime/README.zh.md)；此 Program facade 保留公开 TypeScript API 与唯一的标准 CLI resolver。CLI 私有持有 `native-sdk-dsh-child` 使用的固定 launcher。
+`@redspark/rsh-sdk-client/native` 为 Native Module 提供 `createNativeRshHarness(options, childConnection)`。它把 profile 固定为 `native-sdk`，仍解析同版本标准 `dsh` launcher。其 `NativeRshHarnessOptions` 不包含 `rshBin`、`profile` 或 `patches`；注入的 `childConnection` 只提供 Host 所有的受管 stdio 与完整进程范围清理能力，不用于任意可执行文件或 argv 选择。唯一的 provider-neutral SDK 协议/runtime 实现在 [Engine](../../../../Engine/subagent/sdk-runtime/README.zh.md)；此 Program facade 保留公开 TypeScript API 与唯一的标准 CLI resolver。CLI 私有持有 `native-sdk-dsh-child` 使用的固定 launcher。
 
 可选的 `dsh-sdk-child` Module 会快照所选提供方配置与父 Session 实际启用的 Native Headless 内建文件权限。只有确切的父级 `write_file` 权限、`approvalRequired`、workspace-write 根，以及绑定当前 parent owner 与 turn 的 `dsh-sdk` driver callback 同时存在时，child 才获得 `write_file`；缺少该 authority 时不能新增 writer。只有这一真实 relay 组合会在私有 child profile 中安装 `ask` 策略的 Native Approval。请求、取消与单次决策都会返回既有 parent approval authority，并由它作为唯一的持久 approval 事件写入者。child 使用共享 sandbox policy 与 process-sandbox backend；backend 仍允许其临时目录语义，Windows enforcement 在适用时为 partial（部分）。launcher 会把 child 已解析的 cwd 与精确私有 home 传给 `ProcessSandbox.confineChildProcess`，因此 workspace-write profile 替换 `/tmp` 时仍能访问提供方 overlay，也不会暴露同级临时路径。除非现有策略授权覆盖该目录，否则所选 cwd 保持只读。该 profile 为 opt-in，不改变标准 `native-sdk`。
 
@@ -77,16 +77,16 @@ console.log(result.finalResponse)
 
 ### 设计理念
 
-客户端是同一协议上的两层：`DeepSeekHarness`（自有运行）叠加在 `HarnessClient`（协议客户端）之上，与 Python SDK 的分层一致。它运行在任何 harness 上下文之外，使用框架无关的本地 `dsh-subprocess` 连接 Provider，无需挂载 NativeHost 或 Cordis。所选运行时决定公布哪些 Session；会话树范围限定是客户端对 `subagent.started` 血缘边的过滤。
+客户端是同一协议上的两层：`RedSparkHarness`（自有运行）叠加在 `HarnessClient`（协议客户端）之上，与 Python SDK 的分层一致。它运行在任何 harness 上下文之外，使用框架无关的本地 `dsh-subprocess` 连接 Provider，无需挂载 NativeHost 或 Cordis。所选运行时决定公布哪些 Session；会话树范围限定是客户端对 `subagent.started` 血缘边的过滤。
 
 ### 源码地图
 
 | 文件 | 职责 |
 |---|---|
-| [`src/api.ts`](src/api.ts) | Program facade：标准 launcher 与向后兼容的 `DeepSeekHarness` 导出 |
+| [`src/api.ts`](src/api.ts) | Program facade：标准 launcher 与向后兼容的 `RedSparkHarness` 导出 |
 | [`src/client.ts`](src/client.ts) | Program facade：同版本 `dsh` 解析与本地进程适配器 |
 | [`src/native.ts`](src/native.ts) | Native Host SDK facade；固定 child launcher 由 CLI 持有 |
-| Engine [`sdk-runtime`](../../../../Engine/subagent/sdk-runtime/README.zh.md) | 唯一的 `HarnessClient`、`DeepSeekHarness` 与 provider-neutral SDK 协议 runtime 实现 |
+| Engine [`sdk-runtime`](../../../../Engine/subagent/sdk-runtime/README.zh.md) | 唯一的 `HarnessClient`、`RedSparkHarness` 与 provider-neutral SDK 协议 runtime 实现 |
 | — | 本包不发布 runtime invariant companion，因为它是在调用方进程中运行的 SDK client library，而非 runtime plugin；公开 SDK API 覆盖其 launcher 与 connection 生命周期。 |
 
 ### 自有活动流程
@@ -109,7 +109,7 @@ console.log(result.finalResponse)
 - [SDK 协议格式](../../../../Engine/subagent/sdk-protocol/README.zh.md)——本客户端使用的 JSON-RPC 方法与载荷结构。
 - [JSON-RPC 服务插件](../server/README.zh.md)——服务本客户端的运行时插件。
 - [Python SDK](../../python/README.zh.md) — 共享同一运行时对端与协议的设计孪生。
-- [SDK subagent 后端](../../../../Compatibility/DSH/subagent/subagent-dsh-sdk/README.zh.md) — harness 内部消费本客户端的例子。
+- [SDK subagent 后端](../../../../Compatibility/DSH/subagent/subagent-rsh-sdk/README.zh.md) — harness 内部消费本客户端的例子。
 - [Native SDK 服务端](../native-server/README.zh.md) — 新建标准 `sdk` profile 使用的运行时插件。
 - [SDK 应用组合包](../../../../Compatibility/DSH/bundle/sdk-app/README.zh.md) — legacy profile 使用的 Cordis 应用。
 
@@ -142,7 +142,7 @@ Native profile（`native-sdk` 或新建的标准 `sdk` profile）中，`HarnessS
 
 这些限制说明本客户端何时不合适或需要特别注意。它们是当前包约束，不是与其他 SDK 客户端的对比或任务积压。
 
-- **无捆绑运行时解析**——客户端解析同版本 `@deepseek-ai/dsh` 包（或调用方提供的 `dshBin`）；打包可执行文件的发现留在 Python 侧，直到出现 TypeScript 发行版消费方。
+- **无捆绑运行时解析**——客户端解析同版本 `@redspark/rsh` 包（或调用方提供的 `rshBin`）；打包可执行文件的发现留在 Python 侧，直到出现 TypeScript 发行版消费方。
 - **兼容 profile 的取消限制**——兼容 profile 没有提示词取消方法；放弃其轮次意味着关闭运行时（见[协议限制](../../../../Engine/subagent/sdk-protocol/README.zh.md#known-limitations-and-deferred-work)）。
 - **没有逐提示词结果**——低层 `prompt()` 只返回入队回执；高层 `run()` 负责从回执到 idle 的收集。
 - **没有通用的服务端主动请求 API**——唯一映射的请求是 Native `approval/request`，仅供明确绑定的 SDK child approval relay 使用；标准 `native-sdk` 不安装该 relay。

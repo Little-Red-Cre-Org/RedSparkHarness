@@ -8,7 +8,7 @@ kind: "package-reference"
 
 ## 概述
 
-`@deepseek-ai/dsh-api-session-controller` 拥有 Host 的 `ctx.sessionController` 服务，以及生成的 Client `session`、`skills` 和 `fileReferences` Remote namespace。它提供 Session 生命周期与历史、Host generation 模型目录、工作区路径打开、用户可调用 skill（技能）发现和 Agent（智能体）范围的文件引用。当 Client 需要按 Session 寻址的操作时，请通过 API Gateway 使用它。
+`@redspark/rsh-api-session-controller` 拥有 Host 的 `ctx.sessionController` 服务，以及生成的 Client `session`、`skills` 和 `fileReferences` Remote namespace。它提供 Session 生命周期与历史、Host generation 模型目录、工作区路径打开、用户可调用 skill（技能）发现和 Agent（智能体）范围的文件引用。当 Client 需要按 Session 寻址的操作时，请通过 API Gateway 使用它。
 
 ## 目录
 
@@ -39,7 +39,7 @@ Session 对象还承载本地提交回显：`session.beginSubmission` 在调用�
 <a id="cordis-free-client-event-types"></a>
 ## Cordis-free Client event 类型
 
-`@deepseek-ai/dsh-api-session-controller/client-event-types` 导出 Client event window consumer 使用的持久事件与 transient event 类型。该类型入口不会加载 Session Client runtime。
+`@redspark/rsh-api-session-controller/client-event-types` 导出 Client event window consumer 使用的持久事件与 transient event 类型。该类型入口不会加载 Session Client runtime。
 
 面向用户调用的 `skills/list` 元数据包含胜出提供方可选的指令文件 `path`。输入框可据此预览文件，无需加载每个 skill 的正文或激活冷态 Agent。
 
@@ -57,7 +57,7 @@ Session 对象还承载本地提交回显：`session.beginSubmission` 在调用�
 |---|---:|---|
 | `nativeOpen` | 平台探测 | 是否能把 Session 工作区路径交给原生桌面打开器 |
 
-生成的[配置目录](../../../../Docs/config-catalog.zh.md#deepseek-aidsh-api-session-controller)是所有受支持字段及其 JSDoc 的完整来源。
+生成的[配置目录](../../../../Docs/config-catalog.zh.md#redsparkrsh-api-session-controller)是所有受支持字段及其 JSDoc 的完整来源。
 
 -----
 

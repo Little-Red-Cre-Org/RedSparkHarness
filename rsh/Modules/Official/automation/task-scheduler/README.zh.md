@@ -2,7 +2,7 @@
 description: "持久化定时提醒、周期任务和目标任务。"
 kind: "package-bundle"
 ---
-# @deepseek-ai/dsh-task-scheduler
+# @redspark/rsh-task-scheduler
 
 [English](README.md) | 中文
 
@@ -32,7 +32,7 @@ kind: "package-bundle"
 
 将插件安装到配置中，并添加 [cordis.patch.yml](cordis.patch.yml)。宿主需要正常的 Agent、预设、权限、工作区和会话持久化服务。数据库必须使用绝对路径和独立的本地 SQLite 文件，不要放在网络文件系统。仅导入包不会启用调度，Cordis 的 `apply` 负责加载。
 
-原生安装不使用 Typert 协议。Cordis 包根入口和 gateway 会加载 `@deepseek-ai/dsh-typert-protocol`，公开 Client 声明也引用其 `RemoteResult` 类型；由于该 peer 对原生消费者为可选，安装此插件的兼容 profile 必须显式提供它。
+原生安装不使用 Typert 协议。Cordis 包根入口和 gateway 会加载 `@redspark/rsh-typert-protocol`，公开 Client 声明也引用其 `RemoteResult` 类型；由于该 peer 对原生消费者为可选，安装此插件的兼容 profile 必须显式提供它。
 
 Native 入口需要 `rootExecution`、`activeSessions`、`agents` 和 `tools`；若需调度 Goal，还要安装 Goal Provider 与 continuation driver。数据库路径必须是绝对路径，并指向独立的本地 SQLite 文件，不要通过网络文件系统共享。仅导入包不会启用调度：由 Cordis 导出的 `apply` 或 Native plugin 将其装入 Host。
 

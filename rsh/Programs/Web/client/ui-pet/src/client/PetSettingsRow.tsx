@@ -1,7 +1,7 @@
 /** General > Personalization desktop-pet settings. */
-import { Switch } from '@deepseek-ai/dsh-client-ui-primitives'
-import type { ObservableSnapshot } from '@deepseek-ai/dsh-client-store'
-import type { InjectFace, PropsLocale, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
+import { Switch } from '@redspark/rsh-client-ui-primitives'
+import type { ObservableSnapshot } from '@redspark/rsh-client-store'
+import type { InjectFace, PropsLocale, PropsRuntime } from '@redspark/rsh-client-ui-slots'
 import type { PetSnapshot } from './runtime.ts'
 import css from './PetSettingsRow.module.css'
 import { desktopBridge } from './desktop-bridge.ts'

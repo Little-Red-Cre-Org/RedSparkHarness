@@ -1,8 +1,8 @@
 /** Client-safe Cordis Goal activation notifications. */
-import type {} from '@deepseek-ai/cordis'
+import type {} from '@redspark/cordis'
 import type { GoalActivationChanged } from './types.ts'
 
-declare module '@deepseek-ai/cordis' {
+declare module '@redspark/cordis' {
   interface Events {
     /**
      * Process-local goal activation changed for one session.

@@ -12,6 +12,9 @@
       "path": "../workspace-files/tsconfig.host.json"
     },
     {
+      "path": "../../../../Engine/context/file-reference"
+    },
+    {
       "path": "../../../../Core/runtime-diagnostics/native-runtime"
     },
     {

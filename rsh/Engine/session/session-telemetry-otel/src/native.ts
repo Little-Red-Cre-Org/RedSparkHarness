@@ -1,12 +1,12 @@
 /** Native FEEDBACK_ONLY OpenTelemetry Provider using accepted Session owners. */
 import { createRequire } from 'node:module'
 import { z } from 'zod'
-import type { NativeContext, NativePlugin } from '@deepseek-ai/dsh-native-runtime'
-import { APP_IDENTITY } from '@deepseek-ai/dsh-llm/native'
-import { getOrCreateAnonymousUserId } from '@deepseek-ai/dsh-anonymous-user-id'
-import type { SessionEvent, SessionHeader, SessionId } from '@deepseek-ai/dsh-session/native'
-import type { SessionTelemetryRecord, SessionTelemetrySharingStatus } from '@deepseek-ai/dsh-session-telemetry/types'
-import { isFeedbackEvent, ledgerRecord } from '@deepseek-ai/dsh-session-telemetry/records'
+import type { NativeContext, NativePlugin } from '@redspark/rsh-native-runtime'
+import { APP_IDENTITY } from '@redspark/rsh-llm/native'
+import { getOrCreateAnonymousUserId } from '@redspark/rsh-anonymous-user-id'
+import type { SessionEvent, SessionHeader, SessionId } from '@redspark/rsh-session/native'
+import type { SessionTelemetryRecord, SessionTelemetrySharingStatus } from '@redspark/rsh-session-telemetry/types'
+import { isFeedbackEvent, ledgerRecord } from '@redspark/rsh-session-telemetry/records'
 import {
   BatchLogRecordProcessor, LoggerProvider,
   type BatchLogRecordProcessorOptions,
@@ -15,11 +15,11 @@ import { OTLPLogExporter } from '@opentelemetry/exporter-logs-otlp-http'
 import type { OTLPExporterNodeConfigBase } from '@opentelemetry/otlp-exporter-base'
 import { SeverityNumber, type AnyValue } from '@opentelemetry/api-logs'
 import { resourceFromAttributes } from '@opentelemetry/resources'
-import type { NativeFeedbackCommit } from '@deepseek-ai/dsh-command-feedback/native-definition'
-import type {} from '@deepseek-ai/dsh-command-feedback/native-definition'
-import type {} from '@deepseek-ai/dsh-message-feedback/native-definition'
-import type {} from '@deepseek-ai/dsh-session-telemetry/native-definition'
-import type {} from '@deepseek-ai/dsh-launch-environment/native'
+import type { NativeFeedbackCommit } from '@redspark/rsh-command-feedback/native-definition'
+import type {} from '@redspark/rsh-command-feedback/native-definition'
+import type {} from '@redspark/rsh-message-feedback/native-definition'
+import type {} from '@redspark/rsh-session-telemetry/native-definition'
+import type {} from '@redspark/rsh-launch-environment/native'
 
 const { version } = createRequire(import.meta.url)('../package.json') as { version: string }
 type Mode = 'FEEDBACK_ONLY' | 'DISABLED'
@@ -45,7 +45,7 @@ const severity = {
 /** Native backend plugin; only fresh, durable feedback authorizes its log prefix. */
 export const plugin: NativePlugin = {
   apiVersion: 1,
-  name: '@deepseek-ai/dsh-session-telemetry-otel',
+  name: '@redspark/rsh-session-telemetry-otel',
   targets: ['host'],
   requires: ['launchEnvironment'],
   optional: [],
@@ -54,8 +54,8 @@ export const plugin: NativePlugin = {
     const config = configSchema.parse(input ?? {}) as Config
     return (context) => {
       const environment = context.require('launchEnvironment')
-      const hardOff = (environment.getFrom('DSH_TELEMETRY_DISABLED', ['process'])?.value.length ?? 0) > 0
-        || environment.getFrom('DSH_TELEMETRY_MODE', ['process'])?.value === 'DISABLED'
+      const hardOff = (environment.getFrom('RSH_TELEMETRY_DISABLED', ['process'])?.value.length ?? 0) > 0
+        || environment.getFrom('RSH_TELEMETRY_MODE', ['process'])?.value === 'DISABLED'
       const disabled = hardOff || config.mode === 'DISABLED'
       const telemetry = new NativeTelemetry(context, config, disabled)
       context.provide('sessionTelemetry', telemetry)
@@ -115,7 +115,7 @@ class NativeTelemetry {
       'user.id': getOrCreateAnonymousUserId(),
     }), processors: [new BatchLogRecordProcessor({ ...config.processor, exporter })] })
     this.provider = provider
-    this.logger = provider.getLogger('@deepseek-ai/dsh-session-telemetry-otel', version)
+    this.logger = provider.getLogger('@redspark/rsh-session-telemetry-otel', version)
   }
 
   /** Direct records never authorize a prefix in FEEDBACK_ONLY mode. */

@@ -15,14 +15,14 @@
  * and that difference is carried by a transport, so the compare-and-set logic
  * keeps living in exactly one place.
  */
-import type { SessionId } from '@deepseek-ai/dsh-session/types'
-import type { NativePlugin } from '@deepseek-ai/dsh-native-runtime'
-import type { HostObservable } from '@deepseek-ai/dsh-client-ui-slots'
-import type {} from '@deepseek-ai/dsh-client-ui-renderer/native'
-import type {} from '@deepseek-ai/dsh-client-ui-session/native'
-import type {} from '@deepseek-ai/dsh-client-ui-layout/native'
-import type {} from '@deepseek-ai/dsh-client-locale/native'
-import type { NativeSessionClient } from '@deepseek-ai/dsh-client-native-session/native'
+import type { SessionId } from '@redspark/rsh-session/types'
+import type { NativePlugin } from '@redspark/rsh-native-runtime'
+import type { HostObservable } from '@redspark/rsh-client-ui-slots'
+import type {} from '@redspark/rsh-client-ui-renderer/native'
+import type {} from '@redspark/rsh-client-ui-session/native'
+import type {} from '@redspark/rsh-client-ui-layout/native'
+import type {} from '@redspark/rsh-client-locale/native'
+import type { NativeSessionClient } from '@redspark/rsh-client-native-session/native'
 import type { FeedbackDialogInjected, MessageFeedbackInjected } from './client/slots.ts'
 import type { FeedbackDialogState } from './client/dialog.ts'
 import type { MessageFeedbackCarried } from './client/controller.ts'
@@ -90,7 +90,7 @@ export function nativeTransport(client: NativeFeedbackClient): FeedbackSurfaceTr
 /** Native message feedback: per-message rating controls and the Session's dialog. */
 export const plugin: NativePlugin = {
   apiVersion: 1,
-  name: '@deepseek-ai/dsh-client-ui-message-feedback',
+  name: '@redspark/rsh-client-ui-message-feedback',
   targets: ['client'],
   requires: ['clientSlots', 'clientLocale', 'clientNativeSession'],
   optional: [],

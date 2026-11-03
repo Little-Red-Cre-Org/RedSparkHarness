@@ -3,11 +3,11 @@
  * model-free: the vocabulary comes from successful first-party mutation
  * calls, never presentation data or the closing prose.
  */
-import { isAppendSurfaceEvent } from '@deepseek-ai/dsh-session/surface'
-import type { TurnTailOwnerProps } from '@deepseek-ai/dsh-client-ui-chat/client'
-import type { ConversationNodeDefinition } from '@deepseek-ai/dsh-client-ui-conversation/client'
-import type { MarkdownFileMentions } from '@deepseek-ai/dsh-client-ui-primitives'
-import type { PresentedFile } from '@deepseek-ai/dsh-tool-present/types'
+import { isAppendSurfaceEvent } from '@redspark/rsh-session/surface'
+import type { TurnTailOwnerProps } from '@redspark/rsh-client-ui-chat/client'
+import type { ConversationNodeDefinition } from '@redspark/rsh-client-ui-conversation/client'
+import type { MarkdownFileMentions } from '@redspark/rsh-client-ui-primitives'
+import type { PresentedFile } from '@redspark/rsh-tool-present/types'
 import { basename, isPresentedData, isPresentedFile } from '../presented.ts'
 
 /** A declared file with its authorized open coordinates. */
@@ -27,7 +27,7 @@ export interface DeliverablesTurnData {
   readonly presented?: readonly PresentedPath[]
 }
 
-declare module '@deepseek-ai/dsh-client-ui-conversation/client' {
+declare module '@redspark/rsh-client-ui-conversation/client' {
   interface ConversationTurnDataMap {
     /** Successful mutation paths accumulated in this Turn. */
     deliverables: DeliverablesTurnData

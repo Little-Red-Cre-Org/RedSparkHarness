@@ -1,15 +1,15 @@
 ---
-description: "The TypeScript SDK client for callers that spawn a RedSpark Harness runtime subprocess and drive agent turns over stdio JSON-RPC: the DeepSeekHarness run API and the lower-level HarnessClient."
+description: "The TypeScript SDK client for callers that spawn a RedSpark Harness runtime subprocess and drive agent turns over stdio JSON-RPC: the RedSparkHarness run API and the lower-level HarnessClient."
 kind: "package-library"
 ---
 
-# @deepseek-ai/dsh-sdk-client
+# @redspark/rsh-sdk-client
 
 English | [中文](README.zh.md)
 
 ## Summary
 
-`dsh-sdk-client` lets TypeScript callers drive Harness over stdio JSON-RPC. `DeepSeekHarness` opens Sessions, sends text or image prompts, streams notifications, and returns the last committed root response after the Agent idles; `HarnessClient` exposes protocol requests and subscriptions. `RunResult.events` preserves all six root `subagent/external-operation` variants and their fields unchanged. `NativeExternalOperationEvent` is the canonical Engine union; `NativeExternalOperationSessionEvent` adds its Session envelope. Native Sessions reopen from durable history after a runtime restart. It resolves the same-version `@deepseek-ai/dsh` executable by default or accepts `dshBin`; it owns and reaps the child process across runs through `close()` or `await using`. Callers choose profile and launch settings.
+`dsh-sdk-client` lets TypeScript callers drive Harness over stdio JSON-RPC. `RedSparkHarness` opens Sessions, sends text or image prompts, streams notifications, and returns the last committed root response after the Agent idles; `HarnessClient` exposes protocol requests and subscriptions. `RunResult.events` preserves all six root `subagent/external-operation` variants and their fields unchanged. `NativeExternalOperationEvent` is the canonical Engine union; `NativeExternalOperationSessionEvent` adds its Session envelope. Native Sessions reopen from durable history after a runtime restart. It resolves the same-version `@redspark/rsh` executable by default or accepts `rshBin`; it owns and reaps the child process across runs through `close()` or `await using`. Callers choose profile and launch settings.
 
 ## Table of Contents
 
@@ -27,15 +27,15 @@ English | [中文](README.zh.md)
 
 The Native SDK composition provides the production in-process subagent tool. A new standard `sdk` profile selects this composition; an existing profile with a `package.json` keeps the runtime declared by its manifest. Session-tree subscriptions receive accepted child events and real `subagent.finished` results after one-shot completion, cancellation, failure, and continuable residency settlement; interrupting a turn alone does not finish a still-resident child, and run results retain root-only response projection. Background children return a Jobs handle after actual readiness and survive ordinary parent turns; job_output/job_kill provide output and cancellation controls. The profile installs send_message and interrupt_agent; setting the subagent tool backgroundMode to continuable admits durable child work, supports follow-up steering and interruption, and cold-resumes the same child after a process restart. A settled continuable child contributes a durable subagent-settled notice to the parent's next turn, after actual cleanup. SDK wire catalog discovery remains unsupported; the profile's model-visible `list_agents` tool is a separate capability.
 
-Use this client when TypeScript code must drive a complete Harness runtime from another process and you can name the runtime executable explicitly. The common path is minimal: construct a `DeepSeekHarness` with a launch spec, run prompts, and close it so the child process is always reaped.
+Use this client when TypeScript code must drive a complete Harness runtime from another process and you can name the runtime executable explicitly. The common path is minimal: construct a `RedSparkHarness` with a launch spec, run prompts, and close it so the child process is always reaped.
 
-### Running agent turns with DeepSeekHarness
+### Running agent turns with RedSparkHarness
 
 ```ts
-import { DeepSeekHarness } from '@deepseek-ai/dsh-sdk-client'
-import { ReasoningEffortId } from '@deepseek-ai/dsh-llm/native'
+import { RedSparkHarness } from '@redspark/rsh-sdk-client'
+import { ReasoningEffortId } from '@redspark/rsh-llm/native'
 
-await using harness = new DeepSeekHarness({
+await using harness = new RedSparkHarness({
   profile: 'sdk',
   patches: ['./sdk.patch.json'],
   provider: 'deepseek-official',
@@ -57,7 +57,7 @@ With a Native profile (`native-sdk` or a new standard `sdk` profile), `session(i
 
 `HarnessClientOptions.onApprovalRequest` handles Native approval questions with `(request, signal) => outcome`. Return `allowed-once`, `rejected`, `cancelled`, or `unavailable`; omitting the callback fails closed as `unavailable`. Closing the client or cancelling the parent request aborts the signal. A late callback result is ignored and the runtime replies `cancelled` for that request.
 
-`@deepseek-ai/dsh-sdk-client/native` adds `createNativeDeepSeekHarness(options, childConnection)` for Native Modules. It fixes the profile to `native-sdk` and still resolves the same-version standard `dsh` launcher. Its `NativeDeepSeekHarnessOptions` omits `dshBin`, `profile`, and `patches`; the injected `childConnection` supplies only Host-owned managed stdio and complete-range cleanup, not arbitrary executable or argv selection. The single provider-neutral SDK protocol/runtime implementation is owned by [Engine](../../../../Engine/subagent/sdk-runtime/README.md); this Program facade retains the public TypeScript API and the only standard CLI resolver. The CLI privately owns the fixed launcher used by `native-sdk-dsh-child`.
+`@redspark/rsh-sdk-client/native` adds `createNativeRshHarness(options, childConnection)` for Native Modules. It fixes the profile to `native-sdk` and still resolves the same-version standard `dsh` launcher. Its `NativeRshHarnessOptions` omits `rshBin`, `profile`, and `patches`; the injected `childConnection` supplies only Host-owned managed stdio and complete-range cleanup, not arbitrary executable or argv selection. The single provider-neutral SDK protocol/runtime implementation is owned by [Engine](../../../../Engine/subagent/sdk-runtime/README.md); this Program facade retains the public TypeScript API and the only standard CLI resolver. The CLI privately owns the fixed launcher used by `native-sdk-dsh-child`.
 
 The opt-in `dsh-sdk-child` Module snapshots the selected provider's configured profile and the actual parent Session's enabled Native Headless builtin file grants. A child receives `write_file` only when the exact parent grant, `approvalRequired`, a workspace-write root, and the `dsh-sdk` driver's callback bound to the live parent owner and turn are all present; without that authority, it cannot gain the writer. Only this relay composition installs Native Approval with `ask` in the private child profile. Its request, cancellation, and one-use decision return to the existing parent approval authority, which remains the sole writer of durable approval events. The child uses the shared sandbox policy and process-sandbox backend; the backend's temporary-directory allowance still applies, and Windows enforcement is partial where reported. The launcher passes the child's resolved cwd and exact private home to `ProcessSandbox.confineChildProcess`, so a workspace-write profile can replace `/tmp` without hiding the provider overlay or exposing sibling temporary paths. The selected cwd remains read-only unless an existing policy grant contains it. The profile is opt-in and leaves standard `native-sdk` unchanged.
 
@@ -80,16 +80,16 @@ This section explains the design behind the client; the observable behavior is f
 
 ### Design concept
 
-The client is two layers over one wire: `DeepSeekHarness` (owned runs) over `HarnessClient` (the protocol client), mirroring the Python SDK's layering. It runs outside any harness context and uses the framework-free local `dsh-subprocess` connection Provider without mounting NativeHost or Cordis. The selected runtime defines which Sessions are published; session-tree scoping is a client-side filter over `subagent.started` lineage edges.
+The client is two layers over one wire: `RedSparkHarness` (owned runs) over `HarnessClient` (the protocol client), mirroring the Python SDK's layering. It runs outside any harness context and uses the framework-free local `dsh-subprocess` connection Provider without mounting NativeHost or Cordis. The selected runtime defines which Sessions are published; session-tree scoping is a client-side filter over `subagent.started` lineage edges.
 
 ### Source map
 
 | File | Role |
 |---|---|
-| [`src/api.ts`](src/api.ts) | Program facade: standard launcher and backward-compatible `DeepSeekHarness` exports |
+| [`src/api.ts`](src/api.ts) | Program facade: standard launcher and backward-compatible `RedSparkHarness` exports |
 | [`src/client.ts`](src/client.ts) | Program facade: same-version `dsh` resolution and local-process adapter |
 | [`src/native.ts`](src/native.ts) | Native Host SDK facade; the CLI owns its fixed child launcher |
-| Engine [`sdk-runtime`](../../../../Engine/subagent/sdk-runtime/README.md) | Single implementation of `HarnessClient`, `DeepSeekHarness`, and the provider-neutral SDK protocol runtime |
+| Engine [`sdk-runtime`](../../../../Engine/subagent/sdk-runtime/README.md) | Single implementation of `HarnessClient`, `RedSparkHarness`, and the provider-neutral SDK protocol runtime |
 | — | No runtime invariant companion is published because this client-process library is not a runtime plugin; its launch and connection lifecycle are covered through the public SDK API. |
 
 ### Owned activity flow
@@ -112,7 +112,7 @@ Read these pages when the client contract is not enough. They move from the wire
 - [SDK wire protocol](../../../../Engine/subagent/sdk-protocol/README.md) — the JSON-RPC methods and payload shapes this client speaks.
 - [JSON-RPC serving plugin](../server/README.md) — the runtime plugin that serves this client.
 - [Python SDK](../../python/README.md) — the design twin that shares the same runtime peer and protocol.
-- [SDK subagent backend](../../../../Compatibility/DSH/subagent/subagent-dsh-sdk/README.md) — a harness-internal consumer of this client.
+- [SDK subagent backend](../../../../Compatibility/DSH/subagent/subagent-rsh-sdk/README.md) — a harness-internal consumer of this client.
 - [Native SDK server](../native-server/README.md) — the runtime plugin used by a new standard `sdk` profile.
 - [SDK application bundle](../../../../Compatibility/DSH/bundle/sdk-app/README.md) — the Cordis application used by legacy profiles.
 
@@ -143,7 +143,7 @@ None in the client process. Profile, patch, provider, model, and history choices
 
 These limits define when the client is a poor fit or needs special care. They are current package constraints, not a comparison with other SDK clients or a task backlog.
 
-- **No bundled-runtime resolution** — the client resolves the same-version `@deepseek-ai/dsh` package (or a caller-provided `dshBin`); packaged-executable discovery stays Python-side until a TypeScript distribution consumer exists.
+- **No bundled-runtime resolution** — the client resolves the same-version `@redspark/rsh` package (or a caller-provided `rshBin`); packaged-executable discovery stays Python-side until a TypeScript distribution consumer exists.
 - **Compatibility-profile cancellation** — compatibility profiles have no prompt-cancel method; abandoning their turn means closing the runtime (see the [protocol limitations](../../../../Engine/subagent/sdk-protocol/README.md#known-limitations-and-deferred-work)).
 - **No per-prompt result** — low-level `prompt()` returns only an enqueue receipt; high-level `run()` owns receipt-to-idle collection.
 - **No general server-initiated request API** — the only mapped request is Native `approval/request`, used by an explicitly bound SDK child approval relay; standard `native-sdk` does not install that relay.

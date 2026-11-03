@@ -11,8 +11,8 @@
 
 import { stat } from 'node:fs/promises'
 import { dirname } from 'node:path'
-import { errorChain } from '@deepseek-ai/dsh-llm/native'
-import type { Session, SessionEvent, SessionHeader, SessionId, SessionLogOffset } from '@deepseek-ai/dsh-session/native'
+import { errorChain } from '@redspark/rsh-llm/native'
+import type { Session, SessionEvent, SessionHeader, SessionId, SessionLogOffset } from '@redspark/rsh-session/native'
 import {
   assertContiguous,
   SessionAlreadyExistsError,
@@ -22,7 +22,7 @@ import {
   SessionPersistenceNotFoundError,
   SessionPersistenceRevision,
   SessionReadOnlyError,
-} from '@deepseek-ai/dsh-session-persistence/native'
+} from '@redspark/rsh-session-persistence/native'
 import type {
   SessionAccess,
   SessionHandle,
@@ -30,7 +30,7 @@ import type {
   SessionHandleFlushOptions,
   SessionHandleReadOptions,
   SessionHandleReadResult,
-} from '@deepseek-ai/dsh-session-persistence/native'
+} from '@redspark/rsh-session-persistence/native'
 import type { SessionWriteLease } from './lease.ts'
 
 /** Maximum intentional wait before a routed live session batch starts writing. */

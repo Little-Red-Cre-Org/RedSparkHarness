@@ -1,11 +1,11 @@
 /**
  * Public configuration and measurement vocabulary for replay token metering.
  *
- * @module @deepseek-ai/dsh-token-meter/types
+ * @module @redspark/rsh-token-meter/types
  */
 
-import type { TokenUsage } from '@deepseek-ai/dsh-llm/native'
-import type { SessionLogOffset, SessionSeq } from '@deepseek-ai/dsh-session/types'
+import type { TokenUsage } from '@redspark/rsh-llm/native'
+import type { SessionLogOffset, SessionSeq } from '@redspark/rsh-session/types'
 
 /** The baseline from which a signed surface delta produces current pressure. */
 export type TokenMeasurementBaseline =

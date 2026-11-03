@@ -6,12 +6,12 @@ import { fileURLToPath } from 'node:url'
 import { execa } from 'execa'
 import { createServer, type ServerResponse } from 'node:http'
 import { expect, it } from 'vitest'
-import { DeepSeekHarness } from '@deepseek-ai/dsh-sdk-client'
-import { parseSessionLog } from '@deepseek-ai/dsh-llm-replay'
-import { SESSION_FORMAT_VERSION } from '@deepseek-ai/dsh-session/native'
-import { JsonlSessionBackend } from '@deepseek-ai/dsh-session-persistence-jsonl'
+import { RedSparkHarness } from '@redspark/rsh-sdk-client'
+import { parseSessionLog } from '@redspark/rsh-llm-replay'
+import { SESSION_FORMAT_VERSION } from '@redspark/rsh-session/native'
+import { JsonlSessionBackend } from '@redspark/rsh-session-persistence-jsonl'
 import { formatSystemPromptSnapshot, formatToolSchemasSnapshot, normalizedSystemPrompts, normalizedToolSchemas,
-  normalizeSessionSnapshot, redactSessionSnapshotIds } from '@deepseek-ai/dsh-session-snapshot'
+  normalizeSessionSnapshot, redactSessionSnapshotIds } from '@redspark/rsh-session-snapshot'
 import { ARCHIFY_SKILL_DIRECTORY_ENV, archifyShellEnvValues } from '../../rsh/Modules/Official/skill/archify/src/shared.ts'
 import { shippedNativeProfileComposition } from '../../rsh/Programs/CLI/src/native-profile-template.ts'
 
@@ -79,7 +79,7 @@ function requestText(request: Record<string, unknown> | undefined): string {
 }
 
 it('projects Native Archify routing through both SDKs and cold-restores one durable Session', async () => {
-  const mode = process.env.DSH_SNAPSHOT
+  const mode = process.env.RSH_SNAPSHOT
   const fixture = join(scenario, 'session.v3.jsonl')
   const recorded = existsSync(fixture) ? parseSessionLog(readFileSync(fixture, 'utf8')) : undefined
   const tasks = recorded?.filter(event => event.type === 'user/message' && event.data.source.kind === 'user') ?? []
@@ -140,11 +140,11 @@ it('projects Native Archify routing through both SDKs and cold-restores one dura
     const composition = shippedNativeProfileComposition(home, 'native-sdk')
     writeFileSync(join(profile, 'rsh.profile.json'), JSON.stringify({ ...composition, installations: [
       ...composition.installations,
-      { id: 'request-context', plugin: '@deepseek-ai/dsh-request-context', scope: 'root' },
-      { id: 'skills', plugin: '@deepseek-ai/dsh-skill', scope: 'root' },
-      { id: 'tool-skill', plugin: '@deepseek-ai/dsh-tool-skill', scope: 'root' },
-      { id: 'shell-env', plugin: '@deepseek-ai/dsh-shell-env', scope: 'root' },
-      { id: 'archify', plugin: '@deepseek-ai/dsh-archify', scope: 'root' },
+      { id: 'request-context', plugin: '@redspark/rsh-request-context', scope: 'root' },
+      { id: 'skills', plugin: '@redspark/rsh-skill', scope: 'root' },
+      { id: 'tool-skill', plugin: '@redspark/rsh-tool-skill', scope: 'root' },
+      { id: 'shell-env', plugin: '@redspark/rsh-shell-env', scope: 'root' },
+      { id: 'archify', plugin: '@redspark/rsh-archify', scope: 'root' },
     ] }))
     writeFileSync(modelPatch, JSON.stringify({ formatVersion: 1, installations: [
       { id: 'app', config: { systemPrompt: 'You are a Native Archify fixture.', maxSteps: 3 } },
@@ -154,13 +154,13 @@ it('projects Native Archify routing through both SDKs and cold-restores one dura
         baseURL: `http://127.0.0.1:${address.port}/v1`, models: [{ id: 'fixture-model', input: ['text'] }] } } } },
     ] }))
 
-    const options = { profile: 'native-sdk', dshBin: join(root, 'rsh/Programs/CLI/lib/bin.js'), dshHome: home,
+    const options = { profile: 'native-sdk', rshBin: join(root, 'rsh/Programs/CLI/lib/bin.js'), rshHome: home,
       patches: [modelPatch], cwd: workspace, provider: 'fixture', model: 'fixture-model',
-      env: { ...process.env, NATIVE_SDK_FIXTURE_KEY: 'fixture-key', DSH_TELEMETRY_DISABLED: '1' },
+      env: { ...process.env, NATIVE_SDK_FIXTURE_KEY: 'fixture-key', RSH_TELEMETRY_DISABLED: '1' },
       requestTimeoutMs: 20_000 }
     let first: CarrierRun
     let recovery: CarrierRun
-    if (process.env.DSH_NATIVE_SDK_PYTHON !== undefined) {
+    if (process.env.RSH_NATIVE_SDK_PYTHON !== undefined) {
       const launcher = join(home, process.platform === 'win32' ? 'dsh.cmd' : 'dsh')
       writeFileSync(launcher, process.platform === 'win32'
         ? `@echo off\r\n"${process.execPath}" "${join(root, 'rsh/Programs/CLI/lib/bin.js')}" %*\r\n`
@@ -169,19 +169,19 @@ it('projects Native Archify routing through both SDKs and cold-restores one dura
         const { chmodSync } = await import('node:fs')
         chmodSync(launcher, 0o700)
       }
-      const result = await execa(process.env.DSH_NATIVE_SDK_PYTHON, [join(root, 'snapshots/native-sdk/skills/client.py'), launcher,
+      const result = await execa(process.env.RSH_NATIVE_SDK_PYTHON, [join(root, 'snapshots/native-sdk/skills/client.py'), launcher,
         home, workspace, modelPatch, sessionId, initialTask, resumedTask], {
         env: { ...process.env, PYTHONPATH: join(root, 'rsh/Programs/SDK/python/sdk/src'),
-          NATIVE_SDK_FIXTURE_KEY: 'fixture-key', DSH_TELEMETRY_DISABLED: '1' }, timeout: 60_000,
+          NATIVE_SDK_FIXTURE_KEY: 'fixture-key', RSH_TELEMETRY_DISABLED: '1' }, timeout: 60_000,
       })
       const output = JSON.parse(result.stdout) as PythonCarrierOutput
       first = output.first
       recovery = output.recovery
     } else {
-      const initial = new DeepSeekHarness(options)
+      const initial = new RedSparkHarness(options)
       try { first = await initial.session(sessionId).run(initialTask) }
       finally { await initial.close() }
-      const cold = new DeepSeekHarness(options)
+      const cold = new RedSparkHarness(options)
       try { recovery = await cold.session(sessionId).run(resumedTask) }
       finally { await cold.close() }
     }

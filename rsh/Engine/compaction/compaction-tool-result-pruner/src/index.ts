@@ -1,17 +1,17 @@
 /**
  * Replay-safe, model-free tool-result pruning service.
  *
- * @module @deepseek-ai/dsh-compaction-tool-result-pruner
+ * @module @redspark/rsh-compaction-tool-result-pruner
  */
 
-import { Context, Service } from '@deepseek-ai/cordis'
-import z from '@deepseek-ai/schemastery'
-import type { ContentBlock } from '@deepseek-ai/dsh-llm'
-import type { Session } from '@deepseek-ai/dsh-session'
+import { Context, Service } from '@redspark/cordis'
+import z from '@redspark/schemastery'
+import type { ContentBlock } from '@redspark/rsh-llm'
+import type { Session } from '@redspark/rsh-session'
 // Type-only: the `compaction/*` SessionEventMap merges (the shadow-price event).
-import type {} from '@deepseek-ai/dsh-compaction'
+import type {} from '@redspark/rsh-compaction'
 // Type-only: the `ctx.tokenMeter` Context merge for the declared injection.
-import type {} from '@deepseek-ai/dsh-token-meter'
+import type {} from '@redspark/rsh-token-meter'
 import { DEFAULTS, resolveConfig } from './config.ts'
 import { measureContent, pruneContent, pruneSessionSurface } from './core.ts'
 import type {
@@ -28,7 +28,7 @@ export type {
   ToolResultPruneConfig,
 } from './types.ts'
 
-declare module '@deepseek-ai/cordis' {
+declare module '@redspark/cordis' {
   interface Context {
     toolResultPruner: ToolResultPruner
   }

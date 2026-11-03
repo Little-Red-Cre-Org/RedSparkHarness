@@ -3,7 +3,7 @@ description: "Shared Cordis-free React components for the dsh web client: contro
 kind: "package-library"
 ---
 
-# @deepseek-ai/dsh-client-ui-primitives
+# @redspark/rsh-client-ui-primitives
 
 English | [中文](README.zh.md)
 

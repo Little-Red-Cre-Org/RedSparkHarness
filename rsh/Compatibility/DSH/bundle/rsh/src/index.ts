@@ -1,5 +1,5 @@
 /** Cordis entry for the RSH bundle's Ink terminal runtime. */
-import type { Context } from '@deepseek-ai/cordis'
+import type { Context } from '@redspark/cordis'
 import { apply as mountTerminal } from './runtime.js'
 
 /** Stable Cordis plugin name. */

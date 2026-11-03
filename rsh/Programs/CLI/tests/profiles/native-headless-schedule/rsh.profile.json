@@ -8,7 +8,7 @@
   "installations": [
     {
       "id": "app",
-      "plugin": "@deepseek-ai/dsh-native-headless",
+      "plugin": "@redspark/rsh-native-headless",
       "scope": "root",
       "config": {
         "cwd": "PROFILE_PATCH_REQUIRED",
@@ -20,22 +20,22 @@
     },
     {
       "id": "agents",
-      "plugin": "@deepseek-ai/dsh-native-agent",
+      "plugin": "@redspark/rsh-native-agent",
       "scope": "root"
     },
     {
       "id": "execution",
-      "plugin": "@deepseek-ai/dsh-native-session-execution",
+      "plugin": "@redspark/rsh-native-session-execution",
       "scope": "root"
     },
     {
       "id": "model-execution",
-      "plugin": "@deepseek-ai/dsh-native-model-execution",
+      "plugin": "@redspark/rsh-native-model-execution",
       "scope": "root"
     },
     {
       "id": "tools",
-      "plugin": "@deepseek-ai/dsh-native-tools",
+      "plugin": "@redspark/rsh-native-tools",
       "scope": "root",
       "config": {
         "mode": "native"
@@ -43,17 +43,17 @@
     },
     {
       "id": "prompt",
-      "plugin": "@deepseek-ai/dsh-native-prompt",
+      "plugin": "@redspark/rsh-native-prompt",
       "scope": "root"
     },
     {
       "id": "schedules",
-      "plugin": "@deepseek-ai/dsh-schedule",
+      "plugin": "@redspark/rsh-schedule",
       "scope": "root"
     },
     {
       "id": "storage",
-      "plugin": "@deepseek-ai/dsh-session-persistence-jsonl",
+      "plugin": "@redspark/rsh-session-persistence-jsonl",
       "scope": "root",
       "config": {
         "root": "PROFILE_PATCH_REQUIRED",
@@ -62,7 +62,7 @@
     },
     {
       "id": "fs",
-      "plugin": "@deepseek-ai/dsh-fs-local",
+      "plugin": "@redspark/rsh-fs-local",
       "scope": "root",
       "config": {
         "cwd": "PROFILE_PATCH_REQUIRED"

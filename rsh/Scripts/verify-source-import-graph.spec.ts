@@ -74,14 +74,14 @@ describe('verify-source-import-graph', () => {
     ])
     const cordis = ts.createSourceFile(
       'cordis.ts',
-      "import { Context, type Fiber } from '@deepseek-ai/cordis'\n",
+      "import { Context, type Fiber } from '@redspark/cordis'\n",
       ts.ScriptTarget.Latest,
       true,
     )
     expect(collectCordisSourceUses(cordis, '@test/owner', 'host')).toMatchObject([{
       owner: '@test/owner',
       face: 'host',
-      specifier: '@deepseek-ai/cordis',
+      specifier: '@redspark/cordis',
       kind: 'runtime',
       symbols: ['value:Context', 'type:Fiber'],
     }])
@@ -122,10 +122,10 @@ describe('verify-source-import-graph', () => {
   })
 
   it('distinguishes type-only imports and blocks Cordis through a native alias', () => {
-    const f = fixture("import type { T } from '@deepseek-ai/cordis'\n", {
-      paths: { '@deepseek-ai/cordis': ['packages/target/src/index.ts'] },
+    const f = fixture("import type { T } from '@redspark/cordis'\n", {
+      paths: { '@redspark/cordis': ['packages/target/src/index.ts'] },
     })
-    f.options.paths = { '@deepseek-ai/cordis': [join(f.target.directory, 'src/index.ts')] }
+    f.options.paths = { '@redspark/cordis': [join(f.target.directory, 'src/index.ts')] }
     const strict = new Set([f.importer.directory.replaceAll('\\', '/').toLowerCase()])
     const problems = sourceImportViolations(f.source, f.importer, f.owners, f.options, 'host', strict)
     expect(problems.some(problem => problem.includes('native source owner @test/importer imports Cordis'))).toBe(true)

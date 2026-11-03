@@ -1,7 +1,7 @@
 import { expect, it } from 'vitest'
-import { Context } from '@deepseek-ai/cordis'
-import SessionStore, { SessionId } from '@deepseek-ai/dsh-session'
-import { brandString } from '@deepseek-ai/dsh-brand'
+import { Context } from '@redspark/cordis'
+import SessionStore, { SessionId } from '@redspark/rsh-session'
+import { brandString } from '@redspark/rsh-brand'
 import { appendReminderRecords } from '../src/reminder-journal.ts'
 import type { Task, Run } from '../src/types.ts'
 

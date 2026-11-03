@@ -8,16 +8,16 @@
  * its bootstrap export, which constructs the system and retains the same
  * exports for this package's graph row. The plugin face only enrolls that
  * pre-existing instance by providing it as `ctx.modules`.
- * @module @deepseek-ai/dsh-client-modules/client
+ * @module @redspark/rsh-client-modules/client
  */
-import type { Context } from '@deepseek-ai/cordis'
+import type { Context } from '@redspark/cordis'
 import { ClientModuleSystem } from './system.ts'
 import { parseBootManifest } from './manifest.ts'
 import type {
   ClientBootstrapModule, ClientModuleCreateOptions, ClientModuleLoader, ClientModuleLoaderTarget,
 } from './manifest.ts'
 
-declare module '@deepseek-ai/cordis' {
+declare module '@redspark/cordis' {
   interface Context {
     /** The client module system the web shell builds at boot. */
     modules: ClientModuleLoader
@@ -26,11 +26,11 @@ declare module '@deepseek-ai/cordis' {
 
 export { ClientModuleSystem }
 export { exactPackageSpecifier, parseBootManifest, stripClientSuffix } from './manifest.ts'
-export { parseDshClient } from './dsh-client.ts'
+export { parseRshClient } from './dsh-client.ts'
 export type {
   BootManifest, BootModuleRow, BootPluginRow, ClientBootstrapModule, ClientBundleRegistration,
   ClientModuleCreateOptions, ClientModuleLoader, ClientModuleLoaderTarget, ClientModuleRecord,
-  ClientModuleSystemOptions, DshWindow,
+  ClientModuleSystemOptions, RshWindow,
   WebBootEntry, WebBootGraph,
 } from './manifest.ts'
 

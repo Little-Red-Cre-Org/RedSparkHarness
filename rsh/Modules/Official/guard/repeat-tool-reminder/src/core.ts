@@ -2,10 +2,10 @@
  * Framework-free repeat-call detection shared by the Cordis listener and the native settlement policy.
  * Configuration and chain semantics live in the package README; rationale lives in the
  * repeat-tool-reminder Agent Note.
- * @module @deepseek-ai/dsh-repeat-tool-reminder/core
+ * @module @redspark/rsh-repeat-tool-reminder/core
  */
-import z from '@deepseek-ai/schemastery'
-import { createUserMessage, type MessageSource, type UserMessage } from '@deepseek-ai/dsh-llm/native'
+import z from '@redspark/schemastery'
+import { createUserMessage, type MessageSource, type UserMessage } from '@redspark/rsh-llm/native'
 
 /** Settings after defaults; validated by {@link compileRepeatToolReminder}. */
 export interface RepeatToolReminderSettings {

@@ -8,13 +8,13 @@ const packageDirectory = fileURLToPath(new URL('..', import.meta.url))
 const built = [
   'lib/index.js',
   'lib/worker.js',
-  'node_modules/@deepseek-ai/schemastery/lib/index.mjs',
+  'node_modules/@redspark/schemastery/lib/index.mjs',
 ].every(file => existsSync(join(packageDirectory, file)))
 
 describe.skipIf(!built)('experimental Inspector built artifact', () => {
   it('starts its sibling Worker and evaluates the Host through plain Node', async () => {
     const script = `
-      const { startInspector } = await import('@deepseek-ai/dsh-experimental-inspector')
+      const { startInspector } = await import('@redspark/rsh-experimental-inspector')
       const { default: WebSocket } = await import('ws')
       globalThis.__builtInspectorProbe = 42
       const inspector = await startInspector({ port: 0, captureFetch: false })

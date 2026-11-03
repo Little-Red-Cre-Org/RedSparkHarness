@@ -6,7 +6,8 @@
     "emitDeclarationOnly": true
   },
   "include": [
-    "src/controller.ts"
+    "src/controller.ts",
+    "src/composer-files.ts"
   ],
   "references": [
     {

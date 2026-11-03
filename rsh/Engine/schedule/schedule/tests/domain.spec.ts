@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { SessionLogOffset } from '@deepseek-ai/dsh-session'
-import type { SessionEvent } from '@deepseek-ai/dsh-session'
+import { SessionLogOffset } from '@redspark/rsh-session'
+import type { SessionEvent } from '@redspark/rsh-session'
 import {
   ScheduleId,
   ScheduleInputError,

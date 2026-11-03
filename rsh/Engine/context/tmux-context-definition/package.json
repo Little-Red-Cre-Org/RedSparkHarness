@@ -1,5 +1,5 @@
 {
-  "name": "@deepseek-ai/dsh-tmux-context-definition",
+  "name": "@redspark/rsh-tmux-context-definition",
   "description": "Native durable tmux-context service Definition",
   "version": "1.0.0",
   "publishConfig": { "access": "public" },
@@ -19,8 +19,8 @@
   "files": ["lib/index.js", "lib/types/**/*.d.ts"],
   "license": "MIT",
   "dependencies": {
-    "@deepseek-ai/dsh-llm": "workspace:^",
-    "@deepseek-ai/dsh-native-runtime": "workspace:^",
-    "@deepseek-ai/dsh-session": "workspace:^"
+    "@redspark/rsh-llm": "workspace:^",
+    "@redspark/rsh-native-runtime": "workspace:^",
+    "@redspark/rsh-session": "workspace:^"
   }
 }

@@ -1,5 +1,5 @@
 {
-  "name": "@deepseek-ai/dsh-experimental-code-runtime-python",
+  "name": "@redspark/rsh-experimental-code-runtime-python",
   "description": "CPython subprocess implementation of the RedSpark Harness code-execution seam",
   "version": "1.0.0",
   "repository": {
@@ -24,19 +24,19 @@
   ],
   "license": "MIT",
   "peerDependencies": {
-    "@deepseek-ai/dsh-code-runtime": "workspace:^",
-    "@deepseek-ai/dsh-timeout": "workspace:^",
-    "@deepseek-ai/cordis": "workspace:^",
-    "@deepseek-ai/dsh-util-values": "workspace:^"
+    "@redspark/rsh-code-runtime": "workspace:^",
+    "@redspark/rsh-timeout": "workspace:^",
+    "@redspark/cordis": "workspace:^",
+    "@redspark/rsh-util-values": "workspace:^"
   },
   "devDependencies": {
-    "@deepseek-ai/dsh-code-runtime": "workspace:^",
-    "@deepseek-ai/dsh-timeout": "workspace:^",
-    "@deepseek-ai/cordis": "workspace:^",
-    "@deepseek-ai/dsh-util-values": "workspace:^"
+    "@redspark/rsh-code-runtime": "workspace:^",
+    "@redspark/rsh-timeout": "workspace:^",
+    "@redspark/cordis": "workspace:^",
+    "@redspark/rsh-util-values": "workspace:^"
   },
   "dependencies": {
-    "@deepseek-ai/schemastery": "workspace:^"
+    "@redspark/schemastery": "workspace:^"
   },
   "private": true
 }

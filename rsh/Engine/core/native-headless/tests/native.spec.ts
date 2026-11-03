@@ -3,14 +3,14 @@ import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from 'node:fs/promis
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { expect, it, vi } from 'vitest'
-import { NativeHost, NativeScope, resolveInstallation, type InstallationRequest, type NativeContext, type NativePlugin } from '@deepseek-ai/dsh-native-runtime'
-import { localFilesystemPlugin } from '@deepseek-ai/dsh-fs-local/native'
-import { LocalFileSystemBackend } from '@deepseek-ai/dsh-fs-local/backend'
-import { plugin as policyPlugin } from '@deepseek-ai/dsh-fs-observation-policy/native'
-import { plugin as toolFsPlugin } from '@deepseek-ai/dsh-tool-fs/native'
-import { plugin as storagePlugin } from '@deepseek-ai/dsh-session-persistence-jsonl/native'
-import { JsonlSessionBackend } from '@deepseek-ai/dsh-session-persistence-jsonl'
-import { plugin as agentPlugin } from '@deepseek-ai/dsh-native-agent/native'
+import { NativeHost, NativeScope, resolveInstallation, type InstallationRequest, type NativeContext, type NativePlugin } from '@redspark/rsh-native-runtime'
+import { localFilesystemPlugin } from '@redspark/rsh-fs-local/native'
+import { LocalFileSystemBackend } from '@redspark/rsh-fs-local/backend'
+import { plugin as policyPlugin } from '@redspark/rsh-fs-observation-policy/native'
+import { plugin as toolFsPlugin } from '@redspark/rsh-tool-fs/native'
+import { plugin as storagePlugin } from '@redspark/rsh-session-persistence-jsonl/native'
+import { JsonlSessionBackend } from '@redspark/rsh-session-persistence-jsonl'
+import { plugin as agentPlugin } from '@redspark/rsh-native-agent/native'
 import {
   plugin as subagentPlugin,
   serializeNativeExternalJson,
@@ -20,46 +20,46 @@ import {
   type NativeExternalSubagentOutcome,
   type NativeExternalSubagentRequest,
   type NativeSubagentOperations,
-} from '@deepseek-ai/dsh-native-subagent/native'
-import { AttachmentId } from '@deepseek-ai/dsh-attachment'
-import type { AttachmentOperations, FileAttachmentRef, ImageAttachmentRef } from '@deepseek-ai/dsh-attachment/native'
-import type {} from '@deepseek-ai/dsh-attachment/native'
-import { plugin as sessionExecutionPlugin } from '@deepseek-ai/dsh-native-session-execution/native'
-import { plugin as modelExecutionPlugin } from '@deepseek-ai/dsh-native-model-execution/native'
-import { plugin as promptPlugin } from '@deepseek-ai/dsh-native-prompt/native'
-import { NativeAgentId, type NativeAgent, type NativeAgentRegistry } from '@deepseek-ai/dsh-native-agent'
-import { plugin as approvalPlugin } from '@deepseek-ai/dsh-native-approval/native'
-import type { NativeApprovalServiceDefinition } from '@deepseek-ai/dsh-approval-definition'
-import { plugin as codeToolPlugin } from '@deepseek-ai/dsh-tool-code-runtime/native'
-import { plugin as codeRuntimePlugin } from '@deepseek-ai/dsh-native-code-runtime/native'
-import { plugin as toolSubagentPlugin } from '@deepseek-ai/dsh-tool-subagent/native'
-import type { NativeCodeRunRequest, NativeCodeRuntime } from '@deepseek-ai/dsh-code-runtime-definition'
-import type { NativeModelSelectionOperations } from '@deepseek-ai/dsh-native-model-selection'
-import type { NativeResponsesGenerationCapture, NativeResponsesTransport } from '@deepseek-ai/dsh-native-model-execution/responses-transport'
-import { NativeSandboxPolicy } from '@deepseek-ai/dsh-native-sandbox-policy'
-import type {} from '@deepseek-ai/dsh-native-sandbox-policy/native'
-import { plugin as instructionsPlugin } from '@deepseek-ai/dsh-agent-instructions/native'
-import { plugin as timeContextPlugin } from '@deepseek-ai/dsh-native-time-context/native'
-import { plugin as tmuxContextPlugin } from '@deepseek-ai/dsh-native-tmux-context/native'
-import { plugin as requestContextsPlugin } from '@deepseek-ai/dsh-request-context/native'
-import { plugin as skillsPlugin } from '@deepseek-ai/dsh-skill/native'
-import type { NativeSkills } from '@deepseek-ai/dsh-skill/native'
-import type { SkillProvider } from '@deepseek-ai/dsh-skill/types'
-import { plugin as skillFilesystemPlugin } from '@deepseek-ai/dsh-skill-filesystem/native'
-import { plugin as toolSkillPlugin } from '@deepseek-ai/dsh-tool-skill/native'
-import type { ShellExecRequest, ShellExecSpec, ShellOperations, ShellRunResult } from '@deepseek-ai/dsh-shell/native'
-import { plugin as toolsPlugin } from '@deepseek-ai/dsh-native-tools/native'
-import { FILE_REFERENCE_PROMPT } from '@deepseek-ai/dsh-file-reference/prompt'
-import { plugin as fileReferencePlugin } from '@deepseek-ai/dsh-native-file-reference-local/native'
-import { NativeToolRegistry } from '@deepseek-ai/dsh-native-tools'
-import { brandString } from '@deepseek-ai/dsh-brand'
-import { createUserMessage } from '@deepseek-ai/dsh-llm/native'
-import { SESSION_FORMAT_VERSION, Session, SessionId, SessionSeq, type SessionEvent } from '@deepseek-ai/dsh-session'
-import type { NativeSessionPersistenceOperations } from '@deepseek-ai/dsh-session-persistence/native'
+} from '@redspark/rsh-native-subagent/native'
+import { AttachmentId } from '@redspark/rsh-attachment'
+import type { AttachmentOperations, FileAttachmentRef, ImageAttachmentRef } from '@redspark/rsh-attachment/native'
+import type {} from '@redspark/rsh-attachment/native'
+import { plugin as sessionExecutionPlugin } from '@redspark/rsh-native-session-execution/native'
+import { plugin as modelExecutionPlugin } from '@redspark/rsh-native-model-execution/native'
+import { plugin as promptPlugin } from '@redspark/rsh-native-prompt/native'
+import { NativeAgentId, type NativeAgent, type NativeAgentRegistry } from '@redspark/rsh-native-agent'
+import { plugin as approvalPlugin } from '@redspark/rsh-native-approval/native'
+import type { NativeApprovalServiceDefinition } from '@redspark/rsh-approval-definition'
+import { plugin as codeToolPlugin } from '@redspark/rsh-tool-code-runtime/native'
+import { plugin as codeRuntimePlugin } from '@redspark/rsh-native-code-runtime/native'
+import { plugin as toolSubagentPlugin } from '@redspark/rsh-tool-subagent/native'
+import type { NativeCodeRunRequest, NativeCodeRuntime } from '@redspark/rsh-code-runtime-definition'
+import type { NativeModelSelectionOperations } from '@redspark/rsh-native-model-selection'
+import type { NativeResponsesGenerationCapture, NativeResponsesTransport } from '@redspark/rsh-native-model-execution/responses-transport'
+import { NativeSandboxPolicy } from '@redspark/rsh-native-sandbox-policy'
+import type {} from '@redspark/rsh-native-sandbox-policy/native'
+import { plugin as instructionsPlugin } from '@redspark/rsh-agent-instructions/native'
+import { plugin as timeContextPlugin } from '@redspark/rsh-native-time-context/native'
+import { plugin as tmuxContextPlugin } from '@redspark/rsh-native-tmux-context/native'
+import { plugin as requestContextsPlugin } from '@redspark/rsh-request-context/native'
+import { plugin as skillsPlugin } from '@redspark/rsh-skill/native'
+import type { NativeSkills } from '@redspark/rsh-skill/native'
+import type { SkillProvider } from '@redspark/rsh-skill/types'
+import { plugin as skillFilesystemPlugin } from '@redspark/rsh-skill-filesystem/native'
+import { plugin as toolSkillPlugin } from '@redspark/rsh-tool-skill/native'
+import type { ShellExecRequest, ShellExecSpec, ShellOperations, ShellRunResult } from '@redspark/rsh-shell/native'
+import { plugin as toolsPlugin } from '@redspark/rsh-native-tools/native'
+import { FILE_REFERENCE_PROMPT } from '@redspark/rsh-file-reference/prompt'
+import { plugin as fileReferencePlugin } from '@redspark/rsh-native-file-reference-local/native'
+import { NativeToolRegistry } from '@redspark/rsh-native-tools'
+import { brandString } from '@redspark/rsh-brand'
+import { createUserMessage } from '@redspark/rsh-llm/native'
+import { SESSION_FORMAT_VERSION, Session, SessionId, SessionSeq, type SessionEvent } from '@redspark/rsh-session'
+import type { NativeSessionPersistenceOperations } from '@redspark/rsh-session-persistence/native'
 import type { NativeActiveSessionOwner, NativeRootExecutionOperations, NativeRootRouteId,
-  NativeSessionExecutionOperations, NativeSessionOwnerApproval } from '@deepseek-ai/dsh-native-session-execution'
-import type { NativeToolDelegationContext, NativeToolExecution } from '@deepseek-ai/dsh-native-tools'
-import { ToolCallId } from '@deepseek-ai/dsh-llm/native'
+  NativeSessionExecutionOperations, NativeSessionOwnerApproval } from '@redspark/rsh-native-session-execution'
+import type { NativeToolDelegationContext, NativeToolExecution } from '@redspark/rsh-native-tools'
+import { ToolCallId } from '@redspark/rsh-llm/native'
 import { MockAdapter, maxTokensResponse, textResponse, toolCallResponse } from '../../agent-loop/tests/mock-adapter.ts'
 import { plugin as appPlugin, type NativeHeadlessApplication } from '../src/native.ts'
 
@@ -235,7 +235,7 @@ async function fixture(
       ...(shellProvider === undefined ? [] : [{ plugin: shellProvider, scope, config: undefined }]),
       ...(options.timeContext === undefined ? [] : [{ plugin: timeContextPlugin, scope, config: options.timeContext }]),
       ...(options.tmuxContext === undefined ? [] : [{ plugin: tmuxContextPlugin, scope, config: options.tmuxContext }]),
-      ...(options.instructions ? [{ plugin: instructionsPlugin, scope, config: { maxBytes: 65_536, dshHome: directory } }] : []),
+      ...(options.instructions ? [{ plugin: instructionsPlugin, scope, config: { maxBytes: 65_536, rshHome: directory } }] : []),
       toolsRequest,
       ...(skillDirectory === undefined ? [] : [
         { plugin: toolSkillPlugin, scope, config: undefined },
@@ -1195,7 +1195,7 @@ it('logs the model-visible request and tool result, then resumes the same stored
     expect(state.adapter.requests).toHaveLength(2)
     expect(state.adapter.requests[0]?.messages.some(message => message.role === 'user')).toBe(true)
     expect(state.adapter.requests[1]?.messages.some(message => message.content.some(block => block.type === 'tool-result'))).toBe(true)
-    const storage = new (await import('@deepseek-ai/dsh-session-persistence-jsonl')).JsonlSessionBackend({ root: state.sessions, compression: 'none' })
+    const storage = new (await import('@redspark/rsh-session-persistence-jsonl')).JsonlSessionBackend({ root: state.sessions, compression: 'none' })
     try {
       const snapshots = await storage.list()
       expect(snapshots).toHaveLength(1)
@@ -1430,7 +1430,7 @@ it.each([
         type: 'object', properties: { mode: { type: 'string', enum: ['real', 'hold', 'replacement'] } },
         required: ['mode'], additionalProperties: false,
       } }
-      const providerProbeOutput = { schema: { type: 'string' as const }, render: (_call: NativeToolExecution, value: import('@deepseek-ai/dsh-util-values').JsonValue) => {
+      const providerProbeOutput = { schema: { type: 'string' as const }, render: (_call: NativeToolExecution, value: import('@redspark/rsh-util-values').JsonValue) => {
         if (typeof value !== 'string') throw new Error('Provider probe output must be text')
         return { content: [{ type: 'text' as const, text: value }], isError: false }
       } }
@@ -1857,7 +1857,7 @@ it('rejects prompt-mismatched admissions before persisting resume or fork facts'
 
     const storage = new JsonlSessionBackend({ root: original.sessions, compression: 'none' })
     let source: ReturnType<typeof SessionId> | undefined
-    let interruptedEvents: readonly import('@deepseek-ai/dsh-session/native').SessionEvent[] = []
+    let interruptedEvents: readonly import('@redspark/rsh-session/native').SessionEvent[] = []
     try {
       const row = (await storage.list())[0]
       if (row === undefined) throw new Error('missing fork source Session')
@@ -1939,7 +1939,7 @@ it('waits for an admitted model stream and persists the cancelled turn before sh
     release.resolve(true)
     await expect(running).rejects.toThrow()
     await stopping
-    const storage = new (await import('@deepseek-ai/dsh-session-persistence-jsonl')).JsonlSessionBackend({ root: state.sessions, compression: 'none' })
+    const storage = new (await import('@redspark/rsh-session-persistence-jsonl')).JsonlSessionBackend({ root: state.sessions, compression: 'none' })
     try {
       const id = (await storage.list())[0]?.header.id
       if (id === undefined) throw new Error('cancelled Session was not stored')
@@ -1970,7 +1970,7 @@ it('repairs a persisted tool call when shutdown interrupts the file write', asyn
     await expect(running).rejects.toThrow()
     await stopping
     await expect(readFile(join(state.workspace, 'interrupted.txt'))).rejects.toMatchObject({ code: 'ENOENT' })
-    const storage = new (await import('@deepseek-ai/dsh-session-persistence-jsonl')).JsonlSessionBackend({ root: state.sessions, compression: 'none' })
+    const storage = new (await import('@redspark/rsh-session-persistence-jsonl')).JsonlSessionBackend({ root: state.sessions, compression: 'none' })
     try {
       const id = (await storage.list())[0]?.header.id
       if (id === undefined) throw new Error('interrupted Session was not stored')
@@ -2000,7 +2000,7 @@ it('supports empty writes, denies paths outside the workspace, and records both 
     expect(await readFile(join(state.workspace, 'empty.txt'), 'utf8')).toBe('')
     await expect(readFile(join(state.directory, 'outside.txt'), 'utf8')).rejects.toMatchObject({ code: 'ENOENT' })
     expect(state.adapter.requests[2]?.messages.some(message => message.content.some(block => block.type === 'tool-result'))).toBe(true)
-    const storage = new (await import('@deepseek-ai/dsh-session-persistence-jsonl')).JsonlSessionBackend({ root: state.sessions, compression: 'none' })
+    const storage = new (await import('@redspark/rsh-session-persistence-jsonl')).JsonlSessionBackend({ root: state.sessions, compression: 'none' })
     try {
       const id = (await storage.list())[0]?.header.id
       if (id === undefined) throw new Error('missing Session id')
@@ -2032,7 +2032,7 @@ it('keeps SDK child writes inside the parent-authorized workspace root even with
     await state.host.run(state.scope, { kind: 'child-write-fence' }, invocation => state.app.run(['write under parent grant'], invocation.signal))
     expect(await readFile(join(writeRoot, 'child.txt'), 'utf8')).toBe('allowed')
     await expect(readFile(join(workspace, 'denied.txt'), 'utf8')).rejects.toMatchObject({ code: 'ENOENT' })
-    const storage = new (await import('@deepseek-ai/dsh-session-persistence-jsonl')).JsonlSessionBackend({ root: state.sessions, compression: 'none' })
+    const storage = new (await import('@redspark/rsh-session-persistence-jsonl')).JsonlSessionBackend({ root: state.sessions, compression: 'none' })
     try {
       const id = (await storage.list())[0]?.header.id
       if (id === undefined) throw new Error('missing fenced Session id')
@@ -2057,7 +2057,7 @@ it('projects a bounded worker-thread code result through the Session tool sequen
   try {
     await state.host.run(state.scope, { kind: 'code-runtime' }, invocation => state.app.run(['calculate'], invocation.signal))
     expect(state.adapter.requests[0]?.tools?.map(tool => tool.name)).toContain('run_code')
-    const storage = new (await import('@deepseek-ai/dsh-session-persistence-jsonl')).JsonlSessionBackend({ root: state.sessions, compression: 'none' })
+    const storage = new (await import('@redspark/rsh-session-persistence-jsonl')).JsonlSessionBackend({ root: state.sessions, compression: 'none' })
     try {
       const id = (await storage.list())[0]?.header.id
       if (id === undefined) throw new Error('code Session was not stored')
@@ -2271,7 +2271,7 @@ it('projects a program failure as an explicit native code-runtime tool error', a
   ])
   try {
     await state.host.run(state.scope, { kind: 'code-runtime-failure' }, invocation => state.app.run(['calculate'], invocation.signal))
-    const storage = new (await import('@deepseek-ai/dsh-session-persistence-jsonl')).JsonlSessionBackend({ root: state.sessions, compression: 'none' })
+    const storage = new (await import('@redspark/rsh-session-persistence-jsonl')).JsonlSessionBackend({ root: state.sessions, compression: 'none' })
     try {
       const id = (await storage.list())[0]?.header.id
       if (id === undefined) throw new Error('failed code Session was not stored')
@@ -2395,7 +2395,7 @@ it('persists native time context before the model reads the request', async () =
     expect(state.adapter.requests[0]?.messages.some(message =>
       message.role === 'user' && message.source.kind === 'plugin' && message.source.plugin === 'native-time-context',
     )).toBe(true)
-    const storage = new (await import('@deepseek-ai/dsh-session-persistence-jsonl')).JsonlSessionBackend({ root: state.sessions, compression: 'none' })
+    const storage = new (await import('@redspark/rsh-session-persistence-jsonl')).JsonlSessionBackend({ root: state.sessions, compression: 'none' })
     try {
       const id = (await storage.list())[0]?.header.id
       if (id === undefined) throw new Error('time-context Session was not stored')
@@ -2422,7 +2422,7 @@ it('rejects write_file under the installed never approval policy and persists it
   try {
     await state.host.run(state.scope, { kind: 'approval-write' }, invocation => state.app.run(['try', 'a', 'write'], invocation.signal))
     await expect(readFile(join(state.workspace, 'denied.txt'))).rejects.toMatchObject({ code: 'ENOENT' })
-    const storage = new (await import('@deepseek-ai/dsh-session-persistence-jsonl')).JsonlSessionBackend({ root: state.sessions, compression: 'none' })
+    const storage = new (await import('@redspark/rsh-session-persistence-jsonl')).JsonlSessionBackend({ root: state.sessions, compression: 'none' })
     try {
       const id = (await storage.list())[0]?.header.id
       if (id === undefined) throw new Error('approval Session was not stored')
@@ -2506,7 +2506,7 @@ it('durably records the approval question before dispatch and its grant before t
   const approval = state.approval
   if (approval === undefined) throw new Error('approval Provider was not installed')
   const readAudit = async (): Promise<unknown[]> => {
-    const storage = new (await import('@deepseek-ai/dsh-session-persistence-jsonl')).JsonlSessionBackend({
+    const storage = new (await import('@redspark/rsh-session-persistence-jsonl')).JsonlSessionBackend({
       root: state.sessions,
       compression: 'none',
     })
@@ -2566,7 +2566,7 @@ it('records a max-token model finish without claiming normal completion', async 
   const state = await fixture([maxTokensResponse('partial')])
   try {
     await state.host.run(state.scope, { kind: 'max-tokens' }, invocation => state.app.run(['continue'], invocation.signal))
-    const storage = new (await import('@deepseek-ai/dsh-session-persistence-jsonl')).JsonlSessionBackend({ root: state.sessions, compression: 'none' })
+    const storage = new (await import('@redspark/rsh-session-persistence-jsonl')).JsonlSessionBackend({ root: state.sessions, compression: 'none' })
     try {
       const id = (await storage.list())[0]?.header.id
       if (id === undefined) throw new Error('missing Session id')
@@ -2626,7 +2626,7 @@ it('stops a protected contribution before its executor under the selected approv
   try {
     await state.host.run(state.scope, { kind: 'approval-contribution' }, invocation => state.app.run(['invoke', 'guarded'], invocation.signal))
     expect(executed).toBe(false)
-    const storage = new (await import('@deepseek-ai/dsh-session-persistence-jsonl')).JsonlSessionBackend({ root: state.sessions, compression: 'none' })
+    const storage = new (await import('@redspark/rsh-session-persistence-jsonl')).JsonlSessionBackend({ root: state.sessions, compression: 'none' })
     try {
       const id = (await storage.list())[0]?.header.id
       if (id === undefined) throw new Error('protected contribution Session was not stored')
@@ -2653,7 +2653,7 @@ it('persists native workspace instructions and reconciles an offline edit on res
   try {
     await fs.writeFile(join(state.workspace, 'AGENTS.md'), 'Initial workspace rule.')
     await state.host.run(state.scope, { kind: 'instructions' }, invocation => state.app.run(['first'], invocation.signal))
-    const storage = new (await import('@deepseek-ai/dsh-session-persistence-jsonl/native')).JsonlSessionBackend({ root: state.sessions, compression: 'none' })
+    const storage = new (await import('@redspark/rsh-session-persistence-jsonl/native')).JsonlSessionBackend({ root: state.sessions, compression: 'none' })
     try {
       const id = (await storage.list())[0]?.header.id
       if (id === undefined) throw new Error('missing Session id')
@@ -2703,7 +2703,7 @@ it.each([false, true])('projects nested instruction discovery and removal after 
     expect(initial).toContain('Baseline rule.')
     expect(initial).not.toContain('Instructions from: CLAUDE.md')
     expect(initial).not.toContain('Nested rule.')
-    const storage = new (await import('@deepseek-ai/dsh-session-persistence-jsonl/native')).JsonlSessionBackend({ root: state.sessions, compression: 'none' })
+    const storage = new (await import('@redspark/rsh-session-persistence-jsonl/native')).JsonlSessionBackend({ root: state.sessions, compression: 'none' })
     const id = (await storage.list())[0]?.header.id
     await storage.close()
     if (id === undefined) throw new Error('missing Session id')
@@ -3047,7 +3047,7 @@ it('resumes a cold Session whose stored system prompt still carries the template
   let state = first
   try {
     await state.host.run(state.scope, { kind: 'persona-first' }, invocation => state.app.run(['go'], invocation.signal))
-    const storage = new (await import('@deepseek-ai/dsh-session-persistence-jsonl/native'))
+    const storage = new (await import('@redspark/rsh-session-persistence-jsonl/native'))
       .JsonlSessionBackend({ root: state.sessions, compression: 'none' })
     let id: string | undefined
     try { id = (await storage.list())[0]?.header.id } finally { await storage.close() }

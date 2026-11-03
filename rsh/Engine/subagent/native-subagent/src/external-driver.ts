@@ -1,12 +1,12 @@
 /** Native-owned contract for a product child with no local Agent or Session. */
-import type { ContentBlock, ReasoningEffortId, ToolCallId, ToolSchema, UserMessage } from '@deepseek-ai/dsh-llm/native'
-import type { SessionId } from '@deepseek-ai/dsh-session/native'
-import type { JsonValue } from '@deepseek-ai/dsh-util-values'
-import type { ObjectJsonSchema } from '@deepseek-ai/dsh-native-tools/json-schema'
-import type { NativeToolResult, NativeToolRestriction, StoredImageAttachment } from '@deepseek-ai/dsh-native-tools'
-import type { ToolSdkSchema } from '@deepseek-ai/dsh-native-tools/sdk-typescript'
-import type { NativeSessionDelegationAuthority } from '@deepseek-ai/dsh-native-session-execution'
-import type { NativeResponsesTransport } from '@deepseek-ai/dsh-native-model-execution/responses-transport'
+import type { ContentBlock, ReasoningEffortId, ToolCallId, ToolSchema, UserMessage } from '@redspark/rsh-llm/native'
+import type { SessionId } from '@redspark/rsh-session/native'
+import type { JsonValue } from '@redspark/rsh-util-values'
+import type { ObjectJsonSchema } from '@redspark/rsh-native-tools/json-schema'
+import type { NativeToolResult, NativeToolRestriction, StoredImageAttachment } from '@redspark/rsh-native-tools'
+import type { ToolSdkSchema } from '@redspark/rsh-native-tools/sdk-typescript'
+import type { NativeSessionDelegationAuthority } from '@redspark/rsh-native-session-execution'
+import type { NativeResponsesTransport } from '@redspark/rsh-native-model-execution/responses-transport'
 
 declare const externalSubagentId: unique symbol
 const externalAttemptLease: unique symbol = Symbol('native-external-model-attempt-lease')
@@ -389,7 +389,7 @@ export interface NativeExternalSubagentDriver {
   start(request: NativeExternalSubagentRequest, signal: AbortSignal): Promise<NativeExternalSubagentRun>
 }
 
-declare module '@deepseek-ai/dsh-session/types' {
+declare module '@redspark/rsh-session/types' {
   interface SessionEventMap {
     /**
      * Records a product child only after its real readiness handshake, with the exact Native parent and active-root lineage.
@@ -408,7 +408,7 @@ declare module '@deepseek-ai/dsh-session/types' {
   }
 }
 
-declare module '@deepseek-ai/dsh-native-runtime' {
+declare module '@redspark/rsh-native-runtime' {
   interface NativeServices {
     /** One product adapter selected by the Native Host installation and drained before its provider is disposed. */
     externalSubagentDriver: NativeExternalSubagentDriver

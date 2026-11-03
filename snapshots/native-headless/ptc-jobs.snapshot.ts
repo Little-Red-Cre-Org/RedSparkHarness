@@ -5,10 +5,10 @@ import { join } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { execa } from 'execa'
 import { expect, it } from 'vitest'
-import { JsonlSessionBackend } from '@deepseek-ai/dsh-session-persistence-jsonl'
-import { deriveReplayScript, parseSessionLog } from '@deepseek-ai/dsh-llm-replay'
+import { JsonlSessionBackend } from '@redspark/rsh-session-persistence-jsonl'
+import { deriveReplayScript, parseSessionLog } from '@redspark/rsh-llm-replay'
 import { formatSystemPromptSnapshot, formatToolSchemasSnapshot, normalizedSystemPrompts, normalizedToolSchemas,
-  normalizeSessionSnapshot, redactSessionSnapshotIds } from '@deepseek-ai/dsh-session-snapshot'
+  normalizeSessionSnapshot, redactSessionSnapshotIds } from '@redspark/rsh-session-snapshot'
 
 const root = fileURLToPath(new URL('../../', import.meta.url))
 const scene = join(root, 'snapshots/native-headless/ptc-jobs')
@@ -33,7 +33,7 @@ it('runs confined PTC through dsh, cancels a real job and cold-reads the sole du
   }
   const profilePath = join(profile, 'rsh.profile.json')
   const profileConfig = JSON.parse(readFileSync(profilePath, 'utf8'))
-  profileConfig.installations.push({ id: 'session-execution', plugin: '@deepseek-ai/dsh-native-session-execution', scope: 'root' })
+  profileConfig.installations.push({ id: 'session-execution', plugin: '@redspark/rsh-native-session-execution', scope: 'root' })
   writeFileSync(profilePath, JSON.stringify(profileConfig))
   writeFileSync(join(model, 'package.json'), JSON.stringify({
     name: 'native-ptc-model', version: '0.0.0', type: 'module', exports: { './native': './native.mjs', './package.json': './package.json' },
@@ -53,7 +53,7 @@ it('runs confined PTC through dsh, cancels a real job and cold-reads the sole du
     const processResult = await execa(process.execPath, [
       '--import', pathToFileURL(join(root, 'rsh/Programs/CLI/tests/fixtures/deny-cordis-context-register.mjs')).href,
       join(root, 'rsh/Programs/CLI/lib/bin.js'), '--profile', 'native-ptc', '--patch', patch, task,
-    ], { env: { ...process.env, DSH_HOME: home }, reject: false, timeout: 30_000 })
+    ], { env: { ...process.env, RSH_HOME: home }, reject: false, timeout: 30_000 })
     expect(processResult.exitCode, processResult.stderr).toBe(0)
     expect(readFileSync(audit, 'utf8')).toBe('cancelled\n')
     const name = readdirSync(sessions, { recursive: true }).find(name => String(name).endsWith('session.v3.jsonl'))
@@ -90,7 +90,7 @@ it('runs confined PTC through dsh, cancels a real job and cold-reads the sole du
     if (prompts[0] === undefined || schemas[0] === undefined) throw new Error('ptc-jobs: missing request header')
     const prompt = formatSystemPromptSnapshot(prompts[0], prompts.slice(1))
     const tools = formatToolSchemasSnapshot(schemas[0], schemas.slice(1))
-    if (process.env.DSH_SNAPSHOT === 'refresh') {
+    if (process.env.RSH_SNAPSHOT === 'refresh') {
       writeFileSync(expected, normalized)
       writeFileSync(join(scene, 'system-prompt.expected.md'), prompt)
       writeFileSync(join(scene, 'tool-schemas.expected.json'), tools)

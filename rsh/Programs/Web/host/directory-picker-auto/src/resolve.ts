@@ -3,10 +3,10 @@
  * one pure decision from sampled host facts to a concrete backend kind. The
  * caller samples exactly once per boot, so the mounted capability stays
  * stable for the service lifetime as the seam requires.
- * @module @deepseek-ai/dsh-host-directory-picker-auto/resolve
+ * @module @redspark/rsh-host-directory-picker-auto/resolve
  */
 
-import type { HttpWebServerConfig as HttpServerConfig } from '@deepseek-ai/dsh-http-routes-cordis'
+import type { HttpWebServerConfig as HttpServerConfig } from '@redspark/rsh-http-routes-cordis'
 
 /** Concrete interaction backend the resolver chooses between. */
 export type DirectoryPickerBackendKind = 'native' | 'browse'

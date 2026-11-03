@@ -2,5 +2,5 @@
 # side as of the last confirmed-consistent state. Both languages carry equal authority;
 # after editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write rsh/Modules/Official/hooks/hooks-claude-code/README.md
-README.md: 27e10445d577af41b6daac7e39b9eec3d939ad5b
-README.zh.md: a1949dca82ba06f626dc9fcc8ebb5b45d12b31c8
+README.md: 0087e8f80f2bf3dca3fceffb6e3bc7e482dc51c9
+README.zh.md: b9c6b9bf39e927b5fcc0d8de14bca82be94dcd9b

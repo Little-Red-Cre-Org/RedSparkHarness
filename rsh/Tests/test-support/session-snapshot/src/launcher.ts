@@ -4,7 +4,7 @@
  * stdout tee, SDK client, update collection, permission fallback, and process
  * shutdown so e2e and snapshot suites do not each reconstruct that boundary.
  *
- * @module @deepseek-ai/dsh-session-snapshot/launcher
+ * @module @redspark/rsh-session-snapshot/launcher
  */
 
 import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process'
@@ -37,8 +37,8 @@ import {
   type SetSessionConfigOptionResponse,
   type SessionNotification,
 } from '@agentclientprotocol/sdk'
-import { entryListSchema, type PatchOptions } from '@deepseek-ai/cordis-plugin-include'
-import { resolveExampleLaunch } from '@deepseek-ai/dsh-loader-smoke'
+import { entryListSchema, type PatchOptions } from '@redspark/cordis-plugin-include'
+import { resolveExampleLaunch } from '@redspark/rsh-loader-smoke'
 
 const EXIT_MARKER_GRACE_MS = 250
 
@@ -132,7 +132,7 @@ export function launchAcpTestAgent(options: AcpTestLaunchOptions): LaunchedAcpTe
         agent.profile,
         agent.configPath,
         selectedConfig,
-        options.env?.DSH_SNAPSHOT,
+        options.env?.RSH_SNAPSHOT,
         cwd,
         agent.packageResolutionAnchor,
         agent.fromDefaultProfile,
@@ -141,8 +141,8 @@ export function launchAcpTestAgent(options: AcpTestLaunchOptions): LaunchedAcpTe
     ...agent.profile === undefined ? {} : { sourceImport: 'tsx/esm' },
     env: {
       ...options.env,
-      DSH_HOME: join(cwd, '.dsh'),
-      DSH_AGENTS_HOME: join(cwd, '.agents'),
+      RSH_HOME: join(cwd, '.dsh'),
+      RSH_AGENTS_HOME: join(cwd, '.agents'),
     },
   })
   const child = spawn(
@@ -209,7 +209,7 @@ export function launchAcpTestAgent(options: AcpTestLaunchOptions): LaunchedAcpTe
   }
   const requestPermission = options.requestPermission
     ?? (() => Promise.resolve({ outcome: { outcome: 'cancelled' as const } }))
-  const clientApp = createAcpClientApp({ name: 'deepseek-harness-acp-test-client' })
+  const clientApp = createAcpClientApp({ name: 'redspark-harness-acp-test-client' })
     .onNotification(methods.client.session.update, ({ params }) => {
       return trackClientCallback(() => {
         updates.push(params.update)

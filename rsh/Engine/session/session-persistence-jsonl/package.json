@@ -1,5 +1,5 @@
 {
-  "name": "@deepseek-ai/dsh-session-persistence-jsonl",
+  "name": "@redspark/rsh-session-persistence-jsonl",
   "description": "JSONL durable session persistence backend for the RedSpark Harness",
   "version": "1.0.0",
   "publishConfig": {
@@ -49,27 +49,27 @@
   ],
   "license": "MIT",
   "peerDependencies": {
-    "@deepseek-ai/dsh-session": "workspace:^",
-    "@deepseek-ai/dsh-session-persistence": "workspace:^",
-    "@deepseek-ai/cordis": "workspace:^"
+    "@redspark/rsh-session": "workspace:^",
+    "@redspark/rsh-session-persistence": "workspace:^",
+    "@redspark/cordis": "workspace:^"
   },
   "peerDependenciesMeta": {
-    "@deepseek-ai/cordis": { "optional": true }
+    "@redspark/cordis": { "optional": true }
   },
   "dependencies": {
-    "@deepseek-ai/dsh-llm": "workspace:^",
-    "@deepseek-ai/dsh-session-format": "workspace:^",
-    "@deepseek-ai/dsh-session-format-catalog": "workspace:^",
-    "@deepseek-ai/dsh-session-format-v2-to-v3": "workspace:^",
-    "@deepseek-ai/dsh-native-runtime": "workspace:^",
-    "@deepseek-ai/node-addon-system": "workspace:^",
+    "@redspark/rsh-llm": "workspace:^",
+    "@redspark/rsh-session-format": "workspace:^",
+    "@redspark/rsh-session-format-catalog": "workspace:^",
+    "@redspark/rsh-session-format-v2-to-v3": "workspace:^",
+    "@redspark/rsh-native-runtime": "workspace:^",
+    "@redspark/node-addon-system": "workspace:^",
     "koffi": "3.1.1",
-    "@deepseek-ai/schemastery": "workspace:^"
+    "@redspark/schemastery": "workspace:^"
   },
   "devDependencies": {
-    "@deepseek-ai/dsh-session": "workspace:^",
-    "@deepseek-ai/dsh-session-format-v0-to-v1": "workspace:^",
-    "@deepseek-ai/dsh-session-persistence": "workspace:^",
-    "@deepseek-ai/cordis": "workspace:^"
+    "@redspark/rsh-session": "workspace:^",
+    "@redspark/rsh-session-format-v0-to-v1": "workspace:^",
+    "@redspark/rsh-session-persistence": "workspace:^",
+    "@redspark/cordis": "workspace:^"
   }
 }

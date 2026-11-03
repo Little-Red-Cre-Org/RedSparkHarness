@@ -4,16 +4,16 @@
 // their own specs, so each case scripts them.
 
 import { describe, expect, it, vi } from 'vitest'
-import { Context } from '@deepseek-ai/cordis'
-import AttachmentStore, { AttachmentError } from '@deepseek-ai/dsh-attachment'
-import type { MessageId } from '@deepseek-ai/dsh-llm'
-import { SessionId } from '@deepseek-ai/dsh-session'
+import { Context } from '@redspark/cordis'
+import AttachmentStore, { AttachmentError } from '@redspark/rsh-attachment'
+import type { MessageId } from '@redspark/rsh-llm'
+import { SessionId } from '@redspark/rsh-session'
 import SubagentRuntime, {
   SubagentError,
   type SubagentListEntry,
   type SubagentPromptRequestId,
-} from '@deepseek-ai/dsh-subagent'
-import { deliverSubagentPrompt, type HostPromptDeliverer } from '@deepseek-ai/dsh-subagent/internal'
+} from '@redspark/rsh-subagent'
+import { deliverSubagentPrompt, type HostPromptDeliverer } from '@redspark/rsh-subagent/internal'
 
 const PARENT = SessionId('parent')
 const CHILD = SessionId('child')

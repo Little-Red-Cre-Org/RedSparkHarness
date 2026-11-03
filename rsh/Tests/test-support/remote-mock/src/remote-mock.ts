@@ -1,6 +1,6 @@
 /** `RemoteMock`: an endpoint table (unary answers or stream scripts), live stream control, a log, and the Connection carrier face. */
 
-import type { ClientConnectionRpc, ConnectionRpcResult } from '@deepseek-ai/dsh-client-connection/client'
+import type { ClientConnectionRpc, ConnectionRpcResult } from '@redspark/rsh-client-connection/client'
 import { fn, type Mock } from '@vitest/spy'
 import { MockLogStore, type MockLog } from './log.ts'
 import { MockStream, toError, type StreamScript } from './streams.ts'
@@ -91,7 +91,7 @@ class MissingUnaryRule extends Error {}
 /**
  * Endpoint-named Remote mock. `dispatch` / `open` are the core; `rpc` is the
  * same core as the Connection carrier the `connection` plugin accepts through
- * `__DSH_TRANSPORT__.rpc`.
+ * `__RSH_TRANSPORT__.rpc`.
  */
 export class RemoteMock {
   /**

@@ -7,11 +7,11 @@ import { join } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { execa } from 'execa'
 import { expect, it } from 'vitest'
-import { resolveExampleLaunch } from '@deepseek-ai/dsh-loader-smoke'
-import { deriveReplayScript, parseSessionLog } from '@deepseek-ai/dsh-llm-replay'
-import { SESSION_FORMAT_VERSION } from '@deepseek-ai/dsh-session/native'
+import { resolveExampleLaunch } from '@redspark/rsh-loader-smoke'
+import { deriveReplayScript, parseSessionLog } from '@redspark/rsh-llm-replay'
+import { SESSION_FORMAT_VERSION } from '@redspark/rsh-session/native'
 import { formatSystemPromptSnapshot, formatToolSchemasSnapshot, normalizeSessionSnapshot, normalizedSystemPrompts,
-  normalizedToolSchemas, redactSessionSnapshotIds, sessionFixtureName } from '@deepseek-ai/dsh-session-snapshot'
+  normalizedToolSchemas, redactSessionSnapshotIds, sessionFixtureName } from '@redspark/rsh-session-snapshot'
 
 const root = fileURLToPath(new URL('../../', import.meta.url))
 
@@ -45,7 +45,7 @@ it('replays reminder creation and cold list/delete through the public native CLI
       exports: { './native': './native.mjs', './package.json': './package.json' },
       dsh: { native: { apiVersion: 1, entry: './native', targets: ['host'], requires: [], optional: [], provides: ['model'] } } }))
     writeFileSync(join(model, 'native.mjs'), `import {appendFileSync} from 'node:fs';
-      import {LlmAdapter} from ${JSON.stringify(pathToFileURL(require.resolve('@deepseek-ai/dsh-llm/native')).href)};
+      import {LlmAdapter} from ${JSON.stringify(pathToFileURL(require.resolve('@redspark/rsh-llm/native')).href)};
       const streams=${JSON.stringify(streams)};let cursor;
       class Adapter extends LlmAdapter {
         async resolveModel(provider,id){return {provider,id,name:id};}
@@ -70,7 +70,7 @@ it('replays reminder creation and cold list/delete through the public native CLI
       const launch = resolveExampleLaunch({ srcBin: join(root, 'rsh/Programs/CLI/src/bin.ts'),
         libBin: join(root, 'rsh/Programs/CLI/lib/bin.js'), configArgs: ['--profile', 'native-headless', '--patch', patch,
           ...resume === undefined ? [] : ['--resume', resume], task], tsconfigPath: join(root, 'tsconfig.json'),
-        sourceImport: 'tsx/esm', env: { DSH_HOME: home } })
+        sourceImport: 'tsx/esm', env: { RSH_HOME: home } })
       const process = await execa(launch.command, ['--import',
         pathToFileURL(join(root, 'rsh/Programs/CLI/tests/fixtures/deny-cordis-import.mjs')).href, ...launch.args],
       { cwd: workspace, env: launch.env, reject: false })
@@ -103,7 +103,7 @@ it('replays reminder creation and cold list/delete through the public native CLI
       [join(scenario, 'tool-schemas.expected.json'), formatToolSchemasSnapshot(normalizedToolSchemas(raw, context)[0] ?? [])],
     ])
     for (const [path, contents] of outputs) {
-      if (process.env.DSH_SNAPSHOT !== 'refresh') expect(contents).toBe(readFileSync(path, 'utf8'))
+      if (process.env.RSH_SNAPSHOT !== 'refresh') expect(contents).toBe(readFileSync(path, 'utf8'))
       else {
         const tracked = execFileSync('git', ['ls-files', '--', path.slice(root.length).replaceAll('\\', '/')],
           { cwd: root, encoding: 'utf8' }).trim() !== ''

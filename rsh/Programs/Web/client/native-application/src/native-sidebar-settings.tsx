@@ -2,12 +2,12 @@
 import { useEffect, useRef, useState } from 'react'
 import {
   IconDarkOutline16, IconGlobeOutline14, IconLightOutline16, IconSettingsOutline16, SettingsPanel, Tooltip,
-} from '@deepseek-ai/dsh-client-ui-primitives'
-import type { NativeSessionClient } from '@deepseek-ai/dsh-client-native-session/native'
-import type { NativeLocaleService } from '@deepseek-ai/dsh-client-locale/native'
-import type { NativeThemeService } from '@deepseek-ai/dsh-client-ui-theme/native'
-import type { InjectFace, PropsLocale, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
-import type {} from '@deepseek-ai/dsh-client-ui-sidebar/native'
+} from '@redspark/rsh-client-ui-primitives'
+import type { NativeSessionClient } from '@redspark/rsh-client-native-session/native'
+import type { NativeLocaleService } from '@redspark/rsh-client-locale/native'
+import type { NativeThemeService } from '@redspark/rsh-client-ui-theme/native'
+import type { InjectFace, PropsLocale, PropsRuntime } from '@redspark/rsh-client-ui-slots'
+import type {} from '@redspark/rsh-client-ui-sidebar/native'
 import type { NativeConversationController } from './controller.ts'
 import { SettingsPage, type NativeSettingsActions } from './settings-page.tsx'
 import { applyNativeSettingsPreferences } from './settings-preferences.ts'

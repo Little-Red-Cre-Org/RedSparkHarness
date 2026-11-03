@@ -1,9 +1,9 @@
 /** Shared write/edit fence for the Cordis and Native filesystem Providers. */
 
-import { FsError } from '@deepseek-ai/dsh-fs/types'
-import type { FsTarget } from '@deepseek-ai/dsh-fs/types'
-import { writableRoots } from '@deepseek-ai/dsh-sandbox/roots'
-import type { SandboxExecutionPolicy } from '@deepseek-ai/dsh-sandbox/native-types'
+import { FsError } from '@redspark/rsh-fs/types'
+import type { FsTarget } from '@redspark/rsh-fs/types'
+import { writableRoots } from '@redspark/rsh-sandbox/roots'
+import type { SandboxExecutionPolicy } from '@redspark/rsh-sandbox/native-types'
 import { isPathUnder } from './containment.ts'
 
 /**

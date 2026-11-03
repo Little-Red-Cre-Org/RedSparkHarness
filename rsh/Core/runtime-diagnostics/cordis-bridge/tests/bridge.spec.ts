@@ -1,6 +1,6 @@
 /** Hosting an unmodified Cordis plugin inside a Native activation. */
 import { describe, expect, it } from 'vitest'
-import type { NativeContext } from '@deepseek-ai/dsh-native-runtime'
+import type { NativeContext } from '@redspark/rsh-native-runtime'
 import { hostCordisPlugin, nativePluginForCordis, type CordisPlugin } from '../src/index.ts'
 
 /**

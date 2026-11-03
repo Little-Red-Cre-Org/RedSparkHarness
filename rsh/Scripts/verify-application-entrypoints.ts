@@ -43,7 +43,7 @@ const EXECUTABLE_SOURCE_ALLOWLIST = new Map<string, string>([
   ['rsh/Compatibility/DSH/subagent/subagent-acp/tests/fixtures/loader/rsi-driver.ts', 'test-only subprocess driver'],
   ['rsh/Modules/Official/subagent/subagent-claude-code/tests/fixtures/loader/driver.ts', 'test-only subprocess driver'],
   ['rsh/Compatibility/DSH/bridge/subagent-codex/tests/fixtures/loader/driver.ts', 'test-only subprocess driver'],
-  ['rsh/Compatibility/DSH/subagent/subagent-dsh-sdk/tests/fixtures/loader/driver.ts', 'test-only subprocess driver'],
+  ['rsh/Compatibility/DSH/subagent/subagent-rsh-sdk/tests/fixtures/loader/driver.ts', 'test-only subprocess driver'],
   ['rsh/Tests/test-support/loader-smoke/tests/fixtures/headless-driver.ts', 'test-only subprocess driver'],
   ['rsh/Tests/test-support/llm-mock-server/src/bin.ts', 'test-only model server'],
   ['rsh/Programs/SDK/python/sdk-runtime/runtime-bootstrap.mjs', 'private packaging-only runtime dispatcher'],
@@ -92,7 +92,7 @@ const SOURCE_PATTERNS = [
 ]
 
 const SOURCE_EXCLUDES = [
-  'rsh/Programs/SDK/python/sdk-runtime/src/deepseek_harness_runtime/runtime/**',
+  'rsh/Programs/SDK/python/sdk-runtime/src/redspark_harness_runtime/runtime/**',
   '**/node_modules/**',
   '**/lib/**',
   '**/dist/**',
@@ -119,7 +119,7 @@ function manifestBinViolations(root: string): string[] {
   const failures: string[] = []
   const manifests = [...new Set(globSync([...WORKSPACE_MANIFEST_GLOBS, 'rsh/**/package.json'], {
     cwd: root,
-    exclude: ['**/node_modules/**', 'rsh/Programs/SDK/python/sdk-runtime/src/deepseek_harness_runtime/runtime/**'],
+    exclude: ['**/node_modules/**', 'rsh/Programs/SDK/python/sdk-runtime/src/redspark_harness_runtime/runtime/**'],
   }))]
     .filter(path => !path.replaceAll('\\', '/').startsWith('rsh/Core/vendor/'))
     .sort()
@@ -152,7 +152,7 @@ function executableSourceViolations(root: string): string[] {
   return failures
 }
 
-function referencesDshCli(source: string): boolean {
+function referencesRshCli(source: string): boolean {
   return source.includes('rsh/Programs/CLI/src/bin.ts')
 }
 
@@ -175,7 +175,7 @@ function rootDemoViolations(root: string): string[] {
       continue
     }
     if (policy.kind === 'dsh-direct') {
-      if (!referencesDshCli(command)) failures.push(`package.json scripts.${name}: application demo must launch rsh/Programs/CLI/src/bin.ts`)
+      if (!referencesRshCli(command)) failures.push(`package.json scripts.${name}: application demo must launch rsh/Programs/CLI/src/bin.ts`)
       if (referencesPackageEntry(command)) failures.push(`package.json scripts.${name}: application demo must not launch a package entry directly`)
       continue
     }
@@ -190,7 +190,7 @@ function rootDemoViolations(root: string): string[] {
       continue
     }
     const source = readFileSync(wrapperPath, 'utf8')
-    if (!referencesDshCli(source)) failures.push(`${wrapper}: application demo wrapper must launch rsh/Programs/CLI/src/bin.ts`)
+    if (!referencesRshCli(source)) failures.push(`${wrapper}: application demo wrapper must launch rsh/Programs/CLI/src/bin.ts`)
     if (referencesPackageEntry(source)) failures.push(`${wrapper}: application demo wrapper must not launch a package entry directly`)
   }
   return failures

@@ -2,11 +2,11 @@ import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'no
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { Context } from '@deepseek-ai/cordis'
-import { SESSION_FORMAT_VERSION, SessionSeq } from '@deepseek-ai/dsh-session'
-import type { SessionEvent } from '@deepseek-ai/dsh-session'
-import { CompactionId } from '@deepseek-ai/dsh-compaction'
-import DeepSeekLlmApiExtensionRegistry from '@deepseek-ai/dsh-deepseek-llm-api-extensions'
+import { Context } from '@redspark/cordis'
+import { SESSION_FORMAT_VERSION, SessionSeq } from '@redspark/rsh-session'
+import type { SessionEvent } from '@redspark/rsh-session'
+import { CompactionId } from '@redspark/rsh-compaction'
+import DeepSeekLlmApiExtensionRegistry from '@redspark/rsh-deepseek-llm-api-extensions'
 import LlmRuntime, {
   AssistantStreamAccumulator,
   BlockAssembler,
@@ -17,7 +17,7 @@ import LlmRuntime, {
   GenerateOptions,
   LlmAdapter,
   StreamChunk,
-} from '@deepseek-ai/dsh-llm'
+} from '@redspark/rsh-llm'
 import {
   type Config,
   type ReplayEntry,
@@ -35,7 +35,7 @@ import {
   resolveScriptedEntry,
 } from '../src/index.ts'
 
-declare module '@deepseek-ai/dsh-deepseek-llm-api-extensions/types' {
+declare module '@redspark/rsh-deepseek-llm-api-extensions/types' {
   interface DeepSeekLlmApiExtensionMap {
     test_replay: { readonly version: 1 }
   }
@@ -213,8 +213,8 @@ async function drain(iter: AsyncIterable<StreamChunk>): Promise<StreamChunk[]> {
 describe('Session format package parity', () => {
   it('refuses catalog and Session version skew at module load', async () => {
     vi.resetModules()
-    vi.doMock('@deepseek-ai/dsh-session-format-catalog', async (importOriginal) => {
-      const actual = await importOriginal<typeof import('@deepseek-ai/dsh-session-format-catalog')>()
+    vi.doMock('@redspark/rsh-session-format-catalog', async (importOriginal) => {
+      const actual = await importOriginal<typeof import('@redspark/rsh-session-format-catalog')>()
       return {
         ...actual,
         sessionFormatCatalog: {
@@ -227,7 +227,7 @@ describe('Session format package parity', () => {
       await expect(import('../src/index.ts'))
         .rejects.toThrow(`format catalog v${SESSION_FORMAT_VERSION + 1} does not match Session v${SESSION_FORMAT_VERSION}`)
     } finally {
-      vi.doUnmock('@deepseek-ai/dsh-session-format-catalog')
+      vi.doUnmock('@redspark/rsh-session-format-catalog')
       vi.resetModules()
     }
   })
@@ -236,8 +236,8 @@ describe('Session format package parity', () => {
 describe('fixture format diagnostics', () => {
   it('attaches the header line to a restore-construction failure', async () => {
     vi.resetModules()
-    vi.doMock('@deepseek-ai/dsh-session-format-catalog', async (importOriginal) => {
-      const actual = await importOriginal<typeof import('@deepseek-ai/dsh-session-format-catalog')>()
+    vi.doMock('@redspark/rsh-session-format-catalog', async (importOriginal) => {
+      const actual = await importOriginal<typeof import('@redspark/rsh-session-format-catalog')>()
       return {
         ...actual,
         sessionFormatCatalog: {
@@ -255,15 +255,15 @@ describe('fixture format diagnostics', () => {
       expect(() => replay.parseSessionLog(sessionJsonl([])))
         .toThrow('session snapshot line 1: decoder exploded')
     } finally {
-      vi.doUnmock('@deepseek-ai/dsh-session-format-catalog')
+      vi.doUnmock('@redspark/rsh-session-format-catalog')
       vi.resetModules()
     }
   })
 
   it('attaches the header line to a restore-finalization failure', async () => {
     vi.resetModules()
-    vi.doMock('@deepseek-ai/dsh-session-format-catalog', async (importOriginal) => {
-      const actual = await importOriginal<typeof import('@deepseek-ai/dsh-session-format-catalog')>()
+    vi.doMock('@redspark/rsh-session-format-catalog', async (importOriginal) => {
+      const actual = await importOriginal<typeof import('@redspark/rsh-session-format-catalog')>()
       return {
         ...actual,
         sessionFormatCatalog: {
@@ -286,15 +286,15 @@ describe('fixture format diagnostics', () => {
       expect(() => replay.parseSessionLog(sessionJsonl([])))
         .toThrow('session snapshot line 1: Session event 99 restore finalization failed')
     } finally {
-      vi.doUnmock('@deepseek-ai/dsh-session-format-catalog')
+      vi.doUnmock('@redspark/rsh-session-format-catalog')
       vi.resetModules()
     }
   })
 
   it('falls back to the header when a source-range diagnostic has no matching physical prefix', async () => {
     vi.resetModules()
-    vi.doMock('@deepseek-ai/dsh-session-format-catalog', async (importOriginal) => {
-      const actual = await importOriginal<typeof import('@deepseek-ai/dsh-session-format-catalog')>()
+    vi.doMock('@redspark/rsh-session-format-catalog', async (importOriginal) => {
+      const actual = await importOriginal<typeof import('@redspark/rsh-session-format-catalog')>()
       return {
         ...actual,
         sessionFormatCatalog: {
@@ -317,15 +317,15 @@ describe('fixture format diagnostics', () => {
       expect(() => replay.parseSessionLog(sessionJsonl([])))
         .toThrow('session snapshot line 1: sourceEventSeqs synthetic unmatched failure')
     } finally {
-      vi.doUnmock('@deepseek-ai/dsh-session-format-catalog')
+      vi.doUnmock('@redspark/rsh-session-format-catalog')
       vi.resetModules()
     }
   })
 
   it('maps a non-Error row failure to its physical row', async () => {
     vi.resetModules()
-    vi.doMock('@deepseek-ai/dsh-session-format-catalog', async (importOriginal) => {
-      const actual = await importOriginal<typeof import('@deepseek-ai/dsh-session-format-catalog')>()
+    vi.doMock('@redspark/rsh-session-format-catalog', async (importOriginal) => {
+      const actual = await importOriginal<typeof import('@redspark/rsh-session-format-catalog')>()
       let row = 0
       return {
         ...actual,
@@ -354,7 +354,7 @@ describe('fixture format diagnostics', () => {
       expect(() => replay.parseSessionLog(sessionJsonl(events)))
         .toThrow('session snapshot line 3: row decoder exploded')
     } finally {
-      vi.doUnmock('@deepseek-ai/dsh-session-format-catalog')
+      vi.doUnmock('@redspark/rsh-session-format-catalog')
       vi.resetModules()
     }
   })
@@ -368,8 +368,8 @@ describe('fixture format diagnostics', () => {
     ['out-of-range logical event', 'Session event 99 is malformed', 1],
   ])('maps a %s finalization diagnostic to its source line', async (_label, message, line) => {
     vi.resetModules()
-    vi.doMock('@deepseek-ai/dsh-session-format-catalog', async (importOriginal) => {
-      const actual = await importOriginal<typeof import('@deepseek-ai/dsh-session-format-catalog')>()
+    vi.doMock('@redspark/rsh-session-format-catalog', async (importOriginal) => {
+      const actual = await importOriginal<typeof import('@redspark/rsh-session-format-catalog')>()
       return {
         ...actual,
         sessionFormatCatalog: {
@@ -391,7 +391,7 @@ describe('fixture format diagnostics', () => {
       expect(() => replay.parseSessionLog(sessionJsonl([event])))
         .toThrow(`session snapshot line ${line}: ${message}`)
     } finally {
-      vi.doUnmock('@deepseek-ai/dsh-session-format-catalog')
+      vi.doUnmock('@redspark/rsh-session-format-catalog')
       vi.resetModules()
     }
   })
@@ -408,7 +408,7 @@ describe('parseSessionLog', () => {
       message: {
         id: expect.stringMatching(/^v2-to-v3-system-/) as unknown,
         role: 'system',
-        source: { kind: 'plugin', plugin: '@deepseek-ai/dsh-system-prompt' },
+        source: { kind: 'plugin', plugin: '@redspark/rsh-system-prompt' },
         content: [],
       },
     },
@@ -2101,17 +2101,17 @@ describe('installLlmReplay (per-session keying)', () => {
 
 describe('apply (the plugin entry)', () => {
   const ORIG = {
-    file: process.env.DSH_SNAPSHOT_FILE,
-    override: process.env.DSH_SNAPSHOT_OVERRIDE,
-    children: process.env.DSH_SNAPSHOT_CHILD_FILES,
+    file: process.env.RSH_SNAPSHOT_FILE,
+    override: process.env.RSH_SNAPSHOT_OVERRIDE,
+    children: process.env.RSH_SNAPSHOT_CHILD_FILES,
   }
   afterEach(() => {
-    if (ORIG.file === undefined) delete process.env.DSH_SNAPSHOT_FILE
-    else process.env.DSH_SNAPSHOT_FILE = ORIG.file
-    if (ORIG.override === undefined) delete process.env.DSH_SNAPSHOT_OVERRIDE
-    else process.env.DSH_SNAPSHOT_OVERRIDE = ORIG.override
-    if (ORIG.children === undefined) delete process.env.DSH_SNAPSHOT_CHILD_FILES
-    else process.env.DSH_SNAPSHOT_CHILD_FILES = ORIG.children
+    if (ORIG.file === undefined) delete process.env.RSH_SNAPSHOT_FILE
+    else process.env.RSH_SNAPSHOT_FILE = ORIG.file
+    if (ORIG.override === undefined) delete process.env.RSH_SNAPSHOT_OVERRIDE
+    else process.env.RSH_SNAPSHOT_OVERRIDE = ORIG.override
+    if (ORIG.children === undefined) delete process.env.RSH_SNAPSHOT_CHILD_FILES
+    else process.env.RSH_SNAPSHOT_CHILD_FILES = ORIG.children
   })
 
   it('exposes the namespace plugin shape (name/inject, no default export)', () => {
@@ -2207,12 +2207,12 @@ describe('apply (the plugin entry)', () => {
     )
   })
 
-  it('falls back to $DSH_SNAPSHOT_FILE / $DSH_SNAPSHOT_OVERRIDE when config is empty', async () => {
+  it('falls back to $RSH_SNAPSHOT_FILE / $RSH_SNAPSHOT_OVERRIDE when config is empty', async () => {
     writeFileSync(file, sessionJsonl([]), 'utf8')
     const overrideFile = join(dir, 'replay.override.json')
     writeFileSync(overrideFile, JSON.stringify([{ kind: 'chunks', chunks: TEXT_CHUNKS }]), 'utf8')
-    process.env.DSH_SNAPSHOT_FILE = file
-    process.env.DSH_SNAPSHOT_OVERRIDE = overrideFile
+    process.env.RSH_SNAPSHOT_FILE = file
+    process.env.RSH_SNAPSHOT_OVERRIDE = overrideFile
     const ctx = new Context()
     await ctx.plugin(LlmRuntime)
     apply(ctx)
@@ -2221,8 +2221,8 @@ describe('apply (the plugin entry)', () => {
 
   it('uses only the file when no override path is configured or in the env', async () => {
     writeFileSync(file, replaySessionJsonl([TEXT_CHUNKS]), 'utf8')
-    process.env.DSH_SNAPSHOT_FILE = file
-    delete process.env.DSH_SNAPSHOT_OVERRIDE
+    process.env.RSH_SNAPSHOT_FILE = file
+    delete process.env.RSH_SNAPSHOT_OVERRIDE
     const ctx = new Context()
     await ctx.plugin(LlmRuntime)
     apply(ctx)
@@ -2230,14 +2230,14 @@ describe('apply (the plugin entry)', () => {
   })
 
   it('throws when no fixture path is given by config or env', async () => {
-    delete process.env.DSH_SNAPSHOT_FILE
+    delete process.env.RSH_SNAPSHOT_FILE
     const ctx = new Context()
     await ctx.plugin(LlmRuntime)
     expect(() => { apply(ctx, {}) }).toThrow(/a fixture path is required/)
   })
 
   it('treats an empty-string fixture path as missing', async () => {
-    delete process.env.DSH_SNAPSHOT_FILE
+    delete process.env.RSH_SNAPSHOT_FILE
     const ctx = new Context()
     await ctx.plugin(LlmRuntime)
     expect(() => { apply(ctx, { file: '' }) }).toThrow(/a fixture path is required/)
@@ -2261,7 +2261,7 @@ describe('apply (the plugin entry)', () => {
     expect(await drain(ctx.llm.stream(live('B')))).toEqual(childSecond)
   })
 
-  it('falls back to $DSH_SNAPSHOT_CHILD_FILES (path-delimited) when config omits childFiles', async () => {
+  it('falls back to $RSH_SNAPSHOT_CHILD_FILES (path-delimited) when config omits childFiles', async () => {
     const childChunks: StreamChunk[] = [
       { type: 'block-start', index: 0, blockType: 'text' },
       { type: 'text-delta', index: 0, text: 'env-kid' },
@@ -2270,8 +2270,8 @@ describe('apply (the plugin entry)', () => {
     writeFileSync(file, replaySessionJsonl([TEXT_CHUNKS], { id: 'p', createdAt: 1 }), 'utf8')
     const childFile = join(dir, 'session.1.jsonl')
     writeFileSync(childFile, replaySessionJsonl([childChunks], { id: 'c', createdAt: 2 }), 'utf8')
-    process.env.DSH_SNAPSHOT_FILE = file
-    process.env.DSH_SNAPSHOT_CHILD_FILES = childFile // single entry, no delimiter needed
+    process.env.RSH_SNAPSHOT_FILE = file
+    process.env.RSH_SNAPSHOT_CHILD_FILES = childFile // single entry, no delimiter needed
     const ctx = new Context()
     await ctx.plugin(LlmRuntime)
     apply(ctx)
@@ -2281,10 +2281,10 @@ describe('apply (the plugin entry)', () => {
     expect(await drain(ctx.llm.stream(live('B')))).toEqual(childChunks)
   })
 
-  it('ignores an empty $DSH_SNAPSHOT_CHILD_FILES (single-session)', async () => {
+  it('ignores an empty $RSH_SNAPSHOT_CHILD_FILES (single-session)', async () => {
     writeFileSync(file, replaySessionJsonl([TEXT_CHUNKS], { id: 'p', createdAt: 1 }), 'utf8')
-    process.env.DSH_SNAPSHOT_FILE = file
-    process.env.DSH_SNAPSHOT_CHILD_FILES = ''
+    process.env.RSH_SNAPSHOT_FILE = file
+    process.env.RSH_SNAPSHOT_CHILD_FILES = ''
     const ctx = new Context()
     await ctx.plugin(LlmRuntime)
     apply(ctx)

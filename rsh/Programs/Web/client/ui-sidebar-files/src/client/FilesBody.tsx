@@ -12,14 +12,14 @@
  */
 import { useEffect } from 'react'
 import type { ReactNode } from 'react'
-import type { RemoteFailure } from '@deepseek-ai/dsh-api-remotes/client'
-import type { PropsLocale, PropsRuntime, PropsStore, TranslateNS } from '@deepseek-ai/dsh-client-ui-slots'
+import type { RemoteFailure } from '@redspark/rsh-api-remotes/client'
+import type { PropsLocale, PropsRuntime, PropsStore, TranslateNS } from '@redspark/rsh-client-ui-slots'
 import {
   IconRefreshOutline16, SidebarPathBar, WorkspaceFileTreeRows, orderWorkspaceFileEntries,
-} from '@deepseek-ai/dsh-client-ui-primitives'
-import type { WorkspaceFileTreeLevel } from '@deepseek-ai/dsh-client-ui-primitives'
-import { fileAddressFor } from '@deepseek-ai/dsh-util-workspace-path'
-import type { WorkspaceDirectoryEntry } from '@deepseek-ai/dsh-api-workspace-files/types'
+} from '@redspark/rsh-client-ui-primitives'
+import type { WorkspaceFileTreeLevel } from '@redspark/rsh-client-ui-primitives'
+import { fileAddressFor } from '@redspark/rsh-util-workspace-path'
+import type { WorkspaceDirectoryEntry } from '@redspark/rsh-api-workspace-files/types'
 import type { FilesInjected } from './face.ts'
 import type {} from './locales.ts'
 import type { createFilesStore } from './store.ts'

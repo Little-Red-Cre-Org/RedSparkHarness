@@ -5,9 +5,9 @@ import {
 import {
   DisclosureRow, IconChevronRightOutline14, StateDot,
   type DisclosureRowProps, type StateDotState,
-} from '@deepseek-ai/dsh-client-ui-primitives'
-import type { Translate } from '@deepseek-ai/dsh-client-ui-slots'
-import type { SessionId } from '@deepseek-ai/dsh-session/types'
+} from '@redspark/rsh-client-ui-primitives'
+import type { Translate } from '@redspark/rsh-client-ui-slots'
+import type { SessionId } from '@redspark/rsh-session/types'
 import type { WorkflowRunKey } from './client/locales.ts'
 import type {
   WorkflowRunChatData, WorkflowRunMemberData, WorkflowRunPhaseData, WorkflowRunStatus,

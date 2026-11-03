@@ -1,7 +1,7 @@
 /** Shared JSON backend preserves the existing unit layouts, atomic publication and one-open lifecycle. */
 import { mkdir } from 'node:fs/promises'
-import { StorageError } from '@deepseek-ai/dsh-storage/backend'
-import { UNIT_NAME_RE, type KvFacet, type KvUnit, type KvUnitDescriptor, type StorageBackend } from '@deepseek-ai/dsh-storage/backend'
+import { StorageError } from '@redspark/rsh-storage/backend'
+import { UNIT_NAME_RE, type KvFacet, type KvUnit, type KvUnitDescriptor, type StorageBackend } from '@redspark/rsh-storage/backend'
 import { openSingleUnit } from './single-unit.ts'
 import { openPerRecordUnit } from './per-record-unit.ts'
 

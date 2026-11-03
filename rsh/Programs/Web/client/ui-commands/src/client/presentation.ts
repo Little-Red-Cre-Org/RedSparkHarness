@@ -1,13 +1,13 @@
 /** Composer menu grouping, localized labels, descriptions, and icons. */
 import type { ComponentType } from 'react'
-import type { InputTriggerCandidate } from '@deepseek-ai/dsh-client-ui-input-trigger/client'
+import type { InputTriggerCandidate } from '@redspark/rsh-client-ui-input-trigger/client'
 import {
   IconCompactOutline16, IconDownloadOutline16, IconGoalOutline16, IconPlanOutline14, IconSendOutline16,
   IconShieldOutline16,
-} from '@deepseek-ai/dsh-client-ui-primitives'
-import type { IconProps } from '@deepseek-ai/dsh-client-ui-primitives'
-import type { TranslateNS } from '@deepseek-ai/dsh-client-locale/client'
-import type { CommandDescriptor } from '@deepseek-ai/dsh-commands/types'
+} from '@redspark/rsh-client-ui-primitives'
+import type { IconProps } from '@redspark/rsh-client-ui-primitives'
+import type { TranslateNS } from '@redspark/rsh-client-locale/client'
+import type { CommandDescriptor } from '@redspark/rsh-commands/types'
 import type { CommandKey } from './locales.ts'
 import { builtinCommandName } from './resolution.ts'
 import type { BuiltinCommandName } from './resolution.ts'

@@ -1,29 +1,29 @@
 /** Public SDK facade that supplies the Program-owned standard dsh launcher. */
 
 import {
-  DeepSeekHarness as SdkDeepSeekHarness,
+  RedSparkHarness as SdkRshHarness,
   HarnessSession,
   createNativeHarnessClient,
-} from '@deepseek-ai/dsh-sdk-runtime'
+} from '@redspark/rsh-sdk-runtime'
 import type {
-  DeepSeekHarnessOptions,
+  RshHarnessOptions,
   LegacySdkPromptContentBlock,
-  NativeDeepSeekHarnessOptions,
+  NativeRshHarnessOptions,
   NativeSdkPromptContentBlock,
   RunOptions,
   RunResult,
   SessionUploadFileResult,
   SdkPromptContentBlock,
   RuntimeProcessOptions,
-} from '@deepseek-ai/dsh-sdk-runtime'
-import type { ChildConnectionDefinition } from '@deepseek-ai/dsh-subprocess/native'
-import { resolveDshLaunch } from './launch.ts'
+} from '@redspark/rsh-sdk-runtime'
+import type { ChildConnectionDefinition } from '@redspark/rsh-subprocess/native'
+import { resolveRshLaunch } from './launch.ts'
 import type { HarnessClient } from './client.ts'
 import { HarnessClient as ProgramHarnessClient } from './client.ts'
 
 /** High-level public SDK facade using the Program-owned standard dsh launcher. */
-export class DeepSeekHarness extends SdkDeepSeekHarness {
-  constructor(options: DeepSeekHarnessOptions = {}, clientFactory?: () => HarnessClient) {
+export class RedSparkHarness extends SdkRshHarness {
+  constructor(options: RshHarnessOptions = {}, clientFactory?: () => HarnessClient) {
     super(options, clientFactory ?? (() => new ProgramHarnessClient(options)))
   }
 
@@ -34,15 +34,15 @@ export class DeepSeekHarness extends SdkDeepSeekHarness {
 
 export { HarnessSession }
 
-export function createProcessDeepSeekHarness(
+export function createProcessRshHarness(
   runtime: RuntimeProcessOptions,
-  options: DeepSeekHarnessOptions = {},
-): DeepSeekHarness {
-  const launch: DeepSeekHarnessOptions = {
+  options: RshHarnessOptions = {},
+): RedSparkHarness {
+  const launch: RshHarnessOptions = {
     ...runtime.cwd === undefined ? {} : { processCwd: runtime.cwd },
     ...options,
   }
-  return new DeepSeekHarness(launch, () => new ProgramHarnessClient(launch, runtime))
+  return new RedSparkHarness(launch, () => new ProgramHarnessClient(launch, runtime))
 }
 
 /**
@@ -51,11 +51,11 @@ export function createProcessDeepSeekHarness(
  * @param childConnection - Host-owned managed stdio connection capability.
  * @returns a Harness that runs through the fixed native-sdk profile.
  */
-export function createNativeDeepSeekHarness(
-  options: NativeDeepSeekHarnessOptions,
+export function createNativeRshHarness(
+  options: NativeRshHarnessOptions,
   childConnection: ChildConnectionDefinition,
-): DeepSeekHarness {
-  const launch: DeepSeekHarnessOptions = {
+): RedSparkHarness {
+  const launch: RshHarnessOptions = {
     profile: 'native-sdk',
     ...options.cwd === undefined ? {} : { cwd: options.cwd },
     ...options.provider === undefined ? {} : { provider: options.provider },
@@ -65,7 +65,7 @@ export function createNativeDeepSeekHarness(
     ...options.maxSteps === undefined ? {} : { maxSteps: options.maxSteps },
     ...options.allowedTools === undefined ? {} : { allowedTools: options.allowedTools },
     ...options.workspaceWriteRoot === undefined ? {} : { workspaceWriteRoot: options.workspaceWriteRoot },
-    ...options.dshHome === undefined ? {} : { dshHome: options.dshHome },
+    ...options.rshHome === undefined ? {} : { rshHome: options.rshHome },
     ...options.processCwd === undefined ? {} : { processCwd: options.processCwd },
     ...options.env === undefined ? {} : { env: options.env },
     ...options.initializeTimeoutMs === undefined ? {} : { initializeTimeoutMs: options.initializeTimeoutMs },
@@ -75,8 +75,8 @@ export function createNativeDeepSeekHarness(
     ...options.disposeGraceMs === undefined ? {} : { disposeGraceMs: options.disposeGraceMs },
     ...options.onApprovalRequest === undefined ? {} : { onApprovalRequest: options.onApprovalRequest },
   }
-  const runtime = resolveDshLaunch(launch)
-  return new DeepSeekHarness(launch, () => createNativeHarnessClient(launch, childConnection, runtime))
+  const runtime = resolveRshLaunch(launch)
+  return new RedSparkHarness(launch, () => createNativeHarnessClient(launch, childConnection, runtime))
 }
 
 export type { RunOptions, RunResult, SdkPromptContentBlock }

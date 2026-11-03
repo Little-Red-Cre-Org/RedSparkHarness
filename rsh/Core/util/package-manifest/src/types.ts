@@ -1,7 +1,7 @@
 /**
  * Shared declarations for the package.json fields used by DSH plugin authors.
  * Each reader owns JSON validation and resolved defaults.
- * @module @deepseek-ai/dsh-package-manifest/types
+ * @module @redspark/rsh-package-manifest/types
  */
 
 /** Package identity and metadata; local profile readers may accept a partial declaration. */

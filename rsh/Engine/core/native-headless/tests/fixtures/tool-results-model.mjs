@@ -1,7 +1,7 @@
 /** Controlled model and real registry contributions for the authored tool-results scene. */
 import { appendFileSync, readFileSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
-import { createUserMessage } from '@deepseek-ai/dsh-llm/native'
+import { createUserMessage } from '@redspark/rsh-llm/native'
 
 export const plugin = {
   apiVersion: 1, name: 'native-fixture-model', targets: ['host'], requires: ['tools'], provides: ['model'],

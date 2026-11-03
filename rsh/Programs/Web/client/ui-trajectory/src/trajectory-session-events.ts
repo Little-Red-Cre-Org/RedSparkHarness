@@ -3,8 +3,8 @@
 import type {
   AssistantMessageNode, ConversationLocation, ConversationNode, RunningToolCall, ToolResultNode,
   SystemPromptNode, RequestView,
-} from '@deepseek-ai/dsh-client-ui-conversation/native-types'
-import type { SessionEvent } from '@deepseek-ai/dsh-session/types'
+} from '@redspark/rsh-client-ui-conversation/native-types'
+import type { SessionEvent } from '@redspark/rsh-session/types'
 import type { TrajectorySnapshot } from './client/trajectory-contract.ts'
 import { contextForm, contextProvenance, displayFailure, toAssistantBlocks } from './client/trajectory-event-projection.ts'
 

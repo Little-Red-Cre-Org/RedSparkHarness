@@ -3,7 +3,7 @@ description: "旧版 Settings API 的 Cordis 声明，包含 Context.settings �
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-compat-settings-definition
+# @redspark/rsh-compat-settings-definition
 
 [English](README.md) | 中文
 
@@ -27,7 +27,7 @@ Cordis 插件消费旧版 `Context.settings` API 时使用本包。根导出把 
 Cordis 插件的类型声明导入根导出，以启用 `Context.settings`：
 
 ```ts
-import type {} from '@deepseek-ai/dsh-compat-settings-definition'
+import type {} from '@redspark/rsh-compat-settings-definition'
 ```
 
 `/events` 导出声明兼容 Settings 事件。这些导入只扩展 TypeScript 声明；运行时服务仍由选定的 Settings 提供方创建。

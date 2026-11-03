@@ -1,28 +1,28 @@
 /**
- * @deepseek-ai/dsh-headless — one-shot direct Agent driver. The bundle patch
+ * @redspark/rsh-headless — one-shot direct Agent driver. The bundle patch
  * rides over dsh-base without Host, HTTP, or browser plugins; this runner
  * creates one Agent through the core registry, drives the task to quiescence,
  * streams provider reasoning to stderr, flushes its Session, prints the final
  * assistant text to stdout, and exits.
  *
- * @module @deepseek-ai/dsh-headless
+ * @module @redspark/rsh-headless
  */
 
 import { randomUUID } from 'node:crypto'
-import type { Context } from '@deepseek-ai/cordis'
-import z from '@deepseek-ai/schemastery'
-import { brandString } from '@deepseek-ai/dsh-brand'
-import { installModelSelection } from '@deepseek-ai/dsh-agent'
-import type { Agent, ModelSelectionRef } from '@deepseek-ai/dsh-agent'
-import type {} from '@deepseek-ai/dsh-agent-default-model'
-import { createUserMessage } from '@deepseek-ai/dsh-llm'
-import { assertNever } from '@deepseek-ai/dsh-util-values'
-import { SessionSeq } from '@deepseek-ai/dsh-session'
-import type { Session, SessionEvent, SessionId, SessionLogOffset } from '@deepseek-ai/dsh-session'
+import type { Context } from '@redspark/cordis'
+import z from '@redspark/schemastery'
+import { brandString } from '@redspark/rsh-brand'
+import { installModelSelection } from '@redspark/rsh-agent'
+import type { Agent, ModelSelectionRef } from '@redspark/rsh-agent'
+import type {} from '@redspark/rsh-agent-default-model'
+import { createUserMessage } from '@redspark/rsh-llm'
+import { assertNever } from '@redspark/rsh-util-values'
+import { SessionSeq } from '@redspark/rsh-session'
+import type { Session, SessionEvent, SessionId, SessionLogOffset } from '@redspark/rsh-session'
 // Empty type imports carry the loader Context merge for the settlement await
 // and the cmdline Context merge for the appExit host value.
-import type {} from '@deepseek-ai/cordis-plugin-loader'
-import type {} from '@deepseek-ai/dsh-cmdline'
+import type {} from '@redspark/cordis-plugin-loader'
+import type {} from '@redspark/rsh-cmdline'
 
 /** Stable Cordis plugin name. */
 export const name = 'headless-runner'
@@ -181,7 +181,7 @@ async function run(ctx: Context, task: string, io: HeadlessIo): Promise<void> {
   // This bundle composes no preset roster, so the model-facing rows sit in the
   // host plane and the agent reads them from the global layer. A deployment
   // that DOES configure one has to join it here first
-  // (@deepseek-ai/dsh-agent-presets README, "Composing a child agent").
+  // (@redspark/rsh-agent-presets README, "Composing a child agent").
   const { agent } = await agents.create({
     sessionId: brandString<SessionId>(`session-${randomUUID()}`),
     meta: { cwd: process.cwd() },

@@ -17,8 +17,8 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[2]
-SDK_DISTRIBUTION = "deepseek-harness-sdk"
-RUNTIME_DISTRIBUTION = "deepseek-harness-runtime-bin"
+SDK_DISTRIBUTION = "redspark-harness-sdk"
+RUNTIME_DISTRIBUTION = "redspark-harness-runtime-bin"
 PLATFORM_MANIFEST = ROOT / "rsh" / "Programs" / "SDK" / "python" / "sdk-runtime" / "platforms.json"
 
 
@@ -82,12 +82,12 @@ def main() -> None:
         if args.package == "sdk":
             stage_sdk(staging, wheel_version)
             environment = None
-            expected = output_dir / f"deepseek_harness_sdk-{wheel_version}-py3-none-any.whl"
+            expected = output_dir / f"redspark_harness_sdk-{wheel_version}-py3-none-any.whl"
         else:
             platform_tag, executable_name = PLATFORMS[args.platform]
             stage_runtime(staging, wheel_version, args.runtime_exe.resolve(), executable_name)
-            environment = {"DSH_RUNTIME_PLATFORM_TAG": platform_tag}
-            expected = output_dir / f"deepseek_harness_runtime_bin-{wheel_version}-py3-none-{platform_tag}.whl"
+            environment = {"RSH_RUNTIME_PLATFORM_TAG": platform_tag}
+            expected = output_dir / f"redspark_harness_runtime_bin-{wheel_version}-py3-none-{platform_tag}.whl"
         command = ["uv", "build", "--wheel", "--out-dir", str(output_dir), str(staging)]
         subprocess.run(command, cwd=ROOT, env=None if environment is None else {**os.environ, **environment}, check=True)
     if not expected.is_file():
@@ -153,7 +153,7 @@ def copy_package(source: Path, destination: Path) -> None:
             "*.pyc",
             "dist",
             "node_modules",
-            "deepseek-harness-sdk-runtime-*",
+            "redspark-harness-sdk-runtime-*",
         ),
     )
 
@@ -197,8 +197,8 @@ def stage_sdk(destination: Path, version: str) -> None:
     pyproject = destination / "pyproject.toml"
     rewrite_version(pyproject, version)
     text, count = re.subn(
-        r'"deepseek-harness-runtime-bin==[^"]+"',
-        f'"deepseek-harness-runtime-bin=={version}"',
+        r'"redspark-harness-runtime-bin==[^"]+"',
+        f'"redspark-harness-runtime-bin=={version}"',
         pyproject.read_text(),
         count=1,
     )
@@ -215,7 +215,7 @@ def stage_runtime(destination: Path, version: str, executable: Path, executable_
     copy_package(ROOT / "rsh" / "Programs" / "SDK" / "python" / "sdk-runtime", destination)
     stage_license_files(destination, include_notices=True)
     rewrite_version(destination / "pyproject.toml", version)
-    runtime_dir = destination / "src" / "deepseek_harness_runtime" / "runtime"
+    runtime_dir = destination / "src" / "redspark_harness_runtime" / "runtime"
     runtime_dir.mkdir(parents=True, exist_ok=True)
     source_directory = executable.parent
     for filename in runtime_filenames(executable_name):
@@ -254,7 +254,7 @@ def verify_wheel(
                 f"{wheel} has license files {license_files}, expected {expected_license_files}"
             )
         runtime_files = [
-            name for name in archive.namelist() if "/runtime/deepseek-harness-sdk-runtime-" in name
+            name for name in archive.namelist() if "/runtime/redspark-harness-sdk-runtime-" in name
         ]
         if package == "runtime":
             assert platform is not None

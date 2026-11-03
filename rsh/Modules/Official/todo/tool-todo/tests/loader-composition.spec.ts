@@ -6,18 +6,18 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { afterEach, describe, expect, it } from 'vitest'
-import { Context } from '@deepseek-ai/cordis'
-import Loader from '@deepseek-ai/cordis-plugin-loader'
-import Include from '@deepseek-ai/cordis-plugin-include'
-import { ToolCallId } from '@deepseek-ai/dsh-llm'
-import { Session, SessionId } from '@deepseek-ai/dsh-session'
-import AgentRegistry from '@deepseek-ai/dsh-agent'
-import type { Agent } from '@deepseek-ai/dsh-agent'
-import SystemPrompt from '@deepseek-ai/dsh-system-prompt'
-import ToolRuntime from '@deepseek-ai/dsh-tools'
-import SessionProjectionRegistry from '@deepseek-ai/dsh-session-projection'
-import * as ToolTodo from '@deepseek-ai/dsh-tool-todo'
-import { unsupportedInbox } from '@deepseek-ai/dsh-agent-loop-testkit'
+import { Context } from '@redspark/cordis'
+import Loader from '@redspark/cordis-plugin-loader'
+import Include from '@redspark/cordis-plugin-include'
+import { ToolCallId } from '@redspark/rsh-llm'
+import { Session, SessionId } from '@redspark/rsh-session'
+import AgentRegistry from '@redspark/rsh-agent'
+import type { Agent } from '@redspark/rsh-agent'
+import SystemPrompt from '@redspark/rsh-system-prompt'
+import ToolRuntime from '@redspark/rsh-tools'
+import SessionProjectionRegistry from '@redspark/rsh-session-projection'
+import * as ToolTodo from '@redspark/rsh-tool-todo'
+import { unsupportedInbox } from '@redspark/rsh-agent-loop-testkit'
 
 let root: string | undefined
 let context: Context | undefined
@@ -57,11 +57,11 @@ async function boot(configLines: readonly string[]): Promise<Context> {
   root = await mkdtemp(join(tmpdir(), 'dsh-todo-loader-'))
   const configPath = join(root, 'cordis.yml')
   await writeFile(configPath, [
-    "- name: '@deepseek-ai/dsh-agent'",
-    "- name: '@deepseek-ai/dsh-system-prompt'",
-    "- name: '@deepseek-ai/dsh-tools'",
-    "- name: '@deepseek-ai/dsh-session-projection'",
-    "- name: '@deepseek-ai/dsh-tool-todo'",
+    "- name: '@redspark/rsh-agent'",
+    "- name: '@redspark/rsh-system-prompt'",
+    "- name: '@redspark/rsh-tools'",
+    "- name: '@redspark/rsh-session-projection'",
+    "- name: '@redspark/rsh-tool-todo'",
     ...configLines.length > 0 ? ['  config:', ...configLines] : [],
     '',
   ].join('\n'))
@@ -72,11 +72,11 @@ async function boot(configLines: readonly string[]): Promise<Context> {
   await ctx.plugin(Loader)
   ctx.loader.builtins.include = Include
   const modules = new Map<string, unknown>([
-    ['@deepseek-ai/dsh-agent', AgentRegistry],
-    ['@deepseek-ai/dsh-system-prompt', SystemPrompt],
-    ['@deepseek-ai/dsh-tools', ToolRuntime],
-    ['@deepseek-ai/dsh-session-projection', SessionProjectionRegistry],
-    ['@deepseek-ai/dsh-tool-todo', ToolTodo],
+    ['@redspark/rsh-agent', AgentRegistry],
+    ['@redspark/rsh-system-prompt', SystemPrompt],
+    ['@redspark/rsh-tools', ToolRuntime],
+    ['@redspark/rsh-session-projection', SessionProjectionRegistry],
+    ['@redspark/rsh-tool-todo', ToolTodo],
   ])
   ctx.loader.internal = {
     version: 'v2',

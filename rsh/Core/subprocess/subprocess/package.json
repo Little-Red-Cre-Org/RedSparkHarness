@@ -1,5 +1,5 @@
 {
-  "name": "@deepseek-ai/dsh-subprocess",
+  "name": "@redspark/rsh-subprocess",
   "description": "Subprocess seam (ctx.subprocess) for the RedSpark Harness — managed process groups, bounded spill-backed output, and escalated kills behind one abstract service",
   "version": "1.0.0",
   "publishConfig": {
@@ -33,18 +33,18 @@
   ],
   "license": "MIT",
   "peerDependencies": {
-    "@deepseek-ai/cordis": "workspace:^",
-    "@deepseek-ai/dsh-http-proxy": "workspace:^",
-    "@deepseek-ai/dsh-native-runtime": "workspace:^"
+    "@redspark/cordis": "workspace:^",
+    "@redspark/rsh-http-proxy": "workspace:^",
+    "@redspark/rsh-native-runtime": "workspace:^"
   },
   "peerDependenciesMeta": {
-    "@deepseek-ai/cordis": { "optional": true },
-    "@deepseek-ai/dsh-native-runtime": { "optional": true }
+    "@redspark/cordis": { "optional": true },
+    "@redspark/rsh-native-runtime": { "optional": true }
   },
   "devDependencies": {
-    "@deepseek-ai/cordis": "workspace:^",
-    "@deepseek-ai/dsh-http-proxy": "workspace:^",
-    "@deepseek-ai/dsh-native-runtime": "workspace:^",
-    "@deepseek-ai/dsh-launch-environment": "workspace:^"
+    "@redspark/cordis": "workspace:^",
+    "@redspark/rsh-http-proxy": "workspace:^",
+    "@redspark/rsh-native-runtime": "workspace:^",
+    "@redspark/rsh-launch-environment": "workspace:^"
   }
 }

@@ -1,5 +1,5 @@
 {
-  "name": "@deepseek-ai/dsh-http-proxy",
+  "name": "@redspark/rsh-http-proxy",
   "description": "Process-wide outbound HTTP proxy policy for RedSpark Harness: resolve it from the launch environment and install it as undici's global dispatcher",
   "version": "1.0.0",
   "publishConfig": {

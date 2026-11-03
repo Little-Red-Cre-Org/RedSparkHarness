@@ -3,11 +3,11 @@
  * including the format refusals shared by every backend: a stored log this
  * build cannot faithfully interpret is refused, never misread, and the
  * refusal points at the raw artifact when the backend keeps one per session.
- * @module @deepseek-ai/dsh-session-persistence/errors
+ * @module @redspark/rsh-session-persistence/errors
  */
 
-import { SESSION_FORMAT_VERSION } from '@deepseek-ai/dsh-session/native'
-import type { SessionId } from '@deepseek-ai/dsh-session/native'
+import { SESSION_FORMAT_VERSION } from '@redspark/rsh-session/native'
+import type { SessionId } from '@redspark/rsh-session/native'
 
 /** The requested Session identity has no durable log visible to this caller. */
 export class SessionPersistenceNotFoundError extends Error {

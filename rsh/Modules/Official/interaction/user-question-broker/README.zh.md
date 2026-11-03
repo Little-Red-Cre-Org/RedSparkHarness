@@ -3,7 +3,7 @@ description: "为认证原生应用传输提供待回答的人类问题。"
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-user-question-broker
+# @redspark/rsh-user-question-broker
 
 [English](README.md) | 中文
 
@@ -23,7 +23,7 @@ kind: "package-reference"
 <a id="use-this-package"></a>
 ## 使用本包
 
-在原生 profile 中同时选择本包与 `@deepseek-ai/dsh-user-questions`。其 `./native` 入口依赖 `userQuestions`，提供 `userQuestionBroker`；配置为空。应用通过 `onRequest` 订阅并保留呈现中的 Agent，再通过 `answer(id, agent, answer)` 提交 JSON。无效选项会失败但不消耗问题；重复或过期回答会失败。
+在原生 profile 中同时选择本包与 `@redspark/rsh-user-questions`。其 `./native` 入口依赖 `userQuestions`，提供 `userQuestionBroker`；配置为空。应用通过 `onRequest` 订阅并保留呈现中的 Agent，再通过 `answer(id, agent, answer)` 提交 JSON。无效选项会失败但不消耗问题；重复或过期回答会失败。
 
 <a id="understand-the-implementation"></a>
 ## 理解实现
