@@ -14,8 +14,7 @@
 import { existsSync, mkdirSync, rmSync, writeFileSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { FiberState } from '@redspark/cordis'
-import type { Context } from '@redspark/cordis'
+import type { Context, FiberState } from '@redspark/cordis'
 import type { PatchOptions } from '@redspark/cordis-plugin-include'
 import type { EntryOptions } from '@redspark/cordis-plugin-loader'
 import {
@@ -40,6 +39,16 @@ import { provideCmdline, type AppReady } from '@redspark/rsh-cmdline'
 import { createProcessShutdown, type ProcessShutdown } from './process-shutdown.ts'
 
 const NAME = 'dsh'
+
+/**
+ * Value mirror of cordis's `FiberState` const enum.
+ *
+ * A const enum is erased at compile time, so `@redspark/cordis` publishes no
+ * runtime binding for it and a value import fails when this module loads. Every
+ * member used here is mirrored locally with the enum type as its annotation, the
+ * same way `app-boot` and `tool-cordis` already do it.
+ */
+const FIBER_ACTIVE = 2 as FiberState.ACTIVE
 
 /** Launcher-owned readiness signal committed only after boot and host setup succeed. */
 function createAppReady(): { service: AppReady; commit(): void } {
@@ -270,7 +279,7 @@ export interface RunProfileOptions {
  */
 function suppressShutdownError(ctx: Context, signal: AbortSignal, error: unknown): void {
   if (signal.aborted) return
-  if (ctx.fiber.state !== FiberState.ACTIVE || ctx.get('loader') === undefined) return
+  if (ctx.fiber.state !== FIBER_ACTIVE || ctx.get('loader') === undefined) return
   throw error
 }
 
@@ -355,7 +364,7 @@ export async function runProfile(options: RunProfileOptions): Promise<{ ctx: Con
   // profiles apply every user layer above but install no HMR fallback or watcher.
   if (composed.profile.patchReload === 'live'
     && !signalShutdown.signal.aborted
-    && ctx.fiber.state === FiberState.ACTIVE
+    && ctx.fiber.state === FIBER_ACTIVE
     && ctx.get('loader') !== undefined) {
     try {
       // Config-only HMR for the live profile patch layer: dsh-base disables
@@ -385,7 +394,7 @@ export async function runProfile(options: RunProfileOptions): Promise<{ ctx: Con
     }
   }
   if (!signalShutdown.signal.aborted
-    && ctx.fiber.state === FiberState.ACTIVE
+    && ctx.fiber.state === FIBER_ACTIVE
     && ctx.get('loader') !== undefined) {
     appReady.commit()
   }

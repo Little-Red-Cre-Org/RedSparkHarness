@@ -113,7 +113,7 @@
     - id: session-persistence-jsonl
       name: '@redspark/rsh-session-persistence-jsonl'
       config:
-        root: !!js dshHomePath('sessions')
+        root: !!js rshHomePath('sessions')
 
     # Durable image bytes live outside the append-only session log. Messages
     # keep content-addressed references that this shared backend resolves for
@@ -151,7 +151,7 @@
     - id: storage-json
       name: '@redspark/rsh-storage-json'
       config:
-        root: !!js dshHomePath('storages')
+        root: !!js rshHomePath('storages')
 
     - id: storage-domain
       name: '@redspark/rsh-storage-domain'
