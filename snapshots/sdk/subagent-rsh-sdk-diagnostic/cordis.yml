@@ -27,7 +27,7 @@
 - id: session-persistence-jsonl
   name: '@redspark/rsh-session-persistence-jsonl'
   config:
-    root: !!js dshHomePath('sessions')
+    root: !!js rshHomePath('sessions')
     compression: !!js "process.env.RSH_SNAPSHOT === undefined ? 'zstd' : 'none'"
 
 - id: session-log-deepseek
@@ -43,7 +43,7 @@
         profile: sdk
         patches:
           - !!js process.env.RSH_TEST_CHILD_PATCH
-        dshHome: !!js dshHomePath('children/foreground')
+        rshHome: !!js rshHomePath('children/foreground')
         provider: mock
         model: mock-echo
         env:
@@ -63,7 +63,7 @@
         profile: sdk
         patches:
           - !!js process.env.RSH_TEST_CHILD_PATCH
-        dshHome: !!js dshHomePath('children/background')
+        rshHome: !!js rshHomePath('children/background')
         provider: mock
         model: mock-echo
         env:

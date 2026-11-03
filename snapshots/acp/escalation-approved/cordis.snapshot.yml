@@ -15,7 +15,7 @@
 - id: session-persistence-jsonl
   name: '@redspark/rsh-session-persistence-jsonl'
   config:
-    root: !!js process.env.RSH_SNAPSHOT_SESSIONS_ROOT ?? dshHomePath('sessions')
+    root: !!js process.env.RSH_SNAPSHOT_SESSIONS_ROOT ?? rshHomePath('sessions')
     compression: none
 
 - id: sandbox

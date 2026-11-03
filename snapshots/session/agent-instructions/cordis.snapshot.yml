@@ -13,14 +13,14 @@
 - id: session-persistence-jsonl
   name: '@redspark/rsh-session-persistence-jsonl'
   config:
-    root: !!js dshHomePath('sessions')
+    root: !!js rshHomePath('sessions')
     compression: none
 
 - id: agent-instructions
   name: '@redspark/rsh-agent-instructions'
   config:
     maxBytes: 65536
-    dshHome: !!js process.cwd() + '/.dsh'
+    rshHome: !!js process.cwd() + '/.dsh'
     projectRootMarkers:
       - .dsh-project
 

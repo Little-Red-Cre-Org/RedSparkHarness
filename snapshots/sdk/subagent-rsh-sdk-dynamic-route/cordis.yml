@@ -29,7 +29,7 @@
 - id: session-persistence-jsonl
   name: '@redspark/rsh-session-persistence-jsonl'
   config:
-    root: !!js dshHomePath('sessions')
+    root: !!js rshHomePath('sessions')
     compression: none
 
 - insert:
@@ -42,7 +42,7 @@
       config:
         profile: sdk
         patches: !!js JSON.parse(process.env.RSH_TEST_CHILD_PATCHES ?? '[]')
-        dshHome: !!js process.env.RSH_TEST_CHILD_HOME
+        rshHome: !!js process.env.RSH_TEST_CHILD_HOME
         provider: mock
         model: mock-routed
         env:

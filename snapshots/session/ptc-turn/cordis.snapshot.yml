@@ -16,7 +16,7 @@
 - id: session-persistence-jsonl
   name: '@redspark/rsh-session-persistence-jsonl'
   config:
-    root: !!js dshHomePath('sessions')
+    root: !!js rshHomePath('sessions')
     compression: none
 
 - id: agent-instructions
