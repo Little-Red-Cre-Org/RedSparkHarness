@@ -111,18 +111,18 @@ it('records and cold-replays external child model, filesystem and settlement fac
       dsh: { profile: { runtime: 'native', config: 'rsh.profile.json' } } }))
 
     for (const [name, path] of [
-      ['dsh-native-headless', 'rsh/Engine/core/native-headless'],
-      ['dsh-native-agent', 'rsh/Engine/core/native-agent'],
-      ['dsh-native-tools', 'rsh/Engine/core/native-tools'],
-      ['dsh-native-model-execution', 'rsh/Engine/core/native-model-execution'],
-      ['dsh-native-session-execution', 'rsh/Engine/core/native-session-execution'],
-      ['dsh-native-prompt', 'rsh/Engine/core/native-prompt'],
-      ['dsh-native-subagent', 'rsh/Engine/subagent/native-subagent'],
-      ['dsh-tool-subagent', 'rsh/Engine/subagent/tool-subagent'],
-      ['dsh-session-persistence-jsonl', 'rsh/Engine/session/session-persistence-jsonl'],
-      ['dsh-fs-local', 'rsh/Modules/Official/fs/fs-local'],
-      ['dsh-fs-observation-policy', 'rsh/Modules/Official/fs/fs-observation-policy'],
-      ['dsh-tool-fs', 'rsh/Modules/Official/fs/tool-fs'],
+      ['rsh-native-headless', 'rsh/Engine/core/native-headless'],
+      ['rsh-native-agent', 'rsh/Engine/core/native-agent'],
+      ['rsh-native-tools', 'rsh/Engine/core/native-tools'],
+      ['rsh-native-model-execution', 'rsh/Engine/core/native-model-execution'],
+      ['rsh-native-session-execution', 'rsh/Engine/core/native-session-execution'],
+      ['rsh-native-prompt', 'rsh/Engine/core/native-prompt'],
+      ['rsh-native-subagent', 'rsh/Engine/subagent/native-subagent'],
+      ['rsh-tool-subagent', 'rsh/Engine/subagent/tool-subagent'],
+      ['rsh-session-persistence-jsonl', 'rsh/Engine/session/session-persistence-jsonl'],
+      ['rsh-fs-local', 'rsh/Modules/Official/fs/fs-local'],
+      ['rsh-fs-observation-policy', 'rsh/Modules/Official/fs/fs-observation-policy'],
+      ['rsh-tool-fs', 'rsh/Modules/Official/fs/tool-fs'],
     ] as const) {
       const link = join(profileModules, '@redspark', name)
       symlinkSync(join(root, path), link, 'junction')

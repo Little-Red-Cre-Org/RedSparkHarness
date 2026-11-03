@@ -35,14 +35,14 @@ it('records capped real searches with complete recovery artifacts and cold-repla
   utimesSync(join(workspace, 'a.data'), 1_000, 2_000)
   utimesSync(join(workspace, 'b.data'), 1_000, 1_000)
   const packages = [
-    ['dsh-native-headless', 'rsh/Engine/core/native-headless'], ['dsh-native-agent', 'rsh/Engine/core/native-agent'],
-    ['dsh-native-tools', 'rsh/Engine/core/native-tools'], ['dsh-native-model-execution', 'rsh/Engine/core/native-model-execution'],
-    ['dsh-session-persistence-jsonl', 'rsh/Engine/session/session-persistence-jsonl'],
-    ['dsh-fs-local', 'rsh/Modules/Official/fs/fs-local'], ['dsh-fs-observation-policy', 'rsh/Modules/Official/fs/fs-observation-policy'],
-    ['dsh-tool-fs-search', 'rsh/Modules/Official/fs/tool-fs-search'],
-    ['dsh-subprocess-local', 'rsh/Core/subprocess/subprocess-local'],
-    ['dsh-native-prompt', 'rsh/Engine/core/native-prompt'],
-    ['dsh-spill-local', 'rsh/Modules/Official/spill/spill-local'],
+    ['rsh-native-headless', 'rsh/Engine/core/native-headless'], ['dsh-native-agent', 'rsh/Engine/core/native-agent'],
+    ['rsh-native-tools', 'rsh/Engine/core/native-tools'], ['dsh-native-model-execution', 'rsh/Engine/core/native-model-execution'],
+    ['rsh-session-persistence-jsonl', 'rsh/Engine/session/session-persistence-jsonl'],
+    ['rsh-fs-local', 'rsh/Modules/Official/fs/fs-local'], ['dsh-fs-observation-policy', 'rsh/Modules/Official/fs/fs-observation-policy'],
+    ['rsh-tool-fs-search', 'rsh/Modules/Official/fs/tool-fs-search'],
+    ['rsh-subprocess-local', 'rsh/Core/subprocess/subprocess-local'],
+    ['rsh-native-prompt', 'rsh/Engine/core/native-prompt'],
+    ['rsh-spill-local', 'rsh/Modules/Official/spill/spill-local'],
   ] as const
   for (const [name, path] of packages) {
     const link = join(modules, '@redspark', name)

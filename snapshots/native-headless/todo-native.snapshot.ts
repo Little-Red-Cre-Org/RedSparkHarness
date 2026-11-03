@@ -32,11 +32,11 @@ it('commits todo replacement before the next model request and restores the same
   mkdirSync(join(modules, '@redspark'), { recursive: true })
   mkdirSync(workspace)
   const packages = [
-    ['dsh-native-headless', 'rsh/Engine/core/native-headless'], ['dsh-native-agent', 'rsh/Engine/core/native-agent'],
-    ['dsh-native-tools', 'rsh/Engine/core/native-tools'], ['dsh-native-model-execution', 'rsh/Engine/core/native-model-execution'],
-    ['dsh-session-persistence-jsonl', 'rsh/Engine/session/session-persistence-jsonl'],
-    ['dsh-fs-local', 'rsh/Modules/Official/fs/fs-local'], ['dsh-fs-observation-policy', 'rsh/Modules/Official/fs/fs-observation-policy'],
-    ['dsh-tool-todo', 'rsh/Modules/Official/todo/tool-todo'],
+    ['rsh-native-headless', 'rsh/Engine/core/native-headless'], ['dsh-native-agent', 'rsh/Engine/core/native-agent'],
+    ['rsh-native-tools', 'rsh/Engine/core/native-tools'], ['dsh-native-model-execution', 'rsh/Engine/core/native-model-execution'],
+    ['rsh-session-persistence-jsonl', 'rsh/Engine/session/session-persistence-jsonl'],
+    ['rsh-fs-local', 'rsh/Modules/Official/fs/fs-local'], ['dsh-fs-observation-policy', 'rsh/Modules/Official/fs/fs-observation-policy'],
+    ['rsh-tool-todo', 'rsh/Modules/Official/todo/tool-todo'],
   ] as const
   for (const [name, path] of packages) {
     const link = join(modules, '@redspark', name)

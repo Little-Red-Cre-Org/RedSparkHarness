@@ -39,7 +39,7 @@ async function fixture(linked: readonly string[] = [], options: {
   const dshLink = join(runtime, 'node_modules', '@redspark', 'dsh')
   await symlink(cli, dshLink, process.platform === 'win32' ? 'junction' : 'dir')
   links.push(dshLink)
-  const frontend = join(runtime, 'node_modules', '@redspark', 'dsh-web-frontend')
+  const frontend = join(runtime, 'node_modules', '@redspark', 'rsh-web-frontend')
   await mkdir(join(frontend, 'dist'), { recursive: true })
   await writeFile(join(frontend, 'package.json'), JSON.stringify({
     name: '@redspark/rsh-web-frontend',

@@ -117,7 +117,7 @@ export class DesktopHostProcess {
     // A Host instance starts at most once, so a teardown that ran before this call must not
     // suppress the failures of the child this call is about to spawn.
     this.stopping = false
-    const entry = join(this.runtimeDir, 'node_modules', '@redspark', 'dsh-desktop-host', 'lib', 'index.js')
+    const entry = join(this.runtimeDir, 'node_modules', '@redspark', 'rsh-desktop-host', 'lib', 'index.js')
     const child = spawn(this.node, [
       ...(this.inspectPort === undefined ? [] : [`--inspect=127.0.0.1:${String(this.inspectPort)}`]),
       entry,

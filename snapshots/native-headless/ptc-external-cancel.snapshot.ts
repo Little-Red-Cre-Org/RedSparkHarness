@@ -98,22 +98,22 @@ it('records and cold-replays PTC cancellation through a captured external Respon
         dsh: { profile: { runtime: 'native', config: 'rsh.profile.json' } } }))
 
       for (const [name, path] of [
-        ['dsh-native-headless', 'rsh/Engine/core/native-headless'],
-        ['dsh-native-agent', 'rsh/Engine/core/native-agent'],
-        ['dsh-native-tools', 'rsh/Engine/core/native-tools'],
-        ['dsh-native-model-execution', 'rsh/Engine/core/native-model-execution'],
-        ['dsh-native-session-execution', 'rsh/Engine/core/native-session-execution'],
-        ['dsh-native-prompt', 'rsh/Engine/core/native-prompt'],
-        ['dsh-native-subagent', 'rsh/Engine/subagent/native-subagent'],
-        ['dsh-tool-subagent', 'rsh/Engine/subagent/tool-subagent'],
-        ['dsh-session-persistence-jsonl', 'rsh/Engine/session/session-persistence-jsonl'],
-        ['dsh-fs-local', 'rsh/Modules/Official/fs/fs-local'],
-        ['dsh-fs-observation-policy', 'rsh/Modules/Official/fs/fs-observation-policy'],
-        ['dsh-native-sandbox-policy', 'rsh/Modules/Official/sandbox/native-sandbox-policy'],
-        ['dsh-subprocess-local', 'rsh/Core/subprocess/subprocess-local'],
-        ['dsh-sandbox-local', 'rsh/Modules/Official/sandbox/sandbox-local'],
-        ['dsh-code-runtime-process-sandbox', 'rsh/Modules/Official/code-runtime/code-runtime-process-sandbox'],
-        ['dsh-tool-code-runtime', 'rsh/Modules/Official/code-runtime/tool-code-runtime'],
+        ['rsh-native-headless', 'rsh/Engine/core/native-headless'],
+        ['rsh-native-agent', 'rsh/Engine/core/native-agent'],
+        ['rsh-native-tools', 'rsh/Engine/core/native-tools'],
+        ['rsh-native-model-execution', 'rsh/Engine/core/native-model-execution'],
+        ['rsh-native-session-execution', 'rsh/Engine/core/native-session-execution'],
+        ['rsh-native-prompt', 'rsh/Engine/core/native-prompt'],
+        ['rsh-native-subagent', 'rsh/Engine/subagent/native-subagent'],
+        ['rsh-tool-subagent', 'rsh/Engine/subagent/tool-subagent'],
+        ['rsh-session-persistence-jsonl', 'rsh/Engine/session/session-persistence-jsonl'],
+        ['rsh-fs-local', 'rsh/Modules/Official/fs/fs-local'],
+        ['rsh-fs-observation-policy', 'rsh/Modules/Official/fs/fs-observation-policy'],
+        ['rsh-native-sandbox-policy', 'rsh/Modules/Official/sandbox/native-sandbox-policy'],
+        ['rsh-subprocess-local', 'rsh/Core/subprocess/subprocess-local'],
+        ['rsh-sandbox-local', 'rsh/Modules/Official/sandbox/sandbox-local'],
+        ['rsh-code-runtime-process-sandbox', 'rsh/Modules/Official/code-runtime/code-runtime-process-sandbox'],
+        ['rsh-tool-code-runtime', 'rsh/Modules/Official/code-runtime/tool-code-runtime'],
       ] as const) {
         const link = join(profileModules, '@redspark', name)
         const source = installedRoot === undefined ? join(root, path)

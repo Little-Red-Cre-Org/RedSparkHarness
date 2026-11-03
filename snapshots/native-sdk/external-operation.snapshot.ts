@@ -184,9 +184,9 @@ it('projects external child facts through both SDKs and cold-restores the native
     ] }))
 
     for (const [name, path] of [
-      ['dsh-native-subagent', 'rsh/Engine/subagent/native-subagent'],
-      ['dsh-fs-observation-policy', 'rsh/Modules/Official/fs/fs-observation-policy'],
-      ['dsh-tool-fs', 'rsh/Modules/Official/fs/tool-fs'],
+      ['rsh-native-subagent', 'rsh/Engine/subagent/native-subagent'],
+      ['rsh-fs-observation-policy', 'rsh/Modules/Official/fs/fs-observation-policy'],
+      ['rsh-tool-fs', 'rsh/Modules/Official/fs/tool-fs'],
     ] as const) {
       const link = join(profileModules, '@redspark', name)
       symlinkSync(join(root, path), link, 'junction')

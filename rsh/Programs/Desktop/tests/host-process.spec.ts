@@ -62,7 +62,7 @@ process.on('message', message => {
 function projectWithHost(source: string): string {
   const project = mkdtempSync(join(tmpdir(), 'dsh-desktop-host-test-'))
   roots.push(project)
-  const packageRoot = join(project, 'node_modules', '@redspark', 'dsh-desktop-host')
+  const packageRoot = join(project, 'node_modules', '@redspark', 'rsh-desktop-host')
   mkdirSync(join(packageRoot, 'lib'), { recursive: true })
   writeFileSync(join(packageRoot, 'package.json'), '{"name":"@redspark/rsh-desktop-host","type":"module"}\n')
   writeFileSync(join(packageRoot, 'lib', 'index.js'), `${HOST_WIRE}\n${source}`)

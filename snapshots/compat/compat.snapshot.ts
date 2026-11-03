@@ -32,15 +32,15 @@ it('adapts legacy file tools through the compatibility test profile and writes o
   copyFileSync(join(profileFixture, 'rsh.profile.json'), join(profileDir, 'rsh.profile.json'))
   mkdirSync(join(modules, '@redspark'), { recursive: true })
   for (const [name, path] of [
-    ['dsh-native-agent', 'rsh/Engine/core/native-agent'],
-    ['dsh-native-headless', 'rsh/Engine/core/native-headless'],
-    ['dsh-native-model-execution', 'rsh/Engine/core/native-model-execution'],
-    ['dsh-session-persistence-jsonl', 'rsh/Engine/session/session-persistence-jsonl'],
-    ['dsh-compat-fs-local', 'rsh/Compatibility/DSH/bridge/compat-fs-local'],
-    ['dsh-compat-fs-policy', 'rsh/Compatibility/DSH/bridge/compat-fs-policy'],
-    ['dsh-native-tools', 'rsh/Engine/core/native-tools'],
-    ['dsh-native-prompt', 'rsh/Engine/core/native-prompt'],
-    ['dsh-compat-tool-fs', 'rsh/Compatibility/DSH/bridge/compat-tool-fs'],
+    ['rsh-native-agent', 'rsh/Engine/core/native-agent'],
+    ['rsh-native-headless', 'rsh/Engine/core/native-headless'],
+    ['rsh-native-model-execution', 'rsh/Engine/core/native-model-execution'],
+    ['rsh-session-persistence-jsonl', 'rsh/Engine/session/session-persistence-jsonl'],
+    ['rsh-compat-fs-local', 'rsh/Compatibility/DSH/bridge/compat-fs-local'],
+    ['rsh-compat-fs-policy', 'rsh/Compatibility/DSH/bridge/compat-fs-policy'],
+    ['rsh-native-tools', 'rsh/Engine/core/native-tools'],
+    ['rsh-native-prompt', 'rsh/Engine/core/native-prompt'],
+    ['rsh-compat-tool-fs', 'rsh/Compatibility/DSH/bridge/compat-tool-fs'],
   ] as const) symlinkSync(join(root, path), join(modules, '@redspark', name), 'junction')
   const modelDir = join(modules, 'native-compat-fixture-model')
   mkdirSync(modelDir)

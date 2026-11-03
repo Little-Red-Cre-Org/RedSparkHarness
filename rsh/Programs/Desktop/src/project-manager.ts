@@ -805,7 +805,7 @@ async function validateNativeComposition(files: NativeProfileFiles, profileDir: 
   // Client entry files can reference browser globals; esbuild validates them without executing them in the shell.
   // esbuild cannot spawn its binary from app.asar.
   const nativeClientModule = await import(pathToFileURL(
-    createRequire(join(runtimeDir, 'node_modules', '@redspark', 'dsh-desktop-host', 'package.json'))
+    createRequire(join(runtimeDir, 'node_modules', '@redspark', 'rsh-desktop-host', 'package.json'))
       .resolve('@redspark/rsh-native-web-assets/native-client'),
   ).href) as typeof import('@redspark/rsh-native-web-assets/native-client')
   await nativeClientModule.prepareNativeClientProfileBundle(profileDir, runtimeDir, files.client, true)

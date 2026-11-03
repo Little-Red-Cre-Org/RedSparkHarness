@@ -47,17 +47,17 @@ it('records the native terminal lifecycle tool schema and list result', async ()
   mkdirSync(workspace)
   for (const file of ['package.json', 'rsh.profile.json']) copyFileSync(join(shippedProfile, file), join(profile, file))
   for (const [name, path] of [
-    ['dsh-native-headless', 'rsh/Engine/core/native-headless'],
-    ['dsh-native-agent', 'rsh/Engine/core/native-agent'],
-    ['dsh-native-tools', 'rsh/Engine/core/native-tools'],
-    ['dsh-native-model-execution', 'rsh/Engine/core/native-model-execution'],
-    ['dsh-session-persistence-jsonl', 'rsh/Engine/session/session-persistence-jsonl'],
-    ['dsh-fs-local', 'rsh/Modules/Official/fs/fs-local'],
-    ['dsh-subprocess-local', 'rsh/Core/subprocess/subprocess-local'],
-    ['dsh-native-sandbox-policy', 'rsh/Modules/Official/sandbox/native-sandbox-policy'],
-    ['dsh-terminal', 'rsh/Modules/Official/terminal/terminal'],
-    ['dsh-terminal-bash', 'rsh/Modules/Official/terminal/terminal-bash'],
-    ['dsh-tool-terminal', 'rsh/Modules/Official/terminal/tool-terminal'],
+    ['rsh-native-headless', 'rsh/Engine/core/native-headless'],
+    ['rsh-native-agent', 'rsh/Engine/core/native-agent'],
+    ['rsh-native-tools', 'rsh/Engine/core/native-tools'],
+    ['rsh-native-model-execution', 'rsh/Engine/core/native-model-execution'],
+    ['rsh-session-persistence-jsonl', 'rsh/Engine/session/session-persistence-jsonl'],
+    ['rsh-fs-local', 'rsh/Modules/Official/fs/fs-local'],
+    ['rsh-subprocess-local', 'rsh/Core/subprocess/subprocess-local'],
+    ['rsh-native-sandbox-policy', 'rsh/Modules/Official/sandbox/native-sandbox-policy'],
+    ['rsh-terminal', 'rsh/Modules/Official/terminal/terminal'],
+    ['rsh-terminal-bash', 'rsh/Modules/Official/terminal/terminal-bash'],
+    ['rsh-tool-terminal', 'rsh/Modules/Official/terminal/tool-terminal'],
   ] as const) {
     const junction = join(modules, '@redspark', name)
     symlinkSync(join(root, path), junction, 'junction')

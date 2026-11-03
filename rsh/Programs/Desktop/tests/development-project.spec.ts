@@ -56,7 +56,7 @@ describe('desktop development project', () => {
       home: join(root, 'home'),
     })
     expect(realpathSync(join(project, 'node_modules', '@redspark', 'dsh'))).toBe(realpathSync(cli))
-    expect(realpathSync(join(project, 'node_modules', '@redspark', 'dsh-desktop-host'))).toBe(realpathSync(host))
+    expect(realpathSync(join(project, 'node_modules', '@redspark', 'rsh-desktop-host'))).toBe(realpathSync(host))
     expect(realpathSync(join(project, 'node_modules', 'plain-dependency')))
       .toBe(realpathSync(join(dependencies, 'plain-dependency')))
     expect(realpathSync(join(project, 'node_modules', '@scope', 'dependency')))
@@ -73,7 +73,7 @@ describe('desktop development project', () => {
     const cli = join(root, 'apps', 'cli')
     const host = join(root, 'apps', 'desktop-host')
     const dependencies = join(root, 'workspace-dependencies')
-    const adapter = join(dependencies, '@redspark', 'dsh-example-runtime')
+    const adapter = join(dependencies, '@redspark', 'rsh-example-runtime')
     mkdirSync(join(cli, 'lib'), { recursive: true })
     mkdirSync(join(host, 'lib'), { recursive: true })
     mkdirSync(join(adapter, 'lib'), { recursive: true })
@@ -90,7 +90,7 @@ describe('desktop development project', () => {
       release: release(),
       home: join(root, 'home'),
     })
-    expect(existsSync(join(project, 'node_modules', '@redspark', 'dsh-example-runtime', 'lib', 'runtime.js'))).toBe(true)
+    expect(existsSync(join(project, 'node_modules', '@redspark', 'rsh-example-runtime', 'lib', 'runtime.js'))).toBe(true)
   })
 
   it('rejects a CLI package from another release', async () => {

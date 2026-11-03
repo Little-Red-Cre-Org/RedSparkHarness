@@ -41,17 +41,17 @@ it('records confined native file tools and a denied out-of-workspace write throu
   expect(existsSync(outsidePath)).toBe(false)
 
   for (const [name, path] of [
-    ['dsh-native-headless', 'rsh/Engine/core/native-headless'],
-    ['dsh-native-agent', 'rsh/Engine/core/native-agent'],
-    ['dsh-native-tools', 'rsh/Engine/core/native-tools'],
-    ['dsh-native-model-execution', 'rsh/Engine/core/native-model-execution'],
-    ['dsh-native-prompt', 'rsh/Engine/core/native-prompt'],
-    ['dsh-session-persistence-jsonl', 'rsh/Engine/session/session-persistence-jsonl'],
-    ['dsh-native-sandbox-policy', 'rsh/Modules/Official/sandbox/native-sandbox-policy'],
-    ['dsh-fs-sandbox', 'rsh/Modules/Official/fs/fs-sandbox'],
-    ['dsh-fs-observation-policy', 'rsh/Modules/Official/fs/fs-observation-policy'],
-    ['dsh-native-approval', 'rsh/Modules/Official/interaction/native-approval'],
-    ['dsh-tool-fs', 'rsh/Modules/Official/fs/tool-fs'],
+    ['rsh-native-headless', 'rsh/Engine/core/native-headless'],
+    ['rsh-native-agent', 'rsh/Engine/core/native-agent'],
+    ['rsh-native-tools', 'rsh/Engine/core/native-tools'],
+    ['rsh-native-model-execution', 'rsh/Engine/core/native-model-execution'],
+    ['rsh-native-prompt', 'rsh/Engine/core/native-prompt'],
+    ['rsh-session-persistence-jsonl', 'rsh/Engine/session/session-persistence-jsonl'],
+    ['rsh-native-sandbox-policy', 'rsh/Modules/Official/sandbox/native-sandbox-policy'],
+    ['rsh-fs-sandbox', 'rsh/Modules/Official/fs/fs-sandbox'],
+    ['rsh-fs-observation-policy', 'rsh/Modules/Official/fs/fs-observation-policy'],
+    ['rsh-native-approval', 'rsh/Modules/Official/interaction/native-approval'],
+    ['rsh-tool-fs', 'rsh/Modules/Official/fs/tool-fs'],
   ] as const) {
     const link = join(modules, '@redspark', name)
     symlinkSync(join(root, path), link, 'junction')

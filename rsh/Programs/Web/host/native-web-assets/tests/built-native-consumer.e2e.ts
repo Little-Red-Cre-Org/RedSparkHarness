@@ -12,9 +12,9 @@ const ROUTES_ROOT = join(PACKAGE_ROOT, '../../../../Core/util/http-routes')
 it('loads the built native asset routes in an installed consumer without Cordis', () => {
   const home = mkdtempSync(join(tmpdir(), 'dsh-native-web-assets-'))
   try {
-    const installed = join(home, 'node_modules', '@redspark', 'dsh-native-web-assets')
-    const routes = join(home, 'node_modules', '@redspark', 'dsh-http-routes')
-    const frontend = join(home, 'node_modules', '@redspark', 'dsh-web-frontend')
+    const installed = join(home, 'node_modules', '@redspark', 'rsh-native-web-assets')
+    const routes = join(home, 'node_modules', '@redspark', 'rsh-http-routes')
+    const frontend = join(home, 'node_modules', '@redspark', 'rsh-web-frontend')
     mkdirSync(join(installed, 'lib'), { recursive: true })
     mkdirSync(join(routes, 'lib'), { recursive: true })
     mkdirSync(join(frontend, 'dist'), { recursive: true })

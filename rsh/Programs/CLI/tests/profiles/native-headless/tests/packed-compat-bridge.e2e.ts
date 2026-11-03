@@ -103,7 +103,7 @@ it.skipIf(PACKED_BIN === undefined || CONSUMER_ROOT === undefined)(
     const sdkClientPath = await realpath(consumerRequire.resolve('@redspark/rsh-sdk-client'))
     const sdkRelative = relative(installedRoot, sdkClientPath)
     expect(sdkRelative.startsWith('..' + sep) || isAbsolute(sdkRelative)).toBe(false)
-    expect(sdkRelative.split(sep).slice(0, 3)).toEqual(['node_modules', '@redspark', 'dsh-sdk-client'])
+    expect(sdkRelative.split(sep).slice(0, 3)).toEqual(['node_modules', '@redspark', 'rsh-sdk-client'])
     for (const packageName of [
       '@redspark/rsh-compat-dsh-runtime',
       '@redspark/rsh-compat-fs-local',

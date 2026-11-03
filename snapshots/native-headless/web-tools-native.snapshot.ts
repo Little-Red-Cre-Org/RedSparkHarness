@@ -75,14 +75,14 @@ it('runs the shipped native web rows without Cordis or the public network and re
   mkdirSync(join(modules, '@redspark'), { recursive: true })
   mkdirSync(workspace)
   const packages = [
-    ['dsh-native-headless', 'rsh/Engine/core/native-headless'], ['dsh-native-agent', 'rsh/Engine/core/native-agent'],
-    ['dsh-native-tools', 'rsh/Engine/core/native-tools'], ['dsh-native-model-execution', 'rsh/Engine/core/native-model-execution'],
-    ['dsh-tool-call-timeout-policy', 'rsh/Modules/Official/guard/timeout-policy'],
-    ['dsh-session-persistence-jsonl', 'rsh/Engine/session/session-persistence-jsonl'],
-    ['dsh-native-prompt', 'rsh/Engine/core/native-prompt'],
-    ['dsh-fs-local', 'rsh/Modules/Official/fs/fs-local'], ['dsh-fs-observation-policy', 'rsh/Modules/Official/fs/fs-observation-policy'],
-    ['dsh-web', 'rsh/Modules/Official/web/web'], ['dsh-web-search-deepseek', 'rsh/Modules/Official/web/web-search-deepseek'],
-    ['dsh-web-fetch-http', 'rsh/Modules/Official/web/web-fetch-http'], ['dsh-tool-web', 'rsh/Modules/Official/web/tool-web'],
+    ['rsh-native-headless', 'rsh/Engine/core/native-headless'], ['dsh-native-agent', 'rsh/Engine/core/native-agent'],
+    ['rsh-native-tools', 'rsh/Engine/core/native-tools'], ['dsh-native-model-execution', 'rsh/Engine/core/native-model-execution'],
+    ['rsh-tool-call-timeout-policy', 'rsh/Modules/Official/guard/timeout-policy'],
+    ['rsh-session-persistence-jsonl', 'rsh/Engine/session/session-persistence-jsonl'],
+    ['rsh-native-prompt', 'rsh/Engine/core/native-prompt'],
+    ['rsh-fs-local', 'rsh/Modules/Official/fs/fs-local'], ['dsh-fs-observation-policy', 'rsh/Modules/Official/fs/fs-observation-policy'],
+    ['rsh-web', 'rsh/Modules/Official/web/web'], ['dsh-web-search-deepseek', 'rsh/Modules/Official/web/web-search-deepseek'],
+    ['rsh-web-fetch-http', 'rsh/Modules/Official/web/web-fetch-http'], ['dsh-tool-web', 'rsh/Modules/Official/web/tool-web'],
   ] as const
   for (const [name, path] of packages) {
     const link = join(modules, '@redspark', name)

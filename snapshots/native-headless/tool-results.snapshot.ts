@@ -36,14 +36,14 @@ it('records mode-selected tool results, extra model input and whole-batch conclu
   copyFileSync(join(profile, 'package.json'), join(profileDir, 'package.json'))
   copyFileSync(join(profile, 'rsh.profile.json'), join(profileDir, 'rsh.profile.json'))
   for (const [name, path] of [
-    ['dsh-native-headless', 'rsh/Engine/core/native-headless'],
-    ['dsh-native-agent', 'rsh/Engine/core/native-agent'],
-    ['dsh-native-tools', 'rsh/Engine/core/native-tools'],
-    ['dsh-native-model-execution', 'rsh/Engine/core/native-model-execution'],
-    ['dsh-session-persistence-jsonl', 'rsh/Engine/session/session-persistence-jsonl'],
-    ['dsh-fs-local', 'rsh/Modules/Official/fs/fs-local'],
-    ['dsh-fs-observation-policy', 'rsh/Modules/Official/fs/fs-observation-policy'],
-    ['dsh-llm', 'rsh/Engine/llm/llm'],
+    ['rsh-native-headless', 'rsh/Engine/core/native-headless'],
+    ['rsh-native-agent', 'rsh/Engine/core/native-agent'],
+    ['rsh-native-tools', 'rsh/Engine/core/native-tools'],
+    ['rsh-native-model-execution', 'rsh/Engine/core/native-model-execution'],
+    ['rsh-session-persistence-jsonl', 'rsh/Engine/session/session-persistence-jsonl'],
+    ['rsh-fs-local', 'rsh/Modules/Official/fs/fs-local'],
+    ['rsh-fs-observation-policy', 'rsh/Modules/Official/fs/fs-observation-policy'],
+    ['rsh-llm', 'rsh/Engine/llm/llm'],
   ] as const) symlinkSync(join(root, path), join(modules, '@redspark', name), 'junction')
   const modelDir = join(modules, 'native-fixture-model')
   mkdirSync(modelDir)

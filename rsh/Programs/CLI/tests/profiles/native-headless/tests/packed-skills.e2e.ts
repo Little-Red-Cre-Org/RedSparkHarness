@@ -139,7 +139,7 @@ it.skipIf(PACKED_BIN === undefined || CONSUMER_ROOT === undefined)(
     expect(typecheck).not.toMatch(/node_modules[\\/]@redspark[\\/]cordis(?:[\\/]|$)/iu)
     const sdkRelative = relative(installedRoot, sdkClientPath)
     expect(sdkRelative.startsWith(`..${sep}`) || isAbsolute(sdkRelative)).toBe(false)
-    expect(sdkRelative.split(sep).slice(0, 3)).toEqual(['node_modules', '@redspark', 'dsh-sdk-client'])
+    expect(sdkRelative.split(sep).slice(0, 3)).toEqual(['node_modules', '@redspark', 'rsh-sdk-client'])
     const { RedSparkHarness } = await import(pathToFileURL(sdkClientPath).href) as InstalledSdk
 
     const root = await mkdtemp(join(installedRoot, '.dsh-p4-skills-'))

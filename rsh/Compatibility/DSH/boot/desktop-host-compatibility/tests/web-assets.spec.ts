@@ -11,7 +11,7 @@ async function desktopFixture(): Promise<{ runtime: string; dist: string }> {
   const root = await mkdtemp(join(tmpdir(), 'dsh-host-assets-'))
   roots.push(root)
   const runtime = join(root, 'runtime')
-  const packageRoot = join(runtime, 'node_modules', '@redspark', 'dsh-web-compatibility')
+  const packageRoot = join(runtime, 'node_modules', '@redspark', 'rsh-web-compatibility')
   const dist = join(packageRoot, 'dist')
   await mkdir(dist, { recursive: true })
   await writeFile(join(runtime, 'package.json'), '{}')
