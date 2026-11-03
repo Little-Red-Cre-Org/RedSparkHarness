@@ -2485,6 +2485,22 @@ export interface Config {
 
 <a id="redsparkrsh-subagent-rsh-sdk"></a>
 
+## `@redspark/rsh-subagent-fork-in-process`
+
+需要：`subagents`
+
+```ts config-catalog
+/** Config: the registry name to register the provider under. */
+export interface Config {
+  /** Provider name on `ctx.subagents` (default `fork`). */
+  providerName: string
+}
+```
+
+来源：[`rsh/Engine/subagent/subagent-fork-in-process/src/index.ts:31`](../Engine/subagent/subagent-fork-in-process/src/index.ts)
+
+<a id="redsparkrsh-subagent-spawn-in-process"></a>
+
 ## `@redspark/rsh-subagent-rsh-sdk`
 
 需要：`subagents`
@@ -2540,22 +2556,6 @@ export interface Config {
 来源：[`rsh/Compatibility/DSH/subagent/subagent-rsh-sdk/src/index.ts:34`](../Compatibility/DSH/subagent/subagent-rsh-sdk/src/index.ts)
 
 <a id="redsparkrsh-subagent-fork-in-process"></a>
-
-## `@redspark/rsh-subagent-fork-in-process`
-
-需要：`subagents`
-
-```ts config-catalog
-/** Config: the registry name to register the provider under. */
-export interface Config {
-  /** Provider name on `ctx.subagents` (default `fork`). */
-  providerName: string
-}
-```
-
-来源：[`rsh/Engine/subagent/subagent-fork-in-process/src/index.ts:31`](../Engine/subagent/subagent-fork-in-process/src/index.ts)
-
-<a id="redsparkrsh-subagent-spawn-in-process"></a>
 
 ## `@redspark/rsh-subagent-spawn-in-process`
 

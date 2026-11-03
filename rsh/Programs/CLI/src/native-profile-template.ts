@@ -385,7 +385,9 @@ export function shippedNativeProfileComposition(
       { id: 'fs', plugin: '@redspark/rsh-fs-sandbox', scope: ROOT },
       { id: 'policy', plugin: '@redspark/rsh-fs-observation-policy', scope: ROOT },
       { id: 'file-tools', plugin: '@redspark/rsh-tool-fs', scope: ROOT },
-      ...(isHeadlessProfile(profile) ? [{ id: 'file-reference', plugin: '@redspark/rsh-native-file-reference-local', scope: ROOT }] : []),
+      ...(isHeadlessProfile(profile) || profile === 'native-web'
+        ? [{ id: 'file-reference', plugin: '@redspark/rsh-native-file-reference-local', scope: ROOT }]
+        : []),
       { id: 'subprocess', plugin: '@redspark/rsh-subprocess-local', scope: ROOT },
       { id: 'sandbox', plugin: '@redspark/rsh-sandbox-local', scope: ROOT },
       { id: 'code-runtime', plugin: '@redspark/rsh-code-runtime-process-sandbox', scope: ROOT },

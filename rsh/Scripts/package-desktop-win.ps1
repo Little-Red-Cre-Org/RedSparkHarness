@@ -493,7 +493,7 @@ $bundledPackages = @(Get-ChildItem -LiteralPath $packagesDir -Directory |
   Sort-Object)
 Write-Host ("         bundled @redspark packages: {0}" -f $bundledPackages.Count)
 
-foreach ($requiredPackage in @('dsh', 'dsh-desktop-host')) {
+foreach ($requiredPackage in @('rsh', 'rsh-desktop-host')) {
   if ($bundledPackages -notcontains $requiredPackage) {
     Fail "The bundled runtime is missing @redspark/$requiredPackage" @(
       'prepare-dsh.ts installs the release package set; a missing Host means preparation was skipped or partial.'

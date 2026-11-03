@@ -126,8 +126,15 @@ export class NativeTaskSchedulerRegistry implements NativeTaskSchedulerOperation
         schedule: task.everySeconds === undefined ? task.at : `${task.at}; every ${task.everySeconds}s`,
         timeZone: taskTimeZone(task.at),
         ...(task.nextAt === null ? {} : { nextRunAt: task.nextAt }),
-        ...(lastRun === undefined ? {} : { lastRunAt: lastRun.startedAt }) }]
+        ...(lastRun === undefined ? {} : { lastRunAt: lastRun.startedAt }),
+        // Omitted when the durable row has no kind, so a reader can tell
+        // "unknown producer" from "known scheduled plan" instead of guessing.
+        ...(task.kind === undefined ? {} : { kind: task.kind }) }]
     })
+  }
+  /** @inheritdoc */
+  liveOwners(): readonly NativeActiveSessionOwner[] {
+    return this.owners.owners()
   }
   /** @inheritdoc */
   onSchedulesChanged(listener: () => void): () => void {

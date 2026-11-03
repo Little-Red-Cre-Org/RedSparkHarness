@@ -84,6 +84,7 @@ import type { NativeMessageFeedbackOperations } from '@redspark/rsh-message-feed
 import type { MessageFeedbackDeleteRequest, MessageFeedbackListRequest, MessageFeedbackPutRequest } from '@redspark/rsh-message-feedback/types'
 import type {} from '@redspark/rsh-command-feedback/native-definition'
 import type {} from '@redspark/rsh-message-feedback/native-definition'
+import type { NativeFileReferenceOperations } from '@redspark/rsh-file-reference/native'
 import type { NativeScope } from '@redspark/rsh-native-runtime'
 import type {} from '@redspark/rsh-settings-definition/native'
 import { NativeWebAccounts, NativeWebAuthorization } from './authorization.ts'
@@ -163,6 +164,8 @@ const nativeWorkspaceFileRead = nativeWorkspaceFilePath.extend({
   range: z.strictObject({ offset: z.number().optional(), limit: z.number().optional() }),
 })
 const nativeWorkspaceFileRelated = nativeWorkspaceFilePath.extend({ relativePath: z.string().min(1) })
+/** One `@`-mention query: path text after `@` or `@"`, empty for the workspace root. */
+const nativeWorkspaceFileSearch = z.strictObject({ sessionId: z.string().min(1).max(256), query: z.string() })
 
 declare module '@redspark/rsh-native-runtime' {
   interface NativeServices {
@@ -457,6 +460,7 @@ const endpoints = new Set(['session/list', 'session/history', 'session/create', 
   'workspaces/archive-session', 'workspaces/search', 'workspaces/connect',
   'directories/pick', 'directories/list', 'directories/create-directory',
   'session/files/list', 'session/files/stat', 'session/files/read', 'session/files/read-all', 'session/files/read-related',
+  'session/files/search',
   'feedback/session-record', 'feedback/message-list', 'feedback/message-put', 'feedback/message-delete'])
 const modelSelectionInput = z.strictObject({
   provider: z.string().min(1), model: z.string().min(1), reasoningEffort: z.string().min(1).optional(),
@@ -509,6 +513,8 @@ export interface NativeWebSelectionProviders {
   readonly commands?: NativeCommandOperations | undefined
   readonly sessionFeedback?: NativeSessionFeedbackOperations | undefined
   readonly messageFeedback?: NativeMessageFeedbackOperations | undefined
+  /** Ranked `@`-mention candidates; absent leaves the search endpoint empty. */
+  readonly fileReferences?: NativeFileReferenceOperations | undefined
   readonly commandScope?: NativeScope | undefined
   readonly workspaceRegistry?: WorkspaceRegistryRuntime | undefined
   readonly workspaceTrusted?: ((path: string) => boolean) | undefined
@@ -1492,6 +1498,39 @@ export class NativeWebSessionService {
     }
   }
 
+  /**
+   * Rank `@`-mention candidates inside one Session's workspace.
+   *
+   * The ranking, directory descent, exclusion set and result cap all belong to
+   * the file-reference Provider: it owns the bounded index and reuses it across
+   * a turn of typing. This endpoint therefore contributes only the authorization
+   * step (resolving the exact live Agent and Session) and never reads file
+   * contents or walks the tree itself.
+   *
+   * Only a root invocation may search: a subagent session has no composer of its
+   * own, and widening this would let it enumerate files it cannot otherwise see.
+   * @param id - Session whose workspace bounds discovery.
+   * @param query - path text after `@` or `@"`; empty lists the workspace root.
+   * @param signal - caller cancellation.
+   * @returns ranked workspace-relative candidates, or none when no Provider is installed.
+   */
+  private async searchWorkspaceFiles(id: SessionId, query: string, signal: AbortSignal): Promise<{
+    readonly candidates: readonly { readonly path: string; readonly kind: 'file' | 'directory' }[]
+  }> {
+    const fileReferences = this.selections.fileReferences
+    if (fileReferences === undefined) return { candidates: [] }
+    const owner = this.active.owners().find(candidate => candidate.session.id === id && candidate.invocation === 'root')
+    if (owner === undefined) throw new Error('native web session: file search requires an attached root owner')
+    if (this.active.owner(owner.agent, owner.session) !== owner) {
+      throw new Error('native web session: file search lost its exact root owner')
+    }
+    signal.throwIfAborted()
+    const candidates = await fileReferences.list(owner.agent, owner.session, query, signal)
+    return {
+      candidates: candidates.map(candidate => ({ path: candidate.path, kind: candidate.kind })),
+    }
+  }
+
   private async listWorkspaceFiles(id: SessionId, path: string, signal: AbortSignal): Promise<WorkspaceDirectoryListing> {
     const rootPath = await this.workspaceFileRoot(id, signal)
     const located = await this.inspectWorkspaceFilePath(rootPath, path, signal, true)
@@ -1603,6 +1642,10 @@ export class NativeWebSessionService {
     if (endpoint === 'session/files/read-related') {
       const request = nativeWorkspaceFileRelated.parse(payload)
       return this.readRelatedWorkspaceFile(sessionId(request.sessionId), request.path, request.relativePath, signal)
+    }
+    if (endpoint === 'session/files/search') {
+      const request = nativeWorkspaceFileSearch.parse(payload)
+      return this.searchWorkspaceFiles(sessionId(request.sessionId), request.query, signal)
     }
     throw new Error('native Session workspace file endpoint is unsupported')
   }
@@ -2317,7 +2360,7 @@ function pluginInventory(inventory: NativePluginInventory | undefined, payload: 
 export const plugin: NativePlugin = {
   apiVersion: 1, name: '@redspark/rsh-native-web-session-controller', targets: ['host'],
   requires: ['hostConnection', 'fs', 'sessionPersistence', 'modelExecution', 'agents', 'sessionExecution', 'activeSessions', 'workspaceRegistry'],
-  optional: ['tools', 'promptSections', 'sandboxPolicy', 'approval', 'codeRuntime', 'timeContext', 'tmuxContext', 'modelSelection', 'modelDirectory', 'modelSettings', 'agentPresets', 'planMode', 'permissionPresets', 'agentInstructions', 'userQuestions', 'attachments', 'settings', 'credentials', 'authorization', 'accounts', 'sessionTitles', 'commands', 'pluginInventory', 'requestContexts', 'sessionFeedback', 'messageFeedback'],
+  optional: ['tools', 'promptSections', 'sandboxPolicy', 'approval', 'codeRuntime', 'timeContext', 'tmuxContext', 'modelSelection', 'modelDirectory', 'modelSettings', 'agentPresets', 'planMode', 'permissionPresets', 'agentInstructions', 'userQuestions', 'attachments', 'settings', 'credentials', 'authorization', 'accounts', 'sessionTitles', 'commands', 'pluginInventory', 'requestContexts', 'sessionFeedback', 'messageFeedback', 'fileReferences'],
   provides: ['nativeWebSession', 'rootExecution'],
   resolve(input) {
     const config = resolveNativeWebSessionConfig(input)
@@ -2388,6 +2431,7 @@ export const plugin: NativePlugin = {
           settings: context.optional('settings'), credentials: context.optional('credentials'), titles: context.optional('sessionTitles'),
           commands: context.optional('commands'), commandScope: context.scope,
           sessionFeedback: context.optional('sessionFeedback'), messageFeedback: context.optional('messageFeedback'),
+          fileReferences: context.optional('fileReferences'),
           workspaceRegistry, workspaceTrusted: path => workspaceService.trusted(path),
           executionFor: agent => context.require('agents').execution(agent),
           models: models === undefined ? undefined : { selection: models, executionFor: agent => context.require('agents').execution(agent) } },

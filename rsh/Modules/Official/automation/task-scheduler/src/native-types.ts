@@ -27,6 +27,17 @@ export interface NativeTaskSchedulerOperations {
    */
   listSchedules(): readonly NativeTaskScheduleView[]
   /**
+   * Enumerate the currently live owners this scheduler may act for.
+   *
+   * `change` needs an exact `NativeActiveSessionOwner`, so a caller that starts
+   * from a plan id has to resolve one first. Reading the snapshot is the only
+   * supported way: it neither creates nor wakes an owner, so an absent Session
+   * stays absent and the caller can report the plan as not controllable instead
+   * of failing at the last moment.
+   * @returns detached owner references for currently active Sessions.
+   */
+  liveOwners(): readonly NativeActiveSessionOwner[]
+  /**
    * Subscribe to committed plan or run changes that can alter `listSchedules()`.
    * @param listener - called after a SQLite transaction commits.
    * @returns removal operation.
@@ -60,6 +71,16 @@ export interface NativeTaskScheduleView {
   readonly timeZone: string
   readonly nextRunAt?: number
   readonly lastRunAt?: number
+  /**
+   * Which producer owns this plan. Optional because durable rows written before
+   * the field existed carry none, and a required field would make the whole list
+   * unreadable for exactly those users.
+   *
+   * A reader needs it to decide what it may offer: a `goal` plan can only be
+   * resumed from inside an explicit human turn, so a list screen must not show
+   * a resume control for one.
+   */
+  readonly kind?: 'goal' | 'scheduled' | undefined
 }
 
 declare module '@redspark/rsh-native-runtime' {

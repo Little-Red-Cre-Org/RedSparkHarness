@@ -69,6 +69,11 @@ const sessionProvider = (
   resolve: () => (context) => {
     const schedules: NativeScheduleClient = {
       list: async () => [],
+      // The schedule catalog is read-only in this shell, so the change verbs
+      // exist to satisfy the client contract; they are never reached here.
+      pause: async () => [],
+      resume: async () => [],
+      delete: async () => [],
       follow: async function* () { yield { type: 'baseline', jobs: [] } },
     }
     context.provide('clientNativeSession', client)

@@ -35,6 +35,7 @@ import { SidebarRoot } from './client/SidebarRoot.tsx'
 import css from './client/SidebarRoot.module.css'
 import { en as sidebarEn, zh as sidebarZh, type SidebarKey } from './client/locales.ts'
 import { en as nativeSidebarEn, zh as nativeSidebarZh, type NativeSidebarKey } from './locales.ts'
+import { scheduleActions, type ScheduleAction } from './schedule-actions.ts'
 
 declare module '@redspark/rsh-client-ui-slots' {
   interface LocaleNamespaceMap {
@@ -846,6 +847,10 @@ export function NativeScheduledTasksPanel({ client, close, useLocale, t }: {
   const [jobs, setJobs] = useState<readonly NativeScheduledJob[]>([])
   const [ready, setReady] = useState(false)
   const [error, setError] = useState(false)
+  /** Per-plan failure text, so one refusal does not blank the whole list. */
+  const [failures, setFailures] = useState<Readonly<Record<string, string>>>({})
+  /** The plan whose delete is awaiting a second click, if any. */
+  const [confirming, setConfirming] = useState<string | null>(null)
   useEffect(() => {
     const controller = new AbortController()
     void (async () => {
@@ -860,6 +865,31 @@ export function NativeScheduledTasksPanel({ client, close, useLocale, t }: {
     })()
     return () => { controller.abort() }
   }, [client])
+  /**
+   * Apply one control and keep its failure next to its own card.
+   *
+   * A refusal is real information — the Host rejects a resume that would pass
+   * the plan's end time, and a Goal resume outside a human turn — so it is
+   * shown rather than swallowed. The list is replaced by the Host's answer, and
+   * the live follow feed will keep it current afterwards.
+   */
+  const apply = (id: string, action: ScheduleAction): void => {
+    setConfirming(null)
+    setFailures((current) => { const { [id]: _dropped, ...rest } = current; return rest })
+    const run = action === 'pause' ? client.pause(id)
+      : action === 'resume' ? client.resume(id)
+        : client.delete(id)
+    void run.then((next) => { setJobs(next) }).catch((reason: unknown) => {
+      const message = reason instanceof Error ? reason.message : String(reason)
+      setFailures(current => ({ ...current, [id]: message }))
+    })
+  }
+  const onControl = (id: string, action: ScheduleAction): void => {
+    // Delete is destructive and irreversible from this screen, so it takes two
+    // clicks; the first one only arms the confirm state on that row.
+    if (action === 'delete' && confirming !== id) { setConfirming(id); return }
+    apply(id, action)
+  }
   return <section className={css.schedulePanel} aria-labelledby="native-scheduled-tasks-title">
     <header className={css.schedulePanelHeader}>
       <h1 id="native-scheduled-tasks-title">{t('scheduleAction')}</h1>
@@ -891,6 +921,17 @@ export function NativeScheduledTasksPanel({ client, close, useLocale, t }: {
               <strong>{job.nextRunAt === undefined ? t('schedule.noNextRun')
                 : scheduleTime(job.nextRunAt, job.timeZone, locale)}</strong>
             </div>
+            {scheduleActions(job).length === 0 ? null : <div className={css.scheduleControls}>
+              {scheduleActions(job).map(action => <button type="button" key={action}
+                className={css.scheduleControl} data-action={action}
+                onClick={() => { onControl(job.id, action) }}>
+                {t(action === 'delete' && confirming === job.id ? 'schedule.confirmDelete' : `schedule.${action}`)}
+              </button>)}
+            </div>}
+            {failures[job.id] === undefined ? null
+              : <p className={css.scheduleError} role="alert">
+                {t('schedule.actionFailed', { reason: failures[job.id] })}
+              </p>}
           </article>
         })}
   </section>

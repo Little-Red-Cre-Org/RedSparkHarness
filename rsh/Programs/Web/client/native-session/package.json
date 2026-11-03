@@ -69,7 +69,8 @@
         "clientNativeSessionJobs",
         "clientNativeWorkspace",
         "clientNativeDirectoryPicker",
-        "clientNativeWorkspaceFiles"
+        "clientNativeWorkspaceFiles",
+        "clientNativeFileReferences"
       ]
     }
   },

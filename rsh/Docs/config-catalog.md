@@ -2481,6 +2481,22 @@ Depends on: [`CodexPermissionMode`](../Modules/Official/subagent/codex-app-serve
 
 Source: [`rsh/Compatibility/DSH/bridge/subagent-codex/src/index.ts:36`](../Compatibility/DSH/bridge/subagent-codex/src/index.ts)
 
+<a id="redsparkrsh-subagent-fork-in-process"></a>
+
+## `@redspark/rsh-subagent-fork-in-process`
+
+Requires: `subagents`
+
+```ts config-catalog
+/** Config: the registry name to register the provider under. */
+export interface Config {
+  /** Provider name on `ctx.subagents` (default `fork`). */
+  providerName: string
+}
+```
+
+Source: [`rsh/Engine/subagent/subagent-fork-in-process/src/index.ts:31`](../Engine/subagent/subagent-fork-in-process/src/index.ts)
+
 <a id="redsparkrsh-subagent-rsh-sdk"></a>
 
 ## `@redspark/rsh-subagent-rsh-sdk`
@@ -2536,22 +2552,6 @@ export interface Config {
 ```
 
 Source: [`rsh/Compatibility/DSH/subagent/subagent-rsh-sdk/src/index.ts:34`](../Compatibility/DSH/subagent/subagent-rsh-sdk/src/index.ts)
-
-<a id="redsparkrsh-subagent-fork-in-process"></a>
-
-## `@redspark/rsh-subagent-fork-in-process`
-
-Requires: `subagents`
-
-```ts config-catalog
-/** Config: the registry name to register the provider under. */
-export interface Config {
-  /** Provider name on `ctx.subagents` (default `fork`). */
-  providerName: string
-}
-```
-
-Source: [`rsh/Engine/subagent/subagent-fork-in-process/src/index.ts:31`](../Engine/subagent/subagent-fork-in-process/src/index.ts)
 
 <a id="redsparkrsh-subagent-spawn-in-process"></a>
 

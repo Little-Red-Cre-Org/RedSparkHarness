@@ -30,7 +30,8 @@ it('reads a typed slash-command catalog for the selected Session', async () => {
 it('lists schedule rows and decodes follow frames until caller cancellation', async () => {
   const scope = new NativeScope()
   const jobs: NativeScheduledJob[] = [{ id: 'job-1', sessionId: 'owner' as NativeScheduledJob['sessionId'], title: 'Review',
-    state: 'active', schedule: '2026-10-11T12:00:00+08:00', timeZone: 'UTC+08:00', nextRunAt: 1791691200000 }]
+    state: 'active', schedule: '2026-10-11T12:00:00+08:00', timeZone: 'UTC+08:00', nextRunAt: 1791691200000,
+    controllable: true }]
   const frames: NativeScheduleFrame[] = [
     { type: 'baseline', jobs },
     { type: 'upsert', job: { ...jobs[0]!, state: 'paused' } },

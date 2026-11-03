@@ -87,6 +87,8 @@ declare module '@redspark/rsh-native-runtime' {
     clientNativeDirectoryPicker: import('./workspaces.ts').NativeDirectoryPickerClient
     /** Session-root-scoped Native file listing, preview and observation client. */
     clientNativeWorkspaceFiles: NativeWorkspaceFilesClient
+    /** Session-root-scoped `@`-mention search client. */
+    clientNativeFileReferences: NativeFileReferencesClient
   }
 }
 
@@ -104,7 +106,7 @@ export interface NativeSessionClientConfig {
   readonly maxFollowBufferChars: number
 }
 
-/** Read-only browser access to persisted scheduled work. */
+/** Browser access to persisted scheduled work. */
 export interface NativeScheduleClient {
   /**
    * List active, paused, and failed scheduled plans.
@@ -112,6 +114,31 @@ export interface NativeScheduleClient {
    * @returns safe plan metadata without prompts or captured execution configuration.
    */
   list(signal?: AbortSignal): Promise<readonly NativeScheduledJob[]>
+  /**
+   * Pause one plan's future admission, freezing its remaining delay.
+   * @param id - plan identity from {@link list}.
+   * @param signal - caller cancellation.
+   * @returns the whole projected list after the change.
+   */
+  pause(id: string, signal?: AbortSignal): Promise<readonly NativeScheduledJob[]>
+  /**
+   * Resume one plan's future admission from its frozen remaining delay.
+   *
+   * The Host refuses this when resuming would reach or pass the plan's end
+   * time, and refuses a Goal plan outside an explicit human turn. Both arrive
+   * as a rejection, not a silent no-op.
+   * @param id - plan identity from {@link list}.
+   * @param signal - caller cancellation.
+   * @returns the whole projected list after the change.
+   */
+  resume(id: string, signal?: AbortSignal): Promise<readonly NativeScheduledJob[]>
+  /**
+   * Delete one plan. Deleting an already-absent plan resolves successfully.
+   * @param id - plan identity from {@link list}.
+   * @param signal - caller cancellation.
+   * @returns the whole projected list after the change.
+   */
+  delete(id: string, signal?: AbortSignal): Promise<readonly NativeScheduledJob[]>
   /**
    * Follow one complete baseline and subsequent schedule changes.
    * @param signal - caller cancellation; abort closes the stream cleanly.
@@ -134,6 +161,26 @@ export interface NativeSessionJobsClient {
    * @returns baseline, upsert, remove, and session-gone frames from the Host.
    */
   follow(signal: AbortSignal): AsyncIterable<NativeSessionJobsFrame>
+}
+
+/** One ranked `@`-mention candidate: a workspace-relative path and what it names. */
+export interface NativeFileReferenceCandidate {
+  /** User-facing path accepted by normal prompts and filesystem tools. */
+  readonly path: string
+  /** Directories keep completion open; files finish the mention. */
+  readonly kind: 'file' | 'directory'
+}
+
+/** Read-only `@`-mention search scoped to one Session workspace. */
+export interface NativeFileReferencesClient {
+  /**
+   * Rank path candidates for the text typed after `@` or `@"`.
+   * @param sessionId - Session whose workspace bounds discovery.
+   * @param query - path text after `@`; empty lists the workspace root.
+   * @param signal - caller cancellation; abort stops the Host's index traversal.
+   * @returns best matches first; empty when the Host installs no file-reference Provider.
+   */
+  search(sessionId: SessionId, query: string, signal?: AbortSignal): Promise<readonly NativeFileReferenceCandidate[]>
 }
 
 /** Read-only file tree and preview operations scoped to one Session workspace. */
@@ -945,6 +992,11 @@ const scheduledJobSchema = z.strictObject({
   state: z.enum(['active', 'paused', 'failed']), schedule: z.string().min(1), timeZone: z.string().min(1),
   nextRunAt: z.number().int().refine(Number.isSafeInteger).optional(),
   lastRunAt: z.number().int().refine(Number.isSafeInteger).optional(),
+  // Absent for durable rows written before the producer was recorded.
+  kind: z.enum(['goal', 'scheduled']).optional(),
+  // Required: the Host always answers, and defaulting it would let a row that
+  // lost the field look controllable.
+  controllable: z.boolean(),
 })
 const scheduleFrameSchema = z.discriminatedUnion('type', [
   z.strictObject({ type: z.literal('baseline'), jobs: z.array(scheduledJobSchema) }),
@@ -1123,6 +1175,13 @@ const workspaceDirectoryListingSchema = z.strictObject({
   })),
   truncated: z.boolean(),
 })
+const fileReferenceCandidateSchema = z.strictObject({
+  path: z.string().min(1), kind: z.enum(['file', 'directory']),
+})
+/** One `@`-mention reply: ranked candidates, empty when the Host installs no Provider. */
+const fileReferenceSearchReplySchema = z.strictObject({
+  candidates: z.array(fileReferenceCandidateSchema),
+})
 const workspaceFileTextSchema = workspaceFileStatSchema.extend({
   offset: z.number().int().refine(Number.isSafeInteger).positive(), text: z.string(),
   lines: z.number().int().refine(Number.isSafeInteger).nonnegative(), eof: z.boolean(),
@@ -1261,6 +1320,7 @@ function decodeReply(endpoint: string, value: unknown): unknown {
   if (endpoint === 'session/files/read-all' || endpoint === 'session/files/read-related') {
     return workspaceFileBytesSchema.parse(value)
   }
+  if (endpoint === 'session/files/search') return fileReferenceSearchReplySchema.parse(value)
   if (endpoint === 'session/list') {
     if (!Array.isArray(value)) throw new TypeError('native Session list must be an array')
     return value.map(listItem)
@@ -1835,6 +1895,19 @@ export function createNativeSessionClient(
 
 function createNativeScheduleClient(rpc: ClientConnectionRpc, config: NativeSessionClientConfig,
   lifetime: AbortSignal): NativeScheduleClient {
+  /**
+   * Apply one change and return the resulting list.
+   *
+   * Every endpoint answers with the whole projected list, so the caller never
+   * has to reconstruct Host state locally after a mutation.
+   */
+  const change = async (endpoint: string, id: string, signal: AbortSignal | undefined) => {
+    const accepted = signal === undefined ? lifetime : AbortSignal.any([lifetime, signal])
+    const result = await rpc.call('/api', endpoint, { id }, accepted)
+    if (!result.ok) throw new NativeSessionRpcError(result.error.code, result.error.message, result.error.details)
+    if (!Array.isArray(result.value)) throw new TypeError(`invalid native schedules after ${endpoint}`)
+    return result.value.map(scheduleJob)
+  }
   return {
     async list(signal) {
       const accepted = signal === undefined ? lifetime : AbortSignal.any([lifetime, signal])
@@ -1843,6 +1916,9 @@ function createNativeScheduleClient(rpc: ClientConnectionRpc, config: NativeSess
       if (!Array.isArray(result.value)) throw new TypeError('invalid native schedules list')
       return result.value.map(scheduleJob)
     },
+    pause: (id, signal) => change('schedules/pause', id, signal),
+    resume: (id, signal) => change('schedules/resume', id, signal),
+    delete: (id, signal) => change('schedules/delete', id, signal),
     async *follow(signal) {
       const accepted = AbortSignal.any([lifetime, signal])
       const responseOperation = rpc.response
@@ -1928,11 +2004,23 @@ function createNativeWorkspaceFilesClient(rpc: ClientConnectionRpc, config: Nati
   }
 }
 
+/** Native `@`-mention search Client; shares the Connection Provider's transport. */
+function createNativeFileReferencesClient(rpc: ClientConnectionRpc, lifetime: AbortSignal): NativeFileReferencesClient {
+  return {
+    async search(sessionId, query, signal) {
+      const accepted = signal === undefined ? lifetime : AbortSignal.any([lifetime, signal])
+      const result = await rpc.call('/api', 'session/files/search', { sessionId, query }, accepted)
+      if (!result.ok) throw new NativeSessionRpcError(result.error.code, result.error.message, result.error.details)
+      return fileReferenceSearchReplySchema.parse(result.value).candidates
+    },
+  }
+}
+
 /** Native browser installation that shares the Connection Provider's owned transport. */
 export const plugin: NativePlugin = {
   apiVersion: 1, name: '@redspark/rsh-client-native-session', targets: ['client'],
   requires: ['clientConnection'], provides: ['clientNativeSession', 'clientNativeSchedule', 'clientNativeWorkspace', 'clientNativeDirectoryPicker',
-    'clientNativeWorkspaceFiles', 'clientNativeSessionJobs'],
+    'clientNativeWorkspaceFiles', 'clientNativeSessionJobs', 'clientNativeFileReferences'],
   resolve(input) {
     const fields = objectConfig(input)
     const config: NativeSessionClientConfig = { maxFollowBufferChars: fields.maxFollowBufferChars as number }
@@ -1942,6 +2030,7 @@ export const plugin: NativePlugin = {
       const schedules = createNativeScheduleClient(rpc, config, context.signal)
       const sessionJobs = createNativeSessionJobsClient(rpc, config, context.signal)
       const workspaceFiles = createNativeWorkspaceFilesClient(rpc, config, context.signal)
+      const fileReferences = createNativeFileReferencesClient(rpc, context.signal)
       const clients = createNativeWorkspaceClients(rpc, config.maxFollowBufferChars, context.signal)
       context.own(() => client.close())
       context.own(() => clients.workspace.close())
@@ -1949,6 +2038,7 @@ export const plugin: NativePlugin = {
       context.provide('clientNativeSchedule', schedules)
       context.provide('clientNativeSessionJobs', sessionJobs)
       context.provide('clientNativeWorkspaceFiles', workspaceFiles)
+      context.provide('clientNativeFileReferences', fileReferences)
       context.provide('clientNativeWorkspace', clients.workspace)
       context.provide('clientNativeDirectoryPicker', clients.directoryPicker)
     }

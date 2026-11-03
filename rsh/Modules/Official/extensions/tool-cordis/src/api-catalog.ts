@@ -4376,14 +4376,6 @@ export const TYPE_API: readonly TypeApiEntry[] = [
     declaration: 'export interface DomainTableSpec<K extends string = string, V = unknown> {\n    readonly valueSchema: ZodType<V>;\n    readonly __key?: K;\n}',
   },
   {
-    name: 'RshEnvironment',
-    declaration: 'export type RshEnvironment = Readonly<Record<RshEnvironmentKey, string>>;',
-  },
-  {
-    name: 'RshEnvironmentKey',
-    declaration: 'export type RshEnvironmentKey = `${typeof RSH_ENV_PREFIX}${string}`;',
-  },
-  {
     name: 'DynamicCordisPackage',
     declaration: 'export interface DynamicCordisPackage {\n    pluginId: CordisDynamicPluginId;\n    packageId: CordisDynamicPackageId;\n    pluginRunId: CordisDynamicPluginRunId;\n    name: string;\n}',
   },
@@ -5200,6 +5192,14 @@ export const TYPE_API: readonly TypeApiEntry[] = [
     declaration: 'export interface ResumeAgentOptions {\n    readonly resumeSessionId: SessionId;\n    readonly parentAgent?: Agent;\n    readonly agentOptions?: AgentOptions;\n    readonly signal?: AbortSignal;\n    readonly setup?: AgentSetup;\n}',
   },
   {
+    name: 'RshEnvironment',
+    declaration: 'export type RshEnvironment = Readonly<Record<RshEnvironmentKey, string>>;',
+  },
+  {
+    name: 'RshEnvironmentKey',
+    declaration: 'export type RshEnvironmentKey = `${typeof RSH_ENV_PREFIX}${string}`;',
+  },
+  {
     name: 'RshPluginDescriptor',
     declaration: 'export interface RshPluginDescriptor {\n    readonly packageName: string;\n    readonly apiVersion: typeof RSH_PLUGIN_API_VERSION;\n    readonly role: RshPluginRole;\n    readonly capability: string;\n}',
   },
@@ -5965,7 +5965,7 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   },
   {
     name: 'SkillSource',
-    declaration: 'export type SkillSource = \'project-dsh\' | \'project-agents\' | \'runtime\' | \'user-dsh\' | \'user-agents\' | \'custom\' | \'bundled\' | (string & {});',
+    declaration: 'export type SkillSource = \'project-rsh\' | \'project-agents\' | \'runtime\' | \'user-rsh\' | \'user-agents\' | \'custom\' | \'bundled\' | (string & {});',
   },
   {
     name: 'SkillSummary',

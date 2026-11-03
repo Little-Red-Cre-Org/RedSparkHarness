@@ -5,7 +5,7 @@ import type {
 import { randomUUID } from '@redspark/rsh-util-crypto'
 import { nativeSubmissionRequestId } from '@redspark/rsh-client-native-session/native'
 import type { NativeSubmissionsSnapshot, NativeSubmissionRequestId, NativeSubmissionAcknowledgement } from '@redspark/rsh-client-native-session/native'
-import type { NativeImageUpload, NativeSessionImage, NativeSessionInputPart } from '@redspark/rsh-client-native-session/native'
+import type { NativeImageUpload, NativeSessionFileReceipt, NativeSessionImage, NativeSessionInputPart } from '@redspark/rsh-client-native-session/native'
 import type { NativeWebHumanPrompt, NativeWebHumanAnswer } from '@redspark/rsh-client-native-session/native'
 import type { NativeModelControls } from '@redspark/rsh-client-native-session/native'
 import type { NativeModeControls, NativePermissionControls } from '@redspark/rsh-client-native-session/native'
@@ -36,7 +36,7 @@ export interface ConversationSnapshot {
   readonly error?: string | undefined
 }
 
-/** Draft text and image files retained for one selected Session. */
+/** Draft text, image files and staged general files retained for one selected Session. */
 export interface NativeConversationDraft {
   readonly text: string
   readonly files: readonly File[]
@@ -636,16 +636,17 @@ export class NativeConversationController {
   }
 
   /** Send human text through the Host's sole turn executor.
-   * @param text - submitted text; empty text requires at least one image.
+   * @param text - submitted text; empty text requires at least one image or staged file.
    * @param files - browser-selected raster files; Provider limits govern admission.
+   * @param attachments - general files to stage first; each upload yields a receipt the message consumes.
    * @returns whether this send matched a Host receipt or the Host admitted its turn; preparation can stop before either.
    */
-  send(text: string, files: readonly File[] = []): Promise<boolean> {
+  send(text: string, files: readonly File[] = [], attachments: readonly File[] = []): Promise<boolean> {
     this.assertReady()
     if (this.snapshot.navigationPending === true) throw new Error('native conversation: navigation already pending')
     const id = this.snapshot.selected
-    if (id === undefined || (text.trim().length === 0 && files.length === 0)) {
-      throw new Error('native conversation: select a Session and enter text or attach an image')
+    if (id === undefined || (text.trim().length === 0 && files.length === 0 && attachments.length === 0)) {
+      throw new Error('native conversation: select a Session and enter text or attach a file')
     }
     const retainedDraft = this.submissionDraft
     const reconcileDraft = retainedDraft !== undefined && files.length === 0 && retainedDraft.sessionId === id
@@ -711,13 +712,29 @@ export class NativeConversationController {
           }
         }
         workSignal.throwIfAborted()
+        // General files stage first: the Host stores the bytes and returns a
+        // receipt, and only a message that consumes that receipt creates the
+        // durable FileBlock. A refusal here leaves the operator's selection
+        // intact so the retry needs no re-pick.
+        const receipts: NativeSessionFileReceipt[] = []
+        for (const attachment of attachments) {
+          receipts.push(await this.client.uploadFile(id, { data: attachment, name: attachment.name }, workSignal))
+          workSignal.throwIfAborted()
+        }
         this.foregroundAdmission = admission
         this.followErrorOwner = admission
         if (reconcileDraft !== undefined) this.publish({ error: undefined })
         const onAccepted = (): void => { admitted = true }
-        const prompt = text.trim().length === 0
-          ? this.client.promptContent(id, images.map((image): NativeSessionInputPart => ({ type: 'image', ...image })),
-            true, signal, observe, onFollowError, admission.lastSeq, detach, onAccepted)
+        const parts: NativeSessionInputPart[] = [
+          ...(text.trim().length === 0 ? [] : [{ type: 'text', text } as const]),
+          ...images.map((image): NativeSessionInputPart => ({ type: 'image', ...image })),
+          ...receipts.map((receipt): NativeSessionInputPart => ({ type: 'file', receiptId: receipt.receiptId })),
+        ]
+        // One route for every composition: a plain prompt without images or
+        // files keeps its dedicated wire call, and anything richer goes through
+        // ordered content so text, images and files keep one order.
+        const prompt = receipts.length > 0 || parts.some(part => part.type !== 'text')
+          ? this.client.promptContent(id, parts, true, signal, observe, onFollowError, admission.lastSeq, detach, onAccepted)
           : this.client.prompt(id, text, true, signal, observe, images, onFollowError, admission.lastSeq, detach, onAccepted)
         return prompt
       }, reconcileDraft === undefined)).then(() => admitted)

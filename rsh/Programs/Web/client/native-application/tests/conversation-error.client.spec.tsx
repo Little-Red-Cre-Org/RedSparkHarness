@@ -72,7 +72,7 @@ it('keeps one draft per Session and sends attached images without text', async (
   expect(controller.getSnapshot().error).toBeUndefined()
   expect(promptContent.mock.calls[0]?.slice(0, 3)).toEqual([id,
     [{ type: 'image', mediaType: 'image/png', data: btoa('png'), name: 'shot.png' }], true])
-  expect(() => controller.send('  ')).toThrow('enter text or attach an image')
+  expect(() => controller.send('  ')).toThrow('enter text or attach a file')
   await controller.close()
 })
 

@@ -10,7 +10,7 @@ The installed Python `dsh.exe` console command intermittently exits with Windows
 
 ## Decision
 
-The [Python console entry](../../../../rsh/Programs/SDK/python/sdk-runtime/src/deepseek_harness_runtime/__init__.py) uses `subprocess.run` on Windows, inherits standard streams and environment, waits for runtime completion, and exits with the runtime status. POSIX retains `os.execvpe` process replacement. Windows CRT exec is not POSIX process replacement; the explicit spawn-and-wait path avoids the observed native exec operation.
+The [Python console entry](../../../../rsh/Programs/SDK/python/sdk-runtime/src/redspark_harness_runtime/__init__.py) uses `subprocess.run` on Windows, inherits standard streams and environment, waits for runtime completion, and exits with the runtime status. POSIX retains `os.execvpe` process replacement. Windows CRT exec is not POSIX process replacement; the explicit spawn-and-wait path avoids the observed native exec operation.
 
 The [installed-wheel smoke](../../../../rsh/Scripts/smoke-python-runtime.py) reports decimal and unsigned 32-bit hexadecimal status alongside captured streams when profile installation fails. This preserves the distinction between ordinary command failure and native process exceptions.
 

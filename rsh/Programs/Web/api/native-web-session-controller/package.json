@@ -67,7 +67,7 @@
         "pluginInventory",
         "requestContexts",
         "sessionFeedback",
-        "messageFeedback"
+        "messageFeedback", "fileReferences"
       ],
       "provides": [
         "nativeWebSession",

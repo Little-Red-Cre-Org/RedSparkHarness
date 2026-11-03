@@ -1,0 +1,67 @@
+Close three real Native gaps and stop the rename from breaking the docs
+
+The Native shell had three capabilities whose backend already existed and whose
+UI was missing. Each is now reachable from the Desktop.
+
+## Composer file attachments
+
+`native-session.uploadFile` was wired and nothing called it; the composer accepted
+images only. A drag, a paste, or the picker now routes a non-image to a general
+file rail, stages it through that same channel, and sends it as
+`{ type: 'file', receiptId }`.
+
+The image rail's behaviour is unchanged **for images**; for non-images it moved
+from "rejected as an unsupported image" to "handed to the file rail". That is the
+point of the change, and the tests pin it: `onReject` must be called once with the
+file, and `attachmentRejectedType` must NOT appear.
+
+New: `src/composer-files.ts` (classification, de-duplication, limits — pure
+functions) and `tests/composer-files.spec.ts` (19 cases, 4 mutations).
+
+One thing the code says out loud: the Host applies **no** upload cap
+(`stageStream` takes route, id, data, name — nothing else), so the client's 32 MiB
+is the only limit and is a guard against accidents, not a security boundary.
+
+## @ file references
+
+Reuses `native-file-reference-local`, which already implements the search index,
+ordering, and directory-direct `list`. Nothing new was written for search.
+
+- endpoint `session/files/search` in `native-web-session-controller`
+- `clientNativeFileReferences` service in `native-session`
+- `file-reference` joins the native-web profile; headless behaviour is unchanged
+- declared `optional`, and the handler returns an empty list when the provider is
+  absent, so a profile without it still works
+
+Sandbox containment stays where it already was: the provider's `fs.contains`
+(`native-file-reference-local/src/native.ts:59,71`). The endpoint passes the query
+through untouched rather than re-deriving a boundary rule that could disagree.
+
+## Scheduled-task controls
+
+`clientNativeSchedule` only listed plans. The store already had a complete pause/
+resume state machine (`pausedRemainingMs` freezes the remaining wait), so this
+exposes it rather than reimplementing it, through `schedules/pause|resume|delete`.
+
+Rules, each with a reason:
+- a plan whose Session is closed gets no control at all — hide, not disable; a
+  greyed button still reads as "this could work eventually"
+- a Goal plan may be paused (that resolves the live run by id) but not resumed
+  (that requires a direct human turn, which a list screen is not)
+- delete asks twice
+
+The list and its follow feed share one projection, so a pushed row can never lack
+`controllable`.
+
+## Rename fallout in the documented layer
+
+Renaming `subagent-dsh-sdk` to `subagent-rsh-sdk` moved it in alphabetical order,
+which left three bilingual pairs disagreeing about section order and 12 relative
+links pointing at a path that no longer exists.
+
+- repaired the links; the prose in those notes is untouched
+- re-ordered the two affected sections in the Chinese copies
+- regenerated the config, cordis and doc-graph artifacts the rename had staled
+
+`.agents/notes/archived/` keeps its sealed content: that manifest is append-only
+by design, so the archived copies were reverted rather than re-sealed.

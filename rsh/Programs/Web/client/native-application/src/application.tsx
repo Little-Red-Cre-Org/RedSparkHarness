@@ -1,5 +1,5 @@
 /** Native Web conversation application; the renderer and Session transport are selected Providers. */
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import type { KeyboardEvent, ReactNode } from 'react'
 import { foldTodos } from '@redspark/rsh-tool-todo/client-native'
 import {
@@ -22,7 +22,8 @@ import type {
 } from '@redspark/rsh-client-native-session/native'
 import { NativeConversationController } from './controller.ts'
 import type { ConversationSnapshot } from './controller.ts'
-import { NativeComposerAttachments, NativeComposerImagePicker } from './attachments.tsx'
+import { NativeComposerAttachments, NativeComposerFiles, NativeComposerImagePicker } from './attachments.tsx'
+import { classifyAttachments, settleUpload, type AttachmentRejection, type StagedFileDraft } from './composer-files.ts'
 import { NativePendingSubmissions } from './submissions.tsx'
 import { NativeSessionGoal } from './goal.tsx'
 import { HumanInteraction } from './human.tsx'
@@ -116,7 +117,7 @@ function Conversation({ snapshot, useLocale, settingsActions, listWorkspaces, ch
   listDirectory: (path?: string, signal?: AbortSignal) => Promise<DirectoryBrowserListing>
   createDirectory: NativeDirectoryPickerClient['createDirectory']
   loadImage: (sessionId: SessionId, image: NativeSessionImage, signal: AbortSignal) => Promise<Blob>
-  send: (text: string, files: readonly File[]) => Promise<boolean>
+  send: (text: string, files: readonly File[], attachments?: readonly File[]) => Promise<boolean>
   cancel: () => void
   answerHuman: (prompt: NonNullable<ConversationSnapshot['human']>, answer: Parameters<NativeConversationController['answerHuman']>[1]) => Promise<void>
   selectModel: NativeConversationController['selectModel']
@@ -160,6 +161,48 @@ function Conversation({ snapshot, useLocale, settingsActions, listWorkspaces, ch
   const [files, setFiles] = useState<readonly File[]>([])
   const filesRef = useRef(files)
   const imageInputRef = useRef<HTMLInputElement>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [stagedFiles, setStagedFiles] = useState<readonly StagedFileDraft[]>([])
+  const stagedFilesRef = useRef(stagedFiles)
+  stagedFilesRef.current = stagedFiles
+  const [fileNotices, setFileNotices] = useState<readonly AttachmentRejection[]>([])
+  // The rail callbacks read the current model controls without re-binding on
+  // every snapshot publish.
+  const snapshotRef = useRef(snapshot)
+  snapshotRef.current = snapshot
+  /**
+   * Hold general files on the file rail.
+   *
+   * The image rail calls this for the files its raster rules refuse, and the
+   * file rail calls it for its own picks, so both kinds of delivery end here.
+   * @param incoming - candidate files; already-held and empty ones are dropped.
+   */
+  const addStagedFiles = useCallback((incoming: readonly File[]): void => {
+    if (incoming.length === 0) return
+    const batch = classifyAttachments(incoming,
+      { images: filesRef.current, files: stagedFilesRef.current.map(draft => draft.file) },
+      snapshotRef.current.modelControls?.images)
+    setFileNotices(batch.rejected)
+    if (batch.files.length === 0) return
+    const next: readonly StagedFileDraft[] = [
+      ...stagedFilesRef.current, ...batch.files.map(file => ({ file })),
+    ]
+    stagedFilesRef.current = next
+    setStagedFiles(next)
+  }, [])
+  const removeStagedFile = useCallback((file: File): void => {
+    const next = stagedFilesRef.current.filter(draft => draft.file !== file)
+    stagedFilesRef.current = next
+    setStagedFiles(next)
+    setFileNotices([])
+  }, [])
+  /** Drop one recorded failure so the next send uploads that file again. */
+  const retryStagedFile = useCallback((file: File): void => {
+    const next = stagedFilesRef.current.map(draft =>
+      draft.file === file ? { file: draft.file } : draft)
+    stagedFilesRef.current = next
+    setStagedFiles(next)
+  }, [])
   const [pendingDefault, setPendingDefault] = useState<BusyEnterBehavior>(readPendingDefault)
   const [pendingDefaultError, setPendingDefaultError] = useState(false)
   const [presetSeat, setPresetSeat] = useState<NativeAgentPresetList>()
@@ -290,8 +333,8 @@ function Conversation({ snapshot, useLocale, settingsActions, listWorkspaces, ch
   }, [activeTab])
   const submit = (placement?: 'queued' | 'steering'): void => {
     if (!inputReady || snapshot.selected === undefined || snapshot.submissionBusy) return
-    if (acceptsPending && (draft.trim() === '' || files.length > 0)) return
-    if (!acceptsPending && draft.trim() === '' && files.length === 0) return
+    if (acceptsPending && (draft.trim() === '' || files.length > 0 || stagedFiles.length > 0)) return
+    if (!acceptsPending && draft.trim() === '' && files.length === 0 && stagedFiles.length === 0) return
     const version = ++draftVersion.current
     if (acceptsPending) {
       void submitPending(draft, placement ?? composerPendingDefault(pendingDefault)).then((success) => {
@@ -306,11 +349,15 @@ function Conversation({ snapshot, useLocale, settingsActions, listWorkspaces, ch
       const sessionId = snapshot.selected
       const text = draft
       const attachments = files
+      // General files stay on the rail until the send settles: a refused upload
+      // must keep its chip so the retry does not need the file picked again.
+      const staged = stagedFilesRef.current
+      const toUpload = staged.map(draft => draft.file)
       draftRef.current = ''
       filesRef.current = []
       setDraft('')
       setFiles([])
-      void send(text, attachments).then((success) => {
+      void send(text, attachments, toUpload).then((success) => {
         if (!success) {
           if (followedSession.current !== sessionId) {
             keepDraft(sessionId, { text, files: attachments })
@@ -321,6 +368,14 @@ function Conversation({ snapshot, useLocale, settingsActions, listWorkspaces, ch
             setFiles(attachments)
           }
         }
+      }, (error: unknown) => {
+        // A refused upload is a local failure: record it on every draft that was
+        // in flight so each chip offers its own retry.
+        const message = error instanceof Error ? error.message : String(error)
+        const failed = toUpload.reduce<readonly StagedFileDraft[]>(
+          (current, file) => settleUpload(current, file, { error: message }), stagedFilesRef.current)
+        stagedFilesRef.current = failed
+        setStagedFiles(failed)
       })
     }
   }
@@ -331,11 +386,21 @@ function Conversation({ snapshot, useLocale, settingsActions, listWorkspaces, ch
     <NativePendingSubmissions snapshot={snapshot} changePending={changePending} editPending={editPending}
       refresh={refreshPendingSubmissions} t={t} />
     <ChatComposerCard>
+      <NativeComposerFiles drafts={stagedFiles}
+        onChange={(next) => { addStagedFiles(next) }}
+        onRemove={(file) => { removeStagedFile(file) }}
+        onRetry={(file) => { retryStagedFile(file) }}
+        disabled={!ready || snapshot.selected === undefined}
+        inputRef={fileInputRef} t={t} />
       {snapshot.modelControls?.images === undefined ? null : <NativeComposerAttachments
         files={files} onChange={(nextFiles) => { filesRef.current = nextFiles; setFiles(nextFiles) }}
+        onReject={(rejected) => { addStagedFiles(rejected) }}
         limits={snapshot.modelControls.images} disabled={!ready || snapshot.selected === undefined}
         inputRef={imageInputRef} t={t}
       />}
+      {fileNotices.length === 0 ? null : <ul className={css.notices} role="status" aria-live="polite">
+        {fileNotices.map(notice => <li key={notice}>{t(notice)}</li>)}
+      </ul>}
       <label className={css.editorLabel}>
         <span className={css.visuallyHidden}>{t('prompt')}</span>
         <textarea ref={editorRef} className={css.editor} aria-label={t('prompt')}
@@ -602,9 +667,9 @@ export const plugin: NativePlugin = {
           listDirectory,
           createDirectory: (path: string, name: string) => directoryPicker.createDirectory(path, name, context.signal),
           loadImage: controller.image.bind(controller),
-          send: async (text: string, files: readonly File[]) => {
+          send: async (text: string, files: readonly File[], attachments: readonly File[] = []) => {
             sendCancel.requested = false
-            const admitted = await controller.send(text, files)
+            const admitted = await controller.send(text, files, attachments)
             // oxlint-disable-next-line typescript/no-unnecessary-condition -- cancel() may set it during the await.
             return admitted && !sendCancel.requested && controller.getSnapshot().error === undefined
           },
@@ -639,7 +704,7 @@ export const plugin: NativePlugin = {
         listDirectory: (path?: string, signal?: AbortSignal) => Promise<DirectoryBrowserListing>
         createDirectory: NativeDirectoryPickerClient['createDirectory']
         loadImage: (sessionId: SessionId, image: NativeSessionImage, signal: AbortSignal) => Promise<Blob>
-        send: (text: string, files: readonly File[]) => Promise<boolean>
+        send: (text: string, files: readonly File[], attachments?: readonly File[]) => Promise<boolean>
         cancel: () => void
         answerHuman: (prompt: NonNullable<ConversationSnapshot['human']>, answer: Parameters<NativeConversationController['answerHuman']>[1]) => Promise<void>
         selectModel: NativeConversationController['selectModel']
