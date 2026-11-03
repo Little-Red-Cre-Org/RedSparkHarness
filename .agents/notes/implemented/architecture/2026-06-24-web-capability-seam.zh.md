@@ -18,9 +18,9 @@ harness 需要面向模型的 web 工具，但不能将模型约定绑定到某�
 
 Web 访问是一个一等能力 seam，遵循[能力 seam Agent Note](2026-06-13-capability-seams.zh.md)：
 
-1. `@deepseek-ai/dsh-web`（`rsh/Modules/Official/web/web`）拥有 `ctx.web`、提供方注册、提供方选择、共享的请求/结果词汇，以及 web 特有的错误。
-2. 提供方包实现具体后端并向 `ctx.web` 注册能力，例如 `@deepseek-ai/dsh-web-search-exa`、`@deepseek-ai/dsh-web-search-perplexity`、`@deepseek-ai/dsh-web-search-deepseek` 和 `@deepseek-ai/dsh-web-fetch-http`。
-3. `@deepseek-ai/dsh-tool-web`（`rsh/Modules/Official/web/tool-web`）拥有面向模型的 `web_search` 和 `web_fetch` 工具 schema、提示词段落、参数校验、结果格式化，以及通过 `ctx.web` 实现的工具展示。
+1. `@redspark/rsh-web`（`rsh/Modules/Official/web/web`）拥有 `ctx.web`、提供方注册、提供方选择、共享的请求/结果词汇，以及 web 特有的错误。
+2. 提供方包实现具体后端并向 `ctx.web` 注册能力，例如 `@redspark/rsh-web-search-exa`、`@redspark/rsh-web-search-perplexity`、`@redspark/rsh-web-search-deepseek` 和 `@redspark/rsh-web-fetch-http`。
+3. `@redspark/rsh-tool-web`（`rsh/Modules/Official/web/tool-web`）拥有面向模型的 `web_search` 和 `web_fetch` 工具 schema、提示词段落、参数校验、结果格式化，以及通过 `ctx.web` 实现的工具展示。
 
 提供方不注册工具。提供方注册能力。`dsh-tool-web` 是面向模型的名称、描述、提示词引导、JSON Schema、展示的唯一所有者。
 
@@ -43,13 +43,13 @@ Web 访问是一个一等能力 seam，遵循[能力 seam Agent Note](2026-06-13
 依赖方向与 bash 和 filesystem 一致：
 
 ```text
-@deepseek-ai/dsh-tool-web  --depends on-->  @deepseek-ai/dsh-web  <--depends on--  @deepseek-ai/dsh-web-search-exa
+@redspark/rsh-tool-web  --depends on-->  @redspark/rsh-web  <--depends on--  @redspark/rsh-web-search-exa
         consumer                                 interface                       implementation
-                                                                 <--depends on--  @deepseek-ai/dsh-web-search-perplexity
+                                                                 <--depends on--  @redspark/rsh-web-search-perplexity
                                                                                   implementation
-                                                                 <--depends on--  @deepseek-ai/dsh-web-search-deepseek
+                                                                 <--depends on--  @redspark/rsh-web-search-deepseek
                                                                                   implementation
-                                                                 <--depends on--  @deepseek-ai/dsh-web-fetch-http
+                                                                 <--depends on--  @redspark/rsh-web-fetch-http
                                                                                   implementation
 ```
 
@@ -57,27 +57,27 @@ Web 访问是一个一等能力 seam，遵循[能力 seam Agent Note](2026-06-13
 
 ```mermaid
 flowchart LR
-  exa["@deepseek-ai/dsh-web-search-exa"] -->|registerSearchProvider| web["@deepseek-ai/dsh-web / ctx.web"]
-  perplexity["@deepseek-ai/dsh-web-search-perplexity"] -->|registerSearchProvider| web
-  deepseek["@deepseek-ai/dsh-web-search-deepseek"] -->|registerSearchProvider| web
-  fetchLocal["@deepseek-ai/dsh-web-fetch-http"] -->|registerFetchProvider| web
-  toolWeb["@deepseek-ai/dsh-tool-web"] -->|search/fetch| web
+  exa["@redspark/rsh-web-search-exa"] -->|registerSearchProvider| web["@redspark/rsh-web / ctx.web"]
+  perplexity["@redspark/rsh-web-search-perplexity"] -->|registerSearchProvider| web
+  deepseek["@redspark/rsh-web-search-deepseek"] -->|registerSearchProvider| web
+  fetchLocal["@redspark/rsh-web-fetch-http"] -->|registerFetchProvider| web
+  toolWeb["@redspark/rsh-tool-web"] -->|search/fetch| web
   toolWeb -->|ctx.tools.register| webSearch["tool: web_search"]
   toolWeb -->|ctx.tools.register| webFetch["tool: web_fetch"]
 ```
 
-`@deepseek-ai/dsh-web` 仅依赖 Cordis 和底层 harness 支持。它声明 `ctx.web`、提供方接口、请求/结果类型、提供方可用性约定和错误码。它不导入工具、agent（智能体）、会话、LLM 或提供方包。
+`@redspark/rsh-web` 仅依赖 Cordis 和底层 harness 支持。它声明 `ctx.web`、提供方接口、请求/结果类型、提供方可用性约定和错误码。它不导入工具、agent（智能体）、会话、LLM 或提供方包。
 
 提供方包仅依赖 `dsh-web` 和 Cordis。它们拥有凭证、端点、协议格式映射、解析和 `WebError` 转换，使用平台 `fetch`。每个提供方注入共享服务并注册后端；只有 `dsh-web` 拥有 `ctx.web` 键。提供方私有的协议形状不会产生对 `ctx.llm` 或 Cordis HTTP 服务的依赖。
 
-`@deepseek-ai/dsh-tool-web` 依赖 `@deepseek-ai/dsh-web`、`@deepseek-ai/dsh-tools`、`@deepseek-ai/dsh-system-prompt` 和 Cordis。它从不导入具体的提供方包。
+`@redspark/rsh-tool-web` 依赖 `@redspark/rsh-web`、`@redspark/rsh-tools`、`@redspark/rsh-system-prompt` 和 Cordis。它从不导入具体的提供方包。
 
 ## `ctx.web` 约定
 
 `ctx.web` 是一个提供方注册表加上一个带提供方选择的执行 API。注册表部分与 `LlmRuntime` 保持接近：每种能力类别一个 `Map<id, provider>`，`registerSearchProvider`/`registerFetchProvider` 方法返回 disposer，重复 id 抛出 `WebError`，执行时解析在选定提供方缺失或不可用时抛出异常。权威签名见 `rsh/Modules/Official/web/web/src/types.ts`；seam 的形状：
 
 ```ts
-import type { WebFetchRequest, WebFetchResult, WebSearchRequest, WebSearchResult } from '@deepseek-ai/dsh-web'
+import type { WebFetchRequest, WebFetchResult, WebSearchRequest, WebSearchResult } from '@redspark/rsh-web'
 
 interface WebSearchProvider {
   readonly id: string
@@ -128,25 +128,25 @@ interface WebRuntime {
 
 ```yaml
 - id: web
-  name: '@deepseek-ai/dsh-web'
+  name: '@redspark/rsh-web'
   config:
     searchProvider: exa
     fetchProvider: http
 
 - id: web-search-exa
-  name: '@deepseek-ai/dsh-web-search-exa'
+  name: '@redspark/rsh-web-search-exa'
 
 - id: web-search-perplexity
-  name: '@deepseek-ai/dsh-web-search-perplexity'
+  name: '@redspark/rsh-web-search-perplexity'
 
 - id: web-search-deepseek
-  name: '@deepseek-ai/dsh-web-search-deepseek'
+  name: '@redspark/rsh-web-search-deepseek'
 
 - id: web-fetch-http
-  name: '@deepseek-ai/dsh-web-fetch-http'
+  name: '@redspark/rsh-web-fetch-http'
 
 - id: tool-web
-  name: '@deepseek-ai/dsh-tool-web'
+  name: '@redspark/rsh-tool-web'
 ```
 
 运维覆盖走同一条显式选择路径：`DSH_WEB_SEARCH_PROVIDER=perplexity` 等同于配置 `searchProvider: perplexity`，而非 `dsh-tool-web` 内部的隐式优先级链。
