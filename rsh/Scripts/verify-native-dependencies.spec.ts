@@ -381,3 +381,16 @@ it('admits only the Client producer’s explicit inline CSS query', () => {
   writeFileSync(join(owner, 'native.ts'), 'import css from "./theme.css?raw"; export { css }')
   expect(collectNativeDependencyViolations(root).some(error => error.includes('cannot reference ./theme.css?raw'))).toBe(true)
 })
+
+it('does not classify a native manifest that lives under tests', () => {
+  const root = fixture('export {}')
+  const dir = join(root, 'rsh/Core/typert/generator/tests/fixtures/native-targets/packages/mixed')
+  mkdirSync(dir, { recursive: true })
+  writeFileSync(join(dir, 'package.json'), JSON.stringify({
+    name: '@fixture/mixed',
+    private: true,
+    exports: { './native': { types: './lib/types/native.d.ts', default: './lib/native.js' } },
+    dsh: { native: { apiVersion: 1, entry: './native', targets: ['client'], requires: [], optional: [], provides: [] } },
+  }))
+  expect(collectNativeDependencyViolations(root).filter(error => error.includes('tests/fixtures'))).toEqual([])
+})
