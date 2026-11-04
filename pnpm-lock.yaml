@@ -9705,6 +9705,12 @@ importers:
       '@redspark/rsh-client-ui-session':
         specifier: workspace:^
         version: link:../Web/client/ui-session
+      '@redspark/rsh-client-ui-settings-models':
+        specifier: workspace:^
+        version: link:../Web/client/ui-settings-models
+      '@redspark/rsh-client-ui-settings-plugin-inventory':
+        specifier: workspace:^
+        version: link:../Web/client/ui-settings-plugin-inventory
       '@redspark/rsh-client-ui-sidebar':
         specifier: workspace:^
         version: link:../Web/client/ui-sidebar
@@ -13733,6 +13739,9 @@ importers:
       '@redspark/rsh-client-locale':
         specifier: workspace:^
         version: link:../locale
+      '@redspark/rsh-client-native-session':
+        specifier: workspace:^
+        version: link:../native-session
       '@redspark/rsh-client-store':
         specifier: workspace:^
         version: link:../store
@@ -13751,6 +13760,9 @@ importers:
       '@redspark/rsh-client-ui-slots':
         specifier: workspace:^
         version: link:../ui-slots
+      '@redspark/rsh-native-runtime':
+        specifier: workspace:^
+        version: link:../../../../Core/runtime-diagnostics/native-runtime
       '@redspark/rsh-remote-mock':
         specifier: workspace:^
         version: link:../../../../Tests/test-support/remote-mock
@@ -13775,9 +13787,15 @@ importers:
       '@redspark/rsh-api-remotes':
         specifier: workspace:^
         version: link:../../api/remotes
+      '@redspark/rsh-brand':
+        specifier: workspace:^
+        version: link:../../../../Core/util/brand
       '@redspark/rsh-client-locale':
         specifier: workspace:^
         version: link:../locale
+      '@redspark/rsh-client-native-session':
+        specifier: workspace:^
+        version: link:../native-session
       '@redspark/rsh-client-test-runtime':
         specifier: workspace:^
         version: link:../../../../Tests/test-support/client-runtime
@@ -13796,6 +13814,12 @@ importers:
       '@redspark/rsh-client-ui-slots':
         specifier: workspace:^
         version: link:../ui-slots
+      '@redspark/rsh-host-plugin-inventory':
+        specifier: workspace:^
+        version: link:../../host/plugin-inventory
+      '@redspark/rsh-native-runtime':
+        specifier: workspace:^
+        version: link:../../../../Core/runtime-diagnostics/native-runtime
       '@testing-library/react':
         specifier: ^16.1.0
         version: 16.3.2(@testing-library/dom@10.4.1)(@types/react-dom@18.3.7(@types/react@18.3.31))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)

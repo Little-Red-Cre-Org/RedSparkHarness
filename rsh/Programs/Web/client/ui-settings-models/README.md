@@ -82,6 +82,10 @@ The notice step owns its exact copy in `src/client/locales.ts` and its acknowled
 -----
 
 <a id="further-exploration"></a>
+## Native Client
+
+The Native entry binds the same page to the Native transport. `ModelsSettingsStore`, `createModelsOperations` and every provider card already took their Host reads as props, so they now name the slice they use (`ModelsRemoteHost`) instead of a Cordis context, and the wire types live in this package's own `client/ports.ts`. `createNativeModelsFace` answers the same carrier envelopes from `clientNativeSession`, and `createNativeDescribeFace` is the page's document read. Two Native differences are folded in the adapter: the transport rejects instead of answering a failure envelope, and it spells namespace identity `namespace` where the wire spells it `ns`. Schema reads come from the settings domain base's Native half through `resolveNativeSchema`; a composition without that provider fails loud at activation.
+
 ## Further Exploration
 
 These pages cover the settings base, the seams this page joins, and the design rationale.

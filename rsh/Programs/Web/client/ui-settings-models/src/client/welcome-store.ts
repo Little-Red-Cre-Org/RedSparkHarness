@@ -2,11 +2,12 @@
  * Welcome-notice state derived from the welcome settings scope. The scope is
  * the transport: a loopback browser follows the durable Host section, while a
  * remote browser's memory-mode scope never answers and the acknowledgement
- * stays process-local here.
+ * stays process-local here. The scope arrives as a port, not a Cordis service,
+ * so the same controller serves a Native composition.
  */
 
 import { createSnapshotStore, type SnapshotStore } from '@redspark/rsh-client-store'
-import type { SettingsScope } from '@redspark/rsh-client-ui-settings/client'
+import type { SettingsScope } from './welcome-scope.ts'
 import {
   WELCOME_NOTICE_ACK_FIELD, WELCOME_NOTICE_VERSION,
 } from '../onboarding-copy.ts'

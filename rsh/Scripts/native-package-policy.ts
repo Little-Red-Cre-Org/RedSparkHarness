@@ -231,6 +231,8 @@ export const mixedNativeEntryDirectories: ReadonlyMap<string, string> = new Map(
   ['rsh/Programs/Web/client/connection', 'Cordis and native Client entries share authenticated transport'],
   ['rsh/Programs/Web/client/locale', 'Native and compatibility Clients share dictionary values while each owns its locale installer'],
   ['rsh/Programs/Web/client/ui-theme', 'Native and compatibility Clients share theme values and styles while each owns preference and DOM projection'],
+  ['rsh/Programs/Web/client/ui-settings-plugin-inventory', 'Native and compatibility Clients share the read-only plugin catalog while each binds its own installation source'],
+  ['rsh/Programs/Web/client/ui-settings-models', 'Native and compatibility Clients share the Models page store, provider editors and operations while each binds its own transport'],
   ['rsh/Programs/Web/client/ui-session', 'Native Session presentation projects the existing controller while the compatibility entry adapts Host Session stores'],
   ['rsh/Programs/Web/client/ui-layout', 'Native and compatibility shells share AppFrame, layout store, panel actions, and theme presenter'],
   ['rsh/Programs/Web/client/ui-sidebar', 'Native and compatibility shells share SidebarRoot and slot contracts while each supplies Session navigation'],
@@ -431,6 +433,7 @@ export const nativeSafeSourceSubpaths: ReadonlyMap<string, readonly string[]> = 
   ['rsh/Engine/session/session-title', ['./types', './normalize']],
   ['rsh/Engine/session/session-title-llm', ['./native']],
   ['rsh/Programs/Web/client/ui-theme', ['./theme-contract']],
+  ['rsh/Programs/Web/host/plugin-inventory', ['./types']],
   ['rsh/Engine/session/session-persistence', ['./deletion']],
   ['rsh/Engine/preset/agent-presets', ['./native-definition', './selection']],
   ['rsh/Modules/Official/workspace/workspace', ['./workspace-types']],
@@ -530,4 +533,5 @@ export const nativeSafeSourceEntryTargets: ReadonlyMap<string, readonly ('host' 
   ['rsh/Programs/Web/client/native-session/workspaces', ['host', 'client']],
   ['rsh/Programs/Web/host/directory-picker-native/native-picker', ['host']],
   ['rsh/Programs/Web/client/ui-theme/theme-contract', ['client']],
+  ['rsh/Programs/Web/host/plugin-inventory/types', ['host', 'client']],
 ])

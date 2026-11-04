@@ -62,6 +62,10 @@ kind: "package-reference"
 -----
 
 <a id="further-exploration"></a>
+## Native 客户端
+
+Native 入口在正在运行 profile 的安装清单上发布同一个目录。Native Host 没有 Loader，因此 `clientNativeSession.pluginInventoryList` 报告的是安装状态而不是 Loader 条目；`installationPhase` 把这个封闭状态联合映射到目录的根 Fiber 阶段词汇，`toSnapshot` 把行投影进全局平面。Native profile 安装的是组成里列出的行，因此每个被报告的安装项都是启用的，只有 `disposed` 不是。该传输不携带 Agent 预设名册，因此目录只渲染全局平面。入口在某个 Native 设置外壳声明 `settings.plugins.tab` 后才贡献；在那之前不注册任何东西。
+
 ## 进一步探索
 
 以下页面覆盖设置分区、Remote 调用与宿主侧投影。

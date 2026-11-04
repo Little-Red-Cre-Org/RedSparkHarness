@@ -310,6 +310,8 @@ const packageFileExtras: Readonly<Record<string, readonly string[]>> = {
   '@redspark/rsh-client-ui-jobs': ['lib/native.js', 'lib/**/*.css'],
   '@redspark/rsh-client-ui-brand-official': ['lib/native.js'],
   '@redspark/rsh-client-ui-input-trigger': ['lib/native.js'],
+  '@redspark/rsh-client-ui-settings-plugin-inventory': ['lib/native.js', 'lib/**/*.css'],
+  '@redspark/rsh-client-ui-settings-models': ['lib/native.js', 'lib/**/*.css'],
   '@redspark/rsh-client-ui-settings-general': ['lib/native.js'],
   '@redspark/rsh-client-ui-settings-plugins': ['lib/native.js'],
   '@redspark/rsh-client-native-session': [

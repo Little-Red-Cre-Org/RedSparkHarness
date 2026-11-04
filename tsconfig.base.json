@@ -676,6 +676,8 @@
       "@redspark/rsh-client-ui-message-feedback/native": ["./rsh/Programs/Web/client/ui-message-feedback/src/native.ts"],
       "@redspark/rsh-client-ui-session/native": ["./rsh/Programs/Web/client/ui-session/src/native.ts"],
       "@redspark/rsh-client-ui-settings-general/native": ["./rsh/Programs/Web/client/ui-settings-general/src/native.tsx"],
+      "@redspark/rsh-client-ui-settings-models/native": ["./rsh/Programs/Web/client/ui-settings-models/src/native.ts"],
+      "@redspark/rsh-client-ui-settings-plugin-inventory/native": ["./rsh/Programs/Web/client/ui-settings-plugin-inventory/src/native.ts"],
       "@redspark/rsh-client-ui-settings-plugins/native": ["./rsh/Programs/Web/client/ui-settings-plugins/src/native.tsx"],
       "@redspark/rsh-client-ui-sidebar-right/native": ["./rsh/Programs/Web/client/ui-sidebar-right/src/native.ts"],
       "@redspark/rsh-client-ui-sidebar/native": ["./rsh/Programs/Web/client/ui-sidebar/src/native.ts"],
