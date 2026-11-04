@@ -88,7 +88,7 @@ async function mount(rows?: readonly CommandDescriptor[]) {
   }
   const scope = new NativeScope()
   const host = new NativeHost(resolveInstallation([
-    { plugin: stubProvider('clientNativeSession', wire.face), scope, config: undefined },
+    { plugin: stubProvider('clientNativeSession', wire.face as unknown as import('@redspark/rsh-native-runtime').NativeServices['clientNativeSession']), scope, config: undefined },
     { plugin: stubProvider('clientLocale', {
       register: () => () => {},
       bind: () => (key: string) => key,
