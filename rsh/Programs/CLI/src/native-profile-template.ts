@@ -46,6 +46,10 @@ const NATIVE_WEB_CLIENT_INSTALLATIONS = [
   { id: 'layout', plugin: '@redspark/rsh-client-ui-layout' },
   { id: 'sidebar', plugin: '@redspark/rsh-client-ui-sidebar' },
   { id: 'sidebar-right', plugin: '@redspark/rsh-client-ui-sidebar-right' },
+  { id: 'brand-official', plugin: '@redspark/rsh-client-ui-brand-official' },
+  { id: 'input-trigger', plugin: '@redspark/rsh-client-ui-input-trigger' },
+  { id: 'jobs', plugin: '@redspark/rsh-client-ui-jobs' },
+  { id: 'message-feedback', plugin: '@redspark/rsh-client-ui-message-feedback' },
 ] as const
 
 /** One shipped browser Client installation used by a native Web profile. */

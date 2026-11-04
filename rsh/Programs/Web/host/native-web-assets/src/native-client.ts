@@ -13,13 +13,33 @@ const PROFILE_FILENAME = 'rsh.client.json'
 const ROUTE_PREFIX = '/.dsh/native-client/'
 const PACKAGE_NAME = /^(?:@[a-z0-9][a-z0-9._-]*\/)?[a-z0-9][a-z0-9._-]*$/u
 
+/**
+ * Public values this profile embeds when the Host process does not supply them.
+ *
+ * The Desktop runtime exports no `RSH_CLIENT_*` value, so without a fallback every
+ * build-profile gate in a Native Client reads `undefined` and its occupant never
+ * registers. An inherited `RSH_CLIENT_*` value from the Host process still wins,
+ * so a deployment that selects another profile keeps that choice.
+ *
+ * `OFFICIAL_CLIENT_BUILD_ENVIRONMENT` in `rsh/Scripts/client-build-environment.ts`
+ * carries the same value for the Cordis build; that module is a build-script owner
+ * this Host package does not depend on, so the two agree by value and must move
+ * together.
+ */
+const NATIVE_CLIENT_ENVIRONMENT_DEFAULTS: Readonly<Record<string, string>> = {
+  RSH_CLIENT_BUILD_PROFILE: 'official',
+}
+
 /** Follow the public-only clientBuildEnvironmentDefines contract without a Scripts runtime dependency. */
 function nativeClientEnvironmentDefines(): Record<string, string> {
   const publicValues = Object.fromEntries(Object.entries(process.env)
     .filter(([name, value]) => name.startsWith('RSH_CLIENT_') && value !== undefined)
     .sort(([left], [right]) => left.localeCompare(right))
     .map(([name, value]) => [`process.env.${name}`, JSON.stringify(value)]))
+  const defaults = Object.fromEntries(Object.entries(NATIVE_CLIENT_ENVIRONMENT_DEFAULTS)
+    .map(([name, value]) => [`process.env.${name}`, JSON.stringify(value)]))
   return {
+    ...defaults,
     ...publicValues,
     'process.env': '{}',
     'process.env.NODE_ENV': '"production"',

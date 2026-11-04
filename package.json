@@ -61,6 +61,7 @@
     "package:desktop:win:x64": "pnpm --filter @redspark/rsh-desktop run package:win:x64",
     "package:desktop:win:x64:unsigned": "pnpm --filter @redspark/rsh-desktop run package:win:x64:unsigned",
     "package:desktop:win:x64:dir": "pnpm --filter @redspark/rsh-desktop run package:win:x64:dir",
+    "package:desktop:win:x64:dir:unsigned": "pnpm --filter @redspark/rsh-desktop run package:win:x64:dir:unsigned",
     "upload:mac:arm64": "pnpm --filter @redspark/rsh-desktop run upload:mac:arm64",
     "upload:mac:x64": "pnpm --filter @redspark/rsh-desktop run upload:mac:x64",
     "upload:win:x64": "pnpm --filter @redspark/rsh-desktop run upload:win:x64",

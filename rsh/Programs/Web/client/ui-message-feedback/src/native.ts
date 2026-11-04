@@ -92,7 +92,7 @@ export const plugin: NativePlugin = {
   apiVersion: 1,
   name: '@redspark/rsh-client-ui-message-feedback',
   targets: ['client'],
-  requires: ['clientSlots', 'clientLocale', 'clientNativeSession'],
+  requires: ['clientSlots', 'clientLocale', 'clientNativeSession', 'clientNativeConversation'],
   optional: [],
   provides: [],
   resolve(input) {

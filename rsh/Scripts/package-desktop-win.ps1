@@ -384,8 +384,15 @@ Write-Note "RSH_DESKTOP_APP_ID = $resolvedAppId"
 
 # --- invoke packaging ------------------------------------------------------
 
+# 'dir' and 'unsigned' are different axes, not different directories:
+#   dir      = emit an unpacked directory and stop, no NSIS installer, no signing request
+#   unsigned = build the NSIS installer but skip code signing
+# --dir and --unsigned are independent switches in package-target.ts, so `dir` must pass
+# both; it therefore lands in the same output directory unsigned uses. That shared path is
+# an artifact of the current implementation, not an intended equivalence: do not assume
+# `dir` has an output directory of its own.
 $scriptInvocation = switch ($Mode) {
-  'dir' { 'package:desktop:win:x64:dir' }
+  'dir' { 'package:desktop:win:x64:dir:unsigned' }
   'signed' { 'package:desktop:win:x64' }
   default { 'package:desktop:win:x64:unsigned' }
 }
@@ -425,8 +432,11 @@ Write-Note ("packaging finished in {0:N1}s" -f $packSeconds)
 
 Write-Stage 'verification'
 
+# 'dir' resolves the same directory as 'unsigned' on purpose: dir now runs with
+# --unsigned (see the $scriptInvocation switch above), so electron-builder writes to
+# unsigned-artifacts. The shared value is a consequence of that, not a design rule.
 $buildPaths = @{
-  'dir'      = Join-Path $desktopRoot '.desktop-build/targets/win-x64/artifacts'
+  'dir'      = Join-Path $desktopRoot '.desktop-build/targets/win-x64/unsigned-artifacts'
   'unsigned' = Join-Path $desktopRoot '.desktop-build/targets/win-x64/unsigned-artifacts'
   'signed'   = Join-Path $desktopRoot '.desktop-build/targets/win-x64/artifacts'
 }

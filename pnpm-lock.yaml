@@ -9678,12 +9678,24 @@ importers:
       '@redspark/rsh-client-ui-approval':
         specifier: workspace:^
         version: link:../Web/client/ui-approval
+      '@redspark/rsh-client-ui-brand-official':
+        specifier: workspace:^
+        version: link:../Web/client/ui-brand-official
       '@redspark/rsh-client-ui-conversation':
         specifier: workspace:^
         version: link:../Web/client/ui-conversation
+      '@redspark/rsh-client-ui-input-trigger':
+        specifier: workspace:^
+        version: link:../Web/client/ui-input-trigger
+      '@redspark/rsh-client-ui-jobs':
+        specifier: workspace:^
+        version: link:../Web/client/ui-jobs
       '@redspark/rsh-client-ui-layout':
         specifier: workspace:^
         version: link:../Web/client/ui-layout
+      '@redspark/rsh-client-ui-message-feedback':
+        specifier: workspace:^
+        version: link:../Web/client/ui-message-feedback
       '@redspark/rsh-client-ui-primitives':
         specifier: workspace:^
         version: link:../Web/client/ui-primitives
@@ -13152,9 +13164,6 @@ importers:
       '@redspark/rsh-client-locale':
         specifier: workspace:^
         version: link:../locale
-      '@redspark/rsh-client-native-session':
-        specifier: workspace:^
-        version: link:../native-session
       '@redspark/rsh-client-store':
         specifier: workspace:^
         version: link:../store
@@ -13179,9 +13188,6 @@ importers:
       '@redspark/rsh-host-open-in-app':
         specifier: workspace:^
         version: link:../../host/open-in-app
-      '@redspark/rsh-native-runtime':
-        specifier: workspace:^
-        version: link:../../../../Core/runtime-diagnostics/native-runtime
       '@redspark/rsh-session':
         specifier: workspace:^
         version: link:../../../../Engine/core/session
