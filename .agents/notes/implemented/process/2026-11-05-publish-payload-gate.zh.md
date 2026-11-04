@@ -56,17 +56,19 @@ Status: implemented
 
 其中两个已在本变更中修复。`ui-settings-general` 与 `ui-settings-plugins` 声明了 `exports["./native"]` 和针对 `lib/native.js` 的 `files` 条目，而它们的 `tsdown.config.ts` 只调用了 `clientBundle`，所以该文件从未被构建；现在它们调用 `staticLinkedLeaf` 并发布 `lib/**/*.css`，与同一提交（`5383af6b7d`）中获得 Native 半边的那五个同级包一致。它们是第一种缺陷的现成例子：该提交自己的说明就写着，一个声明了 `./native` 却不构建它的包，等于把一条通向虚无的路径交给消费者。
 
-另外两个需要 `CLIENT_RUNTIME_DEPENDENCIES` 条目，这正是政策为「已发布的 Native 叶子运行时可达、而否则只会被声明为开发依赖」的 Client 包准备的、经评审的机制：
+其余的需要 `CLIENT_RUNTIME_DEPENDENCIES` 条目，这正是政策为「已发布的 Native 叶子运行时可达、而否则只会被声明为开发依赖」的 Client 包准备的、经评审的机制：
 
 - `@redspark/rsh-client-ui-sidebar` → `clsx`。它的叶子在运行时导入 `clsx` 做类名组合。
 - `@redspark/rsh-client-ui-input-trigger` → `@redspark/rsh-file-reference`。它的叶子为触发器检测谓词导入 `@redspark/rsh-file-reference/grammar`，与同级决策记录的裸导入相同。
+- `@redspark/rsh-client-ui-settings` → `@redspark/schemastery`。Native 插件用 `new Schema` 构建 schema，静态叶子把这个导入外置。
+- `@redspark/rsh-client-ui-settings-plugin-inventory` → `@redspark/rsh-brand`。它的快照辅助函数从已打包入口调用 `brandString`。
 
-两者都在随附的 `native-web` Client 组合中，因此导出的 `/native` 入口正是 Desktop 浏览器 bundle 所解析的对象。在政策点名它们之前，`verify-package-dependencies` 会以「仅 `devDependencies`」拒绝它们；而政策自身的文档字符串要求存在源码使用——`/native` 提供了这一点，该入口现在也在门禁所检查的安装段落中得到了满足。
+每一项都在随附的 `native-web` Client 组合中，因此导出的 `/native` 入口正是 Desktop 浏览器 bundle 所解析的对象。在政策点名它们之前，`verify-package-dependencies` 会以「仅 `devDependencies`」拒绝它们；而政策自身的文档字符串要求存在源码使用——`/native` 提供了这一点，该入口现在也在门禁所检查的安装段落中得到了满足。
 
 这条门禁刻意不进入 `ci-static`：那条通道不拥有构建，而两条产物门禁都要读构建出的 `lib/` 输出。它与 `verify-native-build-output` 并列加入 `ci-windows-observational`，即构建归属该通道之处。
 
 ## Testing
 
-`rsh/Scripts/verify-publish-payload.spec.ts` 钉住了检测边界：相对目标缺失会报出，存在则通过，目录 index 能解析，`devDependencies` 中的裸说明符带着具体原因报出，每个安装段落中的裸说明符通过，无人引用的产物成员不报出，两条模块表豁免成立而平台模块名的子路径不成立。语料选择谓词单独钉住，使没有 Native 入口的包留在范围之外，而不是被隐含。
+`rsh/Scripts/verify-publish-payload.spec.ts` 钉住了检测边界：相对目标缺失会报出，存在则通过，目录 index 能解析，`new URL(relative, import.meta.url)` 算作相对说明符，`devDependencies` 中的裸说明符带着具体原因报出，每个安装段落中的裸说明符通过，无人引用的产物成员不报出，两条模块表豁免成立而平台模块名的子路径不成立。tarball 缺少 `./native` 成员时，不会因此藏起同一包里另一处坏掉的相对导入。语料选择谓词单独钉住，使没有 Native 入口的包留在范围之外，而不是被隐含。
 
 这条门禁是拿真实缺陷而非仅夹具验证的：从 `ui-sidebar` 的 `files` 中删掉 `lib/client/SidebarRoot.module.css`，违规计数从 2 升到 3 并点名了精确说明符；把 `@redspark/rsh-util-values` 移出 `dependencies`，计数升到 13，覆盖 `@redspark/rsh-session` 的九个已产出文件。逐一还原后计数回落到原值。

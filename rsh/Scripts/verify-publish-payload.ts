@@ -140,12 +140,20 @@ export interface ModuleSpecifier {
  * Static module specifiers one emitted JavaScript file carries.
  *
  * Reads the full ECMAScript surface a bundle can produce: static imports,
- * re-exports, dynamic `import()`, and `require`. An emitted file is plain
- * JavaScript, so the parser runs in JavaScript mode over the file text.
+ * re-exports, dynamic `import()`, `require`, and `new URL(relative, import.meta.url)`.
+ * An emitted file is plain JavaScript, so the parser runs in JavaScript mode over the file text.
  * @param file - file name used in parser diagnostics only.
  * @param source - file text.
  * @returns Every module specifier the file names, in source order.
  */
+/** Whether a call argument is `import.meta.url`. */
+function isImportMetaUrl(node: ts.Expression): boolean {
+  return ts.isPropertyAccessExpression(node)
+    && node.name.text === 'url'
+    && ts.isMetaProperty(node.expression)
+    && node.expression.keywordToken === ts.SyntaxKind.ImportKeyword
+}
+
 export function moduleSpecifiersOf(file: string, source: string): ModuleSpecifier[] {
   const parsed = ts.createSourceFile(file, source, ts.ScriptTarget.Latest, false, ts.ScriptKind.JS)
   const found: ModuleSpecifier[] = []
@@ -163,6 +171,16 @@ export function moduleSpecifiersOf(file: string, source: string): ModuleSpecifie
       && (node.expression.kind === ts.SyntaxKind.ImportKeyword
         || (ts.isIdentifier(node.expression) && node.expression.text === 'require'))) {
       record(node, node.arguments[0])
+    } else if (ts.isNewExpression(node)
+      && ts.isIdentifier(node.expression)
+      && node.expression.text === 'URL'
+      && node.arguments !== undefined
+      && node.arguments.length >= 2
+      && isImportMetaUrl(node.arguments[1])) {
+      const target = node.arguments[0]
+      if (target !== undefined && ts.isStringLiteralLike(target) && target.text.startsWith('.')) {
+        record(node, target)
+      }
     }
     ts.forEachChild(node, visit)
   }
@@ -253,7 +271,6 @@ export function payloadViolations(
       specifier: target,
       reason: 'exports["./native"] names a file the tarball does not contain',
     })
-    return violations
   }
 
   for (const [file, source] of payload.files) {

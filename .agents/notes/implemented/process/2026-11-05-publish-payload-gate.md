@@ -56,17 +56,19 @@ The payload plane now has a gate for the same defects the source plane kept miss
 
 Two of those four were fixed in this change. `ui-settings-general` and `ui-settings-plugins` advertised `exports["./native"]` and a `files` entry for `lib/native.js` while their `tsdown.config.ts` called only `clientBundle`, so the file was never built; they now call `staticLinkedLeaf` and publish `lib/**/*.css`, matching the five sibling packages that gained a Native half in the same commit (`5383af6b7d`). They are a live example of the first defect: the commit's own message says a package advertising `./native` without building it hands its consumer a path to nothing.
 
-The other two required `CLIENT_RUNTIME_DEPENDENCIES` entries, which is the policy's reviewed mechanism for a Client package whose published Native leaf reaches a package it would otherwise declare for development only:
+The others required `CLIENT_RUNTIME_DEPENDENCIES` entries, which is the policy's reviewed mechanism for a Client package whose published Native leaf reaches a package it would otherwise declare for development only:
 
 - `@redspark/rsh-client-ui-sidebar` → `clsx`. Its leaf imports `clsx` at runtime for class composition.
 - `@redspark/rsh-client-ui-input-trigger` → `@redspark/rsh-file-reference`. Its leaf imports `@redspark/rsh-file-reference/grammar` for the trigger-detection predicate, the same bare import the sibling decision recorded.
+- `@redspark/rsh-client-ui-settings` → `@redspark/schemastery`. The Native plugin builds a schema with `new Schema`, and the static leaf externalizes that import.
+- `@redspark/rsh-client-ui-settings-plugin-inventory` → `@redspark/rsh-brand`. Its snapshot helper calls `brandString` from the packed entry.
 
-Both are in the shipped `native-web` Client composition, so the exported `/native` entry is what the Desktop browser bundle resolves. `verify-package-dependencies` rejects these as `devDependencies`-only until the policy names them, and the policy's own docstring requires a source use — which `/native` supplies and which the entry now satisfies in the installing section the gate checks.
+Each is in the shipped `native-web` Client composition, so the exported `/native` entry is what the Desktop browser bundle resolves. `verify-package-dependencies` rejects these as `devDependencies`-only until the policy names them, and the policy's own docstring requires a source use — which `/native` supplies and which the entry now satisfies in the installing section the gate checks.
 
 The gate is deliberately not in `ci-static`: that lane owns no build, and both payload gates read built `lib/` output. It joins `ci-windows-observational` beside `verify-native-build-output`, where the build belongs to the lane.
 
 ## Testing
 
-`rsh/Scripts/verify-publish-payload.spec.ts` pins the detection boundary: a missing relative target reports, a present one passes, a directory index resolves, a bare specifier in `devDependencies` reports with its specific reason, one in each installing section passes, an unreferenced payload member does not report, and both module-table exemptions hold while a subpath of a platform module name does not. The corpus-selection predicate is pinned separately so a package without a Native entry stays out of scope rather than being implied.
+`rsh/Scripts/verify-publish-payload.spec.ts` pins the detection boundary: a missing relative target reports, a present one passes, a directory index resolves, a `new URL(relative, import.meta.url)` load is a relative specifier, a bare specifier in `devDependencies` reports with its specific reason, one in each installing section passes, an unreferenced payload member does not report, and both module-table exemptions hold while a subpath of a platform module name does not. A missing `./native` member does not hide another broken relative import in the same tarball. The corpus-selection predicate is pinned separately so a package without a Native entry stays out of scope rather than being implied.
 
 The gate was verified against real defects rather than fixtures alone: dropping `lib/client/SidebarRoot.module.css` from `ui-sidebar`'s `files` raised the violation count from 2 to 3 with the exact specifier named, and moving `@redspark/rsh-util-values` out of `dependencies` raised it to 13 across `@redspark/rsh-session`'s nine emitted files. Reverting each returned the count.

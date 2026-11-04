@@ -59,6 +59,9 @@
   "peerDependencies": {
     "@redspark/cordis": "workspace:^"
   },
+  "dependencies": {
+    "@redspark/schemastery": "workspace:^"
+  },
   "devDependencies": {
     "@redspark/cordis": "workspace:^",
     "@redspark/rsh-api-remotes": "workspace:^",
@@ -70,7 +73,6 @@
     "@redspark/rsh-native-runtime": "workspace:^",
     "@redspark/rsh-settings": "workspace:^",
     "@redspark/rsh-util-values": "workspace:^",
-    "@redspark/schemastery": "workspace:^",
     "@types/react": "~18.3.1",
     "react": "^18.2.0"
   },

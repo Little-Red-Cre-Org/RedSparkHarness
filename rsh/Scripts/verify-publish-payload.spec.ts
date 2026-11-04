@@ -105,6 +105,19 @@ describe('moduleSpecifiersOf', () => {
     const found = moduleSpecifiersOf('lib/native.js', 'import"./a.css"\nexport{x}from"./b.js"\n')
     expect(found.map(entry => entry.specifier)).toEqual(['./a.css', './b.js'])
   })
+
+  it('reads a relative URL resolved against import.meta.url', () => {
+    const found = moduleSpecifiersOf('lib/native.js', 'const worker = new URL("./worker.cjs", import.meta.url)\n')
+    expect(found.map(entry => entry.specifier)).toEqual(['./worker.cjs'])
+  })
+
+  it('ignores a URL that is not a relative import.meta.url load', () => {
+    const found = moduleSpecifiersOf('lib/native.js', [
+      'const page = new URL("https://example.test")',
+      'const other = new URL("./x.js", base)',
+    ].join('\n'))
+    expect(found).toEqual([])
+  })
 })
 
 describe('payloadViolations relative specifiers', () => {
@@ -121,6 +134,11 @@ describe('payloadViolations relative specifiers', () => {
       'lib/client/A.module.css': '.a{color:red}',
     })
     expect(payloadViolations(subject)).toEqual([])
+  })
+
+  it('reports a worker named only through new URL when the tarball omits it', () => {
+    const subject = payload({ 'lib/native.js': 'const worker = new URL("./worker.cjs", import.meta.url)\n' })
+    expect(reported(subject)).toEqual(['lib/native.js:1 ./worker.cjs'])
   })
 
   it('accepts a relative import resolved through a directory index', () => {
@@ -228,6 +246,20 @@ describe('payloadViolations Native entry', () => {
       specifier: './lib/native.js',
       reason: 'exports["./native"] names a file the tarball does not contain',
     })])
+  })
+
+  it('still reports other broken relative imports when the native entry is absent', () => {
+    const subject: PackedPayload = {
+      manifest: { name: NAME, exports: { './native': { default: './lib/native.js' } } },
+      files: new Map([
+        ['package.json', '{}'],
+        ['lib/other.js', 'import "./missing.js"\n'],
+      ]),
+    }
+    expect(reported(subject)).toEqual([
+      'package.json ./lib/native.js',
+      'lib/other.js:1 ./missing.js',
+    ])
   })
 
   it('reports an exports map with no default target', () => {

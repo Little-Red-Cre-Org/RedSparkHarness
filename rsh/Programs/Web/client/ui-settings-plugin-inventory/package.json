@@ -62,11 +62,13 @@
   "peerDependencies": {
     "@redspark/cordis": "workspace:^"
   },
+  "dependencies": {
+    "@redspark/rsh-brand": "workspace:^"
+  },
   "devDependencies": {
     "@redspark/cordis": "workspace:^",
     "@redspark/rsh-agent-presets": "workspace:^",
     "@redspark/rsh-api-remotes": "workspace:^",
-    "@redspark/rsh-brand": "workspace:^",
     "@redspark/rsh-client-locale": "workspace:^",
     "@redspark/rsh-client-native-session": "workspace:^",
     "@redspark/rsh-client-test-runtime": "workspace:^",

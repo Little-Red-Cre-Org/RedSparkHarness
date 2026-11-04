@@ -13714,6 +13714,10 @@ importers:
         version: 18.3.1
 
   rsh/Programs/Web/client/ui-settings:
+    dependencies:
+      '@redspark/schemastery':
+        specifier: link:../../../../Core/vendor/schemastery
+        version: link:../../../../Core/vendor/schemastery
     devDependencies:
       '@redspark/cordis':
         specifier: workspace:^
@@ -13745,9 +13749,6 @@ importers:
       '@redspark/rsh-util-values':
         specifier: workspace:^
         version: link:../../../../Core/util/values
-      '@redspark/schemastery':
-        specifier: link:../../../../Core/vendor/schemastery
-        version: link:../../../../Core/vendor/schemastery
       '@types/react':
         specifier: ~18.3.1
         version: 18.3.31
@@ -13865,6 +13866,10 @@ importers:
         version: 18.3.1
 
   rsh/Programs/Web/client/ui-settings-plugin-inventory:
+    dependencies:
+      '@redspark/rsh-brand':
+        specifier: workspace:^
+        version: link:../../../../Core/util/brand
     devDependencies:
       '@redspark/cordis':
         specifier: workspace:^
@@ -13875,9 +13880,6 @@ importers:
       '@redspark/rsh-api-remotes':
         specifier: workspace:^
         version: link:../../api/remotes
-      '@redspark/rsh-brand':
-        specifier: workspace:^
-        version: link:../../../../Core/util/brand
       '@redspark/rsh-client-locale':
         specifier: workspace:^
         version: link:../locale
