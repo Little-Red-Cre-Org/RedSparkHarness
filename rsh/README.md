@@ -9,7 +9,7 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-The harness is assembled from npm packages under `rsh/`, grouped by capability family: sessions and the agent loop, model-facing tools, shell and filesystem execution, web access, subagents, and the rest. Use this page as the top-level map: find the owning group, then open its README for the package list. Every package is scoped `@redspark/rsh-*` and lives in exactly one group; each group README is the authoritative package map for its family.
+The harness is assembled from npm packages under `rsh/`, grouped by capability family: sessions and the agent loop, model-facing tools, shell and filesystem execution, web access, subagents, and more. Use this page as the top-level map: find the owning group, then open its README for the package list. Every package is scoped `@redspark/rsh-*`; each group README is its authoritative map.
 
 ## Table of Contents
 
@@ -46,6 +46,7 @@ Every package lives in exactly one group; new packages join existing groups, and
 | [`sandbox/`](Modules/Official/sandbox/README.md) | Process-confinement seam; bwrap/Landlock/Seatbelt backends |
 | [`fs/`](Modules/Official/fs/README.md) | Filesystem capability family: seam, local impl, model-facing file tools, discovery tools |
 | [`lsp/`](Modules/Official/lsp/README.md) | LSP capability family: seam, generic stdio provider, and the `lsp` tool |
+| [`ide/`](Modules/Official/ide/README.md) | Native IDE: Code OSS provider for `native-ide` |
 | [`skill/`](Modules/Official/skill/README.md) | Skill capability family: provider registry, local provider, model-facing catalog/loader |
 | [`compaction/`](Engine/compaction/README.md) | Compaction capability family: Service Definition + basic provider + command Consumer |
 | [`context/`](Engine/context/README.md) | Model-visible request context: workspace instructions, time context, references |

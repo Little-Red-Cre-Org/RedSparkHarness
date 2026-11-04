@@ -368,6 +368,7 @@ const packageFileExtras: Readonly<Record<string, readonly string[]>> = {
   '@redspark/rsh-native-code-runtime': ['lib/native.js', 'lib/shared-*.js', 'lib/process-child.js'],
   '@redspark/rsh-native-time-context': ['lib/native.js', 'lib/types-*.js'],
   '@redspark/rsh-native-tmux-context': ['lib/native.js', 'lib/shared-*.js'],
+  '@redspark/rsh-ide-code-oss': ['lib/native.js'],
   // Legacy Cordis entries and native values share their pure implementations.
   '@redspark/rsh-session': ['lib/native.js', 'lib/event-validation.js'],
   '@redspark/rsh-llm': ['lib/native.js', 'lib/shared-*.js'],

@@ -45,6 +45,7 @@ export const nativePackageDirectories: ReadonlySet<string> = new Set([
   'rsh/Engine/context/request-context',
   'rsh/Engine/context/tmux-context-definition',
   'rsh/Modules/Official/terminal/native-tmux-context',
+  'rsh/Modules/Official/ide/ide-code-oss',
   'rsh/Engine/workspace/workspace-definition',
   'rsh/Engine/core/native-agent',
   'rsh/Engine/core/native-session-execution',
@@ -85,6 +86,7 @@ export const nativePackageDirectories: ReadonlySet<string> = new Set([
   'rsh/Programs/SDK/packages/native-server',
   'rsh/Programs/SDK/packages/client',
   'rsh/Programs/Web/host/native-web-assets',
+  'rsh/Programs/Web/host/native-ide',
   'rsh/Programs/Web/client/store',
   'rsh/Programs/Web/client/ui-slots',
   'rsh/Programs/Web/client/ui-primitives',
@@ -146,6 +148,8 @@ export const nativePackageTargets: ReadonlyMap<string, readonly ('host' | 'clien
   ['rsh/Engine/subagent/sdk-runtime', ['host']],
   ['rsh/Programs/SDK/packages/client', ['host']],
   ['rsh/Programs/Web/host/native-web-assets', ['host']],
+  ['rsh/Modules/Official/ide/ide-code-oss', ['host']],
+  ['rsh/Programs/Web/host/native-ide', ['host']],
 ])
 
 /** Mixed legacy packages whose Cordis entry and native installer share a package. */

@@ -7021,6 +7021,18 @@ importers:
         specifier: workspace:^
         version: link:../../../../Engine/core/tools
 
+  rsh/Modules/Official/ide/ide-code-oss:
+    dependencies:
+      '@redspark/rsh-native-runtime':
+        specifier: workspace:^
+        version: link:../../../../Core/runtime-diagnostics/native-runtime
+      '@redspark/rsh-subprocess':
+        specifier: workspace:^
+        version: link:../../../../Core/subprocess/subprocess
+      zod:
+        specifier: ^4.4.3
+        version: 4.4.3
+
   rsh/Modules/Official/interaction/commands:
     dependencies:
       '@redspark/rsh-brand':
@@ -14767,6 +14779,15 @@ importers:
       '@redspark/rsh-http-routes-cordis':
         specifier: workspace:^
         version: link:../../../../Compatibility/DSH/bridge/http-routes-cordis
+
+  rsh/Programs/Web/host/native-ide:
+    dependencies:
+      '@redspark/rsh-ide-code-oss':
+        specifier: workspace:^
+        version: link:../../../../Modules/Official/ide/ide-code-oss
+      '@redspark/rsh-native-runtime':
+        specifier: workspace:^
+        version: link:../../../../Core/runtime-diagnostics/native-runtime
 
   rsh/Programs/Web/host/native-schedule-controller:
     dependencies:
