@@ -172,7 +172,7 @@ it('rejects persisted migration conflicts, including shipped defaults and system
     await writeFile(settingsPath, localeSettings)
     await expect(migrateNativeLegacyConfig({ profileName: 'native-web', installAnchor, home, profile,
       patchFiles: [], environment: emptyEnvironment }))
-      .rejects.toThrow(`${settingsPath} locale.preference="system" conflicts with ${clientPath} installations[dsh-client-locale].config.locale="zh"`)
+      .rejects.toThrow(`${settingsPath} locale.preference="system" conflicts with ${clientPath} installations[rsh-client-locale].config.locale="zh"`)
     expect(JSON.parse(await readFile(clientPath, 'utf8'))).toEqual(clientWithLocale)
     expect(await readFile(settingsPath, 'utf8')).toBe(localeSettings)
   } finally {

@@ -66,6 +66,11 @@
     "peerDependencies":  {
                              "@redspark/cordis":  "workspace:^"
                          },
+    "peerDependenciesMeta":  {
+                                 "@redspark/cordis":  {
+                                                          "optional":  true
+                                                      }
+                             },
     "devDependencies":  {
                             "@redspark/rsh-client-locale":  "workspace:^",
                             "@redspark/rsh-client-test-runtime":  "workspace:^",
@@ -87,6 +92,7 @@
                   "lib/index.js",
                   "lib/client.js",
                   "lib/native.js",
+                  "lib/**/*.css",
                   "lib/types/**/*.d.ts"
               ]
 }

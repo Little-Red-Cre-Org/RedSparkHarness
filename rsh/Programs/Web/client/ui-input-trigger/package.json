@@ -85,6 +85,7 @@
     "files":  [
                   "lib/index.js",
                   "lib/client.js",
+                  "lib/native.js",
                   "lib/types/**/*.d.ts"
               ]
 }

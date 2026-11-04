@@ -231,6 +231,7 @@ export const mixedNativeEntryDirectories: ReadonlyMap<string, string> = new Map(
   ['rsh/Programs/Web/client/ui-layout', 'Native and compatibility shells share AppFrame, layout store, panel actions, and theme presenter'],
   ['rsh/Programs/Web/client/ui-sidebar', 'Native and compatibility shells share SidebarRoot and slot contracts while each supplies Session navigation'],
   ['rsh/Programs/Web/client/ui-sidebar-right', 'Native and compatibility shells share the right panel package while Native presents selected Session facts'],
+  ['rsh/Programs/Web/client/ui-jobs', 'Native and compatibility job lists share the frame fold and menu presentation while each supplies its Session surface'],
   ['rsh/Core/storage/storage', 'Cordis and native storage hubs share the backend registry'],
   ['rsh/Core/storage/storage-json', 'Cordis and native JSON Providers share atomic storage operations'],
   ['rsh/Core/storage/storage-domain', 'Cordis and native domain Providers share schemas and durability'],

@@ -307,7 +307,10 @@ const packageFileExtras: Readonly<Record<string, readonly string[]>> = {
   '@redspark/rsh-native-web-session-controller': ['lib/native.js', 'lib/shared-*.js'],
   '@redspark/rsh-native-schedule-controller': ['lib/native.js', 'lib/shared-*.js'],
   '@redspark/rsh-native-jobs-controller': ['lib/native.js', 'lib/shared-*.js'],
-  '@redspark/rsh-client-ui-jobs': ['lib/native.js'],
+  '@redspark/rsh-client-ui-jobs': ['lib/native.js', 'lib/**/*.css'],
+  '@redspark/rsh-client-ui-brand-official': ['lib/native.js'],
+  '@redspark/rsh-client-ui-input-trigger': ['lib/native.js'],
+  '@redspark/rsh-client-ui-open-in-app': ['lib/native.js', 'lib/**/*.css'],
   '@redspark/rsh-client-ui-settings-general': ['lib/native.js'],
   '@redspark/rsh-client-ui-settings-plugins': ['lib/native.js'],
   '@redspark/rsh-client-native-session': [
