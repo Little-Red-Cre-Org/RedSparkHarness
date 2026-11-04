@@ -66,8 +66,6 @@
                             "react":  "^18.2.0",
                             "@redspark/rsh-client-store":  "workspace:^",
                             "@redspark/rsh-client-ui-primitives":  "workspace:^",
-                            "@redspark/rsh-host-open-in-app":  "workspace:^",
-                            "@redspark/rsh-client-native-session":  "workspace:^",
-                            "@redspark/rsh-native-runtime":  "workspace:^"
+                            "@redspark/rsh-host-open-in-app":  "workspace:^"
                         }
 }

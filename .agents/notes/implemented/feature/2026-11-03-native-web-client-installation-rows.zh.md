@@ -28,7 +28,7 @@ Status: implemented
 
 这些包中只有 `ui-jobs` 被分类进 `mixedNativeEntryDirectories`。该分类携带混合包规则所要求的可选 Cordis peer，且仅当 native 入口的源码闭包从不触及该包的 Cordis 半边时成立。其余三个保留必需的 Cordis peer：它们的 native 入口会触到导入 `@redspark/cordis` 或兄弟包 `./client` 子路径的文件，把它们分类为混合包会让 `verify-native-dependencies` 失败。
 
-`ui-open-in-app` 不带 `native-web` 安装行，也不声明 `./native` 子路径或 `dsh.native` 条目，因此不发布 `lib/native.js` 与样式表。它的 native 叶子从 `@redspark/rsh-host-open-in-app/shared` 读取三个路由常量，而该包不声明 `dsh.native` 条目、也不出现在任何随附组合中，因此 Native 装配不提供任何 `/open-in-app/*` 路由来应答这些读取。这些路由常量经由 Native 装配排除的 `rsh-web-app` 到达 Client。要具备可用的启动路径，需要为这三个路由提供 Native Host 半边；该半边存在后，子路径与安装行一起回归。
+`ui-open-in-app` 只保留 Cordis 半边。它的 Native 半边被移除而非发布，因为该能力依赖一组尚不存在的 Native Host 路由。被移除的叶子从 `@redspark/rsh-host-open-in-app/shared` 读取三个路由常量，而该包不声明 `dsh.native` 条目、也不出现在任何随附组合中，因此 Native 装配不提供任何 `/open-in-app/*` 路由来应答这些读取。这些路由常量经由 Native 装配排除的 `rsh-web-app` 到达 Client。要具备可用的启动路径，需要为这三个路由提供 Native Host 半边；该半边存在后，Native 入口、`./native` 子路径、`files` 条目与 `native-web` 安装行一起回归。
 
 ## Alternatives considered
 
@@ -53,3 +53,5 @@ Status: implemented
 [verify-native-build-output.spec.ts](../../../../rsh/Scripts/verify-native-build-output.spec.ts) 固定了每一种被接纳与被排除的形态：跨零段、一段与多段的 `**` 段；包不存在、清单不可读、无 exports 映射、子路径无 default、产物已构建但未发布、构建未产出的相对导入、`files` 漏掉的相对导入、完整载荷，以及每个诊断中的组合类型。
 
 针对本笔记描述的这些包，门禁报告三处缺失的 `lib/native.js` 产物与一处被裁掉的载荷，并在每个包发布它声明的产物后报告为空。从 `ui-jobs` 中删掉 `lib/**/*.css` 可按需复现相对导入那一类。
+
+`ui-open-in-app/tests/native-plugin.client.spec.tsx` 随 Native 半边一并移除。该用例直接 import 源码，在不经过打包与装配的情况下把叶子装进 Native runtime，因此它检验的是没有任何组合会加载的代码，对打包产物不构成证据；移除它不会丢失任何可达路径的覆盖。
