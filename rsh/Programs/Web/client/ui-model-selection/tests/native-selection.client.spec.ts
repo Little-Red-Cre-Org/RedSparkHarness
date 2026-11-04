@@ -115,12 +115,9 @@ describe('native model selection', () => {
   it('forwards a selection with the addressed Session', async () => {
     const fake = client()
     const service = createNativeModelSelection(fake as never, new AbortController().signal)
-    await service.select(SID, { provider: 'deepseek-official', model: 'deepseek-v4-pro', reasoningEffort: 'high' })
-    expect(fake.selectModel).toHaveBeenCalledWith(
-      SID,
-      { provider: 'deepseek-official', model: 'deepseek-v4-pro', reasoningEffort: 'high' },
-      expect.any(AbortSignal),
-    )
+    const request = { selected: { provider: 'deepseek-official', model: 'deepseek-v4-pro', reasoningEffort: 'high' }, expectedRevision: null }
+    await service.select(SID, request)
+    expect(fake.selectModel).toHaveBeenCalledWith(SID, request, expect.any(AbortSignal))
   })
 })
 
