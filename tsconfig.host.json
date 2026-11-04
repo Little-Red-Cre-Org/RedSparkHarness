@@ -446,6 +446,8 @@
     { "path": "./rsh/Programs/Web/host/directory-picker-native" },
     { "path": "./rsh/Programs/Web/host/frontend-static" },
     { "path": "./rsh/Programs/Web/host/native-web-assets" },
+    { "path": "./rsh/Modules/Official/ide/ide-code-oss" },
+    { "path": "./rsh/Programs/Web/host/native-ide" },
     { "path": "./rsh/Programs/Web/client/native-session" },
     { "path": "./rsh/Programs/Web/api/native-web-session-controller" },
     { "path": "./rsh/Programs/Web/host/native-web-host" },

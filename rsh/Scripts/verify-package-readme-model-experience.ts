@@ -63,6 +63,8 @@ const SENTENCE_MODEL_EXPERIENCE: Readonly<Record<string, SentenceContract>> = {
   'rsh/Modules/Official/code-runtime/native-code-runtime': { kind: 'indirect', reason: 'The Provider delegates model-visible result rendering and durable Session logging to its consuming native application.' },
   'rsh/Engine/context/native-time-context': { kind: 'indirect', reason: 'The Provider delegates Session append and model-request placement to its consuming native application.' },
   'rsh/Modules/Official/terminal/native-tmux-context': { kind: 'indirect', reason: 'The Provider delegates Session append and model-request placement to its consuming native application.' },
+  'rsh/Modules/Official/ide/ide-code-oss': { kind: 'none', reason: 'The Provider starts and owns a Code OSS server; it registers no prompt, schema, or result.' },
+  'rsh/Programs/Web/host/native-ide': { kind: 'none', reason: 'The application prints the IDE workspace URL outside the model request; no prompt, schema, or result is registered.' },
   'rsh/Engine/core/native-jobs': { kind: 'none', reason: 'Native background-job state and final output stay owned by the registry until an application chooses a model-facing projection.' },
   'rsh/Modules/Official/interaction/native-approval': { kind: 'indirect', reason: 'The Provider delegates durable audit and tool-result rendering to its consuming native application.' },
   'rsh/Engine/core/native-tools': { kind: 'indirect', reason: 'The registry delegates request assembly and durable result logging to its consuming native application.' },

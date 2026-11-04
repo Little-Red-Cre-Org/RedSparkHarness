@@ -9,7 +9,7 @@ kind: "package-group"
 
 ## 概述
 
-harness 由 `rsh/` 下的 npm 包组装而成，按能力系列分组：会话与 agent loop（智能体循环）、面向模型的工具、shell 与文件系统执行、Web 访问、subagent 等等。把本页当作顶层地图使用：先找到拥有某能力的组，再打开其 README 查看包列表。每个包都以 `@redspark/rsh-*` 为作用域、只属于一个组；每个组的 README 都是该能力系列的权威包映射。
+harness 由 `rsh/` 下的 npm 包组装而成，按能力系列分组：会话与 agent loop（智能体循环）、面向模型的工具、shell 与文件系统执行、Web 访问、subagent 等等。把本页当作顶层地图使用：先找到拥有某能力的组，再打开其 README 查看包列表。每个包都以 `@redspark/rsh-*` 为作用域；每个组的 README 都是它的权威包映射。
 
 ## 目录
 
@@ -46,6 +46,7 @@ harness 由 `rsh/` 下的 npm 包组装而成，按能力系列分组：会话�
 | [`sandbox/`](Modules/Official/sandbox/README.zh.md) | 进程限制 seam；bwrap、Landlock、Seatbelt 后端 |
 | [`fs/`](Modules/Official/fs/README.zh.md) | 文件系统能力系列：seam、本地实现、面向模型的文件工具、发现工具 |
 | [`lsp/`](Modules/Official/lsp/README.zh.md) | LSP 能力系列：seam、通用 stdio 提供方和 `lsp` 工具 |
+| [`ide/`](Modules/Official/ide/README.zh.md) | Native IDE 能力系列：Code OSS 工作区提供方，由 `native-ide` 应用消费 |
 | [`skill/`](Modules/Official/skill/README.zh.md) | skill（技能）能力系列：提供方注册表、本地提供方、面向模型的目录／loader |
 | [`compaction/`](Engine/compaction/README.zh.md) | 压缩（compaction）能力系列：Service Definition + 基础提供方 + 命令 Consumer |
 | [`context/`](Engine/context/README.zh.md) | 模型可见请求上下文：workspace 指令、时间上下文、引用 |
