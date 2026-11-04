@@ -4236,10 +4236,6 @@ export const TYPE_API: readonly TypeApiEntry[] = [
     declaration: 'export interface CreateTeamTaskRequest {\n    readonly subject: string;\n    readonly description: string;\n    readonly blockedBy?: readonly TeamTaskId[];\n    readonly writeScopes?: readonly string[];\n}',
   },
   {
-    name: 'CredentialInfo',
-    declaration: 'export interface CredentialInfo {\n    configured: boolean;\n    source?: string;\n    writable: boolean;\n}',
-  },
-  {
     name: 'CredentialKey',
     declaration: 'export type CredentialKey = Branded<\'CredentialKey\'>;',
   },
@@ -4740,10 +4736,6 @@ export const TYPE_API: readonly TypeApiEntry[] = [
     declaration: 'export interface LlmCallConfigAdapterDefaults {\n    reasoningEffort?: true;\n    maxTokens?: true;\n}',
   },
   {
-    name: 'LlmConfigurableProvider',
-    declaration: 'export interface LlmConfigurableProvider {\n    provider: string;\n    displayName: string;\n    settingsNs: string;\n    settingsPath: readonly string[];\n    declared?: boolean;\n    error?: string;\n}',
-  },
-  {
     name: 'LlmDiscoveredModel',
     declaration: 'export interface LlmDiscoveredModel {\n    id: string;\n    name?: string;\n    contextWindow?: number;\n    maxTokens?: number;\n}',
   },
@@ -4774,10 +4766,6 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   {
     name: 'LlmModelReasoningInfo',
     declaration: 'export interface LlmModelReasoningInfo {\n    efforts: readonly LlmReasoningEffortInfo[];\n    defaultEffort?: ReasoningEffortId;\n}',
-  },
-  {
-    name: 'LlmProviderInfo',
-    declaration: 'export interface LlmProviderInfo {\n    id: string;\n    name: string;\n}',
   },
   {
     name: 'LlmReasoningEffortInfo',

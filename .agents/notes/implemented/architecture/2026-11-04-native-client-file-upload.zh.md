@@ -2,6 +2,8 @@
 
 Status: implemented
 
+[English](2026-11-04-native-client-file-upload.md) | 中文
+
 ## Problem
 
 兼容 file-upload 插件把 Blob 和 stream 发到 `/api/session/uploadFileBinary`，并把精确字节交给 `remote.fileUploads`。Native Web 客户端没有 Cordis remote，也不提供那条路由。`clientNativeSession.uploadFile` 已经会发到 `/api/native-session/file-upload`，但它不报告字节进度，其他 Native 插件也不能 require 它。

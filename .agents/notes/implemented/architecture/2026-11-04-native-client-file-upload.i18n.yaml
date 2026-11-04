@@ -2,5 +2,5 @@
 # side as of the last confirmed-consistent state. Both languages carry equal authority;
 # after editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write .agents/notes/implemented/architecture/2026-11-04-native-client-file-upload.md
-2026-11-04-native-client-file-upload.md: 942c1db1f24a1728d8b12495d0833c992c094fee
-2026-11-04-native-client-file-upload.zh.md: 6bc8e01d85bd5f3aa95c5618b1fc1db33fd903c0
+2026-11-04-native-client-file-upload.md: 54a12a703ec7bbbf57f6443115c3a154d9f9b6fc
+2026-11-04-native-client-file-upload.zh.md: 2eb6770a00e9bbc16cd5e7a045d63562c4eb4628

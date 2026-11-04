@@ -2,6 +2,8 @@
 
 Status: implemented
 
+English | [中文](2026-11-04-native-client-file-upload.zh.md)
+
 ## Problem
 
 The compatibility file-upload plugin stores a Session file by posting Blob and stream bodies to `/api/session/uploadFileBinary` and by sending exact bytes through `remote.fileUploads`. A Native Web client has no Cordis remote and does not serve that route. `clientNativeSession.uploadFile` already posts to `/api/native-session/file-upload`, but it reports no byte progress and it is not a service other Native plugins can require.

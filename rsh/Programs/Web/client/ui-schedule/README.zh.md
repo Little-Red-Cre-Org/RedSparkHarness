@@ -49,6 +49,10 @@ dsh web --patch rsh/Programs/CLI/config/examples/schedule/cordis.yml
 
 浏览器插件以顺序 10 向 `conversation.session.header.actions` 贡献 `schedule-catalog`，位于静态 agent（智能体）与 subagent 上下文之后、后台任务之前。它通过标准会话钩子读取 `openState`，通过 `useProjection('schedule')` 读取完整值；弹层开合是它唯一的本地交互状态。组件把目录 portal 到 `document.body`，并将触发器与面板 ref 交给 `useAnchoredPosition`；该 hook 在测量已渲染面板后发布 fixed 坐标，使面板位于触发器下方 5px、钳制在 16px 视口边距内，并在 resize、捕获阶段 scroll 与面板 resize 时重新测量。目录 ref 也让 portal 内的指针按下继续属于既有 dismissal 边界之内。浏览器格式化使用查看方的 locale、时区与时钟，持久 Schedule 记录保持不变。
 
+### Native 半边
+
+Native 入口（`exports["./native"]`）没有投影注册表，因此自己跟随 `clientNativeSchedule` 的 baseline/upsert/remove 帧，并折叠进同一套按 Session 分组（`applyScheduleFrame`）。它以顺序 15 把 `schedule-catalog` 贡献到 `native.conversation.actions`——在计划徽章之后、后台任务列表之前。两套记录的行文不同：Native 行携带宿主的 `schedule` 表达式，而不是 `kind`/`everySeconds` 一对，所以该字符串就是频率行；没有 `nextRunAt` 的行（暂停或失败）排在最后，并且只显示该表达式。排序、绝对时间格式化与相对时间格式化仍是浏览器半边自己的。
+
 ### 源码地图
 
 | 文件 | 职责 |

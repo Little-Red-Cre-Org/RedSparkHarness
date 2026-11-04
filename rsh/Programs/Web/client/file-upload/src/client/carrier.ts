@@ -170,7 +170,10 @@ export function selectFileUploadCarrier(hook = readFileUploadHook()): SelectedFi
   }
 }
 
-/** Read the page hook installed before either client entry boots. */
+/**
+ * Read the page hook installed before either client entry boots.
+ * @returns the installed hook, or `undefined` when the page did not install one.
+ */
 export function readFileUploadHook(): ClientFileUploadHooks | undefined {
   return (globalThis as ClientFileUploadGlobal).__RSH_FILE_UPLOAD__
 }

@@ -73,6 +73,11 @@ export function apply(ctx) {
 
 每个地址一条记录，持有一个快照存储、一个持有者计数（钩子订阅者加 pin）与运行中流的 `AbortController`。第一个持有者打开提供方的流；之后的持有者共享它；最后一个持有者释放时中止流并把快照重置为空闲（有提供方为 `loading`，没有为 `none`）。记录在页面存续期内保留，使 `source()` 在 React 从渲染到订阅的窗口期以及 StrictMode 重挂载期间保持引用稳定。
 
+<a id="native-half"></a>
+### Native 半边
+
+Native 入口（`exports["./native"]`）以 `clientNativeResources` 提供同一注册表，并通过 `slots.provideRoot` 贡献同一个 `resource` 根键钩子，因此 `useResource` 在 Native slot 组件上保持不变。注册表是本包自己的代码；两种构建都把各自的 Context 适配到同一个窄 effect 端口，所以两边不会漂移。除该注册表外，Native 半边不再提供自己的服务面。
+
 <a id="failures"></a>
 ### 失败
 

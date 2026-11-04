@@ -1,7 +1,7 @@
 /** Cordis identity for the settings-owned schema operations. */
 import { Service } from '@redspark/cordis'
 import type { Context } from '@redspark/cordis'
-import { createSettingsSchemaOperations, type SettingsSchemaOperations } from './schema-operations.ts'
+import { createSettingsSchemaOperations, type SchemaNode, type SettingsSchemaOperations } from './schema-operations.ts'
 
 export type { SchemaNode, SettingsSchemaOperations } from './schema-operations.ts'
 
@@ -25,7 +25,7 @@ export class SettingsSchemaService extends Service implements SettingsSchemaOper
    * @param serialized - serialized Schemastery node.
    * @returns live schema node.
    */
-  rehydrate(serialized: unknown) {
+  rehydrate(serialized: unknown): SchemaNode {
     return this.operations.rehydrate(serialized)
   }
 
@@ -45,7 +45,7 @@ export class SettingsSchemaService extends Service implements SettingsSchemaOper
    * @param path - object keys or array indexes.
    * @returns the resolved node, or `undefined` when the path is absent.
    */
-  nodeAtPath(root: Parameters<SettingsSchemaOperations['nodeAtPath']>[0], path: readonly string[]) {
+  nodeAtPath(root: Parameters<SettingsSchemaOperations['nodeAtPath']>[0], path: readonly string[]): SchemaNode | undefined {
     return this.operations.nodeAtPath(root, path)
   }
 
