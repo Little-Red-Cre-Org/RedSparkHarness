@@ -59,14 +59,20 @@ it('keeps workspace Client resolution explicit and rejects installed package esc
   }
 })
 
-it('defines only public Client environment values and fixes the browser bundle to production', async () => {
+interface NativeEnvironmentFixture {
+  readonly title: string | undefined
+  readonly missing: undefined
+  readonly secret: undefined
+  readonly all: Record<string, never>
+  readonly nodeEnv: string
+  readonly buildProfile: string | undefined
+}
+
+/** Bundle one fixture Client package and read back the environment esbuild embedded. */
+async function bundleEnvironmentFixture(): Promise<NativeEnvironmentFixture> {
   const home = await mkdtemp(join(tmpdir(), 'rsh-native-client-env-'))
   const project = join(home, 'profile'), runtime = join(home, 'runtime')
   const fixture = join(runtime, 'node_modules', 'native-env-fixture')
-  vi.stubEnv('RSH_CLIENT_TITLE', 'Native browser shell')
-  vi.stubEnv('RSH_CLIENT_UNSET', undefined)
-  vi.stubEnv('RSH_HOST_SECRET', 'host-only')
-  vi.stubEnv('NODE_ENV', 'development')
   try {
     await mkdir(project, { recursive: true })
     await mkdir(fixture, { recursive: true })
@@ -81,6 +87,7 @@ it('defines only public Client environment values and fixes the browser bundle t
       '  secret: process.env.RSH_HOST_SECRET,',
       '  all: process.env,',
       '  nodeEnv: process.env.NODE_ENV,',
+      '  buildProfile: process.env.RSH_CLIENT_BUILD_PROFILE,',
       '}',
     ].join('\n'))
     await writeFile(join(project, 'rsh.client.json'), JSON.stringify({
@@ -91,25 +98,36 @@ it('defines only public Client environment values and fixes the browser bundle t
     const asset = bundle?.assets.get(bundle.wire.bundle)
     expect(asset?.contentType).toBe('text/javascript; charset=utf-8')
     const module = await import(`data:text/javascript;base64,${Buffer.from(asset!.body).toString('base64')}`) as {
-      plugins: {
-        client: {
-          environment: {
-            title: string
-            missing: undefined
-            secret: undefined
-            all: Record<string, never>
-            nodeEnv: string
-          }
-        }
-      }
+      plugins: { client: { environment: NativeEnvironmentFixture } }
     }
-    expect(module.plugins.client.environment).toEqual({
-      title: 'Native browser shell', missing: undefined, secret: undefined, all: {}, nodeEnv: 'production',
-    })
+    return module.plugins.client.environment
   } finally {
     vi.unstubAllEnvs()
     await rm(home, { recursive: true, force: true })
   }
+}
+
+it('defines only public Client environment values and fixes the browser bundle to production', async () => {
+  vi.stubEnv('RSH_CLIENT_TITLE', 'Native browser shell')
+  vi.stubEnv('RSH_CLIENT_UNSET', undefined)
+  vi.stubEnv('RSH_HOST_SECRET', 'host-only')
+  vi.stubEnv('NODE_ENV', 'development')
+  expect(await bundleEnvironmentFixture()).toEqual({
+    title: 'Native browser shell', missing: undefined, secret: undefined, all: {}, nodeEnv: 'production',
+    buildProfile: 'official',
+  })
+})
+
+it('embeds the official build profile when the Host process supplies none', async () => {
+  vi.stubEnv('RSH_CLIENT_BUILD_PROFILE', undefined)
+  // Every build-profile gate in a Native Client reads this value; without the
+  // default the occupant never registers.
+  expect((await bundleEnvironmentFixture()).buildProfile).toBe('official')
+})
+
+it('lets an inherited build profile replace the default', async () => {
+  vi.stubEnv('RSH_CLIENT_BUILD_PROFILE', 'local')
+  expect((await bundleEnvironmentFixture()).buildProfile).toBe('local')
 })
 
 it('accepts Client packages hoisted beside the runtime in a flattened install', async () => {

@@ -23,9 +23,10 @@
  * Both shipped compositions of the Web profile are checked. `installation` rows are
  * the Host packages, and `client` rows are the browser Client packages written into
  * the same Native Desktop project. A Client row is the more fragile of the two: its
- * native entry is a statically linked leaf whose own relative and bare imports must
- * also survive packing, so a stylesheet outside `files` breaks it exactly as a
- * missing `lib/native.js` does.
+ * native entry is a statically linked leaf, so a relative specifier it carries stays
+ * relative in the emitted file and that file must also survive packing: a stylesheet
+ * outside `files` breaks it exactly as a missing `lib/native.js` does. Bare
+ * specifiers are dependencies rather than payload, so they are out of scope.
  */
 
 import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync } from 'node:fs'
@@ -241,7 +242,20 @@ export function rowDefects(row: CompositionRow, directory: string | undefined): 
 
   // The entry's own relative imports must be published too, or the packed entry is
   // resolvable but unusable.
-  for (const imported of relativeImportsOf(targetPath)) {
+  let imports: string[]
+  try {
+    imports = relativeImportsOf(targetPath)
+  } catch (error) {
+    defects.push({
+      kind: row.kind,
+      id: row.id,
+      plugin: row.plugin,
+      directory,
+      defect: `exports["./native"] resolves to ${targetRelative}, whose relative imports cannot be read: ${String(error)}`,
+    })
+    return defects
+  }
+  for (const imported of imports) {
     const importedPath = resolve(dirname(targetPath), imported)
     const importedRelative = relative(directory, importedPath).split(sep).join('/')
     if (!existsSync(importedPath)) {
@@ -270,16 +284,19 @@ export function rowDefects(row: CompositionRow, directory: string | undefined): 
  *
  * The statically linked leaf preset keeps relative specifiers verbatim, so what the
  * emitted file imports is what the packed tarball must contain. Bare specifiers are
- * dependencies rather than payload and are out of scope here.
+ * dependencies rather than payload and are out of scope here. Every admitted and
+ * excluded form is pinned in the companion spec; the emitted files of this workspace
+ * carry only the double-quoted forms Rolldown writes.
  * @param entryPath - absolute path of the emitted entry.
  * @returns the entry's relative import specifiers, in source order.
+ * @throws {Error} when the entry path is not a readable regular file.
  */
 export function relativeImportsOf(entryPath: string): string[] {
   let source: string
   try {
     source = readFileSync(entryPath, 'utf8')
-  } catch {
-    return []
+  } catch (error) {
+    throw new Error(`${GATE}: cannot read the emitted native entry ${entryPath}`, { cause: error })
   }
   return [...source.matchAll(/(?:\bfrom|\bimport)\s*"\.\.?\/[^"]*"/gu)]
     .map(match => /"\.\.?\/[^"]*"/u.exec(match[0])?.[0].slice(1, -1))

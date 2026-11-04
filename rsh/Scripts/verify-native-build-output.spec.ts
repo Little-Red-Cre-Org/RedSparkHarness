@@ -75,6 +75,12 @@ describe('rowDefects', () => {
       .toEqual(['exports["./native"] resolves to lib/native.js, which the package "files" list does not include'])
   })
 
+  it('treats a missing files list as publishing nothing', () => {
+    const directory = packageDir({ exports: { './native': { default: './lib/native.js' } } }, ['lib/native.js'])
+    expect(rowDefects(row, directory).map(defect => defect.defect))
+      .toEqual(['exports["./native"] resolves to lib/native.js, which the package "files" list does not include'])
+  })
+
   it('reports a published entry whose relative import the files list omits', () => {
     const directory = packageDir(
       { exports: { './native': { default: './lib/native.js' } }, files: ['lib/native.js'] },
@@ -121,7 +127,31 @@ describe('relativeImportsOf', () => {
       .toEqual(['./client/A.module.css', '../shared/b.js'])
   })
 
-  it('returns nothing for an unreadable entry', () => {
-    expect(relativeImportsOf(join(tmpdir(), 'does-not-exist.js'))).toEqual([])
+  it('refuses an entry it cannot read instead of reporting no imports', () => {
+    expect(() => relativeImportsOf(join(tmpdir(), 'does-not-exist.js')))
+      .toThrow(/cannot read the emitted native entry/u)
+  })
+
+  it('admits every emitted form and excludes the ones this build never writes', () => {
+    const directory = packageDir({}, ['lib/native.js'])
+    const entry = join(directory, 'lib/native.js')
+    writeFileSync(entry, [
+      'import css from "./a.css"',
+      'export { x } from "./b.js"',
+      'export * from "../c.js"',
+      'import "./d.css"',
+      'import{a}from"./e.js"',
+      'export*from"./f.js"',
+    ].join('\n'))
+    expect(relativeImportsOf(entry)).toEqual(['./a.css', './b.js', '../c.js', './d.css', './e.js', './f.js'])
+
+    // Dynamic import, single quotes, and require() stay outside the detection
+    // boundary; the emitted leaves of this workspace use none of them.
+    writeFileSync(entry, [
+      'const e = import("./a.css")',
+      "import css from './b.css'",
+      'const r = require("./c.css")',
+    ].join('\n'))
+    expect(relativeImportsOf(entry)).toEqual([])
   })
 })

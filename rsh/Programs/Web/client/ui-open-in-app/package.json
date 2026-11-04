@@ -22,10 +22,6 @@
                                      "types":  "./lib/types/client/index.d.ts",
                                      "default":  "./lib/client.js"
                                  },
-                    "./native":  {
-                                     "types":  "./lib/types/native.d.ts",
-                                     "default":  "./lib/native.js"
-                                 },
                     "./src/*":  "./src/*",
                     "./package.json":  "./package.json"
                 },
@@ -48,25 +44,6 @@
                                               "@redspark/rsh-client-ui-session"
                                           ],
                                "platform":  "web"
-                           },
-                "native":  {
-                               "apiVersion":  1,
-                               "entry":  "./native",
-                               "targets":  [
-                                               "client"
-                                           ],
-                               "requires":  [
-                                                "clientSlots",
-                                                "clientLocale",
-                                                "clientConnection",
-                                                "clientNativeConversation"
-                                            ],
-                               "optional":  [
-
-                                            ],
-                               "provides":  [
-
-                                            ]
                            }
             },
     "peerDependencies":  {
