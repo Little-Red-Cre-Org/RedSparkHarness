@@ -29,7 +29,7 @@
  */
 
 import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync } from 'node:fs'
-import { isAbsolute, join, relative, resolve, sep } from 'node:path'
+import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path'
 import { tmpdir } from 'node:os'
 import {
   shippedNativeProfileClientComposition,
@@ -50,7 +50,7 @@ const root = resolve(import.meta.dirname, '..', '..')
 type CompositionKind = 'installation' | 'client'
 
 /** One composition row whose advertised native build output this gate requires. */
-interface CompositionRow {
+export interface CompositionRow {
   readonly kind: CompositionKind
   readonly id: string
   readonly plugin: string
@@ -149,7 +149,7 @@ function directoryDirectories(directory: string): string[] {
 }
 
 /** One package whose advertised native export has no build output behind it. */
-interface OutputDefect {
+export interface OutputDefect {
   readonly kind: CompositionKind
   readonly id: string
   readonly plugin: string
@@ -167,36 +167,37 @@ function countOf(kind: CompositionKind): number {
 }
 
 for (const row of rows) {
-  const directory = packages.get(row.plugin)
-  if (directory === undefined) {
-    defects.push({
-      kind: row.kind,
-      id: row.id,
-      plugin: row.plugin,
-      directory: '(unknown)',
-      defect: 'package is not in the workspace',
-    })
-    continue
-  }
+  defects.push(...rowDefects(row, packages.get(row.plugin)))
+}
 
-  let manifest: { exports?: unknown; files?: unknown; dsh?: { native?: { entry?: unknown } } }
+/**
+ * Every defect one composition row has: a package that cannot supply the build
+ * output its `exports["./native"]` map advertises, and a published payload that
+ * cannot satisfy the entry's own relative imports.
+ *
+ * A Client row's native entry is a statically linked leaf, so its relative imports
+ * stay relative in the emitted bundle. Publishing the entry while dropping what it
+ * imports produces a tarball that resolves the entry and then fails on the first
+ * `import "./x.module.css"` — the same packing failure the entry check exists to
+ * prevent, one file deeper.
+ * @param row - composition row naming the package and the row id used in diagnostics.
+ * @param directory - the package directory, or undefined when the workspace does not contain it.
+ * @returns every defect found for this row; empty when the row's build output is complete.
+ */
+export function rowDefects(row: CompositionRow, directory: string | undefined): OutputDefect[] {
+  if (directory === undefined) {
+    return [{ kind: row.kind, id: row.id, plugin: row.plugin, directory: '(unknown)', defect: 'package is not in the workspace' }]
+  }
+  let manifest: { exports?: unknown; files?: unknown }
   try {
     manifest = JSON.parse(readFileSync(join(directory, 'package.json'), 'utf8')) as typeof manifest
   } catch {
-    defects.push({ kind: row.kind, id: row.id, plugin: row.plugin, directory, defect: 'package.json is not readable' })
-    continue
+    return [{ kind: row.kind, id: row.id, plugin: row.plugin, directory, defect: 'package.json is not readable' }]
   }
 
   const exported = manifest.exports
   if (exported === null || typeof exported !== 'object' || Array.isArray(exported)) {
-    defects.push({
-      kind: row.kind,
-      id: row.id,
-      plugin: row.plugin,
-      directory,
-      defect: 'package.json declares no exports map',
-    })
-    continue
+    return [{ kind: row.kind, id: row.id, plugin: row.plugin, directory, defect: 'package.json declares no exports map' }]
   }
 
   const nativeEntry = (exported as Record<string, unknown>)['./native']
@@ -205,44 +206,84 @@ for (const row of rows) {
     ? nativeEntry
     : (nativeEntry as { default?: unknown } | undefined)?.default
   if (typeof target !== 'string' || target === '') {
-    defects.push({
-      kind: row.kind,
-      id: row.id,
-      plugin: row.plugin,
-      directory,
-      defect: 'exports["./native"] has no default target',
-    })
-    continue
+    return [{ kind: row.kind, id: row.id, plugin: row.plugin, directory, defect: 'exports["./native"] has no default target' }]
   }
 
   const targetPath = isAbsolute(target) ? target : resolve(directory, target)
   if (!existsSync(targetPath)) {
-    defects.push({
+    return [{
       kind: row.kind,
       id: row.id,
       plugin: row.plugin,
       directory,
       defect: `exports["./native"] points at ${target}, which does not exist on disk`
         + ' (the package did not build, or the build emits a different file name)',
-    })
-    continue
+    }]
   }
+
+  const files = Array.isArray(manifest.files) ? manifest.files.filter((entry): entry is string => typeof entry === 'string') : []
+  const covered = (packageRelative: string): boolean =>
+    files.some(pattern => globCovers(pattern, packageRelative))
 
   // A built file that the package's own `files` list omits never reaches a tarball,
   // so packaging fails even though the working tree looks correct.
-  const files = manifest.files
-  if (Array.isArray(files) && files.length > 0) {
-    const targetRelative = relative(directory, targetPath).split(sep).join('/')
-    if (!files.some(pattern => typeof pattern === 'string' && globCovers(pattern, targetRelative))) {
+  const defects: OutputDefect[] = []
+  const targetRelative = relative(directory, targetPath).split(sep).join('/')
+  if (!covered(targetRelative)) {
+    defects.push({
+      kind: row.kind,
+      id: row.id,
+      plugin: row.plugin,
+      directory,
+      defect: `exports["./native"] resolves to ${targetRelative}, which the package "files" list does not include`,
+    })
+  }
+
+  // The entry's own relative imports must be published too, or the packed entry is
+  // resolvable but unusable.
+  for (const imported of relativeImportsOf(targetPath)) {
+    const importedPath = resolve(dirname(targetPath), imported)
+    const importedRelative = relative(directory, importedPath).split(sep).join('/')
+    if (!existsSync(importedPath)) {
       defects.push({
         kind: row.kind,
         id: row.id,
         plugin: row.plugin,
         directory,
-        defect: `exports["./native"] resolves to ${targetRelative}, which the package "files" list does not include`,
+        defect: `exports["./native"] imports ${imported}, which the build did not emit`,
+      })
+    } else if (!covered(importedRelative)) {
+      defects.push({
+        kind: row.kind,
+        id: row.id,
+        plugin: row.plugin,
+        directory,
+        defect: `exports["./native"] imports ${imported}, which the package "files" list does not include`,
       })
     }
   }
+  return defects
+}
+
+/**
+ * Relative module specifiers one emitted entry imports.
+ *
+ * The statically linked leaf preset keeps relative specifiers verbatim, so what the
+ * emitted file imports is what the packed tarball must contain. Bare specifiers are
+ * dependencies rather than payload and are out of scope here.
+ * @param entryPath - absolute path of the emitted entry.
+ * @returns the entry's relative import specifiers, in source order.
+ */
+export function relativeImportsOf(entryPath: string): string[] {
+  let source: string
+  try {
+    source = readFileSync(entryPath, 'utf8')
+  } catch {
+    return []
+  }
+  return [...source.matchAll(/(?:\bfrom|\bimport)\s*"\.\.?\/[^"]*"/gu)]
+    .map(match => /"\.\.?\/[^"]*"/u.exec(match[0])?.[0].slice(1, -1))
+    .filter((specifier): specifier is string => specifier !== undefined)
 }
 
 /**
@@ -254,7 +295,7 @@ for (const row of rows) {
  * directory" reports a false defect for every package that publishes a flat types
  * directory.
  */
-function globCovers(pattern: string, target: string): boolean {
+export function globCovers(pattern: string, target: string): boolean {
   const normalized = pattern.replace(/^\.\//u, '').replace(/\/$/u, '')
   if (normalized === target) return true
   if (!/[*?]/u.test(normalized)) return false
@@ -282,25 +323,27 @@ function globCovers(pattern: string, target: string): boolean {
   return new RegExp(`${source}$`, 'u').test(target)
 }
 
-if (defects.length === 0) {
-  console.log(
-    `${GATE}: ${rows.length} row(s) checked (${countOf('installation')} native installation, `
-    + `${countOf('client')} native-web Client),`
-    + ' every advertised exports["./native"] target exists and is published.',
-  )
-  process.exit(0)
-}
+if (import.meta.main) {
+  if (defects.length === 0) {
+    console.log(
+      `${GATE}: ${rows.length} row(s) checked (${countOf('installation')} native installation, `
+      + `${countOf('client')} native-web Client),`
+      + ' every advertised exports["./native"] target and the relative imports it needs exist and are published.',
+    )
+    process.exit(0)
+  }
 
-console.error(
-  `${GATE}: ${defects.length} row(s) of ${rows.length} advertise build output that is missing.`
-  + ' Desktop packaging fails inside prepare-dsh with MODULE_NOT_FOUND.',
-)
-for (const defect of defects) {
-  console.error(`  [${defect.kind}] ${defect.id}  ${defect.plugin}`)
-  console.error(`      ${defect.defect}`)
-  console.error(`      package: ${relative(root, defect.directory).split(sep).join('/')}`)
+  console.error(
+    `${GATE}: ${defects.length} row(s) of ${rows.length} advertise build output that is missing.`
+    + ' Desktop packaging fails inside prepare-dsh with MODULE_NOT_FOUND.',
+  )
+  for (const defect of defects) {
+    console.error(`  [${defect.kind}] ${defect.id}  ${defect.plugin}`)
+    console.error(`      ${defect.defect}`)
+    console.error(`      package: ${relative(root, defect.directory).split(sep).join('/')}`)
+  }
+  console.error('')
+  console.error('Fix: build the package so exports["./native"].default exists,')
+  console.error('and list that file, and anything it imports, in the package "files" array so they are published.')
+  process.exit(1)
 }
-console.error('')
-console.error('Fix: build the package so exports["./native"].default exists,')
-console.error('and list that file in the package "files" array so it is published.')
-process.exit(1)

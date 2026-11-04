@@ -9684,9 +9684,6 @@ importers:
       '@redspark/rsh-client-ui-message-feedback':
         specifier: workspace:^
         version: link:../Web/client/ui-message-feedback
-      '@redspark/rsh-client-ui-open-in-app':
-        specifier: workspace:^
-        version: link:../Web/client/ui-open-in-app
       '@redspark/rsh-client-ui-primitives':
         specifier: workspace:^
         version: link:../Web/client/ui-primitives

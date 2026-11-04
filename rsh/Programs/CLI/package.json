@@ -69,7 +69,6 @@
                          "@redspark/rsh-client-ui-jobs":  "workspace:^",
                          "@redspark/rsh-client-ui-layout":  "workspace:^",
                          "@redspark/rsh-client-ui-message-feedback":  "workspace:^",
-                         "@redspark/rsh-client-ui-open-in-app":  "workspace:^",
                          "@redspark/rsh-client-ui-primitives":  "workspace:^",
                          "@redspark/rsh-client-ui-renderer":  "workspace:^",
                          "@redspark/rsh-client-ui-session":  "workspace:^",

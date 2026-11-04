@@ -18,13 +18,17 @@ Status: implemented
 
 `check-workspace-constraints` 从清单推导期望的 `files` 数组，识别 `./client`、`./invariant`、`./worker`、`./store`、`./startup`、`./runtime`、`./loader` 与 `./typert` 子路径。它不从 `./native` 推导条目，因此发布 native 叶子的包改在 `packageFileExtras` 表中记录 `lib/native.js`。为让门禁通过而删掉该条目会把产物从 tarball 中移出。
 
-`verify-native-build-output` 检查 Web profile 的两个随附组合：来自 `shippedNativeProfileComposition(home, 'web', platform)` 的 Host 行，以及来自 `shippedNativeProfileClientComposition('web')` 的浏览器 Client 行。对每一行，它断言 `exports["./native"].default` 在磁盘上存在且包的 `files` 列表覆盖它。它在所检查的构建之后运行，在 [run-gates.ts](../../../../rsh/Scripts/run-gates.ts) 中标记为 `needs: ['build']`。
+`verify-native-build-output` 检查 Web profile 的两个随附组合：来自 `shippedNativeProfileComposition(home, 'web', platform)` 的 Host 行，以及来自 `shippedNativeProfileClientComposition('web')` 的浏览器 Client 行。对每一行，它断言 `exports["./native"].default` 在磁盘上存在、包的 `files` 列表覆盖它，并且该入口携带的每个相对导入都既能在磁盘上解析、也在 `files` 中被发布。它在所检查的构建之后运行，在 [run-gates.ts](../../../../rsh/Scripts/run-gates.ts) 中标记为 `needs: ['build']`。
 
 `ui-jobs` 与 `ui-open-in-app` 发布它们产出的样式表，因为各自的 native 叶子按相对路径导入它；一个导入了样式表的 native 叶子需要 `files` 里的 `lib/**/*.css`，理由与需要 `lib/native.js` 相同。两者的 `packageFileExtras` 行同时携带这两个条目。
 
+`ui-input-trigger` 提供 `clientNativeInputTrigger` 且不注册任何 slot，也没有任何 Native 包 require 该服务：Native 应用自己实现了命令面板。该行因此发布并加载了一条尚无消费方的管线。它保留的理由是包的 Native 半边已完整且已注册；缺的是消费方，而删除该行会同时删掉这样的消费方唯一能取到的已发布产物。
+
+`ui-brand-official` 以 `RSH_CLIENT_BUILD_PROFILE === 'official'` 作为注册条件，而 Native bundle 只从 Host 进程继承 `RSH_CLIENT_*` 值，而该进程不导出任何这类值。[native-client.ts](../../../../rsh/Programs/Web/host/native-web-assets/src/native-client.ts) 因此用它自己的默认值确定该值，与 Cordis 构建注入的值一致，使同一发布的两个浏览器面描述同一个 profile。
+
 这些包中只有 `ui-jobs` 被分类进 `mixedNativeEntryDirectories`。该分类携带混合包规则所要求的可选 Cordis peer，且仅当 native 入口的源码闭包从不触及该包的 Cordis 半边时成立。其余三个保留必需的 Cordis peer：它们的 native 入口会触到导入 `@redspark/cordis` 或兄弟包 `./client` 子路径的文件，把它们分类为混合包会让 `verify-native-dependencies` 失败。
 
-`ui-open-in-app` 不带 `native-web` 安装行。它的 native 叶子从 `@redspark/rsh-host-open-in-app/shared` 读取三个路由常量，而该包不声明 `dsh.native` 条目、也不出现在任何随附组合中，因此 Native 装配不提供任何 `/open-in-app/*` 路由来应答这些读取。这些路由常量经由 Native 装配排除的 `rsh-web-app` 到达 Client。要让交接说明里的这一行具备可用的启动路径，需要为这三个路由提供 Native Host 半边；该半边存在后此安装行回归。
+`ui-open-in-app` 不带 `native-web` 安装行。它的 native 叶子从 `@redspark/rsh-host-open-in-app/shared` 读取三个路由常量，而该包不声明 `dsh.native` 条目、也不出现在任何随附组合中，因此 Native 装配不提供任何 `/open-in-app/*` 路由来应答这些读取。这些路由常量经由 Native 装配排除的 `rsh-web-app` 到达 Client。要具备可用的启动路径，需要为这三个路由提供 Native Host 半边；该半边存在后此安装行回归。
 
 ## Alternatives considered
 
@@ -34,12 +38,18 @@ Status: implemented
 
 **在 `expectedRshPackageFiles()` 内部推导 `./native`：** 本次拒绝，因为该推导随后也会作用于所有把 `./native` 与包入口一起产出的 Host 包，改变它们的期望数组。把这些包记入 `packageFileExtras`，使改动只落在真正发布独立构建 native 叶子的包上。
 
-**给 `dir` 单独的产物目录：** 拒绝，因为 `--dir` 与 `--unsigned` 在 [package-target.ts](../../../../rsh/Programs/Desktop/scripts/package-target.ts) 中是互相独立的两个轴。`dir` 现在带 `--unsigned` 运行，electron-builder 因此写入 `unsigned-artifacts`；共用目录是这个事实的结果，[package-desktop-win.ps1](../../../../rsh/Scripts/package-desktop-win.ps1) 据此校验。
+**给 `dir` 单独的产物目录：** 拒绝，因为 `--dir` 与 `--unsigned` 在 [package-target.ts](../../../../rsh/Programs/Desktop/scripts/package-target.ts) 中是互相独立的两个轴。`dir` 模式同时选中两者，electron-builder 因此写入 `unsigned-artifacts`；共用目录由这两个标志推出，而不是一条独立的目录规则。
 
 ## Consequences
 
 只有当构建、`exports` 映射与 `files` 列表三者一致时，Client 包才能带 `native-web` 安装行；`verify-native-build-output` 现在对三者中任一违反都以行 id 报告，而不是留给打包晚期失败。其失败输出带组合类型，使缺失的 Client 产物与缺失的 Host 产物可区分。
 
-该门禁读构建后的 `lib/` 输出，因此是构建后行。没有自己构建的运行没有 Client 产物可检查，会跳过该行，与它对 Host 行的既有行为一致。
+该门禁读构建后的 `lib/` 输出，因此是构建后行：`run-gates.ts` 只为拥有该构建的运行安排它。
 
 向随附组合添加 Client 行现在会改变一个被检查的集合：该行必须解析到一个构建产出其 `./native`、且 `files` 发布它的包，否则门禁在打包开始前变红。
+
+## Verification
+
+[verify-native-build-output.spec.ts](../../../../rsh/Scripts/verify-native-build-output.spec.ts) 固定了每一种被接纳与被排除的形态：跨零段、一段与多段的 `**` 段；包不存在、清单不可读、无 exports 映射、子路径无 default、产物已构建但未发布、构建未产出的相对导入、`files` 漏掉的相对导入、完整载荷，以及每个诊断中的组合类型。
+
+针对本笔记描述的这些包，门禁报告三处缺失的 `lib/native.js` 产物与一处被裁掉的载荷，并在每个包发布它声明的产物后报告为空。从 `ui-jobs` 中删掉 `lib/**/*.css` 可按需复现相对导入那一类。

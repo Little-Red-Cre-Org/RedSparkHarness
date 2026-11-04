@@ -18,13 +18,17 @@ The three facts are separate owners. `tsdown.config.ts` decides what the build e
 
 `check-workspace-constraints` derives an expected `files` array from the manifest, recognising `./client`, `./invariant`, `./worker`, `./store`, `./startup`, `./runtime`, `./loader`, and `./typert` subpaths. It does not derive an entry from `./native`, so a package publishing a native leaf records `lib/native.js` in the `packageFileExtras` table instead. Deleting the entry to satisfy the gate would drop the artifact from the tarball.
 
-`verify-native-build-output` checks both shipped compositions of the Web profile: the Host rows from `shippedNativeProfileComposition(home, 'web', platform)` and the browser Client rows from `shippedNativeProfileClientComposition('web')`. For each row it asserts that `exports["./native"].default` exists on disk and that the package's `files` list covers it. It runs after the build it inspects, marked `needs: ['build']` in [run-gates.ts](../../../../rsh/Scripts/run-gates.ts).
+`verify-native-build-output` checks both shipped compositions of the Web profile: the Host rows from `shippedNativeProfileComposition(home, 'web', platform)` and the browser Client rows from `shippedNativeProfileClientComposition('web')`. For each row it asserts that `exports["./native"].default` exists on disk, that the package's `files` list covers it, and that every relative import the emitted entry carries resolves on disk and is published too. It runs after the build it inspects, marked `needs: ['build']` in [run-gates.ts](../../../../rsh/Scripts/run-gates.ts).
 
 `ui-jobs` and `ui-open-in-app` publish their emitted stylesheet because their native leaf imports it by relative path; a native leaf that imports a stylesheet needs `lib/**/*.css` in `files` for the same reason it needs `lib/native.js`. Their `packageFileExtras` rows carry both entries.
 
+`ui-input-trigger` provides `clientNativeInputTrigger` and registers no slot, and no Native package requires that service: the Native application builds its own command palette. The row therefore publishes and loads a pipeline nothing consumes yet. It stays because the package's Native half is complete and registered; what remains is a consumer, and removing the row would delete the only published artifact such a consumer could reach.
+
+`ui-brand-official` gates its registration on `RSH_CLIENT_BUILD_PROFILE === 'official'`, and a Native bundle inherits only `RSH_CLIENT_*` values from the Host process, which exports none. [native-client.ts](../../../../rsh/Programs/Web/host/native-web-assets/src/native-client.ts) therefore settles that value from its own default, matching the value the Cordis build injects, so the same release's two browser faces describe one profile.
+
 `ui-jobs` is the only package here classified in `mixedNativeEntryDirectories`. That classification carries the optional Cordis peer the mixed-package rule requires, and it holds only while the native entry's source closure never reaches the package's Cordis half. The other three keep a required Cordis peer: their native entry reaches files that import `@redspark/cordis` or a sibling package's `./client` subpath, so classifying them as mixed fails `verify-native-dependencies`.
 
-`ui-open-in-app` carries no `native-web` row. Its native leaf reads three route constants from `@redspark/rsh-host-open-in-app/shared`, and that package declares no `dsh.native` entry and appears in no shipped composition, so the Native assembly ships no `/open-in-app/*` route to answer those reads. The route constants reach the Client through `rsh-web-app`, which the Native assembly excludes. Giving the paper's row a working launch path needs a Native host half for those three routes; the row returns when that half exists.
+`ui-open-in-app` carries no `native-web` row. Its native leaf reads three route constants from `@redspark/rsh-host-open-in-app/shared`, and that package declares no `dsh.native` entry and appears in no shipped composition, so the Native assembly ships no `/open-in-app/*` route to answer those reads. The route constants reach the Client through `rsh-web-app`, which the Native assembly excludes. A working launch path needs a Native host half for those three routes; the row returns when that half exists.
 
 ## Alternatives considered
 
@@ -34,12 +38,18 @@ The three facts are separate owners. `tsdown.config.ts` decides what the build e
 
 **Derive `./native` inside `expectedRshPackageFiles()`:** rejected for this change because the derivation would then also apply to every Host package whose `./native` is emitted together with its package entry, changing their expected arrays. Recording those packages in `packageFileExtras` keeps the change to the packages that actually publish a separately built native leaf.
 
-**Give `dir` its own output directory:** rejected because `--dir` and `--unsigned` are independent axes in [package-target.ts](../../../../rsh/Programs/Desktop/scripts/package-target.ts). `dir` now runs with `--unsigned`, so electron-builder writes to `unsigned-artifacts`; the shared directory follows from that, and [package-desktop-win.ps1](../../../../rsh/Scripts/package-desktop-win.ps1) verifies against it.
+**Give `dir` its own output directory:** rejected because `--dir` and `--unsigned` are independent axes in [package-target.ts](../../../../rsh/Programs/Desktop/scripts/package-target.ts). The `dir` mode selects both, so electron-builder writes `unsigned-artifacts`; that shared directory follows from the flags rather than from a directory rule of its own.
 
 ## Consequences
 
 A Client package can carry a `native-web` row only when its build, its `exports` map, and its `files` list agree; `verify-native-build-output` now reports a violation of any of the three against the row id instead of letting packaging fail later. Its failure output names the composition kind, so a missing Client artifact is distinguishable from a missing Host artifact.
 
-The gate reads built `lib/` output, so it is a post-build row. A run without its own build has no Client artifacts to inspect and omits the row, exactly as it already did for the Host rows.
+The gate reads built `lib/` output, so it is a post-build row: `run-gates.ts` schedules it only for a run that owns the build.
 
 Adding a Client row to the shipped composition now changes a checked set: the row must resolve to a package whose `./native` a build produces and whose `files` publishes, or the gate goes red before packaging starts.
+
+## Verification
+
+[verify-native-build-output.spec.ts](../../../../rsh/Scripts/verify-native-build-output.spec.ts) pins each admitted and excluded form: the `**` segment spanning zero, one, and several directories; a missing package, an unreadable manifest, an absent exports map, a subpath with no default, an emitted-but-unpublished entry, a relative import the build did not emit, a relative import the `files` list omits, a complete payload, and the composition kind in each diagnostic.
+
+Against these packages the gate reports the three absent `lib/native.js` artifacts and the one stripped payload, and reports nothing once each package publishes what it advertises. Dropping `lib/**/*.css` from `ui-jobs` reproduces the relative-import class on demand.

@@ -32,8 +32,6 @@
     "files":  [
                   "lib/index.js",
                   "lib/client.js",
-                  "lib/native.js",
-                  "lib/**/*.css",
                   "lib/types/**/*.d.ts"
               ],
     "scripts":  {
