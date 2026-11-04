@@ -13152,9 +13152,6 @@ importers:
       '@redspark/rsh-client-locale':
         specifier: workspace:^
         version: link:../locale
-      '@redspark/rsh-client-native-session':
-        specifier: workspace:^
-        version: link:../native-session
       '@redspark/rsh-client-store':
         specifier: workspace:^
         version: link:../store
@@ -13179,9 +13176,6 @@ importers:
       '@redspark/rsh-host-open-in-app':
         specifier: workspace:^
         version: link:../../host/open-in-app
-      '@redspark/rsh-native-runtime':
-        specifier: workspace:^
-        version: link:../../../../Core/runtime-diagnostics/native-runtime
       '@redspark/rsh-session':
         specifier: workspace:^
         version: link:../../../../Engine/core/session
