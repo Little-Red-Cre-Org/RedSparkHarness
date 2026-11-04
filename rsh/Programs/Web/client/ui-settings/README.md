@@ -61,6 +61,10 @@ The plugin injects `remote` with its `settings` namespace, resolves Host persist
 
 `ctx.settingsSchema` performs synchronous schema rehydration, validation, and immutable path editing for settings plugins. Without a `decode` in the spec, a section that is not a plain object, fails its rehydrated schema, or carries a schema envelope this client cannot rehydrate publishes no value at all.
 
+### The Native half
+
+`settings-engine.ts` and `schema-operations.ts` hold the document fold, the revision-fenced write queue, the per-namespace derivation, and the schema operations with no Cordis reference. The Cordis entry binds them to `ctx.remote.settings` and publishes `ctx.settingsScope`/`ctx.settingsSchema`; the `./native` entry binds the same engine to `clientNativeSession.settingsDescribe`/`settingsMutate` and publishes `clientNativeSettings`, whose `bind` returns the scope together with its disposer. The Native invalidation source is the Host's `settingsEvents` stream, which carries the document commit and reconnection facts the Cordis half receives as `settings/document-updated` and `connection/reset`. A Native scope is always durable, because its `/api` carrier is the Host's own.
+
 </details>
 
 -----

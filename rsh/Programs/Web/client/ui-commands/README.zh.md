@@ -49,6 +49,10 @@ composer 携带图片或通用文件提交时，只有声明了 `input.attachmen
 
 `src/client/contract.ts` 定义贡献项和装饰的注册接口。`CommandDirectory` 负责会话级协议缓存，并通过 `resolution.ts` 解析输入命令；该模块负责内置命令标识匹配和本地化输入写法。`matchSpace` 同步读取就绪缓存，`matchEnter` 等待缓存就绪，预热失败或取消时拒绝。转发的目录和连接事件使缓存失效。宿主执行匹配的命令后，本浏览器发布 `command/executed`，其他客户端只观察持久命令事件。`PopupSelectController` 负责弹窗状态，`PopupSelectView` 占据输入浮层。`presentation.ts` 负责行标题、图标和分节，展示与解析辅助函数均留在插件内部。
 
+### Native 半边
+
+`catalog.ts`、`contract-core.ts`、`presentation.ts` 与 `resolution.ts` 承载命令目录缓存、贡献项与装饰声明、内置行展示面与本地化命令解析，且不引用 Cordis。Cordis 入口在其上加入 `/` 触发源、按会话的弹窗控制器与 `command/executed` 确认；`./native` 入口通过 `clientNativeSession.commands`/`executeCommand` 发布 `clientNativeCommands`，并且不另造第二份命令面板。Native 客户端已在 `native-application` 中渲染 `/` 菜单，因此本入口提供该菜单所读取的内容：每个会话一份缓存目录、内置行的本地化展示面，以及由 Host `agent-presets/updated` 通知驱动的失效；其 `commands` 读取走缓存而非传输层。`popupSelect` 贡献项在此报告为不支持，因为没有 Native 外壳可结算选项列表；`action` 贡献项会直接执行。
+
 </details>
 
 -----

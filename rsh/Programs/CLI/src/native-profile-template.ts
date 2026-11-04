@@ -50,6 +50,10 @@ const NATIVE_WEB_CLIENT_INSTALLATIONS = [
   { id: 'input-trigger', plugin: '@redspark/rsh-client-ui-input-trigger' },
   { id: 'jobs', plugin: '@redspark/rsh-client-ui-jobs' },
   { id: 'message-feedback', plugin: '@redspark/rsh-client-ui-message-feedback' },
+  // Settings scopes and the command catalog are capabilities other client rows
+  // require, so both install before the row that renders them.
+  { id: 'settings', plugin: '@redspark/rsh-client-ui-settings' },
+  { id: 'commands', plugin: '@redspark/rsh-client-ui-commands' },
 ] as const
 
 /** One shipped browser Client installation used by a native Web profile. */
