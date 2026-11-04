@@ -389,6 +389,9 @@ describe('Cordis peer classification', () => {
 })
 
 describe('package payload constraints', () => {
+  /** The conditional export every published native bundle declares. */
+  const nativeExport = { types: './lib/types/native.d.ts', default: './lib/native.js' }
+
   it('includes a runtime adapter exported as a separate bundle', () => {
     expect(expectedRshPackageFiles({
       name: '@redspark/rsh-private-runtime',
@@ -422,29 +425,38 @@ describe('package payload constraints', () => {
   })
 
   it.each([
-    ['@redspark/rsh-credentials', ['lib/native.js', 'lib/shared-*.js']],
-    ['@redspark/rsh-credentials-local', ['lib/native.js', 'lib/backend.js', 'lib/shared-*.js']],
-    ['@redspark/rsh-task-scheduler', ['lib/native.js', 'lib/shared-*.js']],
+    ['@redspark/rsh-credentials', ['lib/shared-*.js']],
+    ['@redspark/rsh-credentials-local', ['lib/backend.js', 'lib/shared-*.js']],
+    ['@redspark/rsh-task-scheduler', ['lib/shared-*.js']],
     ['@redspark/rsh-subprocess-local', [
-      'lib/native.js', 'lib/child-connection.js', 'lib/shared-*.js', 'lib/runner.js', 'lib/runner-*.js', 'scripts/ensure-spawn-helper.mjs',
+      'lib/child-connection.js', 'lib/shared-*.js', 'lib/runner.js', 'lib/runner-*.js', 'scripts/ensure-spawn-helper.mjs',
     ]],
-    ['@redspark/rsh-settings', ['lib/native.js', 'lib/shared-*.js']],
-    ['@redspark/rsh-launch-environment', ['lib/native.js', 'lib/layers.js', 'lib/shared-*.js']],
-    ['@redspark/rsh-tool-subagent', ['lib/model-selection-settings.js', 'lib/compat-settings.js', 'lib/native.js', 'lib/shared-*.js']],
-    ['@redspark/rsh-client-native-application', ['lib/native.js', 'lib/controller.js', 'lib/controller-*.js', 'lib/native-*.js', 'lib/*.css']],
-    ['@redspark/rsh-webhook', ['lib/definition.js', 'lib/native.js', 'lib/shared-*.js']],
-    ['@redspark/rsh-permission-presets', ['lib/native.js', 'lib/native-definition.js', 'lib/shared-*.js']],
-    ['@redspark/rsh-codex-app-server', ['lib/native.js', 'lib/wire.js', 'lib/shared-*.js']],
-    ['@redspark/rsh-subagent-claude-code', ['lib/native.js', 'lib/shared-*.js']],
-    ['@redspark/rsh-tool-session-query', ['lib/native.js', 'lib/shared-*.js']],
-    ['@redspark/rsh-session-query-sqlite', ['lib/core.js', 'lib/native.js', 'lib/shared-*.js']],
-    ['@redspark/rsh-session-projection-cache', ['lib/native.js', 'lib/shared-*.js']],
-    ['@redspark/rsh-native-agent', ['lib/inbox.js', 'lib/consumed-work.js', 'lib/turn-boundary.js']],
-  ] as const)('includes native entry dependencies for %s', (name, extras) => {
-    expect(expectedRshPackageFiles({ name })).toEqual([
+    ['@redspark/rsh-settings', ['lib/shared-*.js']],
+    ['@redspark/rsh-launch-environment', ['lib/layers.js', 'lib/shared-*.js']],
+    ['@redspark/rsh-tool-subagent', ['lib/model-selection-settings.js', 'lib/compat-settings.js', 'lib/shared-*.js']],
+    ['@redspark/rsh-client-native-application', ['lib/controller.js', 'lib/controller-*.js', 'lib/native-*.js', 'lib/*.css']],
+    ['@redspark/rsh-webhook', ['lib/definition.js', 'lib/shared-*.js']],
+    ['@redspark/rsh-permission-presets', ['lib/native-definition.js', 'lib/shared-*.js']],
+    ['@redspark/rsh-codex-app-server', ['lib/wire.js', 'lib/shared-*.js']],
+    ['@redspark/rsh-subagent-claude-code', ['lib/shared-*.js']],
+    ['@redspark/rsh-tool-session-query', ['lib/shared-*.js']],
+    ['@redspark/rsh-session-query-sqlite', ['lib/core.js', 'lib/shared-*.js']],
+    ['@redspark/rsh-session-projection-cache', ['lib/shared-*.js']],
+  ] as const)('derives the native entry beside the extra bundles of %s', (name, extras) => {
+    expect(expectedRshPackageFiles({ name, exports: { './native': nativeExport } })).toEqual([
       'lib/index.js',
+      'lib/native.js',
       ...extras,
       'lib/types/**/*.d.ts',
+    ])
+  })
+
+  it('derives no native entry when the native subpath is the package entry', () => {
+    expect(expectedRshPackageFiles({
+      name: '@redspark/rsh-native-agent',
+      exports: { './native': { types: './lib/types/native.d.ts', default: './lib/index.js' } },
+    })).toEqual([
+      'lib/index.js', 'lib/inbox.js', 'lib/consumed-work.js', 'lib/turn-boundary.js', 'lib/types/**/*.d.ts',
     ])
   })
 
@@ -476,6 +488,7 @@ describe('package payload constraints', () => {
           types: './lib/types/types.d.ts',
           default: './lib/types/types.js',
         },
+        './native': nativeExport,
       },
     })).toEqual([
       'lib/index.js', 'lib/native.js', 'lib/shared-*.js', 'lib/types/**/*.js', 'lib/types/**/*.d.ts',
@@ -483,8 +496,18 @@ describe('package payload constraints', () => {
   })
 
   it('includes the Cordis-free sandbox native entries and shared chunks in the package', () => {
-    expect(expectedRshPackageFiles({ name: '@redspark/rsh-sandbox' })).toEqual([
-      'lib/index.js', 'lib/native-types.js', 'lib/native.js', 'lib/roots.js', 'lib/shared-*.js', 'lib/types/**/*.d.ts',
+    expect(expectedRshPackageFiles({
+      name: '@redspark/rsh-sandbox',
+      exports: {
+        './native-types': {
+          types: './lib/types/native-types.d.ts',
+          default: './lib/native-types.js',
+        },
+        './roots': { types: './lib/types/roots.d.ts', default: './lib/roots.js' },
+        './native': nativeExport,
+      },
+    })).toEqual([
+      'lib/index.js', 'lib/native.js', 'lib/native-types.js', 'lib/roots.js', 'lib/shared-*.js', 'lib/types/**/*.d.ts',
     ])
   })
 
@@ -492,11 +515,47 @@ describe('package payload constraints', () => {
     expect(expectedRshPackageFiles({ name: '@redspark/rsh-sdk-client' })).toEqual([
       'lib/*.js', 'lib/types/**/*.d.ts',
     ])
-    expect(expectedRshPackageFiles({ name: '@redspark/rsh-sdk-runtime' })).toEqual([
+    expect(expectedRshPackageFiles({
+      name: '@redspark/rsh-sdk-runtime',
+      exports: { './native': nativeExport },
+    })).toEqual([
       'lib/index.js', 'lib/native.js', 'lib/types/**/*.d.ts',
     ])
-    expect(expectedRshPackageFiles({ name: '@redspark/rsh-sdk-child' })).toEqual([
+    expect(expectedRshPackageFiles({
+      name: '@redspark/rsh-sdk-child',
+      exports: { './native': nativeExport },
+    })).toEqual([
       'lib/index.js', 'lib/native.js', 'lib/types/**/*.d.ts',
     ])
+  })
+
+  it('derives the native bundle from the artifact path, not the subpath name', () => {
+    expect(expectedRshPackageFiles({
+      name: '@redspark/rsh-private-native',
+      exports: { './native': nativeExport },
+    })).toEqual(['lib/index.js', 'lib/native.js', 'lib/types/**/*.d.ts'])
+  })
+
+  it('leaves the tsc-emitted native tree to the emitted-tree defaults', () => {
+    expect(expectedRshPackageFiles({
+      name: '@redspark/rsh-private-native-tree',
+      exports: {
+        './native': { types: './lib/types/native.d.ts', default: './lib/types/native.js' },
+      },
+    })).toEqual(['lib/index.js', 'lib/types/**/*.js', 'lib/types/**/*.d.ts'])
+  })
+
+  it('derives no native bundle for a package without a native subpath', () => {
+    expect(expectedRshPackageFiles({
+      name: '@redspark/rsh-private-no-native',
+      exports: { '.': { types: './lib/types/index.d.ts', default: './lib/index.js' } },
+    })).toEqual(['lib/index.js', 'lib/types/**/*.d.ts'])
+  })
+
+  it('keeps a relative stylesheet import beside the derived native bundle', () => {
+    expect(expectedRshPackageFiles({
+      name: '@redspark/rsh-client-ui-approval',
+      exports: { './native': nativeExport },
+    })).toEqual(['lib/index.js', 'lib/native.js', 'lib/**/*.css', 'lib/types/**/*.d.ts'])
   })
 })

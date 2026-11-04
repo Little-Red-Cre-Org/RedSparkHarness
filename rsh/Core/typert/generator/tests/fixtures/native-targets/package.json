@@ -1,0 +1,5 @@
+{
+  "name": "@fixture/native-targets-workspace",
+  "private": true,
+  "type": "module"
+}

@@ -49,8 +49,8 @@
   },
   "files": [
     "lib/index.js",
-    "lib/runtime.js",
     "lib/native.js",
+    "lib/runtime.js",
     "lib/backend.js",
     "lib/shared-*.js",
     "lib/types/**/*.d.ts"

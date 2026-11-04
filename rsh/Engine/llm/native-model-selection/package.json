@@ -66,9 +66,9 @@
   "type": "module",
   "files": [
     "lib/index.js",
+    "lib/native.js",
     "lib/types.js",
     "lib/shared-*.js",
-    "lib/native.js",
     "lib/types/**/*.d.ts"
   ]
 }

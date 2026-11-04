@@ -60,8 +60,8 @@
   "files": [
     "lib/index.js",
     "lib/invariant.js",
-    "presets",
     "lib/native.js",
+    "presets",
     "lib/selection.js",
     "lib/compat-settings.js",
     "lib/settings-owner-*.js",

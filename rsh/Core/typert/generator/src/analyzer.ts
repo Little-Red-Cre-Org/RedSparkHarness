@@ -3014,11 +3014,38 @@ function isDualFacePackage(manifest: Record<string, unknown>): boolean {
 }
 
 function hostExportSubpaths(manifest: Record<string, unknown>): string[] {
+  // A package can own real Host source (an HTTP route, a Host service) while its
+  // `./native` module belongs to the browser, and collecting that subpath here
+  // resolves a file this face never builds. Only an explicit `targets` that
+  // omits `host` narrows the export: a package with no `dsh.native` is not a
+  // composition row, so its `./native` stays an ordinary source export Host code
+  // may import.
+  const clientOnlyNative = isClientOnlyNative(manifest)
   return packageExportTargets(manifest)
     .map(([subpath]) => subpath)
     .filter(subpath => subpath !== './client'
       && !subpath.startsWith('./client/')
-      && subpath !== './remote')
+      && subpath !== './remote'
+      && !(subpath === './native' && clientOnlyNative))
+}
+
+/** Whether `dsh.native.targets` is declared and excludes `host`. */
+function isClientOnlyNative(manifest: Record<string, unknown>): boolean {
+  const targets = nativeTargets(manifest)
+  return targets.length > 0 && !targets.includes('host')
+}
+
+/** Declared `dsh.native.targets`; empty when the manifest declares none. */
+function nativeTargets(manifest: Record<string, unknown>): readonly string[] {
+  const dsh = manifest.dsh
+  const native = dsh !== null && typeof dsh === 'object'
+    ? (dsh as Record<string, unknown>).native
+    : undefined
+  if (native === null || typeof native !== 'object') return []
+  const targets = (native as Record<string, unknown>).targets
+  return Array.isArray(targets)
+    ? targets.filter((target): target is string => typeof target === 'string')
+    : []
 }
 
 function clientExportSubpaths(manifest: Record<string, unknown>): string[] {
