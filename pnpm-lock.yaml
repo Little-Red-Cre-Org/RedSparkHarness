@@ -12874,6 +12874,10 @@ importers:
         version: 18.3.1(react@18.3.1)
 
   rsh/Programs/Web/client/ui-input-trigger:
+    dependencies:
+      '@redspark/rsh-file-reference':
+        specifier: workspace:^
+        version: link:../../../../Engine/context/file-reference
     devDependencies:
       '@redspark/cordis':
         specifier: workspace:^
@@ -12905,9 +12909,6 @@ importers:
       '@redspark/rsh-client-ui-slots':
         specifier: workspace:^
         version: link:../ui-slots
-      '@redspark/rsh-file-reference':
-        specifier: workspace:^
-        version: link:../../../../Engine/context/file-reference
       '@redspark/rsh-native-runtime':
         specifier: workspace:^
         version: link:../../../../Core/runtime-diagnostics/native-runtime
@@ -13869,6 +13870,9 @@ importers:
       '@redspark/rsh-workspace-definition':
         specifier: workspace:^
         version: link:../../../../Engine/workspace/workspace-definition
+      clsx:
+        specifier: ^2.0.0
+        version: 2.1.1
     devDependencies:
       '@redspark/cordis':
         specifier: workspace:^
@@ -13900,9 +13904,6 @@ importers:
       '@types/react':
         specifier: ~18.3.1
         version: 18.3.31
-      clsx:
-        specifier: ^2.0.0
-        version: 2.1.1
       react:
         specifier: ^18.2.0
         version: 18.3.1
