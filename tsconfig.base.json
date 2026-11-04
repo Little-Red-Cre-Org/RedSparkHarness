@@ -652,6 +652,7 @@
       "@redspark/rsh-authorization/native": ["./rsh/Modules/Official/credentials/authorization/src/native.ts"],
       "@redspark/rsh-bash-local/native": ["./rsh/Modules/Official/shell/bash-local/src/native.ts"],
       "@redspark/rsh-bash-sandbox/native": ["./rsh/Modules/Official/shell/bash-sandbox/src/native.ts"],
+      "@redspark/rsh-client-file-upload/native": ["./rsh/Programs/Web/client/file-upload/src/native.ts"],
       "@redspark/rsh-client-locale/dictionary": ["./rsh/Programs/Web/client/locale/src/dictionary.ts"],
       "@redspark/rsh-client-locale/native": ["./rsh/Programs/Web/client/locale/src/native.ts"],
       "@redspark/rsh-client-native-application/native": ["./rsh/Programs/Web/client/native-application/src/native.ts"],

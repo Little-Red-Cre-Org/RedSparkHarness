@@ -9666,6 +9666,9 @@ importers:
       '@redspark/rsh-client-connection':
         specifier: workspace:^
         version: link:../Web/client/connection
+      '@redspark/rsh-client-file-upload':
+        specifier: workspace:^
+        version: link:../Web/client/file-upload
       '@redspark/rsh-client-locale':
         specifier: workspace:^
         version: link:../Web/client/locale
@@ -11875,9 +11878,15 @@ importers:
       '@redspark/rsh-client-connection':
         specifier: workspace:^
         version: link:../connection
+      '@redspark/rsh-client-native-session':
+        specifier: workspace:^
+        version: link:../native-session
       '@redspark/rsh-commands':
         specifier: workspace:^
         version: link:../../../../Modules/Official/interaction/commands
+      '@redspark/rsh-native-runtime':
+        specifier: workspace:^
+        version: link:../../../../Core/runtime-diagnostics/native-runtime
       '@redspark/rsh-scope':
         specifier: workspace:^
         version: link:../../../../Engine/core/scope

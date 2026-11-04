@@ -34,6 +34,8 @@ kind: "package-reference"
 
 本包没有 Cordis 配置字段。`Blob` 在专用 Worker 内通过 XMLHttpRequest 发送，因此服务可以报告浏览器上传进度，并在浏览器提供总量时一并报告。`ReadableStream` 会转移给该 Worker，再增量传入 Fetch；进度只报告已消费字节，不包含总量。`AbortSignal` 会终止专用 Worker，或传递给页面自己提供的载体。精确字节与 fixture Blob 输入使用生成的 Remote。
 
+Native 入口提供 `clientFileUpload`，且不接受配置。它通过同一载体把 Blob、stream 和精确字节都发到 `POST /api/native-session/file-upload`，并以 `NativeFileUploadError` 拒绝，而不是返回 `RemoteResult`。精确字节在该路由上作为 Blob 发送，没有生成的 Remote 兜底。没有 `__RSH_FILE_UPLOAD__` 的 `?fixture` 页面仍会拒绝上传。
+
 -----
 
 <a id="understand-the-implementation"></a>
@@ -53,6 +55,8 @@ Host 插件提供 `ctx.fileUploads`。它拥有经过认证的流式路由、编
 | [`src/client/contract.ts`](src/client/contract.ts) | Client 上传、进度与页面钩子类型 |
 | [`src/client/runtime.ts`](src/client/runtime.ts) | 专用 Worker 与页面自有载体实现 |
 | [`src/client/index.ts`](src/client/index.ts) | Client 插件注册与 `ctx.fileUpload` 声明 |
+| [`src/client/carrier.ts`](src/client/carrier.ts) | 共享的 Worker 与页面自有 Fetch 载体 |
+| [`src/native.ts`](src/native.ts) | Native Session 路由上的 `clientFileUpload` 服务 |
 
 </details>
 

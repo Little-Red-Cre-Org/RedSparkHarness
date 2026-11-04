@@ -6,9 +6,11 @@
     "tsBuildInfoFile": "lib/tsconfig.client.tsbuildinfo"
   },
   "files": [
+    "src/client/carrier.ts",
     "src/client/contract.ts",
     "src/client/index.ts",
     "src/client/runtime.ts",
+    "src/native.ts",
     "src/protocol.ts",
     "src/types.ts"
   ],
@@ -18,6 +20,8 @@
     { "path": "../../../../Core/util/crypto" },
     { "path": "../../../../Modules/Official/attachment/attachment" },
     { "path": "../../../../Engine/core/session" },
-    { "path": "../../../../Core/typert/protocol" }
+    { "path": "../../../../Core/typert/protocol" },
+    { "path": "../../../../Core/runtime-diagnostics/native-runtime" },
+    { "path": "../native-session" }
   ]
 }
