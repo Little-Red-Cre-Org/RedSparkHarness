@@ -1,4 +1,4 @@
-{
+﻿{
     "name":  "@redspark/rsh",
     "description":  "dsh CLI: profile boot, plugin management, and the browser UI alias",
     "version":  "1.0.0",
@@ -202,7 +202,10 @@
                          "commander":  "^15.0.0",
                          "react":  "^18.2.0",
                          "react-dom":  "^18.2.0",
-                         "@redspark/rsh-native-jobs-controller":  "workspace:^"
+                         "@redspark/rsh-native-jobs-controller":  "workspace:^",
+                         "@redspark/rsh-client-ui-plan":  "workspace:^",
+                         "@redspark/rsh-client-resources":  "workspace:^",
+                         "@redspark/rsh-client-ui-schedule":  "workspace:^"
                      },
     "optionalDependencies":  {
                                  "@redspark/cordis-plugin-hmr":  "workspace:^",

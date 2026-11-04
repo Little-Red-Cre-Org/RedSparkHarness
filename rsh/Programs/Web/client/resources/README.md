@@ -73,6 +73,11 @@ A protocol has exactly one provider; a second registration throws. Registering a
 
 One record per address holds a snapshot store, a holder count (hook subscribers plus pins), and the running stream's `AbortController`. The first holder opens the provider's stream; every later holder shares it; the last holder's release aborts the stream and resets the snapshot to idle (`loading` with a provider, `none` without). Records are kept for the page lifetime so `source()` stays reference-stable across React's render-then-subscribe window and a StrictMode remount.
 
+<a id="native-half"></a>
+### Native half
+
+The Native entry (`exports["./native"]`) provides the same registry as `clientNativeResources` and contributes the same `resource` root keyed hook through `slots.provideRoot`, so `useResource` reaches Native slot components unchanged. The registry is this package's own code; both builds adapt their Context to one narrow effect port, which is why the two halves cannot drift. The Native half contributes no service face of its own beyond that registry.
+
 <a id="failures"></a>
 ### Failures
 

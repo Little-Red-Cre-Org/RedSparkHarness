@@ -9,13 +9,25 @@
   ],
   "references": [
     {
-      "path": "../../api/remotes/tsconfig.client.json"
+      "path": "../../../../Core/runtime-diagnostics/native-runtime"
     },
     {
       "path": "../../../../Core/vendor/cordis"
     },
     {
+      "path": "../../../../Modules/Official/plan/plan-mode"
+    },
+    {
+      "path": "../../api/remotes/tsconfig.client.json"
+    },
+    {
       "path": "../locale"
+    },
+    {
+      "path": "../native-session"
+    },
+    {
+      "path": "../store"
     },
     {
       "path": "../ui-conversation"
@@ -31,9 +43,6 @@
     },
     {
       "path": "../ui-slots"
-    },
-    {
-      "path": "../../../../Modules/Official/plan/plan-mode"
     }
   ]
 }

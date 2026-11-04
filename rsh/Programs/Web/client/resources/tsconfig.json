@@ -22,6 +22,9 @@
     },
     {
       "path": "../ui-slots"
+    },
+    {
+      "path": "../../../../Core/runtime-diagnostics/native-runtime"
     }
   ]
 }

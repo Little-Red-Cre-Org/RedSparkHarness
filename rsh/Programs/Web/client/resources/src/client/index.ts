@@ -6,7 +6,7 @@ import type { Context as ClientContext } from '@redspark/cordis'
 // Type-only service merge for ctx.slots.
 import type {} from '@redspark/rsh-client-ui-renderer/client'
 import type { RootStandardSourceContribution } from '@redspark/rsh-client-ui-slots'
-import { ResourceRegistry } from './resources.ts'
+import { ResourceRegistry, type ResourceEffectHost } from './resources.ts'
 
 export type {
   ResourceOpenContext,
@@ -30,7 +30,9 @@ export const inject = ['slots']
 export function apply(ctx: ClientContext): void {
   // Built at apply's top level, never inside an effect: other plugins call
   // `register()` from their own apply, and it adds an effect to this fiber.
-  const resources = new ResourceRegistry(ctx)
+  const resources = new ResourceRegistry({
+    effect: (setup, label) => ctx.effect(setup, label),
+  } satisfies ResourceEffectHost)
   const disposeService = ctx.reflect.provide('resources', resources)
   // Registered first, so it tears down last: the face outlives every provider
   // that registered into it.
