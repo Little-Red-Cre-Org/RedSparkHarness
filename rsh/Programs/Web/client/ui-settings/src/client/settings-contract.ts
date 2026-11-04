@@ -1,8 +1,16 @@
 /**
  * Settings-namespace scope contracts owned beside the settings transport.
+ *
+ * Types only, and no transport identity: both browser halves implement these,
+ * so a settings page written against them runs on either client.
  */
 
-import type { SettingsPathOpView } from '@redspark/rsh-api-remotes/client'
+import type { JsonValue } from '@redspark/rsh-util-values'
+
+/** One path-addressed Settings edit inside a namespace section. */
+export type SettingsPathOpView =
+  | { readonly op: 'set'; readonly path: string[]; readonly value: JsonValue }
+  | { readonly op: 'unset'; readonly path: string[] }
 
 /** Client-side sync state of one settings namespace. */
 export interface SettingsScopeSnapshot<T> {

@@ -9681,6 +9681,9 @@ importers:
       '@redspark/rsh-client-ui-brand-official':
         specifier: workspace:^
         version: link:../Web/client/ui-brand-official
+      '@redspark/rsh-client-ui-commands':
+        specifier: workspace:^
+        version: link:../Web/client/ui-commands
       '@redspark/rsh-client-ui-conversation':
         specifier: workspace:^
         version: link:../Web/client/ui-conversation
@@ -9714,6 +9717,9 @@ importers:
       '@redspark/rsh-client-ui-session':
         specifier: workspace:^
         version: link:../Web/client/ui-session
+      '@redspark/rsh-client-ui-settings':
+        specifier: workspace:^
+        version: link:../Web/client/ui-settings
       '@redspark/rsh-client-ui-sidebar':
         specifier: workspace:^
         version: link:../Web/client/ui-sidebar
@@ -12467,6 +12473,9 @@ importers:
       '@redspark/rsh-client-locale':
         specifier: workspace:^
         version: link:../locale
+      '@redspark/rsh-client-native-session':
+        specifier: workspace:^
+        version: link:../native-session
       '@redspark/rsh-client-store':
         specifier: workspace:^
         version: link:../store
@@ -12494,6 +12503,9 @@ importers:
       '@redspark/rsh-commands':
         specifier: workspace:^
         version: link:../../../../Modules/Official/interaction/commands
+      '@redspark/rsh-native-runtime':
+        specifier: workspace:^
+        version: link:../../../../Core/runtime-diagnostics/native-runtime
       '@redspark/rsh-session':
         specifier: workspace:^
         version: link:../../../../Engine/core/session
@@ -13664,6 +13676,9 @@ importers:
       '@redspark/rsh-api-remotes':
         specifier: workspace:^
         version: link:../../api/remotes
+      '@redspark/rsh-client-native-session':
+        specifier: workspace:^
+        version: link:../native-session
       '@redspark/rsh-client-store':
         specifier: workspace:^
         version: link:../store
@@ -13676,6 +13691,9 @@ importers:
       '@redspark/rsh-compat-settings-definition':
         specifier: workspace:^
         version: link:../../../../Compatibility/DSH/bridge/compat-settings-definition
+      '@redspark/rsh-native-runtime':
+        specifier: workspace:^
+        version: link:../../../../Core/runtime-diagnostics/native-runtime
       '@redspark/rsh-settings':
         specifier: workspace:^
         version: link:../../../../Modules/Official/settings/settings

@@ -49,6 +49,10 @@ When the composer submits with images or generic files, only a host command decl
 
 `src/client/contract.ts` defines contribution and decoration registration. `CommandDirectory` owns the per-session wire cache and resolves typed commands through `resolution.ts`; that module owns first-party identity matching and localized input spellings. `matchSpace` reads the ready cache synchronously, while `matchEnter` waits for readiness and rejects on warmup failure or cancellation. Forwarded catalog and connection events invalidate the cache. After a matched Host execution, this browser emits `command/executed`; other clients observe only the durable command events. `PopupSelectController` owns popup state, and `PopupSelectView` occupies the input overlay. `presentation.ts` owns row labels, icons, and sections; its helpers and the resolution helpers stay internal to the plugin.
 
+### The Native half
+
+`catalog.ts`, `contract-core.ts`, `presentation.ts` and `resolution.ts` carry the catalog cache, the contribution and decoration declarations, the built-in row faces and the localized command resolution with no Cordis reference. The Cordis entry adds the `/` trigger source, the per-session popup controllers and the `command/executed` acknowledgment; the `./native` entry publishes `clientNativeCommands` over `clientNativeSession.commands`/`executeCommand` and does not build a second palette. The Native Client already renders a `/` menu in `native-application`, so this entry supplies what that menu reads — one cached catalog per Session, the localized built-in face, and invalidation driven by the Host's `agent-presets/updated` notification — and its `commands` read serves the cache rather than the transport. A `popupSelect` contribution reports itself unsupported there, because no Native shell settles an option list; an `action` contribution runs.
+
 </details>
 
 -----

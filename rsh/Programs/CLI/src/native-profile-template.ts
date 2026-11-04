@@ -50,6 +50,10 @@ const NATIVE_WEB_CLIENT_INSTALLATIONS = [
   { id: 'input-trigger', plugin: '@redspark/rsh-client-ui-input-trigger' },
   { id: 'jobs', plugin: '@redspark/rsh-client-ui-jobs' },
   { id: 'message-feedback', plugin: '@redspark/rsh-client-ui-message-feedback' },
+  // Settings scopes and the command catalog are capabilities other client rows
+  // require, so both install before the rows that render them.
+  { id: 'settings', plugin: '@redspark/rsh-client-ui-settings' },
+  { id: 'commands', plugin: '@redspark/rsh-client-ui-commands' },
   { id: 'plan-mode', plugin: '@redspark/rsh-client-ui-plan' },
   { id: 'resources', plugin: '@redspark/rsh-client-resources' },
   { id: 'schedule-catalog', plugin: '@redspark/rsh-client-ui-schedule' },

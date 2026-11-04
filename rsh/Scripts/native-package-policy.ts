@@ -232,6 +232,8 @@ export const mixedNativeEntryDirectories: ReadonlyMap<string, string> = new Map(
   ['rsh/Programs/Web/client/locale', 'Native and compatibility Clients share dictionary values while each owns its locale installer'],
   ['rsh/Programs/Web/client/ui-theme', 'Native and compatibility Clients share theme values and styles while each owns preference and DOM projection'],
   ['rsh/Programs/Web/client/ui-session', 'Native Session presentation projects the existing controller while the compatibility entry adapts Host Session stores'],
+  ['rsh/Programs/Web/client/ui-settings', 'Native and compatibility Clients share the settings document fold, the revision-fenced write queue and the per-namespace derivation while each owns its transport'],
+  ['rsh/Programs/Web/client/ui-commands', 'Native and compatibility Clients share the session-keyed command catalog, the client contribution registries and the localized built-in command face while each owns its surface'],
   ['rsh/Programs/Web/client/ui-layout', 'Native and compatibility shells share AppFrame, layout store, panel actions, and theme presenter'],
   ['rsh/Programs/Web/client/ui-sidebar', 'Native and compatibility shells share SidebarRoot and slot contracts while each supplies Session navigation'],
   ['rsh/Programs/Web/client/ui-sidebar-right', 'Native and compatibility shells share the right panel package while Native presents selected Session facts'],

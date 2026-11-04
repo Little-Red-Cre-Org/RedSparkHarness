@@ -23,7 +23,11 @@
       "default": "./lib/client.js"
     },
     "./src/*": "./src/*",
-    "./package.json": "./package.json"
+    "./package.json": "./package.json",
+    "./native": {
+      "types": "./lib/types/native.d.ts",
+      "default": "./lib/native.js"
+    }
   },
   "dsh": {
     "client": {
@@ -34,6 +38,21 @@
         "@redspark/rsh-client-ui-conversation"
       ],
       "platform": "web"
+    },
+    "native": {
+      "apiVersion": 1,
+      "entry": "./native",
+      "targets": [
+        "client"
+      ],
+      "requires": [
+        "clientNativeSession",
+        "clientLocale"
+      ],
+      "optional": [],
+      "provides": [
+        "clientNativeCommands"
+      ]
     }
   },
   "scripts": {
@@ -45,28 +64,36 @@
     "@redspark/cordis": "workspace:^"
   },
   "devDependencies": {
+    "@redspark/cordis": "workspace:^",
     "@redspark/rsh-api-remotes": "workspace:^",
+    "@redspark/rsh-api-session-controller": "workspace:^",
     "@redspark/rsh-client-connection": "workspace:^",
     "@redspark/rsh-client-locale": "workspace:^",
+    "@redspark/rsh-client-native-session": "workspace:^",
+    "@redspark/rsh-client-store": "workspace:^",
     "@redspark/rsh-client-test-runtime": "workspace:^",
     "@redspark/rsh-client-ui-conversation": "workspace:^",
-    "@redspark/rsh-client-ui-primitives": "workspace:^",
     "@redspark/rsh-client-ui-input-trigger": "workspace:^",
-    "@redspark/rsh-client-ui-slots": "workspace:^",
-    "@redspark/rsh-commands": "workspace:^",
-    "@types/react": "~18.3.1",
-    "@redspark/cordis": "workspace:^",
-    "react": "^18.2.0",
-    "@redspark/rsh-api-session-controller": "workspace:^",
-    "@redspark/rsh-client-store": "workspace:^",
-    "@redspark/rsh-session": "workspace:^",
+    "@redspark/rsh-client-ui-primitives": "workspace:^",
     "@redspark/rsh-client-ui-renderer": "workspace:^",
     "@redspark/rsh-client-ui-session": "workspace:^",
-    "clsx": "^2.0.0"
+    "@redspark/rsh-client-ui-slots": "workspace:^",
+    "@redspark/rsh-commands": "workspace:^",
+    "@redspark/rsh-native-runtime": "workspace:^",
+    "@redspark/rsh-session": "workspace:^",
+    "@types/react": "~18.3.1",
+    "clsx": "^2.0.0",
+    "react": "^18.2.0"
   },
   "files": [
     "lib/index.js",
     "lib/client.js",
+    "lib/native.js",
     "lib/types/**/*.d.ts"
-  ]
+  ],
+  "peerDependenciesMeta": {
+    "@redspark/cordis": {
+      "optional": true
+    }
+  }
 }
