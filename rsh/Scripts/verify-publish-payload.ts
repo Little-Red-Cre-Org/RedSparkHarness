@@ -147,8 +147,9 @@ export interface ModuleSpecifier {
  * @returns Every module specifier the file names, in source order.
  */
 /** Whether a call argument is `import.meta.url`. */
-function isImportMetaUrl(node: ts.Expression): boolean {
-  return ts.isPropertyAccessExpression(node)
+function isImportMetaUrl(node: ts.Expression | undefined): boolean {
+  return node !== undefined
+    && ts.isPropertyAccessExpression(node)
     && node.name.text === 'url'
     && ts.isMetaProperty(node.expression)
     && node.expression.keywordToken === ts.SyntaxKind.ImportKeyword
