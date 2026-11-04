@@ -124,7 +124,7 @@ describe('plugin', () => {
     const provided: unknown[] = []
     const activate = plugin.resolve(undefined)
     activate({
-      provide: (_name, value) => { provided.push(value); return () => {} },
+      provide: (_name: string, value: unknown) => { provided.push(value); return () => {} },
     } as never)
     expect(provided).toHaveLength(1)
     expect(provided[0]).toMatchObject({ available: true })
