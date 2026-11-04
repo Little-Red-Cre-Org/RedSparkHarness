@@ -1,15 +1,11 @@
 /**
  * Slash-command completion for the Native composer.
  *
- * Everything here is pure: the token recognition, the candidate filtering, the
- * highlight walk and the line a pick submits. The component in
- * `application.tsx` owns React state and the Host call; keeping the decisions
- * out of it is what makes them testable without a DOM or a Host.
- *
- * The rule the composer follows: a command menu is live only while the caret
- * sits inside a `/` token that STARTS the draft. A slash anywhere else is a
- * path (`a/b`) or a date (`1/2`), not a command, and offering a menu there
- * would swallow ordinary typing.
+ * The candidate filtering, the highlight walk and the line a pick submits are
+ * pure decisions owned here. The token recognition is not: it lives in
+ * `ui-primitives` as `slashTokenAt`, which the Web trigger pipeline reads
+ * too, so one boundary rule decides where a `/` command token starts in
+ * both surfaces.
  */
 
 /** One row the Host advertises, reduced to what the menu needs. */
@@ -20,49 +16,6 @@ export interface CommandChoice {
   readonly description: string
   /** Optional free-form input hint advertised to capable clients. */
   readonly hint?: string | undefined
-}
-
-/** A live `/` token under the caret. */
-export interface SlashToken {
-  /** Text between the slash and the caret; the filter. */
-  readonly query: string
-  /** Offset of the leading slash, always 0 under the rule above. */
-  readonly start: number
-  /** Caret offset, i.e. one past the last query character. */
-  readonly end: number
-}
-
-/**
- * Recognize a `/` token that starts the draft and still holds the caret.
- *
- * The token ends at the first whitespace after the slash: once the user has
- * typed a space they are writing command arguments, and the menu belongs to
- * the name alone.
- *
- * @param draft - full composer text.
- * @param caret - caret offset into `draft`.
- * @returns the live token, or null when the caret is not in a leading slash token.
- */
-export function slashTokenAt(draft: string, caret: number): SlashToken | null {
-  if (caret < 0 || caret > draft.length) return null
-  // The caret must be AFTER the slash for the token to hold it. At offset 0
-  // the caret sits before the slash, so the user is not inside the token yet —
-  // opening the menu there would show candidates for text they have not
-  // started typing.
-  if (caret < 1) return null
-  if (draft[0] !== '/') return null
-  const head = draft.slice(1, caret)
-  // The name runs to the first whitespace. Newline is NOT special here beyond
-  // being whitespace: the space rule below already closes the menu for it, so a
-  // separate newline branch would be a guard no test could ever distinguish
-  // from the space guard (verified by mutation).
-  const space = head.search(/\s/u)
-  // A space that the caret has already passed ends the menu: the user is
-  // writing arguments, and the palette only owns the name. A caret still ON the
-  // terminator keeps the name live — that is the instant a user presses space
-  // expecting the menu to settle.
-  if (space !== -1 && caret > 1 + space) return null
-  return { query: space === -1 ? head : head.slice(0, space), start: 0, end: caret }
 }
 
 /**

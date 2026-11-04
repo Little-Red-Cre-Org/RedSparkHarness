@@ -67,6 +67,8 @@ export { fileSizeText } from './file-size.ts'
 export { writeClipboard } from './clipboard.ts'
 export { relativeTime } from './relative-time.ts'
 export { rankByName } from './rank-by-name.ts'
+export { slashTokenAt } from './slash-token.ts'
+export type { SlashToken } from './slash-token.ts'
 export type { RelativeTime, RelativeTimeUnit } from './relative-time.ts'
 export { ProjectRowItem, SearchResultItem, SessionNodeItem } from './workspace-rows/Rows.tsx'
 export type {
