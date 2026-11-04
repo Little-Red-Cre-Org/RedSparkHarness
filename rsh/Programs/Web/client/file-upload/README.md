@@ -34,6 +34,8 @@ Mount the package before a consumer that injects `fileUpload`, then call `ctx.fi
 
 The package has no Cordis configuration fields. A `Blob` uses XMLHttpRequest inside a dedicated Worker so the service can report browser upload progress, including the total when the browser provides it. A `ReadableStream` transfers to that Worker and feeds Fetch incrementally; progress reports consumed bytes without a total. An `AbortSignal` terminates the dedicated Worker or reaches a page-owned carrier. Exact bytes and fixture Blob inputs use the generated Remote.
 
+The Native entry provides `clientFileUpload` and accepts no configuration. It posts Blob, stream, and exact-byte bodies to `POST /api/native-session/file-upload` through the same carrier, and it rejects with `NativeFileUploadError` instead of returning a `RemoteResult`. Exact bytes are sent as a Blob on that route; there is no generated Remote fallback. A `?fixture` page without `__RSH_FILE_UPLOAD__` still refuses the upload.
+
 -----
 
 <a id="understand-the-implementation"></a>
@@ -53,6 +55,8 @@ The Host plugin provides `ctx.fileUploads`. It owns the authenticated streaming 
 | [`src/client/contract.ts`](src/client/contract.ts) | Client upload, progress, and page-hook types |
 | [`src/client/runtime.ts`](src/client/runtime.ts) | Dedicated Worker and page-owned carrier implementations |
 | [`src/client/index.ts`](src/client/index.ts) | Client plugin registration and `ctx.fileUpload` declaration |
+| [`src/client/carrier.ts`](src/client/carrier.ts) | Shared Worker and page-owned Fetch carrier |
+| [`src/native.ts`](src/native.ts) | Native `clientFileUpload` service on the Native Session route |
 
 </details>
 
