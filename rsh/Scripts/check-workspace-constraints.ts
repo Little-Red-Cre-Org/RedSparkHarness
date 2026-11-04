@@ -221,6 +221,8 @@ const packageFileExtras: Readonly<Record<string, readonly string[]>> = {
   '@redspark/rsh-client-ui-skill': ['lib/**/*.css'],
   '@redspark/rsh-client-ui-subagent': ['lib/**/*.css'],
   '@redspark/rsh-client-ui-deliverables': ['lib/**/*.css'],
+  '@redspark/rsh-client-ui-plan': ['lib/client/PlanModeControl.module.css'],
+  '@redspark/rsh-client-ui-schedule': ['lib/client/ScheduleCatalogAction.module.css'],
   // Direct native credential entries share backend bundles where necessary.
   '@redspark/rsh-web': ['lib/shared-*.js'],
   '@redspark/rsh-web-fetch-http': ['lib/shared-*.js'],
