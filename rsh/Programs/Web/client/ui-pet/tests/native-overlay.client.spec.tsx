@@ -27,10 +27,10 @@ function conversation(changes: Partial<NativePetConversation> = {}): NativePetCo
   return { selected: SID, state: 'ready', ...changes }
 }
 
-function overlayProps(pet: NativePetSnapshot, view: NativePetConversation, t: TranslateNS<'pet'> = makeTranslate(en) as never) {
+function overlayProps(pet: NativePetSnapshot, view: NativePetConversation, t: TranslateNS<'pet'> = makeTranslate(en)) {
   return {
-    usePet: bindSnapshotSelector(createSnapshotStore(pet)) as SnapshotSelectorHook<NativePetSnapshot>,
-    useConversation: bindSnapshotSelector(createSnapshotStore(view)) as SnapshotSelectorHook<NativePetConversation>,
+    usePet: bindSnapshotSelector(createSnapshotStore(pet)),
+    useConversation: bindSnapshotSelector(createSnapshotStore(view)),
     t,
   }
 }
@@ -74,7 +74,7 @@ describe('native pet registry', () => {
 
   it('rejects selecting an unregistered character', () => {
     const pet = createNativePetService()
-    expect(() => pet.selectPet('ghost')).toThrow('is not registered')
+    expect(() => { pet.selectPet('ghost') }).toThrow('is not registered')
   })
 
   it('publishes a new snapshot only when a preference actually changes', () => {

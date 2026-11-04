@@ -152,7 +152,6 @@ export function createNativePermissionPresets(
   const listeners = new Set<() => void>()
   let following: Promise<void> | undefined
   let saving = false
-  let disposed = false
 
   const publish = (next: Partial<NativePermissionRowState>): void => {
     state = Object.freeze({ ...state, ...next })
@@ -169,7 +168,7 @@ export function createNativePermissionPresets(
 
   const read = async (): Promise<void> => {
     const description = await client.settingsDescribe(signal)
-    if (disposed) return
+    if (signal.aborted) return
     const row = description.namespaces.find(entry => entry.namespace === PERMISSION_SETTINGS_NAMESPACE)
     if (row === undefined) {
       publish({ status: 'unavailable', error: null, writable: false, currentValue: '', options: [] })
@@ -198,7 +197,7 @@ export function createNativePermissionPresets(
         await read()
       }
     } catch (error) {
-      if (signal.aborted || disposed) return
+      if (signal.aborted) return
       console.error('[ui-permission-presets] Settings follow failed:', error)
     }
   }
@@ -210,17 +209,16 @@ export function createNativePermissionPresets(
       return () => { listeners.delete(listener) }
     },
     async load() {
-      if (disposed) return
       following ??= follow()
       if (state.status !== 'ready') publish({ status: 'loading', error: null })
       try {
         await read()
       } catch (error) {
-        if (!disposed) publish({ status: 'error', error: message(error) })
+        if (!signal.aborted) publish({ status: 'error', error: message(error) })
       }
     },
     async selectDefault(preset) {
-      if (disposed || saving || state.status === 'unavailable') return
+      if (saving || state.status === 'unavailable') return
       saving = true
       publish({ status: 'saving', error: null })
       try {
@@ -229,7 +227,7 @@ export function createNativePermissionPresets(
         )
         await read()
       } catch (error) {
-        if (!disposed) publish({ status: 'error', error: message(error) })
+        if (!signal.aborted) publish({ status: 'error', error: message(error) })
       } finally {
         saving = false
       }

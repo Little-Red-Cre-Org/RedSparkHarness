@@ -92,7 +92,7 @@ describe('native resources installation', () => {
   it('contributes the root keyed hook and withdraws it on dispose', async () => {
     const slots = slotPort()
     const effect = effectPort()
-    const installation = createNativeResources(slots, effect.run)
+    const installation = createNativeResources(slots, setup => effect.run(setup))
 
     expect(slots.contributions).toHaveLength(1)
     const contribution = slots.contributions[0] as RootStandardSourceContribution
@@ -118,7 +118,9 @@ describe('native resources installation', () => {
 describe('native resources registry', () => {
   it('opens a provider stream on subscription and publishes its frames', async () => {
     const effect = effectPort()
-    const { resources, dispose } = createNativeResources(slotPort(), effect.run)
+    const installed = createNativeResources(slotPort(), setup => effect.run(setup))
+    const resources = installed.resources
+    const dispose = (): Promise<void> => installed.dispose()
     // Read the address before the provider exists: an unserved protocol reports
     // `none`, and the record survives the provider arriving under it.
     expect(resources.source(A).getSnapshot()).toMatchObject({ status: 'none' })
@@ -144,7 +146,9 @@ describe('native resources registry', () => {
 
   it('keeps the last value beside a later failure frame', async () => {
     const effect = effectPort()
-    const { resources, dispose } = createNativeResources(slotPort(), effect.run)
+    const installed = createNativeResources(slotPort(), setup => effect.run(setup))
+    const resources = installed.resources
+    const dispose = (): Promise<void> => installed.dispose()
     resources.register(frames(
       { ok: true, value: 'v1' },
       { ok: false, error: new RemoteError('gateway/internal', 'gone', {}) },
@@ -164,7 +168,9 @@ describe('native resources registry', () => {
 
   it('rejects a second provider for one protocol', async () => {
     const effect = effectPort()
-    const { resources, dispose } = createNativeResources(slotPort(), effect.run)
+    const installed = createNativeResources(slotPort(), setup => effect.run(setup))
+    const resources = installed.resources
+    const dispose = (): Promise<void> => installed.dispose()
     resources.register(frames())
     expect(() => resources.register(frames())).toThrow(/already has a provider/)
     await dispose()
@@ -173,7 +179,9 @@ describe('native resources registry', () => {
 
   it('aborts a pinned stream when the pin is released', async () => {
     const effect = effectPort()
-    const { resources, dispose } = createNativeResources(slotPort(), effect.run)
+    const installed = createNativeResources(slotPort(), setup => effect.run(setup))
+    const resources = installed.resources
+    const dispose = (): Promise<void> => installed.dispose()
     const opened = vi.fn()
     resources.register(held(opened))
 
@@ -190,7 +198,9 @@ describe('native resources registry', () => {
 
   it('detaches a held address when its provider leaves', async () => {
     const effect = effectPort()
-    const { resources, dispose } = createNativeResources(slotPort(), effect.run)
+    const installed = createNativeResources(slotPort(), setup => effect.run(setup))
+    const resources = installed.resources
+    const dispose = (): Promise<void> => installed.dispose()
     resources.register(held())
     const unsubscribe = resources.source(A).subscribe(() => {})
     expect(resources.source(A).getSnapshot()).toMatchObject({ status: 'loading' })

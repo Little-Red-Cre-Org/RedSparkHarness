@@ -301,8 +301,8 @@ export const plugin: NativePlugin = {
         ],
       }))
       const registry: HostObservable<NativePetSnapshot> = {
-        getSnapshot: pet.getSnapshot,
-        subscribe: pet.subscribe,
+        getSnapshot: () => pet.getSnapshot(),
+        subscribe: listener => pet.subscribe(listener),
       }
       // The service is already an observable of its own snapshot; the hook
       // binding requires a bare source, so this narrows the published value to

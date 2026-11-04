@@ -78,7 +78,10 @@ export function createNativeResources(
   } satisfies RootStandardSourceContribution)
   return {
     resources,
-    dispose: async () => { disposeRoot() },
+    dispose: () => {
+      disposeRoot()
+      return Promise.resolve()
+    },
   }
 }
 

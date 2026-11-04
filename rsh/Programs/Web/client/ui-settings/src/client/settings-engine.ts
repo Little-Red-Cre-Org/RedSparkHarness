@@ -238,6 +238,8 @@ implements SettingsDescribeFaceOf<Namespace> {
             error: outcome.failure,
           })
         }
+      // load() and mutate() set rerun from outside this function while the read is in flight.
+      // oxlint-disable-next-line typescript/no-unnecessary-condition -- cross-method write during await.
       } while (this.rerun)
     } finally {
       this.inFlight = undefined

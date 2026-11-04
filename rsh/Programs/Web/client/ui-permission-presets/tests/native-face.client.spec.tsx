@@ -59,7 +59,7 @@ function client(named: { readonly rows?: readonly NativeSettingsDescriptor[]; re
       namespaces: named.rows ?? [],
       limits: { maxCredentialRefsPerRead: 32, maxSettingsOperations: 128 },
     })),
-    settingsMutate: (named.mutate ?? vi.fn(async () => descriptor(['read-only', 'workspace-write']))) as never,
+    settingsMutate: (named.mutate ?? vi.fn(async () => descriptor(['read-only', 'workspace-write']))),
     // Ends immediately: the follow is not what this suite exercises.
     settingsEvents: async function* () { /* no events */ },
     selectPermissionPreset: vi.fn(async () => {}),
@@ -86,14 +86,14 @@ describe('permissionDefaults', () => {
 
 describe('native permission presets service', () => {
   it('reports the namespace as unavailable when the Host serves none', async () => {
-    const face = createNativePermissionPresets(client() as never, new AbortController().signal)
+    const face = createNativePermissionPresets(client(), new AbortController().signal)
     await face.load()
     expect(face.getSnapshot().status).toBe('unavailable')
   })
 
   it('reads the default and advertises the choices', async () => {
     const rows = [descriptor(['read-only', 'workspace-write'])]
-    const face = createNativePermissionPresets(client({ rows }) as never, new AbortController().signal)
+    const face = createNativePermissionPresets(client({ rows }), new AbortController().signal)
     await face.load()
     const state = face.getSnapshot()
     expect(state.status).toBe('ready')
@@ -107,7 +107,7 @@ describe('native permission presets service', () => {
       value: { defaultPreset: 'workspace-write' }, revision: 4,
     }))
     const rows = [descriptor(['read-only', 'workspace-write'])]
-    const face = createNativePermissionPresets(client({ rows, mutate }) as never, new AbortController().signal)
+    const face = createNativePermissionPresets(client({ rows, mutate }), new AbortController().signal)
     await face.load()
     await face.selectDefault('workspace-write')
     expect(mutate).toHaveBeenCalledWith(
@@ -119,7 +119,7 @@ describe('native permission presets service', () => {
   it('surfaces a rejected write without claiming the new value', async () => {
     const mutate = vi.fn(async () => { throw new Error('native/settings-conflict') })
     const rows = [descriptor(['read-only', 'workspace-write'])]
-    const face = createNativePermissionPresets(client({ rows, mutate }) as never, new AbortController().signal)
+    const face = createNativePermissionPresets(client({ rows, mutate }), new AbortController().signal)
     await face.load()
     await face.selectDefault('workspace-write')
     expect(face.getSnapshot().status).toBe('error')
@@ -128,7 +128,7 @@ describe('native permission presets service', () => {
 
   it('switches a Session through the Host without touching the default', async () => {
     const switchClient = client()
-    const face = createNativePermissionPresets(switchClient as never, new AbortController().signal)
+    const face = createNativePermissionPresets(switchClient, new AbortController().signal)
     await face.selectForSession(SID, 'workspace-write')
     expect(switchClient.selectPermissionPreset).toHaveBeenCalledWith(SID, 'workspace-write', expect.any(AbortSignal))
   })
@@ -139,7 +139,7 @@ describe('native permission row', () => {
     const load = vi.fn(async () => {})
     const select = vi.fn(async () => {})
     const usePermission = (<T,>(selector: (value: NativePermissionRowState) => T): T =>
-      useSyncExternalStore(() => () => {}, () => selector(state))) as never
+      useSyncExternalStore(() => () => {}, () => selector(state)))
     render(<NativePermissionRow usePermission={usePermission} load={load} select={select} t={t} />)
     return { load, select }
   }

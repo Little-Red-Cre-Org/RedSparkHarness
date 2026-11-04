@@ -66,7 +66,7 @@ export function NativePlanChip({ usePlan, exitPlanMode, t }: NativePlanChipProps
     }
   }, [])
 
-  if (plan === undefined || plan.available !== true) return null
+  if (plan === undefined || !plan.available) return null
   const target = plan.pending === true ? !plan.active : plan.active
   if (!target) return null
 

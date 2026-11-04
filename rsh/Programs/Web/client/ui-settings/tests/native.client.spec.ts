@@ -49,7 +49,7 @@ function transport(options: TransportOptions = {}) {
       ? descriptor(namespace, { preference: 'light' }, revision + 1)
       : await options.mutate(namespace, ops, revision)
   }
-  const settingsEvents = async function* (signal: AbortSignal): AsyncGenerator<unknown> {
+  const settingsEvents = async function* (signal: AbortSignal) {
     while (!signal.aborted) {
       await new Promise<void>((resolve) => {
         wake = resolve
@@ -78,7 +78,7 @@ function stubProvider<K extends keyof import('@redspark/rsh-native-runtime').Nat
   value: import('@redspark/rsh-native-runtime').NativeServices[K],
 ): NativePlugin {
   return {
-    apiVersion: 1, name: `test-${String(name)}`, targets: ['client'], requires: [], provides: [name],
+    apiVersion: 1, name: `test-${name}`, targets: ['client'], requires: [], provides: [name],
     resolve: () => (context) => { context.provide(name, value) },
   }
 }

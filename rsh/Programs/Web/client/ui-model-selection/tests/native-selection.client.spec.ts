@@ -55,7 +55,7 @@ function client(named: { readonly value?: NativeModelControls; readonly failure?
 describe('native model selection', () => {
   it('reads the Host catalog once and shares the in-flight load', async () => {
     const fake = client()
-    const service = createNativeModelSelection(fake as never, new AbortController().signal)
+    const service = createNativeModelSelection(fake, new AbortController().signal)
     const [first, second] = await Promise.all([service.load(), service.load()])
     expect(fake.modelControls).toHaveBeenCalledOnce()
     expect(first).toBe(second)
@@ -65,7 +65,7 @@ describe('native model selection', () => {
 
   it('reuses a loaded catalog instead of reading again', async () => {
     const fake = client()
-    const service = createNativeModelSelection(fake as never, new AbortController().signal)
+    const service = createNativeModelSelection(fake, new AbortController().signal)
     await service.load()
     await service.load()
     expect(fake.modelControls).toHaveBeenCalledOnce()
@@ -73,7 +73,7 @@ describe('native model selection', () => {
 
   it('re-reads on refresh even after a good read', async () => {
     const fake = client()
-    const service = createNativeModelSelection(fake as never, new AbortController().signal)
+    const service = createNativeModelSelection(fake, new AbortController().signal)
     await service.load()
     await service.refresh()
     expect(fake.modelControls).toHaveBeenCalledTimes(2)
@@ -81,7 +81,7 @@ describe('native model selection', () => {
 
   it('reports a failed read without pretending the catalog is empty', async () => {
     const fake = client({ failure: new Error('connection reset') })
-    const service = createNativeModelSelection(fake as never, new AbortController().signal)
+    const service = createNativeModelSelection(fake, new AbortController().signal)
     await service.load()
     expect(service.getSnapshot().status).toBe('error')
     expect(service.getSnapshot().error).toBe('connection reset')
@@ -90,7 +90,7 @@ describe('native model selection', () => {
   })
 
   it('flattens groups into provider/model rows and appends failure rows', async () => {
-    const service = createNativeModelSelection(client() as never, new AbortController().signal)
+    const service = createNativeModelSelection(client(), new AbortController().signal)
     await service.load()
     const rows = service.rows()
     expect(rows.map(row => row.id)).toEqual([
@@ -104,17 +104,20 @@ describe('native model selection', () => {
   })
 
   it('localizes a failure row through this plugin own copy', async () => {
-    const service = createNativeModelSelection(client() as never, new AbortController().signal)
+    const service = createNativeModelSelection(client(), new AbortController().signal)
     await service.load()
-    const translate = (key: keyof typeof zh, params?: Record<string, unknown>): string =>
-      (zh[key] ?? key).replace('{message}', String(params?.message ?? ''))
+    const translate = (key: keyof typeof zh, params?: Record<string, unknown>): string => {
+      const message = params?.message
+      const text = typeof message === 'string' || typeof message === 'number' ? String(message) : ''
+      return (zh[key] ?? key).replace('{message}', text)
+    }
     const failure = service.rows(translate).at(-1)
     expect(failure?.description).toBe(zh['option.loadError'].replace('{message}', 'connection refused'))
   })
 
   it('forwards a selection with the addressed Session', async () => {
     const fake = client()
-    const service = createNativeModelSelection(fake as never, new AbortController().signal)
+    const service = createNativeModelSelection(fake, new AbortController().signal)
     const request = { selected: { provider: 'deepseek-official', model: 'deepseek-v4-pro', reasoningEffort: 'high' }, expectedRevision: null }
     await service.select(SID, request)
     expect(fake.selectModel).toHaveBeenCalledWith(SID, request, expect.any(AbortSignal))

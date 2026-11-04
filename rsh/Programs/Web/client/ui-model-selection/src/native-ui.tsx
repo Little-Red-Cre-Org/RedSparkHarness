@@ -123,6 +123,8 @@ export function createNativeModelSelection(client: ModelClient, signal: AbortSig
   const listeners = new Set<() => void>()
   let inflight: Promise<NativeModelCatalogState> | undefined
   let disposed = false
+  if (signal.aborted) disposed = true
+  else signal.addEventListener('abort', () => { disposed = true }, { once: true })
 
   const publish = (next: NativeModelCatalogState): void => {
     state = Object.freeze(next)

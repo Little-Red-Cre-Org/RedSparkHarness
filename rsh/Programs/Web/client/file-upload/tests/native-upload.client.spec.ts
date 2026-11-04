@@ -116,14 +116,14 @@ describe('createNativeFileUpload', () => {
 })
 
 describe('plugin', () => {
-  it('provides clientFileUpload and refuses configuration', () => {
+  it('provides clientFileUpload and refuses configuration', async () => {
     expect(plugin.requires).toEqual([])
     expect(plugin.optional).toEqual([])
     expect(plugin.provides).toEqual(['clientFileUpload'])
     expect(() => plugin.resolve({ extra: true })).toThrow(/no configuration/)
     const provided: unknown[] = []
     const activate = plugin.resolve(undefined)
-    activate({
+    await activate({
       provide: (_name: string, value: unknown) => { provided.push(value); return () => {} },
     } as never)
     expect(provided).toHaveLength(1)

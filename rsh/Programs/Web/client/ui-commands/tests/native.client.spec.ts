@@ -72,7 +72,7 @@ function stubProvider<K extends keyof import('@redspark/rsh-native-runtime').Nat
   value: import('@redspark/rsh-native-runtime').NativeServices[K],
 ): NativePlugin {
   return {
-    apiVersion: 1, name: `test-${String(name)}`, targets: ['client'], requires: [], provides: [name],
+    apiVersion: 1, name: `test-${name}`, targets: ['client'], requires: [], provides: [name],
     resolve: () => (context) => { context.provide(name, value) },
   }
 }
@@ -88,14 +88,14 @@ async function mount(rows?: readonly CommandDescriptor[]) {
   }
   const scope = new NativeScope()
   const host = new NativeHost(resolveInstallation([
-    { plugin: stubProvider('clientNativeSession', wire.face as never), scope, config: undefined },
+    { plugin: stubProvider('clientNativeSession', wire.face), scope, config: undefined },
     { plugin: stubProvider('clientLocale', {
       register: () => () => {},
       bind: () => (key: string) => key,
       getSnapshot: () => ({ locale: 'en' as const, revision: 0 }),
       subscribe: () => () => {},
       setLocale: () => {},
-    } as never), scope, config: undefined },
+    }), scope, config: undefined },
     { plugin, scope, config: undefined },
     { plugin: observer, scope, config: undefined },
   ], 'client'))
