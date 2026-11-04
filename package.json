@@ -212,7 +212,8 @@
     "demo:inspector": "node --import tsx/esm rsh/Programs/CLI/src/bin.ts web --patch rsh/Modules/Community/experimental/inspector/cordis.source.patch.yml",
     "mock:llm": "node --import tsx rsh/Tests/test-support/llm-mock-server/src/bin.ts",
     "dev:web": "tsx rsh/Scripts/dev-web.ts --poll",
-    "postinstall": "node rsh/Scripts/install-lefthook.mjs"
+    "postinstall": "node rsh/Scripts/install-lefthook.mjs",
+    "verify-publish-payload": "tsx rsh/Scripts/verify-publish-payload.ts"
   },
   "devDependencies": {
     "@redspark/rsh-agent": "workspace:^",

@@ -562,7 +562,21 @@ describe('Node 24 lane ownership', () => {
 
     expect(subject.map(item => item.id)).not.toContain('build')
     expect(subject.map(item => item.id)).not.toContain('doc-typecheck')
+    // Both payload-plane gates read built lib/ output, so neither can run in
+    // the lane that owns no build.
+    expect(subject.map(item => item.id)).not.toContain('native-build-output')
+    expect(subject.map(item => item.id)).not.toContain('publish-payload')
   })
+
+  it.each(['ci-windows-complete', 'ci-windows-observational'] as const)(
+    'packs published payloads only where the lane owns the build in %s',
+    (mode) => {
+      const ids = withPnpmEntrypoint(() => gatesForMode(mode).map(item => item.id))
+
+      expect(ids).toContain('publish-payload')
+      expect(ids).toContain('native-build-output')
+    },
+  )
 
   it('owns the build and orders its artifact consumers', () => {
     const subject = withPnpmEntrypoint(() => gatesForMode('ci-consumers'))
