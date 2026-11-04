@@ -45,6 +45,8 @@ kind: "package-reference"
 
 通用行经 `ctx.settingsScope` 读取显式暴露的 `permission` Settings 描述符，并携带描述符 revision 写入一条 `settings.mutate` 路径操作；其 observable 经 slot 系统的 `hooks` 格传递，因此 React 钩子绑定归渲染器，推送失效通知会重新获取描述符。该值只在之后创建会话时读取。当前会话界面是挂在宿主 `/permission` 命令上的 popupSelect 装饰（`ctx.commandUi.decorate`）：宿主命令保留斜杠菜单行、带参路径与持久生命周期记账，装饰只把裸调用替换为选择器。选项与 active 标记读取会话的 `permissions` 投影——与 composer chip 渲染的同一份宿主计算 select。完全权限选项携带 `confirmation` 载荷，由共享弹窗外壳渲染为页内风险门。
 
+`./native` 入口保留这些事实，去掉 Cordis 接线。它的 `clientNativePermissionPresets` 服务经 `clientNativeSession.settingsDescribe` 读取同一个 `permission` Settings 描述符，发布其 schema 声明的 `const` 节点并集，并携带描述符 revision 写入 `defaultPreset`；跟随改为宿主 Settings 事件流，而非推送失效。它同时转发当前会话的 `selectPermissionPreset`。两个组件 `NativePermissionRow` 与 `NativePermissionAction` 以 props 接收状态与动词，因此 Native 设置位或标题栏无需 Cordis slot 树即可渲染。Native 应用已自绘 composer 切换器与命名空间编辑器，因此本入口不注册自己的位。
+
 </details>
 
 -----
@@ -79,6 +81,7 @@ kind: "package-reference"
 
 - **设置行仅限 Web**——非 Web 客户端仍可经 `/permission` 切换当前会话，但不会获得这项浏览器贡献。
 - **预设描述来自宿主**——本地化的内置标签旁边可能显示另一种语言编写的描述。
+- **Native 入口不注册任何位**——它发布服务与两个组件，但 Native 应用自绘 composer 切换器与命名空间编辑器。把该行接入 Native 设置位属于消费方改动，不是本包改动。
 
 <a id="dev-note"></a>
 ### 开发备注

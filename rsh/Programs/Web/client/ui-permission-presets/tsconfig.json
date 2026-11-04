@@ -46,6 +46,12 @@
     },
     {
       "path": "../ui-settings"
+    },
+    {
+      "path": "../native-session"
+    },
+    {
+      "path": "../../../../Engine/core/session"
     }
   ]
 }
