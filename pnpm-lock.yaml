@@ -9696,6 +9696,15 @@ importers:
       '@redspark/rsh-client-ui-message-feedback':
         specifier: workspace:^
         version: link:../Web/client/ui-message-feedback
+      '@redspark/rsh-client-ui-model-selection':
+        specifier: workspace:^
+        version: link:../Web/client/ui-model-selection
+      '@redspark/rsh-client-ui-permission-presets':
+        specifier: workspace:^
+        version: link:../Web/client/ui-permission-presets
+      '@redspark/rsh-client-ui-pet':
+        specifier: workspace:^
+        version: link:../Web/client/ui-pet
       '@redspark/rsh-client-ui-primitives':
         specifier: workspace:^
         version: link:../Web/client/ui-primitives
@@ -13101,6 +13110,9 @@ importers:
       '@redspark/rsh-client-locale':
         specifier: workspace:^
         version: link:../locale
+      '@redspark/rsh-client-native-session':
+        specifier: workspace:^
+        version: link:../native-session
       '@redspark/rsh-client-store':
         specifier: workspace:^
         version: link:../store
@@ -13128,6 +13140,9 @@ importers:
       '@redspark/rsh-client-ui-slots':
         specifier: workspace:^
         version: link:../ui-slots
+      '@redspark/rsh-native-runtime':
+        specifier: workspace:^
+        version: link:../../../../Core/runtime-diagnostics/native-runtime
       '@redspark/rsh-session':
         specifier: workspace:^
         version: link:../../../../Engine/core/session
@@ -13218,6 +13233,9 @@ importers:
       '@redspark/rsh-client-locale':
         specifier: workspace:^
         version: link:../locale
+      '@redspark/rsh-client-native-session':
+        specifier: workspace:^
+        version: link:../native-session
       '@redspark/rsh-client-store':
         specifier: workspace:^
         version: link:../store
@@ -13245,12 +13263,18 @@ importers:
       '@redspark/rsh-client-ui-slots':
         specifier: workspace:^
         version: link:../ui-slots
+      '@redspark/rsh-native-runtime':
+        specifier: workspace:^
+        version: link:../../../../Core/runtime-diagnostics/native-runtime
       '@redspark/rsh-permission-presets':
         specifier: workspace:^
         version: link:../../../../Modules/Official/interaction/permission-presets
       '@redspark/rsh-remote-mock':
         specifier: workspace:^
         version: link:../../../../Tests/test-support/remote-mock
+      '@redspark/rsh-session':
+        specifier: workspace:^
+        version: link:../../../../Engine/core/session
       '@types/react':
         specifier: ~18.3.1
         version: 18.3.31
@@ -13288,6 +13312,9 @@ importers:
       '@redspark/rsh-client-ui-conversation':
         specifier: workspace:^
         version: link:../ui-conversation
+      '@redspark/rsh-client-ui-layout':
+        specifier: workspace:^
+        version: link:../ui-layout
       '@redspark/rsh-client-ui-primitives':
         specifier: workspace:^
         version: link:../ui-primitives
@@ -13312,6 +13339,9 @@ importers:
       '@redspark/rsh-llm-retry':
         specifier: workspace:^
         version: link:../../../../Engine/llm/llm-retry
+      '@redspark/rsh-native-runtime':
+        specifier: workspace:^
+        version: link:../../../../Core/runtime-diagnostics/native-runtime
       '@redspark/rsh-session':
         specifier: workspace:^
         version: link:../../../../Engine/core/session
