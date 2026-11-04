@@ -69,6 +69,6 @@ Status: implemented
 
 ## Testing
 
-`rsh/Scripts/verify-publish-payload.spec.ts` 钉住了检测边界：相对目标缺失会报出，存在则通过，目录 index 能解析，`new URL(relative, import.meta.url)` 算作相对说明符，`devDependencies` 中的裸说明符带着具体原因报出，每个安装段落中的裸说明符通过，无人引用的产物成员不报出，两条模块表豁免成立而平台模块名的子路径不成立。tarball 缺少 `./native` 成员时，不会因此藏起同一包里另一处坏掉的相对导入。语料选择谓词单独钉住，使没有 Native 入口的包留在范围之外，而不是被隐含。
+`rsh/Scripts/verify-publish-payload.spec.ts` 钉住了检测边界：相对目标缺失会报出，存在则通过，目录 index 能解析，`new URL(relative, import.meta.url)` 算作相对说明符，目录 URL 在其下有成员时视为存在，`.ts` URL 由已产出的 `.js`/`.cjs`/`.mjs` 同名文件满足，条件 URL 的两个分支都会检查，`devDependencies` 中的裸说明符带着具体原因报出，每个安装段落中的裸说明符通过，无人引用的产物成员不报出，两条模块表豁免成立而平台模块名的子路径不成立。tarball 缺少 `./native` 成员时，不会因此藏起同一包里另一处坏掉的相对导入。语料选择谓词单独钉住，使没有 Native 入口的包留在范围之外，而不是被隐含。
 
 这条门禁是拿真实缺陷而非仅夹具验证的：从 `ui-sidebar` 的 `files` 中删掉 `lib/client/SidebarRoot.module.css`，违规计数从 2 升到 3 并点名了精确说明符；把 `@redspark/rsh-util-values` 移出 `dependencies`，计数升到 13，覆盖 `@redspark/rsh-session` 的九个已产出文件。逐一还原后计数回落到原值。

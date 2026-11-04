@@ -246,10 +246,14 @@ describe('package dependency scope', () => {
       '@redspark/rsh-client-ui-goal': ['@redspark/rsh-goal'],
       '@redspark/rsh-client-ui-trajectory': ['@tanstack/react-virtual', 'diff'],
       '@redspark/rsh-client-ui-sidebar': [
+        'clsx',
         '@redspark/rsh-client-store',
         '@redspark/rsh-client-ui-primitives',
         '@redspark/rsh-client-ui-slots',
       ],
+      '@redspark/rsh-client-ui-input-trigger': ['@redspark/rsh-file-reference'],
+      '@redspark/rsh-client-ui-settings': ['@redspark/schemastery'],
+      '@redspark/rsh-client-ui-settings-plugin-inventory': ['@redspark/rsh-brand'],
     })
     expect(PACKAGE_DEPENDENCY_POLICY.sharedClientRuntimePeers).toEqual({
       '@redspark/rsh-client-ui-primitives': ['react', 'react-dom'],

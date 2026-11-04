@@ -128,6 +128,34 @@ export function resolutionCandidates(from: string, specifier: string): string[] 
   ]
 }
 
+/**
+ * Whether a relative specifier, including a filesystem URL, is in the payload.
+ *
+ * A trailing slash is a directory: any member under it is enough. A `.ts` or
+ * `.tsx` URL is the source branch of a dev/prod conditional that the bundle
+ * still contains; the emitted `.js`, `.cjs`, or `.mjs` sibling satisfies it.
+ * @param files - payload members.
+ * @param from - payload-relative path of the importing file.
+ * @param specifier - the relative specifier as written.
+ * @returns True when the payload contains a member that specifier names.
+ */
+function relativeSpecifierResolves(
+  files: ReadonlyMap<string, string>,
+  from: string,
+  specifier: string,
+): boolean {
+  const base = posix.normalize(posix.join(posix.dirname(from), specifier)).replace(/\/+$/u, '')
+  if (specifier.endsWith('/') || specifier === '.' || specifier.endsWith('/.')) {
+    const prefix = base === '' || base === '.' ? '' : `${base}/`
+    return [...files.keys()].some(name => prefix === '' || name.startsWith(prefix))
+  }
+  if (specifier.endsWith('.ts') || specifier.endsWith('.tsx')) {
+    const stem = base.replace(/\.tsx?$/u, '')
+    if (['.js', '.cjs', '.mjs'].some(extension => files.has(stem + extension))) return true
+  }
+  return resolutionCandidates(from, specifier).some(candidate => files.has(candidate))
+}
+
 /** One module specifier found in an emitted file. */
 export interface ModuleSpecifier {
   /** The specifier exactly as written. */
@@ -136,16 +164,6 @@ export interface ModuleSpecifier {
   readonly line: number
 }
 
-/**
- * Static module specifiers one emitted JavaScript file carries.
- *
- * Reads the full ECMAScript surface a bundle can produce: static imports,
- * re-exports, dynamic `import()`, `require`, and `new URL(relative, import.meta.url)`.
- * An emitted file is plain JavaScript, so the parser runs in JavaScript mode over the file text.
- * @param file - file name used in parser diagnostics only.
- * @param source - file text.
- * @returns Every module specifier the file names, in source order.
- */
 /** Whether a call argument is `import.meta.url`. */
 function isImportMetaUrl(node: ts.Expression | undefined): boolean {
   return node !== undefined
@@ -155,6 +173,28 @@ function isImportMetaUrl(node: ts.Expression | undefined): boolean {
     && node.expression.keywordToken === ts.SyntaxKind.ImportKeyword
 }
 
+/** Relative string leaves of a `new URL` argument, including both sides of a conditional. */
+function relativeStringLeaves(node: ts.Expression | undefined): string[] {
+  if (node === undefined) return []
+  if (ts.isParenthesizedExpression(node)) return relativeStringLeaves(node.expression)
+  if (ts.isConditionalExpression(node)) {
+    return [...relativeStringLeaves(node.whenTrue), ...relativeStringLeaves(node.whenFalse)]
+  }
+  if (ts.isStringLiteralLike(node) && node.text.startsWith('.')) return [node.text]
+  return []
+}
+
+/**
+ * Static module specifiers one emitted JavaScript file carries.
+ *
+ * Reads the full ECMAScript surface a bundle can produce: static imports,
+ * re-exports, dynamic `import()`, `require`, and `new URL(relative, import.meta.url)`,
+ * including both branches of a conditional first argument.
+ * An emitted file is plain JavaScript, so the parser runs in JavaScript mode over the file text.
+ * @param file - file name used in parser diagnostics only.
+ * @param source - file text.
+ * @returns Every module specifier the file names, in source order.
+ */
 export function moduleSpecifiersOf(file: string, source: string): ModuleSpecifier[] {
   const parsed = ts.createSourceFile(file, source, ts.ScriptTarget.Latest, false, ts.ScriptKind.JS)
   const found: ModuleSpecifier[] = []
@@ -178,9 +218,11 @@ export function moduleSpecifiersOf(file: string, source: string): ModuleSpecifie
       && node.arguments !== undefined
       && node.arguments.length >= 2
       && isImportMetaUrl(node.arguments[1])) {
-      const target = node.arguments[0]
-      if (target !== undefined && ts.isStringLiteralLike(target) && target.text.startsWith('.')) {
-        record(node, target)
+      for (const specifier of relativeStringLeaves(node.arguments[0])) {
+        found.push({
+          specifier,
+          line: parsed.getLineAndCharacterOfPosition(node.getStart(parsed)).line + 1,
+        })
       }
     }
     ts.forEachChild(node, visit)
@@ -282,7 +324,7 @@ export function payloadViolations(
       // relationship, so neither rule applies to it.
       if (specifier.startsWith('node:')) continue
       if (!isBareSpecifier(specifier)) {
-        if (!resolutionCandidates(file, specifier).some(candidate => payload.files.has(candidate))) {
+        if (!relativeSpecifierResolves(payload.files, file, specifier)) {
           violations.push({
             package: name,
             file: where,

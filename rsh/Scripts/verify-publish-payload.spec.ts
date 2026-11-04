@@ -111,6 +111,14 @@ describe('moduleSpecifiersOf', () => {
     expect(found.map(entry => entry.specifier)).toEqual(['./worker.cjs'])
   })
 
+  it('reads both branches of a conditional URL', () => {
+    const found = moduleSpecifiersOf(
+      'lib/native.js',
+      'new URL(import.meta.url.endsWith(".ts") ? "./process-child.ts" : "./process-child.js", import.meta.url)\n',
+    )
+    expect(found.map(entry => entry.specifier)).toEqual(['./process-child.ts', './process-child.js'])
+  })
+
   it('ignores a URL that is not a relative import.meta.url load', () => {
     const found = moduleSpecifiersOf('lib/native.js', [
       'const page = new URL("https://example.test")',
@@ -139,6 +147,36 @@ describe('payloadViolations relative specifiers', () => {
   it('reports a worker named only through new URL when the tarball omits it', () => {
     const subject = payload({ 'lib/native.js': 'const worker = new URL("./worker.cjs", import.meta.url)\n' })
     expect(reported(subject)).toEqual(['lib/native.js:1 ./worker.cjs'])
+  })
+
+  it('accepts a directory URL when a payload member lies under it', () => {
+    const present = payload({
+      'lib/native.js': 'new URL("../presets/", import.meta.url)\n',
+      'presets/standard/preset.yml': 'name: standard\n',
+    })
+    expect(payloadViolations(present)).toEqual([])
+    const absent = payload({ 'lib/native.js': 'new URL("../presets/", import.meta.url)\n' })
+    expect(reported(absent)).toEqual(['lib/native.js:1 ../presets/'])
+  })
+
+  it('accepts a source .ts URL when the emitted sibling is packed', () => {
+    const present = payload({
+      'lib/native.js': 'new URL("./worker.ts", import.meta.url)\n',
+      'lib/worker.cjs': 'export {}\n',
+    })
+    expect(payloadViolations(present)).toEqual([])
+    const absent = payload({ 'lib/native.js': 'new URL("./worker.ts", import.meta.url)\n' })
+    expect(reported(absent)).toEqual(['lib/native.js:1 ./worker.ts'])
+  })
+
+  it('reports the emitted branch of a conditional URL when that file is absent', () => {
+    const subject = payload({
+      'lib/native.js': 'new URL(import.meta.url.endsWith(".ts") ? "./process-child.ts" : "./process-child.js", import.meta.url)\n',
+    })
+    expect(reported(subject)).toEqual([
+      'lib/native.js:1 ./process-child.ts',
+      'lib/native.js:1 ./process-child.js',
+    ])
   })
 
   it('accepts a relative import resolved through a directory index', () => {
