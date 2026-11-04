@@ -60,6 +60,8 @@ const NATIVE_WEB_CLIENT_INSTALLATIONS = [
   { id: 'pet', plugin: '@redspark/rsh-client-ui-pet' },
   { id: 'permission-presets-ui', plugin: '@redspark/rsh-client-ui-permission-presets' },
   { id: 'model-selection-ui', plugin: '@redspark/rsh-client-ui-model-selection' },
+  { id: 'settings-plugins-ui', plugin: '@redspark/rsh-client-ui-settings-plugin-inventory' },
+  { id: 'settings-models-ui', plugin: '@redspark/rsh-client-ui-settings-models' },
 ] as const
 
 /** One shipped browser Client installation used by a native Web profile. */

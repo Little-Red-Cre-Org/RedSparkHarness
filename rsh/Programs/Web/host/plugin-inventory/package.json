@@ -54,7 +54,7 @@
     "@redspark/cordis": "workspace:^"
   },
   "peerDependenciesMeta": {
-    "@redspark/rsh-agent-presets": {
+    "@redspark/cordis": {
       "optional": true
     }
   },

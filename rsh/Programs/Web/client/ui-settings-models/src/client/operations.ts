@@ -5,10 +5,7 @@
  * failure codes and Remote namespaces stay in the apply world.
  */
 
-import type { Context as ClientContext } from '@redspark/cordis'
-import type {
-  SettingsPathOpView,
-} from '@redspark/rsh-api-remotes/client'
+import type { ModelsRemoteHost } from './ports.ts'
 import type {
   ModelSettingsOperations, ModelSettingsWriteOutcome,
 } from '@redspark/rsh-client-ui-primitives'
@@ -23,11 +20,11 @@ export type ModelsOperations = ModelSettingsOperations
 
 /**
  * Bind the page's Host operations to the plugin's own Remote namespaces.
- * @param ctx - the page plugin's context, which declares `remote.credentials`,
- * `remote.llm`, and `remote.settings` in its own `inject`.
+ * @param ctx - the page plugin's Remote host, whose `credentials`, `llm` and
+ * `settings` namespaces back every card action.
  * @returns the callbacks the section and its cards are injected with.
  */
-export function createModelsOperations(ctx: ClientContext): ModelsOperations {
+export function createModelsOperations(ctx: ModelsRemoteHost): ModelsOperations {
   return {
     describeCredential: async (ref) => {
       const response = await ctx.remote.credentials.describe([ref])
@@ -42,7 +39,7 @@ export function createModelsOperations(ctx: ClientContext): ModelsOperations {
       return response.ok ? undefined : response.error.message
     },
     writeSettings: async (ns, ops, expectedRevision) => {
-      const response = await ctx.remote.settings.mutate(ns, ops as SettingsPathOpView[], expectedRevision)
+      const response = await ctx.remote.settings.mutate(ns, [...ops], expectedRevision)
       if (response.ok) return { kind: 'written', view: {
         user: response.value.user,
         revision: response.value.revision,

@@ -82,6 +82,10 @@ kind: "package-reference"
 -----
 
 <a id="further-exploration"></a>
+## Native 客户端
+
+Native 入口把同一个页面绑定到 Native 传输。`ModelsSettingsStore`、`createModelsOperations` 与每个 provider 卡片本来就把 Host 读取作为 props 接收，因此它们现在只声明自己用到的切片（`ModelsRemoteHost`）而不是 Cordis context，wire 类型住在本包自己的 `client/ports.ts`。`createNativeModelsFace` 从 `clientNativeSession` 回答同样的 carrier 信封，`createNativeDescribeFace` 是页面的文档读取面。两处 Native 差异在适配器里折平：传输以拒绝表示失败而不是回答失败信封；它把命名空间标识拼作 `namespace`，而 wire 拼作 `ns`。schema 读取通过 `resolveNativeSchema` 来自设置领域基底的 Native 半边；缺少该 provider 的组成会在激活时大声失败。
+
 ## 进一步探索
 
 以下页面覆盖设置底座、本页所合并的 seam 与设计依据。

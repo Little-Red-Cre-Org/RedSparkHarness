@@ -297,6 +297,8 @@ const packageFileExtras: Readonly<Record<string, readonly string[]>> = {
   '@redspark/rsh-native-schedule-controller': ['lib/shared-*.js'],
   '@redspark/rsh-native-jobs-controller': ['lib/shared-*.js'],
   '@redspark/rsh-client-ui-jobs': ['lib/**/*.css'],
+  '@redspark/rsh-client-ui-settings-plugin-inventory': ['lib/**/*.css'],
+  '@redspark/rsh-client-ui-settings-models': ['lib/**/*.css'],
   '@redspark/rsh-client-native-session': [
     'lib/list-types.js', 'lib/follow-types.js', 'lib/model-controls.js',
     'lib/human.js', 'lib/workspaces.js', 'lib/schedule-types.js', 'lib/jobs-types.js', 'lib/native-*.js',
