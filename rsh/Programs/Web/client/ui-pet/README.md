@@ -32,6 +32,8 @@ Third-party Client plugins can call `ctx.pet.register()` with a stable id, a dis
 
 `PetRuntime` owns registry entries, preferences, and temporary activity reports. Session-standard state supplies the default mapping: idle, running/thinking, pending interaction/waiting, error, and a short completion reaction. The browser presentation reads one immutable snapshot for both placements. A loopback browser persists preferences through the shared Host settings scope; a remote browser uses an explicitly process-local copy so its controls remain responsive without claiming durable storage. An optional Electron carrier receives only a validated atlas frame and localized status, then owns the transparent draggable always-on-top window. The Host half registers the `ui-pet` settings schema; accepted changes use the shared settings scope.
 
+The `./native` entry keeps the same presentation over a different composition. It owns a `clientNativePet` registry, registers the same built-in character, and contributes one floating mascot into the `shell.overlay` seat `ui-layout` declares, because a Native shell has neither the `conversation.pet` seat nor a `uiConversation` view projection. Its states come from the `clientNativeConversation` lifecycle alone: `error`, `thinking` while a turn runs, `idle` otherwise, plus a short completion reaction. The registry and selection live in the browser process, since a Native host serves no `ui-pet` settings namespace.
+
 <a id="further-exploration"></a>
 ## Further Exploration
 
@@ -55,6 +57,7 @@ None; the package does not assemble provider input.
 - **Desktop carrier is optional** — browsers show the welcome and Conversation placements only. Electron shows the selected frame in a separate transparent draggable always-on-top window when the user enables Desktop display.
 - **Built-in assets are deployment-owned** — the Web app serves the two RedSpark atlases under `/brand/`; a distributable third-party provider serves a PNG under an application-local absolute path such as `/plugins/provider/atlas.png`, or supplies a bounded PNG data URL.
 - **Four-frame presentation** — semantic states share the available idle, blink, wave, and happy frames until a future animation format provides dedicated state clips.
+- **The Native half has no tool-level states and no durable preferences** — the states that need a Conversation view projection (`coding`, `planning`, `sleeping`, `compacting`, `focused`) and the `ui-pet` settings namespace do not exist in a Native host, so the `./native` entry presents the controller lifecycle states only and keeps the selection in the browser process. Restoring either needs a Host-side projection and settings namespace, not a change here.
 
 <a id="dev-note"></a>
 ### Dev Note

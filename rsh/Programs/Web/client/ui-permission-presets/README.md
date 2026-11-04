@@ -45,6 +45,8 @@ The row derives its options from the host's dynamic `defaultPreset` enum, uses t
 
 The General row reads the explicitly exposed `permission` Settings descriptor through `ctx.settingsScope` and writes one `settings.mutate` path operation with the descriptor revision; its observable rides the slot system's `hooks` compartment, so the renderer owns React hook binding, and a push invalidation refetches the descriptor. The value is read only when a later session is created. The current-session surface is a popupSelect decoration hung on the host `/permission` command (`ctx.commandUi.decorate`): the host command keeps its slash-menu row, argument-bearing form, and durable lifecycle logging, while the decoration replaces only the bare invocation with the picker. Options and the active mark read the session's `permissions` projection — the same host-computed select the composer chip renders. The full-access option carries a `confirmation` payload the shared popup shell renders as the in-page risk gate.
 
+The `./native` entry keeps the facts and drops the Cordis plumbing. Its `clientNativePermissionPresets` service reads the same `permission` Settings descriptor through `clientNativeSession.settingsDescribe`, publishes the union of `const` nodes its schema advertises, and writes `defaultPreset` with the descriptor revision; the follow comes from the Host's Settings event stream instead of a push invalidation. It also forwards `selectPermissionPreset` for the current Session. Both components — {@link NativePermissionRow} and {@link NativePermissionAction} — take their state and verbs as props, so a Native settings seat or header can render them without the Cordis slot tree. The Native application already draws its own composer switcher and namespace editor, so this entry registers no seat of its own.
+
 </details>
 
 -----
@@ -79,6 +81,7 @@ These limits define the current permission surfaces. They are current package co
 
 - **The Settings row is Web-only** — non-Web clients may still switch the current session through `/permission`, but do not receive this browser contribution.
 - **Preset descriptions come from the host** — localized built-in labels may therefore appear beside a description written in another language.
+- **The Native entry registers no seat** — it publishes the service and both components, but the Native application draws its own composer switcher and namespace editor. Wiring the row into a Native settings seat is a consumer change, not a package change.
 
 <a id="dev-note"></a>
 ### Dev Note

@@ -22,6 +22,10 @@
       "types": "./lib/types/client/index.d.ts",
       "default": "./lib/client.js"
     },
+    "./native": {
+      "types": "./lib/types/native.d.ts",
+      "default": "./lib/native.js"
+    },
     "./src/*": "./src/*",
     "./package.json": "./package.json"
   },
@@ -37,6 +41,21 @@
         "@redspark/rsh-client-ui-settings"
       ],
       "platform": "web"
+    },
+    "native": {
+      "apiVersion": 1,
+      "entry": "./native",
+      "targets": [
+        "client"
+      ],
+      "requires": [
+        "clientSlots",
+        "clientLocale"
+      ],
+      "optional": [],
+      "provides": [
+        "clientNativePet"
+      ]
     }
   },
   "scripts": {
@@ -73,11 +92,14 @@
     "@types/react": "~18.3.1",
     "react": "^18.2.0",
     "@redspark/rsh-util-values": "workspace:^",
-    "@redspark/rsh-util-crypto": "workspace:^"
+    "@redspark/rsh-util-crypto": "workspace:^",
+    "@redspark/rsh-client-ui-layout": "workspace:^",
+    "@redspark/rsh-native-runtime": "workspace:^"
   },
   "files": [
     "lib/index.js",
     "lib/client.js",
+    "lib/native.js",
     "lib/types/**/*.d.ts"
   ]
 }

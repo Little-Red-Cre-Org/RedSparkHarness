@@ -45,6 +45,8 @@ When the Host reports that no adapter serves the session's route, this plugin ra
 
 Two entries over ONE per-session directory owned by `ModelDirectoryResolver` (`ctx.modelDirectories`): the `/model` popupSelect contribution (registered through `ctx.commandUi`) and the composer's named `conversation.input.model` seat both load the session's advisory directory through `session.models` and submit through `session.selectModel` via the same `ModelDirectory` instance, so a switch made in either entry is what the other shows next. Directory loads and selections share a generation counter so an older response never overwrites a newer one; a connection reset drops every resident projection and repulls the Host-restored selection before display. Directories are per-session, resolved lazily, and disposed with the session scope; addressed subagent sessions expose neither entry. Every resident directory refetches directly on forwarded `llm/adapters-updated` and `settings/document-updated` owner events.
 
+The `./native` entry publishes the same catalog and selection as `clientNativeModelSelection`: it reads `clientNativeSession.modelControls` for the Host-generation catalog and forwards `selectModel` with the addressed Session id. `load()` shares one in-flight read and reuses a loaded catalog, `refresh()` forces a new one, and `rows()` flattens groups into `provider/model` rows plus one failure row per provider the Host could not reach. The Native application already renders the picker from the same `modelControls`, so this entry registers no second picker.
+
 </details>
 
 -----
@@ -80,6 +82,7 @@ These limits define the current model surface. They are current package constrai
 - **No create-time or addressed-subagent selection** — both entries require an existing ordinary session's Agent; there is no draft-phase model choice to fold into session creation, and subagent continuation deliberately exposes no independent model-selection contract.
 - **Directory names are presentation-only** — selection and persistence use provider/model/effort ids; a provider whose catalog or exact-model metadata lookup fails lists as an unselectable failure row until reload.
 - **No arbitrary effort input** — the composer offers only the exact model's adapter-advertised levels; an adapter without reasoning metadata leaves the Effort row absent.
+- **The Native entry registers no picker** — it publishes `clientNativeModelSelection` and the row flattening, but the Native application draws its own picker from `modelControls`. A second picker in the composer would duplicate that control.
 
 <a id="dev-note"></a>
 ### Dev Note

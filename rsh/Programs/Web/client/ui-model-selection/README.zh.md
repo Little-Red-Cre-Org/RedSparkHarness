@@ -45,6 +45,8 @@ Web GUI 允许用户通过 `/model` 弹窗或 composer 模型控件切换既有�
 
 两个入口共用一份由 `ModelDirectoryResolver`（`ctx.modelDirectories`）持有的会话级目录：`/model` popupSelect 贡献项（经 `ctx.commandUi` 注册）与 composer 的具名 `conversation.input.model` 位都经 `session.models` 加载会话的建议目录、经 `session.selectModel` 通过同一个 `ModelDirectory` 实例提交，因此任一入口所做的切换正是另一个入口接下来显示的。目录加载与选择共享一个代次计数器，旧响应不会覆盖新结果；连接重置丢弃所有常驻投影，并在显示前重新拉取 Host 恢复的选择。目录按会话惰性解析，随会话作用域一并 dispose（资源释放）；已寻址 subagent 会话不公开任一入口。每份常驻目录都会直接在转发的 `llm/adapters-updated` 与 `settings/document-updated` owner 事件上重拉。
 
+`./native` 入口把同一份目录与选择发布为 `clientNativeModelSelection`：经 `clientNativeSession.modelControls` 读取当前 Host 世代的目录，并把带上会话 id 的 `selectModel` 转发出去。`load()` 共享一次进行中的读取并复用已加载的目录，`refresh()` 强制重读，`rows()` 把分组摊平为 `provider/model` 行，并为 Host 无法访问的每个提供方追加一行失败行。Native 应用已从同一份 `modelControls` 自绘选择器，因此本入口不再注册第二个选择器。
+
 </details>
 
 -----
@@ -79,6 +81,7 @@ Web GUI 允许用户通过 `/model` 弹窗或 composer 模型控件切换既有�
 
 - **无创建期或已寻址 subagent 选择**——两个入口都要求既有普通会话的 agent（智能体）；没有可纳入会话创建的草稿阶段模型选择，subagent 继续执行也有意不公开独立的模型选择约定。
 - **目录名仅供呈现**——选择与持久化使用提供方／模型／推理强度 id；目录查询或确切模型元数据查询失败的提供方以不可选失败行列出，重新加载前保持原样。
+- **Native 入口不注册选择器**——它发布 `clientNativeModelSelection` 与行摊平，但 Native 应用从 `modelControls` 自绘选择器；在 composer 中再加一个选择器会与该控件重复。
 - **不能任意输入推理强度**——composer 仅提供确切模型由适配器公布的推理强度；适配器没有推理元数据时不显示 Effort 行。
 
 <a id="dev-note"></a>

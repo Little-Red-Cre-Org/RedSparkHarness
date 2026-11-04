@@ -32,6 +32,8 @@ kind: "package-reference"
 
 `PetRuntime` 持有注册项、偏好与临时活动报告。Session 标准状态提供默认映射：待机、运行/思考、等待交互、错误，以及短暂的完成反馈。两个位置都从同一份不可变快照读取浏览器呈现。loopback 浏览器经共享 Host settings scope 持久化偏好；远程浏览器使用明确的进程内副本，因此控件保持可用但不声称已持久化。可选 Electron 载体只接收已验证的图集帧与本地化状态，并持有透明、可拖动、置顶窗口。Host 半部注册 `ui-pet` 设置 schema；通过的变更经共享 settings scope 写入。
 
+`./native` 入口在另一套组合中保留同一份呈现。它持有 `clientNativePet` 注册表，注册同一内置角色，并把一个悬浮吉祥物注册进 `ui-layout` 声明的 `shell.overlay`——因为 Native shell 既没有 `conversation.pet` seat，也没有 `uiConversation` 视图投影。它的状态只来自 `clientNativeConversation` 生命周期：`error`、回合运行中的 `thinking`、其余情况下的 `idle`，以及短暂的完成反馈。注册表与选择保存在浏览器进程内，因为 Native Host 不提供 `ui-pet` 设置命名空间。
+
 <a id="further-exploration"></a>
 ## 进一步探索
 
@@ -55,6 +57,7 @@ kind: "package-reference"
 - **桌面载体是可选的**——浏览器仅显示欢迎页和会话位置。用户启用「在桌面置顶显示」后，Electron 会在独立透明、可拖动、置顶窗口中显示所选帧。
 - **内置素材由部署持有**——Web 应用在 `/brand/` 下提供两套赤绯图集；可分发的第三方 provider 在类似 `/plugins/provider/atlas.png` 的应用内绝对路径提供 PNG，或提供受大小限制的 PNG data URL。
 - **四帧呈现**——语义状态复用待机、眨眼、挥手和开心四帧，直到未来动画格式提供各状态专用片段。
+- **Native 半部没有工具级状态，也没有持久化偏好**——需要 Conversation 视图投影的状态（`coding`、`planning`、`sleeping`、`compacting`、`focused`）与 `ui-pet` 设置命名空间在 Native Host 中都不存在，因此 `./native` 入口只呈现控制器生命周期状态，并把选择保存在浏览器进程内。要恢复其中任一项，需要 Host 侧的投影与设置命名空间，而不是修改本包。
 
 <a id="dev-note"></a>
 ### 开发备注
