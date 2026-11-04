@@ -9,6 +9,7 @@
  */
 import { describe, expect, it } from 'vitest'
 import { NativeHost, NativeScope, resolveInstallation, type NativePlugin } from '@redspark/rsh-native-runtime'
+import { CommandDefinitionId } from '@redspark/rsh-commands/brand'
 import type { CommandDescriptor } from '@redspark/rsh-commands/facts'
 import type { SessionId } from '@redspark/rsh-session/types'
 import { plugin, type NativeCommandCatalogFace, type NativeCommandService } from '../src/native.ts'
@@ -17,8 +18,8 @@ const session = 'session-a' as SessionId
 
 /** Catalog rows a Host advertises, in its own order. */
 const CATALOG: readonly CommandDescriptor[] = [
-  { definitionId: '@redspark/rsh-command-goal', name: 'goal', description: 'Set a goal' },
-  { definitionId: '@redspark/rsh-command-compact', name: 'compact', description: 'Compact history' },
+  { definitionId: CommandDefinitionId('@redspark/rsh-command-goal'), name: 'goal', description: 'Set a goal' },
+  { definitionId: CommandDefinitionId('@redspark/rsh-command-compact'), name: 'compact', description: 'Compact history' },
   { name: 'deploy', description: 'Deploy the workspace', input: { hint: 'target' } },
 ]
 
