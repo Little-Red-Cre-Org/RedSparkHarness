@@ -50,6 +50,19 @@ const NATIVE_WEB_CLIENT_INSTALLATIONS = [
   { id: 'input-trigger', plugin: '@redspark/rsh-client-ui-input-trigger' },
   { id: 'jobs', plugin: '@redspark/rsh-client-ui-jobs' },
   { id: 'message-feedback', plugin: '@redspark/rsh-client-ui-message-feedback' },
+  // Settings scopes and the command catalog are capabilities other client rows
+  // require, so both install before the rows that render them.
+  { id: 'settings', plugin: '@redspark/rsh-client-ui-settings' },
+  { id: 'commands', plugin: '@redspark/rsh-client-ui-commands' },
+  { id: 'plan-mode', plugin: '@redspark/rsh-client-ui-plan' },
+  { id: 'resources', plugin: '@redspark/rsh-client-resources' },
+  { id: 'schedule-catalog', plugin: '@redspark/rsh-client-ui-schedule' },
+  { id: 'pet', plugin: '@redspark/rsh-client-ui-pet' },
+  { id: 'permission-presets-ui', plugin: '@redspark/rsh-client-ui-permission-presets' },
+  { id: 'model-selection-ui', plugin: '@redspark/rsh-client-ui-model-selection' },
+  { id: 'settings-plugins-ui', plugin: '@redspark/rsh-client-ui-settings-plugin-inventory' },
+  { id: 'settings-models-ui', plugin: '@redspark/rsh-client-ui-settings-models' },
+  { id: 'file-upload', plugin: '@redspark/rsh-client-file-upload' },
 ] as const
 
 /** One shipped browser Client installation used by a native Web profile. */

@@ -4,38 +4,21 @@
  * word-boundary rules. Zero React / DOM / cordis.
  */
 import { activeAtToken } from '@redspark/rsh-file-reference/grammar'
-import type { TriggerChar } from '../types.ts'
+import { slashTokenAt } from '@redspark/rsh-client-ui-primitives'
 import type { DetectTrigger } from './contract.ts'
-
-const WORD_CHAR = /[\p{L}\p{N}_]/u
-const WHITESPACE = /\s/u
-
-/**
- * Word-boundary rule: a trigger char opens only at start-of-draft, after
- * whitespace (newlines included), or after punctuation. Two URL carve-outs
- * keep '/' dead inside URLs (both pinned by tests): '/' after a ':' that
- * itself follows a non-whitespace char (scheme separator, `https:/…`), and
- * '/' directly after another '/' (second slash of `//`).
- */
-function boundaryOk(draft: string, index: number, char: TriggerChar): boolean {
-  if (index === 0) return true
-  const prev = draft.charAt(index - 1)
-  if (WHITESPACE.test(prev)) return true
-  if (WORD_CHAR.test(prev)) return false
-  if (char === '/') {
-    if (prev === '/') return false
-    if (prev === ':' && index >= 2 && !WHITESPACE.test(draft.charAt(index - 2))) return false
-  }
-  return true
-}
 
 /**
  * Detect a trigger token at the caret. `@` first uses the shared grammar,
- * including an open quoted token that may span whitespace. Slash detection
- * scans left to the first whitespace; slashes failing the word boundary are
- * treated as ordinary token chars and the scan continues (URL slashes).
- * Guard tiers: plain = both chars live; claimed = '/' fully suppressed,
- * '@' live; frozen = none.
+ * including an open quoted token that may span whitespace.
+ *
+ * `/` delegates to the shared slash grammar in `ui-primitives`, which the
+ * Native composer palette reads too, so both surfaces apply one boundary rule.
+ * This module adds only what belongs to detection: the guard tier and the
+ * leading/inline position. A claimed tier suppresses `/` outright, which is
+ * why it does not need the slash scan at all.
+ *
+ * Guard tiers: plain = both chars live; claimed = `/` fully suppressed,
+ * `@` live; frozen = none.
  *
  * @param draft - Full draft text.
  * @param caret - Caret offset into `draft`.
@@ -54,23 +37,18 @@ export const detectTrigger: DetectTrigger = (draft, caret, guard) => {
       trigger: '@',
       query: at.query,
       quoted: at.quoted,
-      position: draft.search(/\S/) === start ? 'leading' : 'inline',
+      position: draft.search(/\S/u) === start ? 'leading' : 'inline',
       span: { start, end: caret, draftRev: 0 },
     }
   }
-  for (let i = caret - 1; i >= 0; i--) {
-    const ch = draft.charAt(i)
-    if (WHITESPACE.test(ch)) return null
-    if (ch !== '/') continue
-    if (guard.tier === 'claimed') continue
-    if (!boundaryOk(draft, i, ch)) continue
-    return {
-      trigger: ch,
-      query: draft.slice(i + 1, caret),
-      quoted: false,
-      position: draft.search(/\S/) === i ? 'leading' : 'inline',
-      span: { start: i, end: caret, draftRev: 0 },
-    }
+  if (guard.tier === 'claimed') return null
+  const slash = slashTokenAt(draft, caret)
+  if (slash === null) return null
+  return {
+    trigger: '/',
+    query: slash.query,
+    quoted: false,
+    position: draft.search(/\S/u) === slash.start ? 'leading' : 'inline',
+    span: { start: slash.start, end: slash.end, draftRev: 0 },
   }
-  return null
 }

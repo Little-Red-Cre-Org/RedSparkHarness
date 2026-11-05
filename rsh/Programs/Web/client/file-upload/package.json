@@ -34,6 +34,10 @@
       "types": "./lib/typert.remote-client.d.ts",
       "default": "./lib/typert.remote-client.js"
     },
+    "./native": {
+      "types": "./lib/types/native.d.ts",
+      "default": "./lib/native.js"
+    },
     "./src/*": "./src/*",
     "./package.json": "./package.json"
   },
@@ -44,6 +48,14 @@
       ],
       "platform": "web",
       "immediately": true
+    },
+    "native": {
+      "apiVersion": 1,
+      "entry": "./native",
+      "targets": ["client"],
+      "requires": [],
+      "optional": [],
+      "provides": ["clientFileUpload"]
     }
   },
   "scripts": {
@@ -54,6 +66,7 @@
   "files": [
     "lib/index.js",
     "lib/client.js",
+    "lib/native.js",
     "lib/types/**/*.js",
     "lib/types/**/*.d.ts",
     "lib/typert.host.js",
@@ -70,6 +83,9 @@
     "@redspark/cordis": "workspace:^",
     "@redspark/rsh-scope": "workspace:^"
   },
+  "peerDependenciesMeta": {
+    "@redspark/cordis": { "optional": true }
+  },
   "devDependencies": {
     "@redspark/cordis": "workspace:^",
     "@redspark/rsh-agent": "workspace:^",
@@ -79,6 +95,8 @@
     "@redspark/rsh-util-crypto": "workspace:^",
     "@redspark/rsh-api-remotes": "workspace:^",
     "@redspark/rsh-session": "workspace:^",
-    "@redspark/rsh-attachment": "workspace:^"
+    "@redspark/rsh-attachment": "workspace:^",
+    "@redspark/rsh-native-runtime": "workspace:^",
+    "@redspark/rsh-client-native-session": "workspace:^"
   }
 }

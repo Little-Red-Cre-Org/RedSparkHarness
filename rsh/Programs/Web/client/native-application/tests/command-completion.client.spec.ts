@@ -1,70 +1,19 @@
 /**
  * Pure slash-command completion decisions.
  *
- * These cover the four things that can silently break the palette without
- * breaking the build: when the menu is live, what it lists, where the
- * highlight lands, and which key the composer may steal.
+ * These cover what can silently break the palette without breaking the build:
+ * what it lists, where the highlight lands, and which key the composer may
+ * steal. Token recognition itself is not decided here — `slashTokenAt` belongs to
+ * `ui-primitives` and is covered by the shared-grammar spec that the Web
+ * trigger pipeline and this palette both answer to.
  */
 import { describe, expect, it } from 'vitest'
 import type { CommandChoice } from '../src/command-completion.ts'
 import {
-  commandKeyAction, commandLine, filterCommands, moveHighlight, slashTokenAt,
+  commandKeyAction, commandLine, filterCommands, moveHighlight,
 } from '../src/command-completion.ts'
 
 const choice = (name: string, description = `${name} does things`): CommandChoice => ({ name, description })
-
-describe('slashTokenAt', () => {
-  it('recognizes a bare slash at the start of the draft', () => {
-    expect(slashTokenAt('/', 1)).toEqual({ query: '', start: 0, end: 1 })
-  })
-
-  it('carries the text between the slash and the caret as the query', () => {
-    expect(slashTokenAt('/com', 4)).toEqual({ query: 'com', start: 0, end: 4 })
-  })
-
-  it('ignores a slash that does not start the draft', () => {
-    // A path or a date, not a command.
-    expect(slashTokenAt('see src/main', 12)).toBeNull()
-    expect(slashTokenAt('1/2 cup', 3)).toBeNull()
-  })
-
-  it('ignores a caret before the first character', () => {
-    expect(slashTokenAt('/', 0)).toBeNull()
-    expect(slashTokenAt('', 0)).toBeNull()
-  })
-
-  it('ignores a caret past the end of the draft', () => {
-    expect(slashTokenAt('/com', 99)).toBeNull()
-  })
-
-  it('ignores a slash token that a newline has ended', () => {
-    expect(slashTokenAt('/com\nsome body', 13)).toBeNull()
-  })
-
-  it('closes on a newline the way it closes on any other whitespace', () => {
-    // Newline carries no separate rule; it is whitespace, and a caret past it
-    // is past the name. This is the case a dedicated newline branch would have
-    // duplicated (and which mutation proved indistinguishable).
-    expect(slashTokenAt('/com\nabc', 8)).toBeNull()
-  })
-
-  it('keeps the name while the caret is still on the first line', () => {
-    // The rule must not close the menu for text that only looks multi-line
-    // ahead of the caret.
-    expect(slashTokenAt('/com\nabc', 4)).toEqual({ query: 'com', start: 0, end: 4 })
-  })
-
-  it('closes the menu once a space has ended the name', () => {
-    // `/compact ` — the caret is past the space, so this is arguments now.
-    expect(slashTokenAt('/compact ', 9)).toBeNull()
-  })
-
-  it('still recognizes the name at the moment the space is typed', () => {
-    // Caret sits ON the space: the name is complete but the args are empty,
-    // which is the instant a user presses space expecting the menu to settle.
-    expect(slashTokenAt('/compact ', 8)).toEqual({ query: 'compact', start: 0, end: 8 })
-  })
-})
 
 describe('filterCommands', () => {
   const catalog = [choice('compact'), choice('goal'), choice('model'), choice('context')]

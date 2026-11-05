@@ -1,5 +1,5 @@
 import { useEffect, useId, useMemo, useState, type ReactNode } from 'react'
-import type { PluginInventorySnapshot } from '@redspark/rsh-api-remotes/client'
+import type { PluginInventorySnapshot } from '@redspark/rsh-host-plugin-inventory/types'
 import {
   IconChevronDownOutline14,
   IconSearchOutline16,

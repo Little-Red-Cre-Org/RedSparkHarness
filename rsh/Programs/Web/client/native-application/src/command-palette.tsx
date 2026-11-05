@@ -20,11 +20,11 @@
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
-import { Menu } from '@redspark/rsh-client-ui-primitives'
+import { Menu, slashTokenAt } from '@redspark/rsh-client-ui-primitives'
 import css from './command-palette.module.css'
 import type { CommandChoice } from './command-completion.ts'
 import {
-  commandKeyAction, commandLine, filterCommands, moveHighlight, slashTokenAt,
+  commandKeyAction, commandLine, filterCommands, moveHighlight,
 } from './command-completion.ts'
 
 /** One row as the Host advertises it. */

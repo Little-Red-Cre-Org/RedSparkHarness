@@ -14,6 +14,10 @@
       "types": "./lib/types/client/index.d.ts",
       "default": "./lib/client.js"
     },
+    "./native": {
+      "types": "./lib/types/native.d.ts",
+      "default": "./lib/native.js"
+    },
     "./src/*": "./src/*",
     "./package.json": "./package.json"
   },
@@ -25,6 +29,21 @@
         "@redspark/rsh-client-ui-primitives"
       ],
       "platform": "web"
+    },
+    "native": {
+      "apiVersion": 1,
+      "entry": "./native",
+      "targets": [
+        "client"
+      ],
+      "requires": [
+        "clientSlots",
+        "clientLocale",
+        "clientNativeSchedule",
+        "clientNativeConversation"
+      ],
+      "optional": [],
+      "provides": []
     }
   },
   "scripts": {
@@ -44,26 +63,31 @@
     "@redspark/cordis": "workspace:^"
   },
   "devDependencies": {
+    "@redspark/cordis": "workspace:^",
     "@redspark/rsh-api-session-controller": "workspace:^",
     "@redspark/rsh-client-locale": "workspace:^",
+    "@redspark/rsh-client-native-session": "workspace:^",
+    "@redspark/rsh-client-store": "workspace:^",
     "@redspark/rsh-client-test-runtime": "workspace:^",
     "@redspark/rsh-client-ui-conversation": "workspace:^",
     "@redspark/rsh-client-ui-primitives": "workspace:^",
     "@redspark/rsh-client-ui-renderer": "workspace:^",
     "@redspark/rsh-client-ui-session": "workspace:^",
     "@redspark/rsh-client-ui-slots": "workspace:^",
+    "@redspark/rsh-native-runtime": "workspace:^",
     "@redspark/rsh-schedule": "workspace:^",
     "@redspark/rsh-session": "workspace:^",
     "@testing-library/react": "^16.1.0",
     "@types/react": "~18.3.1",
     "@types/react-dom": "~18.3.0",
-    "@redspark/cordis": "workspace:^",
     "react": "^18.2.0",
     "react-dom": "^18.2.0"
   },
   "files": [
     "lib/index.js",
     "lib/client.js",
+    "lib/native.js",
+    "lib/client/ScheduleCatalogAction.module.css",
     "lib/types/**/*.d.ts"
   ]
 }

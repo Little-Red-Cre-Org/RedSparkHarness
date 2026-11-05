@@ -34,6 +34,15 @@
     },
     {
       "path": "../ui-slots"
+    },
+    {
+      "path": "../native-session"
+    },
+    {
+      "path": "../store"
+    },
+    {
+      "path": "../../../../Core/runtime-diagnostics/native-runtime"
     }
   ]
 }

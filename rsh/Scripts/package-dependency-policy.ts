@@ -174,10 +174,14 @@ const CLIENT_RUNTIME_DEPENDENCIES = {
   '@redspark/rsh-client-ui-goal': ['@redspark/rsh-goal'],
   '@redspark/rsh-client-ui-trajectory': ['@tanstack/react-virtual', 'diff'],
   '@redspark/rsh-client-ui-sidebar': [
+    'clsx',
     '@redspark/rsh-client-store',
     '@redspark/rsh-client-ui-primitives',
     '@redspark/rsh-client-ui-slots',
   ],
+  '@redspark/rsh-client-ui-input-trigger': ['@redspark/rsh-file-reference'],
+  '@redspark/rsh-client-ui-settings': ['@redspark/schemastery'],
+  '@redspark/rsh-client-ui-settings-plugin-inventory': ['@redspark/rsh-brand'],
 } as const satisfies Readonly<Record<string, readonly string[]>>
 
 /** Legacy Host peers omitted by the separately published native entry. */

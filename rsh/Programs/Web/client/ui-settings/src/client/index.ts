@@ -10,6 +10,11 @@
  * the chrome — lives in ui-settings-general, because a shell dependency on
  * ui-sidebar would close a reference cycle through ui-layout and ui-theme.
  * Export discipline: rsh/Programs/Web/client/AGENTS.md.
+ *
+ * Every rule this plugin implements — the read fold, the revision-fenced write
+ * queue, the per-namespace derivation — lives in `settings-engine.ts`, which
+ * the Native entry shares. This module supplies Cordis identity and the
+ * `ctx.remote.settings` transport only.
  */
 import type { Context } from '@redspark/cordis'
 // Type-only: the ctx.remote merge, the fixed Host facts, and the carrier's
@@ -29,9 +34,9 @@ export type {
   SettingsPluginsTabOwnerProps, SettingsSectionOwnerProps, SettingsTriggerOwnerProps,
 } from './contract/slots.ts'
 export type { SettingsScopeController, SettingsScopeBinder } from './settings-scope.ts'
-export type { SettingsScope, SettingsScopeSnapshot, SettingsScopeSpec } from './settings-contract.ts'
+export type { SettingsPathOpView, SettingsScope, SettingsScopeSnapshot, SettingsScopeSpec } from './settings-contract.ts'
 export type { SettingsSchemaService } from './schema.ts'
-export type { SchemaNode } from './schema.ts'
+export type { SchemaNode, SettingsSchemaOperations } from './schema-operations.ts'
 export type {
   SettingsDescribeFace, SettingsDescribeView, SettingsMirrorSnapshot,
 } from './settings-mirror.ts'

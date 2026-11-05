@@ -1,6 +1,8 @@
 /** Command identity and localized input spelling over the effective Host catalog. */
-import type { CommandDescriptor } from '@redspark/rsh-commands/types'
-import type { TranslateNS } from '@redspark/rsh-client-locale/client'
+// Type-only, from the framework-neutral facts subpath: the Native entry
+// reaches this module too, and it may not import the Cordis-facing entry.
+import type { CommandDescriptor } from '@redspark/rsh-commands/facts'
+import type { TranslateNS } from '@redspark/rsh-client-ui-slots'
 import { en, zh } from './locales.ts'
 
 const BUILTINS = {

@@ -262,7 +262,7 @@ function cardSeatCalls(
 async function mountFace(scripted: ReturnType<typeof scriptedFace>) {
   const { face, update, mutate, set, unset } = scripted
   const ctx = ctxWith(face)
-  const mirror = new SettingsDescribeMirror(ctx)
+  const mirror = new SettingsDescribeMirror(ctx as never)
   const controller = new ModelsSettingsStore(ctx, settingsSchema, mirror)
   await controller.load()
   const renderSlot = stubRenderSlot()
@@ -474,7 +474,7 @@ describe('ModelsSection', () => {
     face.credentials.describe.mockImplementation((refs: string[]) => Promise.resolve(remoteOk(
       Object.fromEntries(refs.map(ref => [ref, { configured: false, writable: true }])),
     )))
-    const controller = new ModelsSettingsStore(ctxWith(face), settingsSchema, new SettingsDescribeMirror(ctxWith(face)))
+    const controller = new ModelsSettingsStore(ctxWith(face), settingsSchema, new SettingsDescribeMirror(ctxWith(face) as never))
     await controller.load()
     render(<ModelsSection
       controller={controller}
@@ -498,7 +498,7 @@ describe('ModelsSection', () => {
     face.credentials.describe.mockImplementation((refs: string[]) => Promise.resolve(remoteOk(
       Object.fromEntries(refs.map(ref => [ref, { configured: true, writable: true }])),
     )))
-    const controller = new ModelsSettingsStore(ctxWith(face), settingsSchema, new SettingsDescribeMirror(ctxWith(face)))
+    const controller = new ModelsSettingsStore(ctxWith(face), settingsSchema, new SettingsDescribeMirror(ctxWith(face) as never))
     await controller.load()
     cleanup()
     render(<ModelsSection
@@ -1225,7 +1225,7 @@ describe('ModelsSection', () => {
   it('renders the card without the stored-key hint when the credential probe is refused', async () => {
     const { face } = scriptedFace()
     face.credentials.describe = vi.fn(() => Promise.resolve(remoteFail('no credential provider')))
-    const controller = new ModelsSettingsStore(ctxWith(face), settingsSchema, new SettingsDescribeMirror(ctxWith(face)))
+    const controller = new ModelsSettingsStore(ctxWith(face), settingsSchema, new SettingsDescribeMirror(ctxWith(face) as never))
     await controller.load()
     render(<ModelsSection
       controller={controller}
@@ -1359,7 +1359,7 @@ describe('ModelsSection', () => {
     const face = scriptedFace()
     face.face.llm.listProviders = vi.fn(() => Promise.resolve(remoteFail('directory down', 'gateway/internal'))) as never
     const controller = new ModelsSettingsStore(
-      ctxWith(face.face), settingsSchema, new SettingsDescribeMirror(ctxWith(face.face)))
+      ctxWith(face.face), settingsSchema, new SettingsDescribeMirror(ctxWith(face.face) as never))
     await controller.load()
     render(<ModelsSection
       controller={controller}
@@ -1381,7 +1381,7 @@ describe('ModelsSection', () => {
       hasDocument: false,
       namespaces: wireNamespaces(),
     })))
-    const controller = new ModelsSettingsStore(ctxWith(face), settingsSchema, new SettingsDescribeMirror(ctxWith(face)))
+    const controller = new ModelsSettingsStore(ctxWith(face), settingsSchema, new SettingsDescribeMirror(ctxWith(face) as never))
     await controller.load()
     cleanup()
     render(<ModelsSection
@@ -1445,7 +1445,7 @@ describe('ModelsSection', () => {
 
   it('loads on first render of an idle controller', async () => {
     const { face } = scriptedFace()
-    const controller = new ModelsSettingsStore(ctxWith(face), settingsSchema, new SettingsDescribeMirror(ctxWith(face)))
+    const controller = new ModelsSettingsStore(ctxWith(face), settingsSchema, new SettingsDescribeMirror(ctxWith(face) as never))
     render(<ModelsSection
       controller={controller}
       useSnapshot={bindSnapshotSelector(controller.store)}

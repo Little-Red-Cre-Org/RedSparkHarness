@@ -23,7 +23,11 @@
       "default": "./lib/client.js"
     },
     "./src/*": "./src/*",
-    "./package.json": "./package.json"
+    "./package.json": "./package.json",
+    "./native": {
+      "types": "./lib/types/native.d.ts",
+      "default": "./lib/native.js"
+    }
   },
   "dsh": {
     "client": {
@@ -31,6 +35,20 @@
         "@redspark/rsh-api-remotes"
       ],
       "platform": "web"
+    },
+    "native": {
+      "apiVersion": 1,
+      "entry": "./native",
+      "targets": [
+        "client"
+      ],
+      "requires": [
+        "clientNativeSession"
+      ],
+      "optional": [],
+      "provides": [
+        "clientNativeSettings"
+      ]
     }
   },
   "scripts": {
@@ -41,22 +59,32 @@
   "peerDependencies": {
     "@redspark/cordis": "workspace:^"
   },
+  "dependencies": {
+    "@redspark/schemastery": "workspace:^"
+  },
   "devDependencies": {
     "@redspark/cordis": "workspace:^",
     "@redspark/rsh-api-remotes": "workspace:^",
+    "@redspark/rsh-client-native-session": "workspace:^",
     "@redspark/rsh-client-store": "workspace:^",
     "@redspark/rsh-client-test-runtime": "workspace:^",
     "@redspark/rsh-client-ui-slots": "workspace:^",
     "@redspark/rsh-compat-settings-definition": "workspace:^",
+    "@redspark/rsh-native-runtime": "workspace:^",
     "@redspark/rsh-settings": "workspace:^",
+    "@redspark/rsh-util-values": "workspace:^",
     "@types/react": "~18.3.1",
-    "react": "^18.2.0",
-    "@redspark/schemastery": "workspace:^",
-    "@redspark/rsh-util-values": "workspace:^"
+    "react": "^18.2.0"
   },
   "files": [
     "lib/index.js",
     "lib/client.js",
+    "lib/native.js",
     "lib/types/**/*.d.ts"
-  ]
+  ],
+  "peerDependenciesMeta": {
+    "@redspark/cordis": {
+      "optional": true
+    }
+  }
 }

@@ -134,6 +134,9 @@ export function collectNativeDependencyViolations(root: string): string[] {
   const names = new Set<string>()
   for (const file of globSync('rsh/**/package.json', { cwd: root })) {
     const dir = file.replaceAll('\\', '/').replace(/\/package\.json$/, '')
+    // A manifest under tests is a fixture, not a product package. Classifying
+    // it would force every native-target fixture onto the product policy lists.
+    if (dir.split('/').includes('tests')) continue
     const manifest = JSON.parse(readFileSync(resolve(root, file), 'utf8')) as Record<string, unknown>
     const dsh = manifest.dsh
     if (dsh === null || typeof dsh !== 'object' || Array.isArray(dsh) || !Object.hasOwn(dsh, 'native')) continue

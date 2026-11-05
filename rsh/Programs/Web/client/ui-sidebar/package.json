@@ -76,6 +76,7 @@
     }
   },
   "dependencies": {
+    "clsx": "^2.0.0",
     "@redspark/rsh-client-store": "workspace:^",
     "@redspark/rsh-client-ui-layout": "workspace:^",
     "@redspark/rsh-client-ui-primitives": "workspace:^",
@@ -94,8 +95,7 @@
     "@redspark/rsh-client-native-session": "workspace:^",
     "@types/react": "~18.3.1",
     "@redspark/cordis": "workspace:^",
-    "react": "^18.2.0",
-    "clsx": "^2.0.0"
+    "react": "^18.2.0"
   },
   "files": [
     "lib/index.js",

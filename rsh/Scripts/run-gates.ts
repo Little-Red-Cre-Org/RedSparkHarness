@@ -436,10 +436,21 @@ function ciStaticGates(options: { ownsBuild: boolean }): Gate[] {
     // after the build that produces it. A run without its own build has no such
     // output, so the row joins the graph only where the build belongs to it.
     ...options.ownsBuild
-      ? [pnpmScript('native-build-output', 'verify-native-build-output', {
-        label: 'native build output',
-        needs: ['build'],
-      })]
+      ? [
+        pnpmScript('native-build-output', 'verify-native-build-output', {
+          label: 'native build output',
+          needs: ['build'],
+        }),
+        // The payload plane of the same question: a packed tarball must resolve
+        // every specifier in it. It belongs beside the sibling because it reads
+        // the same built lib/ output, and it stays out of the build-free static
+        // lane both because that lane has no lib/ and because packing 176
+        // packages costs about a minute of child processes.
+        pnpmScript('publish-payload', 'verify-publish-payload', {
+          label: 'publish payload',
+          needs: ['build'],
+        }),
+      ]
       : [],
     ...docSyncLeafGates({
       includeDocTypecheck: options.ownsBuild,

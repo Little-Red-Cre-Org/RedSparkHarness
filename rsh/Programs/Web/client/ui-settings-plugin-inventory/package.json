@@ -22,6 +22,10 @@
       "types": "./lib/types/client/index.d.ts",
       "default": "./lib/client.js"
     },
+    "./native": {
+      "types": "./lib/types/native.d.ts",
+      "default": "./lib/native.js"
+    },
     "./src/*": "./src/*",
     "./package.json": "./package.json"
   },
@@ -34,6 +38,20 @@
         "@redspark/rsh-client-ui-agent-preset"
       ],
       "platform": "web"
+    },
+    "native": {
+      "apiVersion": 1,
+      "entry": "./native",
+      "targets": [
+        "client"
+      ],
+      "requires": [
+        "clientSlots",
+        "clientLocale",
+        "clientNativeSession"
+      ],
+      "optional": [],
+      "provides": []
     }
   },
   "scripts": {
@@ -44,25 +62,38 @@
   "peerDependencies": {
     "@redspark/cordis": "workspace:^"
   },
+  "dependencies": {
+    "@redspark/rsh-brand": "workspace:^"
+  },
   "devDependencies": {
+    "@redspark/cordis": "workspace:^",
+    "@redspark/rsh-agent-presets": "workspace:^",
     "@redspark/rsh-api-remotes": "workspace:^",
     "@redspark/rsh-client-locale": "workspace:^",
+    "@redspark/rsh-client-native-session": "workspace:^",
     "@redspark/rsh-client-test-runtime": "workspace:^",
     "@redspark/rsh-client-ui-agent-preset": "workspace:^",
     "@redspark/rsh-client-ui-primitives": "workspace:^",
+    "@redspark/rsh-client-ui-renderer": "workspace:^",
     "@redspark/rsh-client-ui-settings": "workspace:^",
     "@redspark/rsh-client-ui-slots": "workspace:^",
+    "@redspark/rsh-host-plugin-inventory": "workspace:^",
+    "@redspark/rsh-native-runtime": "workspace:^",
     "@testing-library/react": "^16.1.0",
     "@types/react": "~18.3.1",
-    "@redspark/cordis": "workspace:^",
     "react": "^18.2.0",
-    "react-dom": "^18.2.0",
-    "@redspark/rsh-client-ui-renderer": "workspace:^",
-    "@redspark/rsh-agent-presets": "workspace:^"
+    "react-dom": "^18.2.0"
   },
   "files": [
     "lib/index.js",
     "lib/client.js",
+    "lib/native.js",
+    "lib/**/*.css",
     "lib/types/**/*.d.ts"
-  ]
+  ],
+  "peerDependenciesMeta": {
+    "@redspark/cordis": {
+      "optional": true
+    }
+  }
 }

@@ -61,6 +61,10 @@ kind: "package-reference"
 
 `ctx.settingsSchema` 为设置插件执行同步 schema 重建、校验与不可变路径编辑。若 spec 未提供 `decode`，则分区不是普通对象、未通过其重建后的 schema 校验、或携带本客户端无法重建的 schema 信封时，一律不发布任何值。
 
+### Native 半边
+
+`settings-engine.ts` 与 `schema-operations.ts` 承载文档折叠、按 revision 围栏的写入队列、按命名空间派生以及 schema 操作，且不引用 Cordis。Cordis 入口把它们绑到 `ctx.remote.settings`，并发布 `ctx.settingsScope`/`ctx.settingsSchema`；`./native` 入口把同一引擎绑到 `clientNativeSession.settingsDescribe`/`settingsMutate`，并发布 `clientNativeSettings`，其 `bind` 同时返回 scope 与释放它的 disposer。Native 侧的失效来源是 Host 的 `settingsEvents` 流，它承载了 Cordis 半边分别以 `settings/document-updated` 与 `connection/reset` 收到的文档提交与重连事实。Native scope 始终是持久的，因为其 `/api` 载体就是 Host 自身的。
+
 </details>
 
 -----

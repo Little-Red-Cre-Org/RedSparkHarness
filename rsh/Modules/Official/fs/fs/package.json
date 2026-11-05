@@ -50,8 +50,8 @@
   "files": [
     "lib/index.js",
     "lib/invariant.js",
-    "lib/runtime-definition.js",
     "lib/native.js",
+    "lib/runtime-definition.js",
     "lib/runtime.js",
     "lib/operations.js",
     "lib/types.js",

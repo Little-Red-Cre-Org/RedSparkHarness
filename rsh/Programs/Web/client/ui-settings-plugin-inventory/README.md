@@ -62,6 +62,10 @@ Row keys are scope-qualified (`global:`, `preset:<id>:<index>`), so one module a
 -----
 
 <a id="further-exploration"></a>
+## Native Client
+
+The Native entry publishes the same catalog over the running profile's installation inventory. A Native host has no Loader, so `clientNativeSession.pluginInventoryList` reports installation states instead of Loader entries; `installationPhase` maps that closed state union onto the catalog's root-fiber phase vocabulary and `toSnapshot` projects the rows into the global plane. A Native profile installs the rows its composition names, so every reported installation is enabled and only a `disposed` one is not. This transport carries no Agent-preset roster, so the catalog renders the global plane alone. The entry contributes once a Native settings shell declares `settings.plugins.tab`; until then it registers nothing.
+
 ## Further Exploration
 
 These pages cover the settings section, the remote call, and the Host-side projection.

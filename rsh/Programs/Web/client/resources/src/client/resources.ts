@@ -8,7 +8,6 @@
  * across React's render-then-subscribe window and a StrictMode remount, where a
  * recreated record would make every render resubscribe and restart the stream.
  */
-import type { Context } from '@redspark/cordis'
 import type { RemoteResult } from '@redspark/rsh-typert-protocol'
 import { createSnapshotStore, type ObservableSnapshot, type SnapshotStore } from '@redspark/rsh-client-store'
 import type {
@@ -71,13 +70,31 @@ function idle(status: 'none' | 'loading'): ResourceSnapshot<unknown> {
   return { status, value: undefined, failure: undefined }
 }
 
+/**
+ * The one host capability the registry needs: own a provider registration for
+ * the registering plugin's lifetime.
+ *
+ * Both client builds supply it from their own Context — the browser half from
+ * `ctx.effect`, the Native half from `NativeContext.effect` — so the registry
+ * itself carries no framework dependency.
+ */
+export interface ResourceEffectHost {
+  /**
+   * Run `setup` now and, when it returns a disposer, own it for the caller's lifetime.
+   * @param setup - registers the provider and returns its release.
+   * @param label - diagnostic name for the effect.
+   * @returns release for the owned registration, idempotent.
+   */
+  effect(setup: () => () => void, label: string): () => void
+}
+
 /** The `ctx.resources` implementation. */
 export class ResourceRegistry implements Resources {
   private readonly providers = new Map<string, RuntimeProvider>()
   private readonly records = new Map<string, ResourceRecord>()
 
-  /** @param ctx - Context whose effects own the registered providers. */
-  constructor(private readonly ctx: Context) {}
+  /** @param host - Context whose effects own the registered providers. */
+  constructor(private readonly host: ResourceEffectHost) {}
 
   register<P extends ResourceProtocol>(provider: ResourceProvider<P>): () => void {
     const runtime: RuntimeProvider = provider
@@ -85,7 +102,7 @@ export class ResourceRegistry implements Resources {
     if (this.providers.has(protocol)) {
       throw new Error(`resources: protocol "${protocol}" already has a provider`)
     }
-    const dispose = this.ctx.effect(() => {
+    const dispose = this.host.effect(() => {
       this.providers.set(protocol, runtime)
       for (const record of this.recordsOf(protocol)) this.attach(record)
       return () => {
@@ -93,7 +110,7 @@ export class ResourceRegistry implements Resources {
         for (const record of this.recordsOf(protocol)) this.detach(record)
       }
     }, `resources.register(${JSON.stringify(protocol)})`)
-    return () => { void dispose() }
+    return dispose
   }
 
   pin(address: string, signal: AbortSignal): void {

@@ -49,6 +49,10 @@ Only the native trigger button enters the tab order. Enter and Space use normal 
 
 The browser plugin contributes `schedule-catalog` to `conversation.session.header.actions` at order 10, after static Agent and Subagent context and before background Jobs. It reads `openState` through the standard Session hook and the complete value through `useProjection('schedule')`; popover visibility is its only local interaction state. The component portals the catalog to `document.body` and gives its trigger and panel refs to `useAnchoredPosition`, which publishes fixed coordinates after measuring the rendered panel, keeps a 5px gap below the trigger, clamps to a 16px viewport margin, and remeasures on resize, captured scroll, and panel resize. The catalog ref also makes pointer presses inside the portal part of the existing dismissal boundary. Browser formatting uses the viewing locale, time zone, and clock, while durable Schedule records remain unchanged.
 
+### Native half
+
+The Native entry (`exports["./native"]`) has no projection registry, so it follows `clientNativeSchedule`'s baseline/upsert/remove frames itself and folds them into the same per-Session grouping (`applyScheduleFrame`). It contributes `schedule-catalog` to `native.conversation.actions` at order 15 — after the plan chip, before the background-job list. Row text is where the two record sets differ: a Native row carries the Host's `schedule` expression rather than a `kind`/`everySeconds` pair, so that string is the frequency line, and a row without `nextRunAt` (paused or failed) sorts last and shows only that expression. Ordering, the absolute-time formatter, and the relative-time formatter are the browser half's own.
+
 ### Source map
 
 | File | Role |

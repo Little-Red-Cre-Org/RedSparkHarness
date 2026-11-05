@@ -7,13 +7,12 @@
  * re-renders from the next describe, pushed or refetched.
  */
 
-import type { Context as ClientContext } from '@redspark/cordis'
 import type {
-  CredentialInfo, LlmConfigurableProvider, LlmProviderInfo, SettingsNamespaceView,
-} from '@redspark/rsh-api-remotes/client'
+  CredentialInfo, LlmConfigurableProvider, LlmProviderInfo, ModelsDescribeFace,
+  ModelsRemoteHost, SettingsNamespaceView,
+} from './ports.ts'
 import type { SnapshotStore } from '@redspark/rsh-client-store'
 import { createSnapshotStore } from '@redspark/rsh-client-store'
-import type { SettingsDescribeFace } from '@redspark/rsh-client-ui-settings/client'
 import { deriveModelCredentialRef as deriveKeyRef, modelProtocolChoices as protocolChoices } from '@redspark/rsh-client-ui-primitives'
 import type { SettingsSchemaOperations } from './schema-operations.ts'
 
@@ -135,15 +134,15 @@ export class ModelsSettingsStore {
   private generation = 0
 
   /**
-   * @param ctx - the page plugin's context, whose `remote.llm` and
-   * `remote.credentials` namespaces carry the directory and credential reads.
+   * @param ctx - the page plugin's Remote host, whose `llm` and
+   * `credentials` namespaces carry the directory and credential reads.
    * @param schema - settings-owned schema and immutable path operations.
    * @param describeFace - the shared mirror's describe face (namespace views and writability).
    */
   constructor(
-    private readonly ctx: ClientContext,
+    private readonly ctx: ModelsRemoteHost,
     private readonly schema: SettingsSchemaOperations,
-    private readonly describeFace: SettingsDescribeFace,
+    private readonly describeFace: ModelsDescribeFace,
   ) {}
 
   /**

@@ -189,6 +189,11 @@ it('defines a native-web Host composition and Client profile without Cordis rows
       'application', 'renderer', 'connection', 'session',
       'locale', 'theme', 'session-presentation', 'layout', 'sidebar', 'sidebar-right',
       'brand-official', 'input-trigger', 'jobs', 'message-feedback',
+      'settings', 'commands',
+      'plan-mode', 'resources', 'schedule-catalog',
+      'pet', 'permission-presets-ui', 'model-selection-ui',
+      'settings-plugins-ui', 'settings-models-ui',
+      'file-upload',
     ])
     const cli = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8')) as { dependencies: Record<string, string> }
     for (const row of client.installations) expect(cli.dependencies).toHaveProperty([row.plugin])

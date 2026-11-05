@@ -19,7 +19,7 @@
     "./src/*": "./src/*",
     "./package.json": "./package.json"
   },
-  "files": ["lib/index.js", "lib/client.js", "lib/host.js", "lib/native.js", "lib/shared-*.js", "lib/types/**/*.d.ts"],
+  "files": ["lib/index.js", "lib/client.js", "lib/native.js", "lib/host.js", "lib/shared-*.js", "lib/types/**/*.d.ts"],
   "license": "MIT",
   "peerDependencies": { "@redspark/rsh-native-runtime": "workspace:^" },
   "peerDependenciesMeta": { "@redspark/rsh-native-runtime": { "optional": true } },

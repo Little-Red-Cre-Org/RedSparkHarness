@@ -1,19 +1,36 @@
 /** Composer menu grouping, localized labels, descriptions, and icons. */
 import type { ComponentType } from 'react'
-import type { InputTriggerCandidate } from '@redspark/rsh-client-ui-input-trigger/client'
 import {
   IconCompactOutline16, IconDownloadOutline16, IconGoalOutline16, IconPlanOutline14, IconSendOutline16,
   IconShieldOutline16,
 } from '@redspark/rsh-client-ui-primitives'
 import type { IconProps } from '@redspark/rsh-client-ui-primitives'
-import type { TranslateNS } from '@redspark/rsh-client-locale/client'
-import type { CommandDescriptor } from '@redspark/rsh-commands/types'
+import type { TranslateNS } from '@redspark/rsh-client-ui-slots'
+import type { CommandDescriptor } from '@redspark/rsh-commands/facts'
 import type { CommandKey } from './locales.ts'
 import { builtinCommandName } from './resolution.ts'
 import type { BuiltinCommandName } from './resolution.ts'
 
 /** The menu's two sections. */
 export type MenuSection = 'add' | 'commands'
+
+/** One menu row as a trigger source publishes it. */
+export interface MenuRow {
+  /** Command name without the leading slash. */
+  readonly name: string
+  /** Localized title; the name when the row keeps its catalog text. */
+  readonly label?: string
+  readonly description?: string
+  /** Free-form input hint advertised by a capable Host command. */
+  readonly hint?: string
+  /** Visual heading shared by adjacent rows. */
+  readonly section?: string
+}
+
+/** A menu row that may carry a glyph component from the shared icon set. */
+export interface MenuRowWithIcon extends MenuRow {
+  readonly icon?: ComponentType<IconProps>
+}
 
 /** Row names per section, highest usage first; rows outside both lists close the Commands section in catalog order. */
 const SECTION_ROWS: Readonly<Record<MenuSection, readonly string[]>> = {
@@ -57,7 +74,7 @@ const HOST_FACES: ReadonlyMap<BuiltinCommandName, HostFace> = new Map([
 export function builtinRowFace(
   descriptor: CommandDescriptor,
   t: TranslateNS<'command'>,
-): Pick<InputTriggerCandidate, 'label' | 'description' | 'icon'> | undefined {
+): Pick<MenuRowWithIcon, 'label' | 'description' | 'icon'> | undefined {
   const name = builtinCommandName(descriptor)
   const face = name === undefined ? undefined : HOST_FACES.get(name)
   return face === undefined ? undefined : { label: t(face.label), description: t(face.description), icon: face.icon }
@@ -71,10 +88,10 @@ export function builtinRowFace(
  * @param t - the `command` namespace translator.
  * @returns the sectioned rows.
  */
-export function sectionRows(rows: readonly InputTriggerCandidate[], t: TranslateNS<'command'>): readonly InputTriggerCandidate[] {
+export function sectionRows(rows: readonly MenuRow[], t: TranslateNS<'command'>): readonly MenuRow[] {
   const listed = new Set([...SECTION_ROWS.add, ...SECTION_ROWS.commands])
   const byName = new Map(rows.map(row => [row.name, row]))
-  const pick = (names: readonly string[]): InputTriggerCandidate[] =>
+  const pick = (names: readonly string[]): MenuRow[] =>
     names.flatMap((name) => {
       const row = byName.get(name)
       return row === undefined ? [] : [row]

@@ -27,8 +27,8 @@
   },
   "files": [
     "lib/index.js",
-    "cordis.patch.yml",
     "lib/native.js",
+    "cordis.patch.yml",
     "lib/shared-*.js",
     "lib/types/**/*.d.ts"
   ],
