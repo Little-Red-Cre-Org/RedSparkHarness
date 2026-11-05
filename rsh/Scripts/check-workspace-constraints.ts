@@ -308,6 +308,9 @@ const packageFileExtras: Readonly<Record<string, readonly string[]>> = {
     'lib/shared-*.js', 'lib/workspaces-*.js',
   ],
   '@redspark/rsh-host-directory-picker-native': ['lib/native-picker.js', 'lib/native-picker-*.js'],
+  // The Cordis row and the Native row are separate entries over one shared route
+  // module, so tsdown publishes the chunk they share beside both bundles.
+  '@redspark/rsh-host-open-in-app': ['lib/shared-*.js'],
   '@redspark/rsh-client-native-application': ['lib/controller.js', 'lib/controller-*.js', 'lib/native-*.js', 'lib/*.css'],
   '@redspark/rsh-native-acp': ['lib/shared-*.js'],
   // Workflow's native Definition, typed source leaves, and worker/Consumer

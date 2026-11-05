@@ -723,6 +723,7 @@
       "@redspark/rsh-goal/native": ["./rsh/Engine/goal/goal/src/native.ts"],
       "@redspark/rsh-host-directory-picker-native/native-picker": ["./rsh/Programs/Web/host/directory-picker-native/src/native-picker.ts"],
       "@redspark/rsh-host-directory-picker/types": ["./rsh/Programs/Web/host/directory-picker/src/types.ts"],
+      "@redspark/rsh-host-open-in-app/native": ["./rsh/Programs/Web/host/open-in-app/src/native.ts"],
       "@redspark/rsh-http-routes/native": ["./rsh/Core/util/http-routes/src/native.ts"],
       "@redspark/rsh-ide-code-oss/native": ["./rsh/Modules/Official/ide/ide-code-oss/src/native.ts"],
       "@redspark/rsh-llm-retry/native": ["./rsh/Engine/llm/llm-retry/src/native.ts"],

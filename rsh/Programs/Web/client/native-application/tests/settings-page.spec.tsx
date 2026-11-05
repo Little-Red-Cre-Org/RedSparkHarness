@@ -57,9 +57,11 @@ function renderSettingsPage(props: {
   setThemePreference?: NativeThemeService['setPreference']
   setFontSize?: NativeThemeService['setFontSize']
   onDocumentAvailabilityChange?: (available: boolean) => void
+  tabs?: readonly { readonly id: string; readonly order: number; readonly label: string | undefined }[]
 }) {
   return render(<SettingsPage {...props} actions={{ ...emptyModelActions, ...props.actions }}
     section={props.section ?? 'general'} useLocale={props.useLocale ?? useLocale}
+    tabs={props.tabs ?? []}
     useTheme={props.useTheme ?? useTheme} setLocale={props.setLocale ?? (() => {})}
     setThemePreference={props.setThemePreference ?? (() => {})} setFontSize={props.setFontSize ?? (() => {})} />)
 }
@@ -104,10 +106,13 @@ it('shows the four native Plugins configuration cards', async () => {
   })
   const actions = pageActions()
   actions.settingsDescribe = vi.fn(async () => settingsDescription([webSearch]))
-  renderSettingsPage({ actions, t: key => en[key], section: 'plugins' })
+  renderSettingsPage({
+    actions, t: key => en[key], section: 'plugins',
+    tabs: [{ id: 'all', order: 10, label: 'Plugin list' }],
+  })
 
   expect(await screen.findByRole('tab', { name: en.settingsPluginConfigTab })).toBeTruthy()
-  expect(screen.getByRole('tab', { name: en.settingsPluginInventoryTab })).toBeTruthy()
+  expect(screen.getByRole('tab', { name: 'Plugin list' })).toBeTruthy()
   expect(screen.getByRole('button', { name: 'Show settings: Web search' })).toBeTruthy()
   expect(await screen.findAllByText(en.settingsPluginHostGap)).toHaveLength(3)
   for (const label of ['Shell', 'Agent loop', 'Subagent']) expect(screen.getByText(label)).toBeTruthy()
@@ -207,9 +212,12 @@ it('keeps a staged plugin write fenced to the descriptor revision where editing 
 
 it('supports arrow, Home, and End keyboard navigation across plugin tabs', async () => {
   const actions = pageActions()
-  renderSettingsPage({ actions, t: key => en[key], section: 'plugins' })
+  renderSettingsPage({
+    actions, t: key => en[key], section: 'plugins',
+    tabs: [{ id: 'all', order: 10, label: 'Plugin list' }],
+  })
   const config = await screen.findByRole('tab', { name: en.settingsPluginConfigTab })
-  const inventory = screen.getByRole('tab', { name: en.settingsPluginInventoryTab })
+  const inventory = screen.getByRole('tab', { name: 'Plugin list' })
 
   fireEvent.keyDown(config, { key: 'ArrowRight' })
   expect(document.activeElement).toBe(inventory)

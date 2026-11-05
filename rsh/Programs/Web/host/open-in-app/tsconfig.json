@@ -31,6 +31,12 @@
     },
     {
       "path": "../../../../Core/util/launch-environment"
+    },
+    {
+      "path": "../../client/connection/tsconfig.host.json"
+    },
+    {
+      "path": "../../../../Core/runtime-diagnostics/native-runtime"
     }
   ]
 }

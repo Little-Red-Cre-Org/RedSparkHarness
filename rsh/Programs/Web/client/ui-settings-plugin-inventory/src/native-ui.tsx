@@ -139,6 +139,9 @@ export const plugin: NativePlugin = {
       name: 'settings.plugins.tab',
       id: 'all',
       order: 10,
+      // The settings shell renders label and order from the ledger, so the tab
+      // names itself in its own dictionary.
+      label: () => locale.bind(NS)('tab'),
       locale: NS,
       inject: (): PluginInventorySettingsTabInjected => ({ list: ports.list, presetName }),
     }, ({ list, presetName: name, t }: PluginInventorySettingsTabInjected & {

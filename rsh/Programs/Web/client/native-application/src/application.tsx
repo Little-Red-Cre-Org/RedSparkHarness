@@ -8,6 +8,7 @@ import {
 } from '@redspark/rsh-client-ui-primitives'
 import type { DirectoryBrowserListing, MarkdownLabels } from '@redspark/rsh-client-ui-primitives'
 import type { NativePlugin } from '@redspark/rsh-native-runtime'
+import { resolveSlotLabel } from '@redspark/rsh-client-ui-slots'
 import type { SnapshotSelectorHook, TranslateNS } from '@redspark/rsh-client-ui-slots'
 import type {} from '@redspark/rsh-client-ui-renderer/native'
 import type {} from '@redspark/rsh-client-native-session/native'
@@ -632,6 +633,14 @@ export const plugin: NativePlugin = {
         },
         inject: () => ({
           hooks: { locale: clientLocale, theme: clientTheme },
+          // The settings pages and tabs are ledger facts: the shell projects the
+          // registered entries instead of assuming which features are installed.
+          ledger: {
+            sections: () => slots.entries('settings.section').flatMap(entry => entry.options.id === undefined
+              ? [] : [{ id: entry.options.id, order: entry.options.order ?? 0, label: resolveSlotLabel(entry.options.label) }]),
+            tabs: () => slots.entries('settings.plugins.tab').flatMap(entry => entry.options.id === undefined
+              ? [] : [{ id: entry.options.id, order: entry.options.order ?? 0, label: resolveSlotLabel(entry.options.label) }]),
+          },
           settingsActions,
           refreshModelControls,
           setLocale: clientLocale.setLocale.bind(clientLocale),

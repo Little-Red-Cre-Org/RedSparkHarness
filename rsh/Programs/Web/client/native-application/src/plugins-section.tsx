@@ -7,7 +7,7 @@ import css from './plugins-section.module.css'
 
 type Translate = (key: ConversationLocaleKey) => string
 type PluginActions = Pick<NativeSessionClient,
-  'settingsDescribe' | 'settingsMutate' | 'credentialsDescribe' | 'credentialsSet' | 'settingsEvents' | 'modelCatalog' | 'pluginInventoryList'>
+  'settingsDescribe' | 'settingsMutate' | 'credentialsDescribe' | 'credentialsSet' | 'settingsEvents' | 'modelCatalog'>
 type PluginNamespace = 'shell' | 'agent-loop' | 'subagent-model-selection' | 'web-search-deepseek'
 type ModelRoute = { provider: string; model: string }
 type PluginDraft = {
@@ -386,13 +386,15 @@ function PluginCard({
  * @param props - Native Host actions and locale copy.
  * @returns the Plugins Settings section.
  */
-export function PluginsSection({ actions, t, renderSlot }: {
+export function PluginsSection({ actions, t, tabs = [], renderSlot }: {
   actions: PluginActions
   t: Translate
+  /** Registered Plugins tabs, in ledger order; absent means none are installed. */
+  tabs?: readonly { readonly id: string; readonly order: number; readonly label: string | undefined }[] | undefined
   /** Plugins tab contributions declared by the Native settings host. */
-  renderSlot?: ((key: 'settings.plugins.tab', owner: { children?: never }) => ReactNode) | undefined
+  renderSlot?: ((key: 'settings.plugins.tab', owner: { children?: never }, opts?: { only?: string }) => ReactNode) | undefined
 }) {
-  const [tab, setTab] = useState<'config' | 'inventory'>('config')
+  const [tab, setTab] = useState<string>('config')
   const [descriptors, setDescriptors] = useState<readonly NativeSettingsDescriptor[]>([])
   const descriptorsRef = useRef<readonly NativeSettingsDescriptor[]>([])
   const [announcedRevisions, setAnnouncedRevisions] = useState<Readonly<Record<string, number>>>({})
@@ -668,19 +670,21 @@ export function PluginsSection({ actions, t, renderSlot }: {
   }
   const tTabs = t('settingsPluginTabs')
   const tabRefs = useRef<Array<HTMLButtonElement | null>>([])
+  /** Tab keys in render order: the built-in configuration tab, then every registered one. */
+  const tabKeys = ['config', ...tabs.map(entry => entry.id)]
   const moveTab = (event: KeyboardEvent<HTMLButtonElement>, index: number): void => {
     let nextIndex: number
     switch (event.key) {
-      case 'ArrowRight': nextIndex = (index + 1) % 2; break
-      case 'ArrowLeft': nextIndex = (index - 1 + 2) % 2; break
+      case 'ArrowRight': nextIndex = (index + 1) % tabKeys.length; break
+      case 'ArrowLeft': nextIndex = (index - 1 + tabKeys.length) % tabKeys.length; break
       case 'Home': nextIndex = 0; break
-      case 'End': nextIndex = 1; break
+      case 'End': nextIndex = tabKeys.length - 1; break
       default: return
     }
     event.preventDefault()
-    const nextTab = tabRefs.current[nextIndex] as HTMLButtonElement
-    setTab(nextIndex === 0 ? 'config' : 'inventory')
-    nextTab.focus()
+    const next = tabKeys[nextIndex] as string
+    setTab(next)
+    tabRefs.current[nextIndex]?.focus()
   }
 
   return <section className={css.section}>
@@ -702,10 +706,14 @@ export function PluginsSection({ actions, t, renderSlot }: {
         id="plugins-config-tab" data-active={tab === 'config' ? 'true' : undefined} className={css.tab}
         ref={(element) => { tabRefs.current[0] = element }} tabIndex={tab === 'config' ? 0 : -1}
         onClick={() => { setTab('config') }} onKeyDown={(event) => { moveTab(event, 0) }}>{t('settingsPluginConfigTab')}</button>
-      <button type="button" role="tab" aria-selected={tab === 'inventory'} aria-controls="plugins-inventory-panel"
-        id="plugins-inventory-tab" data-active={tab === 'inventory' ? 'true' : undefined} className={css.tab}
-        ref={(element) => { tabRefs.current[1] = element }} tabIndex={tab === 'inventory' ? 0 : -1}
-        onClick={() => { setTab('inventory') }} onKeyDown={(event) => { moveTab(event, 1) }}>{t('settingsPluginInventoryTab')}</button>
+      {tabs.map((entry, index) => (
+        <button key={entry.id} type="button" role="tab" aria-selected={tab === entry.id}
+          aria-controls={`plugins-${entry.id}-panel`} id={`plugins-${entry.id}-tab`}
+          data-active={tab === entry.id ? 'true' : undefined} className={css.tab}
+          ref={(element) => { tabRefs.current[index + 1] = element }} tabIndex={tab === entry.id ? 0 : -1}
+          onClick={() => { setTab(entry.id) }} onKeyDown={(event) => { moveTab(event, index + 1) }}
+        >{entry.label ?? entry.id}</button>
+      ))}
     </div>
     <div id="plugins-config-panel" role="tabpanel" aria-labelledby="plugins-config-tab" hidden={tab !== 'config'} className={css.panel}>
       <ul className={css.cards}>
@@ -730,8 +738,11 @@ export function PluginsSection({ actions, t, renderSlot }: {
         })}
       </ul>
     </div>
-    <div id="plugins-inventory-panel" role="tabpanel" aria-labelledby="plugins-inventory-tab" hidden={tab !== 'inventory'} className={css.panel}>
-      {renderSlot?.('settings.plugins.tab', {})}
-    </div>
+    {tabs.map(entry => (
+      <div key={entry.id} id={`plugins-${entry.id}-panel`} role="tabpanel" aria-labelledby={`plugins-${entry.id}-tab`}
+        hidden={tab !== entry.id} className={css.panel}>
+        {renderSlot?.('settings.plugins.tab', {}, { only: entry.id })}
+      </div>
+    ))}
   </section>
 }

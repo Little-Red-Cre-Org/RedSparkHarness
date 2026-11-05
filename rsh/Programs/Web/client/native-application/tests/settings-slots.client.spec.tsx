@@ -81,11 +81,13 @@ const probes: NativePlugin = {
       name: 'settings.plugins.tab',
       id: 'probe',
       order: 0,
+      label: () => 'Plugin list',
     }, () => <p>plugins-slot-probe</p>)))
     context.own(slots.inject('settings.section', () => slots.register({
       name: 'settings.section',
       id: 'models',
       order: 0,
+      label: () => 'Models',
     }, () => <p>models-slot-probe</p>)))
   },
 }

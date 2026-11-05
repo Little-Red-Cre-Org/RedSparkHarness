@@ -6,9 +6,10 @@ import {
 import type { NativeSessionClient } from '@redspark/rsh-client-native-session/native'
 import type { NativeLocaleService } from '@redspark/rsh-client-locale/native'
 import type { NativeThemeService } from '@redspark/rsh-client-ui-theme/native'
-import type { InjectFace, PropsLocale, PropsRenderSlots, PropsRuntime } from '@redspark/rsh-client-ui-slots'
+import type { InjectFace, PropsLocale, PropsRenderSlots, PropsRuntime, TranslateNS } from '@redspark/rsh-client-ui-slots'
 import type {} from '@redspark/rsh-client-ui-sidebar/native'
 import type { NativeConversationController } from './controller.ts'
+import type { ConversationLocaleKey } from './locales.ts'
 import { SettingsPage, type NativeSettingsActions } from './settings-page.tsx'
 import { applyNativeSettingsPreferences } from './settings-preferences.ts'
 import { subscribeNativeSettingsRequests } from './settings-request.ts'
@@ -29,7 +30,6 @@ export function createNativeSettingsActions(client: NativeSessionClient): Native
     modelsDiscover: client.modelsDiscover.bind(client),
     settingsEvents: client.settingsEvents.bind(client),
     modelCatalog: client.modelCatalog.bind(client),
-    pluginInventoryList: client.pluginInventoryList.bind(client),
     agentPresetsList: client.agentPresetsList.bind(client),
     agentPresetRead: client.agentPresetRead.bind(client),
     agentPresetCopy: client.agentPresetCopy.bind(client),
@@ -39,8 +39,23 @@ export function createNativeSettingsActions(client: NativeSessionClient): Native
   }
 }
 
+/** One settings page or Plugins tab a client package registered. */
+export interface NativeSettingsLedgerEntry {
+  /** Section or tab key (`settings.section` / `settings.plugins.tab` identity). */
+  readonly id: string
+  /** Registrant-requested position, ascending. */
+  readonly order: number
+  /** Registrant-localized display text; undefined when it declared none. */
+  readonly label: string | undefined
+}
+
 type NativeSidebarSettingsInjected = {
   hooks: { locale: NativeLocaleService; theme: NativeThemeService }
+  /** Registered settings pages and Plugins tabs, read at render time. */
+  ledger: {
+    sections: () => readonly NativeSettingsLedgerEntry[]
+    tabs: () => readonly NativeSettingsLedgerEntry[]
+  }
   settingsActions: NativeSettingsActions
   refreshModelControls: NativeConversationController['refreshModelControls']
   setLocale: NativeLocaleService['setLocale']
@@ -54,12 +69,60 @@ type NativeSidebarSettingsProps = PropsRuntime<'sidebar.settings'>
   & PropsLocale<'nativeApplication'>
   & PropsRenderSlots<NativeSettingsHostSlots>
 
+/** The pages this shell renders itself: always present, and never removable by a registrant. */
+const BUILT_IN_SECTIONS = [
+  { id: 'general', labelKey: 'settingsGeneral', order: 0 },
+  { id: 'plugins', labelKey: 'settingsPlugins', order: 20 },
+  { id: 'agent-presets', labelKey: 'settingsAgentPresets', order: 30 },
+] as const satisfies readonly { id: string; labelKey: ConversationLocaleKey; order: number }[]
+
+/**
+ * Whether the settings panel can show one page: the shell's own pages always
+ * exist, everything else must be registered into `settings.section`.
+ * @param ledger - registered section entries, read at render time.
+ * @param id - the page key a caller asked for.
+ * @returns true when the panel has content for that key.
+ */
+export function settingsSectionAvailable(
+  ledger: NativeSidebarSettingsInjected['ledger'],
+  id: string,
+): boolean {
+  return BUILT_IN_SECTIONS.some(section => section.id === id)
+    || ledger.sections().some(entry => entry.id === id)
+}
+
+/**
+ * Settings navigation: the three pages this shell renders itself, then every
+ * page a client package registered into `settings.section`.
+ *
+ * A registered page appears only while its contribution exists, so a
+ * composition without the models package has no Models row instead of an
+ * empty one.
+ * @param t - settings copy for the built-in pages.
+ * @param ledger - registered section entries, read at render time.
+ * @returns the ordered navigation rows.
+ */
+function settingsRows(
+  t: TranslateNS<'nativeApplication'>,
+  ledger: NativeSidebarSettingsInjected['ledger'],
+): readonly { id: string; label: string }[] {
+  const builtIn = BUILT_IN_SECTIONS.map(section => ({ id: section.id, label: t(section.labelKey), order: section.order }))
+  const registered = ledger.sections().map(entry => ({
+    id: entry.id,
+    label: entry.label ?? entry.id,
+    order: entry.order,
+  }))
+  return [...builtIn, ...registered]
+    .filter((row, index, all) => all.findIndex(candidate => candidate.id === row.id) === index)
+    .sort((a, b) => a.order - b.order)
+}
+
 /** Render Settings, language, and theme controls in the sidebar foot.
  * @param props - sidebar geometry, locale, theme, and Settings actions.
  * @returns the sidebar controls and optional Settings panel.
  */
 export function NativeSidebarSettings({
-  wide, useLocale, useTheme, settingsActions, setLocale, toggleTheme,
+  wide, useLocale, useTheme, settingsActions, ledger, setLocale, toggleTheme,
   setThemePreference, setFontSize, t, renderSlot,
 }: NativeSidebarSettingsProps) {
   const locale = useLocale(snapshot => snapshot.locale)
@@ -71,9 +134,12 @@ export function NativeSidebarSettings({
   const startupPreferencesStale = useRef(false)
   useEffect(() => subscribeNativeSettingsRequests((section) => {
     startupPreferencesStale.current = true
-    setSettingsSection(section)
+    // A request for a page only opens it when some package registered it; the
+    // shell renders no editor of its own, so selecting an absent page would
+    // land the panel on an empty body.
+    if (settingsSectionAvailable(ledger, section)) setSettingsSection(section)
     setShowSettings(true)
-  }), [])
+  }), [ledger])
   useEffect(() => {
     const lifetime = new AbortController()
     void settingsActions.settingsDescribe(lifetime.signal).then((description) => {
@@ -120,12 +186,7 @@ export function NativeSidebarSettings({
     {showSettings ? <SettingsPanel
       title={t('settings')}
       closeLabel={t('settingsClose')}
-      rows={[
-        { id: 'general', label: t('settingsGeneral') },
-        { id: 'models', label: t('settingsModels') },
-        { id: 'plugins', label: t('settingsPlugins') },
-        { id: 'agent-presets', label: t('settingsAgentPresets') },
-      ]}
+      rows={settingsRows(t, ledger)}
       activeId={settingsSection}
       onSelect={setSettingsSection}
       onClose={() => { setShowSettings(false) }}
@@ -140,7 +201,7 @@ export function NativeSidebarSettings({
         useLocale={useLocale} useTheme={useTheme} setLocale={setLocale}
         setThemePreference={setThemePreference} setFontSize={setFontSize}
         onDocumentAvailabilityChange={setHasSettingsDocument}
-        renderSlot={renderSlot} close={() => { setShowSettings(false) }} />
+        renderSlot={renderSlot} close={() => { setShowSettings(false) }} tabs={ledger.tabs()} />
     </SettingsPanel> : null}
   </>
 }

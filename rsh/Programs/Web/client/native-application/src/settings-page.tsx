@@ -27,7 +27,7 @@ export type NativeSettingsActions = Pick<NativeSessionClient,
   'settingsDescribe' | 'settingsOpenDocument' | 'credentialsDescribe' | 'settingsMutate' | 'credentialsSet' | 'credentialsUnset'
   | 'modelsListProviders' | 'modelsListConfigurableProviders' | 'modelsDiscover' | 'settingsEvents' | 'modelCatalog'
   | 'agentPresetsList' | 'agentPresetRead' | 'agentPresetCopy' | 'agentPresetDelete'
-  | 'agentPresetsCanOpenDirectory' | 'agentPresetOpenDirectory' | 'pluginInventoryList'>
+  | 'agentPresetsCanOpenDirectory' | 'agentPresetOpenDirectory'>
 
 class UnsupportedSettingsEdit extends TypeError {
   constructor(readonly messageKey: 'settingsArrayStructureUnsupported' | 'settingsSecretStructureUnsupported' | 'settingsOperationLimitExceeded', message: string) {
@@ -153,14 +153,25 @@ function permissionLabel(value: string, t: Translate): string {
   return value
 }
 
-/** Native Settings pages, preference rows, credentials, authorization and account content.
+type SettingsHostSlots = 'settings.plugins.tab' | 'settings.section'
+
+/** One Plugins tab a client package registered. */
+interface SettingsTab {
+  /** Tab key. */
+  readonly id: string
+  /** Registrant-requested position. */
+  readonly order: number
+  /** Registrant-localized label, or undefined when it declared none. */
+  readonly label: string | undefined
+}
+
+/**
+ * Native Settings pages, preference rows, credentials, authorization and account content.
  * @param props - selected section, native actions and locale/theme services.
  * @returns the content for the selected Settings navigation entry.
  */
-type SettingsHostSlots = 'settings.plugins.tab' | 'settings.section'
-
 export function SettingsPage({ actions, t, section, useLocale, useTheme, setLocale, setThemePreference, setFontSize,
-  onDocumentAvailabilityChange, renderSlot, close }: {
+  onDocumentAvailabilityChange, renderSlot, close, tabs }: {
   actions: NativeSettingsActions
   t: Translate
   section: string
@@ -172,6 +183,8 @@ export function SettingsPage({ actions, t, section, useLocale, useTheme, setLoca
   onDocumentAvailabilityChange?: (available: boolean) => void
   /** Child slots declared by the Native settings host. Absent in direct page tests. */
   renderSlot?: PropsRenderSlots<SettingsHostSlots>['renderSlot']
+  /** Registered Plugins tabs, in ledger order; absent means none are installed. */
+  tabs?: readonly SettingsTab[] | undefined
   /** Close the settings panel. Passed to a section that leaves Settings. */
   close?: () => void
 }) {
@@ -333,15 +346,14 @@ export function SettingsPage({ actions, t, section, useLocale, useTheme, setLoca
   const refreshButton = <button type="button" disabled={loading}
     onClick={() => { void refresh(true) }}>{t('refreshSettings')}</button>
 
-  if (section === 'models') return <div>
-    {renderSlot?.('settings.section', { close: close ?? (() => {}) }, {
-      only: 'models', fallback: <p>{t('settingsComingSoon')}</p>,
+  if (section === 'plugins') return <PluginsSection actions={actions} t={t} tabs={tabs}
+    renderSlot={(key, owner, opts) => renderSlot?.(key, owner, opts)} />
+  if (section === 'agent-presets') return <AgentPresetsSection actions={actions} t={t} />
+  if (section !== 'general') return <div>
+    {renderSlot?.('settings.section', { close: () => { close?.() } }, {
+      only: section, fallback: <p>{t('settingsComingSoon')}</p>,
     })}
   </div>
-  if (section === 'plugins') return <PluginsSection actions={actions} t={t}
-    renderSlot={(key, owner) => renderSlot?.(key, owner)} />
-  if (section === 'agent-presets') return <AgentPresetsSection actions={actions} t={t} />
-  if (section !== 'general') return <p>{t('settingsComingSoon')}</p>
   const permission = namespaces.find(row => row.namespace === 'permission')
   const permissionValue = permission?.value.defaultPreset
   const permissionChoices = permission === undefined ? [] : permissionOptions(permission)

@@ -9825,6 +9825,9 @@ importers:
       '@redspark/rsh-home-paths':
         specifier: workspace:^
         version: link:../../Core/util/home-paths
+      '@redspark/rsh-host-open-in-app':
+        specifier: workspace:^
+        version: link:../Web/host/open-in-app
       '@redspark/rsh-http-proxy':
         specifier: workspace:^
         version: link:../../Core/util/http-proxy
@@ -14995,6 +14998,9 @@ importers:
       '@redspark/cordis-plugin-loader':
         specifier: workspace:^
         version: link:../../../../Core/vendor/loader
+      '@redspark/rsh-client-connection':
+        specifier: workspace:^
+        version: link:../../client/connection
       '@redspark/rsh-host-webserver':
         specifier: workspace:^
         version: link:../webserver
@@ -15004,6 +15010,9 @@ importers:
       '@redspark/rsh-http-routes-cordis':
         specifier: workspace:^
         version: link:../../../../Compatibility/DSH/bridge/http-routes-cordis
+      '@redspark/rsh-native-runtime':
+        specifier: workspace:^
+        version: link:../../../../Core/runtime-diagnostics/native-runtime
 
   rsh/Programs/Web/host/plugin-inventory:
     dependencies:
