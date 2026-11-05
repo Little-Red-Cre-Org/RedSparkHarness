@@ -947,7 +947,9 @@ it.each([
       '通用设置', '模型', '插件', 'Agent 预设',
     ])
     fireEvent.click(within(settingsDialog).getByRole('button', { name: '模型' }))
-    expect(within(settingsDialog).getByRole('heading', { name: '模型' })).toBeTruthy()
+    // The Models page renders the settings.section slot; nothing registered one
+    // in this composition, so the page reports it rather than showing an editor.
+    expect(within(settingsDialog).getByText('即将迁移')).toBeTruthy()
     expect(within(settingsDialog).getByRole('button', { name: '模型' }).getAttribute('aria-current')).toBe('true')
     fireEvent.click(within(settingsDialog).getByRole('button', { name: '关闭设置' }))
     expect(screen.queryByRole('dialog')).toBeNull()

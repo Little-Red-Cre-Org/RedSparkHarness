@@ -3,11 +3,11 @@
  *
  * The browser half registers into three Settings slots and drives the Host
  * through `ctx.remote`. A Native host has neither the Loader nor those Remote
- * namespaces, so this entry does the part a Native composition can carry: it
- * binds the page's one implementation to the Native transport and publishes
- * that binding for whichever Native settings surface renders it.
+ * namespaces, so this entry binds the same page to the Native transport and
+ * registers {@link ModelsSection} into `settings.section` once the Native
+ * settings host declares that slot.
  *
- * Reuse, not a second implementation: `ModelsSettingsStore`,
+ * Reuse, not a second implementation: `ModelsSection`, `ModelsSettingsStore`,
  * `createModelsOperations` and every provider card are the browser build's own
  * modules. The only substitution is the transport — `createNativeModelsFace`
  * and `createNativeDescribeFace` answer the same carrier envelopes from
@@ -18,6 +18,10 @@ import type { NativePlugin } from '@redspark/rsh-native-runtime'
 import type {} from './native-services.ts'
 import type {} from '@redspark/rsh-client-native-session/native'
 import type {} from '@redspark/rsh-client-locale/native'
+import type {} from '@redspark/rsh-client-ui-renderer/native'
+// Type-only: pulls this package's SlotMap rows for the section's child seats.
+import type {} from './client/slot-contract.ts'
+import { ModelsSection } from './client/ModelsSection.tsx'
 import { ModelsSettingsStore, type ModelsSettingsState, type ProviderDirectoryEntry, type ProviderRow } from './client/store.ts'
 import { createModelsOperations, type ModelsOperations, type ModelDiscoveryOutcome, type SettingsWriteOutcome } from './client/operations.ts'
 import type { SettingsSchemaOperations } from './client/schema-operations.ts'
@@ -111,10 +115,11 @@ export const plugin: NativePlugin = {
   apiVersion: 1,
   name: '@redspark/rsh-client-ui-settings-models',
   targets: ['client'],
-  requires: ['clientLocale', 'clientNativeSession'],
-  optional: [],
+  requires: ['clientSlots', 'clientLocale', 'clientNativeSession'],
+  optional: ['clientNativeSettings'],
   provides: [],
   resolve: () => (context) => {
+    const slots = context.require('clientSlots')
     const locale = context.require('clientLocale')
     const client = context.require('clientNativeSession')
     const schema = resolveNativeSchema(context.optional('clientNativeSettings'))
@@ -124,5 +129,22 @@ export const plugin: NativePlugin = {
     context.own(locale.register(NS, { en, zh }))
     const page = createNativeModelsPage(client, schema, key => locale.bind(NS)(key), context.signal)
     context.own(async () => { await page.dispose() })
+    context.own(slots.inject('settings.section', () => slots.register({
+      name: 'settings.section',
+      id: 'models',
+      order: 10,
+      label: () => locale.bind(NS)('nav'),
+      inject: () => ({
+        controller: page.controller,
+        hooks: { snapshot: page.controller.store },
+        operations: page.operations,
+        schema: page.schema,
+        t: page.t,
+      }),
+      children: {
+        'settings.models.provider-card': { kind: 'keyed', scope: 'root' },
+        'settings.models.footer': { kind: 'list', scope: 'root' },
+      },
+    }, ModelsSection)))
   },
 }

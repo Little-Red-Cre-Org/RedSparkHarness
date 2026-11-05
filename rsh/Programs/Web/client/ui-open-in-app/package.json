@@ -22,12 +22,18 @@
                                      "types":  "./lib/types/client/index.d.ts",
                                      "default":  "./lib/client.js"
                                  },
+                    "./native":  {
+                                     "types":  "./lib/types/native.d.ts",
+                                     "default":  "./lib/native.js"
+                                 },
                     "./src/*":  "./src/*",
                     "./package.json":  "./package.json"
                 },
     "files":  [
                   "lib/index.js",
                   "lib/client.js",
+                  "lib/native.js",
+                  "lib/client/OpenInAppAction.module.css",
                   "lib/types/**/*.d.ts"
               ],
     "scripts":  {
@@ -44,6 +50,20 @@
                                               "@redspark/rsh-client-ui-session"
                                           ],
                                "platform":  "web"
+                           },
+                "native":  {
+                               "apiVersion":  1,
+                               "entry":  "./native",
+                               "targets":  [
+                                               "client"
+                                           ],
+                               "requires":  [
+                                                "clientSlots",
+                                                "clientLocale",
+                                                "clientNativeConversation"
+                                            ],
+                               "optional":  [],
+                               "provides":  []
                            }
             },
     "peerDependencies":  {
@@ -64,8 +84,12 @@
                             "@redspark/rsh-client-ui-session":  "workspace:^",
                             "@redspark/rsh-client-locale":  "workspace:^",
                             "react":  "^18.2.0",
-                            "@redspark/rsh-client-store":  "workspace:^",
-                            "@redspark/rsh-client-ui-primitives":  "workspace:^",
-                            "@redspark/rsh-host-open-in-app":  "workspace:^"
-                        }
+                            "@redspark/rsh-client-native-session":  "workspace:^",
+                            "@redspark/rsh-native-runtime":  "workspace:^"
+                        },
+    "dependencies":  {
+                         "@redspark/rsh-client-store":  "workspace:^",
+                         "@redspark/rsh-client-ui-primitives":  "workspace:^",
+                         "@redspark/rsh-host-open-in-app":  "workspace:^"
+                     }
 }

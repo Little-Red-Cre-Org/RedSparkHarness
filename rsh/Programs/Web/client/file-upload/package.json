@@ -52,10 +52,14 @@
     "native": {
       "apiVersion": 1,
       "entry": "./native",
-      "targets": ["client"],
+      "targets": [
+        "client"
+      ],
       "requires": [],
       "optional": [],
-      "provides": ["clientFileUpload"]
+      "provides": [
+        "clientFileUpload"
+      ]
     }
   },
   "scripts": {
@@ -75,16 +79,19 @@
     "lib/typert.remote-client.d.ts"
   ],
   "dependencies": {
-    "zod": "^4.4.3",
+    "@redspark/rsh-brand": "workspace:^",
     "@redspark/rsh-typert-protocol": "workspace:^",
-    "@redspark/rsh-brand": "workspace:^"
+    "@redspark/rsh-util-crypto": "workspace:^",
+    "zod": "^4.4.3"
   },
   "peerDependencies": {
     "@redspark/cordis": "workspace:^",
     "@redspark/rsh-scope": "workspace:^"
   },
   "peerDependenciesMeta": {
-    "@redspark/cordis": { "optional": true }
+    "@redspark/cordis": {
+      "optional": true
+    }
   },
   "devDependencies": {
     "@redspark/cordis": "workspace:^",
@@ -92,7 +99,6 @@
     "@redspark/rsh-client-connection": "workspace:^",
     "@redspark/rsh-commands": "workspace:^",
     "@redspark/rsh-scope": "workspace:^",
-    "@redspark/rsh-util-crypto": "workspace:^",
     "@redspark/rsh-api-remotes": "workspace:^",
     "@redspark/rsh-session": "workspace:^",
     "@redspark/rsh-attachment": "workspace:^",

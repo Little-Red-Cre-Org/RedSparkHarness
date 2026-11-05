@@ -28,7 +28,7 @@ export type OpenInAppActionProps =
  * host catalog extension without a matching dictionary entry stays invisible
  * instead of showing a raw id.
  */
-const APP_LABEL_KEY: Record<string, OpenInAppKey | undefined> = {
+export const APP_LABEL_KEY: Record<string, OpenInAppKey | undefined> = {
   finder: 'app.finder',
   explorer: 'app.explorer',
   filemanager: 'app.filemanager',
@@ -74,7 +74,7 @@ const failedIcons = new Set<string>()
  * @param props - catalog id, host icon URL, and rendered size.
  * @returns the icon image or its fallback glyph.
  */
-function AppIcon({ id, url, size }: { id: string; url: string; size: number }): React.JSX.Element {
+export function AppIcon({ id, url, size }: { id: string; url: string; size: number }): React.JSX.Element {
   const [failed, setFailed] = useState(failedIcons.has(id))
   if (failed) {
     return (
@@ -114,7 +114,7 @@ function AppIcon({ id, url, size }: { id: string; url: string; size: number }): 
  * paints — the visible dim-and-wait treatment is reserved for launches that
  * are actually taking a while, instead of flashing on every click.
  */
-const BUSY_DRESS_DELAY_MS = 250
+export const BUSY_DRESS_DELAY_MS = 250
 
 /**
  * Session-header split button: the main button opens the session's workspace

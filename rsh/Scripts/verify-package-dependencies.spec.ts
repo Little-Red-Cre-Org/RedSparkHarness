@@ -254,6 +254,12 @@ describe('package dependency scope', () => {
       '@redspark/rsh-client-ui-input-trigger': ['@redspark/rsh-file-reference'],
       '@redspark/rsh-client-ui-settings': ['@redspark/schemastery'],
       '@redspark/rsh-client-ui-settings-plugin-inventory': ['@redspark/rsh-brand'],
+      '@redspark/rsh-client-file-upload': ['@redspark/rsh-util-crypto'],
+      '@redspark/rsh-client-ui-open-in-app': [
+        '@redspark/rsh-client-store',
+        '@redspark/rsh-client-ui-primitives',
+        '@redspark/rsh-host-open-in-app',
+      ],
     })
     expect(PACKAGE_DEPENDENCY_POLICY.sharedClientRuntimePeers).toEqual({
       '@redspark/rsh-client-ui-primitives': ['react', 'react-dom'],

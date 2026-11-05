@@ -63,6 +63,7 @@ const NATIVE_WEB_CLIENT_INSTALLATIONS = [
   { id: 'settings-plugins-ui', plugin: '@redspark/rsh-client-ui-settings-plugin-inventory' },
   { id: 'settings-models-ui', plugin: '@redspark/rsh-client-ui-settings-models' },
   { id: 'file-upload', plugin: '@redspark/rsh-client-file-upload' },
+  { id: 'open-in-app', plugin: '@redspark/rsh-client-ui-open-in-app' },
 ] as const
 
 /** One shipped browser Client installation used by a native Web profile. */

@@ -9708,6 +9708,9 @@ importers:
       '@redspark/rsh-client-ui-model-selection':
         specifier: workspace:^
         version: link:../Web/client/ui-model-selection
+      '@redspark/rsh-client-ui-open-in-app':
+        specifier: workspace:^
+        version: link:../Web/client/ui-open-in-app
       '@redspark/rsh-client-ui-permission-presets':
         specifier: workspace:^
         version: link:../Web/client/ui-permission-presets
@@ -11874,6 +11877,9 @@ importers:
       '@redspark/rsh-typert-protocol':
         specifier: workspace:^
         version: link:../../../../Core/typert/protocol
+      '@redspark/rsh-util-crypto':
+        specifier: workspace:^
+        version: link:../../../../Core/util/crypto
       zod:
         specifier: ^4.4.3
         version: 4.4.3
@@ -11908,9 +11914,6 @@ importers:
       '@redspark/rsh-session':
         specifier: workspace:^
         version: link:../../../../Engine/core/session
-      '@redspark/rsh-util-crypto':
-        specifier: workspace:^
-        version: link:../../../../Core/util/crypto
 
   rsh/Programs/Web/client/hmr:
     dependencies:
@@ -13206,6 +13209,16 @@ importers:
         version: 18.3.1(react@18.3.1)
 
   rsh/Programs/Web/client/ui-open-in-app:
+    dependencies:
+      '@redspark/rsh-client-store':
+        specifier: workspace:^
+        version: link:../store
+      '@redspark/rsh-client-ui-primitives':
+        specifier: workspace:^
+        version: link:../ui-primitives
+      '@redspark/rsh-host-open-in-app':
+        specifier: workspace:^
+        version: link:../../host/open-in-app
     devDependencies:
       '@redspark/cordis':
         specifier: workspace:^
@@ -13219,18 +13232,15 @@ importers:
       '@redspark/rsh-client-locale':
         specifier: workspace:^
         version: link:../locale
-      '@redspark/rsh-client-store':
+      '@redspark/rsh-client-native-session':
         specifier: workspace:^
-        version: link:../store
+        version: link:../native-session
       '@redspark/rsh-client-test-runtime':
         specifier: workspace:^
         version: link:../../../../Tests/test-support/client-runtime
       '@redspark/rsh-client-ui-conversation':
         specifier: workspace:^
         version: link:../ui-conversation
-      '@redspark/rsh-client-ui-primitives':
-        specifier: workspace:^
-        version: link:../ui-primitives
       '@redspark/rsh-client-ui-renderer':
         specifier: workspace:^
         version: link:../ui-renderer
@@ -13240,9 +13250,9 @@ importers:
       '@redspark/rsh-client-ui-slots':
         specifier: workspace:^
         version: link:../ui-slots
-      '@redspark/rsh-host-open-in-app':
+      '@redspark/rsh-native-runtime':
         specifier: workspace:^
-        version: link:../../host/open-in-app
+        version: link:../../../../Core/runtime-diagnostics/native-runtime
       '@redspark/rsh-session':
         specifier: workspace:^
         version: link:../../../../Engine/core/session

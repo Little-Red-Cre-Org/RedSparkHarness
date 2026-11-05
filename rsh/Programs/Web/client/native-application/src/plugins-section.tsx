@@ -1,9 +1,8 @@
 /** Native plugin settings cards backed by the selected Host's Settings and Credentials actions. */
-import { useCallback, useEffect, useRef, useState, type KeyboardEvent } from 'react'
+import { useCallback, useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
 import { Button } from '@redspark/rsh-client-ui-primitives'
 import type { NativeModelControls, NativeSessionClient, NativeSettingsDescriptor } from '@redspark/rsh-client-native-session/native'
 import type { ConversationLocaleKey } from './locales.ts'
-import { PluginInventoryTab } from './plugin-inventory-tab.tsx'
 import css from './plugins-section.module.css'
 
 type Translate = (key: ConversationLocaleKey) => string
@@ -387,7 +386,12 @@ function PluginCard({
  * @param props - Native Host actions and locale copy.
  * @returns the Plugins Settings section.
  */
-export function PluginsSection({ actions, t }: { actions: PluginActions; t: Translate }) {
+export function PluginsSection({ actions, t, renderSlot }: {
+  actions: PluginActions
+  t: Translate
+  /** Plugins tab contributions declared by the Native settings host. */
+  renderSlot?: ((key: 'settings.plugins.tab', owner: { children?: never }) => ReactNode) | undefined
+}) {
   const [tab, setTab] = useState<'config' | 'inventory'>('config')
   const [descriptors, setDescriptors] = useState<readonly NativeSettingsDescriptor[]>([])
   const descriptorsRef = useRef<readonly NativeSettingsDescriptor[]>([])
@@ -727,7 +731,7 @@ export function PluginsSection({ actions, t }: { actions: PluginActions; t: Tran
       </ul>
     </div>
     <div id="plugins-inventory-panel" role="tabpanel" aria-labelledby="plugins-inventory-tab" hidden={tab !== 'inventory'} className={css.panel}>
-      <PluginInventoryTab actions={actions} t={t} active={tab === 'inventory'} />
+      {renderSlot?.('settings.plugins.tab', {})}
     </div>
   </section>
 }

@@ -60,6 +60,7 @@
                          "@redspark/rsh-brand":  "workspace:^",
                          "@redspark/rsh-client-connection":  "workspace:^",
                          "@redspark/rsh-client-file-upload":  "workspace:^",
+                         "@redspark/rsh-client-ui-open-in-app":  "workspace:^",
                          "@redspark/rsh-client-locale":  "workspace:^",
                          "@redspark/rsh-client-native-application":  "workspace:^",
                          "@redspark/rsh-client-native-session":  "workspace:^",

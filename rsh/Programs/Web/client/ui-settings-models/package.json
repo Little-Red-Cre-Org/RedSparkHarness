@@ -45,6 +45,7 @@
         "client"
       ],
       "requires": [
+        "clientSlots",
         "clientLocale",
         "clientNativeSession"
       ],

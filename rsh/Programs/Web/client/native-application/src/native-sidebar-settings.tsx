@@ -6,7 +6,7 @@ import {
 import type { NativeSessionClient } from '@redspark/rsh-client-native-session/native'
 import type { NativeLocaleService } from '@redspark/rsh-client-locale/native'
 import type { NativeThemeService } from '@redspark/rsh-client-ui-theme/native'
-import type { InjectFace, PropsLocale, PropsRuntime } from '@redspark/rsh-client-ui-slots'
+import type { InjectFace, PropsLocale, PropsRenderSlots, PropsRuntime } from '@redspark/rsh-client-ui-slots'
 import type {} from '@redspark/rsh-client-ui-sidebar/native'
 import type { NativeConversationController } from './controller.ts'
 import { SettingsPage, type NativeSettingsActions } from './settings-page.tsx'
@@ -48,9 +48,11 @@ type NativeSidebarSettingsInjected = {
   setThemePreference: NativeThemeService['setPreference']
   setFontSize: NativeThemeService['setFontSize']
 }
+type NativeSettingsHostSlots = 'settings.plugins.tab' | 'settings.section'
 type NativeSidebarSettingsProps = PropsRuntime<'sidebar.settings'>
   & InjectFace<NativeSidebarSettingsInjected>
   & PropsLocale<'nativeApplication'>
+  & PropsRenderSlots<NativeSettingsHostSlots>
 
 /** Render Settings, language, and theme controls in the sidebar foot.
  * @param props - sidebar geometry, locale, theme, and Settings actions.
@@ -58,7 +60,7 @@ type NativeSidebarSettingsProps = PropsRuntime<'sidebar.settings'>
  */
 export function NativeSidebarSettings({
   wide, useLocale, useTheme, settingsActions, setLocale, toggleTheme,
-  setThemePreference, setFontSize, t,
+  setThemePreference, setFontSize, t, renderSlot,
 }: NativeSidebarSettingsProps) {
   const locale = useLocale(snapshot => snapshot.locale)
   const colorScheme = useTheme(snapshot => snapshot.active.colorScheme)
@@ -137,7 +139,8 @@ export function NativeSidebarSettings({
       <SettingsPage actions={settingsActions} t={t} section={settingsSection}
         useLocale={useLocale} useTheme={useTheme} setLocale={setLocale}
         setThemePreference={setThemePreference} setFontSize={setFontSize}
-        onDocumentAvailabilityChange={setHasSettingsDocument} />
+        onDocumentAvailabilityChange={setHasSettingsDocument}
+        renderSlot={renderSlot} close={() => { setShowSettings(false) }} />
     </SettingsPanel> : null}
   </>
 }

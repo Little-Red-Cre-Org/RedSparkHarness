@@ -41,6 +41,10 @@ kind: "package-reference"
 
 插件通过标准 slot/inject 机制把分体按钮注册到 `conversation.session.header.utilities`，并以一个 effect 注册 `open-in-app` 词典。一个页面生命周期的 controller（[`src/client/controller.ts`](src/client/controller.ts)）拥有每页一次的可用性读取、持久化选择的 snapshot store 与启动 POST；组件经 inject 的 `hooks` 隔间接收两个 store，因此所有会话头部共享同一份事实。路由路径与 wire 载荷类型从主机包的浏览器安全子路径 `@redspark/rsh-host-open-in-app/shared` 内联。飞行中的启动由 ref 守卫——启动期间的重复点击与菜单选择被整体忽略（否则会持久化一个该手势从未打开的选择）——busy/error 视觉由围绕 `launch` promise 的定时器驱动。节点半边是一个空 `apply`，让插件出现在主机侧的插件名册上。
 
+### Native 半边
+
+Native 入口（`exports["./native"]`）原样复用该 controller——两边都通过页面的 Fetch 载体访问同一批主机路由——只改按钮所在位置与目录来源。它把分体按钮以顺序 -10 贡献到 `native.conversation.actions`，占据操作行首位，并通过一个建立在 Native Conversation 服务之上的 source 读取所选会话 header 的 `cwd`：Native 客户端没有会话摘要投影。标签表、图标组件与 busy 延迟都属浏览器半边自有，以导入复用而非复制。
+
 </details>
 
 -----

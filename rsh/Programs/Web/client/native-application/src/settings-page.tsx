@@ -6,11 +6,10 @@ import {
   IconDarkOutline16, IconFollowsystemOutline16, IconLightOutline16,
   RiskConfirmation, Switch,
 } from '@redspark/rsh-client-ui-primitives'
-import type { SnapshotSelectorHook } from '@redspark/rsh-client-ui-slots'
+import type { PropsRenderSlots, SnapshotSelectorHook } from '@redspark/rsh-client-ui-slots'
 import type { NativeLocaleService, NativeLocaleSnapshot } from '@redspark/rsh-client-locale/native'
 import type { NativeThemeService } from '@redspark/rsh-client-ui-theme/native'
 import type { ConversationLocaleKey } from './locales.ts'
-import { ModelsSettingsPage } from './models-settings-page.tsx'
 import { AgentPresetsSection } from './agent-presets-section.tsx'
 import { PluginsSection } from './plugins-section.tsx'
 import { applyNativeSettingsPreferences } from './settings-preferences.ts'
@@ -158,8 +157,10 @@ function permissionLabel(value: string, t: Translate): string {
  * @param props - selected section, native actions and locale/theme services.
  * @returns the content for the selected Settings navigation entry.
  */
+type SettingsHostSlots = 'settings.plugins.tab' | 'settings.section'
+
 export function SettingsPage({ actions, t, section, useLocale, useTheme, setLocale, setThemePreference, setFontSize,
-  onDocumentAvailabilityChange }: {
+  onDocumentAvailabilityChange, renderSlot, close }: {
   actions: NativeSettingsActions
   t: Translate
   section: string
@@ -169,6 +170,10 @@ export function SettingsPage({ actions, t, section, useLocale, useTheme, setLoca
   setThemePreference: NativeThemeService['setPreference']
   setFontSize: NativeThemeService['setFontSize']
   onDocumentAvailabilityChange?: (available: boolean) => void
+  /** Child slots declared by the Native settings host. Absent in direct page tests. */
+  renderSlot?: PropsRenderSlots<SettingsHostSlots>['renderSlot']
+  /** Close the settings panel. Passed to a section that leaves Settings. */
+  close?: () => void
 }) {
   const [pendingDefault, setPendingDefault] = useState(readPendingDefault)
   const [confirmingFullAccess, setConfirmingFullAccess] = useState(false)
@@ -186,7 +191,6 @@ export function SettingsPage({ actions, t, section, useLocale, useTheme, setLoca
   const [describeFailed, setDescribeFailed] = useState(false)
   const [credentialError, setCredentialError] = useState<string>()
   const [notice, setNotice] = useState<string>()
-  const [modelsReload] = useState(0)
   // Older refreshes cannot replace a newer refresh's results.
   // A superseded refresh(false) still resets drafts on the refresh that lands.
   const refreshes = useRef(0)
@@ -330,9 +334,12 @@ export function SettingsPage({ actions, t, section, useLocale, useTheme, setLoca
     onClick={() => { void refresh(true) }}>{t('refreshSettings')}</button>
 
   if (section === 'models') return <div>
-    <ModelsSettingsPage actions={actions} t={t} reloadKey={modelsReload} />
+    {renderSlot?.('settings.section', { close: close ?? (() => {}) }, {
+      only: 'models', fallback: <p>{t('settingsComingSoon')}</p>,
+    })}
   </div>
-  if (section === 'plugins') return <PluginsSection actions={actions} t={t} />
+  if (section === 'plugins') return <PluginsSection actions={actions} t={t}
+    renderSlot={(key, owner) => renderSlot?.(key, owner)} />
   if (section === 'agent-presets') return <AgentPresetsSection actions={actions} t={t} />
   if (section !== 'general') return <p>{t('settingsComingSoon')}</p>
   const permission = namespaces.find(row => row.namespace === 'permission')
