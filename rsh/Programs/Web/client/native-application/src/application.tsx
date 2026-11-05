@@ -8,6 +8,7 @@ import {
 } from '@redspark/rsh-client-ui-primitives'
 import type { DirectoryBrowserListing, MarkdownLabels } from '@redspark/rsh-client-ui-primitives'
 import type { NativePlugin } from '@redspark/rsh-native-runtime'
+import { resolveSlotLabel } from '@redspark/rsh-client-ui-slots'
 import type { SnapshotSelectorHook, TranslateNS } from '@redspark/rsh-client-ui-slots'
 import type {} from '@redspark/rsh-client-ui-renderer/native'
 import type {} from '@redspark/rsh-client-native-session/native'
@@ -93,6 +94,18 @@ function SubagentMenu({ sessions, runningCount, ready, selectSession, t }: {
   } />
 }
 
+/** Owner share of one Plugins settings tab. The section supplies nothing. */
+interface NativeSettingsPluginsTabOwnerProps {
+  /** Marker field: tab owner props are intentionally empty. */
+  children?: never
+}
+
+/** Owner share of one settings section page. */
+interface NativeSettingsSectionOwnerProps {
+  /** Close the settings panel. The section decides when a flow should leave Settings. */
+  close: () => void
+}
+
 declare module '@redspark/rsh-client-ui-slots' {
   interface LocaleNamespaceMap {
     /** Native conversation vocabulary and settings copy. */
@@ -101,6 +114,10 @@ declare module '@redspark/rsh-client-ui-slots' {
   interface SlotMap {
     /** Frame-owned central panel, keyed by a matching sidebar panel id. */
     main: { kind: 'keyed'; scope: 'root' }
+    /** One page inside the Plugins settings section. */
+    'settings.plugins.tab': { kind: 'list'; scope: 'root'; owner: NativeSettingsPluginsTabOwnerProps }
+    /** One settings page, filtered by the registrant's id. */
+    'settings.section': { kind: 'list'; scope: 'root'; owner: NativeSettingsSectionOwnerProps }
   }
 }
 
@@ -610,8 +627,28 @@ export const plugin: NativePlugin = {
       context.own(() => controller.close())
       context.own(slots.inject('sidebar.settings', () => slots.register({
         name: 'sidebar.settings', locale: 'nativeApplication',
+        children: {
+          'settings.plugins.tab': { kind: 'list', scope: 'root' },
+          'settings.section': { kind: 'list', scope: 'root' },
+        },
         inject: () => ({
           hooks: { locale: clientLocale, theme: clientTheme },
+          // The settings pages and tabs are ledger facts: the shell projects the
+          // registered entries instead of assuming which features are installed.
+          ledger: {
+            sections: () => slots.entries('settings.section').flatMap(entry => entry.options.id === undefined
+              ? [] : [{ id: entry.options.id, order: entry.options.order ?? 0, label: resolveSlotLabel(entry.options.label) }]),
+            tabs: () => slots.entries('settings.plugins.tab').flatMap(entry => entry.options.id === undefined
+              ? [] : [{ id: entry.options.id, order: entry.options.order ?? 0, label: resolveSlotLabel(entry.options.label) }]),
+            // Registrations come and go with their packages, so the shell has to
+            // re-read the projection; without this the navigation keeps rows whose
+            // page no longer renders.
+            subscribe: (onChange: () => void) => {
+              const offs = [slots.subscribe('settings.section', onChange), slots.subscribe('settings.plugins.tab', onChange)]
+              return () => { for (const off of offs) off() }
+            },
+            version: () => slots.getVersion('settings.section') + slots.getVersion('settings.plugins.tab'),
+          },
           settingsActions,
           refreshModelControls,
           setLocale: clientLocale.setLocale.bind(clientLocale),

@@ -943,12 +943,13 @@ it.each([
     fireEvent.click(screen.getByRole('button', { name: '设置' }))
     const settingsDialog = screen.getByRole('dialog', { name: '设置' })
     const settingsNav = within(settingsDialog).getByRole('navigation')
+    // Pages come from the settings.section ledger: this composition installs no
+    // settings package, so only the three pages the shell renders itself appear.
     expect(within(settingsNav).getAllByRole('button').map(button => button.textContent?.trim())).toEqual([
-      '通用设置', '模型', '插件', 'Agent 预设',
+      '通用设置', '插件', 'Agent 预设',
     ])
-    fireEvent.click(within(settingsDialog).getByRole('button', { name: '模型' }))
-    expect(within(settingsDialog).getByRole('heading', { name: '模型' })).toBeTruthy()
-    expect(within(settingsDialog).getByRole('button', { name: '模型' }).getAttribute('aria-current')).toBe('true')
+    fireEvent.click(within(settingsDialog).getByRole('button', { name: '插件' }))
+    expect(within(settingsDialog).getByRole('button', { name: '插件' }).getAttribute('aria-current')).toBe('true')
     fireEvent.click(within(settingsDialog).getByRole('button', { name: '关闭设置' }))
     expect(screen.queryByRole('dialog')).toBeNull()
 
@@ -958,7 +959,10 @@ it.each([
     expect(screen.queryByRole('dialog')).toBeNull()
 
     act(() => { requestNativeModelSettings() })
-    expect(within(screen.getByRole('dialog', { name: '设置' })).getByRole('button', { name: '模型' }).getAttribute('aria-current')).toBe('true')
+    // This composition installs no settings package, so the request opens the
+    // panel but cannot select a Models page that nothing registered.
+    const reopened = within(screen.getByRole('dialog', { name: '设置' }))
+    expect(reopened.getByRole('button', { name: '通用设置' }).getAttribute('aria-current')).toBe('true')
     fireEvent.keyDown(document, { key: 'Escape' })
 
     await host.stop()

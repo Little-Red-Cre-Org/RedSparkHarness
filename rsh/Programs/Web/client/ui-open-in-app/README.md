@@ -41,6 +41,10 @@ The main button shows the remembered application's icon — the real application
 
 The plugin registers the split button on `conversation.session.header.utilities` through the standard slot/inject currency and registers the `open-in-app` dictionaries as one effect. A page-lifetime controller ([`src/client/controller.ts`](src/client/controller.ts)) owns the once-per-page availability read, the persisted choice snapshot store, and the launch POST; the component receives both stores through the inject `hooks` compartment, so every Session header shares one truth. Route paths and wire payload types are inlined from the host package's browser-safe `@redspark/rsh-host-open-in-app/shared` subpath. In-flight launches are guarded by a ref — repeat clicks and menu picks during a launch are ignored whole (a pick would otherwise persist a choice the gesture never opened) — and the busy/error dress is timer-driven around the `launch` promise. The node half is an empty `apply` that keeps the plugin on the host roster.
 
+### Native half
+
+The Native entry (`exports["./native"]`) reuses that controller verbatim — both halves reach the same host routes through the page's Fetch carrier — and changes only where the button sits and where the directory comes from. It contributes the split button into `native.conversation.actions` at order -10, opening the action row, and reads the workspace directory from the selected Session header's `cwd` through a source over the Native Conversation service: a Native client has no Session summary projection. The label table, the icon component, and the busy-dress delay are the browser half's own, imported rather than copied.
+
 </details>
 
 -----

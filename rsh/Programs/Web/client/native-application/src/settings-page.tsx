@@ -6,11 +6,10 @@ import {
   IconDarkOutline16, IconFollowsystemOutline16, IconLightOutline16,
   RiskConfirmation, Switch,
 } from '@redspark/rsh-client-ui-primitives'
-import type { SnapshotSelectorHook } from '@redspark/rsh-client-ui-slots'
+import type { PropsRenderSlots, SnapshotSelectorHook } from '@redspark/rsh-client-ui-slots'
 import type { NativeLocaleService, NativeLocaleSnapshot } from '@redspark/rsh-client-locale/native'
 import type { NativeThemeService } from '@redspark/rsh-client-ui-theme/native'
 import type { ConversationLocaleKey } from './locales.ts'
-import { ModelsSettingsPage } from './models-settings-page.tsx'
 import { AgentPresetsSection } from './agent-presets-section.tsx'
 import { PluginsSection } from './plugins-section.tsx'
 import { applyNativeSettingsPreferences } from './settings-preferences.ts'
@@ -28,7 +27,7 @@ export type NativeSettingsActions = Pick<NativeSessionClient,
   'settingsDescribe' | 'settingsOpenDocument' | 'credentialsDescribe' | 'settingsMutate' | 'credentialsSet' | 'credentialsUnset'
   | 'modelsListProviders' | 'modelsListConfigurableProviders' | 'modelsDiscover' | 'settingsEvents' | 'modelCatalog'
   | 'agentPresetsList' | 'agentPresetRead' | 'agentPresetCopy' | 'agentPresetDelete'
-  | 'agentPresetsCanOpenDirectory' | 'agentPresetOpenDirectory' | 'pluginInventoryList'>
+  | 'agentPresetsCanOpenDirectory' | 'agentPresetOpenDirectory'>
 
 class UnsupportedSettingsEdit extends TypeError {
   constructor(readonly messageKey: 'settingsArrayStructureUnsupported' | 'settingsSecretStructureUnsupported' | 'settingsOperationLimitExceeded', message: string) {
@@ -154,12 +153,25 @@ function permissionLabel(value: string, t: Translate): string {
   return value
 }
 
-/** Native Settings pages, preference rows, credentials, authorization and account content.
+type SettingsHostSlots = 'settings.plugins.tab' | 'settings.section'
+
+/** One Plugins tab a client package registered. */
+interface SettingsTab {
+  /** Tab key. */
+  readonly id: string
+  /** Registrant-requested position. */
+  readonly order: number
+  /** Registrant-localized label, or undefined when it declared none. */
+  readonly label: string | undefined
+}
+
+/**
+ * Native Settings pages, preference rows, credentials, authorization and account content.
  * @param props - selected section, native actions and locale/theme services.
  * @returns the content for the selected Settings navigation entry.
  */
 export function SettingsPage({ actions, t, section, useLocale, useTheme, setLocale, setThemePreference, setFontSize,
-  onDocumentAvailabilityChange }: {
+  onDocumentAvailabilityChange, renderSlot, close, tabs }: {
   actions: NativeSettingsActions
   t: Translate
   section: string
@@ -169,6 +181,12 @@ export function SettingsPage({ actions, t, section, useLocale, useTheme, setLoca
   setThemePreference: NativeThemeService['setPreference']
   setFontSize: NativeThemeService['setFontSize']
   onDocumentAvailabilityChange?: (available: boolean) => void
+  /** Child slots declared by the Native settings host. Absent in direct page tests. */
+  renderSlot?: PropsRenderSlots<SettingsHostSlots>['renderSlot']
+  /** Registered Plugins tabs, in ledger order; absent means none are installed. */
+  tabs?: readonly SettingsTab[] | undefined
+  /** Close the settings panel. Passed to a section that leaves Settings. */
+  close?: () => void
 }) {
   const [pendingDefault, setPendingDefault] = useState(readPendingDefault)
   const [confirmingFullAccess, setConfirmingFullAccess] = useState(false)
@@ -186,7 +204,6 @@ export function SettingsPage({ actions, t, section, useLocale, useTheme, setLoca
   const [describeFailed, setDescribeFailed] = useState(false)
   const [credentialError, setCredentialError] = useState<string>()
   const [notice, setNotice] = useState<string>()
-  const [modelsReload] = useState(0)
   // Older refreshes cannot replace a newer refresh's results.
   // A superseded refresh(false) still resets drafts on the refresh that lands.
   const refreshes = useRef(0)
@@ -329,12 +346,14 @@ export function SettingsPage({ actions, t, section, useLocale, useTheme, setLoca
   const refreshButton = <button type="button" disabled={loading}
     onClick={() => { void refresh(true) }}>{t('refreshSettings')}</button>
 
-  if (section === 'models') return <div>
-    <ModelsSettingsPage actions={actions} t={t} reloadKey={modelsReload} />
-  </div>
-  if (section === 'plugins') return <PluginsSection actions={actions} t={t} />
+  if (section === 'plugins') return <PluginsSection actions={actions} t={t} tabs={tabs}
+    renderSlot={(key, owner, opts) => renderSlot?.(key, owner, opts)} />
   if (section === 'agent-presets') return <AgentPresetsSection actions={actions} t={t} />
-  if (section !== 'general') return <p>{t('settingsComingSoon')}</p>
+  if (section !== 'general') return <div>
+    {renderSlot?.('settings.section', { close: () => { close?.() } }, {
+      only: section, fallback: <p>{t('settingsComingSoon')}</p>,
+    })}
+  </div>
   const permission = namespaces.find(row => row.namespace === 'permission')
   const permissionValue = permission?.value.defaultPreset
   const permissionChoices = permission === undefined ? [] : permissionOptions(permission)

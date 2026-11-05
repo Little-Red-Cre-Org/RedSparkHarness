@@ -937,8 +937,8 @@ Source: [`rsh/Programs/Web/host/frontend-static/src/index.ts:30`](../Programs/We
 Requires: `webServer` · `connection` · `subprocess`
 
 ```ts config-catalog
-/** Open-in-app host configuration. */
-export interface Config {
+/** Per-route deadlines and the launch watch window, as configured by the host row. */
+export interface OpenInAppRouteConfig {
   /**
    * Per-command deadline in milliseconds for catalog-resolution host
    * commands (`xcode-select`, the Windows registry reads).
@@ -959,7 +959,7 @@ export interface Config {
 }
 ```
 
-Source: [`rsh/Programs/Web/host/open-in-app/src/index.ts:50`](../Programs/Web/host/open-in-app/src/index.ts)
+Source: [`rsh/Programs/Web/host/open-in-app/src/routes.ts:24`](../Programs/Web/host/open-in-app/src/routes.ts)
 
 <a id="redsparkrsh-host-webserver"></a>
 

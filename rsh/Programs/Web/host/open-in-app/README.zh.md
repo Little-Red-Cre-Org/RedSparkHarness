@@ -1,5 +1,5 @@
 ---
-description: "open-in-app 的主机半边：在 macOS、Windows、Linux 上把已安装的编辑器、Git GUI、终端与文件管理器解析为已验证的启动器，并以三条 webServer 路由提供目录、图标与启动端点。"
+description: "open-in-app 的主机半边：在 macOS、Windows、Linux 上把已安装的编辑器、Git GUI、终端与文件管理器解析为已验证的启动器，并以三条路由（走组合所具备的那个路由载体）提供目录、图标与启动端点。"
 kind: "package-reference"
 ---
 
@@ -77,7 +77,7 @@ kind: "package-reference"
 
 本包拆为一张数据表与三个角色。[`src/catalog.ts`](src/catalog.ts) 是编译期表格：每个条目按平台的 locator 链（`fixed`、`app`、`xcode`、`cli`、`file`、`scan`、`app-paths`、`install-record`、`github-desktop`、`desktop`），以及 Linux 上拥有其图标的 desktop 条目 id。[`src/resolver.ts`](src/resolver.ts) 把表格解析到本机：一趟产出目录 id 到已验证启动的映射（主/回退 argv 加图标来源），共享一次批量的 Windows 注册表读取；argv 启动以清理过凭据的环境（`scrubbedParentEnv`）叠加适配器显式环境后 detached 派生，Windows GUI 默认保持可见，只有负责另行打开 GUI 的 CLI 适配器会隐藏自己的进程。`shell-open` 启动（文件管理器）在同一看护窗口下经 `dsh-native-command` 的路径打开器执行 OS shell 的 open verb，spawn 的 `ENOENT` 被归类为 `missing`，让路由能刷新失效条目。[`src/icons.ts`](src/icons.ts) 按平台提取图标：macOS 在解析出的 bundle 上跑 `plutil`/`sips`，Windows 在解析出的可执行文件上跑生成的 PowerShell `ExtractAssociatedIcon` 脚本（`-File` 位置参数让路径不经过命令行解析），Linux 走 desktop 条目/hicolor/pixmaps 的文件系统查找。
 
-[`src/index.ts`](src/index.ts) 在 `ctx.webServer` 上注册三条路由：`GET /open-in-app/apps`（解析映射的 keys）、`GET /open-in-app/icon/<id>`（提取的图标，进程内内存缓存）、`POST /open-in-app/open`（直接使用映射中已验证的启动器——绝不重新检测）。每条路由都先向组合的 `connection` 服务询问是否拒绝；完整的信任叙述——Host/Origin 栅栏与浏览器认证——唯一的出处在 [`src/index.ts`](src/index.ts) 的模块注释。在该栅栏之上，open 路由在 wire 边界校验请求体：`application/json` 媒体类型、64 KiB 上限、解析为可用的目录 id、指向现存目录的绝对路径。解析与图标命令经 [`@redspark/rsh-native-command`](../../../../Core/util/native-command/README.zh.md)（argv，绝不走 shell）在各自期限内执行；PATH 名称走 `ctx.subprocess.resolveExecutable()` 进程内解析。
+[`src/routes.ts`](src/routes.ts) 持有三个处理器与它们的信任栅栏，不绑定任何路由载体：`GET /open-in-app/apps`（解析映射的 keys）、`GET /open-in-app/icon/<id>`（提取的图标，进程内内存缓存）、`POST /open-in-app/open`（直接使用映射中已验证的启动器——绝不重新检测）。每条路由都先向组合的 `connection` 服务询问是否拒绝；完整的信任叙述——Host/Origin 栅栏与浏览器认证——唯一的出处是该模块的注释。两个载体注册同一份处理器：[src/index.ts](src/index.ts) 的 Cordis 行注册到 ctx.webServer，[src/native.ts](src/native.ts) 的 Native 行注册到监听器的 httpRoutes。若某个 Native 载体改用私有通道服务浏览器而不提供 httpRoutes，该行就不注册路由，而不是让整份组合装配失败；浏览器半边读取该载体提供的目录。在该栅栏之上，open 路由在 wire 边界校验请求体：`application/json` 媒体类型、64 KiB 上限、解析为可用的目录 id、指向现存目录的绝对路径。解析与图标命令经 [`@redspark/rsh-native-command`](../../../../Core/util/native-command/README.zh.md)（argv，绝不走 shell）在各自期限内执行；PATH 名称走 `ctx.subprocess.resolveExecutable()` 进程内解析。
 
 </details>
 
@@ -89,7 +89,8 @@ kind: "package-reference"
 - [dsh-client-ui-open-in-app](../../client/ui-open-in-app/README.zh.md)——消费这三条路由的浏览器分体按钮。
 - [dsh-subprocess](../../../../Core/subprocess/subprocess/README.zh.md)——提供进程内 PATH 解析与清理过的子进程环境的能力。
 - [dsh-native-command](../../../../Core/util/native-command/README.zh.md)——解析与图标命令的免 shell 主机命令运行器。
-- [dsh-host-webserver](../webserver/README.zh.md)——承载三条 HTTP 端点的路由注册表。
+- [dsh-host-webserver](../webserver/README.zh.md)——三条端点在其上注册的 Cordis 路由载体。
+- [rsh-http-routes](../../../../Core/util/http-routes/README.zh.md)——两个载体共同派发的路由表。
 - [Host 包地图](../README.zh.md)——本包所属的 GUI 主机家族。
 
 -----

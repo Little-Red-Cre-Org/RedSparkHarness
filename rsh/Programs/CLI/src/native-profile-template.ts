@@ -63,6 +63,7 @@ const NATIVE_WEB_CLIENT_INSTALLATIONS = [
   { id: 'settings-plugins-ui', plugin: '@redspark/rsh-client-ui-settings-plugin-inventory' },
   { id: 'settings-models-ui', plugin: '@redspark/rsh-client-ui-settings-models' },
   { id: 'file-upload', plugin: '@redspark/rsh-client-file-upload' },
+  { id: 'open-in-app', plugin: '@redspark/rsh-client-ui-open-in-app' },
 ] as const
 
 /** One shipped browser Client installation used by a native Web profile. */
@@ -393,6 +394,10 @@ export function shippedNativeProfileComposition(
       ...(profile === 'native-web' ? [{ id: 'schedule-controller', plugin: '@redspark/rsh-native-schedule-controller', scope: ROOT }] : []),
       ...(profile === 'native-web' ? [{ id: 'jobs-controller', plugin: '@redspark/rsh-native-jobs-controller', scope: ROOT }] : []),
       ...(profile === 'native-web' ? [{ id: 'workspace', plugin: '@redspark/rsh-workspace', scope: ROOT }] : []),
+      // The catalog, icons, and launch endpoint the Open In button calls. A
+      // Native profile has no Cordis webServer, so this row registers the same
+      // handlers on the Native listener's httpRoutes.
+      ...(profile === 'native-web' ? [{ id: 'open-in-app', plugin: '@redspark/rsh-host-open-in-app', scope: ROOT }] : []),
       { id: 'storage', plugin: '@redspark/rsh-session-persistence-jsonl', scope: ROOT,
         config: { root: join(home, 'sessions'), compression: 'none' } },
       { id: 'attachments', plugin: '@redspark/rsh-attachment-local', scope: ROOT,
