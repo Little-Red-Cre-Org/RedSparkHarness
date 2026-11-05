@@ -69,10 +69,10 @@ export const zh = {
   contextInjection: '上下文注入', contextRecall: '跨会话召回',
   live: '实时助手输出', truncated: '较早的实时文本已截断；结算后的 Session 记录保持权威。',
   settled: '实时输出是临时呈现；重载后恢复结算的 Session 记录。',
-  settings: '设置', settingsGeneral: '通用设置', settingsModels: '模型',
+  settings: '设置', settingsGeneral: '通用设置',
   settingsPlugins: '插件', settingsAgentPresets: 'Agent 预设', settingsClose: '关闭设置', settingsComingSoon: '即将迁移',
   settingsPluginTitle: '插件', settingsPluginIntro: '配置和查看本部署已安装的插件。', settingsPluginTabs: '插件视图',
-  settingsPluginConfigTab: '插件配置', settingsPluginInventoryTab: '插件列表', settingsPluginLoading: '正在读取插件设置…',
+  settingsPluginConfigTab: '插件配置', settingsPluginLoading: '正在读取插件设置…',
   settingsPluginRefreshPending: '正在读取更新后的插件设置…',
   settingsPluginLoadFailed: '无法读取插件设置。', settingsPluginCredentialLoadFailed: '无法读取 API 密钥状态。',
   settingsPluginHostGap: '当前 Host 暂不支持配置此插件。',
@@ -202,7 +202,7 @@ export const zh = {
   credentials: '凭据引用', credential: '凭据', credentialValue: '新凭据值', configured: '已配置',
   notConfigured: '未配置', saveCredential: '保存凭据', savingCredential: '正在保存凭据…',
   credentialSaved: '凭据已保存；主机只返回配置状态。', removeCredential: '移除凭据',
-  credentialRemoved: '凭据已移除。', credentialError: '凭据请求失败', settingsPluginListLoadError: '暂时无法读取插件。', settingsPluginListRetry: '重试', settingsPluginListEmpty: '暂无插件。', settingsPluginListEmptySearch: '没有匹配的插件。', settingsPluginListCount: '个', settingsPluginListFailed: '失败', settingsPluginListDisposed: '已停用', settingsPluginListName: '名称', settingsPluginListScope: '作用域', settingsPluginListFailure: '失败步骤', settingsPluginListFailureCleanup: '清理', settingsPluginListNoFailure: '无',
+  credentialRemoved: '凭据已移除。', credentialError: '凭据请求失败',
 } as const
 
 /** Complete English pair for the native page's Chinese key set. */
@@ -280,10 +280,10 @@ export const en: Record<keyof typeof zh, string> = {
   contextInjection: 'Context injection', contextRecall: 'Session recall',
   live: 'Live assistant output', truncated: 'Earlier live text was truncated; settled Session records remain authoritative.',
   settled: 'Live output is temporary; settled Session records restore after reload.',
-  settings: 'Settings', settingsGeneral: 'General', settingsModels: 'Models',
+  settings: 'Settings', settingsGeneral: 'General',
   settingsPlugins: 'Plugins', settingsAgentPresets: 'Agent presets', settingsClose: 'Close settings', settingsComingSoon: 'Coming soon',
   settingsPluginTitle: 'Plugins', settingsPluginIntro: 'Configure and inspect the plugins installed in this deployment.', settingsPluginTabs: 'Plugin views',
-  settingsPluginConfigTab: 'Plugin configuration', settingsPluginInventoryTab: 'Plugin list', settingsPluginLoading: 'Loading plugin settings…',
+  settingsPluginConfigTab: 'Plugin configuration', settingsPluginLoading: 'Loading plugin settings…',
   settingsPluginRefreshPending: 'Reading updated plugin settings…',
   settingsPluginLoadFailed: 'Plugin settings could not be loaded.', settingsPluginCredentialLoadFailed: 'API key status could not be loaded.',
   settingsPluginHostGap: 'Not configurable on this Host yet.',
@@ -413,7 +413,7 @@ export const en: Record<keyof typeof zh, string> = {
   credentials: 'Credential references', credential: 'Credential', credentialValue: 'New credential value', configured: 'Configured',
   notConfigured: 'Not configured', saveCredential: 'Save credential', savingCredential: 'Saving credential…',
   credentialSaved: 'Credential saved; the Host returned its status only.', removeCredential: 'Remove credential',
-  credentialRemoved: 'Credential removed.', credentialError: 'Credential request failed', settingsPluginListLoadError: 'Plugins are temporarily unavailable.', settingsPluginListRetry: 'Retry', settingsPluginListEmpty: 'No plugins are available.', settingsPluginListEmptySearch: 'No matching plugins.', settingsPluginListCount: 'plugins', settingsPluginListFailed: 'Failed', settingsPluginListDisposed: 'Disabled', settingsPluginListName: 'Name', settingsPluginListScope: 'Scope', settingsPluginListFailure: 'Failure step', settingsPluginListFailureCleanup: 'Cleanup', settingsPluginListNoFailure: 'None',
+  credentialRemoved: 'Credential removed.', credentialError: 'Credential request failed',
 }
 
 /** Native page translation keys. */

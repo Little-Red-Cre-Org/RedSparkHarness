@@ -17,14 +17,39 @@ import {
   type OpenInAppInternals, type OpenInAppResolvedLaunch,
 } from './resolver.ts'
 import { extractAppIcon, type OpenInAppIcon } from './icons.ts'
+import z from '@redspark/schemastery'
 import { OPEN_IN_APP_APPS_ROUTE, OPEN_IN_APP_ICON_PREFIX, OPEN_IN_APP_OPEN_ROUTE } from './shared.ts'
 
 /** Per-route deadlines and the launch watch window, as configured by the host row. */
 export interface OpenInAppRouteConfig {
+  /**
+   * Per-command deadline in milliseconds for catalog-resolution host
+   * commands (`xcode-select`, the Windows registry reads).
+   */
   readonly probeTimeoutMs: number
+  /**
+   * Per-command deadline in milliseconds for icon-extraction host commands
+   * (`plutil`/`sips` on macOS, the PowerShell extraction on Windows).
+   */
   readonly iconTimeoutMs: number
+  /**
+   * Early-failure watch window per launch, in milliseconds: a launcher still
+   * running when the window closes counts as launched and keeps running, so
+   * this bounds how long the open route holds a successful launch, not how
+   * long an application may live.
+   */
   readonly launchWatchMs: number
 }
+
+/** One bounded millisecond count: whole, at least 1, at most ten minutes. */
+const boundedMs = (): z<number> => z.number().step(1).min(1).max(600_000).required()
+
+/** The configuration both carriers validate, so a Native profile sets the same deadlines as cordis.yml. */
+export const Config: z<OpenInAppRouteConfig> = z.object({
+  probeTimeoutMs: boundedMs(),
+  iconTimeoutMs: boundedMs(),
+  launchWatchMs: boundedMs(),
+})
 
 /** Trust fence shared by both listeners: a rejection status, or undefined to admit. */
 export interface OpenInAppRejection {

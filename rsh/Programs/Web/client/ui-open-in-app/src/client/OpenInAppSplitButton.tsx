@@ -1,3 +1,4 @@
+/** Split button shared by the browser Session header and the Native message action row. */
 import { useEffect, useRef, useState } from 'react'
 import { IconChevronDownOutline14, Menu, Tooltip, type MenuItem } from '@redspark/rsh-client-ui-primitives'
 import type { TranslateNS } from '@redspark/rsh-client-ui-slots'

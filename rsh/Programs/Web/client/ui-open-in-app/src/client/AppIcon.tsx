@@ -1,3 +1,4 @@
+/** Application icon shared by the browser seat and the Native action row. */
 import { useState } from 'react'
 import type { OpenInAppKey } from './locales.ts'
 import css from './OpenInAppAction.module.css'
@@ -80,6 +81,9 @@ export function AppIcon({ id, url, size }: { id: string; url: string; size: numb
       width={size}
       height={size}
       alt=""
+      // A bundle icon is decoration on a button: dragging it out would start a
+      // native drag of the image instead of the button's own behaviour.
+      draggable={false}
       className={css.icon}
       onError={() => {
         failedIcons.add(id)

@@ -672,6 +672,15 @@ export function PluginsSection({ actions, t, tabs = [], renderSlot }: {
   const tabRefs = useRef<Array<HTMLButtonElement | null>>([])
   /** Tab keys in render order: the built-in configuration tab, then every registered one. */
   const tabKeys = ['config', ...tabs.map(entry => entry.id)]
+  // A tab can retire its registration while it is selected. The configuration
+  // tab always exists, so it is where the panel returns instead of showing no
+  // panel at all with every remaining tab outside the key sequence.
+  const activeTab = tabKeys.includes(tab) ? tab : 'config'
+  useEffect(() => {
+    // Land the selection itself, so further arrow keys start from the tab that
+    // is actually shown rather than from the retired id.
+    if (activeTab !== tab) setTab(activeTab)
+  }, [activeTab, tab])
   const moveTab = (event: KeyboardEvent<HTMLButtonElement>, index: number): void => {
     let nextIndex: number
     switch (event.key) {
@@ -702,20 +711,20 @@ export function PluginsSection({ actions, t, tabs = [], renderSlot }: {
     </div> : null}
     {credentialFailed ? <p className={css.error} role="alert">{t('settingsPluginCredentialLoadFailed')}</p> : null}
     <div className={css.tabs} role="tablist" aria-label={tTabs}>
-      <button type="button" role="tab" aria-selected={tab === 'config'} aria-controls="plugins-config-panel"
-        id="plugins-config-tab" data-active={tab === 'config' ? 'true' : undefined} className={css.tab}
-        ref={(element) => { tabRefs.current[0] = element }} tabIndex={tab === 'config' ? 0 : -1}
+      <button type="button" role="tab" aria-selected={activeTab === 'config'} aria-controls="plugins-config-panel"
+        id="plugins-config-tab" data-active={activeTab === 'config' ? 'true' : undefined} className={css.tab}
+        ref={(element) => { tabRefs.current[0] = element }} tabIndex={activeTab === 'config' ? 0 : -1}
         onClick={() => { setTab('config') }} onKeyDown={(event) => { moveTab(event, 0) }}>{t('settingsPluginConfigTab')}</button>
       {tabs.map((entry, index) => (
-        <button key={entry.id} type="button" role="tab" aria-selected={tab === entry.id}
+        <button key={entry.id} type="button" role="tab" aria-selected={activeTab === entry.id}
           aria-controls={`plugins-${entry.id}-panel`} id={`plugins-${entry.id}-tab`}
-          data-active={tab === entry.id ? 'true' : undefined} className={css.tab}
-          ref={(element) => { tabRefs.current[index + 1] = element }} tabIndex={tab === entry.id ? 0 : -1}
+          data-active={activeTab === entry.id ? 'true' : undefined} className={css.tab}
+          ref={(element) => { tabRefs.current[index + 1] = element }} tabIndex={activeTab === entry.id ? 0 : -1}
           onClick={() => { setTab(entry.id) }} onKeyDown={(event) => { moveTab(event, index + 1) }}
         >{entry.label ?? entry.id}</button>
       ))}
     </div>
-    <div id="plugins-config-panel" role="tabpanel" aria-labelledby="plugins-config-tab" hidden={tab !== 'config'} className={css.panel}>
+    <div id="plugins-config-panel" role="tabpanel" aria-labelledby="plugins-config-tab" hidden={activeTab !== 'config'} className={css.panel}>
       <ul className={css.cards}>
         {PLUGINS.map((plugin) => {
           const row = descriptorByNamespace.get(plugin.namespace)
@@ -740,7 +749,7 @@ export function PluginsSection({ actions, t, tabs = [], renderSlot }: {
     </div>
     {tabs.map(entry => (
       <div key={entry.id} id={`plugins-${entry.id}-panel`} role="tabpanel" aria-labelledby={`plugins-${entry.id}-tab`}
-        hidden={tab !== entry.id} className={css.panel}>
+        hidden={activeTab !== entry.id} className={css.panel}>
         {renderSlot?.('settings.plugins.tab', {}, { only: entry.id })}
       </div>
     ))}

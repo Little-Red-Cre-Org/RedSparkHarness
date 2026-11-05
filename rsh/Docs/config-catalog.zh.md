@@ -939,8 +939,8 @@ export interface Config {
 需要：`webServer` · `connection` · `subprocess`
 
 ```ts config-catalog
-/** Open-in-app host configuration. */
-export interface Config {
+/** Per-route deadlines and the launch watch window, as configured by the host row. */
+export interface OpenInAppRouteConfig {
   /**
    * Per-command deadline in milliseconds for catalog-resolution host
    * commands (`xcode-select`, the Windows registry reads).
@@ -961,7 +961,7 @@ export interface Config {
 }
 ```
 
-来源：[`rsh/Programs/Web/host/open-in-app/src/index.ts:50`](../Programs/Web/host/open-in-app/src/index.ts)
+来源：[`rsh/Programs/Web/host/open-in-app/src/routes.ts:24`](../Programs/Web/host/open-in-app/src/routes.ts)
 
 <a id="redsparkrsh-host-webserver"></a>
 

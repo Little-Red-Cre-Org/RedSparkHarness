@@ -118,6 +118,28 @@ it('shows the four native Plugins configuration cards', async () => {
   for (const label of ['Shell', 'Agent loop', 'Subagent']) expect(screen.getByText(label)).toBeTruthy()
 })
 
+it('returns to the configuration tab when the selected tab retires', async () => {
+  const actions = pageActions()
+  actions.settingsDescribe = vi.fn(async () => settingsDescription([]))
+  const tabs = [{ id: 'all', order: 10, label: 'Plugin list' }]
+  const page = renderSettingsPage({ actions, t: key => en[key], section: 'plugins', tabs })
+
+  fireEvent.click(await screen.findByRole('tab', { name: 'Plugin list' }))
+  expect(screen.getByRole('tab', { name: 'Plugin list' }).getAttribute('aria-selected')).toBe('true')
+
+  // The registering package unloads: its tab leaves the ledger while selected.
+  page.rerender(<SettingsPage actions={{ ...emptyModelActions, ...actions }} t={key => en[key]}
+    section="plugins" tabs={[]} useLocale={useLocale} useTheme={useTheme}
+    setLocale={() => {}} setThemePreference={() => {}} setFontSize={() => {}} />)
+
+  const configTab = await screen.findByRole('tab', { name: en.settingsPluginConfigTab })
+  // Back on a tab that exists, and still reachable by keyboard.
+  expect(configTab.getAttribute('aria-selected')).toBe('true')
+  expect(configTab.getAttribute('tabindex')).toBe('0')
+  expect(screen.getByRole('tabpanel', { hidden: false })).toBeTruthy()
+  expect(screen.queryByRole('tab', { name: 'Plugin list' })).toBeNull()
+})
+
 it('describes a settings-file apiKey field without exposing its value', async () => {
   const literal = {
     ...pluginSettings('web-search-deepseek', 1, { apiKeyEnv: 'KEY_A', baseURL: '', maxUses: 5 }),

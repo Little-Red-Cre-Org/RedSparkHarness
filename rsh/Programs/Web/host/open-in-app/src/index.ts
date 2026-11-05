@@ -17,46 +17,18 @@ import type { Context } from '@redspark/cordis'
 import type {} from '@redspark/rsh-http-routes-cordis'
 import type {} from '@redspark/rsh-subprocess'
 import { launchedThroughSsh, launchEnvironmentOf } from '@redspark/rsh-launch-environment'
-import z from '@redspark/schemastery'
 import type { OpenInAppInternals } from './resolver.ts'
 import { internals } from './internals.ts'
 import { createOpenInAppRoutes } from './routes.ts'
+import type { OpenInAppRouteConfig } from './routes.ts'
 
 export type * from './shared.ts'
+export { Config } from './routes.ts'
 
 /** Cordis function-plugin name. */
 export const name = 'open-in-app'
 /** The route carrier, the trust fence guarding every route, and the PATH resolver. */
 export const inject = ['webServer', 'connection', 'subprocess']
-
-/** Open-in-app host configuration. */
-export interface Config {
-  /**
-   * Per-command deadline in milliseconds for catalog-resolution host
-   * commands (`xcode-select`, the Windows registry reads).
-   */
-  readonly probeTimeoutMs: number
-  /**
-   * Per-command deadline in milliseconds for icon-extraction host commands
-   * (`plutil`/`sips` on macOS, the PowerShell extraction on Windows).
-   */
-  readonly iconTimeoutMs: number
-  /**
-   * Early-failure watch window per launch, in milliseconds: a launcher still
-   * running when the window closes counts as launched and keeps running, so
-   * this bounds how long the open route holds a successful launch, not how
-   * long an application may live.
-   */
-  readonly launchWatchMs: number
-}
-
-const boundedMs = (): z<number> => z.number().step(1).min(1).max(600_000).required()
-
-export const Config: z<Config> = z.object({
-  probeTimeoutMs: boundedMs(),
-  iconTimeoutMs: boundedMs(),
-  launchWatchMs: boundedMs(),
-})
 
 /** Trust surface consumed here; the browser-side connection package owns the full type. */
 interface OpenInAppConnection {
@@ -75,7 +47,7 @@ function connectionOf(ctx: Context): OpenInAppConnection {
  * @param ctx - the host context supplying the carrier, trust fence, and PATH resolver.
  * @param config - per-route deadlines and the launch watch window.
  */
-export function apply(ctx: Context, config: Config): void {
+export function apply(ctx: Context, config: OpenInAppRouteConfig): void {
   const ssh = launchedThroughSsh(launchEnvironmentOf(ctx))
   /** Test-seam facts completed with the composition's PATH resolver. */
   const catalogInternals = (): OpenInAppInternals => ({
