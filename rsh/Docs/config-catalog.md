@@ -959,7 +959,7 @@ export interface Config {
 }
 ```
 
-Source: [`rsh/Programs/Web/host/open-in-app/src/index.ts:50`](../Programs/Web/host/open-in-app/src/index.ts)
+Source: [`rsh/Programs/Web/host/open-in-app/src/index.ts:33`](../Programs/Web/host/open-in-app/src/index.ts)
 
 <a id="redsparkrsh-host-webserver"></a>
 
