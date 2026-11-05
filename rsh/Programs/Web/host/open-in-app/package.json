@@ -1,6 +1,6 @@
 {
   "name": "@redspark/rsh-host-open-in-app",
-  "description": "Host half of open-in-app: resolved application catalog, icons, and the launch endpoint as three webServer routes",
+  "description": "Host half of open-in-app: resolved application catalog, icons, and the launch endpoint as three routes over the composition's route carrier",
   "version": "1.0.0",
   "publishConfig": {
     "access": "public"

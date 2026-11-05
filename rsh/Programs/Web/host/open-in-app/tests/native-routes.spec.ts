@@ -11,7 +11,9 @@
 import { describe, expect, it, vi } from 'vitest'
 import type { NativeContext } from '@redspark/rsh-native-runtime'
 import { createLaunchEnvironmentSnapshot } from '@redspark/rsh-launch-environment/native'
-import { plugin } from '../src/native.ts'
+import { readFileSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
+import { DEFAULT_ROUTE_CONFIG, plugin } from '../src/native.ts'
 import { OPEN_IN_APP_APPS_ROUTE, OPEN_IN_APP_ICON_PREFIX, OPEN_IN_APP_OPEN_ROUTE } from '../src/shared.ts'
 
 /** Context stub: the row reads its services and owns one route disposer per route.
@@ -62,6 +64,30 @@ describe('native open-in-app host row', () => {
   it('installs nothing when the carrier has no route listener', async () => {
     const { routes } = await harness({ routeListener: false })
     expect(routes).toEqual([])
+  })
+
+  it('defaults to the deadlines the shipped cordis.yml sets', () => {
+    // Two literals would drift silently, so the Cordis patch is read back: a
+    // profile that configures nothing must behave exactly like the browser row.
+    const patch = readFileSync(fileURLToPath(new URL(
+      '../../../../../Compatibility/DSH/bundle/web-app/cordis.patch.yml', import.meta.url)), 'utf8')
+    const row = patch.slice(patch.indexOf('- id: open-in-app'))
+    const value = (name: string): number => Number(new RegExp(`\\s${name}:\\s*(\\d+)`, 'u').exec(row)?.[1])
+    expect(DEFAULT_ROUTE_CONFIG).toEqual({
+      probeTimeoutMs: value('probeTimeoutMs'),
+      iconTimeoutMs: value('iconTimeoutMs'),
+      launchWatchMs: value('launchWatchMs'),
+    })
+  })
+
+  it('takes the deadlines a profile sets and refuses the ones it cannot', () => {
+    expect(typeof plugin.resolve(undefined)).toBe('function')
+    expect(() => plugin.resolve({ probeTimeoutMs: 4_000 })).not.toThrow()
+    expect(() => plugin.resolve({ probeTimeoutMs: 0 })).toThrow(/probeTimeoutMs/)
+    expect(() => plugin.resolve({ iconTimeoutMs: 900_000 })).toThrow(/iconTimeoutMs/)
+    expect(() => plugin.resolve({ launchWatchMs: 10.5 })).toThrow(/launchWatchMs/)
+    expect(() => plugin.resolve({ timeoutMs: 1_000 })).toThrow(/unknown native configuration field timeoutMs/)
+    expect(() => plugin.resolve([])).toThrow(/must be an object/)
   })
 
   it('answers with the shared route semantics', async () => {

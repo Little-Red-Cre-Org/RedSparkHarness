@@ -30,9 +30,10 @@ export { Config }
 
 /**
  * Deadlines a Native profile that sets none gets. They match the shipped
- * cordis.yml values so one product does not behave differently per carrier.
+ * cordis.yml values so one product does not behave differently per carrier;
+ * the suite reads that patch file back to keep the two from drifting.
  */
-const DEFAULT_ROUTE_CONFIG: OpenInAppRouteConfig = {
+export const DEFAULT_ROUTE_CONFIG: OpenInAppRouteConfig = {
   probeTimeoutMs: 10_000,
   iconTimeoutMs: 10_000,
   launchWatchMs: 1_000,
