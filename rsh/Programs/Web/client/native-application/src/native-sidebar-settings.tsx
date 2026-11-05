@@ -1,5 +1,5 @@
 /** Native sidebar Settings entry and compact appearance controls. */
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import {
   IconDarkOutline16, IconGlobeOutline14, IconLightOutline16, IconSettingsOutline16, SettingsPanel, Tooltip,
 } from '@redspark/rsh-client-ui-primitives'
@@ -55,6 +55,10 @@ type NativeSidebarSettingsInjected = {
   ledger: {
     sections: () => readonly NativeSettingsLedgerEntry[]
     tabs: () => readonly NativeSettingsLedgerEntry[]
+    /** Subscribe to registration changes for both keys; the return value unsubscribes. */
+    subscribe: (onChange: () => void) => () => void
+    /** Monotonic count of registration changes, so React can re-read the projection. */
+    version: () => number
   }
   settingsActions: NativeSettingsActions
   refreshModelControls: NativeConversationController['refreshModelControls']
@@ -128,7 +132,15 @@ export function NativeSidebarSettings({
   const locale = useLocale(snapshot => snapshot.locale)
   const colorScheme = useTheme(snapshot => snapshot.active.colorScheme)
   const [showSettings, setShowSettings] = useState(false)
-  const [settingsSection, setSettingsSection] = useState('general')
+  // Registration churn re-reads the projection below: a package that unloads
+  // must take its navigation row with it instead of leaving a row whose page
+  // renders nothing.
+  useSyncExternalStore(ledger.subscribe, ledger.version)
+  const [selected, setSettingsSection] = useState('general')
+  // A page can lose its registration while the panel is open. Standing on it
+  // would show an empty body under a navigation that no longer lists it, so the
+  // panel follows the ledger back to a page that exists.
+  const settingsSection = settingsSectionAvailable(ledger, selected) ? selected : 'general'
   const [hasSettingsDocument, setHasSettingsDocument] = useState(false)
   const [settingsDocumentError, setSettingsDocumentError] = useState(false)
   const startupPreferencesStale = useRef(false)

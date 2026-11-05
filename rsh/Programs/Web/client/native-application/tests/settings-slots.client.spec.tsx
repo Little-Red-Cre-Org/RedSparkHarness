@@ -68,6 +68,9 @@ const services: NativePlugin = {
   },
 }
 
+/** Disposes the models registration, so a suite can retire a page while the panel is open. */
+let disposeModels: (() => void) | undefined
+
 /** Registrations that stand in for the feature packages. */
 const probes: NativePlugin = {
   apiVersion: 1,
@@ -83,12 +86,17 @@ const probes: NativePlugin = {
       order: 0,
       label: () => 'Plugin list',
     }, () => <p>plugins-slot-probe</p>)))
-    context.own(slots.inject('settings.section', () => slots.register({
-      name: 'settings.section',
-      id: 'models',
-      order: 0,
-      label: () => 'Models',
-    }, () => <p>models-slot-probe</p>)))
+    context.own(slots.inject('settings.section', () => {
+      const dispose = slots.register({
+        name: 'settings.section',
+        id: 'models',
+        order: 0,
+        label: () => 'Models',
+      }, () => <p>models-slot-probe</p>)
+      context.own(dispose)
+      disposeModels = dispose
+      return dispose
+    }))
   },
 }
 
@@ -148,4 +156,31 @@ it('shows a registration in the plugins tab and the models section', async () =>
   fireEvent.click(screen.getByRole('button', { name: 'Models' }))
   expect(await screen.findByText('models-slot-probe')).toBeTruthy()
   expect(screen.queryByText('plugins-slot-probe')).toBeNull()
+})
+
+it('drops the navigation row and leaves an unregistered page when its registration retires', async () => {
+  const scope = new NativeScope()
+  const host = new NativeHost(resolveInstallation([
+    { plugin: services, scope, config: undefined },
+    { plugin: renderer, scope, config: undefined },
+    { plugin: locale, scope, config: { locale: 'en' } },
+    { plugin: theme, scope, config: undefined },
+    { plugin: application, scope, config: { maxLiveTextChars: 1024, maxLiveEvents: 32 } },
+    { plugin: sessionPresentation, scope, config: undefined },
+    { plugin: probes, scope, config: undefined },
+    { plugin: shell, scope, config: undefined },
+  ], 'client'))
+  await host.start()
+  started.push(host)
+
+  fireEvent.click(await screen.findByRole('button', { name: 'Settings' }))
+  fireEvent.click(await screen.findByRole('button', { name: 'Models' }))
+  expect(await screen.findByText('models-slot-probe')).toBeTruthy()
+
+  disposeModels?.()
+  // The row must go with the registration, and the panel must not stay on a
+  // page whose body is now the empty fallback.
+  await screen.findByRole('button', { name: 'General' })
+  expect(screen.queryByRole('button', { name: 'Models' })).toBeNull()
+  expect(screen.queryByText('Coming soon')).toBeNull()
 })

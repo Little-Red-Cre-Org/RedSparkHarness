@@ -640,6 +640,14 @@ export const plugin: NativePlugin = {
               ? [] : [{ id: entry.options.id, order: entry.options.order ?? 0, label: resolveSlotLabel(entry.options.label) }]),
             tabs: () => slots.entries('settings.plugins.tab').flatMap(entry => entry.options.id === undefined
               ? [] : [{ id: entry.options.id, order: entry.options.order ?? 0, label: resolveSlotLabel(entry.options.label) }]),
+            // Registrations come and go with their packages, so the shell has to
+            // re-read the projection; without this the navigation keeps rows whose
+            // page no longer renders.
+            subscribe: (onChange: () => void) => {
+              const offs = [slots.subscribe('settings.section', onChange), slots.subscribe('settings.plugins.tab', onChange)]
+              return () => { for (const off of offs) off() }
+            },
+            version: () => slots.getVersion('settings.section') + slots.getVersion('settings.plugins.tab'),
           },
           settingsActions,
           refreshModelControls,

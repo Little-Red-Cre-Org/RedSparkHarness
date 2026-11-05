@@ -70,12 +70,13 @@
         "host"
       ],
       "requires": [
-        "httpRoutes",
         "hostConnection",
         "subprocess",
         "launchEnvironment"
       ],
-      "optional": [],
+      "optional": [
+        "httpRoutes"
+      ],
       "provides": []
     }
   }
