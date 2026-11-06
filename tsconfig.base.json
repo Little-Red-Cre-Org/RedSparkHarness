@@ -673,7 +673,7 @@
       "@redspark/rsh-client-ui-conversation/tool-records": ["./rsh/Programs/Web/client/ui-conversation/src/tool-records.ts"],
       "@redspark/rsh-client-ui-deliverables/native": ["./rsh/Programs/Web/client/ui-deliverables/src/native.tsx"],
       "@redspark/rsh-client-ui-goal/native": ["./rsh/Programs/Web/client/ui-goal/src/native.ts"],
-      "@redspark/rsh-client-ui-input-trigger/native": ["./rsh/Programs/Web/client/ui-input-trigger/src/native.ts"],
+      "@redspark/rsh-client-ui-input-trigger/native": ["./rsh/Programs/Web/client/ui-input-trigger/src/native.tsx"],
       "@redspark/rsh-client-ui-jobs/native": ["./rsh/Programs/Web/client/ui-jobs/src/native.ts"],
       "@redspark/rsh-client-ui-layout/native": ["./rsh/Programs/Web/client/ui-layout/src/native.ts"],
       "@redspark/rsh-client-ui-message-feedback/native": ["./rsh/Programs/Web/client/ui-message-feedback/src/native.ts"],

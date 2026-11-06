@@ -25,8 +25,11 @@ import type { NativePlugin } from '@redspark/rsh-native-runtime'
 import type { SessionId } from '@redspark/rsh-session/types'
 import type { SnapshotStore } from '@redspark/rsh-client-store'
 import type {} from '@redspark/rsh-client-ui-renderer/native'
+import type {} from '@redspark/rsh-client-locale/native'
 import type {} from '@redspark/rsh-client-ui-session/native'
 import type { InputDispatch } from './client/native-dispatch.ts'
+import { en, zh } from './client/locales.ts'
+import { NativeTriggerMenu } from './native-menu.tsx'
 import { InputTriggerController } from './client/controller.ts'
 import type { MenuState, TriggerHit } from './core/contract.ts'
 import type {
@@ -288,7 +291,8 @@ export const plugin: NativePlugin = {
   apiVersion: 1,
   name: '@redspark/rsh-client-ui-input-trigger',
   targets: ['client'],
-  requires: ['clientNativeConversation'],
+  requires: ['clientNativeConversation', 'clientNativeComposer', 'clientLocale'],
+  optional: ['clientSlots'],
   provides: ['clientNativeInputTrigger'],
   resolve: (input) => {
     if (input !== undefined && (input === null || typeof input !== 'object' || Array.isArray(input)
@@ -297,9 +301,61 @@ export const plugin: NativePlugin = {
     }
     return (context) => {
       const conversation = context.require('clientNativeConversation')
-      const service = createNativeInputTrigger(conversation)
+      const locale = context.require('clientLocale')
+      context.own(locale.register('slash.menu', { en, zh }))
+      const composer = context.require('clientNativeComposer')
+      // A pick settles into the composer's draft: the pipeline produces the
+      // replacement text, the composer owns the span and the caret.
+      const service = createNativeInputTrigger(conversation, (event) => {
+        if (event.kind !== 'insert-reference') return false
+        const request = event.request as {
+          readonly reference: { readonly clipboardText: string; readonly label: string }
+          readonly span: { readonly start: number; readonly end: number }
+        }
+        composer.replaceToken(request.span, request.reference.clipboardText)
+        return true
+      })
       context.provide('clientNativeInputTrigger', service)
       context.own(() => { service.dispose() })
+      // Drive the selected Session's pipeline from the composer's own draft and
+      // caret. The composer publishes both; this is the only thing that turns a
+      // keystroke into a candidate request, so a Native client without it has a
+      // source roster nothing ever asks.
+      let tracked: { readonly sessionId: SessionId; readonly text: string; readonly caret: number } | undefined
+      const off = composer.subscribe(() => {
+        const selected = conversation.getSnapshot().selected
+        if (selected === undefined) {
+          service.current()?.dismiss()
+          tracked = undefined
+          return
+        }
+        const { text: draft, caret } = composer.getSnapshot()
+        if (tracked?.sessionId === selected && tracked.text === draft && tracked.caret === caret) return
+        tracked = { sessionId: selected, text: draft, caret }
+        service.sessionOf(selected).track(draft, caret, { tier: 'plain' }, caret)
+      })
+      context.own(() => { off() })
+      // Render the menu where a conversation surface can seat it. The seat is a
+      // list slot, so the composer decides where the rows appear; this entry
+      // owns what they say.
+      // The composer seats the menu through the slot it declares; this entry
+      // owns what the rows say and how a pick settles.
+      const slots = context.optional('clientSlots')
+      if (slots !== undefined) {
+        const label = locale.bind('slash.menu')('suggestions.aria')
+        context.own(slots.inject('native.conversation.overlay', () => slots.register({
+          name: 'native.conversation.overlay', id: 'trigger-menu', locale: 'slash.menu',
+        }, ({ sessionId }: { readonly sessionId: SessionId }) => {
+          const session = service.sessionOf(sessionId)
+          return <NativeTriggerMenu
+            menu={session.menu}
+            pick={(source, index, action) => { session.pick(source, index, action) }}
+            hover={(source, index) => { session.hover(source, index) }}
+            dismiss={() => { session.dismiss() }}
+            label={label}
+          />
+        })))
+      }
     }
   },
 }

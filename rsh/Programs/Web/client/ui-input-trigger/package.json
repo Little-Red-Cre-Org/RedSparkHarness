@@ -46,10 +46,12 @@
                                                "client"
                                            ],
                                "requires":  [
-                                                "clientNativeConversation"
+                                                "clientNativeConversation",
+                                                "clientNativeComposer",
+                                                "clientLocale"
                                             ],
                                "optional":  [
-
+                                                "clientSlots"
                                             ],
                                "provides":  [
                                                 "clientNativeInputTrigger"

@@ -14,6 +14,7 @@ import type {} from '@redspark/rsh-client-ui-renderer/native'
 import type {} from '@redspark/rsh-client-native-session/native'
 import type { NativeLocaleSnapshot } from '@redspark/rsh-client-locale/native'
 import type {} from '@redspark/rsh-client-ui-session/native'
+import type { NativeComposerService } from '@redspark/rsh-client-ui-session/native'
 import type { NativeMessageActionsOwnerProps } from '@redspark/rsh-client-ui-session/native'
 import type {} from '@redspark/rsh-client-ui-sidebar/native'
 import { deriveEventMessage, isAppendSurfaceEvent } from '@redspark/rsh-session/surface'
@@ -56,6 +57,7 @@ import type { CommandCatalogFace } from './command-palette.tsx'
 type NativeConversationRenderSlot = {
   (key: 'native.conversation.actions', owner: object): ReactNode
   (key: 'native.conversation.message.actions', owner: NativeMessageActionsOwnerProps): ReactNode
+  (key: 'native.conversation.overlay', owner: { readonly sessionId: SessionId }): ReactNode
 }
 import type { NativeSettingsActions } from './settings-page.tsx'
 import { requestNativeModelSettings } from './settings-request.ts'
@@ -121,13 +123,14 @@ declare module '@redspark/rsh-client-ui-slots' {
   }
 }
 
-function Conversation({ snapshot, useLocale, settingsActions, listWorkspaces, chooseWorkspace, addWorkspace, listDirectory,
+function Conversation({ snapshot, useLocale, settingsActions, bindComposer, listWorkspaces, chooseWorkspace, addWorkspace, listDirectory,
   createDirectory, loadImage, send, cancel, answerHuman, selectModel, selectPreset, selectSession,
   selectPlanMode, selectPermissionPreset, submitPending, changePending, editPending, refreshPendingSubmissions,
   refreshModelControls, keepDraft, takeDraft, commands, t, renderSlot }: {
   snapshot: ConversationSnapshot
   useLocale: SnapshotSelectorHook<NativeLocaleSnapshot>
   settingsActions: NativeSettingsActions
+  bindComposer: (surface: NativeComposerService | undefined) => void
   listWorkspaces: () => Promise<readonly NativeWorkspace[]>
   chooseWorkspace: (id: NativeWorkspace['workspaceId'], trust?: boolean) => Promise<SessionId | undefined>
   addWorkspace: (path: string, trust?: boolean) => Promise<SessionId | undefined>
@@ -172,6 +175,34 @@ function Conversation({ snapshot, useLocale, settingsActions, listWorkspaces, ch
   const draftRef = useRef(draft)
   const draftVersion = useRef(0)
   const editorRef = useRef<HTMLTextAreaElement>(null)
+  const caretRef = useRef(0)
+  const draftsRef = useRef<string>('')
+  draftsRef.current = draft
+  const composerListeners = useRef(new Set<() => void>())
+  // Publish the draft surface the trigger menu reads and rewrites. The menu
+  // spans installations, so it cannot hold React state from here.
+  useEffect(() => {
+    bindComposer({
+      getSnapshot: () => ({ text: draftsRef.current, caret: caretRef.current }),
+      subscribe: (listener: () => void) => {
+        composerListeners.current.add(listener)
+        return () => { composerListeners.current.delete(listener) }
+      },
+      replaceToken: (span, replacement) => {
+        const current = draftsRef.current
+        const next = `${current.slice(0, span.start)}${replacement}${current.slice(span.end)}`
+        draftVersion.current++
+        draftRef.current = next
+        caretRef.current = span.start + replacement.length
+        setDraft(next)
+        for (const listener of composerListeners.current) listener()
+      },
+    })
+    return () => {
+      bindComposer(undefined)
+      composerListeners.current.clear()
+    }
+  }, [bindComposer])
   // The `/` palette reads the draft it is filtering and calls the Host's
   // command endpoints. `selected` is the Session whose catalog it fetched.
   const palette = useCommandPalette(commands, selected)
@@ -423,12 +454,15 @@ function Conversation({ snapshot, useLocale, settingsActions, listWorkspaces, ch
         <textarea ref={editorRef} className={css.editor} aria-label={t('prompt')}
           placeholder={t(snapshot.selected === undefined ? 'composerChooseWorkspace' : 'composerPlaceholder')}
           value={draft} disabled={!inputReady || snapshot.selected === undefined || snapshot.submissionBusy}
+          onSelect={(event) => { caretRef.current = event.currentTarget.selectionStart }}
           onChange={(event) => {
             draftVersion.current++
             draftRef.current = event.target.value
             setDraft(event.target.value)
             // The palette filters on the caret, not just the text: typing `/`
             // in the middle of a paragraph must not open it.
+            caretRef.current = event.target.selectionStart
+            for (const listener of composerListeners.current) listener()
             palette.observe(event.target.value, event.target.selectionStart)
           }} rows={1}
           onKeyDown={(event) => {
@@ -454,6 +488,7 @@ function Conversation({ snapshot, useLocale, settingsActions, listWorkspaces, ch
               }
             }
           }} />
+        {snapshot.selected === undefined ? null : renderSlot('native.conversation.overlay', { sessionId: snapshot.selected })}
         {palette.open
           ? <CommandPaletteMenu rows={palette.rows} selected={palette.selected} editor={editorRef.current}
             onSelect={(name) => {
@@ -589,7 +624,7 @@ function Conversation({ snapshot, useLocale, settingsActions, listWorkspaces, ch
 /** Minimal native application selected by the explicit native-web profile. */
 export const plugin: NativePlugin = {
   apiVersion: 1, name: '@redspark/rsh-client-native-application', targets: ['client'],
-  requires: ['clientNativeSession', 'clientNativeWorkspace', 'clientNativeDirectoryPicker', 'clientSlots', 'clientLocale', 'clientNativeTheme'], provides: ['clientApplication', 'clientNativeConversation'],
+  requires: ['clientNativeSession', 'clientNativeWorkspace', 'clientNativeDirectoryPicker', 'clientSlots', 'clientLocale', 'clientNativeTheme'], provides: ['clientApplication', 'clientNativeConversation', 'clientNativeComposer'],
   resolve(input) {
     if (input !== undefined && (input === null || typeof input !== 'object' || Array.isArray(input)
       || Object.keys(input).some(key => !['locale', 'maxLiveTextChars', 'maxLiveEvents'].includes(key)))) throw new TypeError('native conversation: invalid configuration')
@@ -625,6 +660,18 @@ export const plugin: NativePlugin = {
       }
       context.provide('clientNativeConversation', controller)
       context.own(() => controller.close())
+      // The composer's draft lives in the mounted surface, so the service reads
+      // whatever that surface has published. The menu that consumes this is a
+      // separate installation; before it mounts, the surface is absent and the
+      // getter answers an empty draft rather than throwing at a caller that
+      // only exists while the composer is on screen.
+      let composerSurface: NativeComposerService | undefined
+      context.provide('clientNativeComposer', {
+        getSnapshot: () => composerSurface?.getSnapshot() ?? { text: '', caret: 0 },
+        subscribe: (listener: () => void) => composerSurface?.subscribe(listener) ?? (() => {}),
+        replaceToken: (span, replacement) => { composerSurface?.replaceToken(span, replacement) },
+      } satisfies NativeComposerService)
+      context.own(() => { composerSurface = undefined })
       context.own(slots.inject('sidebar.settings', () => slots.register({
         name: 'sidebar.settings', locale: 'nativeApplication',
         children: {
@@ -662,10 +709,12 @@ export const plugin: NativePlugin = {
         children: {
           'native.conversation.actions': { kind: 'list', scope: 'root' },
           'native.conversation.message.actions': { kind: 'list', scope: 'session' },
+          'native.conversation.overlay': { kind: 'list', scope: 'root' },
         },
         inject: () => ({
           hooks: { conversation: controller, locale: clientLocale },
           settingsActions,
+          bindComposer: (surface: NativeComposerService | undefined) => { composerSurface = surface },
           listWorkspaces: async () => (await workspaceClient.list(context.signal)).workspaces,
           chooseWorkspace: async (id: NativeWorkspace['workspaceId'], trust?: boolean) => {
             const navigation = controller.beginNavigation(true)
@@ -728,13 +777,14 @@ export const plugin: NativePlugin = {
           selectPermissionPreset: controller.selectPermissionPreset.bind(controller),
           refreshModelControls,
         }),
-      }, ({ useConversation, useLocale, settingsActions, listWorkspaces, chooseWorkspace, addWorkspace, listDirectory,
+      }, ({ useConversation, useLocale, settingsActions, bindComposer, listWorkspaces, chooseWorkspace, addWorkspace, listDirectory,
         createDirectory, loadImage, send, cancel, answerHuman, selectModel, selectPreset, selectSession,
         selectPlanMode, selectPermissionPreset, submitPending, changePending, editPending, refreshPendingSubmissions,
         refreshModelControls, keepDraft, takeDraft, t, renderSlot }: {
         useConversation: SnapshotSelectorHook<ConversationSnapshot>
         useLocale: SnapshotSelectorHook<NativeLocaleSnapshot>
         settingsActions: NativeSettingsActions
+        bindComposer: (surface: NativeComposerService | undefined) => void
         listWorkspaces: () => Promise<readonly NativeWorkspace[]>
         chooseWorkspace: (id: NativeWorkspace['workspaceId'], trust?: boolean) => Promise<SessionId | undefined>
         addWorkspace: (path: string, trust?: boolean) => Promise<SessionId | undefined>
@@ -759,7 +809,7 @@ export const plugin: NativePlugin = {
         t: Translate
         renderSlot: NativeConversationRenderSlot
       }) => <Conversation snapshot={useConversation(value => value)} useLocale={useLocale}
-        settingsActions={settingsActions} listWorkspaces={listWorkspaces} chooseWorkspace={chooseWorkspace}
+        settingsActions={settingsActions} bindComposer={bindComposer} listWorkspaces={listWorkspaces} chooseWorkspace={chooseWorkspace}
         addWorkspace={addWorkspace} listDirectory={listDirectory} createDirectory={createDirectory}
         loadImage={loadImage} send={send}
         cancel={cancel} answerHuman={answerHuman} selectModel={selectModel} selectPreset={selectPreset}
