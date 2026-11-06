@@ -25,7 +25,7 @@ kind: "package-reference"
 <a id="use-this-package"></a>
 ## 使用本包
 
-原生 `./native` Provider 注册由 profile 安装的常驻组装。配置显式 `default` 标识，并使用真实 NativeScope 注册每个组装。解析返回该次安装的 generation；Agent 租约共享其取消信号。移除常驻组装时，先关闭接纳并取消其 Agent，再等待租约释放，同时报告已记录的清理失败。Program 负责 Session 选择事件和 Agent 创建。原生 CLI 加载 `agent.native.json`；此 Provider 本身不读取旧版 `agent.cordis.yml`，也不编辑用户设置。`./selection` 为两个运行时从完整 Session 历史重建 preset 选择。
+原生 `./native` Provider 注册由 profile 安装的常驻组装，并在程序组装了 settings 提供方时注册与 Cordis 入口相同的 `agent-presets` 命名空间——其 `optional: ['settings']` 声明正是选择器偏好能抵达 Native 会话的原因。配置显式 `default` 标识，并使用真实 NativeScope 注册每个组装。解析返回该次安装的 generation；Agent 租约共享其取消信号。移除常驻组装时，先关闭接纳并取消其 Agent，再等待租约释放，同时报告已记录的清理失败。Program 负责 Session 选择事件和 Agent 创建。原生 CLI 加载 `agent.native.json`；此 Provider 本身不读取旧版 `agent.cordis.yml`，也不编辑用户设置。`./selection` 为两个运行时从完整 Session 历史重建 preset 选择。
 
 原生入口不会加载兼容入口使用的可选 Loader、Include、原子写入、主目录路径、scope 或 Typert 对等依赖。
 

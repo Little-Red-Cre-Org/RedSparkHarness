@@ -2,6 +2,7 @@
 import { z } from 'zod'
 import type { NativePlugin } from '@redspark/rsh-native-runtime'
 import { NativeAgentPresetRegistry } from './native-registry.ts'
+
 import { PRESET_ID } from './preset.ts'
 import type { NativePresetFolderSummary } from './native-storage.ts'
 import type { PresetRoot } from './preset.ts'
@@ -49,13 +50,64 @@ export function resolveNativeAgentPresetsConfig(input: unknown): NativeAgentPres
   }
 }
 
-/** Registry only; the selected Program owns history, Agent creation and choice transactions. */
+/** Settings namespace carrying the picker preference and the chosen default. */
+export const SETTINGS_NAMESPACE = 'agent-presets'
+
+/** The user-writable slice of the preset-selection policy. */
+export interface NativeAgentPresetSettings {
+  /** Saved default used while mode selection is enabled. */
+  default: string
+  /** Whether visible mode selection and the saved default govern unnamed new Sessions. */
+  modeSelectionEnabled: boolean
+}
+
+// A partial write is merged before the resolver runs, so both fields may be
+// absent; a strict object still rejects an unknown field.
+const settingsSectionSchema = z.strictObject({
+  default: z.string().optional(),
+  modeSelectionEnabled: z.boolean().optional(),
+})
+
+/**
+ * Read a written settings section into the policy.
+ *
+ * Absent fields fall back to the registration base, which is what makes a
+ * partial write resolve to the deployment default rather than to nothing.
+ * @param value - the merged section as stored.
+ * @param base - the registration base for absent fields.
+ * @returns the resolved policy.
+ */
+function resolveSettings(value: Record<string, unknown>, base: NativeAgentPresetSettings): NativeAgentPresetSettings {
+  const { default: savedDefault, modeSelectionEnabled } = settingsSectionSchema.parse(value)
+  return {
+    default: savedDefault ?? base.default,
+    modeSelectionEnabled: modeSelectionEnabled ?? base.modeSelectionEnabled,
+  }
+}
+
+/**
+ * Native registry Provider over the selected settings authority.
+ *
+ * The settings namespace is what makes the picker preference real: the Host
+ * resolves every unnamed new Session through this policy, so a client that
+ * writes `modeSelectionEnabled` hides the picker AND pins new Sessions to the
+ * deployment default. Without a settings provider the registry still serves the
+ * roster; the policy then reports the picker as shown and the deployment default
+ * as effective.
+ */
 export const plugin: NativePlugin = {
-  apiVersion: 1, name: '@redspark/rsh-agent-presets', targets: ['host'], requires: [], provides: ['agentPresets'],
+  apiVersion: 1, name: '@redspark/rsh-agent-presets', targets: ['host'],
+  requires: [], optional: ['settings'], provides: ['agentPresets'],
   resolve(input) {
     const config = resolveNativeAgentPresetsConfig(input)
     return (context) => {
-      const registry = new NativeAgentPresetRegistry(config.default, context.scope, config.folders, config.managementRoots)
+      const settings = context.optional('settings')
+      const base: NativeAgentPresetSettings = { default: config.default, modeSelectionEnabled: true }
+      const scope = settings?.register(SETTINGS_NAMESPACE, { ...base }, value => resolveSettings(value, base))
+      if (scope !== undefined) context.own(() => { scope.dispose() })
+      const registry = new NativeAgentPresetRegistry(
+        config.default, context.scope, config.folders, config.managementRoots, scope,
+      )
       context.own(() => registry.dispose())
       context.provide('agentPresets', registry)
     }
