@@ -103,7 +103,12 @@ export function crumbsFor(
   return crumbs
 }
 
-/** Project one directory destination as the drill payload `pick` already understands. */
+/**
+ * Project one directory destination as the drill payload `pickOf` already understands.
+ * @param label - the crumb text this destination shows.
+ * @param mention - the mention text reaching this directory.
+ * @returns the row payload as JSON.
+ */
 export function directoryValue(label: string, mention: string): string {
   const value: ReferenceCandidateValue = { kind: 'file', fileKind: 'directory', label, mention }
   return JSON.stringify(value)

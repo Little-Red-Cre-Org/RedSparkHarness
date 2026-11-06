@@ -101,6 +101,82 @@ export interface NativeSessionReferenceRow {
   readonly updatedAt: number
 }
 
+/** One menu row this source returns, in the pipeline's candidate currency. */
+export interface NativeReferenceSourceRow {
+  readonly name: string
+  readonly label?: string
+  readonly description?: string
+  readonly icon?: 'file' | 'folder' | 'session'
+  readonly section?: string
+  readonly value?: string
+  readonly drill?: boolean
+}
+
+/** One breadcrumb step above a drilled listing. */
+export interface NativeReferenceSourceCrumb {
+  readonly label: string
+  readonly value: string
+  readonly current?: boolean
+}
+
+/** What a pick asks the input pipeline to apply. */
+export type ReferencePickOutcome =
+  | {
+    readonly insert: {
+      readonly source: string
+      readonly ref: string
+      readonly label: string
+      readonly appearance: 'file' | 'folder' | 'session'
+      readonly clipboardText: string
+    }
+  }
+  | { readonly text: string; readonly continue?: boolean }
+  | undefined
+
+/** The trigger source this entry registers into the Native input pipeline. */
+export interface NativeReferenceSource {
+  readonly trigger: '@'
+  readonly name: 'reference'
+  readonly showGroupTitle: false
+  /**
+   * Rank files and sessions for one query.
+   * @param session - the Session whose composer is open.
+   * @param req - live query, quote state, drill state and cancellation.
+   * @returns file rows first, then session rows.
+   */
+  candidates(session: { readonly sessionId: SessionId }, req: {
+    readonly query: string
+    readonly quoted?: boolean | undefined
+    readonly drilled: boolean
+    readonly signal: AbortSignal
+  }): Promise<readonly NativeReferenceSourceRow[]>
+  /**
+   * Breadcrumbs for a drilled listing.
+   * @param session - the Session whose composer is open.
+   * @param req - live query, quote state and drill state.
+   * @returns the trail, or undefined when this listing needs no header.
+   */
+  header(session: { readonly sessionId: SessionId }, req: {
+    readonly query: string
+    readonly quoted?: boolean | undefined
+    readonly drilled: boolean
+  }): readonly NativeReferenceSourceCrumb[] | undefined
+  /**
+   * Resolve one row into the pick the pipeline applies.
+   * @param pick - the clicked row and whether this was its drill action.
+   * @returns the insert or drill outcome, or undefined when the row carries no payload.
+   */
+  onPick(pick: {
+    readonly candidate: { readonly name: string; readonly value?: string }
+    readonly action: 'pick' | 'drill'
+  }): ReferencePickOutcome
+  /** Reference codec: the clipboard form and the model serialization. */
+  readonly codec: {
+    clipboardText(ref: string): string
+    serialize(ref: string): Promise<string>
+  }
+}
+
 /** What the source reads from the Native client. */
 export interface NativeReferenceFaces {
   /** Durable Session list of the open conversation. */
@@ -117,7 +193,7 @@ export interface NativeReferenceFaces {
  * @param t - the `reference` namespace translator.
  * @returns one trigger source for the Native input pipeline.
  */
-export function createReferenceSource(faces: NativeReferenceFaces, t: Translate) {
+export function createReferenceSource(faces: NativeReferenceFaces, t: Translate): NativeReferenceSource {
   return {
     trigger: '@' as const,
     name: 'reference',

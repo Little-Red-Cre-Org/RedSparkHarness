@@ -9,7 +9,7 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-Use `dsh-client-ui-reference` when Web users need to mention files, folders, or sessions from one `@` completion menu. Both Client builds register the same source: the browser half discovers through Host Remotes, the Native half reads the Session workspace-files client and the durable Session list, and both project rows through one shared module. It lists files before sessions and keeps either group available when the other cannot load. Picking a file, folder, or session inserts an atomic reference with a stable clipboard form; folder rows also let users descend without closing completion. File rows omit redundant root locations, and session rows show a workspace only when it differs from the current one. Session mentions are validated before model context is captured, while browsing candidates has no model effect.
+Use `dsh-client-ui-reference` when Web users need to mention files, folders, or sessions from one `@` completion menu. It lists files before sessions and keeps either group available when the other cannot load. Picking inserts an atomic reference with a stable clipboard form; folder rows also descend without closing completion. Session rows show a workspace only when it differs from the current one. Both Client builds register the same source over one shared row projection: the browser discovers through Host Remotes, the Native half through the workspace-files client and the Session list. Session mentions are validated before model context is captured.
 
 ## Table of Contents
 
