@@ -2,5 +2,5 @@
 # side as of the last confirmed-consistent state. Both languages carry equal authority;
 # after editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write .agents/notes/implemented/feature/2026-11-06-native-trigger-menu.md
-2026-11-06-native-trigger-menu.md: e8c803fa40c6cb1cec2a61c935b9eddf49ec856b
-2026-11-06-native-trigger-menu.zh.md: fe241a338cada8605307d778a3ca2d6b84047988
+2026-11-06-native-trigger-menu.md: e2b2452289e21b380fd903b660d96600a5a4098c
+2026-11-06-native-trigger-menu.zh.md: bdbb30a8dba4e3aa817640ae980048407099a771

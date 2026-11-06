@@ -12,7 +12,7 @@ import type { SessionId } from '@redspark/rsh-session/types'
 
 /** A composer whose draft a test can publish. */
 function composer() {
-  let value = { text: '', caret: 0 }
+  let value = { text: '', caret: 0, revision: 0 }
   const listeners = new Set<() => void>()
   return {
     getSnapshot: () => value,
@@ -21,8 +21,8 @@ function composer() {
       return () => { listeners.delete(listener) }
     },
     replaceToken: vi.fn(),
-    publish(next: { text: string; caret: number }) {
-      value = next
+    publish(next: { text: string; caret: number; revision?: number }) {
+      value = { ...next, revision: next.revision ?? value.revision + 1 }
       for (const listener of listeners) listener()
     },
     listeners,
@@ -50,7 +50,7 @@ function install(selected: SessionId | undefined) {
     clientLocale: { register: () => () => {}, bind: () => () => 'label' },
   }
   const owned: (() => void)[] = []
-  const tracked = { track: vi.fn(), dispose: vi.fn() }
+  const tracked = { track: vi.fn(), dismiss: vi.fn(), dispose: vi.fn() }
   const context = {
     require: (name: string) => services[name],
     optional: (name: string) => services[name],
@@ -83,7 +83,7 @@ describe('composer subscription', () => {
     const { draft, tracked } = install(SID)
     draft.publish({ text: 'see @src', caret: 8 })
     expect(tracked.track).toHaveBeenCalledTimes(1)
-    expect(tracked.track).toHaveBeenCalledWith('see @src', 8, { tier: 'plain' }, 8)
+    expect(tracked.track).toHaveBeenCalledWith('see @src', 8, { tier: 'plain' }, 1)
   })
 
   it('takes no second call for a republished identical draft', () => {
@@ -111,7 +111,17 @@ describe('composer subscription', () => {
     select('session-2' as SessionId)
     // The draft is unchanged, so only the selection change can have asked.
     expect(tracked.track).toHaveBeenCalledTimes(2)
-    expect(tracked.track).toHaveBeenLastCalledWith('@s', 2, { tier: 'plain' }, 2)
+    expect(tracked.track).toHaveBeenLastCalledWith('@s', 2, { tier: 'plain' }, 1)
+  })
+
+  it('dismisses the menu the previous Session left open', () => {
+    const { draft, tracked, select } = install(SID)
+    draft.publish({ text: '@s', caret: 2 })
+    const dismissed = vi.fn()
+    Object.assign(tracked, { dismiss: dismissed })
+    select('session-2' as SessionId)
+    // The rows belong to a composer the user has left.
+    expect(dismissed).toHaveBeenCalledTimes(1)
   })
 
   it('asks for no Session while none is selected', () => {

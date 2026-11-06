@@ -147,7 +147,14 @@ export interface NativeConversationService {
  */
 export interface NativeComposerService {
   /** Draft and caret the trigger menu is anchored to. */
-  getSnapshot(): { readonly text: string; readonly caret: number }
+  /**
+   * The draft, caret and revision the trigger detection stamps on a hit.
+   *
+   * A hit records the revision it was computed against so a pick can refuse to
+   * rewrite a token the user has since typed over; the revision is the same one
+   * the composer bumps on every accepted mutation.
+   */
+  getSnapshot(): { readonly text: string; readonly caret: number; readonly revision: number }
   /** Subscribe to draft and caret changes. */
   subscribe(listener: () => void): () => void
   /**

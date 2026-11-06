@@ -327,15 +327,19 @@ export const plugin: NativePlugin = {
       let tracked: { readonly sessionId: SessionId; readonly text: string; readonly caret: number } | undefined
       const sync = (): void => {
         const selected = conversation.getSnapshot().selected
+        // The previous Session's menu belongs to a composer the user left, so
+        // leaving it open would show rows over a draft they cannot see.
+        if (tracked !== undefined && tracked.sessionId !== selected) {
+          service.sessionOf(tracked.sessionId).dismiss()
+        }
         if (selected === undefined) {
-          service.current()?.dismiss()
           tracked = undefined
           return
         }
-        const { text: draft, caret } = composer.getSnapshot()
+        const { text: draft, caret, revision } = composer.getSnapshot()
         if (tracked?.sessionId === selected && tracked.text === draft && tracked.caret === caret) return
         tracked = { sessionId: selected, text: draft, caret }
-        service.sessionOf(selected).track(draft, caret, { tier: 'plain' }, caret)
+        service.sessionOf(selected).track(draft, caret, { tier: 'plain' }, revision)
       }
       // Both sources can change the pair: a keystroke republishes the draft, and
       // a Session switch changes which draft matters. A draft-only subscription
@@ -346,23 +350,65 @@ export const plugin: NativePlugin = {
       sync()
       // The composer seats the menu through the slot it declares; this entry
       // fills it with the same surface the browser renders.
+      // A slot injection is computed once per registered entry, so the stores it
+      // hands out must survive a Session switch: this wraps a per-Session store
+      // and re-points it when the selection moves, keeping the subscribers the
+      // surface already made.
+      const followingStore = <T,>(
+        selected: () => SessionId,
+        pickStore: (session: NativeInputTriggerSession) => SnapshotStore<T>,
+        empty: T,
+      ): SnapshotStore<T> => {
+        const listeners = new Set<() => void>()
+        let bound: SessionId | undefined
+        let off: (() => void) | undefined
+        const rebind = (): void => {
+          const id = selected()
+          if (bound === id) return
+          off?.()
+          bound = id
+          off = pickStore(service.sessionOf(id)).subscribe(() => { for (const listener of listeners) listener() })
+        }
+        return {
+          getSnapshot: () => bound === undefined ? empty : pickStore(service.sessionOf(bound)).getSnapshot(),
+          subscribe: (listener: () => void) => {
+            listeners.add(listener)
+            rebind()
+            return () => {
+              listeners.delete(listener)
+              if (listeners.size > 0) return
+              off?.()
+              off = undefined
+              bound = undefined
+            }
+          },
+          update: () => { rebind() },
+          set: (next: T) => { rebind(); pickStore(service.sessionOf(selected())).set(next) },
+        }
+      }
+      const EMPTY_MENU: MenuState = { open: false, hit: null, generation: 0, groups: [], highlight: null }
+      const EMPTY_HEADERS: ReadonlyMap<string, readonly InputTriggerCrumb[]> = new Map()
       const slots = context.optional('clientSlots')
       if (slots !== undefined) {
         context.own(slots.inject('native.conversation.overlay', () => slots.register({
           name: 'native.conversation.overlay', id: 'slash-menu', order: 0, locale: 'slash.menu',
-          // A root-scoped seat receives no Session id, so the menu follows the
-          // conversation's selection — the same Session the composer drives.
+          // A root-scoped seat receives no Session id and its injection is
+          // computed once per registered entry, so the reading has to be live:
+          // every member resolves the Session at call time rather than capturing
+          // the one that happened to be selected when the menu first mounted.
           inject: (): MenuViewInjected => {
-            const selected = conversation.getSnapshot().selected
-            if (selected === undefined) throw new Error('native input-trigger: the menu rendered with no selected Session')
-            const session = service.sessionOf(selected)
+            const selectedSession = (): SessionId => {
+              const id = conversation.getSnapshot().selected
+              if (id === undefined) throw new Error('native input-trigger: the menu has no selected Session')
+              return id
+            }
             return {
-              menu: session.menu,
-              headers: session.headers,
-              onPick: (source, index, action) => { session.pick(source, index, action) },
-              onCrumb: (source, index) => { session.pickCrumb(source, index) },
-              onHover: (source, index) => { session.hover(source, index) },
-              onDismiss: () => { session.dismiss() },
+              menu: followingStore(selectedSession, session => session.menu, EMPTY_MENU),
+              headers: followingStore(selectedSession, session => session.headers, EMPTY_HEADERS),
+              onPick: (source, index, action) => { service.sessionOf(selectedSession()).pick(source, index, action) },
+              onCrumb: (source, index) => { service.sessionOf(selectedSession()).pickCrumb(source, index) },
+              onHover: (source, index) => { service.sessionOf(selectedSession()).hover(source, index) },
+              onDismiss: () => { service.sessionOf(selectedSession()).dismiss() },
             }
           },
         }, MenuView)))

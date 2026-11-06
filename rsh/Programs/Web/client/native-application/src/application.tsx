@@ -176,20 +176,20 @@ function Conversation({ snapshot, useLocale, settingsActions, bindComposer, list
   const draftVersion = useRef(0)
   const editorRef = useRef<HTMLTextAreaElement>(null)
   const caretRef = useRef(0)
-  const draftsRef = useRef<string>('')
-  draftsRef.current = draft
   const composerListeners = useRef(new Set<() => void>())
   // Publish the draft surface the trigger menu reads and rewrites. The menu
   // spans installations, so it cannot hold React state from here.
   useEffect(() => {
     bindComposer({
-      getSnapshot: () => ({ text: draftsRef.current, caret: caretRef.current }),
+      // One ref owns the draft: draftRef is what the textarea and the draft
+      // cache already use, so publishing from it cannot disagree with them.
+      getSnapshot: () => ({ text: draftRef.current, caret: caretRef.current, revision: draftVersion.current }),
       subscribe: (listener: () => void) => {
         composerListeners.current.add(listener)
         return () => { composerListeners.current.delete(listener) }
       },
       replaceToken: (span, replacement) => {
-        const current = draftsRef.current
+        const current = draftRef.current
         const next = `${current.slice(0, span.start)}${replacement}${current.slice(span.end)}`
         draftVersion.current++
         draftRef.current = next
@@ -198,6 +198,9 @@ function Conversation({ snapshot, useLocale, settingsActions, bindComposer, list
         for (const listener of composerListeners.current) listener()
       },
     })
+    // A composer that mounts with a restored draft publishes no keystroke, so
+    // the pipeline would not learn the draft until the user typed.
+    for (const listener of composerListeners.current) listener()
     return () => {
       bindComposer(undefined)
       composerListeners.current.clear()
@@ -667,7 +670,7 @@ export const plugin: NativePlugin = {
       // only exists while the composer is on screen.
       let composerSurface: NativeComposerService | undefined
       context.provide('clientNativeComposer', {
-        getSnapshot: () => composerSurface?.getSnapshot() ?? { text: '', caret: 0 },
+        getSnapshot: () => composerSurface?.getSnapshot() ?? { text: '', caret: 0, revision: 0 },
         subscribe: (listener: () => void) => composerSurface?.subscribe(listener) ?? (() => {}),
         replaceToken: (span, replacement) => { composerSurface?.replaceToken(span, replacement) },
       } satisfies NativeComposerService)
