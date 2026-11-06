@@ -376,6 +376,9 @@ export const nativeCompatibilityOnlyPeers: ReadonlyMap<string, readonly string[]
 export const nativeSafeSourceSubpaths: ReadonlyMap<string, readonly string[]> = new Map([
   ['rsh/Programs/Web/api/session-controller', ['./client-event-types']],
   ['rsh/Engine/context/file-reference', ['./native', './prompt', './search']],
+  // The URI codec is the one part of this package a browser build needs: the
+  // package root imports the Cordis service, so a Native leaf imports `./uri`.
+  ['rsh/Engine/context/session-reference', ['./uri']],
   ['rsh/Modules/Official/webhook/webhook', ['./definition', './types']],
   ['rsh/Modules/Official/interaction/permission-presets', ['./native-definition']],
   ['rsh/Engine/session/session-projection', ['./types', './definition']],

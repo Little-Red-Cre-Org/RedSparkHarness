@@ -21,12 +21,12 @@ import type {
 } from '@redspark/rsh-client-ui-input-trigger/client'
 import type { SessionReferenceMentionCandidate } from '@redspark/rsh-session-reference/types'
 import { fileAddressFor } from '@redspark/rsh-util-workspace-path'
-import { crumbsFor, fileCandidate, pickOf, sessionCandidate } from './candidates.ts'
+import { crumbsFor, fileCandidate, pickOf, sessionCandidate, type ReferenceTranslate } from './candidates.ts'
 import { en, NS, zh } from './locales.ts'
 
 export {
   crumbsFor, directoryValue, fileCandidate, parseCandidate, pickOf, sessionCandidate,
-  type ReferenceCandidateValue, type ReferenceCrumb, type ReferencePick, type ReferenceRow, type Translate,
+  type ReferenceCandidateValue, type ReferenceCrumb, type ReferencePick, type ReferenceRow, type ReferenceTranslate,
 } from './candidates.ts'
 
 /** Required services: the trigger registry, the Remote namespaces, and the copy. */
@@ -41,7 +41,7 @@ export const inject = [
  */
 export function apply(ctx: ClientContext): void {
   ctx.effect(() => ctx.locale.register(NS, { zh, en }), 'ui-reference: dictionaries')
-  const t = ctx.locale.bind(NS)
+  const t = ctx.locale.bind(NS) as ReferenceTranslate
   const sessions = ctx.get('sessions') as ISessions
   const source: InputTriggerSource = {
     trigger: '@',

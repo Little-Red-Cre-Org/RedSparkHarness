@@ -912,6 +912,10 @@ export const TYPE_API: readonly TypeApiEntry[] = [
     declaration: 'export type ThemeTokenOverrides = Record<string, ThemeTokenModes>;',
   },
   {
+    name: 'Translate',
+    declaration: 'export type Translate<K extends string = string> = (key: K, params?: Record<string, unknown>) => string;',
+  },
+  {
     name: 'TranslateNS',
     declaration: 'export type TranslateNS<N extends keyof LocaleNamespaceMap & string> = Translate<LocaleKeysOf<N>>;',
   },

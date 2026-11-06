@@ -18,7 +18,7 @@ The package now publishes `./native` and splits its behaviour in two.
 
 `src/native.ts` supplies only discovery. Files come from `clientNativeFileReferences.search`; sessions come from the durable list `clientNativeConversation` already holds, filtered and ranked by `sessionCandidatesFor` — the asking Session excluded, candidates sharing its workspace first, then a different recorded workspace, then none. The browser resolver does that work on the Host; a Native client has no Host to ask, so the same rule runs over the rows the client has.
 
-The Native entry requires `clientNativeInputTrigger` rather than treating it as optional. A source registered into a pipeline no composition drives would install successfully and show nothing, which is the failure this change exists to remove. `clientNativeInputTrigger` in turn requires `clientNativeConversation`, so the dependency runs one way and the entry goes in `NATIVE_WEB_CLIENT_INSTALLATIONS` after `input-trigger`.
+The Native entry requires `clientNativeInputTrigger` rather than treating it as optional. A source registered into a pipeline absent from the composition would install successfully and show nothing. `clientNativeInputTrigger` in turn requires `clientNativeConversation`, so the dependency runs one way and the entry goes in `NATIVE_WEB_CLIENT_INSTALLATIONS` after `input-trigger`.
 
 Two smaller facts follow from running in a browser:
 
@@ -34,11 +34,13 @@ The displayed workspace is abbreviated against the Host home read from the conne
 
 **Register the source without requiring `clientNativeInputTrigger`.** Rejected: `registerSource` would be called on a service that does not exist. Declaring the requirement makes a composition that omits the pipeline fail at plan time, where [the fail-loud rule](../../../../AGENTS.md) wants it.
 
-**Add a Host route so the Native client can call the real `sessionReferenceResolver`.** Rejected for this change: `native-web` composes no `sessionQuery` (the template installs it only for headless profiles), and the resolver's own candidate listing reads session projections the Web client does not have. The durable list the client already holds answers the same question with facts the Host already projected.
+**Add a Host route so the Native client can call the real `sessionReferenceResolver`.** Rejected: `native-web` composes no `sessionQuery` (the template installs it only for headless profiles), and the resolver's own candidate listing reads session projections the Web client does not have. The durable list the client already holds answers the same question with facts the Host already projected.
 
 ## Consequences
 
-- A Native Web client's `@` menu now lists workspace files and durable sessions, and picking one produces the same insert the browser produces.
+- The Native input pipeline holds a `@` source that answers with workspace files and durable sessions, and a pick resolves to the same insert the browser source produces.
+- **The menu that renders those rows is not installed.** `native-application`'s composer owns its own `/` palette and calls no `clientNativeInputTrigger` method, so a Native user pressing `@` sees nothing yet. The source, its discovery faces and its pick outcomes are reachable and tested; rendering them into the composer's overlay is separate work, and until it lands this entry's capability is latent in the same way the `/` rows already were.
 - Row wording, ordering and pick outcomes have one home, so the two builds cannot disagree about a reference.
-- The Native session group is necessarily weaker than the browser's: it ranks and labels from the Client's list, so a Session whose title projection is unavailable is labelled by its id rather than costing a log read.
-- Coverage: `tests/native-reference.client.spec.ts` pins the asking-Session exclusion, the affinity rank, the title/id/workspace filter, the id fallback label, quoted-path suppression, a failed search degrading to the session group only, the aborted-result drop, home abbreviation, the createdAt fallback for the age, the drill header, every pick outcome and the codec round-trip. Each was checked by reverting the behaviour it covers: removing the exclusion, the affinity sort, the quoted-path suppression and the abort guard each turned its own case red. Strengthening one case was necessary — quoting the query `SOURCE` instead of an unmatched word — because the original fixture could not distinguish a suppressed group from an empty one.
+- The Native session group is weaker than the browser's: it ranks and labels from the Client's list, so a Session whose title projection is unavailable is labelled by its id rather than costing a log read.
+- The Host resolver's candidate cap is a per-deployment setting; the Native cap is the protocol's own bound, because a client cannot read that setting before asking.
+- Coverage: `tests/native-reference.client.spec.ts` pins the asking-Session exclusion, the affinity rank, the title/id/workspace filter, the id fallback label, quoted-path suppression, a failed search degrading to the session group only, the aborted-result drop, home abbreviation across a reconnect, the drill header, every pick outcome, the codec round-trip, and the plugin body (dictionaries, the source registration, and the home getter reached through the registered source).

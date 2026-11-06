@@ -34,11 +34,13 @@ Native 入口把 `clientNativeInputTrigger` 作为必需依赖，而不是可选
 
 **注册 source 但不要求 `clientNativeInputTrigger`。** 否决：`registerSource` 会被调在一个并不存在的服务上。声明该依赖让省略流水线的组合在计划阶段就失败，这正是 [fail-loud 规则](../../../../AGENTS.md) 要求的位置。
 
-**加一条宿主路由，让 Native 客户端调用真正的 `sessionReferenceResolver`。** 本次否决：`native-web` 不组合 `sessionQuery`（模板只为 headless profile 安装它），而解析器自身的候选列举要读 Web 客户端没有的会话投影。客户端已持有的持久化列表用宿主已经投影过的事实回答了同一个问题。
+**加一条宿主路由，让 Native 客户端调用真正的 `sessionReferenceResolver`。** 否决：`native-web` 不组合 `sessionQuery`（模板只为 headless profile 安装它），而解析器自身的候选列举要读 Web 客户端没有的会话投影。客户端已持有的持久化列表用宿主已经投影过的事实回答了同一个问题。
 
 ## Consequences
 
-- Native Web 客户端的 `@` 菜单现在列出工作区文件与持久化会话，选择其中一个产生的插入与浏览器一致。
+- Native 输入流水线持有一个 `@` source，回答工作区文件与持久化会话，pick 解析出的插入与浏览器 source 一致。
+- **渲染这些行的菜单尚未安装。** `native-application` 的 composer 拥有自己的 `/` 面板，不调用 `clientNativeInputTrigger` 的任何方法，因此 Native 用户此刻按 `@` 看不到东西。source、它的发现面与 pick 结果均可达且有测试；把它们渲染进 composer 的 overlay 是另一件事，在它落地之前，本入口的能力与既有的 `/` 行一样处于潜伏状态。
 - 行的文案、顺序与 pick 结果只有一个家，两个构建不会在引用上产生分歧。
-- Native 的会话分组必然弱于浏览器：它从客户端列表排序与取标签，因此标题投影不可用的会话以 id 作标签，而不会付出一次日志读取。
-- 覆盖：`tests/native-reference.client.spec.ts` 钉住发起会话排除、亲和排序、标题/id/工作区筛选、id 回落标签、带引号路径抑制、搜索失败降级为仅会话分组、中止结果丢弃、home 缩写、时间回落到 createdAt、下钻头部、每种 pick 结果与 codec 往返。每一条都用回退其所覆盖行为的方式验证过：去掉排除、亲和排序、带引号路径抑制与中止守卫，各自让自己那条变红。其中一条需要加强——把查询从匹配不到任何行的词换成 `SOURCE`——因为原来的 fixture 无法区分「分组被抑制」与「分组本就为空」。
+- Native 的会话分组弱于浏览器：它从客户端列表排序与取标签，因此标题投影不可用的会话以 id 作标签，而不会付出一次日志读取。
+- 宿主解析器的候选上限是按部署配置的；Native 的上限是协议自身的界，因为客户端在提问前读不到那项配置。
+- 覆盖：`tests/native-reference.client.spec.ts` 钉住发起会话排除、亲和排序、标题/id/工作区筛选、id 回落标签、带引号路径抑制、搜索失败降级为仅会话分组、中止结果丢弃、跨重连的 home 缩写、下钻头部、每种 pick 结果、codec 往返，以及 plugin 正文（字典、source 注册，以及经注册的 source 读到的 home getter）。

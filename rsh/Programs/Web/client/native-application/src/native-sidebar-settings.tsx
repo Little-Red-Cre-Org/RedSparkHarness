@@ -101,8 +101,8 @@ export function settingsSectionAvailable(
  *
  * A registered page appears only while its contribution exists, so a
  * composition without the models package has no Models row instead of an
- * empty one. One page renders per id, so a registration that reuses a shown id
- * is reported and left out rather than silently replacing nothing.
+ * empty one. The panel renders one page per id, so a registration whose id is
+ * already shown is reported and left out.
  * @param t - settings copy for the built-in pages.
  * @param ledger - registered section entries, read at render time.
  * @returns the ordered navigation rows.

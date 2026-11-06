@@ -12,9 +12,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { SESSION_FORMAT_VERSION, type SessionId } from '@redspark/rsh-session/types'
 import { formatSessionReferenceMention } from '@redspark/rsh-session-reference'
 import type { NativeSessionListItem } from '@redspark/rsh-client-native-session/native'
-import { en } from '../src/client/locales.ts'
+import { en, NS, zh } from '../src/client/locales.ts'
 import {
-  createReferenceSource, sessionCandidatesFor, type NativeReferenceFaces,
+  createReferenceSource, plugin, sessionCandidatesFor, type NativeReferenceFaces,
 } from '../src/native.ts'
 
 /** The `reference` dictionary with its one template parameter filled. */
@@ -85,16 +85,16 @@ describe('session candidates', () => {
       row('sibling'),
       row('nocwd', { header: { version: SESSION_FORMAT_VERSION, id: sid('nocwd'), createdAt: CREATED_AT, isSeeded: false } }),
     ], sid('target'), '')
-    expect(candidates.map(candidate => candidate.sessionId)).toEqual(['sibling', 'elsewhere', 'nocwd'])
+    expect(candidates.map(entry => entry.candidate.sessionId)).toEqual(['sibling', 'elsewhere', 'nocwd'])
     // The mention is the canonical one the browser resolver emits.
-    expect(candidates[0]?.mention).toBe(formatSessionReferenceMention({ sessionId: sid('sibling'), label: 'SIBLING' }))
+    expect(candidates[0]?.candidate.mention).toBe(formatSessionReferenceMention({ sessionId: sid('sibling'), label: 'SIBLING' }))
   })
 
   it('filters case-insensitively by title, id and workspace', () => {
     const rows = [row('target'), row('alpha-title'), row('beta')]
-    expect(sessionCandidatesFor(rows, sid('target'), 'ALPHA').map(c => c.sessionId)).toEqual(['alpha-title'])
-    expect(sessionCandidatesFor(rows, sid('target'), 'bet').map(c => c.sessionId)).toEqual(['beta'])
-    expect(sessionCandidatesFor(rows, sid('target'), '/users/dev/project').map(c => c.sessionId)).toEqual(['alpha-title', 'beta'])
+    expect(sessionCandidatesFor(rows, sid('target'), 'ALPHA').map(c => c.candidate.sessionId)).toEqual(['alpha-title'])
+    expect(sessionCandidatesFor(rows, sid('target'), 'bet').map(c => c.candidate.sessionId)).toEqual(['beta'])
+    expect(sessionCandidatesFor(rows, sid('target'), '/users/dev/project').map(c => c.candidate.sessionId)).toEqual(['alpha-title', 'beta'])
     expect(sessionCandidatesFor(rows, sid('target'), 'nothing-matches')).toEqual([])
   })
 
@@ -103,7 +103,7 @@ describe('session candidates', () => {
       [row('target'), row('untitled', { titleProjection: { status: 'absent' } })],
       sid('target'), '',
     )
-    expect(candidates.map(candidate => candidate.label)).toEqual(['untitled'])
+    expect(candidates.map(entry => entry.candidate.label)).toEqual(['untitled'])
   })
 })
 
@@ -153,7 +153,7 @@ describe('candidates', () => {
     expect(rows.find(row => row.name === 'AWAY')?.description).toBe('~/other · 1h')
   })
 
-  it('dates a session the conversation lists without an activity time by its creation time', async () => {
+  it('dates a session from its own row activity time', async () => {
     const { source } = bench({ sessions: [row('target'), row('stale', { updatedAt: CREATED_AT })] })
     const rows = await source.candidates(context, request(''))
     expect(rows.find(row => row.name === 'STALE')?.description).toBe('3d')
@@ -163,41 +163,120 @@ describe('candidates', () => {
 describe('directory header', () => {
   it('publishes crumbs only for a drilled listing', () => {
     const { source } = bench()
-    expect(source.header(context, { query: 'src/module1/ind', drilled: true })).toEqual([
+    expect(source.header?.(context, { query: 'src/module1/ind', drilled: true })).toEqual([
       expect.objectContaining({ label: t('crumb.root') }),
       expect.objectContaining({ label: 'src' }),
       expect.objectContaining({ label: 'module1', current: true }),
     ])
-    expect(source.header(context, { query: 'src/module1/', drilled: false })).toBeUndefined()
+    expect(source.header?.(context, { query: 'src/module1/', drilled: false })).toBeUndefined()
   })
 })
 
 describe('pick', () => {
+  /** The pick envelope the pipeline passes; only the row and the action vary per case. */
+  const pick = (candidate: { name: string; value?: string }, action: 'pick' | 'drill') => ({
+    candidate, session: context, position: 'inline' as const, via: 'menu' as const, action,
+    span: { start: 0, end: 1, draftRev: 1 },
+  })
+
   it('settles a file, a session and a folder as inserts; a drill keeps the menu open', async () => {
     const { source } = bench()
     const rows = await source.candidates(context, request(''))
     const [directory, file, session] = rows
-    expect(source.onPick({ candidate: directory!, action: 'pick' })).toEqual({
+    expect(source.onPick(pick(directory!, 'pick'))).toEqual({
       insert: { source: 'reference', ref: '@src/', label: 'src/', appearance: 'folder', clipboardText: '@src/' },
     })
-    expect(source.onPick({ candidate: directory!, action: 'drill' })).toEqual({ text: '@src/', continue: true })
-    expect(source.onPick({ candidate: file!, action: 'pick' })).toMatchObject({
+    expect(source.onPick(pick(directory!, 'drill'))).toEqual({ text: '@src/', continue: true })
+    expect(source.onPick(pick(file!, 'pick'))).toMatchObject({
       insert: { appearance: 'file', label: 'a b.md' },
     })
-    expect(source.onPick({ candidate: session!, action: 'pick' })).toMatchObject({
+    expect(source.onPick(pick(session!, 'pick'))).toMatchObject({
       insert: { appearance: 'session', label: 'SOURCE' },
     })
   })
 
   it('ignores a row that carries no source-owned payload', () => {
     const { source } = bench()
-    expect(source.onPick({ candidate: { name: 'foreign' }, action: 'pick' })).toBeUndefined()
+    expect(source.onPick(pick({ name: 'foreign' }, 'pick'))).toBeUndefined()
   })
 
   it('round-trips a mention through the codec unchanged', async () => {
     const mention = formatSessionReferenceMention({ sessionId: sid('source'), label: 'Source' })
     const { source } = bench()
-    expect(source.codec.clipboardText(mention)).toBe(mention)
-    await expect(source.codec.serialize(mention)).resolves.toBe(mention)
+    expect(source.codec?.clipboardText(mention)).toBe(mention)
+    await expect(source.codec?.serialize(mention, new AbortController().signal)).resolves.toBe(mention)
+  })
+})
+describe('plugin', () => {
+  function register(over: {
+    connection?: { generation: { getSnapshot(): { host: { home: string } } | undefined } }
+  } = {}) {
+    const registered: unknown[] = []
+    const dictionaries: unknown[] = []
+    const own = vi.fn()
+    const context = {
+      require: (name: string) => {
+        if (name === 'clientLocale') {
+          return { register: (ns: string, dicts: unknown) => { dictionaries.push([ns, dicts]); return () => {} }, bind: () => t }
+        }
+        if (name === 'clientNativeInputTrigger') {
+          return { registerSource: (source: unknown) => { registered.push(source); return () => {} } }
+        }
+        if (name === 'clientConnection') return over.connection ?? { generation: { getSnapshot: () => undefined } }
+        if (name === 'clientNativeConversation') {
+          return { getSnapshot: () => ({ sessions: [], events: [], state: 'ready' }), subscribe: () => () => {} }
+        }
+        return { search: async () => [] }
+      },
+      own,
+    }
+    void plugin.resolve(undefined)(context as never)
+    return { registered, own, dictionaries }
+  }
+
+  it('registers the dictionaries and the source into the Native pipeline', () => {
+    const bench = register()
+    expect(bench.registered).toHaveLength(1)
+    expect(bench.registered[0]).toMatchObject({ trigger: '@', name: 'reference', showGroupTitle: false })
+    // The namespace and both dictionaries ride one locale registration, and the
+    // installation owns both that registration and the source registration, so
+    // the composition can withdraw them.
+    expect(bench.dictionaries).toEqual([[NS, { en, zh }]])
+    expect(bench.own).toHaveBeenCalledTimes(2)
+  })
+
+  it('reads the Host home from the current connection generation', async () => {
+    let home = '/Users/dev'
+    const conversation = {
+      getSnapshot: () => ({
+        sessions: [
+          row('target'),
+          row('away', { header: { version: SESSION_FORMAT_VERSION, id: sid('away'), createdAt: CREATED_AT, isSeeded: false, cwd: '/Users/dev/other' } }),
+        ],
+        events: [], state: 'ready',
+      }),
+      subscribe: () => () => {},
+    }
+    const registered: unknown[] = []
+    const context = {
+      require: (name: string) => {
+        if (name === 'clientLocale') return { register: () => () => {}, bind: () => t }
+        if (name === 'clientNativeInputTrigger') return { registerSource: (s: unknown) => { registered.push(s); return () => {} } }
+        if (name === 'clientConnection') return { generation: { getSnapshot: () => ({ host: { home } }) } }
+        if (name === 'clientNativeConversation') return conversation
+        return { search: async () => [] }
+      },
+      own: () => {},
+    }
+    void plugin.resolve(undefined)(context as never)
+    const source = registered[0] as {
+      candidates(s: { sessionId: SessionId }, r: unknown): Promise<readonly { name: string; description?: string }[]>
+    }
+    const first = await source.candidates({ sessionId: sid('target') }, request(''))
+    expect(first.find(entry => entry.name === 'AWAY')?.description).toBe('~/other · 1h')
+    // A reconnect to another Host must re-read rather than keep the first value.
+    home = '/home/elsewhere'
+    const second = await source.candidates({ sessionId: sid('target') }, request(''))
+    expect(second.find(entry => entry.name === 'AWAY')?.description).toBe('/Users/dev/other · 1h')
   })
 })

@@ -28,7 +28,7 @@ import type { ReferenceKey } from './locales.ts'
  * signature: the pipeline and both halves bind one namespace, so a broader
  * `string` key would let a typo through as a literal.
  */
-export type Translate = (key: ReferenceKey, params?: Record<string, unknown>) => string
+export type ReferenceTranslate = (key: ReferenceKey, params?: Record<string, unknown>) => string
 
 /** One menu row. Structurally the trigger pipeline's candidate. */
 export interface ReferenceRow {
@@ -78,7 +78,7 @@ export function crumbsFor(
   query: string,
   quoted: boolean,
   drilled: boolean,
-  t: Translate,
+  t: ReferenceTranslate,
 ): readonly ReferenceCrumb[] | undefined {
   if (!drilled) return undefined
   const slash = query.lastIndexOf('/')
@@ -126,7 +126,7 @@ export function fileCandidate(
   candidate: FileReferenceCandidate,
   preserveQuote: boolean,
   withLocation: boolean,
-  t: Translate,
+  t: ReferenceTranslate,
 ): readonly ReferenceRow[] {
   const mention = formatFileMention(candidate, preserveQuote)
   if (mention === undefined) return []
@@ -166,7 +166,7 @@ export function sessionCandidate(
   updatedAt: number,
   now: number,
   home: string | undefined,
-  t: Translate,
+  t: ReferenceTranslate,
 ): ReferenceRow {
   const { unit, n } = relativeTime(updatedAt, now)
   const age = unit === 'now' ? t('time.now') : t(`time.${unit}`, { n })

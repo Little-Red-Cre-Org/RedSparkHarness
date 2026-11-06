@@ -8,12 +8,11 @@
  * therefore supplies the same source over those two faces and reads the SAME
  * row projection — `./client/candidates.ts` — as the browser.
  *
- * Discovery differs in one respect worth stating. The browser resolver ranks
- * candidates by workspace affinity on the Host; here the list is already the
- * Host's own projection, so the filter and the rank run over the rows the
- * client holds. The pick produces the same `insert`/`text` outcomes the browser
- * source produces, so the Native input pipeline applies it through the same
- * dispatch path a `/` command takes.
+ * Discovery is where the halves differ, and only partly. The Host resolver
+ * filters and ranks candidates before the browser sees them; a Native client has
+ * no Host resolver to ask, so `sessionCandidatesFor` applies the same rule —
+ * exclude the asking Session, match title/id/workspace, prefer the shared
+ * workspace — over the rows the client already holds.
  *
  * @module @redspark/rsh-client-ui-reference/native
  */
@@ -21,24 +20,37 @@ import type { NativePlugin } from '@redspark/rsh-native-runtime'
 import type { SessionId } from '@redspark/rsh-session/types'
 import type { NativeFileReferencesClient, NativeSessionListItem } from '@redspark/rsh-client-native-session/native'
 import type {} from '@redspark/rsh-client-locale/native'
-import type {} from '@redspark/rsh-client-ui-input-trigger/native'
+import type { InputTriggerSource } from '@redspark/rsh-client-ui-input-trigger/native'
 import type {} from '@redspark/rsh-client-connection/native'
 import type { NativeConversationService } from '@redspark/rsh-client-ui-session/native'
 import type { SessionReferenceMentionCandidate } from '@redspark/rsh-session-reference/types'
 // Browser-safe subpath: the package root imports the Cordis service.
 import { formatSessionReferenceMention } from '@redspark/rsh-session-reference/uri'
-import { crumbsFor, fileCandidate, pickOf, sessionCandidate, type Translate } from './client/candidates.ts'
+import { crumbsFor, fileCandidate, pickOf, sessionCandidate, type ReferenceTranslate } from './client/candidates.ts'
 import { en, NS, zh } from './client/locales.ts'
 
 export {
   crumbsFor, directoryValue, fileCandidate, parseCandidate, pickOf, sessionCandidate,
-  type ReferenceCandidateValue, type ReferenceCrumb, type ReferencePick, type ReferenceRow, type Translate,
+  type ReferenceCandidateValue, type ReferenceCrumb, type ReferencePick, type ReferenceRow, type ReferenceTranslate,
 } from './client/candidates.ts'
 export { NS, en, zh } from './client/locales.ts'
 export type { ReferenceKey } from './client/locales.ts'
 
-/** Candidate cap one query may return, matching the Host resolver's default. */
+/**
+ * Candidate cap one query may return.
+ *
+ * The Host resolver's cap is a per-deployment setting the client cannot read
+ * before asking, so this is the protocol's own ordering bound rather than a
+ * mirror of that configuration: a Native client lists what it already holds.
+ */
 const SESSION_CANDIDATE_LIMIT = 50
+
+/** One ranked session candidate and the activity time its row dates itself from. */
+export interface NativeSessionCandidate {
+  readonly candidate: SessionReferenceMentionCandidate
+  /** Latest committed Session event time for that row. */
+  readonly updatedAt: number
+}
 
 /**
  * Rank one candidate against the asking Session: the same workspace first, a
@@ -59,13 +71,13 @@ function sessionAffinity(candidate: SessionReferenceMentionCandidate): number {
  * @param sessions - Host-ordered durable Session rows.
  * @param askingSessionId - the Session whose composer is open.
  * @param query - text after `@`, matched case-insensitively against title, id and workspace.
- * @returns mention-carrying candidates in rank order.
+ * @returns candidates in rank order, each with its row's activity time.
  */
 export function sessionCandidatesFor(
-  sessions: readonly NativeSessionReferenceRow[],
+  sessions: readonly NativeSessionListItem[],
   askingSessionId: SessionId,
   query: string,
-): readonly SessionReferenceMentionCandidate[] {
+): readonly NativeSessionCandidate[] {
   const needle = query.toLocaleLowerCase()
   const asking = sessions.find(row => row.header.id === askingSessionId)?.header.cwd
   return sessions
@@ -90,91 +102,7 @@ export function sessionCandidatesFor(
     .sort((left, right) => sessionAffinity(left.candidate) - sessionAffinity(right.candidate)
       || left.index - right.index)
     .slice(0, SESSION_CANDIDATE_LIMIT)
-    .map(({ candidate }) => candidate)
-}
-
-/** The Session facts `@session` rows are built from; a subset of the listed row. */
-export interface NativeSessionReferenceRow {
-  readonly header: { readonly id: SessionId; readonly cwd?: string | undefined; readonly createdAt: number }
-  readonly titleProjection: NativeSessionListItem['titleProjection']
-  /** Latest committed Session event time. */
-  readonly updatedAt: number
-}
-
-/** One menu row this source returns, in the pipeline's candidate currency. */
-export interface NativeReferenceSourceRow {
-  readonly name: string
-  readonly label?: string
-  readonly description?: string
-  readonly icon?: 'file' | 'folder' | 'session'
-  readonly section?: string
-  readonly value?: string
-  readonly drill?: boolean
-}
-
-/** One breadcrumb step above a drilled listing. */
-export interface NativeReferenceSourceCrumb {
-  readonly label: string
-  readonly value: string
-  readonly current?: boolean
-}
-
-/** What a pick asks the input pipeline to apply. */
-export type ReferencePickOutcome =
-  | {
-    readonly insert: {
-      readonly source: string
-      readonly ref: string
-      readonly label: string
-      readonly appearance: 'file' | 'folder' | 'session'
-      readonly clipboardText: string
-    }
-  }
-  | { readonly text: string; readonly continue?: boolean }
-  | undefined
-
-/** The trigger source this entry registers into the Native input pipeline. */
-export interface NativeReferenceSource {
-  readonly trigger: '@'
-  readonly name: 'reference'
-  readonly showGroupTitle: false
-  /**
-   * Rank files and sessions for one query.
-   * @param session - the Session whose composer is open.
-   * @param req - live query, quote state, drill state and cancellation.
-   * @returns file rows first, then session rows.
-   */
-  candidates(session: { readonly sessionId: SessionId }, req: {
-    readonly query: string
-    readonly quoted?: boolean | undefined
-    readonly drilled: boolean
-    readonly signal: AbortSignal
-  }): Promise<readonly NativeReferenceSourceRow[]>
-  /**
-   * Breadcrumbs for a drilled listing.
-   * @param session - the Session whose composer is open.
-   * @param req - live query, quote state and drill state.
-   * @returns the trail, or undefined when this listing needs no header.
-   */
-  header(session: { readonly sessionId: SessionId }, req: {
-    readonly query: string
-    readonly quoted?: boolean | undefined
-    readonly drilled: boolean
-  }): readonly NativeReferenceSourceCrumb[] | undefined
-  /**
-   * Resolve one row into the pick the pipeline applies.
-   * @param pick - the clicked row and whether this was its drill action.
-   * @returns the insert or drill outcome, or undefined when the row carries no payload.
-   */
-  onPick(pick: {
-    readonly candidate: { readonly name: string; readonly value?: string }
-    readonly action: 'pick' | 'drill'
-  }): ReferencePickOutcome
-  /** Reference codec: the clipboard form and the model serialization. */
-  readonly codec: {
-    clipboardText(ref: string): string
-    serialize(ref: string): Promise<string>
-  }
+    .map(({ candidate, row }) => ({ candidate, updatedAt: row.updatedAt }))
 }
 
 /** What the source reads from the Native client. */
@@ -193,22 +121,19 @@ export interface NativeReferenceFaces {
  * @param t - the `reference` namespace translator.
  * @returns one trigger source for the Native input pipeline.
  */
-export function createReferenceSource(faces: NativeReferenceFaces, t: Translate): NativeReferenceSource {
+export function createReferenceSource(faces: NativeReferenceFaces, t: ReferenceTranslate): InputTriggerSource {
   return {
-    trigger: '@' as const,
+    trigger: '@',
     name: 'reference',
     showGroupTitle: false,
-    async candidates(session: { readonly sessionId: SessionId }, req: {
-      readonly query: string
-      readonly quoted?: boolean | undefined
-      readonly drilled: boolean
-      readonly signal: AbortSignal
-    }) {
+    async candidates(session, req) {
       const snapshot = faces.conversation.getSnapshot()
-      const fileLookup = faces.files.search(session.sessionId, req.query, req.signal)
-        // A failed search is an empty file group, exactly as the browser half
-        // treats a failed Remote result; the session group still answers.
-        .catch(() => [])
+      // A rejected search is an empty file group, exactly as the browser half
+      // treats a failed Remote result. Cancellation also lands here; the
+      // signal check below is what decides a superseded query, so both the
+      // refusal and the abort reach the same answer without this branch
+      // having to tell them apart.
+      const fileLookup = faces.files.search(session.sessionId, req.query, req.signal).catch(() => [])
       // A quoted path names a file, so the session group is suppressed: it
       // would answer a question the user did not ask.
       const sessionLookup = req.quoted === true
@@ -218,30 +143,18 @@ export function createReferenceSource(faces: NativeReferenceFaces, t: Translate)
       if (req.signal.aborted) return []
       const withLocation = crumbsFor(req.query, req.quoted === true, req.drilled, t) === undefined
       const now = Date.now()
-      const listed = new Map(snapshot.sessions.map(row => [row.header.id, row.updatedAt]))
       return [
         ...fileItems.flatMap(candidate => fileCandidate(candidate, req.quoted === true, withLocation, t)),
-        ...sessionLookup.map(candidate => sessionCandidate(
-          candidate,
-          listed.get(candidate.sessionId) ?? candidate.createdAt,
-          now,
-          faces.home,
-          t,
+        ...sessionLookup.map(({ candidate, updatedAt }) => sessionCandidate(
+          candidate, updatedAt, now, faces.home, t,
         )),
       ]
     },
-    header(_session: { readonly sessionId: SessionId }, req: {
-      readonly query: string
-      readonly quoted?: boolean | undefined
-      readonly drilled: boolean
-    }) {
+    header(_session, req) {
       return crumbsFor(req.query, req.quoted === true, req.drilled, t)
     },
-    onPick(pick: {
-      readonly candidate: { readonly name: string; readonly value?: string | undefined }
-      readonly action: 'pick' | 'drill'
-    }) {
-      const outcome = pickOf(pick.candidate.value, pick.action)
+    onPick({ candidate, action }) {
+      const outcome = pickOf(candidate.value, action)
       if (outcome === undefined) return undefined
       if (outcome.kind === 'drill') return { text: outcome.text, continue: true }
       return {
@@ -255,8 +168,8 @@ export function createReferenceSource(faces: NativeReferenceFaces, t: Translate)
       }
     },
     codec: {
-      clipboardText: (ref: string) => ref,
-      serialize: (ref: string) => Promise.resolve(ref),
+      clipboardText: ref => ref,
+      serialize: ref => Promise.resolve(ref),
     },
   }
 }
@@ -272,7 +185,7 @@ export const plugin: NativePlugin = {
   resolve: () => (context) => {
     const locale = context.require('clientLocale')
     context.own(locale.register(NS, { en, zh }))
-    const t = locale.bind(NS)
+    const t = locale.bind(NS) as ReferenceTranslate
     const triggers = context.require('clientNativeInputTrigger')
     const connection = context.require('clientConnection')
     const source = createReferenceSource({
