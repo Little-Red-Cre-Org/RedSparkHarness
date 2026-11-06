@@ -9,7 +9,7 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-Use `dsh-client-ui-reference` when Web users need to mention files, folders, or sessions from one `@` completion menu. It lists files before sessions and keeps either group available when the other cannot load. Picking a file, folder, or session inserts an atomic reference with a stable clipboard form; folder rows also let users descend without closing completion. File rows omit redundant root locations, and session rows show a workspace only when it differs from the current one. Session mentions are validated before model context is captured, while browsing candidates has no model effect.
+Use `dsh-client-ui-reference` when Web users need to mention files, folders, or sessions from one `@` completion menu. It lists files before sessions and keeps either group available when the other cannot load. Picking inserts an atomic reference with a stable clipboard form; folder rows also descend without closing completion. Session rows show a workspace only when it differs from the current one. Both Client builds register the same source over one shared row projection: the browser discovers through Host Remotes, the Native half through the workspace-files client and the Session list. Session mentions are validated before model context is captured.
 
 ## Table of Contents
 
@@ -26,6 +26,8 @@ Use `dsh-client-ui-reference` when Web users need to mention files, folders, or 
 ## Use this package
 
 The source is active whenever the composition mounts this package and a Host `ctx.fileReferences` provider is available. Type `@` followed by an unquoted token to see files first, then sessions; open `@"…` to search files only. The candidate list is a completion menu, not a search result page: pick once and keep typing.
+
+The Native entry (`./native`) registers the same source against a Native client's own faces: `clientNativeFileReferences` answers path search for the Session workspace, and `clientNativeConversation` carries the durable Session list the session group is built from. It requires `clientNativeInputTrigger`, the Native trigger pipeline that owns the menu and the pick dispatch, so a composition without that pipeline installs no source rather than a source nothing drives.
 
 ### What a pick inserts
 
@@ -48,6 +50,10 @@ Click a file reference in the composer to preview its current contents in the ri
 <summary>Implementation internals — click to expand</summary>
 
 The source keeps candidate encoding internal to the registration effect: the `/client` export is the plugin body (`apply`/`inject`) only.
+
+### One projection, two discoveries
+
+`src/client/candidates.ts` owns every row and crumb this package emits, plus the pick each payload resolves to. The browser and Native halves both read it, so a row's text, section, ordering and pick outcome cannot drift between them. What each half supplies is discovery alone: the browser calls `fileReferences/list` and `sessionReferenceResolver/candidates`; the Native half calls `clientNativeFileReferences.search` and filters the durable Session list itself. That filtering and its workspace-affinity rank live in `src/native.ts`, because the Host resolver's equivalent runs where this client has no Host. Both halves read the Host home to abbreviate a displayed workspace; the Native half takes it from the connection generation, so a reconnect to another Host re-reads it rather than keeping the first value.
 
 ### Candidate flow
 
@@ -89,9 +95,10 @@ Candidate browsing has no model effect. A selected file or session changes only 
 
 These limits define when the reference source cannot help; they are current package constraints.
 
-- **Candidate failure is intentionally quiet** — one unavailable or failed Remote discovery call yields no rows for that domain. A session-reference preparation failure occurs after prompt acceptance and terminates that agent turn.
+- **Candidate failure is intentionally quiet** — one unavailable or failed discovery call yields no rows for that domain. A session-reference preparation failure occurs after prompt acceptance and terminates that agent turn.
 - **No browser-side file scan** — Web completion requires a mounted Host `ctx.fileReferences` provider; the browser cannot fall back to its own filesystem.
-- **Session search remains metadata-only** — discovery filters session id, cwd, and the latest log-backed title through `ctx.sessionReferenceResolver`; message bodies and full transcripts are not searched.
+- **Session search remains metadata-only** — discovery filters session id, cwd, and the latest log-backed title, through `ctx.sessionReferenceResolver` in the browser and through the durable list in Native; message bodies and full transcripts are not searched.
+- **The Native session group reads the Client's list** — it ranks and labels from the row the Host already projected, so a Session whose title projection is unavailable is labelled by its id rather than triggering a log read on the Client.
 
 <a id="dev-note"></a>
 ### Dev Note

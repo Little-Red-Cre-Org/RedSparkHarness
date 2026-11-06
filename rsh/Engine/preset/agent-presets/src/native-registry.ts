@@ -5,6 +5,8 @@ import type { NativeAgentPresetOperations, NativeAgentPresetLease, NativePresetC
   NativePresetGeneration, NativeResolvedAgentPreset } from './native-definition.ts'
 import type { NativeAgentPresetFacts } from './selection.ts'
 import type { NativePresetFolderSummary } from './native-storage.ts'
+import type { NativeSettingsScope } from '@redspark/rsh-settings-definition/native'
+import type { AgentPresetSettings } from './settings-namespace.ts'
 import { copyNativePreset, deleteNativePreset, nativePresetDirectory, nativePresetFolder,
   NativeAgentPresetError, readNativePresetComposition, scanNativePresetFolders } from './native-storage.ts'
 import type { PresetRoot } from './preset.ts'
@@ -35,7 +37,25 @@ export class NativeAgentPresetRegistry implements NativeAgentPresetOperations {
    */
   constructor(private readonly defaultPreset: string, private readonly scope: NativeScope,
     private readonly folders: readonly NativePresetFolderSummary[] = [],
-    private readonly roots: readonly PresetRoot[] = []) {}
+    private readonly roots: readonly PresetRoot[] = [],
+    private readonly settings?: NativeSettingsScope<AgentPresetSettings>) {}
+
+  /**
+   * The selection policy one read sees.
+   *
+   * Both terms come from the same settings snapshot: while the picker is hidden
+   * an unnamed new Session takes the deployment default even when the user
+   * document still names another one, because no control reports that choice.
+   * @returns whether the picker is shown and which default governs.
+   */
+  private policy(): { readonly enabled: boolean; readonly defaultId: string } {
+    const settings = this.settings?.get()
+    if (settings === undefined) return { enabled: true, defaultId: this.defaultPreset }
+    return {
+      enabled: settings.modeSelectionEnabled,
+      defaultId: settings.modeSelectionEnabled ? settings.default : this.defaultPreset,
+    }
+  }
 
   /** @inheritdoc */
   register(composition: NativePresetComposition): () => Promise<void> {
@@ -76,7 +96,11 @@ export class NativeAgentPresetRegistry implements NativeAgentPresetOperations {
   }
 
   /** @inheritdoc */
-  catalog(): { readonly default: string; readonly folders: readonly NativePresetFolderSummary[] } {
+  catalog(): {
+    readonly default: string
+    readonly modeSelectionEnabled: boolean
+    readonly folders: readonly NativePresetFolderSummary[]
+  } {
     this.assertAvailable()
     const invalid = new Map(this.folders.filter(folder => folder.status === 'invalid')
       .map(folder => [folder.id, folder.problem]))
@@ -88,7 +112,8 @@ export class NativeAgentPresetRegistry implements NativeAgentPresetOperations {
           ...description === undefined ? {} : { description },
           ...unavailable ? { problem: previousProblem } : problem === undefined ? {} : { problem } }
       })
-    return { default: this.defaultPreset, folders }
+    const policy = this.policy()
+    return { default: policy.defaultId, modeSelectionEnabled: policy.enabled, folders }
   }
 
   /** @inheritdoc */
@@ -149,7 +174,10 @@ export class NativeAgentPresetRegistry implements NativeAgentPresetOperations {
   }): NativeResolvedAgentPreset | null {
     this.assertAvailable()
     if (request.preset !== undefined && request.facts.locked) throw new Error('agent-presets: started Session cannot select a preset')
-    const id = request.preset ?? request.facts.preset ?? (request.fresh ? this.defaultPreset : null)
+    // While the picker is hidden the stored choice is not a choice anyone can
+    // see or change, so an unnamed new Session takes the deployment default.
+    const policy = this.policy()
+    const id = request.preset ?? request.facts.preset ?? (request.fresh ? policy.defaultId : null)
     if (id === null) return null
     const standing = this.standings.get(id)
     // Explicit picks and fresh defaults must match the live roster; restored Sessions keep their standing.

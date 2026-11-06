@@ -74,6 +74,7 @@
                          "@redspark/rsh-client-ui-layout":  "workspace:^",
                          "@redspark/rsh-client-ui-message-feedback":  "workspace:^",
                          "@redspark/rsh-client-ui-primitives":  "workspace:^",
+                        "@redspark/rsh-client-ui-reference":  "workspace:^",
                          "@redspark/rsh-client-ui-renderer":  "workspace:^",
                          "@redspark/rsh-client-ui-session":  "workspace:^",
                          "@redspark/rsh-client-ui-settings":  "workspace:^",

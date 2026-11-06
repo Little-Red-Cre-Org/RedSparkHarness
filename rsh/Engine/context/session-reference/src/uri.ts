@@ -9,13 +9,38 @@ import type { SessionReferenceInput } from './types.ts'
 export const SESSION_REFERENCE_SCHEME = 'dsh-session:'
 
 /**
+ * Encode one JSON value as unpadded base64url.
+ *
+ * The Host and the browser both produce these mention payloads, so the codec
+ * lives here rather than on `Buffer`, which a browser bundle cannot carry.
+ * @param value - the string to encode.
+ * @returns its UTF-8 bytes in base64url.
+ */
+function toBase64Url(value: string): string {
+  const bytes = new TextEncoder().encode(value)
+  let binary = ''
+  for (const byte of bytes) binary += String.fromCharCode(byte)
+  return btoa(binary).replace(/\+/gu, '-').replace(/\//gu, '_').replace(/=+$/u, '')
+}
+
+/**
+ * Decode unpadded base64url into its UTF-8 text.
+ * @param value - base64url text.
+ * @returns the decoded string.
+ */
+function fromBase64Url(value: string): string {
+  const padded = value.replace(/-/gu, '+').replace(/_/gu, '/')
+  const binary = atob(padded.padEnd(Math.ceil(padded.length / 4) * 4, '='))
+  return new TextDecoder().decode(Uint8Array.from(binary, character => character.charCodeAt(0)))
+}
+
+/**
  * Encode any JavaScript session-id string as a canonical lossless URI.
  * @param sessionId - opaque session id to serialize.
  * @returns canonical `dsh-session:` URI.
  */
 export function encodeSessionReferenceUri(sessionId: SessionIdType): string {
-  const payload = Buffer.from(JSON.stringify(sessionId), 'utf8').toString('base64url')
-  return `${SESSION_REFERENCE_SCHEME}${payload}`
+  return `${SESSION_REFERENCE_SCHEME}${toBase64Url(JSON.stringify(sessionId))}`
 }
 
 /**
@@ -30,7 +55,7 @@ export function decodeSessionReferenceUri(uri: string): SessionIdType {
   const payload = uri.slice(SESSION_REFERENCE_SCHEME.length)
   if (!/^[A-Za-z0-9_-]+$/.test(payload)) throw invalidUri(uri)
   try {
-    const parsed: unknown = JSON.parse(Buffer.from(payload, 'base64url').toString('utf8'))
+    const parsed: unknown = JSON.parse(fromBase64Url(payload))
     if (typeof parsed !== 'string') throw new TypeError('decoded session id is not a string')
     const sessionId = brandString<SessionIdType>(parsed)
     if (encodeSessionReferenceUri(sessionId) !== uri) throw new TypeError('URI is not canonical')

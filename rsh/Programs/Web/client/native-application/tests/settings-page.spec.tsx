@@ -140,6 +140,28 @@ it('returns to the configuration tab when the selected tab retires', async () =>
   expect(screen.queryByRole('tab', { name: 'Plugin list' })).toBeNull()
 })
 
+it('refuses a Plugins tab that reuses the built-in configuration key and names it', async () => {
+  const actions = pageActions()
+  actions.settingsDescribe = vi.fn(async () => settingsDescription([]))
+  const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+  try {
+    renderSettingsPage({
+      actions, t: key => en[key], section: 'plugins',
+      tabs: [{ id: 'config', order: 0, label: 'Config clone' }, { id: 'all', order: 10, label: 'Plugin list' }],
+    })
+
+    // The one shown configuration tab keeps its DOM id and controls target.
+    const configTab = await screen.findByRole('tab', { name: en.settingsPluginConfigTab })
+    expect(configTab.id).toBe('plugins-config-tab')
+    expect(document.querySelectorAll('#plugins-config-tab')).toHaveLength(1)
+    expect(screen.queryByRole('tab', { name: 'Config clone' })).toBeNull()
+    expect(screen.getByRole('tab', { name: 'Plugin list' })).toBeTruthy()
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('"config"'))
+  } finally {
+    warn.mockRestore()
+  }
+})
+
 it('describes a settings-file apiKey field without exposing its value', async () => {
   const literal = {
     ...pluginSettings('web-search-deepseek', 1, { apiKeyEnv: 'KEY_A', baseURL: '', maxUses: 5 }),
