@@ -25,8 +25,14 @@ import type { NativePlugin } from '@redspark/rsh-native-runtime'
 import type { SessionId } from '@redspark/rsh-session/types'
 import type { SnapshotStore } from '@redspark/rsh-client-store'
 import type {} from '@redspark/rsh-client-ui-renderer/native'
+import type {} from '@redspark/rsh-client-locale/native'
 import type {} from '@redspark/rsh-client-ui-session/native'
 import type { InputDispatch } from './client/native-dispatch.ts'
+import { en, zh } from './client/locales.ts'
+// The browser's menu surface is reused as-is: it reads only its injected face,
+// and the Native service already answers that face.
+import { MenuView } from './client/MenuView.tsx'
+import type { MenuViewInjected } from './client/slots.ts'
 import { InputTriggerController } from './client/controller.ts'
 import type { MenuState, TriggerHit } from './core/contract.ts'
 import type {
@@ -288,7 +294,8 @@ export const plugin: NativePlugin = {
   apiVersion: 1,
   name: '@redspark/rsh-client-ui-input-trigger',
   targets: ['client'],
-  requires: ['clientNativeConversation'],
+  requires: ['clientNativeConversation', 'clientNativeComposer', 'clientLocale'],
+  optional: ['clientSlots'],
   provides: ['clientNativeInputTrigger'],
   resolve: (input) => {
     if (input !== undefined && (input === null || typeof input !== 'object' || Array.isArray(input)
@@ -297,9 +304,115 @@ export const plugin: NativePlugin = {
     }
     return (context) => {
       const conversation = context.require('clientNativeConversation')
-      const service = createNativeInputTrigger(conversation)
+      const locale = context.require('clientLocale')
+      context.own(locale.register('slash.menu', { en, zh }))
+      const composer = context.require('clientNativeComposer')
+      // A pick settles into the composer's draft: the pipeline produces the
+      // replacement text, the composer owns the span and the caret.
+      const service = createNativeInputTrigger(conversation, (event) => {
+        if (event.kind !== 'insert-reference') return false
+        const request = event.request as {
+          readonly reference: { readonly clipboardText: string; readonly label: string }
+          readonly span: { readonly start: number; readonly end: number }
+        }
+        composer.replaceToken(request.span, request.reference.clipboardText)
+        return true
+      })
       context.provide('clientNativeInputTrigger', service)
       context.own(() => { service.dispose() })
+      // Drive the selected Session's pipeline from the composer's own draft and
+      // caret. The composer publishes both; this is the only thing that turns a
+      // keystroke into a candidate request, so a Native client without it has a
+      // source roster nothing ever asks.
+      let tracked: { readonly sessionId: SessionId; readonly text: string; readonly caret: number } | undefined
+      const sync = (): void => {
+        const selected = conversation.getSnapshot().selected
+        // The previous Session's menu belongs to a composer the user left, so
+        // leaving it open would show rows over a draft they cannot see.
+        if (tracked !== undefined && tracked.sessionId !== selected) {
+          service.sessionOf(tracked.sessionId).dismiss()
+        }
+        if (selected === undefined) {
+          tracked = undefined
+          return
+        }
+        const { text: draft, caret, revision } = composer.getSnapshot()
+        if (tracked?.sessionId === selected && tracked.text === draft && tracked.caret === caret) return
+        tracked = { sessionId: selected, text: draft, caret }
+        service.sessionOf(selected).track(draft, caret, { tier: 'plain' }, revision)
+      }
+      // Both sources can change the pair: a keystroke republishes the draft, and
+      // a Session switch changes which draft matters. A draft-only subscription
+      // would leave the new Session's menu closed until the user typed again.
+      const off = composer.subscribe(sync)
+      const offSelection = conversation.subscribe(sync)
+      context.own(() => { off(); offSelection() })
+      sync()
+      // The composer seats the menu through the slot it declares; this entry
+      // fills it with the same surface the browser renders.
+      // A slot injection is computed once per registered entry, so the stores it
+      // hands out must survive a Session switch: this wraps a per-Session store
+      // and re-points it when the selection moves, keeping the subscribers the
+      // surface already made.
+      const followingStore = <T,>(
+        selected: () => SessionId,
+        pickStore: (session: NativeInputTriggerSession) => SnapshotStore<T>,
+        empty: T,
+      ): SnapshotStore<T> => {
+        const listeners = new Set<() => void>()
+        let bound: SessionId | undefined
+        let off: (() => void) | undefined
+        const rebind = (): void => {
+          const id = selected()
+          if (bound === id) return
+          off?.()
+          bound = id
+          off = pickStore(service.sessionOf(id)).subscribe(() => { for (const listener of listeners) listener() })
+        }
+        return {
+          getSnapshot: () => bound === undefined ? empty : pickStore(service.sessionOf(bound)).getSnapshot(),
+          subscribe: (listener: () => void) => {
+            listeners.add(listener)
+            rebind()
+            return () => {
+              listeners.delete(listener)
+              if (listeners.size > 0) return
+              off?.()
+              off = undefined
+              bound = undefined
+            }
+          },
+          update: () => { rebind() },
+          set: (next: T) => { rebind(); pickStore(service.sessionOf(selected())).set(next) },
+        }
+      }
+      const EMPTY_MENU: MenuState = { open: false, hit: null, generation: 0, groups: [], highlight: null }
+      const EMPTY_HEADERS: ReadonlyMap<string, readonly InputTriggerCrumb[]> = new Map()
+      const slots = context.optional('clientSlots')
+      if (slots !== undefined) {
+        context.own(slots.inject('native.conversation.overlay', () => slots.register({
+          name: 'native.conversation.overlay', id: 'slash-menu', order: 0, locale: 'slash.menu',
+          // A root-scoped seat receives no Session id and its injection is
+          // computed once per registered entry, so the reading has to be live:
+          // every member resolves the Session at call time rather than capturing
+          // the one that happened to be selected when the menu first mounted.
+          inject: (): MenuViewInjected => {
+            const selectedSession = (): SessionId => {
+              const id = conversation.getSnapshot().selected
+              if (id === undefined) throw new Error('native input-trigger: the menu has no selected Session')
+              return id
+            }
+            return {
+              menu: followingStore(selectedSession, session => session.menu, EMPTY_MENU),
+              headers: followingStore(selectedSession, session => session.headers, EMPTY_HEADERS),
+              onPick: (source, index, action) => { service.sessionOf(selectedSession()).pick(source, index, action) },
+              onCrumb: (source, index) => { service.sessionOf(selectedSession()).pickCrumb(source, index) },
+              onHover: (source, index) => { service.sessionOf(selectedSession()).hover(source, index) },
+              onDismiss: () => { service.sessionOf(selectedSession()).dismiss() },
+            }
+          },
+        }, MenuView)))
+      }
     }
   },
 }

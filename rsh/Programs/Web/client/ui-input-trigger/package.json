@@ -46,10 +46,12 @@
                                                "client"
                                            ],
                                "requires":  [
-                                                "clientNativeConversation"
+                                                "clientNativeConversation",
+                                                "clientNativeComposer",
+                                                "clientLocale"
                                             ],
                                "optional":  [
-
+                                                "clientSlots"
                                             ],
                                "provides":  [
                                                 "clientNativeInputTrigger"
@@ -88,6 +90,7 @@
                   "lib/index.js",
                   "lib/client.js",
                   "lib/native.js",
+                  "lib/client/MenuView.module.css",
                   "lib/types/**/*.d.ts"
               ]
 }

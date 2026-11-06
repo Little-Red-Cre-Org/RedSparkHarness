@@ -14,6 +14,12 @@ import type { NativeSessionListItem } from '@redspark/rsh-client-native-session/
 import type {} from '@redspark/rsh-client-ui-renderer/native'
 import { renderSessionArea } from './client/session-provider.tsx'
 
+/** Owner currency of the trigger menu's seat above the composer. */
+export interface NativeOverlayOwnerProps {
+  /** Session whose composer owns the menu; absent when none is selected. */
+  readonly sessionId: SessionId
+}
+
 /** Owner currency of the per-message action strip inside the Native transcript. */
 export interface NativeMessageActionsOwnerProps {
   /** Durable identity of the assistant message the actions address. */
@@ -39,6 +45,13 @@ declare module '@redspark/rsh-client-ui-slots' {
       scope: 'session'
       owner: NativeMessageActionsOwnerProps
     }
+    /**
+     * The trigger menu's seat above the composer, one occupant per Session.
+     *
+     * The composer declares it because it owns where the menu sits; the trigger
+     * pipeline fills it, because the pipeline owns the rows.
+     */
+    'native.conversation.overlay': { kind: 'list'; scope: 'root'; owner: NativeOverlayOwnerProps }
   }
 }
 
@@ -122,12 +135,44 @@ export interface NativeConversationService {
   refreshTitle(id: SessionId): Promise<void>
 }
 
+/**
+ * The Native composer's draft and trigger surface.
+ *
+ * A trigger source answers candidates and resolves a pick; the composer owns
+ * the text they are drawn over, the span they replace and the menu that renders
+ * them. Publishing this as a service — rather than having the composer reach for
+ * the trigger pipeline — is what keeps the dependency one-way: the pipeline
+ * requires this conversation, so a conversation requiring it back would be a
+ * cycle the installation planner refuses.
+ */
+export interface NativeComposerService {
+  /** Draft and caret the trigger menu is anchored to. */
+  /**
+   * The draft, caret and revision the trigger detection stamps on a hit.
+   *
+   * A hit records the revision it was computed against so a pick can refuse to
+   * rewrite a token the user has since typed over; the revision is the same one
+   * the composer bumps on every accepted mutation.
+   */
+  getSnapshot(): { readonly text: string; readonly caret: number; readonly revision: number }
+  /** Subscribe to draft and caret changes. */
+  subscribe(listener: () => void): () => void
+  /**
+   * Replace the open trigger token with a picked reference.
+   * @param span - the token span the menu recorded when it opened.
+   * @param text - the mention text that replaces it.
+   */
+  replaceToken(span: { readonly start: number; readonly end: number }, text: string): void
+}
+
 declare module '@redspark/rsh-native-runtime' {
   interface NativeServices {
     /** Sole Session and Agent UI authority supplied by Native Application. */
     clientNativeConversation: NativeConversationService
     /** Session-owned title source used by the Native shell frame. */
     clientNativeSessionPresentation: NativeSessionPresentation
+    /** Draft, caret and token replacement owned by the Native composer. */
+    clientNativeComposer: NativeComposerService
   }
 }
 

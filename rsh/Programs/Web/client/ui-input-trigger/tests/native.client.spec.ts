@@ -9,8 +9,8 @@
 import { describe, expect, it } from 'vitest'
 import type { SessionId } from '@redspark/rsh-session/types'
 import type { InputTriggerSource } from '../src/types.ts'
-import type { NativeSessionReadFace } from '../src/native.ts'
-import { createNativeInputTrigger, nativeActx } from '../src/native.ts'
+import type { NativeSessionReadFace } from '../src/native.tsx'
+import { createNativeInputTrigger, nativeActx } from '../src/native.tsx'
 
 /** A Session read face whose selection and list the test owns. */
 function sessionFace(initial: readonly SessionId[] = [], selected?: SessionId) {

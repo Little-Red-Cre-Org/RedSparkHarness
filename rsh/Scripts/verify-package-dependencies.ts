@@ -385,7 +385,9 @@ function nativeClientSourceEntries(root: string, pkg: WorkspacePackageManifest):
     if (!target.startsWith('./lib/')) {
       throw new Error(`${pkg.manifestPath}: Native Client export ${native.entry} cannot map ${target} to source`)
     }
-    const source = target.replace(/^\.\/lib\//, './src/').replace(/\.js$/, '.ts').replace(/\.mjs$/, '.mts')
+    // A Native entry may be authored as TSX: it renders the surface the entry
+    // installs. resolveLocal already prefers whichever exists.
+    const source = target.replace(/^\.\/lib\//, './src/').replace(/\.mjs$/, '.mts').replace(/\.js$/, '')
     const resolved = resolveLocal(resolve(root, pkg.manifestPath), source)
     if (resolved === undefined) {
       throw new Error(`${pkg.manifestPath}: Native Client export ${native.entry} has no source entry for ${target}`)

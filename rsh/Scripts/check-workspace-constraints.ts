@@ -192,6 +192,9 @@ const packageFileExtras: Readonly<Record<string, readonly string[]>> = {
   '@redspark/rsh-message-feedback': ['lib/shared-*.js'],
   '@redspark/rsh-archify': ['lib/shared-*.js'],
   '@redspark/rsh-request-context': ['lib/shared-*.js'],
+  // The Native leaf reuses the browser menu component, so it imports that
+  // component's stylesheet: a file the entry/output derivation cannot see.
+  '@redspark/rsh-client-ui-input-trigger': ['lib/client/MenuView.module.css'],
   // Statically linked client libraries keep their stylesheets next to the emitted
   // JavaScript, which imports them by relative path: the compile shell runs
   // them through its own CSS pipeline, so the sheets are published artifacts.
