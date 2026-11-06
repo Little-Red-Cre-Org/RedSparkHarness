@@ -18,7 +18,7 @@ Status: implemented
 
 `src/native.ts` 只提供发现。文件来自 `clientNativeFileReferences.search`；会话来自 `clientNativeConversation` 已经持有的持久化列表，由 `sessionCandidatesFor` 筛选并排序——排除发起会话，与其共享工作区的候选最前，其次是记录了其他工作区的，最后是没有记录的。浏览器解析器在宿主上做这件事；Native 客户端没有宿主可问，于是同一条规则跑在客户端已有的行上。
 
-Native 入口把 `clientNativeInputTrigger` 作为必需依赖，而不是可选。注册进一个没有组合驱动的流水线的 source 会安装成功却什么都不显示，而这正是本次改动要消除的失败。`clientNativeInputTrigger` 又要求 `clientNativeConversation`，因此依赖单向，该行在 `NATIVE_WEB_CLIENT_INSTALLATIONS` 里排在 `input-trigger` 之后。
+Native 入口把 `clientNativeInputTrigger` 作为必需依赖，而不是可选。注册进一个组合里并不存在的流水线的 source 会安装成功却什么都不显示。`clientNativeInputTrigger` 又要求 `clientNativeConversation`，因此依赖单向，该行在 `NATIVE_WEB_CLIENT_INSTALLATIONS` 里排在 `input-trigger` 之后。
 
 还有两个较小的事实源于在浏览器中运行：
 

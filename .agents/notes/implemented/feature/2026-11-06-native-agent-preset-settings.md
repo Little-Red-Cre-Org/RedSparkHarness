@@ -12,7 +12,7 @@ The Native entry registered no such namespace. `native-web` composes a settings 
 
 ## Decision
 
-`@redspark/rsh-agent-presets/native` declares `optional: ['settings']` and registers `agent-presets` when the program composes one, with `{ default: config.default, modeSelectionEnabled: true }` as the base — the same base the Cordis adapter uses. The registration is owned by the installation, so unloading the module withdraws the namespace.
+`@redspark/rsh-agent-presets/native` declares `optional: ['settings']` and registers `agent-presets` when the program composes one, with `{ default: config.default, modeSelectionEnabled: true }` as the base — the same base the Cordis adapter uses. The registration carries a `presentation` schema, because `NativeSettings.describe` lists only registrations that publish one and `mutate` refuses one that does not; without it the namespace exists for the document but is invisible to the page. The registration is owned by the installation, so unloading the module withdraws the namespace.
 
 `NativeAgentPresetRegistry` takes that scope and reads a single `policy()` per resolution:
 
@@ -43,6 +43,6 @@ The resolver reads the merged section, so a partial write resolves the field it 
 
 ## Consequences
 
-- Writing `modeSelectionEnabled` from the Native Settings page now changes what the Host resolves, exactly as it does for the Cordis bundle.
+- Writing `modeSelectionEnabled` from the Native Settings page changes what the Host resolves, exactly as it does for the Cordis bundle: the page lists the namespace, `settings/mutate` accepts it, and the registry reads the new value on its next resolution.
 - A deployment that composes no settings provider keeps the previous behaviour: the roster is served, the policy reports the picker as shown, and the deployment default governs.
-- Coverage: `tests/native-settings.spec.ts` pins the no-provider default, the saved default while enabled, the deployment default while hidden, an explicit preset surviving the hidden picker, a settings write observed without rebuilding the registry, a restored Session keeping its standing, and the plugin body (base, empty-section resolution, partial write, unknown-field refusal, roster without a provider, and the owned registration). Reverting the `policy()` default and the namespace registration each turned their own cases red.
+- Coverage: `tests/native-settings.spec.ts` pins the no-provider default, the saved default while enabled, the deployment default while hidden, an explicit preset surviving the hidden picker, a settings write observed without rebuilding the registry, a restored Session keeping its standing, and the plugin body (base, empty-section resolution, partial write, unknown-field refusal, roster without a provider, and the owned registration).

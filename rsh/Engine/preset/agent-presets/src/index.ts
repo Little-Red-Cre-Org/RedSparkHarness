@@ -51,22 +51,14 @@ export type {
   AgentPresetComposition, AgentPresetCompositionRow, CompositionRowEnablement,
 } from './composition-inventory.ts'
 
-/** Settings namespace carrying the user's preset-picker preference and chosen default. */
-export const SETTINGS_NAMESPACE = 'agent-presets'
+import { SETTINGS_NAMESPACE, type AgentPresetSettings } from './settings-namespace.ts'
+export { SETTINGS_NAMESPACE, type AgentPresetSettings } from './settings-namespace.ts'
 
 /** Refuse an empty preset id before invoking a domain operation. */
 function validatePresetId(value: string, field: 'agentPreset' | 'from'): void {
   if (value.length === 0) {
     throw new RemoteError('gateway/bad-request', `${field} must be a non-empty string`, {})
   }
-}
-
-/** Resolved preset-selection settings; the registration base supplies both fields. */
-export interface AgentPresetSettings {
-  /** Saved default used when mode selection is enabled. */
-  default: string
-  /** Whether visible mode selection and the saved user default govern unnamed new sessions. */
-  modeSelectionEnabled: boolean
 }
 
 /** Runtime schema for the user-writable slice. */

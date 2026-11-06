@@ -3,4 +3,4 @@
 # after editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write .agents/notes/implemented/feature/2026-11-06-native-reference-source.md
 2026-11-06-native-reference-source.md: a09e0ea5a46680fcb84617665df3cdc9c76c66c7
-2026-11-06-native-reference-source.zh.md: fef2b9b157b52513ce11abb8ec4bf927747c35ff
+2026-11-06-native-reference-source.zh.md: f5ae73d32305f120acb4c7bbdf94a05e98da3f63

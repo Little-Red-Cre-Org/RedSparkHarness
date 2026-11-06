@@ -2,5 +2,5 @@
 # side as of the last confirmed-consistent state. Both languages carry equal authority;
 # after editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write .agents/notes/proposed/architecture/2026-11-06-legacy-runtime-retirement.md
-2026-11-06-legacy-runtime-retirement.md: d1f17786b2ac436230266dfaa873b1f7ef7f9a2a
-2026-11-06-legacy-runtime-retirement.zh.md: 4e47949d5b415f496d42d4d1b1bb570081f4ddf0
+2026-11-06-legacy-runtime-retirement.md: f6cf687a9d0fddf5b56a57716cadd6a90109d6ac
+2026-11-06-legacy-runtime-retirement.zh.md: 5afd07e7a6ff6e89240344c2aa10da623a4e5056

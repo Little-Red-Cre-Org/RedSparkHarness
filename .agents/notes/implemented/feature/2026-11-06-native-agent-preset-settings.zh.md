@@ -12,7 +12,7 @@ Native 入口没有注册这个命名空间。`native-web` 组装了 settings �
 
 ## Decision
 
-`@redspark/rsh-agent-presets/native` 声明 `optional: ['settings']`，并在程序组装了该服务时注册 `agent-presets`，以 `{ default: config.default, modeSelectionEnabled: true }` 为 base——与 Cordis 适配器一致。该注册由安装持有，卸载模块即撤销命名空间。
+`@redspark/rsh-agent-presets/native` 声明 `optional: ['settings']`，并在程序组装了该服务时注册 `agent-presets`，以 `{ default: config.default, modeSelectionEnabled: true }` 为 base——与 Cordis 适配器一致。该注册携带 `presentation` schema，因为 `NativeSettings.describe` 只列出发布了 schema 的注册，而 `mutate` 会拒绝没有发布的注册；缺了它，命名空间对文档存在，对页面不可见。该注册由安装持有，卸载模块即撤销命名空间。
 
 `NativeAgentPresetRegistry` 接收该 scope，并在每次解析时读一次 `policy()`：
 
@@ -43,6 +43,6 @@ private policy(): { readonly enabled: boolean; readonly defaultId: string } {
 
 ## Consequences
 
-- 从 Native 设置页写入 `modeSelectionEnabled` 现在会改变宿主解析的结果，与 Cordis 组合完全一致。
+- 从 Native 设置页写入 `modeSelectionEnabled` 会改变宿主解析的结果，与 Cordis 组合完全一致：页面列出该命名空间，`settings/mutate` 接受它，注册表在下一次解析时读到新值。
 - 不组装 settings 提供方的部署保持原行为：名册照常服务，策略报告选择器为显示，部署默认生效。
-- 覆盖：`tests/native-settings.spec.ts` 钉住无提供方时的默认、启用时的保存默认、隐藏时的部署默认、显式预设不受隐藏影响、写入无需重建注册表即可观察、已恢复会话保持 standing，以及 plugin 正文（base、空 section 解析、部分写入、未知字段拒绝、无提供方的名册、被持有的注册）。把 `policy()` 的默认值与命名空间注册各自改回，都让自己那几条变红。
+- 覆盖：`tests/native-settings.spec.ts` 钉住无提供方时的默认、启用时的保存默认、隐藏时的部署默认、显式预设不受隐藏影响、写入无需重建注册表即可观察、已恢复会话保持 standing，以及 plugin 正文（base、空 section 解析、部分写入、未知字段拒绝、无提供方的名册、被持有的注册）。

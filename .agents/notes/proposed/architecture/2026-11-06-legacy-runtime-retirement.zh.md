@@ -21,11 +21,16 @@ Status: proposed
 | 没有 `package.json` | :31 | 手建的 profile 目录 |
 | `dsh.profile.runtime: 'legacy'` | :46 | 显式退出 |
 | `dsh.profile.bundles: [...]` | :39 | Native 之前的 profile 格式 |
-| 既无 runtime 也无 bundles | :46 | 响亮报错拒绝，不静默 |
+| 既无 runtime 也无 bundles | :40 | 响亮报错拒绝，不静默 |
 
-缺 manifest 在实践中**不**等于未初始化 profile：`bin.ts:31-33` 对每次 `profile` 与 `dump-config` 调用都执行 `ensureShippedNativeProfile`，它会写出声明 `runtime: 'native'` 的 manifest。因此五个标准名在首次使用时都收敛到 Native。legacy 人群因此是：非标准名且无 manifest 的 profile，以及任何声明 `bundles` 或 `runtime: 'legacy'` 的 manifest。
+缺 manifest 在实践中**不**等于未初始化 profile：`bin.ts:31-33` 对每次 `profile` 与 `dump-config` 调用都执行 `ensureShippedNativeProfile`，它会写出声明 `runtime: 'native'` 的 manifest。因此每个已发布的模板名在首次使用时都收敛到 Native；模板名列在 CLI manifest 的 `dsh.nativeProfileTemplates` 里，不只是 `web`/`headless`/`sdk`/`acp`/`rsh` 这五个别名。legacy 人群是剩下的部分：自定义名的 profile，无论是下面两条命令写的、更早的 `dsh` 写的，还是手写的。
 
-`bundles` 形态没有已发布的产生者。`rsh/Compatibility/DSH/bundle/*` 是 bundle **包**（`cordis.patch.yml` 加 `lib/`），不是 profile manifest；仓库里真正声明 `bundles` 的 manifest 只有测试夹具（`rsh/Programs/CLI/tests/built-bin.e2e.ts`）。野外的 `bundles` profile 来自更早的 `dsh`、legacy CLI 下的 `dsh plugin`，或手写。
+`bundles` 形态在当前树里有两条现行产生路径，都只经由非标准 profile 名：
+
+- `dsh --profile <name> --from-default-profile web`——`bin.ts` 走非 native 臂，`prepareProfile` 调用 `initializeProfileFromDefault`（`profile-boot.ts:197-198`），写出 bundle 模板。
+- `dsh plugin --profile <name> add <pkg>`——`plugin.ts:127-135` 用 `PROFILE_TEMPLATES[profile]` 或 `DEFAULT_PROFILE_BUNDLES` 初始化缺失的 manifest。
+
+两者都调用 `initProfile`，它写出 `dsh.profile: { runtime: 'legacy', bundles: [...], patchReload }`（`rsh/Compatibility/DSH/boot/app-boot/src/profile.ts:182`）。已发布的名字到不了这两条路径，因为 `ensureShippedNativeProfile` 会先写出 Native manifest，且各命令都会拒绝 Native profile。因此 legacy 人群恰是：经由这两条命令创建的自定义名 profile，加上任何手写或更早 `dsh` 写出的 manifest。
 
 ### 退场要改的调用点
 
@@ -60,11 +65,11 @@ Status: proposed
 
 只有在以下全部成立后才能开始退场：
 
-1. 没有任何已发布的 `dsh` 版本还会写出 `bundles` manifest。用最近几个版本的 `PROFILE_TEMPLATES` 与 `initProfile` 历史核实。
+1. `initProfile` 及调用它的两条命令要么写出 Native manifest，要么不再写 profile。当前它们写出的是 `runtime: 'legacy'` 加 `bundles`，所以这是退场工作的起点，而不是待确认的事实。
 2. 遥测或用户报告确认没有活跃 profile 解析为 `legacy`。本地检查是在真实 home 下对各个 profile 跑 `profileRuntime(name)`。
 3. `rsh/Docs/native-config-migration.md` 已写明旧 profile 必须变成什么，包括插件集合的差异。
 
 ## Risks
 
-- 由旧 `dsh` 创建、此后从未再运行过的 profile 会失去可用性。缓解手段是迁移文档加一条点名 profile 与文件的拒绝；静默改写不是。
+- 用 `--from-default-profile` 或 `dsh plugin` 以自定义名创建的 profile 会失去可用性。这两条是当前命令，因此缓解手段是迁移文档加一条点名 profile 与文件的拒绝；静默改写不是。
 - 拆分 `profile-boot.ts` 会触及 CLI 仅剩的 Cordis 边，因此拆分必须先于任何包删除落地，而删除必须是它自己的 PR。

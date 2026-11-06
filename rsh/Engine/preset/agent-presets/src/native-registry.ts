@@ -6,7 +6,7 @@ import type { NativeAgentPresetOperations, NativeAgentPresetLease, NativePresetC
 import type { NativeAgentPresetFacts } from './selection.ts'
 import type { NativePresetFolderSummary } from './native-storage.ts'
 import type { NativeSettingsScope } from '@redspark/rsh-settings-definition/native'
-import type { NativeAgentPresetSettings } from './native.ts'
+import type { AgentPresetSettings } from './settings-namespace.ts'
 import { copyNativePreset, deleteNativePreset, nativePresetDirectory, nativePresetFolder,
   NativeAgentPresetError, readNativePresetComposition, scanNativePresetFolders } from './native-storage.ts'
 import type { PresetRoot } from './preset.ts'
@@ -38,7 +38,7 @@ export class NativeAgentPresetRegistry implements NativeAgentPresetOperations {
   constructor(private readonly defaultPreset: string, private readonly scope: NativeScope,
     private readonly folders: readonly NativePresetFolderSummary[] = [],
     private readonly roots: readonly PresetRoot[] = [],
-    private readonly settings?: NativeSettingsScope<NativeAgentPresetSettings>) {}
+    private readonly settings?: NativeSettingsScope<AgentPresetSettings>) {}
 
   /**
    * The selection policy one read sees.

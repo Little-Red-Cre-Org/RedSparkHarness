@@ -8,8 +8,9 @@
  * two builds cannot disagree about a row's text or its pick payload.
  *
  * The row and crumb shapes are declared here rather than imported from the
- * trigger pipeline: this module is reachable from the Native entry, which must
- * not depend on the Cordis-side contract. They describe the same fields the
+ * trigger pipeline's client subpath: this module is shared with the browser
+ * half, and reaching for a Native-face subpath from it would add a Native
+ * dependency to the browser bundle's graph. They describe the same fields the
  * pipeline accepts.
  *
  * @module @redspark/rsh-client-ui-reference/client/candidates

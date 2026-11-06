@@ -42,6 +42,10 @@
       "types": "./lib/types/native.d.ts",
       "default": "./lib/native.js"
     },
+    "./settings-namespace": {
+      "types": "./lib/types/settings-namespace.d.ts",
+      "default": "./lib/types/settings-namespace.js"
+    },
     "./native-definition": {
       "types": "./lib/types/native-definition.d.ts",
       "default": "./lib/types/native-definition.js"

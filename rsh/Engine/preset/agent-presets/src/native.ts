@@ -1,12 +1,15 @@
 /** Native registry Provider for profile-installed standing compositions. */
+import schemastery from '@redspark/schemastery'
 import { z } from 'zod'
 import type { NativePlugin } from '@redspark/rsh-native-runtime'
 import { NativeAgentPresetRegistry } from './native-registry.ts'
 
 import { PRESET_ID } from './preset.ts'
+import { SETTINGS_NAMESPACE, type AgentPresetSettings } from './settings-namespace.ts'
 import type { NativePresetFolderSummary } from './native-storage.ts'
 import type { PresetRoot } from './preset.ts'
 export type * from './native-definition.ts'
+export type { AgentPresetSettings } from './settings-namespace.ts'
 export { NativeAgentPresetRegistry } from './native-registry.ts'
 export { foldNativeAgentPresetFacts } from './selection.ts'
 export { NativeAgentPresetError, NATIVE_COMPOSITION_FILE, nativePresetRoots, scanNativePresetFolders } from './native-storage.ts'
@@ -50,39 +53,37 @@ export function resolveNativeAgentPresetsConfig(input: unknown): NativeAgentPres
   }
 }
 
-/** Settings namespace carrying the picker preference and the chosen default. */
-export const SETTINGS_NAMESPACE = 'agent-presets'
-
-/** The user-writable slice of the preset-selection policy. */
-export interface NativeAgentPresetSettings {
-  /** Saved default used while mode selection is enabled. */
-  default: string
-  /** Whether visible mode selection and the saved default govern unnamed new Sessions. */
-  modeSelectionEnabled: boolean
-}
-
-// A partial write is merged before the resolver runs, so both fields may be
-// absent; a strict object still rejects an unknown field.
+/**
+ * The user-writable section; the resolver always receives it merged with the
+ * registration base, so both fields are present by the time it is parsed.
+ */
 const settingsSectionSchema = z.strictObject({
-  default: z.string().optional(),
-  modeSelectionEnabled: z.boolean().optional(),
+  default: z.string(),
+  modeSelectionEnabled: z.boolean(),
+})
+
+/**
+ * The published schema the Native Settings page edits.
+ *
+ * `NativeSettings.describe` lists only registrations that carry a presentation,
+ * and `mutate` refuses one that does not — so a namespace registered without
+ * this is reachable by the document but invisible to the page.
+ */
+const PRESET_SELECTION_SCHEMA = schemastery.object({
+  default: schemastery.string().default('standard'),
+  modeSelectionEnabled: schemastery.boolean().default(true),
 })
 
 /**
  * Read a written settings section into the policy.
  *
- * Absent fields fall back to the registration base, which is what makes a
- * partial write resolve to the deployment default rather than to nothing.
+ * The registration base supplies the defaults a stored document omits, so this
+ * only has to reject what no base could make valid.
  * @param value - the merged section as stored.
- * @param base - the registration base for absent fields.
  * @returns the resolved policy.
  */
-function resolveSettings(value: Record<string, unknown>, base: NativeAgentPresetSettings): NativeAgentPresetSettings {
-  const { default: savedDefault, modeSelectionEnabled } = settingsSectionSchema.parse(value)
-  return {
-    default: savedDefault ?? base.default,
-    modeSelectionEnabled: modeSelectionEnabled ?? base.modeSelectionEnabled,
-  }
+function resolveSettings(value: Record<string, unknown>): AgentPresetSettings {
+  return settingsSectionSchema.parse(value)
 }
 
 /**
@@ -102,8 +103,9 @@ export const plugin: NativePlugin = {
     const config = resolveNativeAgentPresetsConfig(input)
     return (context) => {
       const settings = context.optional('settings')
-      const base: NativeAgentPresetSettings = { default: config.default, modeSelectionEnabled: true }
-      const scope = settings?.register(SETTINGS_NAMESPACE, { ...base }, value => resolveSettings(value, base))
+      const base: AgentPresetSettings = { default: config.default, modeSelectionEnabled: true }
+      const scope = settings?.register(SETTINGS_NAMESPACE, { ...base }, resolveSettings,
+        undefined, { schema: PRESET_SELECTION_SCHEMA, applies: 'live' })
       if (scope !== undefined) context.own(() => { scope.dispose() })
       const registry = new NativeAgentPresetRegistry(
         config.default, context.scope, config.folders, config.managementRoots, scope,

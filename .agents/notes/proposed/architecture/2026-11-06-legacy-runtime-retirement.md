@@ -21,11 +21,16 @@ This note records what the branch decided to keep, what a retirement would have 
 | No `package.json` | :31 | A profile directory someone created by hand |
 | `dsh.profile.runtime: 'legacy'` | :46 | An explicit opt-out |
 | `dsh.profile.bundles: [...]` | :39 | The pre-Native profile format |
-| Neither runtime nor bundles | :46 | Refused with a loud error, not silently |
+| Neither runtime nor bundles | :40 | Refused with a loud error, not silently |
 
-A missing manifest is **not** the same as an uninitialised profile in practice: `bin.ts:31-33` calls `ensureShippedNativeProfile` for every `profile` and `dump-config` invocation, which writes a manifest declaring `runtime: 'native'`. So the five standard names converge on Native on first use. The legacy population is therefore: profiles with a non-standard name and no manifest, plus any manifest that names `bundles` or `runtime: 'legacy'`.
+A missing manifest is **not** the same as an uninitialised profile in practice: `bin.ts:31-33` calls `ensureShippedNativeProfile` for every `profile` and `dump-config` invocation, which writes a manifest declaring `runtime: 'native'`. Every shipped template name therefore converges on Native on first use; the templates themselves are listed in the CLI manifest's `dsh.nativeProfileTemplates`, not only the five aliases `web`/`headless`/`sdk`/`acp`/`rsh`. The legacy population is what remains: a custom-named profile, whether written by one of the two commands below, by an older `dsh`, or by hand.
 
-The `bundles` shape has no shipped producer. `rsh/Compatibility/DSH/bundle/*` are bundle *packages* (`cordis.patch.yml` plus `lib/`), not profile manifests; the only manifests in the repository that declare `bundles` are test fixtures (`rsh/Programs/CLI/tests/built-bin.e2e.ts`). A `bundles` profile in the wild was written by an older `dsh`, by `dsh plugin` under a legacy CLI, or by hand.
+The `bundles` shape has two live producers in the current tree, both reached only by a non-standard profile name:
+
+- `dsh --profile <name> --from-default-profile web` — `bin.ts` takes the non-native arm, `prepareProfile` calls `initializeProfileFromDefault` (`profile-boot.ts:197-198`), which writes the bundle template.
+- `dsh plugin --profile <name> add <pkg>` — `plugin.ts:127-135` initialises the missing manifest from `PROFILE_TEMPLATES[profile]` or `DEFAULT_PROFILE_BUNDLES`.
+
+Both call `initProfile`, which writes `dsh.profile: { runtime: 'legacy', bundles: [...], patchReload }` (`rsh/Compatibility/DSH/boot/app-boot/src/profile.ts:182`). A shipped name never reaches them, because `ensureShippedNativeProfile` writes a Native manifest first and each command refuses a Native profile. So the legacy population is exactly: a custom-named profile created through one of those two commands, plus any manifest written by hand or by an older `dsh`.
 
 ### The call sites a retirement would change
 
@@ -60,11 +65,11 @@ Deleting those packages is a separate, larger decision: the CLI declares them as
 
 Retirement may start only when all of these hold:
 
-1. No released `dsh` version writes a `bundles` manifest. Verify by reading the last few releases' `PROFILE_TEMPLATES` and `initProfile` history.
+1. `initProfile` and the two commands that call it either write a Native manifest or stop writing profiles at all. Today they write `runtime: 'legacy'` with `bundles`, so this is the work the retirement starts with, not a fact to confirm.
 2. Telemetry or a user report establishes that no active profile resolves `legacy`. A local check is `profileRuntime(name)` over the profiles under a real home.
 3. `rsh/Docs/native-config-migration.md` documents what an old profile must become, including the plugin-set difference.
 
 ## Risks
 
-- A user whose profile was created by an old `dsh` and never re-run would lose it. The migration doc plus a refusal that names the profile and the file is the mitigation; a silent rewrite is not.
+- A user whose profile was created by `--from-default-profile` or `dsh plugin` under a custom name would lose it. Those are current commands, so the migration doc plus a refusal that names the profile and the file is the mitigation; a silent rewrite is not.
 - Splitting `profile-boot.ts` touches the CLI's only remaining Cordis edge, so the split must land before any package deletion, and the deletion must be its own PR.

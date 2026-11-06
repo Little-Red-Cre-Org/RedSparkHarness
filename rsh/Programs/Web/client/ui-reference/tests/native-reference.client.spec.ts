@@ -153,8 +153,18 @@ describe('candidates', () => {
     expect(rows.find(row => row.name === 'AWAY')?.description).toBe('~/other · 1h')
   })
 
-  it('dates a session from its own row activity time', async () => {
-    const { source } = bench({ sessions: [row('target'), row('stale', { updatedAt: CREATED_AT })] })
+  it('dates a session from its row activity time, not its creation time', async () => {
+    // Ten days apart, so the two sources cannot produce the same bucket: a
+    // fallback to createdAt would read '10d' instead of '1d'.
+    const { source } = bench({
+      sessions: [
+        row('target'),
+        row('stale', {
+          header: { version: SESSION_FORMAT_VERSION, id: sid('stale'), createdAt: CREATED_AT - 10 * 86_400_000, isSeeded: false, cwd: `${HOME}/project` },
+          updatedAt: CREATED_AT,
+        }),
+      ],
+    })
     const rows = await source.candidates(context, request(''))
     expect(rows.find(row => row.name === 'STALE')?.description).toBe('3d')
   })
