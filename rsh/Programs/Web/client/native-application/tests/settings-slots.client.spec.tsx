@@ -4,7 +4,7 @@
  * and the page renders those registrations.
  */
 import { cleanup, fireEvent, screen } from '@testing-library/react'
-import { afterEach, expect, it } from 'vitest'
+import { afterEach, expect, it, vi } from 'vitest'
 import type { PropsRenderSlots } from '@redspark/rsh-client-ui-slots'
 import type { NativePlugin } from '@redspark/rsh-native-runtime'
 import { NativeHost, NativeScope, resolveInstallation } from '@redspark/rsh-native-runtime'
@@ -156,6 +156,46 @@ it('shows a registration in the plugins tab and the models section', async () =>
   fireEvent.click(screen.getByRole('button', { name: 'Models' }))
   expect(await screen.findByText('models-slot-probe')).toBeTruthy()
   expect(screen.queryByText('plugins-slot-probe')).toBeNull()
+})
+
+it('reports a settings.section registration that reuses a shown page id and keeps one row', async () => {
+  const scope = new NativeScope()
+  const colliding: NativePlugin = {
+    apiVersion: 1,
+    name: 'test-native-settings-slot-collision',
+    targets: ['client'],
+    requires: ['clientSlots'],
+    provides: [],
+    resolve: () => (context) => {
+      const slots = context.require('clientSlots')
+      // 'general' is a page this shell renders itself, so nothing at the slot
+      // layer rejects the registration; the shell is where it becomes visible.
+      context.own(slots.inject('settings.section', () => slots.register({
+        name: 'settings.section', id: 'general', order: 0, label: () => 'Hidden general',
+      }, () => <p>general-slot-probe</p>)))
+    },
+  }
+  const host = new NativeHost(resolveInstallation([
+    { plugin: services, scope, config: undefined },
+    { plugin: renderer, scope, config: undefined },
+    { plugin: locale, scope, config: { locale: 'en' } },
+    { plugin: theme, scope, config: undefined },
+    { plugin: application, scope, config: { maxLiveTextChars: 1024, maxLiveEvents: 32 } },
+    { plugin: sessionPresentation, scope, config: undefined },
+    { plugin: colliding, scope, config: undefined },
+    { plugin: shell, scope, config: undefined },
+  ], 'client'))
+  const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+  try {
+    await host.start()
+    started.push(host)
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Settings' }))
+    expect(screen.getAllByRole('button', { name: 'General' })).toHaveLength(1)
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('"general"'))
+  } finally {
+    warn.mockRestore()
+  }
 })
 
 it('drops the navigation row and leaves an unregistered page when its registration retires', async () => {

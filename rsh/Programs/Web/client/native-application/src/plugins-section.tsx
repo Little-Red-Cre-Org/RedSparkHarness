@@ -670,8 +670,21 @@ export function PluginsSection({ actions, t, tabs = [], renderSlot }: {
   }
   const tTabs = t('settingsPluginTabs')
   const tabRefs = useRef<Array<HTMLButtonElement | null>>([])
-  /** Tab keys in render order: the built-in configuration tab, then every registered one. */
-  const tabKeys = ['config', ...tabs.map(entry => entry.id)]
+  /**
+   * Tab keys in render order: the built-in configuration tab, then every
+   * registered one. A registration reusing a shown key is reported and left
+   * out: two rows for one key would share a DOM id and an `aria-controls`
+   * target, and the second panel would never be reachable.
+   */
+  const tabKeys: string[] = ['config']
+  const shownTabs = tabs.filter((entry) => {
+    if (tabKeys.includes(entry.id)) {
+      console.warn(`[native-application] settings.plugins.tab registration "${entry.id}" reuses an existing tab id and is not shown`)
+      return false
+    }
+    tabKeys.push(entry.id)
+    return true
+  })
   // A tab can retire its registration while it is selected. The configuration
   // tab always exists, so it is where the panel returns instead of showing no
   // panel at all with every remaining tab outside the key sequence.
@@ -715,7 +728,7 @@ export function PluginsSection({ actions, t, tabs = [], renderSlot }: {
         id="plugins-config-tab" data-active={activeTab === 'config' ? 'true' : undefined} className={css.tab}
         ref={(element) => { tabRefs.current[0] = element }} tabIndex={activeTab === 'config' ? 0 : -1}
         onClick={() => { setTab('config') }} onKeyDown={(event) => { moveTab(event, 0) }}>{t('settingsPluginConfigTab')}</button>
-      {tabs.map((entry, index) => (
+      {shownTabs.map((entry, index) => (
         <button key={entry.id} type="button" role="tab" aria-selected={activeTab === entry.id}
           aria-controls={`plugins-${entry.id}-panel`} id={`plugins-${entry.id}-tab`}
           data-active={activeTab === entry.id ? 'true' : undefined} className={css.tab}
@@ -747,7 +760,7 @@ export function PluginsSection({ actions, t, tabs = [], renderSlot }: {
         })}
       </ul>
     </div>
-    {tabs.map(entry => (
+    {shownTabs.map(entry => (
       <div key={entry.id} id={`plugins-${entry.id}-panel`} role="tabpanel" aria-labelledby={`plugins-${entry.id}-tab`}
         hidden={activeTab !== entry.id} className={css.panel}>
         {renderSlot?.('settings.plugins.tab', {}, { only: entry.id })}

@@ -101,7 +101,8 @@ export function settingsSectionAvailable(
  *
  * A registered page appears only while its contribution exists, so a
  * composition without the models package has no Models row instead of an
- * empty one.
+ * empty one. One page renders per id, so a registration that reuses a shown id
+ * is reported and left out rather than silently replacing nothing.
  * @param t - settings copy for the built-in pages.
  * @param ledger - registered section entries, read at render time.
  * @returns the ordered navigation rows.
@@ -111,14 +112,19 @@ function settingsRows(
   ledger: NativeSidebarSettingsInjected['ledger'],
 ): readonly { id: string; label: string }[] {
   const builtIn = BUILT_IN_SECTIONS.map(section => ({ id: section.id, label: t(section.labelKey), order: section.order }))
-  const registered = ledger.sections().map(entry => ({
-    id: entry.id,
-    label: entry.label ?? entry.id,
-    order: entry.order,
-  }))
-  return [...builtIn, ...registered]
-    .filter((row, index, all) => all.findIndex(candidate => candidate.id === row.id) === index)
-    .sort((a, b) => a.order - b.order)
+  const shown = new Set<string>(BUILT_IN_SECTIONS.map(section => section.id))
+  const registered = ledger.sections().flatMap((entry) => {
+    if (shown.has(entry.id)) {
+      // The panel renders one page per id, so a second row for the same id is
+      // unreachable; naming the registration is the only way its author learns
+      // the page never opens.
+      console.warn(`[native-application] settings.section registration "${entry.id}" reuses an existing page id and is not shown`)
+      return []
+    }
+    shown.add(entry.id)
+    return [{ id: entry.id, label: entry.label ?? entry.id, order: entry.order }]
+  })
+  return [...builtIn, ...registered].sort((a, b) => a.order - b.order)
 }
 
 /** Render Settings, language, and theme controls in the sidebar foot.
