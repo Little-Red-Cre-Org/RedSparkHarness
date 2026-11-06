@@ -36,8 +36,16 @@ function composer() {
  */
 function install(selected: SessionId | undefined) {
   const draft = composer()
+  let current = selected
+  const conversationListeners = new Set<() => void>()
   const services: Record<string, unknown> = {
-    clientNativeConversation: { getSnapshot: () => ({ selected }), subscribe: () => () => {} },
+    clientNativeConversation: {
+      getSnapshot: () => ({ selected: current, sessions: [] }),
+      subscribe: (listener: () => void) => {
+        conversationListeners.add(listener)
+        return () => { conversationListeners.delete(listener) }
+      },
+    },
     clientNativeComposer: draft,
     clientLocale: { register: () => () => {}, bind: () => () => 'label' },
   }
@@ -58,7 +66,14 @@ function install(selected: SessionId | undefined) {
   // without standing up the controller's own scopes.
   const sessionOf = vi.fn(() => tracked)
   Object.assign(service, { sessionOf })
-  return { draft, service, owned, tracked, sessionOf }
+  return {
+    draft, service, owned, tracked, sessionOf,
+    // Switching Sessions in the conversation is what a click in the sidebar does.
+    select: (next: SessionId | undefined): void => {
+      current = next
+      for (const listener of conversationListeners) listener()
+    },
+  }
 }
 
 const SID = 'session-1' as SessionId
@@ -87,6 +102,16 @@ describe('composer subscription', () => {
     draft.publish({ text: '@s', caret: 2 })
     expect(tracked.track).toHaveBeenCalledTimes(1)
     expect(draft.listeners.size).toBe(0)
+  })
+
+  it('tracks the newly selected Session without waiting for a keystroke', () => {
+    const { draft, tracked, select } = install(SID)
+    draft.publish({ text: '@s', caret: 2 })
+    expect(tracked.track).toHaveBeenCalledTimes(1)
+    select('session-2' as SessionId)
+    // The draft is unchanged, so only the selection change can have asked.
+    expect(tracked.track).toHaveBeenCalledTimes(2)
+    expect(tracked.track).toHaveBeenLastCalledWith('@s', 2, { tier: 'plain' }, 2)
   })
 
   it('asks for no Session while none is selected', () => {

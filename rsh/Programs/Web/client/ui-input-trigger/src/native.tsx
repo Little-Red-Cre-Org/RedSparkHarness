@@ -325,7 +325,7 @@ export const plugin: NativePlugin = {
       // keystroke into a candidate request, so a Native client without it has a
       // source roster nothing ever asks.
       let tracked: { readonly sessionId: SessionId; readonly text: string; readonly caret: number } | undefined
-      const off = composer.subscribe(() => {
+      const sync = (): void => {
         const selected = conversation.getSnapshot().selected
         if (selected === undefined) {
           service.current()?.dismiss()
@@ -336,8 +336,14 @@ export const plugin: NativePlugin = {
         if (tracked?.sessionId === selected && tracked.text === draft && tracked.caret === caret) return
         tracked = { sessionId: selected, text: draft, caret }
         service.sessionOf(selected).track(draft, caret, { tier: 'plain' }, caret)
-      })
-      context.own(() => { off() })
+      }
+      // Both sources can change the pair: a keystroke republishes the draft, and
+      // a Session switch changes which draft matters. A draft-only subscription
+      // would leave the new Session's menu closed until the user typed again.
+      const off = composer.subscribe(sync)
+      const offSelection = conversation.subscribe(sync)
+      context.own(() => { off(); offSelection() })
+      sync()
       // The composer seats the menu through the slot it declares; this entry
       // fills it with the same surface the browser renders.
       const slots = context.optional('clientSlots')
