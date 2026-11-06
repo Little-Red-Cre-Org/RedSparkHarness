@@ -9723,6 +9723,9 @@ importers:
       '@redspark/rsh-client-ui-primitives':
         specifier: workspace:^
         version: link:../Web/client/ui-primitives
+      '@redspark/rsh-client-ui-reference':
+        specifier: workspace:^
+        version: link:../Web/client/ui-reference
       '@redspark/rsh-client-ui-renderer':
         specifier: workspace:^
         version: link:../Web/client/ui-renderer

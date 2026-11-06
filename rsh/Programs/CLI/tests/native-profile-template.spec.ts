@@ -188,7 +188,7 @@ it('defines a native-web Host composition and Client profile without Cordis rows
     expect(client.installations.map(row => row.id)).toEqual([
       'application', 'renderer', 'connection', 'session',
       'locale', 'theme', 'session-presentation', 'layout', 'sidebar', 'sidebar-right',
-      'brand-official', 'input-trigger', 'jobs', 'message-feedback',
+      'brand-official', 'input-trigger', 'reference', 'jobs', 'message-feedback',
       'settings', 'commands',
       'plan-mode', 'resources', 'schedule-catalog',
       'pet', 'permission-presets-ui', 'model-selection-ui',
