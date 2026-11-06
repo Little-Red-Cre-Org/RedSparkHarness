@@ -34,6 +34,10 @@
       "types": "./lib/types/native.d.ts",
       "default": "./lib/native.js"
     },
+    "./uri": {
+      "types": "./lib/types/uri.d.ts",
+      "default": "./lib/types/uri.js"
+    },
     "./src/*": "./src/*",
     "./package.json": "./package.json"
   },

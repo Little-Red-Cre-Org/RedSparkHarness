@@ -48,6 +48,7 @@ const NATIVE_WEB_CLIENT_INSTALLATIONS = [
   { id: 'sidebar-right', plugin: '@redspark/rsh-client-ui-sidebar-right' },
   { id: 'brand-official', plugin: '@redspark/rsh-client-ui-brand-official' },
   { id: 'input-trigger', plugin: '@redspark/rsh-client-ui-input-trigger' },
+  { id: 'reference', plugin: '@redspark/rsh-client-ui-reference' },
   { id: 'jobs', plugin: '@redspark/rsh-client-ui-jobs' },
   { id: 'message-feedback', plugin: '@redspark/rsh-client-ui-message-feedback' },
   // Settings scopes and the command catalog are capabilities other client rows

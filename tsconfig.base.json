@@ -682,6 +682,7 @@
       "@redspark/rsh-client-ui-permission-presets/native": ["./rsh/Programs/Web/client/ui-permission-presets/src/native.ts"],
       "@redspark/rsh-client-ui-pet/native": ["./rsh/Programs/Web/client/ui-pet/src/native.ts"],
       "@redspark/rsh-client-ui-plan/native": ["./rsh/Programs/Web/client/ui-plan/src/native.ts"],
+      "@redspark/rsh-client-ui-reference/native": ["./rsh/Programs/Web/client/ui-reference/src/native.ts"],
       "@redspark/rsh-client-ui-schedule/native": ["./rsh/Programs/Web/client/ui-schedule/src/native.ts"],
       "@redspark/rsh-client-ui-session/native": ["./rsh/Programs/Web/client/ui-session/src/native.ts"],
       "@redspark/rsh-client-ui-settings-general/native": ["./rsh/Programs/Web/client/ui-settings-general/src/native.tsx"],

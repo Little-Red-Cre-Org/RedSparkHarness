@@ -180,6 +180,14 @@ const CLIENT_RUNTIME_DEPENDENCIES = {
     '@redspark/rsh-client-ui-slots',
   ],
   '@redspark/rsh-client-ui-input-trigger': ['@redspark/rsh-file-reference'],
+  // The Native leaf keeps its browser-safe specifiers as imports, so a consumer
+  // installing the tarball must receive them.
+  '@redspark/rsh-client-ui-reference': [
+    '@redspark/rsh-client-ui-primitives',
+    '@redspark/rsh-file-reference',
+    '@redspark/rsh-session-reference',
+    '@redspark/rsh-util-workspace-path',
+  ],
   '@redspark/rsh-client-ui-settings': ['@redspark/schemastery'],
   '@redspark/rsh-client-ui-settings-plugin-inventory': ['@redspark/rsh-brand'],
   '@redspark/rsh-client-file-upload': ['@redspark/rsh-util-crypto'],

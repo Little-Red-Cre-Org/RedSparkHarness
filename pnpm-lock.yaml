@@ -13545,6 +13545,19 @@ importers:
         version: 18.3.1(react@18.3.1)
 
   rsh/Programs/Web/client/ui-reference:
+    dependencies:
+      '@redspark/rsh-client-ui-primitives':
+        specifier: workspace:^
+        version: link:../ui-primitives
+      '@redspark/rsh-file-reference':
+        specifier: workspace:^
+        version: link:../../../../Engine/context/file-reference
+      '@redspark/rsh-session-reference':
+        specifier: workspace:^
+        version: link:../../../../Engine/context/session-reference
+      '@redspark/rsh-util-workspace-path':
+        specifier: workspace:^
+        version: link:../../../../Core/util/workspace-path
     devDependencies:
       '@redspark/cordis':
         specifier: workspace:^
@@ -13561,33 +13574,33 @@ importers:
       '@redspark/rsh-client-locale':
         specifier: workspace:^
         version: link:../locale
+      '@redspark/rsh-client-native-session':
+        specifier: workspace:^
+        version: link:../native-session
       '@redspark/rsh-client-test-runtime':
         specifier: workspace:^
         version: link:../../../../Tests/test-support/client-runtime
       '@redspark/rsh-client-ui-input-trigger':
         specifier: workspace:^
         version: link:../ui-input-trigger
-      '@redspark/rsh-client-ui-primitives':
+      '@redspark/rsh-client-ui-session':
         specifier: workspace:^
-        version: link:../ui-primitives
+        version: link:../ui-session
       '@redspark/rsh-client-ui-sidebar-right':
         specifier: workspace:^
         version: link:../ui-sidebar-right
       '@redspark/rsh-client-ui-slots':
         specifier: workspace:^
         version: link:../ui-slots
-      '@redspark/rsh-file-reference':
+      '@redspark/rsh-native-runtime':
         specifier: workspace:^
-        version: link:../../../../Engine/context/file-reference
-      '@redspark/rsh-session-reference':
+        version: link:../../../../Core/runtime-diagnostics/native-runtime
+      '@redspark/rsh-session':
         specifier: workspace:^
-        version: link:../../../../Engine/context/session-reference
+        version: link:../../../../Engine/core/session
       '@redspark/rsh-typert-protocol':
         specifier: workspace:^
         version: link:../../../../Core/typert/protocol
-      '@redspark/rsh-util-workspace-path':
-        specifier: workspace:^
-        version: link:../../../../Core/util/workspace-path
 
   rsh/Programs/Web/client/ui-renderer:
     dependencies:
