@@ -169,7 +169,9 @@
         "agentPresets"
       ],
       "requires": [],
-      "optional": []
+      "optional": [
+        "settings"
+      ]
     }
   }
 }
