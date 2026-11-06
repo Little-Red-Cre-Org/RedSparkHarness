@@ -29,7 +29,10 @@ import type {} from '@redspark/rsh-client-locale/native'
 import type {} from '@redspark/rsh-client-ui-session/native'
 import type { InputDispatch } from './client/native-dispatch.ts'
 import { en, zh } from './client/locales.ts'
-import { NativeTriggerMenu } from './native-menu.tsx'
+// The browser's menu surface is reused as-is: it reads only its injected face,
+// and the Native service already answers that face.
+import { MenuView } from './client/MenuView.tsx'
+import type { MenuViewInjected } from './client/slots.ts'
 import { InputTriggerController } from './client/controller.ts'
 import type { MenuState, TriggerHit } from './core/contract.ts'
 import type {
@@ -335,26 +338,28 @@ export const plugin: NativePlugin = {
         service.sessionOf(selected).track(draft, caret, { tier: 'plain' }, caret)
       })
       context.own(() => { off() })
-      // Render the menu where a conversation surface can seat it. The seat is a
-      // list slot, so the composer decides where the rows appear; this entry
-      // owns what they say.
       // The composer seats the menu through the slot it declares; this entry
-      // owns what the rows say and how a pick settles.
+      // fills it with the same surface the browser renders.
       const slots = context.optional('clientSlots')
       if (slots !== undefined) {
-        const label = locale.bind('slash.menu')('suggestions.aria')
         context.own(slots.inject('native.conversation.overlay', () => slots.register({
-          name: 'native.conversation.overlay', id: 'trigger-menu', locale: 'slash.menu',
-        }, ({ sessionId }: { readonly sessionId: SessionId }) => {
-          const session = service.sessionOf(sessionId)
-          return <NativeTriggerMenu
-            menu={session.menu}
-            pick={(source, index, action) => { session.pick(source, index, action) }}
-            hover={(source, index) => { session.hover(source, index) }}
-            dismiss={() => { session.dismiss() }}
-            label={label}
-          />
-        })))
+          name: 'native.conversation.overlay', id: 'slash-menu', order: 0, locale: 'slash.menu',
+          // A root-scoped seat receives no Session id, so the menu follows the
+          // conversation's selection — the same Session the composer drives.
+          inject: (): MenuViewInjected => {
+            const selected = conversation.getSnapshot().selected
+            if (selected === undefined) throw new Error('native input-trigger: the menu rendered with no selected Session')
+            const session = service.sessionOf(selected)
+            return {
+              menu: session.menu,
+              headers: session.headers,
+              onPick: (source, index, action) => { session.pick(source, index, action) },
+              onCrumb: (source, index) => { session.pickCrumb(source, index) },
+              onHover: (source, index) => { session.hover(source, index) },
+              onDismiss: () => { session.dismiss() },
+            }
+          },
+        }, MenuView)))
       }
     }
   },

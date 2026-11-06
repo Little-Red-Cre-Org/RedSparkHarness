@@ -26,9 +26,11 @@ export interface NativeComposerService {
 
 应用从挂载的会话绑定活的 surface，并且无论如何都发布该服务，因此流水线可以在 surface 出现之前就订阅。在那个窗口里 getter 回答空草稿，而不是对只在 composer 上屏期间才运行的调用方抛错。
 
-流水线只订阅一次，把发布的草稿与光标和上次跟踪的那对做比较，只在变化时调用 `track()`。它同时自己渲染菜单：`native-menu.tsx` 读该会话的菜单存储，注册进会话声明并安置在 composer 之上的 `native.conversation.overlay` 列表槽位。
+流水线只订阅一次，把发布的草稿与光标和上次跟踪的那对做比较，只在变化时调用 `track()`。pick 朝相反方向落地：流水线产出替换文本，composer 的 `replaceToken` 把它写进草稿里菜单记录的那个 span。
 
-该槽位是 `root` 作用域、以会话 id 作为 owner props，而不是 `session` 作用域。`session` 槽位在渲染时要求作用域绑定，而 composer 在根作用域渲染；把 id 作为 owner 数据传入，才能让一个根 surface 渲染所选会话的菜单。
+菜单本身就用浏览器的 `MenuView`，注册进 `native.conversation.overlay`——一个由会话声明、安置在 composer 之上的列表槽位。`MenuViewInjected` 是纯数据接口，Native 服务已经答得出每个成员，因此复用该表面同时也保住了面包屑头部、分组标题与下钻路径——第二份实现得把这些重新挣一遍。
+
+该槽位是 `root` 作用域，因此它的 `inject` 收不到会话 id；注入函数读会话的当前选择，而那也正是 composer 驱动的会话。`session` 作用域的位置在渲染时要求作用域绑定，而 composer 在根作用域渲染。
 
 ## Alternatives considered
 
@@ -38,11 +40,13 @@ export interface NativeComposerService {
 
 **让流水线通过 DOM 读 textarea。** 否决：composer 的草稿是 React state，跨安装读 DOM 节点会让流水线依赖于 composer 恰好挂在哪里。
 
+**写一份 Native 专属菜单、只共享行投影。** 否决：`MenuViewInjected` 不带任何 Cordis 触点，第二份表面等于把一整个成熟组件——样式表、面包屑、分组标题、下钻提示与骨架行——复制一遍去读同一个存储。
+
 **用现有的 `/` 面板渲染菜单。** 否决：那个面板是独立表面，有自己的目录与存储；让它渲染触发行会让同一区域出现两个「什么可见」的拥有者。
 
 ## Consequences
 
 - Native 用户按 `@` 现在能看到文件与会话候选，选中其一会把草稿里的 token 替换成与浏览器相同的 mention。
+- 两半不可能在「菜单显示什么」上分歧：都从同一个存储渲染 `MenuView`。
 - composer 与流水线可以各自独立安装：没有流水线的组合里，composer 发布一个没人读的草稿；没有 composer 的组合里，流水线的 source 名册没有击键能触达。两者都不会装载失败。
-- 菜单每个分组渲染成一列平铺行。浏览器菜单还会渲染分组标题与面包屑头部；本表面两者都不渲染，因此下钻的目录列表只有行，没有回去的路。
-- 覆盖：`tests/native-menu.client.spec.tsx` 钉住空分组丢弃、关闭与全空时的渲染、高亮、保持焦点的按下、以及 hover 路由。把空分组过滤与 `preventDefault` 各自改回，都让自己那几条变红。
+- 覆盖：`tests/native-composer.client.spec.ts` 钉住被跟踪的草稿与光标、重复发布的去重、卸载时退订，以及无选中会话时不去问任何会话。

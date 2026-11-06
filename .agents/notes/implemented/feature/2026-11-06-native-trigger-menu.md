@@ -26,9 +26,11 @@ Three members and no more. The composer owns the draft, the caret and the span a
 
 The application binds the live surface from the mounted conversation and publishes the service regardless, so the pipeline can subscribe before the surface exists. Its getter answers an empty draft in that window rather than throwing at a caller that only runs while the composer is on screen.
 
-The pipeline subscribes once, compares the published draft and caret against the last tracked pair, and calls `track()` only when they changed. It also renders the menu itself: `native-menu.tsx` reads the Session's menu store and is registered into `native.conversation.overlay`, a list slot the conversation declares and seats above the composer.
+The pipeline subscribes once, compares the published draft and caret against the last tracked pair, and calls `track()` only when they changed. A pick settles in the opposite direction: the pipeline produces the replacement text and the composer's `replaceToken` writes it into the draft at the span the menu recorded.
 
-That slot is `root`-scoped with the Session id as owner props, not `session`-scoped. A `session` slot requires a scope binding at render, and the composer renders in the root scope; passing the id as owner data is what lets one root surface render the selected Session's menu.
+The menu itself is the browser's `MenuView`, registered into `native.conversation.overlay` — a list slot the conversation declares and seats above the composer. `MenuViewInjected` is a plain data interface and the Native service already answers every member, so reusing the surface also keeps the breadcrumb header, the group titles and the drill path that a second implementation would have had to re-earn.
+
+That slot is `root`-scoped, so its `inject` receives no Session id; the injection reads the conversation's selection, which is also the Session the composer drives. A `session`-scoped seat would need a scope binding at render, and the composer renders in the root scope.
 
 ## Alternatives considered
 
@@ -38,11 +40,13 @@ That slot is `root`-scoped with the Session id as owner props, not `session`-sco
 
 **Have the pipeline read the textarea through the DOM.** Rejected: the composer's draft is React state, and reading a DOM node across installations would make the pipeline depend on where the composer happens to mount.
 
+**Write a Native-only menu and share the row projection.** Rejected: `MenuViewInjected` carries no Cordis contact, so a second surface would have duplicated a complete component — its stylesheet, breadcrumbs, group titles, drill hint and skeleton rows — to reach the same store.
+
 **Render the menu through the existing `/` palette.** Rejected: that palette is a separate surface with its own catalog and its own store; making it render trigger rows would give one region two owners of what is visible.
 
 ## Consequences
 
 - A Native user pressing `@` now sees file and session candidates, and picking one replaces the token in the draft with the same mention the browser inserts.
+- The two halves cannot drift on what a menu shows: both render `MenuView` from the same store.
 - The composer and the pipeline can be installed independently: a composition without the pipeline has a composer that publishes a draft nobody reads, and a composition without the composer has a pipeline whose source roster no keystroke reaches. Neither fails to load.
-- The menu renders one flat list per group. The browser menu also renders section headings and a breadcrumb header; this surface drops both, so a drilled directory listing shows its rows without the trail back.
-- Coverage: `tests/native-menu.client.spec.tsx` pins the empty-group drop, the closed and empty renders, the highlight, the focus-preserving press and the hover route. Reverting the empty-group filter and the `preventDefault` each turned their own cases red.
+- Coverage: `tests/native-composer.client.spec.ts` pins the tracked draft and caret, the republish dedupe, the unsubscribe on unload, and that no Session is consulted while none is selected.
