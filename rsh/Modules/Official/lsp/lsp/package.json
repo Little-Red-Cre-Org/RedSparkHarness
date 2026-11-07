@@ -43,7 +43,6 @@
   "license": "MIT",
   "peerDependencies": {
     "@redspark/rsh-brand": "workspace:^",
-    "@redspark/rsh-llm": "workspace:^",
     "@redspark/cordis": "workspace:^"
   },
   "dependencies": {
@@ -52,7 +51,6 @@
   },
   "devDependencies": {
     "@redspark/rsh-brand": "workspace:^",
-    "@redspark/rsh-llm": "workspace:^",
     "@redspark/cordis": "workspace:^",
     "@redspark/rsh-native-runtime": "workspace:^"
   },

@@ -1,7 +1,8 @@
 /**
  * Native installation of the model-facing `lsp` tool.
  *
- * Argument checks, coordinate conversion, result caps, and rendering stay in the Cordis module.
+ * Argument checks, coordinate conversion, and rendering live in the Cordis-free `render.ts`, and the
+ * caps, timeout budget, prompt text, and load-time checks live in the Cordis-free `config.ts`.
  * This entry binds that core to the native tool registry and the native LSP service. The session
  * workspace is the invocation session's cwd. Call-deadline enforcement belongs to the tool-call
  * timeout guard, which reads `timeoutMs`.

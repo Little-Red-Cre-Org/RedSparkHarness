@@ -45,7 +45,6 @@
     "@redspark/cordis": "workspace:^",
     "@redspark/rsh-brand": "workspace:^",
     "@redspark/rsh-fs": "workspace:^",
-    "@redspark/rsh-llm": "workspace:^",
     "@redspark/rsh-lsp": "workspace:^",
     "@redspark/rsh-subprocess": "workspace:^",
     "@redspark/rsh-timeout": "workspace:^"
@@ -60,7 +59,6 @@
     "@redspark/rsh-brand": "workspace:^",
     "@redspark/rsh-fs": "workspace:^",
     "@redspark/rsh-fs-local": "workspace:^",
-    "@redspark/rsh-llm": "workspace:^",
     "@redspark/rsh-lsp": "workspace:^",
     "@redspark/rsh-subprocess": "workspace:^",
     "@redspark/rsh-subprocess-local": "workspace:^",

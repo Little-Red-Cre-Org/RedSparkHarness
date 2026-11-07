@@ -7515,9 +7515,6 @@ importers:
       '@redspark/rsh-brand':
         specifier: workspace:^
         version: link:../../../../Core/util/brand
-      '@redspark/rsh-llm':
-        specifier: workspace:^
-        version: link:../../../../Engine/llm/llm
 
   rsh/Modules/Official/lsp/lsp-stdio:
     dependencies:
@@ -7543,9 +7540,6 @@ importers:
       '@redspark/rsh-fs-local':
         specifier: workspace:^
         version: link:../../fs/fs-local
-      '@redspark/rsh-llm':
-        specifier: workspace:^
-        version: link:../../../../Engine/llm/llm
       '@redspark/rsh-lsp':
         specifier: workspace:^
         version: link:../lsp
