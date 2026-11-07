@@ -11,8 +11,21 @@ import type { NativePlugin } from '@redspark/rsh-native-runtime'
 import type { LspService } from './types.ts'
 import { LspRegistry } from './registry.ts'
 
+export { LspProviderId } from './brand.ts'
 export { finalExtension, LspError, LspRegistry } from './registry.ts'
 export type { LspReservation } from './registry.ts'
+export type {
+  LspHover,
+  LspLocation,
+  LspOperation,
+  LspPosition,
+  LspProvider,
+  LspProviderQuery,
+  LspQueryRequest,
+  LspQueryResult,
+  LspRange,
+  LspService,
+} from './types.ts'
 
 declare module '@redspark/rsh-native-runtime' {
   interface NativeServices { lsp: LspService }

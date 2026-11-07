@@ -259,6 +259,9 @@ export const mixedNativeEntryDirectories: ReadonlyMap<string, string> = new Map(
   ['rsh/Engine/session/session-title-first-prompt-llm', 'Native title generation delegates through the selected title and model capabilities while its legacy adapter remains optional'],
   ['rsh/Core/runtime-diagnostics/cordis-bridge', 'Native and Cordis entries share the Cordis context owner and the Native plugin wrapper'],
   ['rsh/Engine/preset/native-persona', 'Native and Cordis persona entries share the persona section names and the bridged system-prompt service'],
+  ['rsh/Modules/Official/lsp/lsp', 'Cordis and Native LSP registries share extension routing and conflict checks'],
+  ['rsh/Modules/Official/lsp/lsp-stdio', 'Cordis and Native stdio providers share executable resolution, isolation, and teardown'],
+  ['rsh/Modules/Official/lsp/tool-lsp', 'Cordis and Native lsp tools share argument checks, caps, and result rendering'],
 ])
 
 /** Mixed library exports that have native values or types but no installer manifest. */

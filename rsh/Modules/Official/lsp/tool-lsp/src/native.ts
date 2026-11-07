@@ -13,14 +13,14 @@ import type { NativeValueToolContribution } from '@redspark/rsh-native-tools'
 import type { JsonSchemaNode } from '@redspark/rsh-native-tools/json-schema'
 import type {} from '@redspark/rsh-native-tools/native'
 import type {} from '@redspark/rsh-native-prompt/native'
-import { LspError } from '@redspark/rsh-lsp'
-import type { LspQueryResult, LspService } from '@redspark/rsh-lsp'
+import { LspError } from '@redspark/rsh-lsp/native'
+import type { LspQueryResult, LspService } from '@redspark/rsh-lsp/native'
 import {
   Config,
   LSP_PROMPT_TEXT,
   validateToolLspConfig,
   type Config as ToolLspConfig,
-} from './index.ts'
+} from './config.ts'
 import {
   formatHover,
   formatLocations,

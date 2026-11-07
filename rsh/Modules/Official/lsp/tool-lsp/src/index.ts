@@ -11,15 +11,16 @@
  */
 
 import type { Context } from '@redspark/cordis'
-import z from '@redspark/schemastery'
 import { defineTool } from '@redspark/rsh-tools'
 import { LspError } from '@redspark/rsh-lsp'
 import type {} from '@redspark/rsh-lsp'
-import { MAX_TIMER_DELAY_MS } from '@redspark/rsh-timeout'
 import { assertNever } from '@redspark/rsh-util-values'
 import {
-  DEFAULT_MAX_LOCATIONS,
-  DEFAULT_MAX_RESULT_CHARS,
+  Config,
+  LSP_PROMPT_TEXT,
+  validateToolLspConfig,
+} from './config.ts'
+import {
   formatHover,
   formatLocations,
   LSP_OPERATIONS,
@@ -39,6 +40,12 @@ export {
   renderUri,
 } from './render.ts'
 export { sessionCwd } from './session-cwd.ts'
+export {
+  Config,
+  DEFAULT_LSP_TOOL_TIMEOUT_MS,
+  LSP_PROMPT_TEXT,
+  validateToolLspConfig,
+} from './config.ts'
 
 /** Cordis plugin name for loader diagnostics. */
 export const name = 'tool-lsp'
@@ -46,37 +53,7 @@ export const name = 'tool-lsp'
 /** Services required by this plugin. */
 export const inject = ['tools', 'lsp', 'systemPrompt']
 
-/** Default tool-call timeout budget (ms), covering the queued open/query/close lifecycle. */
-export const DEFAULT_LSP_TOOL_TIMEOUT_MS = 60_000
-
-/** The stable system-prompt guidance positioning LSP as a precision aid. */
-export const LSP_PROMPT_TEXT =
-  'Use search/read for ordinary navigation. Use lsp when textual matches are ambiguous or before a change requires precise definitions, implementations, or references. Positions are one-based line and character (UTF-16) at the cursor; an off-symbol position may return no results. findReferences always includes the declaration.'
-
-/** Plugin configuration: result caps and the timeout budget. */
-export interface Config {
-  /** Largest number of rendered locations before an omission marker (default 100). */
-  maxLocations?: number
-  /** Largest complete rendered result in characters, including truncation metadata (default 16000). */
-  maxResultChars?: number
-  /** Tool-call timeout budget in ms (default 60000). */
-  timeoutMs?: number
-}
-
-export const Config: z<Config> = z.object({
-  maxLocations: z.number().default(DEFAULT_MAX_LOCATIONS),
-  maxResultChars: z.number().default(DEFAULT_MAX_RESULT_CHARS),
-  timeoutMs: z.number().max(MAX_TIMER_DELAY_MS).default(DEFAULT_LSP_TOOL_TIMEOUT_MS),
-})
-
 type ResolvedConfig = Required<Config>
-
-/** Reject a load configuration whose caps or timeout cannot be honored as written. */
-export function validateToolLspConfig(resolved: ResolvedConfig): void {
-  assertPositiveInteger('maxLocations', resolved.maxLocations)
-  assertPositiveInteger('maxResultChars', resolved.maxResultChars)
-  assertTimer('timeoutMs', resolved.timeoutMs)
-}
 
 const LSP_POSITION_OUTPUT_SCHEMA = {
   type: 'object',
@@ -234,18 +211,4 @@ export function apply(ctx: Context, config: Config): void {
     },
     presentCall: presentLspCall,
   }))
-}
-
-/** Reject a non-positive-integer config value at load, so misconfiguration fails loud. */
-function assertPositiveInteger(name: string, value: number): void {
-  if (!Number.isInteger(value) || value < 1) {
-    throw new Error(`tool-lsp: ${name} must be a positive integer`)
-  }
-}
-
-/** Reject a timer value Node would clamp instead of scheduling as configured. */
-function assertTimer(name: string, value: number): void {
-  if (!Number.isInteger(value) || value < 1 || value > MAX_TIMER_DELAY_MS) {
-    throw new Error(`tool-lsp: ${name} must be a positive integer no greater than ${MAX_TIMER_DELAY_MS}`)
-  }
 }

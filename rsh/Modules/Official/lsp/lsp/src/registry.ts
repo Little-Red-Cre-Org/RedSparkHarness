@@ -4,7 +4,7 @@
  * @module @redspark/rsh-lsp/registry
  */
 
-import { HarnessError } from '@redspark/rsh-llm'
+import { HarnessError } from '@redspark/rsh-errors'
 import type { LspProviderId } from './brand.ts'
 import type {
   LspProvider,

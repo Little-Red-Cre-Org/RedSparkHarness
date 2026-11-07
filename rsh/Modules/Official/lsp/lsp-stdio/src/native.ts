@@ -10,8 +10,8 @@
 import type { NativePlugin } from '@redspark/rsh-native-runtime'
 import type {} from '@redspark/rsh-fs/native'
 import type {} from '@redspark/rsh-subprocess/native'
-import type { LspService } from '@redspark/rsh-lsp'
-import { Config, bindStdioProviders, loadStdioProviders, type Config as LspStdioConfig } from './index.ts'
+import type { LspService } from '@redspark/rsh-lsp/native'
+import { Config, bindStdioProviders, loadStdioProviders, type Config as LspStdioConfig } from './providers.ts'
 
 declare module '@redspark/rsh-native-runtime' {
   interface NativeServices { lsp: LspService }

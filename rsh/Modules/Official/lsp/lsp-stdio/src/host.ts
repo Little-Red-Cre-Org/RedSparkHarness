@@ -2,7 +2,7 @@
 
 import { Buffer } from 'node:buffer'
 import type { FileSystemOperations } from '@redspark/rsh-fs/operations'
-import type { FsTarget } from '@redspark/rsh-fs'
+import type { FsTarget } from '@redspark/rsh-fs/types'
 import { throwIfAborted } from './abort.ts'
 
 /** A canonical workspace in the filesystem/subprocess execution world. */

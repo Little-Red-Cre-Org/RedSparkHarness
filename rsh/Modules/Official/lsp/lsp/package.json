@@ -47,6 +47,7 @@
     "@redspark/cordis": "workspace:^"
   },
   "dependencies": {
+    "@redspark/rsh-errors": "workspace:^",
     "@redspark/rsh-native-runtime": "workspace:^"
   },
   "devDependencies": {

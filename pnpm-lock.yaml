@@ -7502,6 +7502,9 @@ importers:
 
   rsh/Modules/Official/lsp/lsp:
     dependencies:
+      '@redspark/rsh-errors':
+        specifier: workspace:^
+        version: link:../../../../Core/util/errors
       '@redspark/rsh-native-runtime':
         specifier: workspace:^
         version: link:../../../../Core/runtime-diagnostics/native-runtime

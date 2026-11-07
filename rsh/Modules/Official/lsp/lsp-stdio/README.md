@@ -98,7 +98,9 @@ This section explains the design decisions behind the provider and where the cod
 
 | File | Role |
 |---|---|
-| [`src/index.ts`](src/index.ts) | Plugin entry: config schema, executable resolution, provider registration, process pooling |
+| [`src/index.ts`](src/index.ts) | Cordis plugin entry: the `apply` lifecycle over resolution and registration |
+| [`src/providers.ts`](src/providers.ts) | Cordis-free core shared with the native entry: config schema, executable resolution, provider registration, process pooling |
+| [`src/native.ts`](src/native.ts) | Native Provider entry binding that core to the native filesystem, subprocess, and LSP services |
 | [`src/host.ts`](src/host.ts) | Workspace canonicalization and bounded source reads through `ctx.fs` |
 | [`src/instance.ts`](src/instance.ts) | One server process: initialize handshake, serialized transient-open queries, bounded teardown |
 | [`src/connection.ts`](src/connection.ts) | JSON-RPC endpoint: id correlation, outbound requests, inbound server requests, stderr cap |
