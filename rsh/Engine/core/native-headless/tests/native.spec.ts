@@ -54,7 +54,7 @@ import { plugin as fileReferencePlugin } from '@redspark/rsh-native-file-referen
 import { NativeToolRegistry } from '@redspark/rsh-native-tools'
 import { brandString } from '@redspark/rsh-brand'
 import { createUserMessage } from '@redspark/rsh-llm/native'
-import { SESSION_FORMAT_VERSION, Session, SessionId, SessionSeq, type SessionEvent } from '@redspark/rsh-session'
+import { SESSION_FORMAT_VERSION, Session, SessionId, SessionSeq, foldSurface, type SessionEvent } from '@redspark/rsh-session'
 import type { NativeSessionPersistenceOperations } from '@redspark/rsh-session-persistence/native'
 import type { NativeActiveSessionOwner, NativeRootExecutionOperations, NativeRootRouteId,
   NativeSessionExecutionOperations, NativeSessionOwnerApproval } from '@redspark/rsh-native-session-execution'
@@ -3134,6 +3134,12 @@ it('seeds the child with completed parent turns and leaves the open turn out', a
     expect(child.events[child.inheritedEventCount]?.type).toBe('session/end-seed')
     expect(JSON.stringify(prefix)).toContain('parent-done')
     expect(JSON.stringify(parent.events)).toContain('child-done')
+
+    // The child prompt adds delegation text, so the copied parent system node is rewritten in
+    // place: the log keeps both writes, and the surface keeps one system node.
+    const systemNodes = foldSurface(child.events).nodes
+      .filter(seq => child.events[seq]?.type === 'system/message')
+    expect(systemNodes).toHaveLength(1)
   } finally {
     await state.host.stop()
     await rm(state.directory, { recursive: true, force: true })

@@ -553,6 +553,9 @@ export class NativeSpawnSubagents implements NativeSubagentOperations {
   /** @inheritdoc */
   startContinuable(request: NativeSubagentRequest, signal: AbortSignal): Promise<NativeSubagentContinuation> {
     if (this.closing) throw new Error('native-subagent: Provider is closing')
+    if (request.inheritCompletedTurns === true) {
+      throw new Error('native-subagent: completed-turn seed supports one-shot runs only')
+    }
     this.assertSessionBackedProvider()
     const effective = AbortSignal.any([signal, this.context.signal, this.cancellation.signal])
     return this.track(this.continuations.start(request, effective), effective)

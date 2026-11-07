@@ -253,6 +253,38 @@ function promptVariables(config: PromptVariableSource): Readonly<Record<string, 
 }
 
 /**
+ * Locate the first surviving `system/message` surface node.
+ *
+ * Surface nodes hold seqs, not message indices: {@link Session.deriveMessages} drops nodes that
+ * project to `null`, so its positions cannot address a node.
+ * @param session - the Session whose surface is searched.
+ * @returns the node's seq, or `undefined` when no system message survives.
+ */
+function firstSystemNodeSeq(session: Session): SessionSeq | undefined {
+  for (const seq of session.surface.nodes) {
+    // oxlint-disable-next-line typescript/no-deprecated -- Existing Session history read; migration deferred.
+    if (session.eventAt(seq)?.type === 'system/message') return seq
+  }
+  return undefined
+}
+
+/**
+ * Read the text of a stored system node.
+ * @param session - the Session holding the node.
+ * @param seq - the node's seq, from {@link firstSystemNodeSeq}.
+ * @returns the message text, or `undefined` when the node is not a text system message.
+ */
+function systemNodeText(session: Session, seq: SessionSeq): string | undefined {
+  // oxlint-disable-next-line typescript/no-deprecated -- Existing Session history read; migration deferred.
+  const event = session.eventAt(seq)
+  if (event?.type !== 'system/message') return undefined
+  const content = event.data.message.content
+  if (content.length === 0) return undefined
+  const first = content[0]
+  return first?.type === 'text' ? first.text : undefined
+}
+
+/**
  * Compare a stored system prompt with the one this configuration produces now.
  *
  * The stored text is interpolated first: a Session written before interpolation renders the
@@ -1512,17 +1544,16 @@ export class NativeHeadlessApplication implements NativeApplication {
                 }
                 track(session.append('step/start', { turn, step }))
                 if (step === 1) {
-                  const renderedMessages = session.deriveMessages()
-                  const systemIndex = renderedMessages.findIndex(message => message.role === 'system')
-                  const storedSystem = systemIndex < 0 ? undefined : renderedMessages[systemIndex]
-                  const storedText = storedSystem?.content[0]?.type === 'text' ? storedSystem.content[0].text : undefined
-                  const systemSeq = systemIndex < 0 ? undefined : session.surface.nodes[systemIndex]
-                  if (invocation === 'delegated' && forkSeed !== undefined && storedSystem !== undefined && systemSeq !== undefined
+                  // Address the system node by its seq. deriveMessages() drops nodes that project to
+                  // null, so its indices cannot index surface.nodes.
+                  const systemSeq = firstSystemNodeSeq(session)
+                  const storedText = systemSeq === undefined ? undefined : systemNodeText(session, systemSeq)
+                  if (invocation === 'delegated' && forkSeed !== undefined && systemSeq !== undefined
                     && (storedText === undefined || !sameRenderedPrompt(storedText, systemPrompt, promptVariables(config)))) {
                     // The child prompt adds delegation text the copied parent system node does not have.
                     track(session.append('system/message', { turn, step, message: createSystemMessage(systemPrompt, 'native-headless') },
                       { surfaceOp: { op: 'replace', startSeq: systemSeq, endSeq: systemSeq }, sourceEventSeqs: [systemSeq] }))
-                  } else if (renderedMessages.every(message => message.role !== 'system')) {
+                  } else if (systemSeq === undefined) {
                     track(session.append('system/message', { turn, step, message: createSystemMessage(systemPrompt, 'native-headless') }, { surfaceOp: 'append' }))
                   }
                 }
