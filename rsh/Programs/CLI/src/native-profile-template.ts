@@ -455,6 +455,11 @@ export function shippedNativeProfileComposition(
       { id: 'credentials', plugin: '@redspark/rsh-credentials-local', scope: ROOT },
       { id: 'settings', plugin: '@redspark/rsh-settings-file', scope: ROOT,
         config: { rshHome: home } },
+      // Provider-specific API extensions and the read-only plugin inventory both
+      // ship in the Cordis base bundle; the Native halves exist and were never
+      // composed, so a Native session had no inventory surface at all.
+      { id: 'deepseek-llm-api-extensions', plugin: '@redspark/rsh-deepseek-llm-api-extensions', scope: ROOT },
+      { id: 'plugin-inventory-deepseek', plugin: '@redspark/rsh-plugin-package-inventory-deepseek', scope: ROOT },
       { id: 'pi-ai', plugin: '@redspark/rsh-llm-pi-ai', scope: ROOT,
         config: { providers: { deepseek: { apiKeyEnv: 'DEEPSEEK_API_KEY', displayName: 'DeepSeek' } } } },
       ...(profile === 'native-web' ? [

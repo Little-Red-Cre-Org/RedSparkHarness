@@ -126,6 +126,12 @@ it('defines a native-web Host composition and Client profile without Cordis rows
     expect(nativeWebRows.get('tool-skill')?.plugin).toBe('@redspark/rsh-tool-skill')
     expect(nativeWebRows.get('skill-badge')?.plugin).toBe('@redspark/rsh-skill-badge')
     expect(nativeWebRows.get('archify')?.plugin).toBe('@redspark/rsh-archify')
+    // DeepSeek provider extensions and the read-only plugin inventory: both had
+    // Native halves that no profile composed.
+    expect(nativeWebRows.get('deepseek-llm-api-extensions')?.plugin)
+      .toBe('@redspark/rsh-deepseek-llm-api-extensions')
+    expect(nativeWebRows.get('plugin-inventory-deepseek')?.plugin)
+      .toBe('@redspark/rsh-plugin-package-inventory-deepseek')
     expect(nativeWebRows.get('spill-policy')).toMatchObject({
       plugin: '@redspark/rsh-spill-policy', config: { maxInlineBytes: 50000 },
     })

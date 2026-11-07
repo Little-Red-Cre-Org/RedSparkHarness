@@ -9958,6 +9958,9 @@ importers:
       '@redspark/rsh-plan-mode':
         specifier: workspace:^
         version: link:../../Modules/Official/plan/plan-mode
+      '@redspark/rsh-plugin-package-inventory-deepseek':
+        specifier: workspace:^
+        version: link:../../Modules/Official/llm/plugin-package-inventory-deepseek
       '@redspark/rsh-pwsh-local':
         specifier: workspace:^
         version: link:../../Modules/Official/shell/pwsh-local
@@ -9985,6 +9988,9 @@ importers:
       '@redspark/rsh-session':
         specifier: workspace:^
         version: link:../../Engine/core/session
+      '@redspark/rsh-session-log-export':
+        specifier: workspace:^
+        version: link:../../Engine/session-query/session-log-export
       '@redspark/rsh-session-persistence':
         specifier: workspace:^
         version: link:../../Engine/session/session-persistence
@@ -10202,9 +10208,6 @@ importers:
       '@redspark/rsh-lsp-stdio':
         specifier: workspace:^
         version: link:../../Modules/Official/lsp/lsp-stdio
-      '@redspark/rsh-plugin-package-inventory-deepseek':
-        specifier: workspace:^
-        version: link:../../Modules/Official/llm/plugin-package-inventory-deepseek
       '@redspark/rsh-sandbox-policy':
         specifier: workspace:^
         version: link:../../Modules/Official/sandbox/sandbox-policy
