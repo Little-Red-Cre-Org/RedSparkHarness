@@ -438,6 +438,7 @@ export function shippedNativeProfileComposition(
       { id: 'skills', plugin: '@redspark/rsh-skill', scope: ROOT },
       { id: 'skill-filesystem', plugin: '@redspark/rsh-skill-filesystem', scope: ROOT },
       { id: 'tool-skill', plugin: '@redspark/rsh-tool-skill', scope: ROOT },
+      { id: 'skill-badge', plugin: '@redspark/rsh-skill-badge', scope: ROOT },
       // Skills: the registry, its filesystem discovery, and the tool that invokes
       // one. The Cordis bundle installs all three; a Native profile without them
       // silently has no skill surface at all.

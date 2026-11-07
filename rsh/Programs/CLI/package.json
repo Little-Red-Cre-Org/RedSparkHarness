@@ -258,6 +258,7 @@
                                  "@redspark/rsh-tool-present":  "workspace:^",
                                  "@redspark/rsh-tool-pwsh-persistent":  "workspace:^",
                                  "@redspark/rsh-tool-skill":  "workspace:^",
+    "@redspark/rsh-skill-badge":  "workspace:^",
                                  "@redspark/rsh-tool-str-replace-editor":  "workspace:^",
                                  "@redspark/rsh-user-question-broker":  "workspace:^",
                                  "@redspark/rsh-web-app":  "workspace:^",

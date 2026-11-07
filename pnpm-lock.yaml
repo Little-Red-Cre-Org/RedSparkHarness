@@ -8522,13 +8522,17 @@ importers:
         version: link:../../../../Engine/core/scope
 
   rsh/Modules/Official/skill/skill-badge:
+    dependencies:
+      '@redspark/rsh-native-runtime':
+        specifier: workspace:^
+        version: link:../../../../Core/runtime-diagnostics/native-runtime
+      '@redspark/rsh-skill':
+        specifier: workspace:^
+        version: link:../skill
     devDependencies:
       '@redspark/cordis':
         specifier: workspace:^
         version: link:../../../../Core/vendor/cordis
-      '@redspark/rsh-skill':
-        specifier: workspace:^
-        version: link:../skill
 
   rsh/Modules/Official/skill/skill-filesystem:
     dependencies:
@@ -10337,6 +10341,9 @@ importers:
       '@redspark/rsh-skill':
         specifier: workspace:^
         version: link:../../Modules/Official/skill/skill
+      '@redspark/rsh-skill-badge':
+        specifier: workspace:^
+        version: link:../../Modules/Official/skill/skill-badge
       '@redspark/rsh-skill-filesystem':
         specifier: workspace:^
         version: link:../../Modules/Official/skill/skill-filesystem
