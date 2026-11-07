@@ -9652,6 +9652,9 @@ importers:
       '@redspark/rsh-anonymous-user-id':
         specifier: workspace:^
         version: link:../../Core/identity/anonymous-user-id
+      '@redspark/rsh-archify':
+        specifier: workspace:^
+        version: link:../../Modules/Official/skill/archify
       '@redspark/rsh-atomic-write':
         specifier: workspace:^
         version: link:../../Core/util/atomic-write
@@ -10027,12 +10030,18 @@ importers:
       '@redspark/rsh-shell-env':
         specifier: workspace:^
         version: link:../../Modules/Official/shell/shell-env
+      '@redspark/rsh-skill-badge':
+        specifier: workspace:^
+        version: link:../../Modules/Official/skill/skill-badge
       '@redspark/rsh-spill':
         specifier: workspace:^
         version: link:../../Modules/Official/spill/spill
       '@redspark/rsh-spill-local':
         specifier: workspace:^
         version: link:../../Modules/Official/spill/spill-local
+      '@redspark/rsh-spill-policy':
+        specifier: workspace:^
+        version: link:../../Modules/Official/spill/spill-policy
       '@redspark/rsh-storage':
         specifier: workspace:^
         version: link:../../Core/storage/storage
@@ -10344,15 +10353,9 @@ importers:
       '@redspark/rsh-skill':
         specifier: workspace:^
         version: link:../../Modules/Official/skill/skill
-      '@redspark/rsh-skill-badge':
-        specifier: workspace:^
-        version: link:../../Modules/Official/skill/skill-badge
       '@redspark/rsh-skill-filesystem':
         specifier: workspace:^
         version: link:../../Modules/Official/skill/skill-filesystem
-      '@redspark/rsh-spill-policy':
-        specifier: workspace:^
-        version: link:../../Modules/Official/spill/spill-policy
       '@redspark/rsh-terminal':
         specifier: workspace:^
         version: link:../../Modules/Official/terminal/terminal
