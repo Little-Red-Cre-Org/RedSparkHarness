@@ -205,7 +205,7 @@ export function shippedNativeProfileComposition(
   if (profile === 'native-acp-dsh-child') {
     const parent = shippedNativeProfileComposition(home, 'native-acp', platform)
     const recursiveInstallations = new Set([
-      'subagents', 'subagent-controls', 'subagent-directory', 'subagent-tool',
+      'subagents', 'subagent-controls', 'subagent-directory', 'subagent-tool', 'subagent-tool-fork',
       'workflow', 'workflow-worker', 'workflow-tool', 'ralph-tool',
     ])
     return {
@@ -251,6 +251,10 @@ export function shippedNativeProfileComposition(
       { id: 'subagent-directory', plugin: '@redspark/rsh-native-tool-subagent-list-agents', scope: ROOT },
       { id: 'subagent-tool', plugin: '@redspark/rsh-tool-subagent', scope: ROOT,
         config: { toolName: 'subagent', maxDepth: 3 } },
+      ...(profile === 'native-sdk-dsh-child' ? [] : [{
+        id: 'subagent-tool-fork', plugin: '@redspark/rsh-tool-subagent', scope: ROOT,
+        config: { toolName: 'subagent_fork', maxDepth: 3, backgroundMode: 'one-shot' as const, inheritCompletedTurns: true },
+      }]),
       ...nativeWorkflowInstallations(profile === 'native-sdk-dsh-child' ? 'dsh-sdk' : 'spawn', profile !== 'native-sdk-dsh-child'),
       { id: 'agents', plugin: '@redspark/rsh-native-agent', scope: ROOT },
       { id: 'commands', plugin: '@redspark/rsh-commands', scope: ROOT },

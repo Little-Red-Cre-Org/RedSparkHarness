@@ -98,6 +98,8 @@ async function fixture(
     workspaceWriteRoot?: string
     codeRuntimeProvider?: NativePlugin
     toolSubagent?: boolean
+    /** In-process subagent_fork: seed completed parent turns and omit the open turn. */
+    forkSubagent?: boolean
     sandboxPolicy?: NativeSandboxPolicy
     modelSelection?: NativeModelSelectionOperations
     attachments?: AttachmentOperations
@@ -136,8 +138,8 @@ async function fixture(
     resolve: () => (context) => { context.provide('model', adapter) },
   }
   const selectedModelSelection = options.modelSelection
-  const needsSessionExecution = options.fileReferences || options.toolSubagent || selectedModelSelection !== undefined
-    || skillDirectory !== undefined
+  const needsSessionExecution = options.fileReferences || options.toolSubagent || options.forkSubagent
+    || selectedModelSelection !== undefined || skillDirectory !== undefined
   const modelSelectionProvider: NativePlugin | undefined = selectedModelSelection === undefined ? undefined : {
     apiVersion: 1, name: 'test-model-selection', targets: ['host'], requires: [], provides: ['modelSelection'],
     resolve: () => (context) => { context.provide('modelSelection', selectedModelSelection) },
@@ -229,6 +231,11 @@ async function fixture(
         { plugin: subagentPlugin, scope, config: { providerName: externalSubagentDriver.name } },
       ]),
       ...(options.toolSubagent ? [{ plugin: toolSubagentPlugin, scope, config: { toolName: 'subagent', maxDepth: 2 } }] : []),
+      ...(options.forkSubagent ? [
+        { plugin: subagentPlugin, scope, config: { providerName: 'spawn' } },
+        { plugin: toolSubagentPlugin, scope, config: { toolName: 'subagent_fork', maxDepth: 2,
+          backgroundMode: 'one-shot', inheritCompletedTurns: true } },
+      ] : []),
       codeRuntimeRequest,
       ...(options.ptc ? [{ plugin: codeToolPlugin, scope, config: undefined }] : []),
       ...(sandboxPolicyProvider === undefined ? [] : [{ plugin: sandboxPolicyProvider, scope, config: undefined }]),
@@ -241,7 +248,9 @@ async function fixture(
         { plugin: toolSkillPlugin, scope, config: undefined },
       ]),
       { plugin: policyPlugin, scope, config: undefined },
-      ...(options.fileReferences || options.toolSubagent || options.persona ? [{ plugin: promptPlugin, scope, config: undefined }] : []),
+      ...(options.fileReferences || options.toolSubagent || options.forkSubagent || options.persona
+        ? [{ plugin: promptPlugin, scope, config: undefined }]
+        : []),
       ...(options.fileReferences ? [
         { plugin: toolFsPlugin, scope, config: undefined },
         { plugin: fileReferencePlugin, scope, config: undefined },
@@ -3069,5 +3078,90 @@ it('resumes a cold Session whose stored system prompt still carries the template
   } finally {
     await state.host.stop()
     await rm(directory, { recursive: true, force: true })
+  }
+})
+
+async function storedSessions(root: string): Promise<readonly {
+  id: ReturnType<typeof SessionId>
+  headerSeeded: boolean
+  inheritedEventCount: number
+  events: readonly SessionEvent[]
+}[]> {
+  const storage = new JsonlSessionBackend({ root, compression: 'none' })
+  try {
+    const rows = await storage.list()
+    const stored = []
+    for (const row of rows) {
+      const reader = await storage.open(row.header.id, 'read')
+      try {
+        stored.push({ id: row.header.id, headerSeeded: reader.header.isSeeded,
+          inheritedEventCount: reader.inheritedEventCount, events: (await reader.read()).events })
+      } finally { await reader.close() }
+    }
+    return stored
+  } finally { await storage.close() }
+}
+
+it('seeds the child with completed parent turns and leaves the open turn out', async () => {
+  const state = await fixture([
+    textResponse('parent-done'),
+    toolCallResponse('fork-1', 'subagent_fork', { description: 'review', prompt: 'child task' }),
+    textResponse('child-done'),
+    textResponse('parent-after'),
+  ], { forkSubagent: true })
+  try {
+    await state.host.run(state.scope, { kind: 'fork-parent' }, invocation =>
+      state.app.run(['completed-parent-question'], invocation.signal))
+    const parentOnly = await storedSessions(state.sessions)
+    expect(parentOnly).toHaveLength(1)
+    const parentId = parentOnly[0]?.id
+    if (parentId === undefined) throw new Error('missing parent Session')
+    await state.host.run(state.scope, { kind: 'fork-open' }, invocation =>
+      state.app.run(['--resume', parentId, 'open-parent-prompt'], invocation.signal))
+    const stored = await storedSessions(state.sessions)
+    const child = stored.find(row => row.id !== parentId)
+    const parent = stored.find(row => row.id === parentId)
+    if (child === undefined || parent === undefined) throw new Error('missing forked child Session')
+    expect(child.headerSeeded).toBe(true)
+    expect(child.inheritedEventCount).toBeGreaterThan(0)
+    const prefix = child.events.slice(0, child.inheritedEventCount)
+    expect(prefix.at(-1)?.type).toBe('turn/end')
+    expect(prefix.filter(event => event.type === 'turn/end')).toHaveLength(1)
+    expect(JSON.stringify(prefix)).toContain('completed-parent-question')
+    expect(JSON.stringify(prefix)).not.toContain('open-parent-prompt')
+    expect(JSON.stringify(child.events)).not.toContain('parent-after')
+    expect(JSON.stringify(child.events)).toContain('child-done')
+    expect(child.events[child.inheritedEventCount]?.type).toBe('session/end-seed')
+    expect(JSON.stringify(prefix)).toContain('parent-done')
+    expect(JSON.stringify(parent.events)).toContain('child-done')
+  } finally {
+    await state.host.stop()
+    await rm(state.directory, { recursive: true, force: true })
+  }
+})
+
+it('starts an unseeded child when the parent has no completed turn', async () => {
+  const state = await fixture([
+    toolCallResponse('fork-1', 'subagent_fork', { description: 'review', prompt: 'child task' }),
+    textResponse('child-done'),
+    textResponse('parent-after'),
+  ], { forkSubagent: true })
+  try {
+    await state.host.run(state.scope, { kind: 'fork-empty' }, invocation =>
+      state.app.run(['open parent prompt'], invocation.signal))
+    const stored = await storedSessions(state.sessions)
+    expect(stored).toHaveLength(2)
+    const child = stored.find((row) => {
+      const text = JSON.stringify(row.events)
+      return text.includes('child task') && !text.includes('open parent prompt')
+    })
+    if (child === undefined) throw new Error('missing unseeded child Session')
+    expect(child.headerSeeded).toBe(false)
+    expect(child.inheritedEventCount).toBe(0)
+    expect(child.events.filter(event => event.type === 'turn/end')).toHaveLength(1)
+    expect(JSON.stringify(child.events)).toContain('child-done')
+  } finally {
+    await state.host.stop()
+    await rm(state.directory, { recursive: true, force: true })
   }
 })

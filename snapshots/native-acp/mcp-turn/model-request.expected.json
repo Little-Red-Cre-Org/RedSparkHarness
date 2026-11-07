@@ -205,6 +205,30 @@
       {
         "type": "function",
         "function": {
+          "name": "subagent_fork",
+          "description": "Delegate a task to a subagent that inherits this conversation: a child agent seeded with all completed turns so far (it does not see the current in-flight turn). Use this when the subtask builds on this conversation's context — a follow-up analysis, a review, a continuation — without consuming this conversation's context for the work itself. You receive its result, not its intermediate steps. This call waits for its final result and cleanup.",
+          "parameters": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "description",
+              "prompt"
+            ],
+            "properties": {
+              "description": {
+                "type": "string"
+              },
+              "prompt": {
+                "type": "string",
+                "description": "The task for the subagent. It already sees this conversation's completed turns, so build on them freely and state only what is new."
+              }
+            }
+          }
+        }
+      },
+      {
+        "type": "function",
+        "function": {
           "name": "workflow",
           "description": "Run a foreground JavaScript workflow body with top-level await and return JSON. Hooks: agent(prompt, {schema?, label?, phase?, provider?, model?}), parallel(thunks), pipeline(items, ...stages), phase(title), log(message), args. Child failures become null; invalid options, unsupported schemas and resource caps fail the run. No filesystem, network, timers or Node APIs are provided. The worker is containment, not a security boundary.",
           "parameters": {
@@ -599,6 +623,30 @@
               },
               "run_in_background": {
                 "type": "boolean"
+              }
+            }
+          }
+        }
+      },
+      {
+        "type": "function",
+        "function": {
+          "name": "subagent_fork",
+          "description": "Delegate a task to a subagent that inherits this conversation: a child agent seeded with all completed turns so far (it does not see the current in-flight turn). Use this when the subtask builds on this conversation's context — a follow-up analysis, a review, a continuation — without consuming this conversation's context for the work itself. You receive its result, not its intermediate steps. This call waits for its final result and cleanup.",
+          "parameters": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "description",
+              "prompt"
+            ],
+            "properties": {
+              "description": {
+                "type": "string"
+              },
+              "prompt": {
+                "type": "string",
+                "description": "The task for the subagent. It already sees this conversation's completed turns, so build on them freely and state only what is new."
               }
             }
           }

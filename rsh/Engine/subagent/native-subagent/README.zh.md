@@ -22,7 +22,7 @@ kind: "package-reference"
 <a id="configuration"></a>
 ## 配置
 
-原生入口要求 sessionExecution、activeSessions 与 promptSections，可选使用 tools、jobs 与 `externalSubagentDriver`，并提供 subagents。配置必须包含 providerName。`spawn` 选择进程内执行器，仍是已发布配置的默认值。其他名称必须与同一 Native Host 安装所选的单个外部驱动匹配；其可选服务依赖会使 Subagent Provider 先排空，再释放该驱动。内置 native-sdk 配置组合安装此 Provider 与原生 tool-subagent 消费者；其他配置必须显式选择外部 Module。
+原生入口要求 sessionExecution、activeSessions 与 promptSections，可选使用 tools、jobs 与 `externalSubagentDriver`，并提供 subagents。配置必须包含 providerName。`spawn` 选择进程内执行器，仍是已发布配置的默认值。其他名称必须与同一 Native Host 安装所选的单个外部驱动匹配；其可选服务依赖会使 Subagent Provider 先排空，再释放该驱动。内置 native-sdk 配置组合安装此 Provider 与原生 tool-subagent 消费者；其他配置必须显式选择外部 Module。带 `inheritCompletedTurns` 的 tool-subagent 行在子会话启动时复制父会话已完成的 turn，不含进行中的那一轮。没有已完成 turn 时，子会话像空的 spawn。此后父会话的新 turn 不进该子会话。外部 Provider 拒绝该标志。
 
 <a id="ownership"></a>
 ## 所有权
@@ -52,7 +52,7 @@ kind: "package-reference"
 
 #### KV Cache 影响
 
-子任务开始新对话；其请求不复用父对话前缀。
+spawn 子任务开始新对话，不复用父对话前缀。带 `inheritCompletedTurns` 的子任务复用启动时取得的已完成 turn 快照。
 
 ## 已知限制与延期工作
 

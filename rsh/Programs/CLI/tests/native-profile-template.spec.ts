@@ -284,6 +284,21 @@ it.each(['native-headless', 'native-sdk', 'native-sdk-dsh-child', 'native-web', 
     expect(new Set(profile.installations.map(row => row.id)).size).toBe(profile.installations.length)
   })
 
+it.each(['native-sdk', 'native-acp'] as const)('installs one-shot subagent_fork without a child model route in %s', (profileName) => {
+  const profile = shippedNativeProfileComposition('C:/rsh-native-fork', profileName, 'win32')
+  expect(profile.installations.find(row => row.id === 'subagent-tool-fork')).toEqual({
+    id: 'subagent-tool-fork', plugin: '@redspark/rsh-tool-subagent', scope: 'root',
+    config: { toolName: 'subagent_fork', maxDepth: 3, backgroundMode: 'one-shot', inheritCompletedTurns: true },
+  })
+})
+
+it('keeps external children on spawn without a completed-turn seed tool', () => {
+  const sdkChild = shippedNativeProfileComposition('C:/rsh-native-fork', 'native-sdk-dsh-child', 'win32')
+  expect(sdkChild.installations.some(row => row.id === 'subagent-tool-fork')).toBe(false)
+  const acpChild = shippedNativeProfileComposition('C:/rsh-native-fork', 'native-acp-dsh-child', 'win32')
+  expect(acpChild.installations.some(row => row.id === 'subagent-tool-fork' || row.id === 'subagent-tool')).toBe(false)
+})
+
 it.each(['native-headless', 'native-sdk', 'native-web', 'native-acp', 'native-tui'] as const)(
   'installs the Cordis base guards natively in %s', (profileName) => {
     const profile = shippedNativeProfileComposition('C:/rsh-native-guards', profileName, 'win32')

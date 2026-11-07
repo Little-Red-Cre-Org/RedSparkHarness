@@ -138,7 +138,7 @@ export interface NativeTurnRequest {
 }
 
 /** A fresh delegated turn executed under the exact active parent Session. */
-export interface NativeDelegatedTurnRequest extends Omit<NativeTurnRequest, 'resume' | 'preset' | 'route' | 'prepareMessage' | 'issueOwnerApproval' | 'onBaseline'>, Pick<NativeSessionDelegation, 'prepare' | 'initialize' | 'onReady' | 'lifetime' | 'delegationContext'> {
+export interface NativeDelegatedTurnRequest extends Omit<NativeTurnRequest, 'resume' | 'preset' | 'route' | 'prepareMessage' | 'issueOwnerApproval' | 'onBaseline'>, Pick<NativeSessionDelegation, 'prepare' | 'initialize' | 'onReady' | 'lifetime' | 'delegationContext' | 'seed'> {
   readonly parent: Session
   /** Fully resolved child route, prompt and budgets; the workspace must match the parent. */
   readonly config: Readonly<Config>
@@ -808,7 +808,7 @@ export class NativeHeadlessApplication implements NativeApplication {
         ...forkSeed === undefined ? {} : { parentSession: forkSeed.source },
       }, forkSeed === undefined ? undefined : SessionLogOffset(forkSeed.events.length),
       (event) => { constructorEvents.push(event) }) : undefined
-      if (fresh !== undefined && forkSeed !== undefined) {
+      if (fresh !== undefined && forkSeed !== undefined && invocation !== 'delegated') {
         const priorSystem = fresh.deriveMessages().findLast(message => message.role === 'system')
         if (priorSystem !== undefined && (priorSystem.content[0]?.type !== 'text'
           || !sameRenderedPrompt(priorSystem.content[0].text, systemPrompt, promptVariables(config)))) {
@@ -1512,7 +1512,17 @@ export class NativeHeadlessApplication implements NativeApplication {
                 }
                 track(session.append('step/start', { turn, step }))
                 if (step === 1) {
-                  if (session.deriveMessages().every(message => message.role !== 'system')) {
+                  const renderedMessages = session.deriveMessages()
+                  const systemIndex = renderedMessages.findIndex(message => message.role === 'system')
+                  const storedSystem = systemIndex < 0 ? undefined : renderedMessages[systemIndex]
+                  const storedText = storedSystem?.content[0]?.type === 'text' ? storedSystem.content[0].text : undefined
+                  const systemSeq = systemIndex < 0 ? undefined : session.surface.nodes[systemIndex]
+                  if (invocation === 'delegated' && forkSeed !== undefined && storedSystem !== undefined && systemSeq !== undefined
+                    && (storedText === undefined || !sameRenderedPrompt(storedText, systemPrompt, promptVariables(config)))) {
+                    // The child prompt adds delegation text the copied parent system node does not have.
+                    track(session.append('system/message', { turn, step, message: createSystemMessage(systemPrompt, 'native-headless') },
+                      { surfaceOp: { op: 'replace', startSeq: systemSeq, endSeq: systemSeq }, sourceEventSeqs: [systemSeq] }))
+                  } else if (renderedMessages.every(message => message.role !== 'system')) {
                     track(session.append('system/message', { turn, step, message: createSystemMessage(systemPrompt, 'native-headless') }, { surfaceOp: 'append' }))
                   }
                 }
@@ -2142,9 +2152,13 @@ export class NativeHeadlessApplication implements NativeApplication {
         return execution.run(async (composed) => {
           await request.prepare?.({ agent: execution.agent, own: dispose => composition.own(dispose) })
           composed.throwIfAborted()
+          const completedTurns = request.seed
+          const forkSeed = completedTurns === undefined || completedTurns.length === 0 ? undefined
+            : { source: request.parent.id, events: completedTurns }
           return this.runTurn({ ...request, resume: false,
             ...(delegationContext === undefined ? {} : { delegationContext }) }, request.id, execution.agent,
-          composed, config, { parentSession: request.parent.id, delegationDepth }, undefined, 'delegated')
+          composed, config, { parentSession: request.parent.id, delegationDepth }, undefined, 'delegated',
+          false, undefined, undefined, forkSeed)
         }, signal)
       }, scope, parent)
     } catch (error: unknown) {
