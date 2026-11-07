@@ -1502,7 +1502,7 @@ export interface LspLocalServerConfig {
 }
 ```
 
-Source: [`rsh/Modules/Official/lsp/lsp-stdio/src/index.ts:82`](../Modules/Official/lsp/lsp-stdio/src/index.ts)
+Source: [`rsh/Modules/Official/lsp/lsp-stdio/src/providers.ts:57`](../Modules/Official/lsp/lsp-stdio/src/providers.ts)
 
 <a id="redsparkrsh-mcp-client"></a>
 
@@ -2907,7 +2907,7 @@ export interface Config {
 }
 ```
 
-Source: [`rsh/Modules/Official/lsp/tool-lsp/src/index.ts:57`](../Modules/Official/lsp/tool-lsp/src/index.ts)
+Source: [`rsh/Modules/Official/lsp/tool-lsp/src/config.ts:19`](../Modules/Official/lsp/tool-lsp/src/config.ts)
 
 <a id="redsparkrsh-tool-present"></a>
 

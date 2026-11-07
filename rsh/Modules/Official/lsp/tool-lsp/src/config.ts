@@ -33,7 +33,10 @@ export const Config: z<Config> = z.object({
 
 type ResolvedConfig = Required<Config>
 
-/** Reject a load configuration whose caps or timeout cannot be honored as written. */
+/**
+ * Reject a load configuration whose caps or timeout cannot be honored as written.
+ * @param resolved - the configuration after schemastery filled every default.
+ */
 export function validateToolLspConfig(resolved: ResolvedConfig): void {
   assertPositiveInteger('maxLocations', resolved.maxLocations)
   assertPositiveInteger('maxResultChars', resolved.maxResultChars)

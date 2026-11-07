@@ -109,14 +109,20 @@ export class LspRegistry implements LspService {
     return { id, pending }
   }
 
-  /** Publish a reservation prepared against this registry. */
+  /**
+   * Publish a reservation prepared against this registry.
+   * @param reservation - the unpublished reservation {@link prepare} returned.
+   */
   commit(reservation: LspReservation): void {
     this.providerIds.add(reservation.id)
     for (const [ext, route] of reservation.pending) this.routes.set(ext, route)
     this.reservations.add(reservation)
   }
 
-  /** Drop a published reservation. Repeated calls are a no-op. */
+  /**
+   * Drop a published reservation. Repeated calls are a no-op.
+   * @param reservation - the reservation to release, together with its extensions.
+   */
   release(reservation: LspReservation): void {
     if (!this.reservations.delete(reservation)) return
     this.providerIds.delete(reservation.id)
