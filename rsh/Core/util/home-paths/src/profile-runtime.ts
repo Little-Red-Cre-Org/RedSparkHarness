@@ -20,14 +20,24 @@ function record(value: unknown, label: string, allowed: readonly string[]): Reco
   return fields
 }
 
+const warnedCordisProfiles = new Set<string>()
+
+/** Cordis profiles still boot. Say so once per directory, and do not rewrite the manifest. */
+function warnCordisProfile(profileDir: string): void {
+  if (warnedCordisProfiles.has(profileDir)) return
+  warnedCordisProfiles.add(profileDir)
+  console.warn(`profile ${profileDir} still selects Cordis execution; declare "runtime": "native" with "config": "rsh.profile.json" to leave it; see rsh/Docs/native-config-migration.md`)
+}
+
 /**
  * Read the runtime marker from one profile package manifest.
  * @param profileDir - directory containing the profile's package.json.
  * @returns the validated profile runtime and configuration reload mode. An
  *   absent manifest reports `legacy` so the caller that initializes a profile
  *   still runs; that writer records the native marker, so a profile this
- *   release creates resolves native from the next read onwards.
- * @throws when the manifest selects the retired Cordis runtime, or lacks the native marker.
+ *   release creates resolves native from the next read onwards. A Cordis
+ *   `bundles` list, or `runtime: 'legacy'`, also reports legacy and warns once.
+ * @throws when the manifest mixes Cordis and native fields, or declares neither a native marker nor a bundle list.
  */
 export function resolveRshProfileDirectoryExecution(profileDir: string): DshProfileExecution {
   const manifestPath = join(profileDir, 'package.json')
@@ -40,16 +50,23 @@ export function resolveRshProfileDirectoryExecution(profileDir: string): DshProf
   const dsh = manifest.dsh === undefined ? {} : object(manifest.dsh, 'profile dsh')
   const profile = dsh.profile === undefined ? {} : record(dsh.profile, 'dsh.profile', ['bundles', 'patchReload', 'runtime', 'config', 'configReload'])
   if (profile.runtime === undefined) {
-    // A bundle list is the retired Cordis profile format. Refusing it here — with
-    // the migration document named — is what keeps a stale profile from booting
-    // a runtime this release no longer ships.
+    if (profile.config !== undefined || profile.configReload !== undefined) {
+      throw new Error(`profile ${profileDir} must declare "runtime": "native" with "config": "rsh.profile.json"; see rsh/Docs/native-config-migration.md`)
+    }
+    // Cordis callers such as legacy-sdk still ship this shape. Warn, and keep
+    // the path runnable until those callers move.
     if (Array.isArray(profile.bundles)) {
-      throw new Error(`profile ${profileDir} uses the retired Cordis bundle format; declare "runtime": "native" with "config": "rsh.profile.json"; see rsh/Docs/native-config-migration.md`)
+      warnCordisProfile(profileDir)
+      return { runtime: 'legacy', reload: 'startup' }
     }
     throw new Error(`profile ${profileDir} must declare "runtime": "native" with "config": "rsh.profile.json"; see rsh/Docs/native-config-migration.md`)
   }
   if (profile.runtime === 'legacy') {
-    throw new Error(`profile ${profileDir} selects the retired Cordis runtime; declare "runtime": "native" with "config": "rsh.profile.json"; see rsh/Docs/native-config-migration.md`)
+    if (profile.config !== undefined || profile.configReload !== undefined) {
+      throw new Error('dsh.profile.runtime legacy cannot declare config or configReload; see rsh/Docs/native-config-migration.md')
+    }
+    warnCordisProfile(profileDir)
+    return { runtime: 'legacy', reload: 'startup' }
   }
   if (profile.runtime !== 'native' || profile.config !== 'rsh.profile.json') {
     throw new Error('dsh.profile.runtime/config must select native and rsh.profile.json')

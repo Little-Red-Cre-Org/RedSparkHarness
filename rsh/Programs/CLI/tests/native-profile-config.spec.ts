@@ -2,7 +2,7 @@
 import { mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { expect, it } from 'vitest'
+import { expect, it, vi } from 'vitest'
 import { applyNativeProfilePatches, nativeProfileReloadMode, parseNativeProfileConfig, profileRuntime } from '../src/native-profile-config.ts'
 
 const base = {
@@ -42,7 +42,7 @@ it('rejects overlays that cannot target one complete existing installation', () 
   ]) expect(() => applyNativeProfilePatches(profile, [overlay])).toThrow()
 })
 
-it('selects native only with an explicit, valid profile marker and refuses the retired format', async () => {
+it('selects native only with an explicit marker and keeps a Cordis manifest on legacy', async () => {
   const home = await mkdtemp(join(tmpdir(), 'rsh-native-profile-kind-'))
   const directory = join(home, 'profiles', 'probe')
   try {
@@ -53,10 +53,13 @@ it('selects native only with an explicit, valid profile marker and refuses the r
     expect(() => nativeProfileReloadMode('probe', home)).toThrow('does not select native')
     await mkdir(directory, { recursive: true })
     const writeManifest = (profile: unknown) => writeFile(join(directory, 'package.json'), JSON.stringify({ name: 'probe', dsh: { profile } }))
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
     await writeManifest({ bundles: [] })
-    expect(() => profileRuntime('probe', home)).toThrow('retired Cordis bundle format')
+    expect(profileRuntime('probe', home)).toBe('legacy')
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('still selects Cordis execution'))
     await writeManifest({ runtime: 'legacy', bundles: [] })
-    expect(() => profileRuntime('probe', home)).toThrow('retired Cordis runtime')
+    expect(profileRuntime('probe', home)).toBe('legacy')
+    warn.mockRestore()
     await writeManifest({ runtime: 'native', config: 'rsh.profile.json' })
     expect(profileRuntime('probe', home)).toBe('native')
     expect(nativeProfileReloadMode('probe', home)).toBe('startup')

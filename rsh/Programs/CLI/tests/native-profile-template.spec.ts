@@ -85,15 +85,15 @@ it('maps standard profile names to native compositions and leaves an existing ma
       }
     }
 
-    // An existing manifest is never rewritten: the resolver refuses a retired
-    // one, and the operator migrates it in place.
+    // An existing Cordis manifest is never rewritten. The resolver keeps it on
+    // legacy execution and warns; the operator migrates it in place.
     const existingDir = join(legacyHome, 'profiles', 'web')
     await mkdir(existingDir, { recursive: true })
     const existingManifest = `${JSON.stringify({ name: 'dsh-profile-web', private: true,
       dsh: { profile: { bundles: ['@redspark/rsh-base'] } } }, null, 2)}\n`
     await writeFile(join(existingDir, 'package.json'), existingManifest)
     ensureShippedNativeProfile('web', legacyHome)
-    expect(() => profileRuntime('web', legacyHome)).toThrow('retired Cordis bundle format')
+    expect(profileRuntime('web', legacyHome)).toBe('legacy')
     expect(await readFile(join(existingDir, 'package.json'), 'utf8')).toBe(existingManifest)
     expect(existsSync(join(existingDir, 'rsh.profile.json'))).toBe(false)
   } finally {
