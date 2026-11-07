@@ -66,6 +66,8 @@ Program 使用确切的注册 Agent、匹配的活动 Session、已解析的工�
 
 委派可通过 `prepare` 在执行器渲染系统文本或选择工具声明前安装子级作用域贡献。回调接收确切的已注册子级与绑定的资源所有者。执行器等待准备、回滚和资源释放后才完成委派；准备与清理失败保留独立原因。`onReady` 仍是在初始事实持久化后的交付回调，不是配置安装窗口。
 
+委派可提供 `seed`，用该所有者历史中已有的父级事件启动子级。执行器以该前缀创建子 Session，把前缀长度记为继承历史，并在其后开始首个 turn。前缀契约由调用方负责：它必须自 seq 0 起连续，并止于 `turn/end`；执行器不会封闭被截断的 turn，而不合契约的前缀会以 Session 种子拒绝的形式暴露。
+
 `activeSessions` 服务在模型调用发起归属之外提供确切的 Program 所有 Agent 与 Session 访问。注册会等待未来 attach 观察者后才允许初始模型接纳。释放会关闭查询接纳、等待已接纳 attach 回调，并在 Program writer 清理前执行 detach 清理；移除观察者也会等待已接纳回调。Attach 失败通过 detach 清理回滚。复制的 Agent 与复制的 Session 不能选择所有者。
 
 活动所有者通过唯一 writer 暴露已校验历史、追踪 append/flush、独立的持久收件箱候选与后端已接纳事件观察。`readCommittedEvents()` 在已接受的 append 与 flush 后读取有界权威前缀，不受 turn cancellation 影响；普通 `readEvents()` 仍受调用方与 Program 生命周期取消。其 invocation 来自当前 Program 入口（`root` 或 `delegated`），独立于历史 Session 谱系。有序异步 step hook 通过 `next()` 委派，只能选择未修改的已捕获候选。Hook 可注册一个同步提交检查，由 Program 在请求准备后执行；检查只能取消该次 admission 所选候选的 id，并且不能返回 Promise。

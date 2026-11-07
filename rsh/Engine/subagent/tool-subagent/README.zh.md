@@ -25,7 +25,7 @@ kind: "package-reference"
 <a id="use-this-package"></a>
 ## 使用本包
 
-原生 ./native 入口消费 native-subagent。配置必须包含 toolName 与 maxDepth；maxSteps、provider、model、reasoningEffort、maxTokens、persona 与 toolFilter 是可选部署选择。backgroundMode 默认 one-shot：run_in_background 要求 jobs 与 jobControls，在真实就绪后返回，job_output/job_kill 观察或取消 Agent 所有的任务。Provider 的 backgroundJobs、选定 jobs 与 jobControls.jobs 必须标识同一注册表；不一致时加载失败。backgroundMode:continuable 默认在首次消息持久接受后返回；run_in_background:false 等待普通一次性结果。可持续模式要求 subagentControls 绑定同一选定 Provider 与其 continuationTools 注册表。NativeTools 校验参数并记录真实结果。
+原生 ./native 入口消费 native-subagent。配置必须包含 toolName 与 maxDepth；maxSteps、provider、model、reasoningEffort、maxTokens、persona 与 toolFilter 是可选部署选择。`inheritCompletedTurns: true` 只支持一次性执行，不单独选择子模型，并种入父会话已完成的 turn。backgroundMode 默认 one-shot：run_in_background 要求 jobs 与 jobControls，在真实就绪后返回，job_output/job_kill 观察或取消 Agent 所有的任务。Provider 的 backgroundJobs、选定 jobs 与 jobControls.jobs 必须标识同一注册表；不一致时加载失败。backgroundMode:continuable 默认在首次消息持久接受后返回；run_in_background:false 等待普通一次性结果。可持续模式要求 subagentControls 绑定同一选定 Provider 与其 continuationTools 注册表。NativeTools 校验参数并记录真实结果。
 
 包根入口仍是 Cordis 插件入口，仅在调用 `apply` 时加载兼容实现。Cordis 对等依赖（peer dependency）对于包管理器安装保持可选；原生组合应选择 `./native`，Cordis 组合则需安装兼容入口使用的对等依赖。
 

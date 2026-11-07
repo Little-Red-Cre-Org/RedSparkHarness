@@ -205,7 +205,7 @@ export function shippedNativeProfileComposition(
   if (profile === 'native-acp-dsh-child') {
     const parent = shippedNativeProfileComposition(home, 'native-acp', platform)
     const recursiveInstallations = new Set([
-      'subagents', 'subagent-controls', 'subagent-directory', 'subagent-tool',
+      'subagents', 'subagent-controls', 'subagent-directory', 'subagent-tool', 'subagent-tool-fork',
       'workflow', 'workflow-worker', 'workflow-tool', 'ralph-tool',
     ])
     return {
@@ -251,6 +251,10 @@ export function shippedNativeProfileComposition(
       { id: 'subagent-directory', plugin: '@redspark/rsh-native-tool-subagent-list-agents', scope: ROOT },
       { id: 'subagent-tool', plugin: '@redspark/rsh-tool-subagent', scope: ROOT,
         config: { toolName: 'subagent', maxDepth: 3 } },
+      ...(profile === 'native-sdk-dsh-child' ? [] : [{
+        id: 'subagent-tool-fork', plugin: '@redspark/rsh-tool-subagent', scope: ROOT,
+        config: { toolName: 'subagent_fork', maxDepth: 3, backgroundMode: 'one-shot' as const, inheritCompletedTurns: true },
+      }]),
       ...nativeWorkflowInstallations(profile === 'native-sdk-dsh-child' ? 'dsh-sdk' : 'spawn', profile !== 'native-sdk-dsh-child'),
       { id: 'agents', plugin: '@redspark/rsh-native-agent', scope: ROOT },
       { id: 'commands', plugin: '@redspark/rsh-commands', scope: ROOT },
@@ -417,6 +421,11 @@ export function shippedNativeProfileComposition(
       { id: 'shell-env', plugin: '@redspark/rsh-shell-env', scope: ROOT },
       { id: 'bash', plugin: windows ? '@redspark/rsh-pwsh-sandbox' : '@redspark/rsh-bash-sandbox', scope: ROOT },
       { id: 'spill-store', plugin: '@redspark/rsh-spill-local', scope: ROOT },
+      // Bounds an oversized plain-text tool result to a preview plus a spill
+      // locator. The store above has no consumer without this row, and the cap
+      // matches the Cordis base bundle so both runtimes truncate alike.
+      { id: 'spill-policy', plugin: '@redspark/rsh-spill-policy', scope: ROOT,
+        config: { maxInlineBytes: 50000 } },
       { id: 'search-tools', plugin: '@redspark/rsh-tool-fs-search', scope: ROOT,
         config: { sampleOverCapGlobResults: false } },
       { id: 'web', plugin: '@redspark/rsh-web', scope: ROOT,
@@ -431,9 +440,31 @@ export function shippedNativeProfileComposition(
       { id: 'approval', plugin: '@redspark/rsh-native-approval', scope: ROOT },
       ...(profile === 'native-web' ? [{ id: 'permission-presets', plugin: '@redspark/rsh-permission-presets', scope: ROOT }] : []),
       { id: 'bash-tool', plugin: windows ? '@redspark/rsh-tool-pwsh' : '@redspark/rsh-tool-bash', scope: ROOT },
+      // Skills: the registry, its filesystem discovery, and the tool that invokes
+      // one. The Cordis bundle installs all three; a Native profile without them
+      // silently has no skill surface at all.
+      { id: 'request-context', plugin: '@redspark/rsh-request-context', scope: ROOT },
+      { id: 'skills', plugin: '@redspark/rsh-skill', scope: ROOT },
+      { id: 'skill-filesystem', plugin: '@redspark/rsh-skill-filesystem', scope: ROOT },
+      { id: 'tool-skill', plugin: '@redspark/rsh-tool-skill', scope: ROOT },
+      { id: 'skill-badge', plugin: '@redspark/rsh-skill-badge', scope: ROOT },
+      // Archify ships a hidden skill plus a deterministic automatic instruction
+      // route; the Cordis base bundle composes it, so a Native profile without
+      // it loses the routing rather than the catalog entry.
+      { id: 'archify', plugin: '@redspark/rsh-archify', scope: ROOT },
+      // Skills: the registry, its filesystem discovery, and the tool that invokes
+      // one. The Cordis bundle installs all three; a Native profile without them
+      // silently has no skill surface at all.
+
       { id: 'credentials', plugin: '@redspark/rsh-credentials-local', scope: ROOT },
       { id: 'settings', plugin: '@redspark/rsh-settings-file', scope: ROOT,
         config: { rshHome: home } },
+      // Provider-specific API extensions and the read-only plugin inventory both
+      // ship in the Cordis base bundle; the Native halves exist and were never
+      // composed, so a Native session had no inventory surface at all.
+      { id: 'deepseek-llm-api-extensions', plugin: '@redspark/rsh-deepseek-llm-api-extensions', scope: ROOT },
+      { id: 'plugin-inventory-deepseek', plugin: '@redspark/rsh-plugin-package-inventory-deepseek', scope: ROOT },
+      { id: 'session-log-deepseek', plugin: '@redspark/rsh-session-log-deepseek', scope: ROOT },
       { id: 'pi-ai', plugin: '@redspark/rsh-llm-pi-ai', scope: ROOT,
         config: { providers: { deepseek: { apiKeyEnv: 'DEEPSEEK_API_KEY', displayName: 'DeepSeek' } } } },
       ...(profile === 'native-web' ? [

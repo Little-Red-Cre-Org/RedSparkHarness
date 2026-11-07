@@ -10,8 +10,8 @@ import type {
   LspLocation,
   LspOperation,
   LspRange,
-} from '@redspark/rsh-lsp'
-import { LspError } from '@redspark/rsh-lsp'
+} from '@redspark/rsh-lsp/native'
+import { LspError } from '@redspark/rsh-lsp/native'
 import { assertNever } from '@redspark/rsh-util-values'
 import type {
   WireHover,

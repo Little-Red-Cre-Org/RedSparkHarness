@@ -18,11 +18,26 @@
       "types": "./lib/types/index.d.ts",
       "default": "./lib/index.js"
     },
+    "./native": {
+      "types": "./lib/types/native.d.ts",
+      "default": "./lib/types/native.js"
+    },
     "./src/*": "./src/*",
     "./package.json": "./package.json"
   },
+  "dsh": {
+    "native": {
+      "apiVersion": 1,
+      "entry": "./native",
+      "targets": ["host"],
+      "requires": ["fs", "lsp", "subprocess"],
+      "optional": [],
+      "provides": []
+    }
+  },
   "files": [
     "lib/index.js",
+    "lib/types/**/*.js",
     "lib/types/**/*.d.ts"
   ],
   "license": "MIT",
@@ -30,12 +45,12 @@
     "@redspark/cordis": "workspace:^",
     "@redspark/rsh-brand": "workspace:^",
     "@redspark/rsh-fs": "workspace:^",
-    "@redspark/rsh-llm": "workspace:^",
     "@redspark/rsh-lsp": "workspace:^",
     "@redspark/rsh-subprocess": "workspace:^",
     "@redspark/rsh-timeout": "workspace:^"
   },
   "dependencies": {
+    "@redspark/rsh-native-runtime": "workspace:^",
     "@redspark/rsh-util-values": "workspace:^",
     "@redspark/schemastery": "workspace:^"
   },
@@ -44,12 +59,15 @@
     "@redspark/rsh-brand": "workspace:^",
     "@redspark/rsh-fs": "workspace:^",
     "@redspark/rsh-fs-local": "workspace:^",
-    "@redspark/rsh-llm": "workspace:^",
     "@redspark/rsh-lsp": "workspace:^",
     "@redspark/rsh-subprocess": "workspace:^",
     "@redspark/rsh-subprocess-local": "workspace:^",
     "@redspark/rsh-timeout": "workspace:^",
     "typescript": "^6.0.3",
-    "typescript-language-server": "^5.0.0"
+    "typescript-language-server": "^5.0.0",
+    "@redspark/rsh-native-runtime": "workspace:^"
+  },
+  "peerDependenciesMeta": {
+    "@redspark/cordis": { "optional": true }
   }
 }

@@ -2,7 +2,7 @@
 import { mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { expect, it } from 'vitest'
+import { expect, it, vi } from 'vitest'
 import { applyNativeProfilePatches, nativeProfileReloadMode, parseNativeProfileConfig, profileRuntime } from '../src/native-profile-config.ts'
 
 const base = {
@@ -42,16 +42,24 @@ it('rejects overlays that cannot target one complete existing installation', () 
   ]) expect(() => applyNativeProfilePatches(profile, [overlay])).toThrow()
 })
 
-it('selects native only with an explicit, valid profile marker', async () => {
+it('selects native only with an explicit marker and keeps a Cordis manifest on legacy', async () => {
   const home = await mkdtemp(join(tmpdir(), 'rsh-native-profile-kind-'))
   const directory = join(home, 'profiles', 'probe')
   try {
+    // No manifest means NOT INITIALIZED, not legacy: the CLI's initializer runs
+    // on this answer and writes the native marker itself. Reporting native here
+    // would make the initializer refuse its own creation path.
     expect(profileRuntime('probe', home)).toBe('legacy')
     expect(() => nativeProfileReloadMode('probe', home)).toThrow('does not select native')
     await mkdir(directory, { recursive: true })
     const writeManifest = (profile: unknown) => writeFile(join(directory, 'package.json'), JSON.stringify({ name: 'probe', dsh: { profile } }))
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
     await writeManifest({ bundles: [] })
     expect(profileRuntime('probe', home)).toBe('legacy')
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('still selects Cordis execution'))
+    await writeManifest({ runtime: 'legacy', bundles: [] })
+    expect(profileRuntime('probe', home)).toBe('legacy')
+    warn.mockRestore()
     await writeManifest({ runtime: 'native', config: 'rsh.profile.json' })
     expect(profileRuntime('probe', home)).toBe('native')
     expect(nativeProfileReloadMode('probe', home)).toBe('startup')
@@ -62,11 +70,11 @@ it('selects native only with an explicit, valid profile marker', async () => {
     await writeManifest({ runtime: 'native', config: 'rsh.profile.json', configReload: 'unknown' })
     expect(() => profileRuntime('probe', home)).toThrow('configReload must be startup or live')
     await writeManifest({ configReload: 'live' })
-    expect(() => profileRuntime('probe', home)).toThrow('has no dsh.profile.runtime')
+    expect(() => profileRuntime('probe', home)).toThrow('must declare "runtime": "native"')
     await writeManifest({ runtime: 'native', config: 'rsh.profile.json', bundles: [] })
     expect(() => profileRuntime('probe', home)).toThrow('cannot declare Cordis bundles')
     await writeManifest({ config: 'rsh.profile.json' })
-    expect(() => profileRuntime('probe', home)).toThrow('has no dsh.profile.runtime')
+    expect(() => profileRuntime('probe', home)).toThrow('must declare "runtime": "native"')
     expect(() => profileRuntime('../probe', home)).toThrow('invalid profile name')
   } finally {
     await rm(home, { recursive: true, force: true })

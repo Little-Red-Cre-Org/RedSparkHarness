@@ -138,7 +138,7 @@ export interface NativeTurnRequest {
 }
 
 /** A fresh delegated turn executed under the exact active parent Session. */
-export interface NativeDelegatedTurnRequest extends Omit<NativeTurnRequest, 'resume' | 'preset' | 'route' | 'prepareMessage' | 'issueOwnerApproval' | 'onBaseline'>, Pick<NativeSessionDelegation, 'prepare' | 'initialize' | 'onReady' | 'lifetime' | 'delegationContext'> {
+export interface NativeDelegatedTurnRequest extends Omit<NativeTurnRequest, 'resume' | 'preset' | 'route' | 'prepareMessage' | 'issueOwnerApproval' | 'onBaseline'>, Pick<NativeSessionDelegation, 'prepare' | 'initialize' | 'onReady' | 'lifetime' | 'delegationContext' | 'seed'> {
   readonly parent: Session
   /** Fully resolved child route, prompt and budgets; the workspace must match the parent. */
   readonly config: Readonly<Config>
@@ -250,6 +250,38 @@ interface PromptVariableSource {
  */
 function promptVariables(config: PromptVariableSource): Readonly<Record<string, string>> {
   return { model: config.model, provider: config.provider, cwd: config.cwd }
+}
+
+/**
+ * Locate the first surviving `system/message` surface node.
+ *
+ * Surface nodes hold seqs, not message indices: {@link Session.deriveMessages} drops nodes that
+ * project to `null`, so its positions cannot address a node.
+ * @param session - the Session whose surface is searched.
+ * @returns the node's seq, or `undefined` when no system message survives.
+ */
+function firstSystemNodeSeq(session: Session): SessionSeq | undefined {
+  for (const seq of session.surface.nodes) {
+    // oxlint-disable-next-line typescript/no-deprecated -- Existing Session history read; migration deferred.
+    if (session.eventAt(seq)?.type === 'system/message') return seq
+  }
+  return undefined
+}
+
+/**
+ * Read the text of a stored system node.
+ * @param session - the Session holding the node.
+ * @param seq - the node's seq, from {@link firstSystemNodeSeq}.
+ * @returns the message text, or `undefined` when the node is not a text system message.
+ */
+function systemNodeText(session: Session, seq: SessionSeq): string | undefined {
+  // oxlint-disable-next-line typescript/no-deprecated -- Existing Session history read; migration deferred.
+  const event = session.eventAt(seq)
+  if (event?.type !== 'system/message') return undefined
+  const content = event.data.message.content
+  if (content.length === 0) return undefined
+  const first = content[0]
+  return first?.type === 'text' ? first.text : undefined
 }
 
 /**
@@ -808,7 +840,7 @@ export class NativeHeadlessApplication implements NativeApplication {
         ...forkSeed === undefined ? {} : { parentSession: forkSeed.source },
       }, forkSeed === undefined ? undefined : SessionLogOffset(forkSeed.events.length),
       (event) => { constructorEvents.push(event) }) : undefined
-      if (fresh !== undefined && forkSeed !== undefined) {
+      if (fresh !== undefined && forkSeed !== undefined && invocation !== 'delegated') {
         const priorSystem = fresh.deriveMessages().findLast(message => message.role === 'system')
         if (priorSystem !== undefined && (priorSystem.content[0]?.type !== 'text'
           || !sameRenderedPrompt(priorSystem.content[0].text, systemPrompt, promptVariables(config)))) {
@@ -1512,7 +1544,16 @@ export class NativeHeadlessApplication implements NativeApplication {
                 }
                 track(session.append('step/start', { turn, step }))
                 if (step === 1) {
-                  if (session.deriveMessages().every(message => message.role !== 'system')) {
+                  // Address the system node by its seq. deriveMessages() drops nodes that project to
+                  // null, so its indices cannot index surface.nodes.
+                  const systemSeq = firstSystemNodeSeq(session)
+                  const storedText = systemSeq === undefined ? undefined : systemNodeText(session, systemSeq)
+                  if (invocation === 'delegated' && forkSeed !== undefined && systemSeq !== undefined
+                    && (storedText === undefined || !sameRenderedPrompt(storedText, systemPrompt, promptVariables(config)))) {
+                    // The child prompt adds delegation text the copied parent system node does not have.
+                    track(session.append('system/message', { turn, step, message: createSystemMessage(systemPrompt, 'native-headless') },
+                      { surfaceOp: { op: 'replace', startSeq: systemSeq, endSeq: systemSeq }, sourceEventSeqs: [systemSeq] }))
+                  } else if (systemSeq === undefined) {
                     track(session.append('system/message', { turn, step, message: createSystemMessage(systemPrompt, 'native-headless') }, { surfaceOp: 'append' }))
                   }
                 }
@@ -2142,9 +2183,13 @@ export class NativeHeadlessApplication implements NativeApplication {
         return execution.run(async (composed) => {
           await request.prepare?.({ agent: execution.agent, own: dispose => composition.own(dispose) })
           composed.throwIfAborted()
+          const completedTurns = request.seed
+          const forkSeed = completedTurns === undefined || completedTurns.length === 0 ? undefined
+            : { source: request.parent.id, events: completedTurns }
           return this.runTurn({ ...request, resume: false,
             ...(delegationContext === undefined ? {} : { delegationContext }) }, request.id, execution.agent,
-          composed, config, { parentSession: request.parent.id, delegationDepth }, undefined, 'delegated')
+          composed, config, { parentSession: request.parent.id, delegationDepth }, undefined, 'delegated',
+          false, undefined, undefined, forkSeed)
         }, signal)
       }, scope, parent)
     } catch (error: unknown) {

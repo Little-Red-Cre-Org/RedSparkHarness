@@ -98,7 +98,9 @@ kind: "package-reference"
 
 | 文件 | 职责 |
 |---|---|
-| [`src/index.ts`](src/index.ts) | 插件入口：config schema、可执行文件解析、提供方注册、进程池 |
+| [`src/index.ts`](src/index.ts) | Cordis 插件入口：解析与注册之上的 `apply` 生命周期 |
+| [`src/providers.ts`](src/providers.ts) | 与原生入口共享的无 Cordis 核心：config schema、可执行文件解析、提供方注册、进程池 |
+| [`src/native.ts`](src/native.ts) | 原生 Provider 入口，把该核心绑定到原生文件系统、子进程与 LSP 服务 |
 | [`src/host.ts`](src/host.ts) | 通过 `ctx.fs` 完成工作区规范化与有边界的源读取 |
 | [`src/instance.ts`](src/instance.ts) | 单个服务器进程：initialize 握手、串行化临时打开查询、有边界的释放 |
 | [`src/connection.ts`](src/connection.ts) | JSON-RPC 端点：id 关联、出站请求、入站服务器请求、stderr 上限 |

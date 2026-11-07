@@ -232,6 +232,7 @@ it('projects external child facts through both SDKs and cold-restores the native
       { id: 'app', config: { systemPrompt: 'Delegate one file creation to the external child.', maxSteps: 3 } },
       { id: 'subagent-tool', config: { toolName: 'subagent', maxDepth: 1 } },
       { id: 'subagents', config: { providerName: 'external-fixture' } },
+      { id: 'subagent-tool-fork', disabled: true },
       { id: 'workflow-worker', config: { subagentProvider: 'external-fixture' } },
       { id: 'ralph-tool', disabled: true },
       { id: 'external-driver', config: driverConfig, disabled: false },

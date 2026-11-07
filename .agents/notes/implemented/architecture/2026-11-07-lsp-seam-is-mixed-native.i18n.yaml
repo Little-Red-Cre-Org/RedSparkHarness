@@ -1,0 +1,6 @@
+# Bilingual-pair consistency record (rsh/Docs/i18n/README.md): the git blob hash of each
+# side as of the last confirmed-consistent state. Both languages carry equal authority;
+# after editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write .agents/notes/implemented/architecture/2026-11-07-lsp-seam-is-mixed-native.md
+2026-11-07-lsp-seam-is-mixed-native.md: 658b1f541e62fd63f22906f5a82262fc7942bb3e
+2026-11-07-lsp-seam-is-mixed-native.zh.md: 371cace80f171707b88ca4f3ed27bbf5dcde30bc

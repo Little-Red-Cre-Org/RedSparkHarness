@@ -47,6 +47,8 @@ describe('initializeProfileFromDefault', () => {
         initializeProfileFromDefault('custom', source, home)
         const dir = resolveProfileDir('custom', home)
         const manifest = readProfileManifest('test', dir)
+        // This initializer serves the Cordis launcher, which refuses a native
+        // marker; it records the template's bundle list it will actually boot.
         expect(manifest).toEqual({
           name: 'dsh-profile-custom',
           private: true,

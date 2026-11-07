@@ -72,7 +72,9 @@ This section explains the design decisions behind the tool and where the code re
 
 | File | Role |
 |---|---|
-| [`src/index.ts`](src/index.ts) | Plugin entry: config schema, tool registration, system-prompt section, execution |
+| [`src/index.ts`](src/index.ts) | Cordis plugin entry: tool registration, system-prompt section, execution |
+| [`src/config.ts`](src/config.ts) | Cordis-free caps, timeout budget, prompt text, and load-time checks shared with the native entry |
+| [`src/native.ts`](src/native.ts) | Native Provider entry binding those shared checks to the native tool registry |
 | [`src/render.ts`](src/render.ts) | Pure formatting, coordinate conversion, URI resolution, result caps, UI presentation |
 | [`src/session-cwd.ts`](src/session-cwd.ts) | Workspace root from the session `header.cwd` |
 | — | No runtime invariant companion is published; this stateless adapter contributes one tool and prompt section, while query lifecycle and result relations remain owned by the tool and LSP seams it composes. |

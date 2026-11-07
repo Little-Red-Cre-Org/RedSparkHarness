@@ -18,11 +18,26 @@
       "types": "./lib/types/index.d.ts",
       "default": "./lib/index.js"
     },
+    "./native": {
+      "types": "./lib/types/native.d.ts",
+      "default": "./lib/types/native.js"
+    },
     "./src/*": "./src/*",
     "./package.json": "./package.json"
   },
+  "dsh": {
+    "native": {
+      "apiVersion": 1,
+      "entry": "./native",
+      "targets": ["host"],
+      "requires": ["tools", "lsp", "promptSections"],
+      "optional": [],
+      "provides": []
+    }
+  },
   "files": [
     "lib/index.js",
+    "lib/types/**/*.js",
     "lib/types/**/*.d.ts"
   ],
   "license": "MIT",
@@ -35,6 +50,9 @@
     "@redspark/rsh-tools": "workspace:^"
   },
   "dependencies": {
+    "@redspark/rsh-native-prompt": "workspace:^",
+    "@redspark/rsh-native-runtime": "workspace:^",
+    "@redspark/rsh-native-tools": "workspace:^",
     "@redspark/rsh-util-values": "workspace:^",
     "@redspark/schemastery": "workspace:^"
   },
@@ -50,6 +68,12 @@
     "@redspark/rsh-system-prompt": "workspace:^",
     "@redspark/rsh-timeout": "workspace:^",
     "@redspark/rsh-tool-call-timeout-policy": "workspace:^",
-    "@redspark/rsh-tools": "workspace:^"
+    "@redspark/rsh-tools": "workspace:^",
+    "@redspark/rsh-native-prompt": "workspace:^",
+    "@redspark/rsh-native-runtime": "workspace:^",
+    "@redspark/rsh-native-tools": "workspace:^"
+  },
+  "peerDependenciesMeta": {
+    "@redspark/cordis": { "optional": true }
   }
 }

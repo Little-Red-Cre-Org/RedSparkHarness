@@ -19,7 +19,7 @@ function responsesGeneration(call: NativeToolExecution): NativeToolExecution['re
 function resolveConfig(input: unknown): Config {
   if (typeof input !== 'object' || input === null || Array.isArray(input)) throw new Error('native tool-subagent: configuration must be an object')
   const fields = input as Record<string, unknown>
-  const permitted = ['toolName', 'maxDepth', 'maxSteps', 'provider', 'model', 'reasoningEffort', 'maxTokens', 'persona', 'toolFilter', 'backgroundMode']
+  const permitted = ['toolName', 'maxDepth', 'maxSteps', 'provider', 'model', 'reasoningEffort', 'maxTokens', 'persona', 'toolFilter', 'backgroundMode', 'inheritCompletedTurns']
   for (const key of Object.keys(fields)) if (!permitted.includes(key)) throw new Error(`native tool-subagent: unsupported configuration field ${key}`)
   for (const key of ['toolName', 'provider', 'model', 'reasoningEffort', 'persona']) {
     if ((key === 'toolName' || fields[key] !== undefined) && (typeof fields[key] !== 'string' || fields[key].length === 0)) {
@@ -34,6 +34,12 @@ function resolveConfig(input: unknown): Config {
   }
   const backgroundMode = fields.backgroundMode === undefined ? 'one-shot' : fields.backgroundMode
   if (backgroundMode !== 'one-shot' && backgroundMode !== 'continuable') throw new Error('native tool-subagent: backgroundMode must be one-shot or continuable')
+  if (fields.inheritCompletedTurns !== undefined && typeof fields.inheritCompletedTurns !== 'boolean') {
+    throw new Error('native tool-subagent: inheritCompletedTurns must be a boolean')
+  }
+  if (fields.inheritCompletedTurns === true && backgroundMode === 'continuable') {
+    throw new Error('native tool-subagent: completed-turn seed supports one-shot runs only')
+  }
   let toolFilter: NativeSubagentOptions['toolFilter']
   if (fields.toolFilter !== undefined) {
     const filter = fields.toolFilter
@@ -59,6 +65,7 @@ function resolveConfig(input: unknown): Config {
     ...fields.reasoningEffort === undefined ? {} : { reasoningEffort: ReasoningEffortId(fields.reasoningEffort as string) },
     ...fields.persona === undefined ? {} : { persona: fields.persona as string },
     ...toolFilter === undefined ? {} : { toolFilter },
+    ...fields.inheritCompletedTurns === true ? { inheritCompletedTurns: true } : {},
   } }
 }
 
@@ -74,6 +81,9 @@ export const plugin: NativePlugin = {
       if (external && config.backgroundMode === 'continuable') {
         throw new Error('native tool-subagent: external providers support one-shot runs only')
       }
+      if (external && config.options.inheritCompletedTurns === true) {
+        throw new Error('native tool-subagent: completed-turn seed requires the in-process executor')
+      }
       const tools = context.require('tools')
       const controls = context.optional('jobControls')
       const jobs = context.optional('jobs')
@@ -86,14 +96,22 @@ export const plugin: NativePlugin = {
         || subagents.continuationTools !== tools)) {
         throw new Error('native tool-subagent: continuable mode requires controls bound to the same Provider and tool registry')
       }
-      const background = !external && (continuation || controls !== undefined)
+      const inherit = config.options.inheritCompletedTurns === true
+      const background = !inherit && !external && (continuation || controls !== undefined)
       const contribution: NativeValueToolContribution = {
-        schema: { name: config.toolName, description: 'Delegate one task to a fresh child without your conversation. '
-          + (continuation ? 'By default start a durable continuable child and return after its initial input is accepted. Use send_message for follow-ups and interrupt_agent to stop current work; run_in_background:false waits for a one-shot result.'
-            : background ? 'By default wait for its final result and cleanup. run_in_background returns after child readiness; use job_output/job_kill to observe or cancel the Agent-owned job.'
-              : 'This call waits for its final result and cleanup.'),
+        schema: { name: config.toolName, description: inherit
+          ? 'Delegate a task to a subagent that inherits this conversation: a child agent seeded with all '
+            + 'completed turns so far (it does not see the current in-flight turn). Use this when the subtask '
+            + 'builds on this conversation\'s context — a follow-up analysis, '
+            + 'a review, a continuation — without consuming this conversation\'s context for the work itself. '
+            + 'You receive its result, not its intermediate steps. This call waits for its final result and cleanup.'
+          : 'Delegate one task to a fresh child without your conversation. '
+            + (continuation ? 'By default start a durable continuable child and return after its initial input is accepted. Use send_message for follow-ups and interrupt_agent to stop current work; run_in_background:false waits for a one-shot result.'
+              : background ? 'By default wait for its final result and cleanup. run_in_background returns after child readiness; use job_output/job_kill to observe or cancel the Agent-owned job.'
+                : 'This call waits for its final result and cleanup.'),
         parameters: { type: 'object', additionalProperties: false, required: ['description', 'prompt'], properties: {
-          description: { type: 'string' }, prompt: { type: 'string' },
+          description: { type: 'string' },
+          prompt: { type: 'string', ...inherit ? { description: 'The task for the subagent. It already sees this conversation\'s completed turns, so build on them freely and state only what is new.' } : {} },
           ...background ? { run_in_background: { type: 'boolean' as const } } : {},
         } } },
         output: {

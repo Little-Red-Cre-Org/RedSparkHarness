@@ -1,7 +1,8 @@
 /** Filesystem-seam source access for the generic stdio LSP provider. */
 
 import { Buffer } from 'node:buffer'
-import type { FileSystem, FsTarget } from '@redspark/rsh-fs'
+import type { FileSystemOperations } from '@redspark/rsh-fs/operations'
+import type { FsTarget } from '@redspark/rsh-fs/types'
 import { throwIfAborted } from './abort.ts'
 
 /** A canonical workspace in the filesystem/subprocess execution world. */
@@ -30,7 +31,7 @@ export interface HostSource {
  * @returns stable identity plus process path and file URI.
  */
 export async function canonicalizeWorkspace(
-  fs: FileSystem,
+  fs: FileSystemOperations,
   workspaceRoot: string,
   signal?: AbortSignal,
 ): Promise<HostWorkspace> {
@@ -70,7 +71,7 @@ export async function canonicalizeWorkspace(
  * @returns canonical file URI and current text.
  */
 export async function readHostSource(
-  fs: FileSystem,
+  fs: FileSystemOperations,
   filePath: string,
   workspace: HostWorkspace,
   maxDocumentBytes: number,

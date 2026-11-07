@@ -4,7 +4,7 @@ import type { NativeAgent } from '@redspark/rsh-native-agent'
 import type { NativePlugin, NativeContext } from '@redspark/rsh-native-runtime'
 import { createUserMessage, type ContentBlock, type ReasoningEffortId, type StreamChunk, type MessageId,
   type ToolCallId } from '@redspark/rsh-llm/native'
-import { SessionId, type Session, type TurnEndReason } from '@redspark/rsh-session/native'
+import { SessionId, type Session, type SessionEvent, type TurnEndReason } from '@redspark/rsh-session/native'
 import { NativeSubagentContinuations } from './continuation.ts'
 import type { NativeActiveSessionOwner, NativeDelegationSetup,
   NativeSessionConfiguration } from '@redspark/rsh-native-session-execution'
@@ -48,6 +48,11 @@ export interface NativeSubagentOptions {
   readonly persona?: string
   readonly toolFilter?: NativeToolRestriction
   /**
+   * Copy the parent's completed turns into the child once. The open turn stays out.
+   * With no completed turn the child starts empty, the same as spawn.
+   */
+  readonly inheritCompletedTurns?: boolean
+  /**
    * A successful run needs one schema-valid structured_output commit. Failed attempts may retry; normal completion without one is an error.
    */
   readonly outputSchema?: ObjectJsonSchema
@@ -69,6 +74,8 @@ export interface NativeSubagentRequest {
   readonly delegationContext?: NativeToolDelegationContext
   /** Process-local generation capability inherited by one nested Responses operation. */
   readonly responsesGeneration?: NativeResponsesPreparedGeneration
+  /** Copy the parent's completed turns into the child once. The open turn stays out. */
+  readonly inheritCompletedTurns?: boolean
   readonly outputSchema?: ObjectJsonSchema
 }
 
@@ -373,6 +380,9 @@ export class NativeSpawnSubagents implements NativeSubagentOperations {
 
   /** @inheritdoc */
   resolve(request: Parameters<NativeSubagentOperations['resolve']>[0]): NativeSubagentRequest {
+    if (request.options.inheritCompletedTurns === true && this.externalDriver !== undefined) {
+      throw new Error('native-subagent: completed-turn seed requires the in-process executor')
+    }
     const { agent, session, options } = request
     const inherited = request.delegationContext
     const parent = this.context.require('sessionExecution').configuration(agent, session)
@@ -422,6 +432,7 @@ export class NativeSpawnSubagents implements NativeSubagentOperations {
       ...options.toolFilter === undefined ? {} : { toolFilter: structuredClone(options.toolFilter) },
       ...delegationContext === undefined ? {} : { delegationContext },
       ...request.responsesGeneration === undefined ? {} : { responsesGeneration: request.responsesGeneration },
+      ...options.inheritCompletedTurns === true ? { inheritCompletedTurns: true } : {},
       ...options.outputSchema === undefined ? {} : { outputSchema: structuredClone(options.outputSchema) } })
     const resolved: NativeSubagentRequest = Object.freeze({ ...canonical, prompt: structuredClone(canonical.prompt),
       config: Object.freeze({ ...canonical.config }), routeOverrides: Object.freeze({ ...canonical.routeOverrides }),
@@ -542,6 +553,9 @@ export class NativeSpawnSubagents implements NativeSubagentOperations {
   /** @inheritdoc */
   startContinuable(request: NativeSubagentRequest, signal: AbortSignal): Promise<NativeSubagentContinuation> {
     if (this.closing) throw new Error('native-subagent: Provider is closing')
+    if (request.inheritCompletedTurns === true) {
+      throw new Error('native-subagent: completed-turn seed supports one-shot runs only')
+    }
     this.assertSessionBackedProvider()
     const effective = AbortSignal.any([signal, this.context.signal, this.cancellation.signal])
     return this.track(this.continuations.start(request, effective), effective)
@@ -1295,6 +1309,19 @@ export class NativeSpawnSubagents implements NativeSubagentOperations {
     if (errors.length > 0) throw new AggregateError(errors, 'native-subagent: accepted run cleanup failed')
   }
 
+  /**
+   * Parent events through the last completed turn. The open turn is excluded.
+   * An empty result starts the child the same way as spawn.
+   */
+  private async completedTurnPrefix(agent: NativeAgent, session: Session, signal: AbortSignal): Promise<readonly SessionEvent[]> {
+    const owner = this.context.require('activeSessions').owner(agent, session)
+    if (owner === undefined) throw new Error('native-subagent: fork requires the active parent Session')
+    const events = await owner.readEvents({ signal })
+    const lastEnd = events.findLast(event => event.type === 'turn/end')
+    if (lastEnd === undefined) return []
+    return events.slice(0, lastEnd.seq + 1)
+  }
+
   private prepare(request: NativeSubagentRequest, setup: NativeDelegationSetup): NativeStructuredAttachment | undefined {
     const { agent, own } = setup
     const prompt = this.context.require('promptSections')
@@ -1328,8 +1355,11 @@ export class NativeSpawnSubagents implements NativeSubagentOperations {
     const descriptor = snapshotSubagentDescriptor({ mode: 'one-shot', provider: this.providerName, label: request.label })
     let structured: NativeStructuredAttachment | undefined
     try {
+      const seed = request.inheritCompletedTurns === true
+        ? await this.completedTurnPrefix(request.agent, request.session, signal) : undefined
       await this.context.require('sessionExecution').delegate(request.agent, request.session, {
         id, config: request.config, maxDepth: request.maxDepth,
+        ...seed === undefined || seed.length === 0 ? {} : { seed },
         ...request.delegationContext === undefined ? {} : { delegationContext: request.delegationContext },
         ...background?.agentLifetime === true ? { lifetime: 'agent' as const } : {},
         ...background?.onReady === undefined ? {} : { onReady: background.onReady },
