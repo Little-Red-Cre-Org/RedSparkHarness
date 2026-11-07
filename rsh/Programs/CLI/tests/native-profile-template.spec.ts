@@ -125,6 +125,7 @@ it('defines a native-web Host composition and Client profile without Cordis rows
     expect(nativeWebRows.get('skill-filesystem')?.plugin).toBe('@redspark/rsh-skill-filesystem')
     expect(nativeWebRows.get('tool-skill')?.plugin).toBe('@redspark/rsh-tool-skill')
     expect(nativeWebRows.get('skill-badge')?.plugin).toBe('@redspark/rsh-skill-badge')
+    expect(nativeWebRows.get('archify')?.plugin).toBe('@redspark/rsh-archify')
     expect(nativeWebRows.get('spill-policy')).toMatchObject({
       plugin: '@redspark/rsh-spill-policy', config: { maxInlineBytes: 50000 },
     })
