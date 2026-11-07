@@ -460,6 +460,7 @@ export function shippedNativeProfileComposition(
       // composed, so a Native session had no inventory surface at all.
       { id: 'deepseek-llm-api-extensions', plugin: '@redspark/rsh-deepseek-llm-api-extensions', scope: ROOT },
       { id: 'plugin-inventory-deepseek', plugin: '@redspark/rsh-plugin-package-inventory-deepseek', scope: ROOT },
+      { id: 'session-log-deepseek', plugin: '@redspark/rsh-session-log-deepseek', scope: ROOT },
       { id: 'pi-ai', plugin: '@redspark/rsh-llm-pi-ai', scope: ROOT,
         config: { providers: { deepseek: { apiKeyEnv: 'DEEPSEEK_API_KEY', displayName: 'DeepSeek' } } } },
       ...(profile === 'native-web' ? [

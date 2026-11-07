@@ -100,6 +100,7 @@
                          "@redspark/rsh-credentials-local":  "workspace:^",
                          "@redspark/rsh-deepseek-account":  "workspace:^",
                          "@redspark/rsh-deepseek-llm-api-extensions":  "workspace:^",
+                         "@redspark/rsh-session-log-deepseek":  "workspace:^",
                          "@redspark/rsh-session-log-export":  "workspace:^",
                          "@redspark/rsh-errors":  "workspace:^",
                          "@redspark/rsh-fs":  "workspace:^",

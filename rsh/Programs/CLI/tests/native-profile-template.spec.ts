@@ -132,6 +132,7 @@ it('defines a native-web Host composition and Client profile without Cordis rows
       .toBe('@redspark/rsh-deepseek-llm-api-extensions')
     expect(nativeWebRows.get('plugin-inventory-deepseek')?.plugin)
       .toBe('@redspark/rsh-plugin-package-inventory-deepseek')
+    expect(nativeWebRows.get('session-log-deepseek')?.plugin).toBe('@redspark/rsh-session-log-deepseek')
     expect(nativeWebRows.get('spill-policy')).toMatchObject({
       plugin: '@redspark/rsh-spill-policy', config: { maxInlineBytes: 50000 },
     })

@@ -9988,6 +9988,9 @@ importers:
       '@redspark/rsh-session':
         specifier: workspace:^
         version: link:../../Engine/core/session
+      '@redspark/rsh-session-log-deepseek':
+        specifier: workspace:^
+        version: link:../../Modules/Official/llm/session-log-deepseek
       '@redspark/rsh-session-log-export':
         specifier: workspace:^
         version: link:../../Engine/session-query/session-log-export
@@ -10214,9 +10217,6 @@ importers:
       '@redspark/rsh-session-checkpoint-policy':
         specifier: workspace:^
         version: link:../../Engine/session/session-checkpoint-policy
-      '@redspark/rsh-session-log-deepseek':
-        specifier: workspace:^
-        version: link:../../Modules/Official/llm/session-log-deepseek
       '@redspark/rsh-session-snapshot':
         specifier: workspace:^
         version: link:../../Tests/test-support/session-snapshot
