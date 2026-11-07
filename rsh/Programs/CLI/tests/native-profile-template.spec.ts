@@ -119,6 +119,11 @@ it('defines a native-web Host composition and Client profile without Cordis rows
     expect(nativeWebRows.get('command-feedback')?.plugin).toBe('@redspark/rsh-command-feedback')
     expect(nativeWebRows.get('message-feedback')?.plugin).toBe('@redspark/rsh-message-feedback')
     expect(nativeWebRows.has('session-telemetry-otel')).toBe(false)
+    // Skills are a Cordis-bundle capability the Native composition has to
+    // compose explicitly: registry, filesystem discovery, and the invoking tool.
+    expect(nativeWebRows.get('skills')?.plugin).toBe('@redspark/rsh-skill')
+    expect(nativeWebRows.get('skill-filesystem')?.plugin).toBe('@redspark/rsh-skill-filesystem')
+    expect(nativeWebRows.get('tool-skill')?.plugin).toBe('@redspark/rsh-tool-skill')
     expect(nativeWebRows.get('storage-hub')?.plugin).toBe('@redspark/rsh-storage')
     expect(nativeWebRows.get('storage-json')).toMatchObject({ config: { root: join(home, 'storages') } })
     expect(nativeWebRows.get('storage-domain')).toMatchObject({ config: { backend: 'json' } })

@@ -431,6 +431,17 @@ export function shippedNativeProfileComposition(
       { id: 'approval', plugin: '@redspark/rsh-native-approval', scope: ROOT },
       ...(profile === 'native-web' ? [{ id: 'permission-presets', plugin: '@redspark/rsh-permission-presets', scope: ROOT }] : []),
       { id: 'bash-tool', plugin: windows ? '@redspark/rsh-tool-pwsh' : '@redspark/rsh-tool-bash', scope: ROOT },
+      // Skills: the registry, its filesystem discovery, and the tool that invokes
+      // one. The Cordis bundle installs all three; a Native profile without them
+      // silently has no skill surface at all.
+      { id: 'request-context', plugin: '@redspark/rsh-request-context', scope: ROOT },
+      { id: 'skills', plugin: '@redspark/rsh-skill', scope: ROOT },
+      { id: 'skill-filesystem', plugin: '@redspark/rsh-skill-filesystem', scope: ROOT },
+      { id: 'tool-skill', plugin: '@redspark/rsh-tool-skill', scope: ROOT },
+      // Skills: the registry, its filesystem discovery, and the tool that invokes
+      // one. The Cordis bundle installs all three; a Native profile without them
+      // silently has no skill surface at all.
+
       { id: 'credentials', plugin: '@redspark/rsh-credentials-local', scope: ROOT },
       { id: 'settings', plugin: '@redspark/rsh-settings-file', scope: ROOT,
         config: { rshHome: home } },
