@@ -49,7 +49,7 @@ async function expectModelResolves(
   }
 }
 
-it('maps standard profile names to native compositions and preserves existing legacy manifests', async () => {
+it('maps standard profile names to native compositions and leaves an existing manifest alone', async () => {
   const home = await mkdtemp(join(tmpdir(), 'rsh-standard-profile-template-'))
   const legacyHome = await mkdtemp(join(tmpdir(), 'rsh-standard-profile-legacy-'))
   try {
@@ -85,15 +85,17 @@ it('maps standard profile names to native compositions and preserves existing le
       }
     }
 
-    const legacyDir = join(legacyHome, 'profiles', 'web')
-    await mkdir(legacyDir, { recursive: true })
-    const legacyManifest = `${JSON.stringify({ name: 'dsh-profile-web', private: true,
-      dsh: { profile: { bundles: ['@redspark/rsh-base', '@redspark/rsh-web-app'] } } }, null, 2)}\n`
-    await writeFile(join(legacyDir, 'package.json'), legacyManifest)
+    // An existing manifest is never rewritten: the resolver refuses a retired
+    // one, and the operator migrates it in place.
+    const existingDir = join(legacyHome, 'profiles', 'web')
+    await mkdir(existingDir, { recursive: true })
+    const existingManifest = `${JSON.stringify({ name: 'dsh-profile-web', private: true,
+      dsh: { profile: { bundles: ['@redspark/rsh-base'] } } }, null, 2)}\n`
+    await writeFile(join(existingDir, 'package.json'), existingManifest)
     ensureShippedNativeProfile('web', legacyHome)
-    expect(profileRuntime('web', legacyHome)).toBe('legacy')
-    expect(await readFile(join(legacyDir, 'package.json'), 'utf8')).toBe(legacyManifest)
-    expect(existsSync(join(legacyDir, 'rsh.profile.json'))).toBe(false)
+    expect(() => profileRuntime('web', legacyHome)).toThrow('retired Cordis bundle format')
+    expect(await readFile(join(existingDir, 'package.json'), 'utf8')).toBe(existingManifest)
+    expect(existsSync(join(existingDir, 'rsh.profile.json'))).toBe(false)
   } finally {
     await Promise.all([rm(home, { recursive: true, force: true }), rm(legacyHome, { recursive: true, force: true })])
   }

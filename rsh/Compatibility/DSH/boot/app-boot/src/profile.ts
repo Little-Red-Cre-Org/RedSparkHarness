@@ -163,23 +163,28 @@ autoInstallPeers: false
  * pnpm settings out-of-tree plugins need. Existing files are never touched,
  * so re-running is a no-op on an initialized profile.
  * @param dir - the profile directory from {@link resolveProfileDir}.
- * @param bundles - the initial `dsh.profile.bundles` layer list.
- * @param patchReload - user patch-file lifecycle; custom profiles default to live reload.
- * @returns nothing; a newly written manifest explicitly selects legacy execution.
+ * @param bundles - ignored; the manifest no longer records a bundle list.
+ * @param patchReload - ignored; a native profile reloads through `configReload`.
+ * @returns nothing; a newly written manifest selects native execution.
  */
 export function initProfile(
   dir: string,
   bundles: readonly string[],
   patchReload: ProfilePatchReload = DEFAULT_PROFILE_PATCH_RELOAD,
 ): void {
+  void bundles
+  void patchReload
   mkdirSync(dir, { recursive: true })
   const manifestPath = join(dir, 'package.json')
   if (!existsSync(manifestPath)) {
-    const manifest: ProfileManifest & { private: boolean } = {
+    // A profile this function creates has no composition to run, so it records
+    // the runtime it needs and nothing else: the retired bundle format would
+    // produce a profile the CLI refuses to start.
+    const manifest = {
       name: `dsh-profile-${basename(dir)}`,
       private: true,
       dependencies: {},
-      dsh: { profile: { runtime: 'legacy', bundles: [...bundles], patchReload } },
+      dsh: { profile: { runtime: 'native', config: 'rsh.profile.json' } },
     }
     writeFileSync(manifestPath, JSON.stringify(manifest, undefined, 2) + '\n')
   }

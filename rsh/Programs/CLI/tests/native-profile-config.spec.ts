@@ -42,16 +42,18 @@ it('rejects overlays that cannot target one complete existing installation', () 
   ]) expect(() => applyNativeProfilePatches(profile, [overlay])).toThrow()
 })
 
-it('selects native only with an explicit, valid profile marker', async () => {
+it('selects native only with an explicit, valid profile marker and refuses the retired format', async () => {
   const home = await mkdtemp(join(tmpdir(), 'rsh-native-profile-kind-'))
   const directory = join(home, 'profiles', 'probe')
   try {
-    expect(profileRuntime('probe', home)).toBe('legacy')
-    expect(() => nativeProfileReloadMode('probe', home)).toThrow('does not select native')
+    // No manifest: nothing selects the retired runtime any more.
+    expect(profileRuntime('probe', home)).toBe('native')
     await mkdir(directory, { recursive: true })
     const writeManifest = (profile: unknown) => writeFile(join(directory, 'package.json'), JSON.stringify({ name: 'probe', dsh: { profile } }))
     await writeManifest({ bundles: [] })
-    expect(profileRuntime('probe', home)).toBe('legacy')
+    expect(() => profileRuntime('probe', home)).toThrow('retired Cordis bundle format')
+    await writeManifest({ runtime: 'legacy', bundles: [] })
+    expect(() => profileRuntime('probe', home)).toThrow('retired Cordis runtime')
     await writeManifest({ runtime: 'native', config: 'rsh.profile.json' })
     expect(profileRuntime('probe', home)).toBe('native')
     expect(nativeProfileReloadMode('probe', home)).toBe('startup')
@@ -62,11 +64,11 @@ it('selects native only with an explicit, valid profile marker', async () => {
     await writeManifest({ runtime: 'native', config: 'rsh.profile.json', configReload: 'unknown' })
     expect(() => profileRuntime('probe', home)).toThrow('configReload must be startup or live')
     await writeManifest({ configReload: 'live' })
-    expect(() => profileRuntime('probe', home)).toThrow('has no dsh.profile.runtime')
+    expect(() => profileRuntime('probe', home)).toThrow('must declare "runtime": "native"')
     await writeManifest({ runtime: 'native', config: 'rsh.profile.json', bundles: [] })
     expect(() => profileRuntime('probe', home)).toThrow('cannot declare Cordis bundles')
     await writeManifest({ config: 'rsh.profile.json' })
-    expect(() => profileRuntime('probe', home)).toThrow('has no dsh.profile.runtime')
+    expect(() => profileRuntime('probe', home)).toThrow('must declare "runtime": "native"')
     expect(() => profileRuntime('../probe', home)).toThrow('invalid profile name')
   } finally {
     await rm(home, { recursive: true, force: true })
