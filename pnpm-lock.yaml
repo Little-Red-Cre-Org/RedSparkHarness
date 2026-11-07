@@ -8665,6 +8665,12 @@ importers:
 
   rsh/Modules/Official/spill/spill-policy:
     dependencies:
+      '@redspark/rsh-native-runtime':
+        specifier: workspace:^
+        version: link:../../../../Core/runtime-diagnostics/native-runtime
+      '@redspark/rsh-native-tools':
+        specifier: workspace:^
+        version: link:../../../../Engine/core/native-tools
       '@redspark/schemastery':
         specifier: link:../../../../Core/vendor/schemastery
         version: link:../../../../Core/vendor/schemastery
@@ -10027,9 +10033,6 @@ importers:
       '@redspark/rsh-spill-local':
         specifier: workspace:^
         version: link:../../Modules/Official/spill/spill-local
-      '@redspark/rsh-spill-policy':
-        specifier: workspace:^
-        version: link:../../Modules/Official/spill/spill-policy
       '@redspark/rsh-storage':
         specifier: workspace:^
         version: link:../../Core/storage/storage
@@ -10347,6 +10350,9 @@ importers:
       '@redspark/rsh-skill-filesystem':
         specifier: workspace:^
         version: link:../../Modules/Official/skill/skill-filesystem
+      '@redspark/rsh-spill-policy':
+        specifier: workspace:^
+        version: link:../../Modules/Official/spill/spill-policy
       '@redspark/rsh-terminal':
         specifier: workspace:^
         version: link:../../Modules/Official/terminal/terminal

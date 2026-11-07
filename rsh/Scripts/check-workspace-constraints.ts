@@ -171,6 +171,8 @@ const packageFileExtras: Readonly<Record<string, readonly string[]>> = {
   '@redspark/rsh-http-routes': ['lib/host.js', 'lib/shared-*.js'],
   '@redspark/rsh-webhook': ['lib/definition.js', 'lib/shared-*.js'],
   '@redspark/rsh-permission-presets': ['lib/native-definition.js', 'lib/shared-*.js'],
+  // The Native policy and the Cordis one share the preview and notice helpers.
+  '@redspark/rsh-spill-policy': ['lib/shared-*.js'],
   '@redspark/rsh-commands': ['lib/shared-*.js'],
   '@redspark/rsh-goal': ['lib/projection.js', 'lib/shared-*.js'],
   '@redspark/rsh-goal-round-driver': ['lib/shared-*.js'],

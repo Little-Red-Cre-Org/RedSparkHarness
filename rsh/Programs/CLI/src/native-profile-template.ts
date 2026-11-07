@@ -417,6 +417,11 @@ export function shippedNativeProfileComposition(
       { id: 'shell-env', plugin: '@redspark/rsh-shell-env', scope: ROOT },
       { id: 'bash', plugin: windows ? '@redspark/rsh-pwsh-sandbox' : '@redspark/rsh-bash-sandbox', scope: ROOT },
       { id: 'spill-store', plugin: '@redspark/rsh-spill-local', scope: ROOT },
+      // Bounds an oversized plain-text tool result to a preview plus a spill
+      // locator. The store above has no consumer without this row, and the cap
+      // matches the Cordis base bundle so both runtimes truncate alike.
+      { id: 'spill-policy', plugin: '@redspark/rsh-spill-policy', scope: ROOT,
+        config: { maxInlineBytes: 50000 } },
       { id: 'search-tools', plugin: '@redspark/rsh-tool-fs-search', scope: ROOT,
         config: { sampleOverCapGlobResults: false } },
       { id: 'web', plugin: '@redspark/rsh-web', scope: ROOT,

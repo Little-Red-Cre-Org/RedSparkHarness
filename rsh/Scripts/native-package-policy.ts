@@ -200,6 +200,7 @@ export const mixedNativeEntryDirectories: ReadonlyMap<string, string> = new Map(
   ['rsh/Modules/Official/web/web-search-perplexity', 'Cordis and native Perplexity search providers share request construction and response parsing'],
   ['rsh/Modules/Official/web/tool-web', 'Cordis and native web tools share argument validation, result merging, render text and presentation meta'],
   ['rsh/Modules/Official/spill/spill-local', 'Cordis and native spill Providers share private writes and startup cleanup'],
+  ['rsh/Modules/Official/spill/spill-policy', 'Cordis and native spill policies share the preview budget, the notice spelling and the best-effort failure rule'],
   ['rsh/Engine/context/agent-instructions', 'Native and Cordis instruction Providers share discovery, rendering and durable reconciliation'],
   ['rsh/Modules/Official/interaction/user-questions', 'Native and Cordis human questions share protocol values and errors'],
   ['rsh/Modules/Official/interaction/tool-ask-user', 'Native and Cordis Consumers use the selected human question service'],
