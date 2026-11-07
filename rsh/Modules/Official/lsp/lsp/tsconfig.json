@@ -19,6 +19,9 @@
     },
     {
       "path": "../../../../Engine/llm/llm"
+    },
+    {
+      "path": "../../../../Core/runtime-diagnostics/native-runtime"
     }
   ]
 }

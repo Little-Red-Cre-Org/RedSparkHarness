@@ -163,9 +163,9 @@ autoInstallPeers: false
  * pnpm settings out-of-tree plugins need. Existing files are never touched,
  * so re-running is a no-op on an initialized profile.
  * @param dir - the profile directory from {@link resolveProfileDir}.
- * @param bundles - the initial `dsh.profile.bundles` layer list.
- * @param patchReload - user patch-file lifecycle; custom profiles default to live reload.
- * @returns nothing; a newly written manifest explicitly selects legacy execution.
+ * @param bundles - ignored; the manifest no longer records a bundle list.
+ * @param patchReload - ignored; a native profile reloads through `configReload`.
+ * @returns nothing; a newly written manifest selects native execution.
  */
 export function initProfile(
   dir: string,
@@ -175,11 +175,14 @@ export function initProfile(
   mkdirSync(dir, { recursive: true })
   const manifestPath = join(dir, 'package.json')
   if (!existsSync(manifestPath)) {
+    // This initializer belongs to the Cordis launcher and writes the format
+    // that launcher boots; its own reader refuses a native marker, so writing
+    // one here would produce a profile neither runtime can start.
     const manifest: ProfileManifest & { private: boolean } = {
       name: `dsh-profile-${basename(dir)}`,
       private: true,
       dependencies: {},
-      dsh: { profile: { runtime: 'legacy', bundles: [...bundles], patchReload } },
+      dsh: { profile: { bundles: [...bundles], patchReload } },
     }
     writeFileSync(manifestPath, JSON.stringify(manifest, undefined, 2) + '\n')
   }

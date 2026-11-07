@@ -7,12 +7,12 @@
  * @module @redspark/rsh-lsp-stdio/instance
  */
 
-import { LspError } from '@redspark/rsh-lsp'
+import { LspError } from '@redspark/rsh-lsp/native'
 import type {
   LspOperation,
   LspProviderQuery,
   LspQueryResult,
-} from '@redspark/rsh-lsp'
+} from '@redspark/rsh-lsp/native'
 import { deadline } from '@redspark/rsh-timeout'
 import { abortable, abortError } from './abort.ts'
 import { LspConnection } from './connection.ts'

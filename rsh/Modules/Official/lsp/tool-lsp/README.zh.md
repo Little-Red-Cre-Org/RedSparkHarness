@@ -72,7 +72,9 @@ kind: "package-reference"
 
 | 文件 | 职责 |
 |---|---|
-| [`src/index.ts`](src/index.ts) | 插件入口：配置 schema、工具注册、系统提示词区段、执行 |
+| [`src/index.ts`](src/index.ts) | Cordis 插件入口：工具注册、系统提示词区段、执行 |
+| [`src/config.ts`](src/config.ts) | 与原生入口共享的无 Cordis 上限、超时预算、提示文本与加载期校验 |
+| [`src/native.ts`](src/native.ts) | 原生 Provider 入口，把共享校验绑定到原生工具注册表 |
 | [`src/render.ts`](src/render.ts) | 纯格式化、坐标转换、URI 解析、结果上限、UI 呈现 |
 | [`src/session-cwd.ts`](src/session-cwd.ts) | 从会话 `header.cwd` 取得工作区根目录 |
 | — | 不发布运行时不变式伴生入口；该无状态适配器提供一个工具和一个提示词区段，而查询生命周期与结果关系仍由它所组合的工具 seam 和 LSP seam 负责。 |

@@ -49,7 +49,7 @@ async function expectModelResolves(
   }
 }
 
-it('maps standard profile names to native compositions and preserves existing legacy manifests', async () => {
+it('maps standard profile names to native compositions and leaves an existing manifest alone', async () => {
   const home = await mkdtemp(join(tmpdir(), 'rsh-standard-profile-template-'))
   const legacyHome = await mkdtemp(join(tmpdir(), 'rsh-standard-profile-legacy-'))
   try {
@@ -85,15 +85,17 @@ it('maps standard profile names to native compositions and preserves existing le
       }
     }
 
-    const legacyDir = join(legacyHome, 'profiles', 'web')
-    await mkdir(legacyDir, { recursive: true })
-    const legacyManifest = `${JSON.stringify({ name: 'dsh-profile-web', private: true,
-      dsh: { profile: { bundles: ['@redspark/rsh-base', '@redspark/rsh-web-app'] } } }, null, 2)}\n`
-    await writeFile(join(legacyDir, 'package.json'), legacyManifest)
+    // An existing Cordis manifest is never rewritten. The resolver keeps it on
+    // legacy execution and warns; the operator migrates it in place.
+    const existingDir = join(legacyHome, 'profiles', 'web')
+    await mkdir(existingDir, { recursive: true })
+    const existingManifest = `${JSON.stringify({ name: 'dsh-profile-web', private: true,
+      dsh: { profile: { bundles: ['@redspark/rsh-base'] } } }, null, 2)}\n`
+    await writeFile(join(existingDir, 'package.json'), existingManifest)
     ensureShippedNativeProfile('web', legacyHome)
     expect(profileRuntime('web', legacyHome)).toBe('legacy')
-    expect(await readFile(join(legacyDir, 'package.json'), 'utf8')).toBe(legacyManifest)
-    expect(existsSync(join(legacyDir, 'rsh.profile.json'))).toBe(false)
+    expect(await readFile(join(existingDir, 'package.json'), 'utf8')).toBe(existingManifest)
+    expect(existsSync(join(existingDir, 'rsh.profile.json'))).toBe(false)
   } finally {
     await Promise.all([rm(home, { recursive: true, force: true }), rm(legacyHome, { recursive: true, force: true })])
   }
@@ -117,6 +119,23 @@ it('defines a native-web Host composition and Client profile without Cordis rows
     expect(nativeWebRows.get('command-feedback')?.plugin).toBe('@redspark/rsh-command-feedback')
     expect(nativeWebRows.get('message-feedback')?.plugin).toBe('@redspark/rsh-message-feedback')
     expect(nativeWebRows.has('session-telemetry-otel')).toBe(false)
+    // Skills are a Cordis-bundle capability the Native composition has to
+    // compose explicitly: registry, filesystem discovery, and the invoking tool.
+    expect(nativeWebRows.get('skills')?.plugin).toBe('@redspark/rsh-skill')
+    expect(nativeWebRows.get('skill-filesystem')?.plugin).toBe('@redspark/rsh-skill-filesystem')
+    expect(nativeWebRows.get('tool-skill')?.plugin).toBe('@redspark/rsh-tool-skill')
+    expect(nativeWebRows.get('skill-badge')?.plugin).toBe('@redspark/rsh-skill-badge')
+    expect(nativeWebRows.get('archify')?.plugin).toBe('@redspark/rsh-archify')
+    // DeepSeek provider extensions and the read-only plugin inventory: both had
+    // Native halves that no profile composed.
+    expect(nativeWebRows.get('deepseek-llm-api-extensions')?.plugin)
+      .toBe('@redspark/rsh-deepseek-llm-api-extensions')
+    expect(nativeWebRows.get('plugin-inventory-deepseek')?.plugin)
+      .toBe('@redspark/rsh-plugin-package-inventory-deepseek')
+    expect(nativeWebRows.get('session-log-deepseek')?.plugin).toBe('@redspark/rsh-session-log-deepseek')
+    expect(nativeWebRows.get('spill-policy')).toMatchObject({
+      plugin: '@redspark/rsh-spill-policy', config: { maxInlineBytes: 50000 },
+    })
     expect(nativeWebRows.get('storage-hub')?.plugin).toBe('@redspark/rsh-storage')
     expect(nativeWebRows.get('storage-json')).toMatchObject({ config: { root: join(home, 'storages') } })
     expect(nativeWebRows.get('storage-domain')).toMatchObject({ config: { backend: 'json' } })
@@ -264,6 +283,21 @@ it.each(['native-headless', 'native-sdk', 'native-sdk-dsh-child', 'native-web', 
     expect(profile.installations.filter(row => row.id === 'session-execution')).toHaveLength(1)
     expect(new Set(profile.installations.map(row => row.id)).size).toBe(profile.installations.length)
   })
+
+it.each(['native-sdk', 'native-acp'] as const)('installs one-shot subagent_fork without a child model route in %s', (profileName) => {
+  const profile = shippedNativeProfileComposition('C:/rsh-native-fork', profileName, 'win32')
+  expect(profile.installations.find(row => row.id === 'subagent-tool-fork')).toEqual({
+    id: 'subagent-tool-fork', plugin: '@redspark/rsh-tool-subagent', scope: 'root',
+    config: { toolName: 'subagent_fork', maxDepth: 3, backgroundMode: 'one-shot', inheritCompletedTurns: true },
+  })
+})
+
+it('keeps external children on spawn without a completed-turn seed tool', () => {
+  const sdkChild = shippedNativeProfileComposition('C:/rsh-native-fork', 'native-sdk-dsh-child', 'win32')
+  expect(sdkChild.installations.some(row => row.id === 'subagent-tool-fork')).toBe(false)
+  const acpChild = shippedNativeProfileComposition('C:/rsh-native-fork', 'native-acp-dsh-child', 'win32')
+  expect(acpChild.installations.some(row => row.id === 'subagent-tool-fork' || row.id === 'subagent-tool')).toBe(false)
+})
 
 it.each(['native-headless', 'native-sdk', 'native-web', 'native-acp', 'native-tui'] as const)(
   'installs the Cordis base guards natively in %s', (profileName) => {

@@ -22,7 +22,7 @@ The native Subagent Definition and selected in-process spawn Provider delegate t
 <a id="configuration"></a>
 ## Configuration
 
-The native entry requires sessionExecution, activeSessions and promptSections, optionally consumes tools, jobs and `externalSubagentDriver`, and provides subagents. Configuration requires providerName. `spawn` selects the in-process executor and remains the shipped profile default. Any other name must match the single external driver selected in the same Native Host installation; its optional-service dependency makes the Subagent Provider drain before that driver is disposed. The shipped native-sdk profile installs this Provider with the native tool-subagent Consumer; other profiles must select an external Module explicitly.
+The native entry requires sessionExecution, activeSessions and promptSections, optionally consumes tools, jobs and `externalSubagentDriver`, and provides subagents. Configuration requires providerName. `spawn` selects the in-process executor and remains the shipped profile default. Any other name must match the single external driver selected in the same Native Host installation; its optional-service dependency makes the Subagent Provider drain before that driver is disposed. The shipped native-sdk profile installs this Provider with the native tool-subagent Consumer; other profiles must select an external Module explicitly. A tool-subagent row with `inheritCompletedTurns` copies the parent session's completed turns into the child once and leaves the open turn out. With no completed turn the child starts empty, the same as spawn. Later parent turns do not enter that child. An external provider rejects the flag.
 
 <a id="ownership"></a>
 ## Ownership
@@ -52,7 +52,7 @@ The child task and prompt consume child tokens. Returning final or partial outpu
 
 #### KV Cache effect
 
-The child starts a fresh conversation; its request does not reuse the parent conversation prefix.
+A spawn child starts a fresh conversation and does not reuse the parent conversation prefix. A child started with `inheritCompletedTurns` reuses the completed-turn snapshot taken at startup.
 
 ## Known Limitations and Deferred Work
 

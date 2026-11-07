@@ -11,7 +11,7 @@
  */
 
 import type { Writable } from 'node:stream'
-import type { SubprocessHandle, SubprocessSpawnSpec } from '@redspark/rsh-subprocess'
+import type { SubprocessHandle, SubprocessSpawnSpec } from '@redspark/rsh-subprocess/native'
 import { encodeMessage, MessageDecoder } from './framing.ts'
 
 /** How to launch the server and answer its config requests. */

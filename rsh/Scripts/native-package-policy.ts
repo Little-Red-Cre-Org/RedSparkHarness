@@ -200,6 +200,7 @@ export const mixedNativeEntryDirectories: ReadonlyMap<string, string> = new Map(
   ['rsh/Modules/Official/web/web-search-perplexity', 'Cordis and native Perplexity search providers share request construction and response parsing'],
   ['rsh/Modules/Official/web/tool-web', 'Cordis and native web tools share argument validation, result merging, render text and presentation meta'],
   ['rsh/Modules/Official/spill/spill-local', 'Cordis and native spill Providers share private writes and startup cleanup'],
+  ['rsh/Modules/Official/spill/spill-policy', 'Cordis and native spill policies share the preview budget, the notice spelling and the best-effort failure rule'],
   ['rsh/Engine/context/agent-instructions', 'Native and Cordis instruction Providers share discovery, rendering and durable reconciliation'],
   ['rsh/Modules/Official/interaction/user-questions', 'Native and Cordis human questions share protocol values and errors'],
   ['rsh/Modules/Official/interaction/tool-ask-user', 'Native and Cordis Consumers use the selected human question service'],
@@ -223,6 +224,7 @@ export const mixedNativeEntryDirectories: ReadonlyMap<string, string> = new Map(
   ['rsh/Modules/Official/llm/plugin-package-inventory-deepseek', 'Cordis Loader and native installation inventory share the package identity field projection'],
   ['rsh/Modules/Official/llm/session-log-deepseek', 'Cordis and native Consumers share accepted-watermark folding and lossless Session event encoding'],
   ['rsh/Modules/Official/skill/skill', 'Cordis and Native skill registries share the public provider vocabulary and catalog helpers'],
+  ['rsh/Modules/Official/skill/skill-badge', 'Cordis and Native badge Providers share one bundled Skill definition and its assets'],
   ['rsh/Modules/Official/skill/skill-filesystem', 'Cordis and Native filesystem providers share root priority, frontmatter parsing and watcher behavior'],
   ['rsh/Modules/Official/skill/tool-skill', 'Cordis and Native skill Consumers share catalog rendering and invocation validation'],
   ['rsh/Modules/Official/skill/archify', 'Cordis and Native Archify Providers share one hidden Skill definition, managed shell environment, and automatic-request matcher'],
@@ -257,6 +259,9 @@ export const mixedNativeEntryDirectories: ReadonlyMap<string, string> = new Map(
   ['rsh/Engine/session/session-title-first-prompt-llm', 'Native title generation delegates through the selected title and model capabilities while its legacy adapter remains optional'],
   ['rsh/Core/runtime-diagnostics/cordis-bridge', 'Native and Cordis entries share the Cordis context owner and the Native plugin wrapper'],
   ['rsh/Engine/preset/native-persona', 'Native and Cordis persona entries share the persona section names and the bridged system-prompt service'],
+  ['rsh/Modules/Official/lsp/lsp', 'Cordis and Native LSP registries share extension routing and conflict checks'],
+  ['rsh/Modules/Official/lsp/lsp-stdio', 'Cordis and Native stdio providers share executable resolution, isolation, and teardown'],
+  ['rsh/Modules/Official/lsp/tool-lsp', 'Cordis and Native lsp tools share argument checks, caps, and result rendering'],
 ])
 
 /** Mixed library exports that have native values or types but no installer manifest. */
@@ -355,6 +360,7 @@ export const nativeCompatibilityOnlyPeers: ReadonlyMap<string, readonly string[]
   ['rsh/Modules/Official/shell/tool-pwsh', ['@redspark/rsh-tools']],
   ['rsh/Modules/Official/shell/tool-bash', ['@redspark/rsh-tools']],
   ['rsh/Modules/Official/skill/skill', ['@redspark/rsh-scope']],
+  ['rsh/Modules/Official/skill/skill-badge', ['@redspark/rsh-skill']],
   ['rsh/Modules/Official/fs/fs', ['@redspark/rsh-invariants', '@redspark/rsh-plugin-host']],
   ['rsh/Modules/Official/fs/fs-local', ['@redspark/rsh-plugin-host']],
   ['rsh/Modules/Official/fs/fs-observation-policy', ['@redspark/rsh-plugin-host']],

@@ -7501,6 +7501,13 @@ importers:
         version: link:../../../../Engine/session/session-persistence-jsonl
 
   rsh/Modules/Official/lsp/lsp:
+    dependencies:
+      '@redspark/rsh-errors':
+        specifier: workspace:^
+        version: link:../../../../Core/util/errors
+      '@redspark/rsh-native-runtime':
+        specifier: workspace:^
+        version: link:../../../../Core/runtime-diagnostics/native-runtime
     devDependencies:
       '@redspark/cordis':
         specifier: workspace:^
@@ -7514,6 +7521,9 @@ importers:
 
   rsh/Modules/Official/lsp/lsp-stdio:
     dependencies:
+      '@redspark/rsh-native-runtime':
+        specifier: workspace:^
+        version: link:../../../../Core/runtime-diagnostics/native-runtime
       '@redspark/rsh-util-values':
         specifier: workspace:^
         version: link:../../../../Core/util/values
@@ -7557,6 +7567,15 @@ importers:
 
   rsh/Modules/Official/lsp/tool-lsp:
     dependencies:
+      '@redspark/rsh-native-prompt':
+        specifier: workspace:^
+        version: link:../../../../Engine/core/native-prompt
+      '@redspark/rsh-native-runtime':
+        specifier: workspace:^
+        version: link:../../../../Core/runtime-diagnostics/native-runtime
+      '@redspark/rsh-native-tools':
+        specifier: workspace:^
+        version: link:../../../../Engine/core/native-tools
       '@redspark/rsh-util-values':
         specifier: workspace:^
         version: link:../../../../Core/util/values
@@ -8522,13 +8541,17 @@ importers:
         version: link:../../../../Engine/core/scope
 
   rsh/Modules/Official/skill/skill-badge:
+    dependencies:
+      '@redspark/rsh-native-runtime':
+        specifier: workspace:^
+        version: link:../../../../Core/runtime-diagnostics/native-runtime
+      '@redspark/rsh-skill':
+        specifier: workspace:^
+        version: link:../skill
     devDependencies:
       '@redspark/cordis':
         specifier: workspace:^
         version: link:../../../../Core/vendor/cordis
-      '@redspark/rsh-skill':
-        specifier: workspace:^
-        version: link:../skill
 
   rsh/Modules/Official/skill/skill-filesystem:
     dependencies:
@@ -8661,6 +8684,12 @@ importers:
 
   rsh/Modules/Official/spill/spill-policy:
     dependencies:
+      '@redspark/rsh-native-runtime':
+        specifier: workspace:^
+        version: link:../../../../Core/runtime-diagnostics/native-runtime
+      '@redspark/rsh-native-tools':
+        specifier: workspace:^
+        version: link:../../../../Engine/core/native-tools
       '@redspark/schemastery':
         specifier: link:../../../../Core/vendor/schemastery
         version: link:../../../../Core/vendor/schemastery
@@ -9642,6 +9671,9 @@ importers:
       '@redspark/rsh-anonymous-user-id':
         specifier: workspace:^
         version: link:../../Core/identity/anonymous-user-id
+      '@redspark/rsh-archify':
+        specifier: workspace:^
+        version: link:../../Modules/Official/skill/archify
       '@redspark/rsh-atomic-write':
         specifier: workspace:^
         version: link:../../Core/util/atomic-write
@@ -9945,6 +9977,9 @@ importers:
       '@redspark/rsh-plan-mode':
         specifier: workspace:^
         version: link:../../Modules/Official/plan/plan-mode
+      '@redspark/rsh-plugin-package-inventory-deepseek':
+        specifier: workspace:^
+        version: link:../../Modules/Official/llm/plugin-package-inventory-deepseek
       '@redspark/rsh-pwsh-local':
         specifier: workspace:^
         version: link:../../Modules/Official/shell/pwsh-local
@@ -9972,6 +10007,12 @@ importers:
       '@redspark/rsh-session':
         specifier: workspace:^
         version: link:../../Engine/core/session
+      '@redspark/rsh-session-log-deepseek':
+        specifier: workspace:^
+        version: link:../../Modules/Official/llm/session-log-deepseek
+      '@redspark/rsh-session-log-export':
+        specifier: workspace:^
+        version: link:../../Engine/session-query/session-log-export
       '@redspark/rsh-session-persistence':
         specifier: workspace:^
         version: link:../../Engine/session/session-persistence
@@ -10017,6 +10058,9 @@ importers:
       '@redspark/rsh-shell-env':
         specifier: workspace:^
         version: link:../../Modules/Official/shell/shell-env
+      '@redspark/rsh-skill-badge':
+        specifier: workspace:^
+        version: link:../../Modules/Official/skill/skill-badge
       '@redspark/rsh-spill':
         specifier: workspace:^
         version: link:../../Modules/Official/spill/spill
@@ -10186,18 +10230,12 @@ importers:
       '@redspark/rsh-lsp-stdio':
         specifier: workspace:^
         version: link:../../Modules/Official/lsp/lsp-stdio
-      '@redspark/rsh-plugin-package-inventory-deepseek':
-        specifier: workspace:^
-        version: link:../../Modules/Official/llm/plugin-package-inventory-deepseek
       '@redspark/rsh-sandbox-policy':
         specifier: workspace:^
         version: link:../../Modules/Official/sandbox/sandbox-policy
       '@redspark/rsh-session-checkpoint-policy':
         specifier: workspace:^
         version: link:../../Engine/session/session-checkpoint-policy
-      '@redspark/rsh-session-log-deepseek':
-        specifier: workspace:^
-        version: link:../../Modules/Official/llm/session-log-deepseek
       '@redspark/rsh-session-snapshot':
         specifier: workspace:^
         version: link:../../Tests/test-support/session-snapshot

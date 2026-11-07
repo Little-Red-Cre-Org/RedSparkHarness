@@ -84,7 +84,8 @@ seam 需要提供方与消费方才能发挥作用。最小组合挂载服务、
 
 | 文件 | 职责 |
 |---|---|
-| [`src/index.ts`](src/index.ts) | 插件入口：`Lsp` 服务、`registerProvider`／`query`、`finalExtension`、`LspError` code |
+| [`src/index.ts`](src/index.ts) | Cordis 插件入口，发布 `Lsp` 服务 |
+| [`src/native.ts`](src/native.ts) | 原生 Provider 入口，复用同一 `LspRegistry`、`finalExtension` 与 `LspError` code |
 | [`src/types.ts`](src/types.ts) | seam 词汇：请求、结果、提供方与服务约定 |
 | [`src/brand.ts`](src/brand.ts) | `LspProviderId` 品牌化 id 类型与工厂 |
 | — | 不发布运行时不变式伴生入口；提供方 id 与扩展名路由属于以原子方式更新的私有状态；该 seam 既不公开可枚举快照，也不公开可供独立比较的生命周期事件。 |

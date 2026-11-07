@@ -74,6 +74,11 @@ export interface NativeSessionDelegation {
   readonly prepare?: (setup: NativeDelegationSetup) => void | Promise<void>
   /** Append child-owned initial facts inside the first turn, before its first model request. */
   readonly initialize?: (append: Session['append']) => void
+  /**
+   * Completed parent turns copied once at child start. Omission starts an empty child.
+   * The prefix stops at the last `turn/end`; the parent's open turn stays out.
+   */
+  readonly seed?: readonly SessionEvent[]
   /** Observe the registered child only after its initial turn facts have been persisted. */
   readonly onReady?: (agent: NativeAgent) => void
   /** Observe accepted model chunks. */

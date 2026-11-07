@@ -6,8 +6,8 @@
  * @module @redspark/rsh-tool-lsp/render
  */
 
-import type { GenericCallView } from '@redspark/rsh-tools'
-import type { LspHover, LspLocation, LspOperation, LspPosition } from '@redspark/rsh-lsp'
+import type { GenericCallView } from '@redspark/rsh-native-tools/presentation'
+import type { LspHover, LspLocation, LspOperation, LspPosition } from '@redspark/rsh-lsp/native'
 import { posix, win32 } from 'node:path'
 import { fileURLToPath } from 'node:url'
 

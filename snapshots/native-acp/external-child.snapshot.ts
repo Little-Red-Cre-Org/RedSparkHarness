@@ -250,6 +250,8 @@ it('records a Native ACP parent delegating one approved write to its fixed ACP c
       builtinTools: true, allowedTools: ['read_file', 'write_file', 'subagent'], workspaceWriteRoot: workspace }
     row('storage').config = { root: sessions, compression: 'none' }
     row('subagents').config = { providerName: 'dsh-acp-child' }
+    const forkTool = profile.installations.find(installation => installation.id === 'subagent-tool-fork')
+    if (forkTool !== undefined) forkTool.disabled = true
     row('workflow-worker').config = { subagentProvider: 'dsh-acp-child' }
     row('ralph-tool').config = { ...row('ralph-tool').config, subagentProvider: 'dsh-acp-child' }
     row('subagent-tool').config = { toolName: 'subagent', maxDepth: 1, maxSteps: 2, maxTokens: 48,
