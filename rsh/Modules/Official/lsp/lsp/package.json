@@ -18,11 +18,26 @@
       "types": "./lib/types/index.d.ts",
       "default": "./lib/index.js"
     },
+    "./native": {
+      "types": "./lib/types/native.d.ts",
+      "default": "./lib/types/native.js"
+    },
     "./src/*": "./src/*",
     "./package.json": "./package.json"
   },
+  "dsh": {
+    "native": {
+      "apiVersion": 1,
+      "entry": "./native",
+      "targets": ["host"],
+      "requires": [],
+      "optional": [],
+      "provides": ["lsp"]
+    }
+  },
   "files": [
     "lib/index.js",
+    "lib/types/**/*.js",
     "lib/types/**/*.d.ts"
   ],
   "license": "MIT",
@@ -31,9 +46,16 @@
     "@redspark/rsh-llm": "workspace:^",
     "@redspark/cordis": "workspace:^"
   },
+  "dependencies": {
+    "@redspark/rsh-native-runtime": "workspace:^"
+  },
   "devDependencies": {
     "@redspark/rsh-brand": "workspace:^",
     "@redspark/rsh-llm": "workspace:^",
-    "@redspark/cordis": "workspace:^"
+    "@redspark/cordis": "workspace:^",
+    "@redspark/rsh-native-runtime": "workspace:^"
+  },
+  "peerDependenciesMeta": {
+    "@redspark/cordis": { "optional": true }
   }
 }

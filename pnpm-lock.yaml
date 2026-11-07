@@ -7501,6 +7501,10 @@ importers:
         version: link:../../../../Engine/session/session-persistence-jsonl
 
   rsh/Modules/Official/lsp/lsp:
+    dependencies:
+      '@redspark/rsh-native-runtime':
+        specifier: workspace:^
+        version: link:../../../../Core/runtime-diagnostics/native-runtime
     devDependencies:
       '@redspark/cordis':
         specifier: workspace:^
@@ -7514,6 +7518,9 @@ importers:
 
   rsh/Modules/Official/lsp/lsp-stdio:
     dependencies:
+      '@redspark/rsh-native-runtime':
+        specifier: workspace:^
+        version: link:../../../../Core/runtime-diagnostics/native-runtime
       '@redspark/rsh-util-values':
         specifier: workspace:^
         version: link:../../../../Core/util/values
@@ -7557,6 +7564,15 @@ importers:
 
   rsh/Modules/Official/lsp/tool-lsp:
     dependencies:
+      '@redspark/rsh-native-prompt':
+        specifier: workspace:^
+        version: link:../../../../Engine/core/native-prompt
+      '@redspark/rsh-native-runtime':
+        specifier: workspace:^
+        version: link:../../../../Core/runtime-diagnostics/native-runtime
+      '@redspark/rsh-native-tools':
+        specifier: workspace:^
+        version: link:../../../../Engine/core/native-tools
       '@redspark/rsh-util-values':
         specifier: workspace:^
         version: link:../../../../Core/util/values

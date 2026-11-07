@@ -13,7 +13,9 @@
 
 import type { Context } from '@redspark/cordis'
 import z from '@redspark/schemastery'
+import type { FileSystemOperations } from '@redspark/rsh-fs/operations'
 import { LspError, LspProviderId } from '@redspark/rsh-lsp'
+import type { LspService } from '@redspark/rsh-lsp'
 import type {
   LspProvider,
   LspProviderQuery,
@@ -116,6 +118,74 @@ function throwTeardownFailures(results: readonly PromiseSettledResult<void>[], m
   if (failures.length > 1) throw new AggregateError(failures, message)
 }
 
+/** Filesystem and process ports shared by the Cordis plugin and the native Provider. */
+export interface StdioHostPorts {
+  readonly fs: FileSystemOperations
+  readonly resolveExecutable: (
+    command: string,
+    env: Readonly<Record<string, string>> | undefined,
+    signal: AbortSignal,
+  ) => Promise<string>
+  readonly spawn: ConnectionSpawner
+}
+
+/**
+ * Resolve every configured server before any provider is published. A failure aborts `setup`
+ * so sibling executable lookups stop, then waits for them to settle.
+ * @param ports - filesystem and subprocess operations in the server's execution world.
+ * @param config - resolved plugin configuration (schemastery has filled every default).
+ * @param setup - cancellation for this load, including Cordis fiber disposal during apply.
+ * @returns one unpublished provider per server entry.
+ */
+export async function loadStdioProviders(
+  ports: StdioHostPorts,
+  config: Config,
+  setup: AbortController,
+): Promise<LocalLspProvider[]> {
+  const entries = Object.entries(config.servers)
+  if (entries.length === 0) throw new Error('lsp-stdio: servers must contain at least one server')
+  const lookups = entries.map(async ([providerId, rawConfig]) => {
+    if (providerId.trim() === '') throw new Error('lsp-stdio: server ids must be non-empty strings')
+    const resolved = rawConfig as ResolvedServerConfig
+    validateServerConfig(providerId, resolved)
+    const executable = await ports.resolveExecutable(resolved.command, resolved.env, setup.signal)
+    setup.signal.throwIfAborted()
+    return new LocalLspProvider(providerId, ports.fs, resolved, executable, ports.spawn)
+  })
+  try {
+    return await Promise.all(lookups)
+  } catch (error: unknown) {
+    setup.abort(error)
+    await Promise.allSettled(lookups)
+    throw error
+  }
+}
+
+/**
+ * Publish every provider, or none of them. The returned disposer unregisters first, then tears
+ * the processes down.
+ * @param lsp - the seam that owns extension routes.
+ * @param providers - providers already resolved by {@link loadStdioProviders}.
+ * @returns cleanup that releases routes and processes together.
+ */
+export function bindStdioProviders(
+  lsp: Pick<LspService, 'registerProvider'>,
+  providers: readonly LocalLspProvider[],
+): () => Promise<void> {
+  const disposers: Array<() => void> = []
+  try {
+    for (const provider of providers) disposers.push(lsp.registerProvider(provider))
+  } catch (error) {
+    for (const dispose of disposers.reverse()) dispose()
+    throw error
+  }
+  return async () => {
+    for (const dispose of disposers.reverse()) dispose()
+    const results = await Promise.allSettled(providers.map(provider => provider.disposeAll()))
+    throwTeardownFailures(results, 'lsp-stdio provider teardown failed')
+  }
+}
+
 /**
  * Register the configured stdio LSP providers. Resolves every executable at load (after credential
  * scrubbing) before publishing any provider; each process launches lazily on its first matching
@@ -124,9 +194,6 @@ function throwTeardownFailures(results: readonly PromiseSettledResult<void>[], m
  * @param config - the resolved plugin configuration (schemastery has filled every default).
  */
 export async function apply(ctx: Context, config: Config): Promise<void> {
-  const entries = Object.entries(config.servers)
-  if (entries.length === 0) throw new Error('lsp-stdio: servers must contain at least one server')
-
   const setupAbort = new AbortController()
   const stopSetupCancellation = ctx.on('internal/plugin', (fiber) => {
     // An async plugin callback must observe its own disposal before Cordis can
@@ -135,54 +202,17 @@ export async function apply(ctx: Context, config: Config): Promise<void> {
       setupAbort.abort(new Error('lsp-stdio setup disposed'))
     }
   })
-
-  // Resolve every server-local setting before registration so a bad later command or bound cannot
-  // publish an earlier provider. Registry-level mapping conflicts are rolled back below.
-  const providers = await (async () => {
-    const lookups = entries.map(async ([providerId, rawConfig]) => {
-      if (providerId.trim() === '') throw new Error('lsp-stdio: server ids must be non-empty strings')
-      const resolved = rawConfig as ResolvedServerConfig
-      validateServerConfig(providerId, resolved)
-      const executable = await ctx.subprocess.resolveExecutable(
-        resolved.command,
-        resolved.env,
-        setupAbort.signal,
-      )
-      setupAbort.signal.throwIfAborted()
-      return new LocalLspProvider(
-        providerId,
-        ctx.fs,
-        resolved,
-        executable,
-        spec => ctx.subprocess.spawn(spec),
-      )
-    })
-    try {
-      return await Promise.all(lookups)
-    } catch (error: unknown) {
-      setupAbort.abort(error)
-      await Promise.allSettled(lookups)
-      throw error
-    } finally {
-      stopSetupCancellation()
-    }
-  })()
-
-  ctx.effect(() => {
-    const disposers: Array<() => void> = []
-    try {
-      for (const provider of providers) disposers.push(ctx.lsp.registerProvider(provider))
-    } catch (error) {
-      for (const dispose of disposers.reverse()) dispose()
-      throw error
-    }
-    return async () => {
-      // Remove every route before process teardown so no new query can enter a draining provider.
-      for (const dispose of disposers.reverse()) dispose()
-      const results = await Promise.allSettled(providers.map(provider => provider.disposeAll()))
-      throwTeardownFailures(results, 'lsp-stdio provider teardown failed')
-    }
-  }, 'lsp-stdio.registerProviders')
+  let providers: LocalLspProvider[]
+  try {
+    providers = await loadStdioProviders({
+      fs: ctx.fs,
+      resolveExecutable: (command, env, signal) => ctx.subprocess.resolveExecutable(command, env, signal),
+      spawn: spec => ctx.subprocess.spawn(spec),
+    }, config, setupAbort)
+  } finally {
+    stopSetupCancellation()
+  }
+  ctx.effect(() => bindStdioProviders(ctx.lsp, providers), 'lsp-stdio.registerProviders')
 }
 
 /** Validate one resolved server entry before any provider in the table is registered. */
@@ -228,7 +258,7 @@ class LocalLspProvider implements LspProvider {
 
   constructor(
     providerId: string,
-    private readonly fs: Context['fs'],
+    private readonly fs: FileSystemOperations,
     private readonly config: ResolvedServerConfig,
     private readonly executable: string,
     private readonly spawner: ConnectionSpawner,

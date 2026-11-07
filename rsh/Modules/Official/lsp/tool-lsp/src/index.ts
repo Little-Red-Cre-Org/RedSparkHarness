@@ -71,6 +71,13 @@ export const Config: z<Config> = z.object({
 
 type ResolvedConfig = Required<Config>
 
+/** Reject a load configuration whose caps or timeout cannot be honored as written. */
+export function validateToolLspConfig(resolved: ResolvedConfig): void {
+  assertPositiveInteger('maxLocations', resolved.maxLocations)
+  assertPositiveInteger('maxResultChars', resolved.maxResultChars)
+  assertTimer('timeoutMs', resolved.timeoutMs)
+}
+
 const LSP_POSITION_OUTPUT_SCHEMA = {
   type: 'object',
   additionalProperties: false,
@@ -96,9 +103,7 @@ const LSP_RANGE_OUTPUT_SCHEMA = {
  */
 export function apply(ctx: Context, config: Config): void {
   const resolved = config as ResolvedConfig
-  assertPositiveInteger('maxLocations', resolved.maxLocations)
-  assertPositiveInteger('maxResultChars', resolved.maxResultChars)
-  assertTimer('timeoutMs', resolved.timeoutMs)
+  validateToolLspConfig(resolved)
 
   ctx.systemPrompt.section({
     name: 'tool:lsp',
