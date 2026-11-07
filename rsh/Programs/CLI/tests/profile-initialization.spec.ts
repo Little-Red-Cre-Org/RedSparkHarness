@@ -41,19 +41,19 @@ function withHome(assertion: (home: string) => void): void {
 
 describe('initializeProfileFromDefault', () => {
   it.each(Object.entries(PROFILE_TEMPLATES))(
-    'initializes an independent profile from the %s template',
-    (source) => {
+    'copies the %s template metadata into an independent profile',
+    (source, template) => {
       withHome((home) => {
         initializeProfileFromDefault('custom', source, home)
         const dir = resolveProfileDir('custom', home)
         const manifest = readProfileManifest('test', dir)
-        // The manifest records the runtime the profile needs, not the template's
-        // bundle list: the Cordis format this table names is no longer bootable.
+        // This initializer serves the Cordis launcher, which refuses a native
+        // marker; it records the template's bundle list it will actually boot.
         expect(manifest).toEqual({
           name: 'dsh-profile-custom',
           private: true,
           dependencies: {},
-          dsh: { profile: { runtime: 'native', config: 'rsh.profile.json' } },
+          dsh: { profile: { bundles: [...template.bundles], patchReload: template.patchReload } },
         })
         expect(readFileSync(join(dir, PROFILE_PATCH_FILENAME), 'utf8')).toContain('[]')
         expect(readFileSync(join(dir, 'pnpm-workspace.yaml'), 'utf8')).toContain('nodeLinker: hoisted')
@@ -75,7 +75,10 @@ describe('initializeProfileFromDefault', () => {
       const targetDir = resolveProfileDir('rescue', home)
       const target = readProfileManifest('test', targetDir)
       expect(target.dependencies).toEqual({})
-      expect(target.dsh?.profile).toEqual({ runtime: 'native', config: 'rsh.profile.json' })
+      expect(target.dsh?.profile).toEqual({
+        bundles: [...PROFILE_TEMPLATES.web!.bundles],
+        patchReload: PROFILE_TEMPLATES.web!.patchReload,
+      })
       expect(readFileSync(join(targetDir, PROFILE_PATCH_FILENAME), 'utf8')).not.toContain('local-only')
     })
   })
@@ -148,7 +151,7 @@ describe('initializeProfileFromDefault', () => {
       const results = await Promise.all(children)
       expect(results.map(result => result.exitCode).sort()).toEqual([0, 1])
       expect(readProfileManifest('test', resolveProfileDir('rescue', home)).dsh?.profile)
-        .toEqual({ runtime: 'native', config: 'rsh.profile.json' })
+        .toEqual(PROFILE_TEMPLATES.web)
     } finally {
       for (const child of children) child.kill('SIGKILL')
       rmSync(home, { recursive: true, force: true })

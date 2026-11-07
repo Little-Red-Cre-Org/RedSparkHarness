@@ -46,8 +46,11 @@ it('selects native only with an explicit, valid profile marker and refuses the r
   const home = await mkdtemp(join(tmpdir(), 'rsh-native-profile-kind-'))
   const directory = join(home, 'profiles', 'probe')
   try {
-    // No manifest: nothing selects the retired runtime any more.
-    expect(profileRuntime('probe', home)).toBe('native')
+    // No manifest means NOT INITIALIZED, not legacy: the CLI's initializer runs
+    // on this answer and writes the native marker itself. Reporting native here
+    // would make the initializer refuse its own creation path.
+    expect(profileRuntime('probe', home)).toBe('legacy')
+    expect(() => nativeProfileReloadMode('probe', home)).toThrow('does not select native')
     await mkdir(directory, { recursive: true })
     const writeManifest = (profile: unknown) => writeFile(join(directory, 'package.json'), JSON.stringify({ name: 'probe', dsh: { profile } }))
     await writeManifest({ bundles: [] })

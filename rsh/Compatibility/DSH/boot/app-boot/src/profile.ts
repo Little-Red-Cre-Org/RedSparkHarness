@@ -172,19 +172,17 @@ export function initProfile(
   bundles: readonly string[],
   patchReload: ProfilePatchReload = DEFAULT_PROFILE_PATCH_RELOAD,
 ): void {
-  void bundles
-  void patchReload
   mkdirSync(dir, { recursive: true })
   const manifestPath = join(dir, 'package.json')
   if (!existsSync(manifestPath)) {
-    // A profile this function creates has no composition to run, so it records
-    // the runtime it needs and nothing else: the retired bundle format would
-    // produce a profile the CLI refuses to start.
-    const manifest = {
+    // This initializer belongs to the Cordis launcher and writes the format
+    // that launcher boots; its own reader refuses a native marker, so writing
+    // one here would produce a profile neither runtime can start.
+    const manifest: ProfileManifest & { private: boolean } = {
       name: `dsh-profile-${basename(dir)}`,
       private: true,
       dependencies: {},
-      dsh: { profile: { runtime: 'native', config: 'rsh.profile.json' } },
+      dsh: { profile: { bundles: [...bundles], patchReload } },
     }
     writeFileSync(manifestPath, JSON.stringify(manifest, undefined, 2) + '\n')
   }

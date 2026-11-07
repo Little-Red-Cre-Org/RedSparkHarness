@@ -23,12 +23,19 @@ function record(value: unknown, label: string, allowed: readonly string[]): Reco
 /**
  * Read the runtime marker from one profile package manifest.
  * @param profileDir - directory containing the profile's package.json.
- * @returns the validated profile runtime and configuration reload mode.
+ * @returns the validated profile runtime and configuration reload mode. An
+ *   absent manifest reports `legacy` so the caller that initializes a profile
+ *   still runs; that writer records the native marker, so a profile this
+ *   release creates resolves native from the next read onwards.
  * @throws when the manifest selects the retired Cordis runtime, or lacks the native marker.
  */
 export function resolveRshProfileDirectoryExecution(profileDir: string): DshProfileExecution {
   const manifestPath = join(profileDir, 'package.json')
-  if (!existsSync(manifestPath)) return { runtime: 'native', reload: 'startup' }
+  // "Not initialized yet", not "legacy": the CLI's own initializer writes the
+  // native marker, and a custom-name profile only reaches it through this
+  // answer. Returning native here would make the initializer refuse its own
+  // creation path.
+  if (!existsSync(manifestPath)) return { runtime: 'legacy', reload: 'startup' }
   const manifest = object(JSON.parse(readFileSync(manifestPath, 'utf8')) as unknown, 'profile package')
   const dsh = manifest.dsh === undefined ? {} : object(manifest.dsh, 'profile dsh')
   const profile = dsh.profile === undefined ? {} : record(dsh.profile, 'dsh.profile', ['bundles', 'patchReload', 'runtime', 'config', 'configReload'])
