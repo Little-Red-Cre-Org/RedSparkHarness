@@ -118,7 +118,13 @@ it('defines a native-web Host composition and Client profile without Cordis rows
     const nativeWebRows = new Map(profile.installations.map(row => [row.id, row]))
     expect(nativeWebRows.get('command-feedback')?.plugin).toBe('@redspark/rsh-command-feedback')
     expect(nativeWebRows.get('message-feedback')?.plugin).toBe('@redspark/rsh-message-feedback')
-    expect(nativeWebRows.has('session-telemetry-otel')).toBe(false)
+    // Feedback-only OTLP export: the Native Provider existed with no profile
+    // composing it, so a Native session never uploaded an authorized feedback
+    // prefix. Its bounds mirror the Cordis base bundle.
+    expect(nativeWebRows.get('session-telemetry-otel')).toMatchObject({
+      plugin: '@redspark/rsh-session-telemetry-otel',
+      config: { mode: 'FEEDBACK_ONLY', shutdownTimeoutMillis: 3000 },
+    })
     // Skills are a Cordis-bundle capability the Native composition has to
     // compose explicitly: registry, filesystem discovery, and the invoking tool.
     expect(nativeWebRows.get('skills')?.plugin).toBe('@redspark/rsh-skill')
