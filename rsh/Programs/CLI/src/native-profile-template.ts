@@ -465,6 +465,26 @@ export function shippedNativeProfileComposition(
       { id: 'deepseek-llm-api-extensions', plugin: '@redspark/rsh-deepseek-llm-api-extensions', scope: ROOT },
       { id: 'plugin-inventory-deepseek', plugin: '@redspark/rsh-plugin-package-inventory-deepseek', scope: ROOT },
       { id: 'session-log-deepseek', plugin: '@redspark/rsh-session-log-deepseek', scope: ROOT },
+      // Feedback-only OTLP export. The bounds match the Cordis base bundle: the
+      // backend's shutdownTimeoutMillis is the outer drain bound when a transport
+      // promise never settles, and maxExportBatchSize == maxQueueSize makes that
+      // drain a single batch. Feedback commits are the only authorized prefix.
+      { id: 'session-telemetry-otel', plugin: '@redspark/rsh-session-telemetry-otel', scope: ROOT,
+        config: {
+          mode: process.env.RSH_TELEMETRY_MODE ?? 'FEEDBACK_ONLY',
+          shutdownTimeoutMillis: 3000,
+          exporter: {
+            url: process.env.RSH_TELEMETRY_OTLP_URL ?? 'https://harness-telemetry.deepseeksvc.com/v1/logs',
+            compression: 'gzip',
+            timeoutMillis: 1000,
+          },
+          processor: {
+            scheduledDelayMillis: 10000,
+            maxQueueSize: 2048,
+            maxExportBatchSize: 2048,
+            exportTimeoutMillis: 1500,
+          },
+        } },
       { id: 'pi-ai', plugin: '@redspark/rsh-llm-pi-ai', scope: ROOT,
         config: { providers: { deepseek: { apiKeyEnv: 'DEEPSEEK_API_KEY', displayName: 'DeepSeek' } } } },
       ...(profile === 'native-web' ? [

@@ -315,6 +315,13 @@ export const nativeCompatibilityOnlyPeers: ReadonlyMap<string, readonly string[]
     '@redspark/rsh-sandbox-policy', '@redspark/rsh-session', '@redspark/rsh-session-projection',
     '@redspark/rsh-user-approval', '@redspark/rsh-settings',
   ]],
+  // ACP subagents run out of process through @redspark/rsh-acp-child, which provides
+  // `externalSubagentDriver` to the Native subagent Provider. This Cordis plugin stays the
+  // compatibility half of the same protocol and has no Native entry of its own.
+  ['rsh/Compatibility/DSH/subagent/subagent-acp', [
+    '@redspark/cordis', '@redspark/rsh-agent', '@redspark/rsh-llm', '@redspark/rsh-session',
+    '@redspark/rsh-subagent', '@redspark/rsh-subprocess', '@redspark/rsh-timeout',
+  ]],
   ['rsh/Engine/context/session-reference', ['@redspark/rsh-typert-protocol']],
   ['rsh/Engine/subagent/tool-subagent', ['@redspark/rsh-scope', '@redspark/rsh-session', '@redspark/rsh-subagent', '@redspark/rsh-tools']],
   ['rsh/Engine/llm/token-meter', ['@redspark/rsh-compaction', '@redspark/rsh-llm-retry', '@redspark/rsh-session-projection']],
