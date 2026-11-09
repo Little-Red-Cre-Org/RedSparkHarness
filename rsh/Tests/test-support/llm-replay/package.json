@@ -28,7 +28,6 @@
   "files": [
     "lib/index.js",
     "lib/native.js",
-    "lib/shared-*.js",
     "lib/types/**/*.d.ts"
   ],
   "license": "MIT",
@@ -43,9 +42,6 @@
   },
   "peerDependenciesMeta": {
     "@redspark/rsh-deepseek-llm-api-extensions": {
-      "optional": true
-    },
-    "@redspark/cordis": {
       "optional": true
     }
   },
