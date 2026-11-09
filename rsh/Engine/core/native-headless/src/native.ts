@@ -63,7 +63,7 @@ import type { NativeTmuxContext } from '@redspark/rsh-tmux-context-definition'
 import {
   ReasoningEffortId, HarnessError, createSystemMessage, createToolResultMessage, createUserMessage,
   callConfigEquals, fileAttachmentsIn, projectFilesToText, type ContentBlock, type ContextSnapshotSection,
-  type GenerateOptions, type ToolCallBlock, type ToolSchema, type UserMessage,
+  type GenerateOptions, type Message, type ToolCallBlock, type ToolSchema, type UserMessage,
 } from '@redspark/rsh-llm/native'
 import { interruptedTurnClosers, SESSION_FORMAT_VERSION, Session, SessionId, SessionSeq,
   type SessionEvent, type SessionHeader, type TurnEndCancelCause } from '@redspark/rsh-session/native'
@@ -252,29 +252,28 @@ function runtimeContextText(sections: readonly ContextSnapshotSection[]): string
   return RUNTIME_CONTEXT_HEADER + String.fromCharCode(10, 10) + sections.map(section => section.text).join(String.fromCharCode(10, 10))
 }
 
-/** Whether one surface message is a runtime-context snapshot this application wrote. */
-function isRuntimeContextSnapshot(event: SessionEvent | undefined): event is SessionEvent<'user/message'> {
-  if (event?.type !== 'user/message') return false
-  const source = event.data.source
-  return source.kind === 'plugin' && source.plugin === RUNTIME_CONTEXT_SOURCE && source.form === 'snapshot'
+/** Whether one derived message is a runtime-context snapshot this application wrote. */
+function isRuntimeContextSnapshot(message: Message): boolean {
+  return message.role === 'user' && message.source.kind === 'plugin'
+    && message.source.plugin === RUNTIME_CONTEXT_SOURCE && message.source.form === 'snapshot'
 }
 
 /**
  * The text of the runtime-context snapshot the model history still retains.
  *
  * The snapshot is a peer of the system prompt: a later one supersedes the earlier text, and a
- * replacement that consumed it retires it. Comparing against the surviving node keeps an
+ * replacement that consumed it retires it. Comparing against the surviving message keeps an
  * unchanged policy from appending a duplicate every step.
- * @param session - the Session whose surviving surface is inspected.
+ * @param session - the Session whose surviving derived history is inspected.
  * @returns the retained snapshot text, or `undefined` when none survives.
  */
 function retainedRuntimeContext(session: Session): string | undefined {
-  const nodes = session.surface.nodes
-  for (let index = nodes.length - 1; index >= 0; index -= 1) {
-    const event = session.eventAt(nodes[index] as SessionSeq)
-    if (!isRuntimeContextSnapshot(event)) continue
-    const [block] = event.data.content
-    return event.data.content.length === 1 && block?.type === 'text' ? block.text : undefined
+  const messages = session.deriveMessages()
+  for (let index = messages.length - 1; index >= 0; index -= 1) {
+    const message = messages[index]
+    if (message === undefined || !isRuntimeContextSnapshot(message)) continue
+    const [block] = message.content
+    return message.content.length === 1 && block?.type === 'text' ? block.text : undefined
   }
   return undefined
 }
