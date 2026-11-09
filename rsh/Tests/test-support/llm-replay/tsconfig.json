@@ -9,6 +9,9 @@
   ],
   "references": [
     {
+      "path": "../../../Core/runtime-diagnostics/native-runtime"
+    },
+    {
       "path": "../../../Core/vendor/cosmokit"
     },
     {
@@ -18,16 +21,19 @@
       "path": "../../../Engine/compaction/compaction"
     },
     {
-      "path": "../../../Engine/llm/llm"
-    },
-    {
-      "path": "../../../Modules/Official/llm/deepseek-llm-api-extensions"
+      "path": "../../../Engine/core/native-model-execution/tsconfig.host.json"
     },
     {
       "path": "../../../Engine/core/session"
     },
     {
+      "path": "../../../Engine/llm/llm"
+    },
+    {
       "path": "../../../Engine/session/session-format-catalog"
+    },
+    {
+      "path": "../../../Modules/Official/llm/deepseek-llm-api-extensions"
     }
   ]
 }
