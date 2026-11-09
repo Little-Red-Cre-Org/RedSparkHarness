@@ -36,6 +36,7 @@ import type {} from '@redspark/rsh-native-tools/native'
 import type {} from '@redspark/rsh-native-prompt/native'
 import type {} from '@redspark/rsh-native-agent/native'
 import type {} from '@redspark/rsh-native-time-context/native'
+import type {} from '@redspark/rsh-agent-default-model/native'
 import type {} from '@redspark/rsh-tmux-context-definition'
 import type {} from '@redspark/rsh-native-model-execution/native'
 import type { NativeModelExecution, NativePreparedModelStep } from '@redspark/rsh-native-model-execution'
@@ -192,7 +193,8 @@ interface NativeHeadlessAuthority {
   /** Attachment service selected by a caller whose context requires it. */
   readonly attachments?: AttachmentOperations
   readonly execution?: NativeSessionExecutionOperations
-  readonly active: NativeActiveSessionOperations
+  /** Explicit active-owner service; an omitted value reads the context's optional service. */
+  readonly active?: NativeActiveSessionOperations
   readonly defaultModelSelection?: () => Pick<LlmCallConfig, 'provider' | 'model' | 'reasoningEffort'> | undefined
 }
 
@@ -3201,7 +3203,7 @@ export function createNativeHeadlessApplication(context: NativeContext, config: 
     context.optional('tools'), context.optional('promptSections'), context.optional('sandboxPolicy'), context.optional('approval'),
     context.optional('codeRuntime'), context.optional('timeContext'), context.optional('tmuxContext'),
     authority === undefined ? context.optional('sessionExecution') : authority.execution,
-    authority === undefined ? context.optional('activeSessions') : authority.active, context.optional('modelSelection'),
+    authority?.active ?? context.optional('activeSessions'), context.optional('modelSelection'),
     authority?.defaultModelSelection,
     context.optional('agentPresets'), authority?.workspaceRegistry ?? context.optional('workspaceRegistry'), executionScope,
     context.optional('agentInstructions'), authority?.attachments ?? context.optional('attachments'),
@@ -3215,12 +3217,14 @@ export function createNativeHeadlessApplication(context: NativeContext, config: 
 export const plugin: NativePlugin = {
   apiVersion: 1, name: '@redspark/rsh-native-headless', targets: ['host'],
   requires: ['fs', 'sessionPersistence', 'modelExecution', 'agents'],
-  optional: ['tools', 'promptSections', 'sandboxPolicy', 'approval', 'codeRuntime', 'timeContext', 'tmuxContext', 'sessionExecution', 'activeSessions', 'modelSelection', 'agentPresets', 'workspaceRegistry', 'agentInstructions', 'attachments', 'requestContexts'],
+  optional: ['tools', 'promptSections', 'sandboxPolicy', 'approval', 'codeRuntime', 'timeContext', 'tmuxContext', 'sessionExecution', 'activeSessions', 'modelSelection', 'agentPresets', 'workspaceRegistry', 'agentInstructions', 'attachments', 'requestContexts', 'agentDefaultModel'],
   provides: ['application', 'rootExecution'],
   resolve(input) {
     const config = resolveNativeHeadlessConfig(input)
     return (context) => {
-      const application = createNativeHeadlessApplication(context, config)
+      const defaultModel = context.optional('agentDefaultModel')
+      const application = createNativeHeadlessApplication(context, config, context.scope,
+        defaultModel === undefined ? undefined : { defaultModelSelection: () => defaultModel.currentSelection() })
       context.provide('application', application)
       context.provide('rootExecution', application.rootExecution)
     }

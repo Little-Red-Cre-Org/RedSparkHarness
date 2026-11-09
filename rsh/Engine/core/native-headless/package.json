@@ -39,7 +39,8 @@
         "workspaceRegistry",
         "agentInstructions",
         "attachments",
-        "requestContexts"
+        "requestContexts",
+        "agentDefaultModel"
       ],
       "provides": [
         "application",
@@ -112,6 +113,7 @@
     "@redspark/rsh-native-model-selection": "workspace:^",
     "@redspark/rsh-agent-instructions": "workspace:^",
     "@redspark/rsh-attachment": "workspace:^",
-    "@redspark/rsh-request-context-definition": "workspace:^"
+    "@redspark/rsh-request-context-definition": "workspace:^",
+    "@redspark/rsh-agent-default-model": "workspace:^"
   }
 }

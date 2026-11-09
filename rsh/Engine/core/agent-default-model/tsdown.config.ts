@@ -1,9 +1,9 @@
 import { defineConfig } from 'tsdown'
 
-/** Build the package root and invariant companion as independent bundles. */
+/** Build the package root, its Native entry, and the compatibility settings entry as independent bundles. */
 export default defineConfig([
   {
-    entry: ['lib/types/index.js', 'lib/types/compat-settings.js'],
+    entry: ['lib/types/index.js', 'lib/types/native.js', 'lib/types/compat-settings.js'],
     outDir: 'lib',
     format: ['esm'],
     platform: 'node',

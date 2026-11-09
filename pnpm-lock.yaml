@@ -2634,6 +2634,9 @@ importers:
       '@redspark/rsh-llm':
         specifier: workspace:^
         version: link:../../llm/llm
+      '@redspark/rsh-native-runtime':
+        specifier: workspace:^
+        version: link:../../../Core/runtime-diagnostics/native-runtime
       '@redspark/rsh-settings':
         specifier: workspace:^
         version: link:../../../Modules/Official/settings/settings
@@ -2781,6 +2784,9 @@ importers:
 
   rsh/Engine/core/native-headless:
     dependencies:
+      '@redspark/rsh-agent-default-model':
+        specifier: workspace:^
+        version: link:../agent-default-model
       '@redspark/rsh-agent-instructions':
         specifier: workspace:^
         version: link:../../context/agent-instructions

@@ -126,6 +126,11 @@ const CREATION_PERSONA = {
   suffix: 'Your working directory is {{cwd}}.',
 } as const
 
+/** The deployment default a root step falls back to when its Session recorded none. */
+const NATIVE_DEFAULT_MODEL_INSTALLATION = (provider: string, model: string) => ({
+  id: 'agent-default-model', plugin: '@redspark/rsh-agent-default-model', scope: ROOT, config: { provider, model },
+})
+
 const NATIVE_AGENT_PRESET_INSTALLATIONS = [
   { id: 'agent-presets', plugin: '@redspark/rsh-agent-presets', scope: ROOT, config: { default: 'standard' } },
   { id: 'preset-standard', plugin: '@redspark/rsh-agent-preset-standing', scope: 'standard',
@@ -297,6 +302,8 @@ export function shippedNativeProfileComposition(
             ...(profile === 'native-headless' || profile === 'native-headless-query' ? { cwd: process.cwd() } : {}),
             ...(profile === 'native-tui' ? { cwd: process.cwd(), locale: 'en', background: '#000000', maxQueuedInputs: 32, maxHistoryEvents: 100000, maxTranscriptEvents: 500, maxStreamChunks: 500, maxPendingHumanRequests: 32 } : {}) },
       },
+      // The deployment default a root step falls back to when its Session recorded none.
+      NATIVE_DEFAULT_MODEL_INSTALLATION('deepseek', 'deepseek-flash'),
       ...(profile === 'native-web' ? [{ id: 'model-selection', plugin: '@redspark/rsh-native-model-selection', scope: ROOT }] : []),
       ...(profile === 'native-web' ? [
         { id: 'storage-hub', plugin: '@redspark/rsh-storage', scope: ROOT },
