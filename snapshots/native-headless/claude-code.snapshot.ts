@@ -187,7 +187,7 @@ it('records and cold-replays a Claude Code child through the Native parent Sessi
         .find((name): name is string => typeof name === 'string' && name.endsWith(currentName))
       if (storedName === undefined) throw new Error('Claude Code parent writer omitted the current Session JSONL')
       raw = readFileSync(join(sessions, storedName), 'utf8')
-      const context = { sessionIds: stored.map(item => item.header.id), cwd: workspace }
+      const context = { sessionIds: stored.map(item => item.header.id), cwd: workspace, cwdAliases: [JSON.stringify(workspace).slice(1, -1)] }
       const normalized = normalizeSessionSnapshot(redactSessionSnapshotIds([raw])[0] ?? raw, context,
         { identityMode: 'preserve' })
       const prompts = normalizedSystemPrompts(raw, context)

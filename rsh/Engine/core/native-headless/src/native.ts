@@ -62,8 +62,8 @@ import type { NativeTimeContext } from '@redspark/rsh-native-time-context'
 import type { NativeTmuxContext } from '@redspark/rsh-tmux-context-definition'
 import {
   ReasoningEffortId, HarnessError, createSystemMessage, createToolResultMessage, createUserMessage,
-  callConfigEquals, fileAttachmentsIn, projectFilesToText, type ContentBlock, type GenerateOptions, type ToolCallBlock, type ToolSchema,
-  type UserMessage,
+  callConfigEquals, fileAttachmentsIn, projectFilesToText, type ContentBlock, type ContextSnapshotSection,
+  type GenerateOptions, type ToolCallBlock, type ToolSchema, type UserMessage,
 } from '@redspark/rsh-llm/native'
 import { interruptedTurnClosers, SESSION_FORMAT_VERSION, Session, SessionId, SessionSeq,
   type SessionEvent, type SessionHeader, type TurnEndCancelCause } from '@redspark/rsh-session/native'
@@ -216,6 +216,67 @@ const CODE_TOOL_SCHEMA: ToolSchema = {
   name: 'run_code', description: 'Run one TypeScript program in an isolated worker thread.', parameters: {
     type: 'object', properties: { program: { type: 'string' } }, required: ['program'], additionalProperties: false,
   },
+}
+
+/** The system-prompt plugin that owns the runtime-context snapshot surface message. */
+const RUNTIME_CONTEXT_SOURCE = '@redspark/rsh-system-prompt'
+
+/** Opens every runtime-context snapshot; a later one supersedes the earlier text. */
+const RUNTIME_CONTEXT_HEADER = 'Current runtime context. This snapshot supersedes earlier runtime-context snapshots.'
+
+/**
+ * Render the model-facing runtime-context sections for the standing policies.
+ *
+ * A model that predicts a denial from the policy alone refuses work it could have done, so the
+ * text states what the sandbox enforces and what an approval may ask, and leaves denial handling
+ * to the tools that actually hit one.
+ * @param mode - resolved standing file policy mode.
+ * @param workspaceRoot - the session workspace the policy confines writes to.
+ * @param approvalAsks - whether a configured answerer may be asked.
+ * @returns the policy sections in prompt order.
+ */
+function policySections(mode: string, workspaceRoot: string, approvalAsks: boolean): ContextSnapshotSection[] {
+  const file = mode === 'read-only'
+    ? 'Current DSH file policy: read-only. Any available operation enforced by the DSH file sandbox cannot modify files in the standing mode. Do not refuse a required modification from this policy alone: try an available tool normally and follow any denial and escalation guidance it returns.'
+    : mode === 'workspace-write'
+      ? `Current DSH file policy: workspace-write. Any available operation enforced by the DSH file sandbox may modify files under the session workspace: ${JSON.stringify(workspaceRoot)}. Some platform temporary areas may also be writable.`
+      : 'Current DSH file policy: danger-full-access. The DSH file sandbox does not restrict file modifications by available operations.'
+  const approval = approvalAsks
+    ? 'Approval policy: ask. Operations that require approval may ask through the configured answerers; without an available answerer, the request fails closed.'
+    : 'Approval prompts are disabled in this session: actions that require approval are rejected automatically \u2014 do not request sandbox escalation (do not set `sandbox_permissions`).'
+  return [{ name: 'sandbox:policy', text: file }, { name: 'approval:policy', text: approval }]
+}
+
+/** The model-facing text of one rendered runtime-context section list. */
+function runtimeContextText(sections: readonly ContextSnapshotSection[]): string {
+  return RUNTIME_CONTEXT_HEADER + String.fromCharCode(10, 10) + sections.map(section => section.text).join(String.fromCharCode(10, 10))
+}
+
+/** Whether one surface message is a runtime-context snapshot this application wrote. */
+function isRuntimeContextSnapshot(event: SessionEvent | undefined): event is SessionEvent<'user/message'> {
+  if (event?.type !== 'user/message') return false
+  const source = event.data.source
+  return source.kind === 'plugin' && source.plugin === RUNTIME_CONTEXT_SOURCE && source.form === 'snapshot'
+}
+
+/**
+ * The text of the runtime-context snapshot the model history still retains.
+ *
+ * The snapshot is a peer of the system prompt: a later one supersedes the earlier text, and a
+ * replacement that consumed it retires it. Comparing against the surviving node keeps an
+ * unchanged policy from appending a duplicate every step.
+ * @param session - the Session whose surviving surface is inspected.
+ * @returns the retained snapshot text, or `undefined` when none survives.
+ */
+function retainedRuntimeContext(session: Session): string | undefined {
+  const nodes = session.surface.nodes
+  for (let index = nodes.length - 1; index >= 0; index -= 1) {
+    const event = session.eventAt(nodes[index] as SessionSeq)
+    if (!isRuntimeContextSnapshot(event)) continue
+    const [block] = event.data.content
+    return event.data.content.length === 1 && block?.type === 'text' ? block.text : undefined
+  }
+  return undefined
 }
 
 function nonempty(value: unknown, name: string): string {
@@ -1559,6 +1620,20 @@ export class NativeHeadlessApplication implements NativeApplication {
                 }
                 for (const input of inputs) {
                   track(session.append('user/message', input, { surfaceOp: 'append' }))
+                }
+                // The standing policies reach the model as one runtime-context snapshot, which a
+                // later identical snapshot must not duplicate: only a superseded text is appended.
+                const standingPolicy = this.sandboxPolicy?.resolve({ session })
+                if (standingPolicy !== undefined) {
+                  const sections = policySections(standingPolicy.mode, standingPolicy.workspaceRoot,
+                    this.approval?.policy === 'ask')
+                  const text = runtimeContextText(sections)
+                  if (retainedRuntimeContext(session) !== text) {
+                    track(session.append('user/message', createUserMessage({
+                      source: { kind: 'plugin', plugin: RUNTIME_CONTEXT_SOURCE, form: 'snapshot', sections },
+                      content: [{ type: 'text', text }],
+                    }), { surfaceOp: 'append' }))
+                  }
                 }
                 if (selection?.notice !== undefined) track(session.append('user/message', selection.notice, { surfaceOp: 'append' }))
                 for (const instructionContext of instructionContexts ?? []) {
