@@ -169,7 +169,15 @@ export function assembleNativeScenario(options: NativeScenarioOptions): NativeSc
   }
 }
 
-/** A `node_modules` package that re-exports a built `./native` entry from one repository package. */
+/**
+ * Build a `node_modules` package that re-exports a built `./native` entry from one repository package.
+ *
+ * A profile resolves its rows by package name, so installing a scenario-only
+ * provider means materializing a package rather than editing the shipped profile.
+ * @param name - package name the profile row refers to.
+ * @param target - module specifier the generated entry re-exports from.
+ * @returns the package name and the files to write under it.
+ */
 export function reexportPackage(name: string, target: string): { name: string; files: Record<string, string> } {
   return {
     name,
@@ -184,7 +192,12 @@ export function reexportPackage(name: string, target: string): { name: string; f
   }
 }
 
-/** The repository root a scenario file lives under. */
+/**
+ * Resolve the repository root from a scenario file's own module URL.
+ * @param importMetaUrl - the calling module's `import.meta.url`.
+ * @param depth - directory levels between that module and the repository root.
+ * @returns the absolute repository root with a trailing separator.
+ */
 export function repositoryRoot(importMetaUrl: string, depth: number): string {
   return fileURLToPath(new URL('../'.repeat(depth), importMetaUrl))
 }
