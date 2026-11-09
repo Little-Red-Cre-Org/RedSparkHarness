@@ -99,6 +99,27 @@ export const plugin: NativePlugin = {
           assertOwner(owner, signal)
         },
       }
+      // A fresh Session carries its standing permission facts before its first model
+      // admission, the guarantee the Cordis owner gives on `session/created`. Without
+      // it a Native Session enforces a policy its log never records.
+      const owners = active as Pick<NativeActiveSessionOperations, 'owner' | 'onAttached'>
+      const seeded = new WeakSet<NativeActiveSessionOwner>()
+      context.effect(owners.onAttached(async (owner) => {
+        if (owner.invocation !== 'root' || !owner.writerAvailable || seeded.has(owner)) return
+        seeded.add(owner)
+        const events = await owner.readEvents({ signal: new AbortController().signal })
+        const loggedSandbox = events.findLast(event => event.type === 'sandbox/mode')
+        const loggedApproval = events.findLast(event => event.type === 'approval/policy')
+        const loggedPreset = events.findLast(event => event.type === 'permission/preset')
+        if (loggedSandbox !== undefined && loggedApproval !== undefined && loggedPreset !== undefined) return
+        const name = currentValue(owner, events)
+        if (loggedPreset === undefined && name !== CUSTOM_PRESET) owner.append('permission/preset', { preset: name })
+        if (loggedSandbox === undefined) {
+          owner.append('sandbox/mode', { mode: sandboxPolicy.resolve({ session: owner.session }).mode })
+        }
+        if (loggedApproval === undefined) owner.append('approval/policy', { policy: approval.policy })
+        await owner.flush()
+      }))
       context.provide('permissionPresets', service)
     }
   },
