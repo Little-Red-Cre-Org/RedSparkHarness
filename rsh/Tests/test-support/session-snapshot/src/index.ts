@@ -106,6 +106,16 @@ export {
   type SnapshotSuiteOptions,
 } from './suite.ts'
 export {
+  assembleNativeScenario,
+  reexportPackage,
+  type NativeScenario,
+  type NativeScenarioModule,
+  type NativeScenarioOptions,
+  type NativeScenarioPaths,
+  type NativeScenarioRow,
+  type NativeScenarioRunOptions,
+} from './native-scenario.ts'
+export {
   captureExpectedWorkspaceSnapshot,
   captureWorkspaceSnapshot,
   EMPTY_WORKSPACE_MARKER,
