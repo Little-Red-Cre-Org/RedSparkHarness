@@ -182,7 +182,7 @@ export const plugin = { apiVersion: 1, name: 'native-fs-sandbox-approval', targe
     const stored = readdirSync(sessions, { recursive: true }).find(name => String(name).endsWith(sessionFixtureName(0, SESSION_FORMAT_VERSION)))
     if (stored === undefined) throw new Error('native-fs-sandbox: missing Session JSONL')
     raw = readFileSync(join(sessions, String(stored)), 'utf8')
-    const context = { cwd: workspace, sessionIds: [] }
+    const context = { cwd: workspace, sessionIds: [], cwdAliases: [JSON.stringify(workspace).slice(1, -1)] }
     const prompts = normalizedSystemPrompts(raw, context)
     const schemas = normalizedToolSchemas(raw, context)
     if (prompts[0] === undefined || schemas[0] === undefined) throw new Error('native-fs-sandbox: missing model header')

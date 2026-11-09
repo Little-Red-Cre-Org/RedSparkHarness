@@ -2423,6 +2423,43 @@ it('persists native time context before the model reads the request', async () =
   }
 })
 
+it('appends one runtime-context snapshot per policy change and suppresses an unchanged repeat', async () => {
+  const policy = new NativeSandboxPolicy({ mode: 'workspace-write', workspaceRoot: process.cwd() })
+  // Three steps: an unchanged policy must not append a second snapshot on step 2 or 3.
+  const state = await fixture([toolCallResponse('rc-1', 'run_code', { program: 'return 1' }),
+    toolCallResponse('rc-2', 'run_code', { program: 'return 2' }), textResponse('done')],
+  { sandboxPolicy: policy, approvalPolicy: 'ask', maxSteps: 5 })
+  try {
+    await state.host.run(state.scope, { kind: 'runtime-context' }, invocation => state.app.run(['report'], invocation.signal))
+    const storage = new (await import('@redspark/rsh-session-persistence-jsonl')).JsonlSessionBackend({ root: state.sessions, compression: 'none' })
+    try {
+      const id = (await storage.list())[0]?.header.id
+      if (id === undefined) throw new Error('runtime-context Session was not stored')
+      const reader = await storage.open(id, 'read')
+      try {
+        const snapshots = (await reader.read()).events.filter(event =>
+          event.type === 'user/message'
+          && event.data.source.kind === 'plugin'
+          && event.data.source.plugin === '@redspark/rsh-system-prompt'
+          && event.data.source.form === 'snapshot')
+        expect(snapshots).toHaveLength(1)
+        const first = snapshots[0]
+        if (first?.type !== 'user/message' || first.data.source.kind !== 'plugin'
+          || first.data.source.form !== 'snapshot') throw new Error('runtime-context snapshot is unreadable')
+        expect(first.data.source.sections.map(section => section.name)).toEqual(['sandbox:policy', 'approval:policy'])
+        const text = first.data.content[0]?.type === 'text' ? first.data.content[0].text : ''
+        expect(text.startsWith('Current runtime context. This snapshot supersedes earlier runtime-context snapshots.'))
+          .toBe(true)
+        expect(text).toContain('Current DSH file policy: workspace-write.')
+        expect(text).toContain('Approval policy: ask.')
+      } finally { await reader.close() }
+    } finally { await storage.close() }
+  } finally {
+    await state.host.stop()
+    await rm(state.directory, { recursive: true, force: true })
+  }
+})
+
 it('rejects write_file under the installed never approval policy and persists its paired audit', async () => {
   const state = await fixture([
     toolCallResponse('write-denied', 'write_file', { path: 'denied.txt', content: 'must not exist' }),

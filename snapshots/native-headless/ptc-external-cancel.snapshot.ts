@@ -246,7 +246,7 @@ it('records and cold-replays PTC cancellation through a captured external Respon
           if (storedName === undefined) throw new Error('ptc-external-cancel writer omitted current Session JSONL')
           raw = readFileSync(join(sessions, String(storedName)), 'utf8')
         } finally { await reader.close() }
-        const context = { sessionIds: stored.map(item => item.header.id), cwd: workspace }
+        const context = { sessionIds: stored.map(item => item.header.id), cwd: workspace, cwdAliases: [JSON.stringify(workspace).slice(1, -1)] }
         const embedded = normalizeEmbeddedRequestBodies(raw, workspace)
         const normalized = normalizeSessionSnapshot(redactSessionSnapshotIds([embedded])[0] ?? embedded, context,
           { identityMode: 'preserve' })

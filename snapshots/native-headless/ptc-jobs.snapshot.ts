@@ -84,7 +84,7 @@ it('runs confined PTC through dsh, cancels a real job and cold-reads the sole du
     expect(readFileSync(physical, 'utf8')).toBe(raw)
     const normalized = normalizeSessionSnapshot(redactSessionSnapshotIds([raw])[0] ?? raw,
       { cwd: workspace, sessionIds: [] }, { identityMode: 'preserve' })
-    const context = { cwd: workspace, sessionIds: [] }
+    const context = { cwd: workspace, sessionIds: [], cwdAliases: [JSON.stringify(workspace).slice(1, -1)] }
     const prompts = normalizedSystemPrompts(raw, context)
     const schemas = normalizedToolSchemas(raw, context)
     if (prompts[0] === undefined || schemas[0] === undefined) throw new Error('ptc-jobs: missing request header')

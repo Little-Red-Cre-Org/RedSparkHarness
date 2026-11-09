@@ -99,7 +99,7 @@ it('records the native terminal lifecycle tool schema and list result', async ()
     const events = parseSessionLog(raw)
     expect(events.filter(event => event.type === 'tool/result')).toHaveLength(1)
     expect(JSON.stringify(events.filter(event => event.type === 'tool/result'))).toContain('(no terminal sessions)')
-    const context = { cwd: workspace, sessionIds: [] }
+    const context = { cwd: workspace, sessionIds: [], cwdAliases: [JSON.stringify(workspace).slice(1, -1)] }
     const normalized = normalizeSessionSnapshot(redactSessionSnapshotIds([raw])[0] ?? raw, context, { identityMode: 'preserve' })
     const prompts = normalizedSystemPrompts(raw, context)
     const schemas = normalizedToolSchemas(raw, context)
