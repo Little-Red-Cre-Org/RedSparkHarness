@@ -47,6 +47,7 @@
                          "@redspark/cordis":  "workspace:^",
                          "@redspark/rsh-acp-child":  "workspace:^",
                          "@redspark/rsh-acp-protocol":  "workspace:^",
+                         "@redspark/rsh-agent-default-model":  "workspace:^",
                          "@redspark/rsh-agent-instructions":  "workspace:^",
                          "@redspark/rsh-agent-preset-standing":  "workspace:^",
                          "@redspark/rsh-agent-presets":  "workspace:^",
