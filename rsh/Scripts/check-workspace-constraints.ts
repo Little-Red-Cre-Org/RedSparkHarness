@@ -242,7 +242,7 @@ const packageFileExtras: Readonly<Record<string, readonly string[]>> = {
   '@redspark/rsh-deepseek-account': ['lib/shared-*.js'],
   '@redspark/rsh-task-scheduler': ['lib/shared-*.js'],
   '@redspark/rsh-agent-loop': ['lib/compat-settings.js', 'lib/settings-owner-*.js'],
-  '@redspark/rsh-agent-default-model': ['lib/compat-settings.js', 'lib/settings-owner-*.js'],
+  '@redspark/rsh-agent-default-model': ['lib/native-definition.js', 'lib/compat-settings.js', 'lib/settings-owner-*.js'],
   '@redspark/rsh-agent-presets': [
     'presets', 'lib/selection.js', 'lib/compat-settings.js',
     'lib/settings-owner-*.js', 'lib/shared-*.js',
