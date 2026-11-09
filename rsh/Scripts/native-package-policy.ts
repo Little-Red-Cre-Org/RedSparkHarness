@@ -158,6 +158,7 @@ export const mixedNativeEntryDirectories: ReadonlyMap<string, string> = new Map(
   ['rsh/Modules/Official/webhook/webhook', 'Cordis and Native trusted-rule registration share neutral request and delivery Definitions'],
   ['rsh/Modules/Official/interaction/permission-presets', 'Cordis and Native permission selection share preset facts while Native applies through the selected root Session owner'],
   ['rsh/Modules/Official/automation/task-scheduler', 'Native and Cordis schedulers share SQLite plan facts while selected Programs own Agent execution and Session writers'],
+  ['rsh/Engine/core/agent-default-model', 'Cordis and Native default-model policies share the settings namespace and section schema while each runtime reads it through its own settings service'],
   ['rsh/Engine/llm/token-meter', 'Native and Cordis Providers share the durable replay estimator'],
   ['rsh/Engine/llm/llm-retry', 'Native and Cordis recovery policies share the durable retry schedule and events'],
   ['rsh/Modules/Official/guard/timeout-policy', 'Native and Cordis execution policies share the declared-budget TOOL_TIMEOUT outcome'],
@@ -266,6 +267,7 @@ export const mixedNativeEntryDirectories: ReadonlyMap<string, string> = new Map(
 
 /** Mixed library exports that have native values or types but no installer manifest. */
 export const mixedNativeLibraryDirectories: ReadonlyMap<string, readonly ('host' | 'client')[]> = new Map([
+  ['rsh/Engine/core/agent-default-model', ['host']],
   ['rsh/Programs/Web/client/ui-attachment', ['client']],
   ['rsh/Programs/Web/client/ui-goal', ['client']],
   ['rsh/Programs/Web/client/ui-workflow-run', ['client']],
@@ -394,6 +396,8 @@ export const nativeSafeSourceSubpaths: ReadonlyMap<string, readonly string[]> = 
   ['rsh/Engine/context/session-reference', ['./uri']],
   ['rsh/Modules/Official/webhook/webhook', ['./definition', './types']],
   ['rsh/Modules/Official/interaction/permission-presets', ['./native-definition']],
+  ['rsh/Engine/core/agent-default-model', ['./native']],
+  ['rsh/Engine/core/agent-default-model', ['./native-definition']],
   ['rsh/Engine/session/session-projection', ['./types', './definition']],
   ['rsh/Engine/session/session-title', ['./normalize', './types']],
   ['rsh/Engine/session-query/session-query', ['./source', './definition']],
@@ -544,6 +548,7 @@ export const nativeSafeSourceEntryTargets: ReadonlyMap<string, readonly ('host' 
   ['rsh/Modules/Official/shell/pwsh-local/resolve', ['host']],
   ['rsh/Modules/Official/shell/shell-env/definition', ['host']],
   ['rsh/Modules/Official/subagent/codex-app-server/wire', ['host']],
+  ['rsh/Engine/core/agent-default-model/native-definition', ['host']],
   ['rsh/Engine/preset/agent-presets/native-definition', ['host']],
   ['rsh/Engine/session/session-projection/types', ['host', 'client']],
   ['rsh/Engine/session/session-title-llm/native', ['host']],

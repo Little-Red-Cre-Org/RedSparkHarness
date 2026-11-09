@@ -2621,6 +2621,9 @@ importers:
       '@redspark/schemastery':
         specifier: link:../../../Core/vendor/schemastery
         version: link:../../../Core/vendor/schemastery
+      zod:
+        specifier: ^4.4.3
+        version: 4.4.3
     devDependencies:
       '@redspark/cordis':
         specifier: workspace:^

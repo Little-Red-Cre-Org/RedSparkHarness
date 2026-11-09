@@ -16,7 +16,9 @@ The package publishes `./native`, providing the `agentDefaultModel` service. `Na
 
 `native-headless` now reads `agentDefaultModel` as an optional service and passes `() => defaultModel.currentSelection()` into the authority, so a profile that composes the row gets the fallback without changing the application row.
 
-The package also gains its missing `dsh.native` manifest and a `./native` build entry: without the manifest the profile loader rejects the row as an invalid package, and without the tsdown entry only `index.js` is built.
+The service type and the branded selection live in `src/native-definition.ts`, following the existing mixed-entry pattern: a strict native owner may import a mixed package's declaration module, but not its entry. `native-headless` therefore imports the definition, not `./native`.
+
+Three composition facts had to be registered for the row to load at all: the package has no `dsh.native` manifest before this change, its `tsdown` entry built only `index.js`, and its path aliases were absent until `gen-tsconfig-paths` ran. Each of those failed differently — an invalid-package rejection, a missing `lib/native.js`, and a source the compiler face never saw.
 
 ## Alternatives considered
 

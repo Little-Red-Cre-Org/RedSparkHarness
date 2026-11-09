@@ -43,6 +43,7 @@ const snapshotAdapters = [
   'snapshots/native-acp/text-turn.snapshot.ts',
   'snapshots/native-headless/goal-continuation.snapshot.ts',
   'snapshots/native-headless/human-question.snapshot.ts',
+  'snapshots/native-headless/default-model-wiring.snapshot.ts',
   'snapshots/native-headless/fs-read-native.snapshot.ts',
   'snapshots/native-headless/fs-sandbox-tool-round.snapshot.ts',
   'snapshots/native-headless/external-operation.snapshot.ts',

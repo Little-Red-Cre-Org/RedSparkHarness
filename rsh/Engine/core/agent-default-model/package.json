@@ -27,11 +27,16 @@
     "./native": {
       "types": "./lib/types/native.d.ts",
       "default": "./lib/native.js"
+    },
+    "./native-definition": {
+      "types": "./lib/types/native-definition.d.ts",
+      "default": "./lib/types/native-definition.js"
     }
   },
   "files": [
     "lib/index.js",
     "lib/native.js",
+    "lib/native-definition.js",
     "lib/compat-settings.js",
     "lib/settings-owner-*.js",
     "lib/types/**/*.d.ts"
@@ -39,7 +44,8 @@
   "license": "MIT",
   "dependencies": {
     "@redspark/rsh-util-values": "workspace:^",
-    "@redspark/schemastery": "workspace:^"
+    "@redspark/schemastery": "workspace:^",
+    "zod": "^4.4.3"
   },
   "peerDependencies": {
     "@redspark/rsh-agent": "workspace:^",

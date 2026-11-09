@@ -12,32 +12,23 @@
 
 import { z } from 'zod'
 import schemastery from '@redspark/schemastery'
-import { ReasoningEffortId, type ReasoningEffortId as ReasoningEffort } from '@redspark/rsh-llm/native'
-import type { NativePlugin } from '@redspark/rsh-native-runtime'
-import type {} from '@redspark/rsh-settings-definition/native'
+import { ReasoningEffortId } from '@redspark/rsh-llm/native'
+import type {
+  NativeAgentDefaultModelOperations,
+  NativeBrandedModelSelection,
+  NativeModelSelection,
+  NativePlugin,
+} from './native-definition.ts'
+import type {} from './native-definition.ts'
 
-declare module '@redspark/rsh-native-runtime' {
-  interface NativeServices { agentDefaultModel: NativeAgentDefaultModel }
-}
-
+export type {
+  NativeAgentDefaultModelOperations,
+  NativeBrandedModelSelection,
+  NativeModelSelection,
+} from './native-definition.ts'
 
 /** Settings namespace carrying the default model selection for future Agents. */
 export const AGENT_DEFAULT_MODEL_SETTINGS_NAMESPACE = 'agent-default-model'
-
-/** The one selection a root step falls back to when its Session recorded none. */
-export interface NativeModelSelection {
-  /** Registered provider route. */
-  readonly provider: string
-  /** Provider-owned model id. */
-  readonly model: string
-  /** Adapter-owned reasoning effort, or provider behavior when absent. */
-  readonly reasoningEffort?: string
-}
-
-/** The same selection in the branded form the model execution layer accepts. */
-export interface NativeBrandedModelSelection extends Omit<NativeModelSelection, 'reasoningEffort'> {
-  readonly reasoningEffort?: ReasoningEffort
-}
 
 /** Stored settings section: the same fields the Cordis owner persists. */
 const settingsSectionSchema = z.strictObject({
@@ -116,7 +107,7 @@ function resolveSettings(value: Record<string, unknown>): NativeModelSelection {
  * the default in the Native Settings page reaches the next Agent without a
  * restart. A deployment with no settings Provider keeps its composed entry.
  */
-export class NativeAgentDefaultModel {
+export class NativeAgentDefaultModel implements NativeAgentDefaultModelOperations {
   private current: NativeModelSelection
 
   /**

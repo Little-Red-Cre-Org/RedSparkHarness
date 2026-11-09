@@ -16,7 +16,9 @@ Status: implemented
 
 `native-headless` 现在把 `agentDefaultModel` 作为可选服务读取，并把 `() => defaultModel.currentSelection()` 传入 authority，于是组合了该行的 profile 无需改动应用行即可获得回退。
 
-该包同时补上了缺失的 `dsh.native` manifest 与 `./native` 构建入口：没有 manifest，profile loader 会以「invalid package」拒绝该行；没有 tsdown 入口，只会构建出 `index.js`。
+服务类型与 branded 选择位于 `src/native-definition.ts`，沿用既有的 mixed-entry 模式：strict native owner 可以引用 mixed 包的声明模块，但不能引用其入口。因此 `native-headless` 引用的是定义模块，而非 `./native`。
+
+该行能加载还依赖三条组合事实：本改动之前该包没有 `dsh.native` manifest、其 `tsdown` 入口只构建 `index.js`、其路径别名在跑 `gen-tsconfig-paths` 之前并不存在。三者各自以不同方式失败——invalid-package 拒绝、缺少 `lib/native.js`、以及编译器 face 从未看见该源文件。
 
 ## Alternatives considered
 

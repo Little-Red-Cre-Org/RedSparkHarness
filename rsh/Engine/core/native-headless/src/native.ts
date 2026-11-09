@@ -36,7 +36,8 @@ import type {} from '@redspark/rsh-native-tools/native'
 import type {} from '@redspark/rsh-native-prompt/native'
 import type {} from '@redspark/rsh-native-agent/native'
 import type {} from '@redspark/rsh-native-time-context/native'
-import type {} from '@redspark/rsh-agent-default-model/native'
+import type { NativeAgentDefaultModelOperations } from '@redspark/rsh-agent-default-model/native-definition'
+import type {} from '@redspark/rsh-agent-default-model/native-definition'
 import type {} from '@redspark/rsh-tmux-context-definition'
 import type {} from '@redspark/rsh-native-model-execution/native'
 import type { NativeModelExecution, NativePreparedModelStep } from '@redspark/rsh-native-model-execution'
@@ -3222,7 +3223,7 @@ export const plugin: NativePlugin = {
   resolve(input) {
     const config = resolveNativeHeadlessConfig(input)
     return (context) => {
-      const defaultModel = context.optional('agentDefaultModel')
+      const defaultModel: NativeAgentDefaultModelOperations | undefined = context.optional('agentDefaultModel')
       const application = createNativeHeadlessApplication(context, config, context.scope,
         defaultModel === undefined ? undefined : { defaultModelSelection: () => defaultModel.currentSelection() })
       context.provide('application', application)

@@ -645,6 +645,8 @@
       "@redspark/rsh-workspace": ["./rsh/Modules/Official/workspace/workspace/src"],
       "@redspark/rsh-workspace/invariant": ["./rsh/Modules/Official/workspace/workspace/src/invariant.ts"],
       "@redspark/rsh-acp-child/native": ["./rsh/Modules/Official/subagent/acp-child/src/native.ts"],
+      "@redspark/rsh-agent-default-model/native": ["./rsh/Engine/core/agent-default-model/src/native.ts"],
+      "@redspark/rsh-agent-default-model/native-definition": ["./rsh/Engine/core/agent-default-model/src/native-definition.ts"],
       "@redspark/rsh-agent-instructions/native": ["./rsh/Engine/context/agent-instructions/src/native.ts"],
       "@redspark/rsh-agent-preset-standing/native": ["./rsh/Engine/preset/agent-preset-standing/src/native.ts"],
       "@redspark/rsh-api-session-controller/client-event-types": ["./rsh/Programs/Web/api/session-controller/src/client-event-types.ts"],
