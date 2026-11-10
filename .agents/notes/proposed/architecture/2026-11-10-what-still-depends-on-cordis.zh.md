@@ -105,6 +105,16 @@ Native 一侧已经证明这个形状可行：`native-ptc` 组合了 19 个真�
 - `Programs/Web` 要么迁移、要么明确记为不在范围内并写明理由。
 - 收尾时 `rsh/Compatibility` 之外没有任何包 import `@redspark/cordis`。
 
+## 那两个 driver 形场景究竟需要什么
+
+`system-prompt-in-history` 与 `model-switch-notice` 此前都被归为受同一理由阻塞，而核查否证了这个理由。它们都不需要回合中途的 driver，需要的是**Native 运行时尚不具备的能力**。
+
+第一个场景断言：当渲染出的提示词发生变化时，声明 `systemPromptUpdate: 'in-history'` 的路由会在缓存历史之后追加一条新的 `system/message`，而不是替换节点 0。`rsh-llm` 会在路由能力上解析该标志，但 Native 循环从不读它；循环也只在**每次运行**而不是每步渲染一次提示词段落。两者现已实现：步边界重新渲染段落，in-history 路由追加变化后的提示词而非替换缓存节点。该场景已在 Native profile 上回放通过，这一项因此是关闭的，而不是记录为阻塞。
+
+第二个场景通过 `installModelSelection` 在 `todo_write` 之后切换所选模型，而该函数完全由两个 Cordis waterfall 搭成：`system-prompt/assemble` 改写 provider 与 model 变量，`agent/request` 改写已解析的调用配置。Native 循环没有对应接缝——它每一步从 `modelSelection` 服务读取路由，而后者需要 `modelDirectory`，replay Provider 不提供该服务，真实 Provider 也只能通过活的模型目录提供。因此要在 Native profile 上复现该录制，需要的是一个 Native 模型目录 fixture，而不是移植 driver：切换机制本身已经存在，只是它的输入无法仅由回放提供。
+
+所以两者都被记录为受运行时能力阻塞，而不是受测试基础设施阻塞——这改变了「解除阻塞」的代价：那是循环层的工作，且必须自带场景覆盖，而不是改一下 fixture。
+
 ## Acceptance criteria
 
 上面的提案按包逐个满足：已被现有 Native 包拥有的，在无人引用后删掉它的 Cordis 那一半；Cordis 形状的随运行时消失；确实未移植的补上 Native 入口。场景以其在 CI 中于 Native profile 上回放通过为准。Web 的范围决定必须在任何 Web 包移动之前记录下来。

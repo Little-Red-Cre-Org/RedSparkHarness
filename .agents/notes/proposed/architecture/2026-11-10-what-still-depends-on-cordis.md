@@ -110,6 +110,16 @@ That is a product programme, not a cleanup step. It is also the honest boundary 
 - `Programs/Web` is either migrated or explicitly recorded as out of scope, with the reason.
 - No package outside `rsh/Compatibility` imports `@redspark/cordis` at the end.
 
+## What the two driver-shaped scenarios actually need
+
+`system-prompt-in-history` and `model-switch-notice` were both blocked for a stated reason that checking disproves. Neither needs a mid-turn driver. What they need is **a capability the Native runtime does not have**.
+
+The first asserts that a route declaring `systemPromptUpdate: 'in-history'` appends a fresh `system/message` after cached history instead of replacing node 0 when the rendered prompt changes. `rsh-llm` resolves that flag on the route capability, but nothing read it in the Native loop, and the loop also rendered the prompt sections **once per run** rather than once per step. Both are now implemented: the step boundary re-renders the sections, and an in-history route appends the changed prompt instead of replacing the cached node. The scenario replays on a Native profile, which closed this item rather than recording it as blocked.
+
+The second changes the selected model after a `todo_write` through `installModelSelection`, which is built entirely out of two Cordis waterfalls: `system-prompt/assemble` rewrites the provider and model variables, and `agent/request` rewrites the resolved call config. The Native loop has no equivalent seam — it reads each step's route from the `modelSelection` service, which requires `modelDirectory`, which the replay Provider does not provide and which a real one only supplies through a live provider catalog. Reproducing the recording on a Native profile therefore needs a Native model-directory fixture, not a driver port: the switching mechanism already exists, but its input cannot be supplied by replay alone.
+
+Both are therefore recorded as blocked on runtime capability rather than on test infrastructure, which changes what unblocking them costs: it is loop work, and it must ship with its own scenario coverage, not as a fixture tweak.
+
 ## Acceptance criteria
 
 The proposals above are satisfied per package as each is resolved: a package that an existing Native package already owns needs its Cordis half deleted once nothing imports it; a `Cordis-shaped` package disappears with the runtime; a genuinely unported one gets a Native entry. The scenarios count when they replay on the Native profile in CI. The Web scope decision is recorded before any Web package moves.

@@ -1738,19 +1738,30 @@ export class NativeHeadlessApplication implements NativeApplication {
                   if (turnOwnership !== undefined) turnOwnership.preparingStep = false
                 }
                 track(session.append('step/start', { turn, step }))
+                // Address the system node by its seq. deriveMessages() drops nodes that project to
+                // null, so its indices cannot index surface.nodes.
+                // Re-render sections here: a section may change between steps, and the
+                // in-history route records the changed prompt after the cached one.
+                const stepAdditions = await this.promptSections?.render(agent.scope, promptContext) ?? ''
+                const stepPrompt = stepAdditions === '' ? config.systemPrompt : `${config.systemPrompt}\n\n${stepAdditions}`
+                const systemSeq = firstSystemNodeSeq(session)
+                const storedText = systemSeq === undefined ? undefined : systemNodeText(session, systemSeq)
+                const promptChanged = storedText !== undefined
+                  && !sameRenderedPrompt(storedText, stepPrompt, promptVariables(config))
                 if (step === 1) {
-                  // Address the system node by its seq. deriveMessages() drops nodes that project to
-                  // null, so its indices cannot index surface.nodes.
-                  const systemSeq = firstSystemNodeSeq(session)
-                  const storedText = systemSeq === undefined ? undefined : systemNodeText(session, systemSeq)
                   if (invocation === 'delegated' && forkSeed !== undefined && systemSeq !== undefined
-                    && (storedText === undefined || !sameRenderedPrompt(storedText, systemPrompt, promptVariables(config)))) {
+                    && (storedText === undefined || promptChanged)) {
                     // The child prompt adds delegation text the copied parent system node does not have.
-                    track(session.append('system/message', { turn, step, message: createSystemMessage(systemPrompt, 'native-headless') },
+                    track(session.append('system/message', { turn, step, message: createSystemMessage(stepPrompt, 'native-headless') },
                       { surfaceOp: { op: 'replace', startSeq: systemSeq, endSeq: systemSeq }, sourceEventSeqs: [systemSeq] }))
                   } else if (systemSeq === undefined) {
-                    track(session.append('system/message', { turn, step, message: createSystemMessage(systemPrompt, 'native-headless') }, { surfaceOp: 'append' }))
+                    track(session.append('system/message', { turn, step, message: createSystemMessage(stepPrompt, 'native-headless') }, { surfaceOp: 'append' }))
                   }
+                } else if (promptChanged && preparedStep.modelInfo?.systemPromptUpdate === 'in-history') {
+                  // An in-history route keeps cached history intact and appends the changed prompt
+                  // after it, so the earlier request prefix stays valid for prompt caching.
+                  track(session.append('system/message', { turn, step, message: createSystemMessage(stepPrompt, 'native-headless') },
+                    { surfaceOp: 'append' }))
                 }
                 for (const input of inputs) {
                   track(session.append('user/message', input, { surfaceOp: 'append' }))
