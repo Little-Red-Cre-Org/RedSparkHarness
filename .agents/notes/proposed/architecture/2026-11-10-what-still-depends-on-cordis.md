@@ -36,7 +36,9 @@ Deleting a package moves four things beyond its own directory, and each one fail
 
 A manifest is the fifth artifact, and the only one that breaks the packed lane: `rsh/Programs/CLI/package.json` may name a deleted package under `workspace:^`, and `pnpm pack` refuses to resolve a workspace protocol whose package is gone. Neither typecheck nor lint sees this, so the local check for a deletion is `pnpm --dir rsh/Programs/CLI pack`, which is also the fastest way to prove the lockfile and the manifest agree.
 
-The complete local recipe for deleting one Cordis package is therefore five steps: remove the directory and its stored files, drop the `tsconfig.host.json` project reference, remove every `workspace:^` line naming it and run `pnpm install --lockfile-only`, fix the README rows and links and re-record the pairs, then run `typecheck`, `verify-config-catalog`, the doc-site build and `pnpm --dir rsh/Programs/CLI pack` before committing.
+Six artifacts move, not four: the package directory, the `tsconfig.host.json` project reference, the manifest's `workspace:^` lines and the lockfile, the README rows and links of every page that named it, the reviewed `config-catalog.zh.md` counterpart, and the architecture pages — of which `module-graph.md` is generated while `event-producer-consumer.md` is hand-written.
+
+Guessing which gates to run does not work: each deletion so far surfaced a different one, and every miss cost a round-trip through CI. The reliable local sequence is to delete the files, remove the references, regenerate the generated pages (`gen-config-catalog`, `gen-module-graph`), re-record the pairs, and then run `pnpm run doc-sync` plus `typecheck` and `pnpm --dir rsh/Programs/CLI pack` as one batch — `doc-sync` is the aggregate that owns the catalog, link, graph, pairing and wrap gates together, so it reports all of them in one pass.
 
 ## Acceptance criteria
 

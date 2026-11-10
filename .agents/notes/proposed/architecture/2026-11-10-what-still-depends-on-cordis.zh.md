@@ -36,7 +36,9 @@ Status: proposed
 
 清单是第五处，也是唯一打坏打包车道的一处：`rsh/Programs/CLI/package.json` 可能仍以 `workspace:^` 引用被删的包，而 `pnpm pack` 拒绝解析指向已消失包的 workspace 协议。typecheck 与 lint 都看不见这一点，所以删除的本地校验是 `pnpm --dir rsh/Programs/CLI pack`，它同时也是证明 lockfile 与清单一致的最快方式。
 
-因此删除一个 Cordis 包的完整本地流程是五步：删目录与其受管文件、去掉 `tsconfig.host.json` 的 project 引用、删掉所有以 `workspace:^` 点名它的行并跑 `pnpm install --lockfile-only`、修 README 行与链接并重新记录配对，然后在提交前跑 `typecheck`、`verify-config-catalog`、文档站点构建与 `pnpm --dir rsh/Programs/CLI pack`。
+会牵动六处而非四处：包目录、`tsconfig.host.json` 的 project 引用、清单里的 `workspace:^` 行与 lockfile、点名它的每一页 README 行与链接、生成目录的中文评审对侧，以及架构页面——其中 `module-graph.md` 是生成的而 `event-producer-consumer.md` 是手写的。
+
+靠猜该跑哪些门禁行不通：到目前为止每次删除暴露的都是不同的一个，每次漏掉都要多走一轮 CI。可靠的本地顺序是先删文件、清引用、重跑生成页（`gen-config-catalog`、`gen-module-graph`）、重新记录配对，然后把 `pnpm run doc-sync` 与 `typecheck`、`pnpm --dir rsh/Programs/CLI pack` 作为一批跑——`doc-sync` 是拥有目录、链接、图、配对与换行诸门禁的聚合入口，一次就能报出全部问题。
 
 ## Acceptance criteria
 
