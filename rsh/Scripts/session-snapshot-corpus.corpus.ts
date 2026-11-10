@@ -75,6 +75,7 @@ const snapshotAdapters = [
   'snapshots/native-headless/hook-cc-pretool-deny-native.snapshot.ts',
   'snapshots/native-headless/fs-write-overwrite-native.snapshot.ts',
   'snapshots/native-headless/fs-delete-recreate-native.snapshot.ts',
+  'snapshots/native-headless/tool-call-turn-native.snapshot.ts',
   'snapshots/native-sdk/text-turn.snapshot.ts',
   'snapshots/native-sdk/staged-files.snapshot.ts',
   'snapshots/native-sdk/external-operation.snapshot.ts',
