@@ -95,7 +95,9 @@ Native 一侧已经证明这个形状可行：`native-ptc` 组合了 19 个真�
 
 **出厂启动器已经完全不读 Cordis 模板表。** 新建一个 Harness home 并运行 `dsh --profile headless`，写出的 `profiles/headless/package.json` 带 `"runtime": "native"`，其 `rsh.profile.json` 有 62 行，组合 `native-headless`、`native-agent`、`native-tools`、工作流、goal、agent instructions 与各上下文 Provider。`rsh/Programs/CLI/src` 中**没有任何对 `app-boot` 的引用**，所以 `PROFILE_TEMPLATES` 从启动器不可达。
 
-这也解释了为何六个名字里有五个已经以 Native profile 的形式工作：CLI 查询的是 `native-profile-template.ts` 的名字到组合表，而 Cordis bundle 只能通过 `app-boot` 到达，后者剩余的消费者是两个 Cordis 桥（`subagent-codex`、`subagent-rsh-sdk`）及它们的 Loader 测试 fixture。
+这也解释了为何六个名字里有五个已经以 Native profile 的形式工作：CLI 查询的是 `native-profile-template.ts` 的名字到组合表，而 Cordis bundle 只能通过 `app-boot` 到达，后者剩余的消费者是三个 Cordis 子代理桥。
+
+三者都没有 Native 入口，但处境不同。`subagent-codex` 与 `subagent-rsh-sdk` 的包级消费者为**零**——它们是用户通过 `dsh plugin add` 安装的已发布 profile bundle，所以「没有 import 方」并不等于死代码。`subagent-acp` 被 `base` bundle 引用。它们的 README 记录了各自的 Native 侧状态：Codex 适配器在 Native 请求上**在启动前就停止**，因为它尚未强制父级权限或继承的 `maxSteps`；SDK 桥同样如此记录。因此退役 `app-boot` 意味着要么把这三个适配器移植到 Native，要么退役这三个产品能力，而仓库已把前者记为未完成的工作。
 
 **六个 Cordis 模板名里已有五个具备出厂 Native 组合。** `rsh/Programs/CLI/src/native-profile-template.ts` 把 `headless` 映射到 `native-headless`、`web` 映射到 `native-web`、`sdk` 映射到 `native-sdk`、`acp` 映射到 `native-acp`、`rsh` 映射到 `native-tui`；只有 `sdk-minimal` 没有对应物。CLI 在其 manifest 中声明了十三个 native 模板，`native-web` 还自带客户端安装清单。所以第 5 步的工作不是「建一个 Native Web profile」——它已存在——而是「退役这些同名仍在解析到的 Cordis bundle」，并对 `sdk-minimal` 作出决定。
 
