@@ -1614,8 +1614,9 @@ export class NativeHeadlessApplication implements NativeApplication {
               if (this.requestContexts?.hasProviders(agent.scope) === true) {
                 throw new Error('native-headless: request-context providers require the exact active Session owner')
               }
+              // No admission ran, so there is no hook context to append.
               return { inputs: await owner.claim(step === 1 ? 'next-turn' : 'next-step'), snapshot: undefined,
-                commitChecks: [], ...prepared }
+                commitChecks: [], context: [] as readonly UserMessage[], ...prepared }
             }
             while (true) {
               const snapshot = eligibleInboxSnapshot(owner, step)
@@ -1647,7 +1648,9 @@ export class NativeHeadlessApplication implements NativeApplication {
               const prepared = await prepare()
               signal.throwIfAborted()
               if (!eligibleInboxMatches(owner, step, snapshot)) continue
-              return { inputs: decision.messages, snapshot, commitChecks, ...prepared }
+              return { inputs: decision.messages, snapshot, commitChecks, ...prepared,
+                // A hook's own guidance is appended with the opened step, not selected.
+                ...decision.context === undefined ? {} : { context: decision.context } }
             }
           }
           const initialInputs = await (async () => {
@@ -1678,6 +1681,7 @@ export class NativeHeadlessApplication implements NativeApplication {
               firstAdmission = false
               if (admitted === undefined) break
               const { inputs, selection, preparedStep, commitChecks } = admitted
+              const hookContexts = admitted.context ?? []
               const hasCurrentCandidates = (): boolean => admitted.snapshot === undefined
               || eligibleInboxMatches(owner, step, admitted.snapshot)
               if (!hasCurrentCandidates()) continue
@@ -1750,6 +1754,12 @@ export class NativeHeadlessApplication implements NativeApplication {
                 }
                 for (const input of inputs) {
                   track(session.append('user/message', input, { surfaceOp: 'append' }))
+                }
+                // A prompt-admission hook's guidance joins the opened step as its own
+                // sourced message; it is not captured input, so it is appended rather
+                // than selected.
+                for (const context of hookContexts) {
+                  track(session.append('user/message', context, { surfaceOp: 'append' }))
                 }
                 // The standing policies reach the model as one runtime-context snapshot, which a
                 // later identical snapshot must not duplicate: only a superseded text is appended.

@@ -39,9 +39,19 @@ export interface NativeStepAdmissionContext {
  */
 export type NativeStepAdmissionCommitCheck = () => readonly MessageId[]
 
-/** Inputs selected from the unchanged captured candidates, or ids rejected without a model request. */
+/**
+ * Inputs selected from the unchanged captured candidates, or ids rejected without a model request.
+ *
+ * `context` carries messages an admission hook contributes on its own authority — a hook's
+ * guidance is not captured input, so it cannot be selected. The Program appends them to the
+ * opened step after admission settles; their ids are not validated against the candidates.
+ */
 export type NativeStepAdmissionDecision =
-  | { readonly kind: 'enter'; readonly messages: readonly UserMessage[] }
+  | {
+    readonly kind: 'enter'
+    readonly messages: readonly UserMessage[]
+    readonly context?: readonly UserMessage[]
+  }
   | { readonly kind: 'reject'; readonly discard: readonly MessageId[] }
 
 /** Ordered admission hook; delegate with next() and recheck owned state after it settles. */

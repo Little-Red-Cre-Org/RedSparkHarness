@@ -387,8 +387,10 @@ async function admitPrompt(
   const downstream = await next()
   if (downstream.kind !== 'enter') return downstream
   const ours = contextFrom(merged)
+  // Admission may only select captured input, so the hook's guidance rides beside the
+  // selection and the Program appends it to the opened step.
   if (ours === undefined) return downstream
-  return { ...downstream, messages: [...downstream.messages, ours] }
+  return { ...downstream, context: [...downstream.context ?? [], ours] }
 }
 
 /**
