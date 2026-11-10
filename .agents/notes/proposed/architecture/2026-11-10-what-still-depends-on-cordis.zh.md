@@ -71,7 +71,11 @@ Status: proposed
 
 有十三个 Cordis-only 包完全没有引用方，但它们同样没有一个可以随意删除。`cordis-plugin-logger-console` 是钉住的 Cordis 源码。三个是 `experimental/*` 的 profile 与 bundle，是已发布产物，只是没有出厂 profile 恰好点名它们。`storage-sqlite`、`tool-str-replace-editor` 与 `typert/generator` 是有文档、能工作的接缝——`storage-sqlite` 就出现在 `capability-seams.md` 里作为可选后端的示例，工具编辑器登记在生成的 tool catalog 中。`fs-e2b` 与 `subprocess-e2b` 是远程执行适配器。Python SDK 运行时闭包是构建产物。删除其中任何一个，都会移除本仓库之外的消费者可能正在选用的能力。
 
-这些 bundle 是分层而非独立的：`headless` 只声明 6 个依赖，因为它是**覆盖在 `base` 之上的补丁**（`cordis.patch.yml` 开头就写「one-shot task mode directly over dsh-base」，只调整了 `base` 已经挂载的三行）。`web-app` 有 86 个自有依赖，是因为它加了整个 Host 与客户端。所以 `base` 是所有其他模板立足的那一层，也唯一一个退役真正有意义的层。
+这些 bundle 是分层而非独立的：`headless` 只声明 6 个依赖，因为它是**覆盖在 `base` 之上的补丁**（`cordis.patch.yml` 开头就写「one-shot task mode directly over dsh-base」，只调整了 `base` 已经挂载的三行）。`web-app` 有 86 个自有依赖，是因为它加了整个 Host 与客户端。把清单里的一项追到结论，能看出答案通常是什么样。`session-checkpoint-policy` 的存在意义是在三个语义边界 flush Session：模型请求派发前、顶层工具主体执行前、以及下一步之前。`native-headless` 自己已经做了这三件事——它在调用工具主体**之前** append `tool/call` 并 await `persist()`（第 1862 行后接 1864 行），在派发前持久化请求前缀，并在每个步边界持久化。所以这个独立的 Cordis 插件没有 Native 对应物的原因是：Native 循环把该保证内联了，而不是把它作为策略采用。
+
+这也是清单上大多数项的预期模式：不是移植，而是确认某个现有 Native 包已经拥有该关注点。它也意味着每核查一项，真实工作量就会下降。
+
+所以 `base` 是所有其他模板立足的那一层，也唯一一个退役真正有意义的层。
 
 Native 一侧已经证明这个形状可行：`native-ptc` 组合了 19 个真实产品行——agent、tools、prompt、model execution、jobs、sandbox policy、subprocess、shell、bash tool、code runtime 与 session persistence——并跑起一个能工作的 agent。它缺的不是深度而是广度：除 prompt 注册表之外没有系统提示身份、没有 agent instructions、启动时没有 attachments、没有命令面、没有 Web API。那些就是那 24 个包。
 
