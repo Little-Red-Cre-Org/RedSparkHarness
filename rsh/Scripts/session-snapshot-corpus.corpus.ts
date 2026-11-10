@@ -111,6 +111,8 @@ const snapshotAdapters = [
   'snapshots/native-headless/read-image-gif-native.snapshot.ts',
   'snapshots/native-headless/read-image-reencode-native.snapshot.ts',
   'snapshots/native-headless/read-image-attachment-path-native.snapshot.ts',
+  'snapshots/native-headless/ptc-turn-native.snapshot.ts',
+  'snapshots/native-headless/ptc-workspace-context-native.snapshot.ts',
   'snapshots/native-sdk/text-turn.snapshot.ts',
   'snapshots/native-sdk/staged-files.snapshot.ts',
   'snapshots/native-sdk/external-operation.snapshot.ts',
