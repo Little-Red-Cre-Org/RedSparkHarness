@@ -2,5 +2,5 @@
 # side as of the last confirmed-consistent state. Both languages carry equal authority;
 # after editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write .agents/notes/proposed/architecture/2026-11-10-what-still-depends-on-cordis.md
-2026-11-10-what-still-depends-on-cordis.md: e4ed002fb1e268d6335843723cc115c6a75a5c67
-2026-11-10-what-still-depends-on-cordis.zh.md: c48f4e4f65ec21324b42aafd87833f776a0dcddb
+2026-11-10-what-still-depends-on-cordis.md: bb2fafa92576521bfdd8032a5360f76f0a4ecbff
+2026-11-10-what-still-depends-on-cordis.zh.md: 24ef36ab29a27bfdf52d84fc4b9a0258948435de

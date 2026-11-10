@@ -48,6 +48,20 @@ Status: proposed
 
 这让删除 Cordis 成为一次产品级迁移而非打包步骤：那 85 个包各自要么需要 Native 形态、要么作为死代码删除、要么因为它所服务的应用本身要退役而被明确划出范围。本笔记里的场景工作是必要但不充分的，决定规划规模的数字是 85，不是 6。
 
+## 88 背后实测的工作量
+
+那个 85 是 `base` 依赖清单与出厂 Native profile 12 行之间的差值，但它高估了工作量。按包清单实测，**`base` 的 88 个包里已有 64 个带 `dsh.native` 入口**。只有 24 个没有，它们分四组：
+
+**可作为钉住的 Cordis 源码删除。** `cordis-plugin-hmr` 与 `cordis-plugin-timer` 是 Cordis 源码副本，没有 Native 形态，也没有理由再获得一个。
+
+**已被同名兄弟取代。** `rsh-agent`、`rsh-tools`、`rsh-subagent`、`rsh-tool-jobs`、`rsh-sandbox-policy` 各自有一个 `rsh-native-*` 兄弟包被 Native profile 组合。它们需要的是在无人引用后删掉 Cordis 那一半，而不是迁移。
+
+**确实未移植，也是真正的目标清单。** `agent-loop`、`agent-default-model`、`llm`、`session`、`system-prompt`、`jobs-local`、`tool-present`、`session-checkpoint-policy`、`subagent-spawn-in-process`、`subagent-fork-in-process`、`user-approval`、`typert-loader`、`typert-registry` 以及 Web 的 `api-gateway` 没有 Native 对应物。其中一部分其实已被别的名字的 Native 包覆盖（`native-headless` 承接了 loop、`native-approval` 承接了批准），所以每个都要核实而不是盲目移植。
+
+**兼容桥接层。** `compat-settings-adapters`、`plugin-host`、`subagent-acp` 只为适配 Cordis 而存在，随它一起消失。
+
+所以计划从 24 个候选开始：其中约一半是删除，其余需要判断现有 Native 包是否已覆盖。那是一份可执行的清单；「85 个包」不是。
+
 ## Acceptance criteria
 
 - 删除的每一步 `verify-native-dependencies` 都通过。

@@ -52,6 +52,20 @@ The shipped Native profile composes **12 rows**, and only three of them name the
 
 That makes deleting Cordis a product-level migration rather than a packaging step: each of those 85 either needs a Native form, must be deleted as dead, or must be declared out of scope because the application it serves is itself retired. The scenario work in this note is necessary but not sufficient, and the number that governs the plan is 85, not 6.
 
+## The measured work behind the 88
+
+That 85 figure is the gap between `base`'s dependency list and the 12 rows the shipped Native profile names, but it overstates the work. Measured against package manifests, **64 of `base`'s 88 packages already carry a `dsh.native` entry**. Only 24 do not, and they fall into four groups:
+
+**Deletable as vendored Cordis.** `cordis-plugin-hmr` and `cordis-plugin-timer` are pinned Cordis sources with no Native form and no reason to acquire one.
+
+**Already replaced, under a sibling name.** `rsh-agent`, `rsh-tools`, `rsh-subagent`, `rsh-tool-jobs` and `rsh-sandbox-policy` each have a `rsh-native-*` twin that the Native profile composes instead. These need their Cordis half deleted once nothing else imports it, not migrated.
+
+**Genuinely unported, and the real target list.** `agent-loop`, `agent-default-model`, `llm`, `session`, `system-prompt`, `jobs-local`, `tool-present`, `session-checkpoint-policy`, `subagent-spawn-in-process`, `subagent-fork-in-process`, `user-approval`, `typert-loader`, `typert-registry` and the Web `api-gateway` have no Native counterpart. Some are already covered by a differently named Native package (`native-headless` owns the loop, `native-approval` owns approval), so each needs checking rather than porting blind.
+
+**Compatibility bridges.** `compat-settings-adapters`, `plugin-host` and `subagent-acp` exist only to adapt Cordis; they disappear with it.
+
+So the plan starts from 24 candidates, of which about half are deletions and the rest need a decision on whether an existing Native package already covers them. That is a tractable list; "85 packages" was not.
+
 ## Acceptance criteria
 
 - `verify-native-dependencies` passes at every step of the deletion.
