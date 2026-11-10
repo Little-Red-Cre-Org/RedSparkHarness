@@ -274,7 +274,6 @@
     { "path": "./rsh/Engine/context/context-insight" },
     { "path": "./rsh/Engine/context/file-reference" },
     { "path": "./rsh/Engine/context/file-reference-local" },
-    { "path": "./rsh/Engine/context/tmux-context" },
     { "path": "./rsh/Engine/context/session-reference" },
     { "path": "./rsh/Engine/context/request-context-definition" },
     { "path": "./rsh/Engine/context/request-context" },

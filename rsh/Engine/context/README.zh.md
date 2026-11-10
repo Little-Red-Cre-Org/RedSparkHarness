@@ -31,7 +31,6 @@ context 组定义 Native request-context 服务并提供可选贡献器：工作
 | [`native-time-context/`](native-time-context/README.zh.md) | 原生 Provider：向应用 Consumer 返回持久的当前时间、浏览器时区与经过时长消息 | `timeContext` |
 | [`tmux-context-definition/`](tmux-context-definition/README.zh.md) | 持久 tmux 上下文服务的 Cordis-free Native Definition | `tmuxContext` |
 | [`native-tmux-context/`](../../Modules/Official/terminal/native-tmux-context/README.zh.md) | 通过所选 shell 查询 agent 自身 tmux 会话、窗口与窗格的 Native Provider | `tmuxContext` |
-| [`tmux-context/`](tmux-context/README.zh.md) | 提供 agent 所在 tmux 会话、窗口与窗格位置的兼容 Agent pre-step Provider | — |
 | [`request-context-definition/`](request-context-definition/README.zh.md) | 定义 Native request-context provider 与接受结果类型 | `requestContexts` |
 | [`request-context/`](request-context/README.zh.md) | Native registry：按 scope 排序贡献器，并将消息接受操作交给持有 Session 的 Program | `requestContexts` |
 

@@ -2470,40 +2470,6 @@ importers:
         specifier: workspace:^
         version: link:../../../Core/typert/protocol
 
-  rsh/Engine/context/tmux-context:
-    dependencies:
-      '@redspark/schemastery':
-        specifier: link:../../../Core/vendor/schemastery
-        version: link:../../../Core/vendor/schemastery
-      zod:
-        specifier: ^4.4.3
-        version: 4.4.3
-    devDependencies:
-      '@redspark/cordis':
-        specifier: workspace:^
-        version: link:../../../Core/vendor/cordis
-      '@redspark/rsh-agent':
-        specifier: workspace:^
-        version: link:../../core/agent
-      '@redspark/rsh-agent-loop-testkit':
-        specifier: workspace:^
-        version: link:../../../Tests/test-support/agent-loop-testkit
-      '@redspark/rsh-llm':
-        specifier: workspace:^
-        version: link:../../llm/llm
-      '@redspark/rsh-session':
-        specifier: workspace:^
-        version: link:../../core/session
-      '@redspark/rsh-session-projection':
-        specifier: workspace:^
-        version: link:../../session/session-projection
-      '@redspark/rsh-shell':
-        specifier: workspace:^
-        version: link:../../../Modules/Official/shell/shell
-      '@redspark/rsh-system-prompt':
-        specifier: workspace:^
-        version: link:../../core/system-prompt
-
   rsh/Engine/context/tmux-context-definition:
     dependencies:
       '@redspark/rsh-llm':
