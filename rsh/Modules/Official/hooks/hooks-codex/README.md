@@ -104,11 +104,26 @@ The matcher subject is the tool name (`PreToolUse` / `PostToolUse`) or the sessi
 
 The [hook-bridges Agent Note](../../../../../.agents/notes/archived/feature/2026-06-30-hook-bridges.md) records the bridge design and the deferred gaps; the [hook-protocol-lib Agent Note](../../../../../.agents/notes/archived/feature/2026-06-30-hook-protocol-lib.md) records the shared-versus-per-dialect split.
 
+### Native entry
+
+The package publishes a second entry, `@redspark/rsh-hooks-codex/native`, which answers the same five points on a Native profile and shares the config parser, the payload vocabulary, the matcher, the runner and the durable event pair. Only the extension-point wiring differs:
+
+| Point | Cordis entry | Native entry |
+|---|---|---|
+| `SessionStart` | `agent/session-start` (detached, injects context) | `session/starting` (parallel), consumed by a request-context provider so the opening request awaits it |
+| `UserPromptSubmit` | `agent/pre-step` waterfall | the active owner's `beforeStep` admission hook |
+| `PreToolUse` | `tools/pre-execute` waterfall | `tools.interceptBeforeCall` |
+| `PostToolUse` | `tools/post-execute` waterfall | `tools.interceptAfterCall` |
+| `Stop` | `agent/turn-stopping` plus `steer()` | `turn/stopping` plus a `next-step` inbox admission |
+
+The Native entry declares `shell` as required and `tools`, `requestContexts` and `activeSessions` as optional, so a profile that omits a capability loses that point rather than failing activation.
+
 ### Source map
 
 | File | Role |
 |---|---|
-| [`src/index.ts`](src/index.ts) | Plugin entry: config validation, listener registration, per-event payloads, decision mapping |
+| [`src/index.ts`](src/index.ts) | Cordis entry: config validation, listener registration, per-event payloads, decision mapping |
+| [`src/native.ts`](src/native.ts) | Native entry: the same mapping over the interception service, request contexts and the announced lifecycle events |
 | [`src/config.ts`](src/config.ts) | Codex config parsing: current event inventory, five mapped events, matcher validation, and skip reasons |
 | — | No runtime invariant companion is published; this bridge publishes hook-protocol session events, whose companion owns which invocation event each result cites. |
 

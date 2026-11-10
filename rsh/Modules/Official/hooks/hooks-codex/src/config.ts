@@ -6,7 +6,7 @@
  * @module @redspark/rsh-hooks-codex/config
  */
 
-import { matcherDiagnostic, type MatcherGroup } from '@redspark/rsh-hook-protocol'
+import { matcherDiagnostic, type MatcherGroup } from '@redspark/rsh-hook-protocol/native'
 
 /** Hook event names in the current Codex hooks reference. */
 export const CODEX_EVENTS = [

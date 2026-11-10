@@ -10,6 +10,8 @@
 
 import { readFileSync } from 'node:fs'
 import type { Context } from '@redspark/cordis'
+// Brings the `ctx.shell` service declaration into this Cordis entry's scope.
+import type {} from '@redspark/rsh-shell'
 import z from '@redspark/schemastery'
 import type { Agent, PreStepDecision, TurnBoundaryProjection } from '@redspark/rsh-agent'
 import type {} from '@redspark/rsh-session-projection'
