@@ -6,7 +6,11 @@
  * @module @redspark/rsh-hook-protocol/runner
  */
 
+import type { ShellOperations } from '@redspark/rsh-shell/native'
 import type { ShellExecutor } from '@redspark/rsh-shell'
+
+/** Either shell service the protocol accepts: a Cordis executor or a Native Provider. */
+export type HookShell = ShellOperations | ShellExecutor
 import { parseHookOutput } from './codec.ts'
 import type { CommandHook, HookOutput } from './types.ts'
 
@@ -58,14 +62,15 @@ export interface RunHookResult {
  * timeout in seconds overrides the default; trusted environment entries merge
  * after the executor scrub. Infrastructure rejection becomes an outcome with
  * no exit code, so this function never throws or crashes the calling turn.
- * @param bash - The executor service the command runs through.
+ * @param bash - The shell service the command runs through. Only `resolve` and
+ * `run` are used, so a Cordis executor and a Native Provider both satisfy it.
  * @param hook - the configured command; its `timeoutSec` (wire unit: seconds) overrides the default timeout.
  * @param options - the invocation's payload, env, cwd, signal, stdin framing, and default timeout.
  * @param now - millisecond clock used for the reported duration.
  * @returns the decoded output plus the run's wall-clock duration.
  */
 export async function runHook(
-  bash: ShellExecutor,
+  bash: HookShell,
   hook: CommandHook,
   options: RunHookOptions,
   now: () => number,
