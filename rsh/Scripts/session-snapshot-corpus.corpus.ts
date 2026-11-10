@@ -93,6 +93,8 @@ const snapshotAdapters = [
   'snapshots/native-headless/fs-edit-native.snapshot.ts',
   'snapshots/native-headless/fs-write-overwrite-bounded-native.snapshot.ts',
   'snapshots/native-headless/both-mode-turn-native.snapshot.ts',
+  'snapshots/native-headless/parallel-tool-calls-native.snapshot.ts',
+  'snapshots/native-headless/bash-spill-native.snapshot.ts',
   'snapshots/native-sdk/text-turn.snapshot.ts',
   'snapshots/native-sdk/staged-files.snapshot.ts',
   'snapshots/native-sdk/external-operation.snapshot.ts',
