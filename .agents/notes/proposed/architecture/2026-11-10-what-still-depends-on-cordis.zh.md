@@ -195,6 +195,28 @@ CLI 参考文档用自己的表格陈述了这个区分：`web`、`headless`、`
 
 由此得到的顺序与批量删除相反：先让分派不可达（确认每个出厂名字都解析到 Native 组合），删除两个 boot 文件及其导入，确认 CLI 不再声明 Cordis，然后才向外推进到「最后一个消费者是那个分支」的那些包。
 
+## 剩余十五个场景究竟在等什么
+
+逐项核查后，它们收敛为六项能力而不是十五个任务。这个分组才让它们变得可估算。
+
+**Native Session 上的持久化检查点——2 个场景。** `subagent-published-run-failure` 通过 `session/flush` 断言，而 Cordis session 的 `Session.flush` 会派发它；`rsh/Engine/core/session/src/native.ts` 没有 `flush` 概念。`session-reference-spill` 从另一侧停在同一层：它手写的持久化 Session 没有被 `sessionQuery` 列出。
+
+**Python 代码运行时——1 个场景。** `ptc-python-turn` 组合 `@redspark/rsh-experimental-code-runtime-python`，该包位于 `Modules/Community/experimental` 且没有 `dsh.native` 入口，所以 Native profile 根本无法运行 Python。
+
+**持久 shell——1 个场景，外加第六个模板。** `tool-bash-persistent` 与 `tool-pwsh-persistent` 分别为 438 与 474 行，面向一个 Native 已存在的 `terminals` 服务；`persistent-pwsh-tool-turn` 还需要重录，因为它的录制早于必需的 `description` 字段。
+
+**外部 LSP 或 ACP 服务——3 个场景。** `lsp-definition` 驱动 LSP 服务器；`subagent-acp-diagnostic` 与 `product-subagent-result-diagnostic` 驱动 ACP 子进程（后者还挂载 `subagent-result-diagnostic`）。
+
+**Linux 沙箱 runner——2 个场景。** `missing-sandbox-runner` 设 `RSH_SNAPSHOT_MISSING_SANDBOX_RUNNER=1` 模拟缺失的 Landlock runner；`partial-landlock-child-failure` 断言部分强制。
+
+**宿主能表达的工作区——1 个场景。** `agent-instructions` 需要名称含 `:` 的目录，Windows 即使通过 `CreateDirectory` 也无法创建。
+
+**随 Cordis 退役——3 个场景。** `advanced-toolchain`、`advanced-toolchain-runtime` 与 `cordis-inspect-jsdoc` 演练 `cordis_define`、`cordis_undefine`、`cordis_inspect_query`。
+
+**按原录制不可回放——2 个场景。** `session-query-spill` 会 grep 形如 `/tmp/dsh-acp-snap-<随机>` 的绝对路径；`skill-load` 复制的 preset 技能文件仓库已不再包含。两者都需要重录，而不是能力。
+
+六项能力里有三项规模不大且接缝已存在（`terminals`、持久化 Session 读取器、以及解锁了 `web-fetch` 的 fixture 服务器模式）。另三项则不是：Python、LSP/ACP 传输与 Landlock runner 都是独立运行时。这个划分才是有用的估算——而不是「还剩十二个场景」。
+
 ## Acceptance criteria
 
 上面的提案按包逐个满足：已被现有 Native 包拥有的，在无人引用后删掉它的 Cordis 那一半；Cordis 形状的随运行时消失；确实未移植的补上 Native 入口。场景以其在 CI 中于 Native profile 上回放通过为准。Web 的范围决定必须在任何 Web 包移动之前记录下来。

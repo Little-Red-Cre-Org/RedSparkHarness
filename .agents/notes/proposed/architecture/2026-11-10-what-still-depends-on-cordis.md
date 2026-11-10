@@ -208,9 +208,35 @@ The order this implies is the reverse of a bulk delete: make the dispatch unreac
 
 Every claim above is stated as a measured fact with the file or the command that produced it, so a later reader can re-run the check rather than trust the sentence. A package qualifies as deletable only when nothing imports it **and** no published profile composes it.
 
-## Acceptance criteria
+## What the fifteen remaining scenarios are actually waiting for
+
+Checked one by one, they resolve into six capabilities rather than fifteen tasks. The grouping is what makes them estimable.
+
+**A durability checkpoint on the Native Session — 2 scenarios.** `subagent-published-run-failure` asserts through `session/flush`, which `Session.flush` dispatches in the Cordis session; `rsh/Engine/core/session/src/native.ts` has no `flush` concept. `session-reference-spill` stopped at the same layer from the other side: its hand-written persisted Session was not listed by `sessionQuery`.
+
+**A Python code runtime — 1 scenario.** `ptc-python-turn` composes `@redspark/rsh-experimental-code-runtime-python`, which lives under `Modules/Community/experimental` with no `dsh.native` entry, so a Native profile cannot run Python at all.
+
+**A persistent shell — 1 scenario, plus the sixth template.** `tool-bash-persistent` and `tool-pwsh-persistent` are 438 and 474 lines against a `terminals` service that already exists natively; `persistent-pwsh-tool-turn` also needs its recording refreshed, because it predates the required `description` field.
+
+**An external LSP or ACP service — 3 scenarios.** `lsp-definition` drives an LSP server; `subagent-acp-diagnostic` and `product-subagent-result-diagnostic` drive ACP children (the latter also mounts `subagent-result-diagnostic`).
+
+**A Linux sandbox runner — 2 scenarios.** `missing-sandbox-runner` sets `RSH_SNAPSHOT_MISSING_SANDBOX_RUNNER=1` to simulate an absent Landlock runner; `partial-landlock-child-failure` asserts partial enforcement.
+
+**A workspace the host can represent — 1 scenario.** `agent-instructions` needs a directory whose name contains `:`, which Windows cannot create even through `CreateDirectory`.
+
+**Retire with Cordis — 3 scenarios.** `advanced-toolchain`, `advanced-toolchain-runtime` and `cordis-inspect-jsdoc` exercise `cordis_define`, `cordis_undefine` and `cordis_inspect_query`.
+
+**Unreplayable as recorded — 2 scenarios.** `session-query-spill` greps an absolute `/tmp/dsh-acp-snap-<random>` path; `skill-load` copies a preset skill file the repository no longer contains. Both need re-recording, not a capability.
+
+Three of the six capabilities are small and already have their seams (`terminals`; the persisted-Session reader; the fixture-server pattern that unblocked `web-fetch`). Three are not: Python, LSP/ACP transports and a Landlock runner are separate runtimes. That split is the useful estimate — not "twelve scenarios remain".
+
+
 
 Every claim above names the file or command that produced it, so a later reader re-runs the check rather than trusting the sentence. A package qualifies as deletable only when nothing imports it **and** no published profile composes it.
+
+## Acceptance criteria
+
+Each claim above names the file or command that produced it, so a reader re-runs the check rather than trusting the sentence.
 
 ## Risks
 
