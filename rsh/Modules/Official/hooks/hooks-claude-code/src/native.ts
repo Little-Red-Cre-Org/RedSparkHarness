@@ -55,7 +55,7 @@ import { parseClaudeCodeConfig, type ClaudeCodeHookConfig } from './config.ts'
  * @param event - the exact durable event to record.
  */
 async function appendHook(
-  append: NativeToolPreCall['appendEvent'], session: Session,
+  append: HookAppend | undefined, session: Session,
   event: { readonly type: 'hook/invoked' | 'hook/result'; readonly data: unknown },
 ): Promise<void> {
   if (append !== undefined) {
@@ -65,6 +65,9 @@ async function appendHook(
   }
   ;(session.append as (type: 'hook/invoked' | 'hook/result', data: never) => unknown)(event.type, event.data as never)
 }
+
+/** One hook record's write path: the tracked appender may be synchronous or async. */
+type HookAppend = (type: 'hook/invoked' | 'hook/result', data: unknown) => unknown
 
 /** The plugin source every context this bridge injects is stamped with. */
 const PLUGIN_SOURCE: MessageSource = { kind: 'plugin', plugin: 'hooks-claude-code' }
@@ -309,7 +312,7 @@ async function runPoint(
      * application keeps one contiguous pending batch, and a direct Session append
      * desynchronizes the next persist.
      */
-    readonly append?: NativeToolPreCall['appendEvent']
+    readonly append?: HookAppend | undefined
   },
 ): Promise<MergedHookOutcome> {
   const groups: MatcherGroup[] = settings.parsed[point] ?? []
@@ -417,7 +420,8 @@ function install(context: NativeContext, settings: Settings): void {
     // --- PreToolUse: the matcher subject is the tool name. ---
     context.effect(tools.interceptBeforeCall(async (call, next): Promise<NativeToolPreDecision> => {
       const merged = await runPoint(context, settings, 'PreToolUse', call.name, preToolPayload(call), {
-        session: call.session, append: call.appendEvent,
+        session: call.session,
+        ...call.appendEvent === undefined ? {} : { append: call.appendEvent as HookAppend },
         ...call.turn === undefined ? {} : { turn: call.turn },
         signal: call.signal,
       })
@@ -428,7 +432,8 @@ function install(context: NativeContext, settings: Settings): void {
     // --- PostToolUse: block with corrective feedback, or attach context. ---
     context.effect(tools.interceptAfterCall(async (call, next): Promise<NativeToolPostDecision> => {
       const merged = await runPoint(context, settings, 'PostToolUse', call.name, postToolPayload(call), {
-        session: call.session, append: call.appendEvent,
+        session: call.session,
+        ...call.appendEvent === undefined ? {} : { append: call.appendEvent as HookAppend },
         ...call.turn === undefined ? {} : { turn: call.turn },
         signal: call.signal,
       })
@@ -522,6 +527,7 @@ async function admitPrompt(
   const merged = await runPoint(context, settings, 'UserPromptSubmit', '',
     promptPayload(ask.owner.session, prompt), {
       session: ask.owner.session, turn: ask.turn, signal: ask.signal,
+      ...ask.appendEvent === undefined ? {} : { append: ask.appendEvent as HookAppend },
     })
   if (merged.decision === 'deny') return { kind: 'reject', discard: ask.candidates.map(message => message.id) }
   // Context alone is not a veto: DELEGATE so a later admission hook can still reject,

@@ -50,7 +50,7 @@ import { parseCodexConfig, type CodexHookConfig, type CodexSupportedEvent } from
  * @param event - the exact durable event to record.
  */
 async function appendHook(
-  append: NativeToolPreCall['appendEvent'], session: Session,
+  append: HookAppend | undefined, session: Session,
   event: { readonly type: 'hook/invoked' | 'hook/result'; readonly data: unknown },
 ): Promise<void> {
   if (append !== undefined) {
@@ -60,6 +60,9 @@ async function appendHook(
   }
   ;(session.append as (type: 'hook/invoked' | 'hook/result', data: never) => unknown)(event.type, event.data as never)
 }
+
+/** One hook record's write path: the tracked appender may be synchronous or async. */
+type HookAppend = (type: 'hook/invoked' | 'hook/result', data: unknown) => unknown
 
 /** The plugin source every context this bridge injects is stamped with. */
 const PLUGIN_SOURCE: MessageSource = { kind: 'plugin', plugin: 'hooks-codex' }
@@ -292,7 +295,7 @@ async function runPoint(
     readonly signal: AbortSignal
     readonly plainStdoutAsContext?: boolean
     /** The application's tracked appender; a hook event must be written through it. */
-    readonly append?: NativeToolPreCall['appendEvent']
+    readonly append?: HookAppend | undefined
   },
 ): Promise<MergedHookOutcome> {
   const groups: MatcherGroup[] = settings.parsed[point] ?? []
@@ -446,7 +449,7 @@ function install(context: NativeContext, settings: Settings): void {
         session: call.session,
         ...call.turn === undefined ? {} : { turn: call.turn },
         signal: call.signal,
-        ...call.appendEvent === undefined ? {} : { append: call.appendEvent },
+        ...call.appendEvent === undefined ? {} : { append: call.appendEvent as HookAppend },
       })
       if (merged.decision === 'deny') return { kind: 'deny', reason: merged.reason ?? 'blocked by PreToolUse hook' }
       return next()
@@ -457,7 +460,7 @@ function install(context: NativeContext, settings: Settings): void {
         session: call.session,
         ...call.turn === undefined ? {} : { turn: call.turn },
         signal: call.signal,
-        ...call.appendEvent === undefined ? {} : { append: call.appendEvent },
+        ...call.appendEvent === undefined ? {} : { append: call.appendEvent as HookAppend },
       })
       const ours = contextFrom(merged)
       if (merged.decision === 'deny') {

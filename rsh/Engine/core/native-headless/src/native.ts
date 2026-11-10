@@ -1621,10 +1621,13 @@ export class NativeHeadlessApplication implements NativeApplication {
               const snapshot = eligibleInboxSnapshot(owner, step)
               const candidates = [...snapshot.nextStep, ...snapshot.nextTurn]
               const commitChecks: NativeStepAdmissionCommitCheck[] = []
+              const admissionOwner = activeOwner
               let registrationOpen = true
               let decision: Awaited<ReturnType<NativeProgramActiveSession['admission']['decide']>>
               try {
                 decision = await activeOwner.admission.decide({ owner: activeOwner, turn, step, candidates, signal,
+                  // Admission hooks record through the same batch the committed step uses.
+                  appendEvent: (type, data, ...opts) => admissionOwner.append(type, data, ...opts),
                   registerCommitCheck: (check) => {
                     if (!registrationOpen) throw new Error('native-headless: admission commit checks must register before admission settles')
                     commitChecks.push(check)
@@ -1635,7 +1638,10 @@ export class NativeHeadlessApplication implements NativeApplication {
               if (decision.kind === 'reject') {
                 if (turnOwnership !== undefined) turnOwnership.preparingStep = false
                 await owner.remove(decision.discard, 'canceled', signal)
+                // A hook that refuses the prompt ends the turn deliberately, so the run
+                // reports a blocked turn rather than the failure exit a crash produces.
                 reason = { kind: 'blocked' }
+                exitCode = 0
                 return undefined
               }
               const prepared = await prepare()
