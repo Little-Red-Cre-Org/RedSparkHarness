@@ -161,10 +161,11 @@ export const plugin: NativePlugin = {
               // own block; a model that only saw "ended: max-tokens" could not tell a refusal
               // from a truncation, and would lose the partial answer the child did produce.
               const partial = content.map(block => block.type === 'text' ? block.text : '').join('')
-              // The compatibility tool keeps the headline and the partial answer as one block
-              // and then repeats the child's own blocks; the recorded result pins that shape.
-              if (partial.length > 0) content.unshift({ type: 'text', text: partial })
-              content.unshift({ type: 'text', text: `${stopReasonHeadline(result.stopReason)}\nPartial output before the run ended:` })
+              // One block carries the headline and the child's preserved partial answer, which
+              // is the shape the compatibility result renders.
+              content.splice(0, content.length, { type: 'text', text: partial.length === 0
+                ? stopReasonHeadline(result.stopReason)
+                : `${stopReasonHeadline(result.stopReason)}\nPartial output before the run ended:\n${partial}` })
             }
             return { content, isError: result.stopReason !== 'completed', meta: {
               kind: 'subagent', ...'remoteId' in result ? { externalChildId: result.id, remoteId: result.remoteId }

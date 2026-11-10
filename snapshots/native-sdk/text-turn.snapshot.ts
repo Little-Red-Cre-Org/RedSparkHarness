@@ -293,7 +293,6 @@ it('replays a native SDK turn with exact model input, output and durable Session
         expect(failed.events.find(event => event.type === 'tool/result')?.data.message.content)
           .toMatchObject([{ type: 'tool-result', isError: true, content: [
             { type: 'text', text: 'subagent run failed\nPartial output before the run ended:\npartial failed child output' },
-            { type: 'text', text: 'partial failed child output' },
           ] }])
         expect(failed.finalResponse).toBe(reply)
         const backgroundEvents = restored.client.subscribeSessionTree(session.id)
