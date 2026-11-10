@@ -446,6 +446,7 @@ function install(context: NativeContext, settings: Settings): void {
         session: call.session,
         ...call.turn === undefined ? {} : { turn: call.turn },
         signal: call.signal,
+        ...call.appendEvent === undefined ? {} : { append: call.appendEvent },
       })
       if (merged.decision === 'deny') return { kind: 'deny', reason: merged.reason ?? 'blocked by PreToolUse hook' }
       return next()
@@ -456,6 +457,7 @@ function install(context: NativeContext, settings: Settings): void {
         session: call.session,
         ...call.turn === undefined ? {} : { turn: call.turn },
         signal: call.signal,
+        ...call.appendEvent === undefined ? {} : { append: call.appendEvent },
       })
       const ours = contextFrom(merged)
       if (merged.decision === 'deny') {
