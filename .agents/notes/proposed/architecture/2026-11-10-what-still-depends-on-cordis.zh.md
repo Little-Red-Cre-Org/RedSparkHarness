@@ -105,6 +105,16 @@ Native 一侧已经证明这个形状可行：`native-ptc` 组合了 19 个真�
 - `Programs/Web` 要么迁移、要么明确记为不在范围内并写明理由。
 - 收尾时 `rsh/Compatibility` 之外没有任何包 import `@redspark/cordis`。
 
+## 那两个 driver 形场景究竟需要什么
+
+`system-prompt-in-history` 与 `model-switch-notice` 此前都被归为受同一理由阻塞，而核查否证了这个理由。它们都不需要回合中途的 driver，需要的是**Native 运行时尚不具备的能力**。
+
+第一个场景断言：当渲染出的提示词发生变化时，声明 `systemPromptUpdate: 'in-history'` 的路由会在缓存历史之后追加一条新的 `system/message`，而不是替换节点 0。`rsh-llm` 仍会在路由能力上解析该标志——字段就在 `llm/src/types.ts` 与 `index.ts` 里——但 **`native-headless` 与 `native-model-execution` 都不读它**。Cordis 的行为在 `agent-loop` 里，由它的测试守着。所以该场景在 Native 循环实现 in-history 提示词更新之前无法回放。
+
+第二个场景通过 `installModelSelection` 与三个根 waterfall 在 `todo_write` 之后切换所选模型。其中两个（`system-prompt/assemble`、`agent/request`）是 Cordis 扩展点，没有 Native 对应物，因此移植该 driver 意味着要设计这两者的 Native 等价物。
+
+所以两者都被记录为受运行时能力阻塞，而不是受测试基础设施阻塞——这改变了「解除阻塞」的代价：那是循环层的工作，且必须自带场景覆盖，而不是改一下 fixture。
+
 ## Acceptance criteria
 
 上面的提案按包逐个满足：已被现有 Native 包拥有的，在无人引用后删掉它的 Cordis 那一半；Cordis 形状的随运行时消失；确实未移植的补上 Native 入口。场景以其在 CI 中于 Native profile 上回放通过为准。Web 的范围决定必须在任何 Web 包移动之前记录下来。
