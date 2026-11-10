@@ -69,6 +69,7 @@ const snapshotAdapters = [
   'snapshots/native-headless/fs-policy-reject-native.snapshot.ts',
   'snapshots/native-headless/fs-read-window-native.snapshot.ts',
   'snapshots/native-headless/fs-write-native.snapshot.ts',
+  'snapshots/native-headless/hook-cc-invalid-matcher-native.snapshot.ts',
   'snapshots/native-sdk/text-turn.snapshot.ts',
   'snapshots/native-sdk/staged-files.snapshot.ts',
   'snapshots/native-sdk/external-operation.snapshot.ts',
