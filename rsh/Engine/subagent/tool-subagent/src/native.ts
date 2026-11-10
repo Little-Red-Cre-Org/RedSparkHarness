@@ -157,13 +157,14 @@ export const plugin: NativePlugin = {
             const content: ContentBlock[] = result.output.filter(
               (block): block is Extract<ContentBlock, { type: 'text' }> => block.type === 'text')
             if (result.stopReason !== 'completed') {
-              // The headline names what happened, then the child's own words follow; a model
-              // that only saw "ended: max-tokens" could not tell a refusal from a truncation,
-              // and would lose the partial answer the child did produce.
+              // The headline names what happened, then the child's own words follow as their
+              // own block; a model that only saw "ended: max-tokens" could not tell a refusal
+              // from a truncation, and would lose the partial answer the child did produce.
               const partial = content.map(block => block.type === 'text' ? block.text : '').join('')
-              content.unshift({ type: 'text', text: partial.length === 0
-                ? stopReasonHeadline(result.stopReason)
-                : `${stopReasonHeadline(result.stopReason)}\nPartial output before the run ended:\n${partial}` })
+              // The compatibility tool keeps the headline and the partial answer as one block
+              // and then repeats the child's own blocks; the recorded result pins that shape.
+              if (partial.length > 0) content.unshift({ type: 'text', text: partial })
+              content.unshift({ type: 'text', text: `${stopReasonHeadline(result.stopReason)}\nPartial output before the run ended:` })
             }
             return { content, isError: result.stopReason !== 'completed', meta: {
               kind: 'subagent', ...'remoteId' in result ? { externalChildId: result.id, remoteId: result.remoteId }

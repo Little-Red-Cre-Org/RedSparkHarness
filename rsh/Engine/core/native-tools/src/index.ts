@@ -584,6 +584,7 @@ export class NativeToolRegistry {
    * Ask the pre-tool interception points about one call and adopt their answer.
    * @param call - invocation whose Agent, Session and cancellation remain fixed.
    * @param candidate - parsed arguments the body would receive before any rewrite.
+   * @param append - the application's tracked appender an interceptor may record through.
    * @returns allow/deny/ask decision, with the arguments the body must run with.
    */
   async decideBeforeCall(
@@ -615,6 +616,7 @@ export class NativeToolRegistry {
    * Ask the post-tool interception points about one body result and adopt their answer.
    * @param call - admitted invocation, or the application's own builtin facts.
    * @param result - body result before any post-tool decision transforms it.
+   * @param append - the application's tracked appender an interceptor may record through.
    * @returns the result to record, with decision contexts retained on it.
    */
   async decideAfterCall(
