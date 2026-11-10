@@ -217,6 +217,7 @@ export const mixedNativeEntryDirectories: ReadonlyMap<string, string> = new Map(
   ['rsh/Modules/Official/terminal/terminal-bash', 'Cordis and native Providers share the subprocess terminal primitive'],
   ['rsh/Modules/Official/terminal/tool-terminal', 'Cordis and native Consumers share terminal lifecycle tools'],
   ['rsh/Modules/Official/fs/tool-fs', 'Cordis and native value tools share filesystem validation, guards and presentation'],
+  ['rsh/Modules/Official/fs/tool-present', 'Cordis and native deliveries share the presented-file record and readable-file checks'],
   ['rsh/Modules/Official/attachment/attachment-local', 'Cordis and native attachment Providers share immutable objects and transform ownership'],
   ['rsh/Modules/Official/llm/llm-pi-ai', 'Cordis and native pi-ai Providers share real adapter, catalog and auth operations'],
   ['rsh/Modules/Official/llm/llm-deepseek', 'Cordis and native official Providers share real HTTP/SSE adapter and static configuration'],
@@ -380,6 +381,7 @@ export const nativeCompatibilityOnlyPeers: ReadonlyMap<string, readonly string[]
   ['rsh/Core/storage/storage-domain', ['@redspark/schemastery']],
   ['rsh/Core/storage/storage-json', ['@redspark/schemastery']],
   ['rsh/Modules/Official/fs/tool-fs', ['@redspark/rsh-tools', '@redspark/rsh-attachment']],
+  ['rsh/Modules/Official/fs/tool-present', ['@redspark/rsh-tools']],
   ['rsh/Modules/Official/mcp/mcp-client', ['@redspark/rsh-scope', '@redspark/rsh-tools']],
   ['rsh/Engine/preset/agent-presets', [
     '@redspark/cordis-plugin-include', '@redspark/cordis-plugin-loader',

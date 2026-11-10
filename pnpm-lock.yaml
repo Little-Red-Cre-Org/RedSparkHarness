@@ -6690,6 +6690,12 @@ importers:
       '@redspark/rsh-llm':
         specifier: workspace:^
         version: link:../../../../Engine/llm/llm
+      '@redspark/rsh-native-runtime':
+        specifier: workspace:^
+        version: link:../../../../Core/runtime-diagnostics/native-runtime
+      '@redspark/rsh-native-tools':
+        specifier: workspace:^
+        version: link:../../../../Engine/core/native-tools
       '@redspark/rsh-scope':
         specifier: workspace:^
         version: link:../../../../Engine/core/scope

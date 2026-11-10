@@ -16,6 +16,19 @@
       "apiVersion": 1,
       "role": "consumer",
       "capability": "filesystem-delivery"
+    },
+    "native": {
+      "apiVersion": 1,
+      "entry": "./native",
+      "targets": [
+        "host"
+      ],
+      "requires": [
+        "fs",
+        "tools"
+      ],
+      "optional": [],
+      "provides": []
     }
   },
   "main": "lib/index.js",
@@ -30,11 +43,16 @@
       "default": "./lib/types/types.js"
     },
     "./src/*": "./src/*",
-    "./package.json": "./package.json"
+    "./package.json": "./package.json",
+    "./native": {
+      "types": "./lib/types/native.d.ts",
+      "default": "./lib/native.js"
+    }
   },
   "license": "MIT",
   "files": [
     "lib/index.js",
+    "lib/native.js",
     "lib/types/**/*.js",
     "lib/types/**/*.d.ts"
   ],
@@ -48,7 +66,9 @@
     "@redspark/rsh-llm": "workspace:^",
     "@redspark/rsh-session": "workspace:^",
     "@redspark/rsh-session-projection": "workspace:^",
-    "@redspark/rsh-tools": "workspace:^"
+    "@redspark/rsh-tools": "workspace:^",
+    "@redspark/rsh-native-runtime": "workspace:^",
+    "@redspark/rsh-native-tools": "workspace:^"
   },
   "devDependencies": {
     "@redspark/cordis": "workspace:^",
@@ -62,6 +82,8 @@
     "@redspark/rsh-agent-loop-testkit": "workspace:^",
     "@redspark/rsh-fs-local": "workspace:^",
     "@redspark/rsh-system-prompt": "workspace:^",
-    "@redspark/rsh-scope": "workspace:^"
+    "@redspark/rsh-scope": "workspace:^",
+    "@redspark/rsh-native-runtime": "workspace:^",
+    "@redspark/rsh-native-tools": "workspace:^"
   }
 }
