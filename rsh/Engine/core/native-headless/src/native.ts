@@ -1983,9 +1983,15 @@ export class NativeHeadlessApplication implements NativeApplication {
             reason = { kind: 'error', error: { code: 'STEP_LIMIT', message: 'native-headless: model step limit reached' } }
           }
         } catch (error: unknown) {
+          // A model failure arrives with the provider-neutral code its adapter classified.
+          // Collapsing it to UNKNOWN would leave the durable turn/end unable to say whether
+          // the run failed on credentials, rate limits or a server fault.
           reason = signal.aborted
             ? { kind: 'aborted', reason: cancellationCause(signal.reason) }
-            : { kind: 'error', error: { code: 'UNKNOWN', message: error instanceof Error ? error.message : String(error) } }
+            : { kind: 'error', error: {
+              code: error instanceof HarnessError ? error.code : 'UNKNOWN',
+              message: error instanceof Error ? error.message : String(error),
+            } }
           throw error
         } finally {
           if (reason.kind === 'completed' || reason.kind === 'max-tokens' || reason.kind === 'error' && reason.error.code === 'STEP_LIMIT') {
