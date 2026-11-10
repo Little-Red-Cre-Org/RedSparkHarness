@@ -194,6 +194,10 @@ Measured, rather than assumed: **266 of 384 workspace packages declare `@redspar
 
 So removing the legacy launcher is a change to **one dispatch branch plus `profile-boot.ts` (381 lines) and `compatibility-runtime.ts` (29 lines)**, after which the 266 declaring packages either lose their last consumer or keep one in the compatibility bundles, which is what the bundle retirement then has to settle. The CLI's 178 dependencies can shed `@redspark/cordis` and `@redspark/rsh-cordis-bridge` at that point.
 
+The precondition for that first step is now verified, and it isolates the one thing still in the way. Calling `profileRuntime` before any profile exists answers `'legacy'` for every name — resolution reads the manifest on disk, not the name. After `ensureShippedNativeProfile` runs, `headless`, `web`, `sdk`, `acp` and `rsh` all answer `'native'`. `sdk-minimal` answers `'legacy'` either way, and `SHIPPED_NATIVE_PROFILES()` does not contain it.
+
+So exactly one shipped name still requires the legacy branch: `sdk-minimal`. Making the dispatch unreachable is therefore not a matter of verifying five profiles — it is the decision to retire that sixth name, which is why the two questions are one question. Its `sdk-minimal` tests, its bundle and its documentation row all belong to this same change, because the branch cannot go until the name does.
+
 The order this implies is the reverse of a bulk delete: make the dispatch unreachable (verify every shipped name resolves to a Native composition), delete the two boot files and their imports, confirm the CLI no longer declares Cordis, and only then work outward through the packages whose last consumer was that branch.
 
 

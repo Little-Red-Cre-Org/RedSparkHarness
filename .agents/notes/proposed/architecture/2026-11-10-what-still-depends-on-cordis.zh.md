@@ -185,6 +185,10 @@ CLI 参考文档用自己的表格陈述了这个区分：`web`、`headless`、`
 
 所以移除 legacy 启动器是**一个分派分支加上 `profile-boot.ts`（381 行）与 `compatibility-runtime.ts`（29 行）**的改动；此后那 266 个声明包里，要么失去最后一个消费者，要么其消费者留在兼容 bundle 中——那正是 bundle 退役随后要解决的问题。CLI 的 178 个依赖届时可以去掉 `@redspark/cordis` 与 `@redspark/rsh-cordis-bridge`。
 
+那第一步的前提现已验证，并且它孤立出唯一仍在挡路的东西。在任何 profile 存在之前调用 `profileRuntime`，每个名字都返回 `'legacy'`——解析读的是磁盘上的 manifest，不是名字。而在 `ensureShippedNativeProfile` 运行之后，`headless`、`web`、`sdk`、`acp` 与 `rsh` 全部返回 `'native'`。`sdk-minimal` 无论如何都返回 `'legacy'`，且 `SHIPPED_NATIVE_PROFILES()` 不含它。
+
+所以仍然需要 legacy 分支的出厂名字恰好只有一个：`sdk-minimal`。因此「让分派不可达」不是验证五个 profile 的事，而是决定退役第六个名字的事——这就是为什么那两个问题其实是同一个问题。它的 `sdk-minimal` 测试、bundle 与文档行都属于同一次改动，因为名字不消失，那个分支就去不掉。
+
 由此得到的顺序与批量删除相反：先让分派不可达（确认每个出厂名字都解析到 Native 组合），删除两个 boot 文件及其导入，确认 CLI 不再声明 Cordis，然后才向外推进到「最后一个消费者是那个分支」的那些包。
 
 ## Acceptance criteria
