@@ -199,7 +199,7 @@ CLI 参考文档用自己的表格陈述了这个区分：`web`、`headless`、`
 
 逐项核查后，它们收敛为六项能力而不是十五个任务。这个分组才让它们变得可估算。
 
-**Native Session 上的持久化检查点——2 个场景。** `NativeContinuationSession` 现已带有一个：`persist()` 先追加受管批次，随后在 writer flush 之前运行每个已注册的 `NativeDurabilityCheckpoint`，因此拒绝会中止该次 flush 并以与存储错误相同的形式浮出给调用方。`checkpoint(observer)` 返回其精确移除句柄。剩下的是把它接到插件可见的服务上，而该 fixture 需要的正是这一点：一个等价于 `session/flush` 的观察者，对某一次子回合抛出错误。
+**Native Session 上的持久化检查点——2 个场景。** `NativeContinuationSession` 现已带有一个：`persist()` 先追加受管批次，随后在 writer flush 之前运行每个已注册的 `NativeDurabilityCheckpoint`，因此拒绝会中止该次 flush 并以与存储错误相同的形式浮出给调用方。`checkpoint(observer)` 返回其精确移除句柄，而 owner 通过 `NativeActiveSessionOwner.checkpoint` 暴露它——该成员在接口上是可选的，因此模拟 owner 的测试替身不必改动即可编译——Program 再把它转发到 session。这就是插件所需的完整 `session/flush` 能力：注册一次，在想失败的那个回合从回调中抛出即可。
  `subagent-published-run-failure` 通过 `session/flush` 断言，而 Cordis session 的 `Session.flush` 会派发它；`rsh/Engine/core/session/src/native.ts` 没有 `flush` 概念。`session-reference-spill` 从另一侧停在同一层：它手写的持久化 Session 没有被 `sessionQuery` 列出。
 
 **Python 代码运行时——1 个场景。** `ptc-python-turn` 组合 `@redspark/rsh-experimental-code-runtime-python`，该包位于 `Modules/Community/experimental` 且没有 `dsh.native` 入口，所以 Native profile 根本无法运行 Python。

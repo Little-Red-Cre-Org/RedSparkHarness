@@ -2,7 +2,7 @@
 import type { NativeAgent, InboxTarget } from '@redspark/rsh-native-agent'
 import type { MessageId, TextBlock, UserMessage } from '@redspark/rsh-llm/native'
 import type { SessionEvent, TurnEndReason } from '@redspark/rsh-session/native'
-import { NativeStepAdmission, type NativeActiveSessionOwner, type NativeStepAdmissionHook, type NativeRootSessionOperations } from '@redspark/rsh-native-session-execution'
+import { NativeStepAdmission, type NativeActiveSessionOwner, type NativeDurabilityCheckpoint, type NativeStepAdmissionHook, type NativeRootSessionOperations } from '@redspark/rsh-native-session-execution'
 import type { NativeContinuationSession } from './continuation-session.ts'
 
 interface IdleListener {
@@ -139,6 +139,11 @@ export class NativeProgramActiveSession implements NativeActiveSessionOwner {
       this.idle.delete(entry)
       return disposal ??= Promise.allSettled([...entry.pending]).then(() => undefined)
     }
+  }
+  /** @inheritdoc */
+  checkpoint(observer: NativeDurabilityCheckpoint): () => void {
+    this.assertAdmitting()
+    return this.owner.checkpoint(observer)
   }
   /** @inheritdoc */
   beforeStep(hook: NativeStepAdmissionHook, order: number): () => Promise<void> {
