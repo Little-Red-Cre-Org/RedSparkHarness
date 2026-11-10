@@ -42,7 +42,8 @@ import type { NativeModelExecution, NativePreparedModelStep } from '@redspark/rs
 import type { NativeResponsesRoute } from '@redspark/rsh-native-model-execution/responses-transport'
 import type { NativeExternalToolCall, NativeExternalToolInvocation, NativeExternalToolOperations,
   NativeToolApprovalRequest, NativeToolDelegationContext, NativeToolExecution, NativeToolExecutionSnapshot,
-  NativeToolRegistry, NativeToolResult, ToolSdkSchema } from '@redspark/rsh-native-tools'
+  NativeToolPreCallInput, NativeToolRegistry, NativeToolResult,
+  ToolSdkSchema } from '@redspark/rsh-native-tools'
 import type { NativePromptRegistry } from '@redspark/rsh-native-prompt'
 import { interpolatePromptText } from '@redspark/rsh-native-prompt'
 import { NativeAgentId, type NativeAgent, type NativeAgentRegistry } from '@redspark/rsh-native-agent'
@@ -67,7 +68,7 @@ import {
 } from '@redspark/rsh-llm/native'
 import { interruptedTurnClosers, SESSION_FORMAT_VERSION, Session, SessionId, SessionSeq,
   type SessionEvent, type SessionHeader, type TurnEndCancelCause } from '@redspark/rsh-session/native'
-import { deepFreeze, type JsonValue } from '@redspark/rsh-util-values'
+import { assertNever, deepFreeze, type JsonValue } from '@redspark/rsh-util-values'
 import type { NativeSessionPersistenceOperations } from '@redspark/rsh-session-persistence/native'
 
 interface NativeRootForkSeed {
@@ -507,6 +508,21 @@ function imageReferences(...contents: readonly (readonly ContentBlock[])[]): rea
   return [...references.values()]
 }
 
+/** The error result a denied or refused application builtin records. */
+function builtinDenial(reason: string): NativeToolResult {
+  return { content: [{ type: 'text', text: reason }], isError: true, error: { name: 'HarnessError', code: 'TOOL_INTERCEPTED' } }
+}
+
+/** The model-visible text a closed approval outcome produces for one builtin call. */
+function approvalRefusalText(name: string, outcome: Exclude<NativeApprovalOutcome, 'allowed-once'>): string {
+  switch (outcome) {
+    case 'rejected': return `the user rejected tool "${name}"`
+    case 'cancelled': return `approval for tool "${name}" was cancelled`
+    case 'unavailable': return `tool "${name}" requires approval, but no approval channel is available`
+    default: return assertNever(outcome, 'NativeApprovalOutcome')
+  }
+}
+
 /** Failure used only to project a closed approval outcome into one tool result. */
 class NativeApprovalRejection extends Error {
   constructor(readonly outcome: Exclude<NativeApprovalOutcome, 'allowed-once'>, toolName: string) {
@@ -834,6 +850,98 @@ export class NativeHeadlessApplication implements NativeApplication {
     const outcome = await this.fs.writeText(target, args.content ?? '', intent, signal, this.sandboxPolicy?.resolve({ session }))
     this.context.events.emit(this.context.scope, 'fs/observed', target, { kind: 'present', version: outcome.version }, actor)
     return `${outcome.operation}: ${args.path}`
+  }
+
+  /**
+   * Ask the pre-tool interception points about one application builtin.
+   * @param facts - builtin invocation facts shared with Registry calls.
+   * @param requestApproval - the turn's approval channel for an `ask` answer.
+   * @param signal - turn cancellation.
+   * @returns the admitted arguments, or the denial to record instead of running the body.
+   */
+  private async admitBuiltin(
+    facts: NativeToolPreCallInput,
+    requestApproval: (request: NativeToolApprovalRequest) => Promise<NativeApprovalOutcome>,
+    signal: AbortSignal,
+  ): Promise<{ admitted: unknown; denial?: never } | { denial: NativeToolResult; admitted?: never }> {
+    const tools = this.tools
+    if (tools === undefined) return { admitted: facts.arguments }
+    const decision = await tools.decideBeforeCall(facts, facts.arguments)
+    signal.throwIfAborted()
+    switch (decision.kind) {
+      case 'allow':
+        return { admitted: decision.arguments ?? facts.arguments }
+      case 'deny':
+        return { denial: builtinDenial(decision.reason) }
+      case 'ask': {
+        const outcome = await requestApproval({
+          agent: facts.agent, session: facts.session, callId: facts.callId, toolName: facts.name, signal,
+          ...decision.reason === undefined ? {} : { reason: decision.reason },
+        })
+        return outcome === 'allowed-once' ? { admitted: facts.arguments } : { denial: builtinDenial(approvalRefusalText(facts.name, outcome)) }
+      }
+      default: return assertNever(decision, 'NativeToolPreDecision')
+    }
+  }
+
+  /**
+   * Run one application builtin body with the arguments a pre-tool decision admitted.
+   * @param call - the model's tool-call block, used for its own argument text.
+   * @param admitted - parsed arguments the pre-tool point admitted, possibly rewritten.
+   * @param scope - turn facts the body needs: workspace root, approval channel and policy.
+   * @returns the outcome the post-tool interception point observes.
+   */
+  private async runBuiltin(
+    call: ToolCallBlock,
+    admitted: unknown,
+    scope: {
+      readonly agent: NativeAgent
+      readonly session: Session
+      readonly signal: AbortSignal
+      readonly root: FsTarget
+      /** Turn cwd and write root resolved for this exact invocation. */
+      readonly cwd: string
+      readonly workspaceWriteRoot: string | undefined
+      readonly approval: (request: NativeToolApprovalRequest) => Promise<NativeApprovalOutcome>
+      readonly executionPolicy: ReturnType<typeof nativeSessionExecutionPolicy>
+    },
+  ): Promise<NativeToolResult> {
+    const { session, signal, root, executionPolicy, cwd, workspaceWriteRoot } = scope
+    if (this.codeRuntime !== undefined && call.name === 'run_code') {
+      const outcome = await this.executeCode(call, session, signal)
+      return {
+        content: [{ type: 'text', text: outcome.text }], isError: outcome.error !== undefined,
+        ...outcome.error === undefined ? {} : { error: outcome.error },
+      }
+    }
+    if (call.name === 'read_file' || call.name === 'write_file') {
+      const args = toolArguments(JSON.stringify(admitted), call.name)
+      const attached = call.name === 'read_file' ? await this.attachedFile(session, args.path, cwd, signal) : undefined
+      if (attached !== undefined) return { content: [{ type: 'text', text: await this.readAttachedFile(attached, signal) }], isError: false }
+      const target = await this.target(args.path, root, signal, cwd)
+      if (call.name === 'write_file' && (this.approval !== undefined || executionPolicy !== undefined)) {
+        const outcome = await scope.approval({ agent: scope.agent, session, callId: call.id, toolName: call.name, signal,
+          sessionGrant: { parameters: Object.freeze({ path: args.path, content: args.content ?? '' }),
+            context: { cwdKey: root.targetKey, targetKey: target.targetKey } },
+          reason: 'Writing a file changes the selected workspace.' })
+        if (outcome !== 'allowed-once') throw new NativeApprovalRejection(outcome, call.name)
+      }
+      return { content: [{ type: 'text', text: await this.execute(call, args, target, scope.agent, session, signal,
+        cwd, workspaceWriteRoot) }], isError: false }
+    }
+    throw new HarnessError(`native-headless: builtin tool ${call.name} has no body`, 'TOOL_DENIED')
+  }
+
+  /**
+   * Ask the post-tool interception points about one application builtin outcome.
+   * @param facts - builtin invocation facts shared with Registry calls.
+   * @param result - outcome the builtin produced or the denial that replaced it.
+   * @returns the result to record, with decision contexts retained on it.
+   */
+  private async interceptBuiltinOutcome(
+    facts: NativeToolPreCallInput, result: NativeToolResult,
+  ): Promise<NativeToolResult> {
+    return this.tools === undefined ? result : this.tools.decideAfterCall(facts, result)
   }
 
   /** Run code through the profile-selected Provider and convert a program failure into one tool failure. */
@@ -1271,6 +1379,9 @@ export class NativeHeadlessApplication implements NativeApplication {
               throw new FsError('external tool workspace is outside the active Session', 'FS_SANDBOX_DENIED')
             }
             const allowedBuiltins = new Set(delegation.builtinToolNames)
+            // An external call starts outside this application's turn loop, so it inherits the
+            // turn whose request captured it.
+            const delegationTurn: { readonly turn?: number } = { turn }
             return {
               schemas: Object.freeze([...builtinSchemas, ...externalModelSchemas]),
               programSchemas,
@@ -1284,7 +1395,18 @@ export class NativeHeadlessApplication implements NativeApplication {
                   let result: NativeToolResult
                   const block: ToolCallBlock = { type: 'tool-call', id: call.callId, name: call.name, arguments: JSON.stringify(call.arguments) }
                   try {
-                    if (allowedBuiltins.has(call.name) && (call.name === 'read_file' || call.name === 'write_file')) {
+                    if (allowedBuiltins.has(call.name) && this.tools !== undefined) {
+                      const facts: NativeToolPreCallInput = {
+                        agent, session, callId: call.callId, name: call.name, signal: effectiveSignal,
+                        arguments: structuredClone(call.arguments), ...delegationTurn,
+                      }
+                      const admit = await this.admitBuiltin(facts, requestApproval, effectiveSignal)
+                      const outcome = admit.denial ?? await this.runBuiltin(block, admit.admitted, {
+                        agent, session, signal: effectiveSignal, root, cwd: delegation.cwd,
+                        workspaceWriteRoot: config.workspaceWriteRoot, approval: requestApproval, executionPolicy,
+                      })
+                      result = await this.interceptBuiltinOutcome(facts, outcome)
+                    } else if (allowedBuiltins.has(call.name) && (call.name === 'read_file' || call.name === 'write_file')) {
                       const args = toolArguments(block.arguments, block.name)
                       const attached = call.name === 'read_file'
                         ? await this.attachedFile(session, args.path, delegation.cwd, effectiveSignal) : undefined
@@ -1311,7 +1433,7 @@ export class NativeHeadlessApplication implements NativeApplication {
                       }
                       execution = {
                         agent, callId: call.callId, name: call.name, arguments: call.arguments, session,
-                        signal: effectiveSignal,
+                        signal: effectiveSignal, turn,
                         ...call.name === 'run_code' && externalProgramSnapshot !== undefined
                           ? { programSnapshot: externalProgramSnapshot } : {},
                         delegationContext: delegation,
@@ -1721,7 +1843,28 @@ export class NativeHeadlessApplication implements NativeApplication {
                   if (!toolNames.includes(call.name)) {
                     throw new HarnessError(`native-headless: tool ${call.name} is outside this Session's tool authority`, 'TOOL_DENIED')
                   }
-                  if (builtinToolNames.includes(call.name) && (call.name === 'read_file' || call.name === 'write_file')) {
+                  const isBuiltin = builtinToolNames.includes(call.name)
+                  // An application builtin answers the same pre/post interception points a
+                  // Registry call reaches through its own preparation, so a policy states
+                  // one rule for a tool name whichever transport serves it.
+                  if (isBuiltin && this.tools !== undefined) {
+                    const facts: NativeToolPreCallInput = {
+                      agent, session, callId: call.id, name: call.name, signal,
+                      arguments: settlementArguments(call.arguments), turn,
+                    }
+                    const admit = await this.admitBuiltin(facts, requestApproval, signal)
+                    const outcome = admit.denial ?? await this.runBuiltin(call, admit.admitted, {
+                      agent, session, signal, root, cwd: config.cwd, workspaceWriteRoot: config.workspaceWriteRoot,
+                      approval: requestApproval, executionPolicy,
+                    })
+                    const recorded = await this.interceptBuiltinOutcome(facts, outcome)
+                    content = [...recorded.content]
+                    isError = recorded.isError
+                    meta = recorded.meta
+                    additionalContexts = structuredClone(recorded.additionalContexts ?? [])
+                    if (!recorded.isError && recorded.concludesTurn === true) concludedByTool = true
+                    error = recorded.error === undefined ? undefined : { ...recorded.error }
+                  } else if (builtinToolNames.includes(call.name) && (call.name === 'read_file' || call.name === 'write_file')) {
                     const args = toolArguments(call.arguments, call.name)
                     const attached = call.name === 'read_file' ? await this.attachedFile(session, args.path, config.cwd, signal) : undefined
                     if (attached !== undefined) {
@@ -1748,7 +1891,7 @@ export class NativeHeadlessApplication implements NativeApplication {
                   } else {
                     if (this.tools === undefined) throw new Error(`unknown tool ${call.name}`)
                     execution = {
-                      agent, callId: call.id, name: call.name, arguments: JSON.parse(call.arguments) as unknown, session, signal,
+                      agent, callId: call.id, name: call.name, arguments: JSON.parse(call.arguments) as unknown, session, signal, turn,
                       ...call.name === 'run_code' && programSnapshot !== undefined ? { programSnapshot } : {},
                       ...(request.delegationContext === undefined ? {} : { delegationContext: request.delegationContext }),
                       appendEvent: async (type, data, ...opts) => {

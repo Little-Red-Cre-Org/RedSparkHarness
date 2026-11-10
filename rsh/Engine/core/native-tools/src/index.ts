@@ -1,7 +1,7 @@
 /** Reversible native tool contributions consumed by a selected application. */
 import { HarnessError, type ContentBlock, type ToolCallId, type ToolSchema, type UserMessage } from '@redspark/rsh-llm/native'
 import type { StoredImageAttachment } from '@redspark/rsh-attachment/native'
-import { deepFreeze, snapshotJsonValue, type JsonValue } from '@redspark/rsh-util-values'
+import { assertNever, deepFreeze, snapshotJsonValue, type JsonValue } from '@redspark/rsh-util-values'
 import { type NativeAgent, type NativeAgentRegistry } from '@redspark/rsh-native-agent'
 import { NativeContributions, type NativeScope } from '@redspark/rsh-native-runtime'
 import type {
@@ -11,8 +11,12 @@ import { assertSupportedJsonSchema, type JsonSchemaNode, ToolArgsError, validate
 import type { ToolSdkSchema } from './ts-types.ts'
 import type { NativeToolDelegationContext, NativeToolRestriction } from './types.ts'
 import {
-  registerAsyncPolicy, processAsyncWaterfall, processExecutionChain, type AsyncPolicyRegistration,
+  registerAsyncPolicy, processAsyncWaterfall, processExecutionChain, processInterceptionChain,
+  type AsyncPolicyRegistration,
 } from './result-processing.ts'
+import { admittedArguments, replacesArguments, type NativeToolPostDecision, type NativeToolPostInterceptor,
+  type NativeToolPreCall, type NativeToolPreCallInput, type NativeToolPreDecision,
+  type NativeToolPreInterceptor } from './tool-interception.ts'
 export { createNativePtcDispatch, type NativePtcDispatch } from './ptc-dispatch.ts'
 
 /** Model transport selection; program bindings retain the same scoped business capabilities. */
@@ -54,6 +58,8 @@ export interface NativeToolExecution {
   readonly arguments: unknown
   readonly session: Session
   readonly signal: AbortSignal
+  /** Open turn the invocation belongs to; absent for calls outside a recorded turn. */
+  readonly turn?: number
   /** Exact enclosing admitted invocation for a nested program call. */
   readonly parent?: NativeToolExecution
   /** Exact external-child route and resource ceilings inherited by nested delegation. */
@@ -332,6 +338,27 @@ export type NativePtcDispatchLogPolicy = (
 
 export type { NativeToolDelegationContext, NativeToolRestriction } from './types.ts'
 export type { ToolSdkSchema } from './ts-types.ts'
+export type {
+  NativeToolPostCall, NativeToolPostDecision, NativeToolPostInterceptor,
+  NativeToolPreCall, NativeToolPreCallInput, NativeToolPreDecision, NativeToolPreInterceptor,
+} from './tool-interception.ts'
+
+/**
+ * Name the model-visible reason a closed approval outcome denies a call.
+ * @param name - tool name the refusal is about.
+ * @param outcome - decision returned by the application's approval authority.
+ * @returns the failure to record, or undefined when the call may run.
+ */
+function approvalRefusal(name: string, outcome: NativeToolApprovalOutcome): HarnessError | undefined {
+  switch (outcome) {
+    case 'allowed-once': return undefined
+    case 'rejected': return new HarnessError(`the user rejected tool "${name}"`, 'TOOL_INTERCEPTED')
+    case 'cancelled': return new HarnessError(`approval for tool "${name}" was cancelled`, 'TOOL_INTERCEPTED')
+    case 'unavailable': return new HarnessError(
+      `tool "${name}" requires approval, but no approval channel is available`, 'TOOL_DENIED')
+    default: return assertNever(outcome, 'NativeToolApprovalOutcome')
+  }
+}
 
 interface CompiledToolRestriction {
   readonly allow?: ReadonlySet<string>
@@ -375,6 +402,12 @@ export class NativeToolRegistry {
   private readonly presentations: NativeContributions<NativeToolMode>
   private readonly resultObservers: NativeContributions<NativeToolResultObserver>
   private readonly resultPolicies: NativeContributions<ResultPolicyRegistration>
+  private readonly preInterceptors: NativeContributions<AsyncPolicyRegistration<NativeToolPreInterceptor>>
+  private readonly postInterceptors: NativeContributions<AsyncPolicyRegistration<NativeToolPostInterceptor>>
+  private readonly preInterceptorRegistrations = new Set<AsyncPolicyRegistration<NativeToolPreInterceptor>>()
+  private readonly postInterceptorRegistrations = new Set<AsyncPolicyRegistration<NativeToolPostInterceptor>>()
+  private preInterceptorSequence = 0
+  private postInterceptorSequence = 0
   private readonly executionPolicies: NativeContributions<ExecutionPolicyRegistration>
   private readonly executionPolicyRegistrations = new Set<ExecutionPolicyRegistration>()
   private executionPolicySequence = 0
@@ -406,6 +439,8 @@ export class NativeToolRegistry {
     this.guards = new NativeContributions(scope)
     this.resultObservers = new NativeContributions(scope)
     this.resultPolicies = new NativeContributions(scope)
+    this.preInterceptors = new NativeContributions(scope)
+    this.postInterceptors = new NativeContributions(scope)
     this.executionPolicies = new NativeContributions(scope)
     this.settlementPolicies = new NativeContributions(scope)
     this.ptcLogPolicies = new NativeContributions(scope)
@@ -520,6 +555,195 @@ export class NativeToolRegistry {
   }
 
   /**
+   * Answer before a tool body runs, in the executing Agent's scope and for nested program calls.
+   * @param interceptor - waterfall delegate that may allow, deny, ask, or replace the body arguments.
+   * @param scope - installation scope, defaulting to the Provider scope.
+   * @returns disposer that closes admission, cancels captured calls and awaits their settlement.
+   */
+  interceptBeforeCall(interceptor: NativeToolPreInterceptor, scope?: NativeScope): () => Promise<void> {
+    if (this.disposal !== undefined) throw new Error('native-tools: registry is disposed')
+    const entry = registerAsyncPolicy(this.preInterceptors, this.preInterceptorRegistrations,
+      `intercept:${this.preInterceptorSequence++}`, interceptor, scope)
+    return () => entry.dispose()
+  }
+
+  /**
+   * Answer after a tool body produced a result, before the application records it.
+   * @param interceptor - waterfall delegate that may pass, block with feedback, or attach model context.
+   * @param scope - installation scope, defaulting to the Provider scope.
+   * @returns disposer that closes admission, cancels captured calls and awaits their settlement.
+   */
+  interceptAfterCall(interceptor: NativeToolPostInterceptor, scope?: NativeScope): () => Promise<void> {
+    if (this.disposal !== undefined) throw new Error('native-tools: registry is disposed')
+    const entry = registerAsyncPolicy(this.postInterceptors, this.postInterceptorRegistrations,
+      `intercept:${this.postInterceptorSequence++}`, interceptor, scope)
+    return () => entry.dispose()
+  }
+
+  /**
+   * Ask the pre-tool interception points about one call and adopt their answer.
+   * @param call - invocation whose Agent, Session and cancellation remain fixed.
+   * @param candidate - parsed arguments the body would receive before any rewrite.
+   * @returns allow/deny/ask decision, with the arguments the body must run with.
+   */
+  async decideBeforeCall(call: NativeToolPreCallInput, candidate: unknown): Promise<NativeToolPreDecision> {
+    if (this.disposal !== undefined) throw new Error('native-tools: registry is disposed')
+    const interceptors = [...this.preInterceptors.visible(call.agent.scope).values()]
+    if (interceptors.length === 0) return { kind: 'allow' }
+    const signal = this.interceptionSignal(call, interceptors)
+    const facts: NativeToolPreCall = Object.freeze({
+      agent: call.agent, session: call.session, callId: call.callId, name: call.name,
+      arguments: deepFreeze(structuredClone(candidate)), signal,
+      ...call.turn === undefined ? {} : { turn: call.turn },
+    })
+    const completion = this.beginInterception(interceptors)
+    try {
+      const decision = await processInterceptionChain<NativeToolPreDecision>(interceptors.length, signal,
+        () => ({ kind: 'allow' }), (index, next) => {
+          const entry = interceptors[index]
+          if (entry === undefined) throw new Error('native-tools: captured pre-tool interceptor is missing')
+          return entry.policy(facts, next)
+        })
+      return this.adoptPreDecision(call.name, decision)
+    } finally { this.endInterception(interceptors, completion) }
+  }
+
+  /**
+   * Ask the post-tool interception points about one body result and adopt their answer.
+   * @param call - admitted invocation, or the application's own builtin facts.
+   * @param result - body result before any post-tool decision transforms it.
+   * @returns the result to record, with decision contexts retained on it.
+   */
+  async decideAfterCall(call: NativeToolPreCallInput, result: NativeToolResult): Promise<NativeToolResult> {
+    if (this.disposal !== undefined) throw new Error('native-tools: registry is disposed')
+    const interceptors = [...this.postInterceptors.visible(call.agent.scope).values()]
+    if (interceptors.length === 0) return result
+    const signal = this.interceptionSignal(call, interceptors)
+    const completion = this.beginInterception(interceptors)
+    try {
+      const original = deepFreeze(result)
+      const decision = await processInterceptionChain<NativeToolPostDecision>(interceptors.length, signal,
+        () => ({ kind: 'pass' }), (index, next) => {
+          const entry = interceptors[index]
+          if (entry === undefined) throw new Error('native-tools: captured post-tool interceptor is missing')
+          return entry.policy(Object.freeze({
+            agent: call.agent, session: call.session, callId: call.callId, name: call.name,
+            arguments: call.arguments, signal, result: original,
+            ...call.turn === undefined ? {} : { turn: call.turn },
+          }), next)
+        })
+      return this.adoptPostDecision(call, original, decision)
+    } finally { this.endInterception(interceptors, completion) }
+  }
+
+  private interceptionSignal(
+    call: { readonly signal: AbortSignal }, interceptors: readonly AsyncPolicyRegistration<unknown>[],
+  ): AbortSignal {
+    return AbortSignal.any([call.signal, ...interceptors.map(entry => entry.controller.signal)])
+  }
+
+  private beginInterception(
+    interceptors: readonly AsyncPolicyRegistration<unknown>[],
+  ): PromiseWithResolvers<void> {
+    const completion = Promise.withResolvers<void>()
+    for (const entry of interceptors) entry.pending.add(completion.promise)
+    return completion
+  }
+
+  private endInterception(
+    interceptors: readonly AsyncPolicyRegistration<unknown>[], completion: PromiseWithResolvers<void>,
+  ): void {
+    for (const entry of interceptors) entry.pending.delete(completion.promise)
+    completion.resolve()
+  }
+
+  private adoptPreDecision(name: string, decision: NativeToolPreDecision): NativeToolPreDecision {
+    switch (decision.kind) {
+      case 'allow':
+        return replacesArguments(decision)
+          ? { kind: 'allow', arguments: admittedArguments(name, decision.arguments) }
+          : { kind: 'allow' }
+      case 'deny':
+        if (typeof decision.reason !== 'string' || decision.reason.length === 0) {
+          throw new TypeError('native-tools: a pre-tool denial must carry a reason')
+        }
+        return { kind: 'deny', reason: decision.reason }
+      case 'ask':
+        return decision.reason === undefined ? { kind: 'ask' } : { kind: 'ask', reason: decision.reason }
+      default:
+        return assertNever(decision, 'NativeToolPreDecision')
+    }
+  }
+
+  /**
+   * Resolve an allow/deny/ask decision into either dispatch or a recorded denial.
+   * @param call - admitted invocation the decision applies to.
+   * @param decision - answer from the pre-tool interception points.
+   * @returns the failure to record instead of dispatching, or undefined to run the body.
+   */
+  private async resolvePreDecision(
+    call: NativeToolExecution, decision: NativeToolPreDecision,
+  ): Promise<HarnessError | undefined> {
+    switch (decision.kind) {
+      case 'allow': return undefined
+      case 'deny': return new HarnessError(decision.reason, 'TOOL_INTERCEPTED')
+      case 'ask': {
+        const approval: NativeToolApproval = decision.reason === undefined ? {} : { reason: decision.reason }
+        if (call.requestApproval !== undefined) {
+          return approvalRefusal(call.name, await call.requestApproval(approval, call.signal))
+        }
+        if (call.authorize === undefined) {
+          return new HarnessError(decision.reason
+            ?? `tool "${call.name}" requires approval, but no approval channel is available`, 'TOOL_DENIED')
+        }
+        try { await call.authorize(approval, call.signal) } catch (error: unknown) {
+          return new HarnessError(error instanceof Error ? error.message : String(error), 'TOOL_DENIED', { cause: error })
+        }
+        return undefined
+      }
+      default: return assertNever(decision, 'NativeToolPreDecision')
+    }
+  }
+
+  private adoptPostDecision(
+    call: { readonly name: string }, original: Readonly<NativeToolResult>, decision: NativeToolPostDecision,
+  ): NativeToolResult {
+    const decisionContexts = decision.additionalContexts ?? []
+    for (const message of decisionContexts) {
+      // Interceptors are third-party code; their declared type is not trusted at runtime.
+      if ((message as { readonly role: unknown }).role !== 'user') {
+        throw new Error('native-tools: post-tool interceptors may only add user messages')
+      }
+    }
+    if (decision.kind === 'block') {
+      if (decision.feedback.length === 0) {
+        throw new TypeError('native-tools: a post-tool block must carry corrective feedback')
+      }
+      // A block exposes only the context its own decision supplied, matching the
+      // post-execute rule that discarding the body's context is the point of a block.
+      const blocked: NativeToolResult = {
+        content: [...decision.feedback], isError: true,
+        error: { name: 'HarnessError', code: 'TOOL_INTERCEPTED' },
+        ...decisionContexts.length === 0 ? {} : { additionalContexts: structuredClone([...decisionContexts]) },
+      }
+      return this.materializeIntercepted(call, blocked)
+    }
+    const contexts = [...original.additionalContexts ?? [], ...decisionContexts]
+    return this.materializeIntercepted(call, {
+      ...original,
+      ...contexts.length === 0 ? {} : { additionalContexts: contexts },
+    })
+  }
+
+  private materializeIntercepted(call: { readonly name: string }, result: NativeToolResult): NativeToolResult {
+    const snapshot = snapshotJsonValue(result)
+    if (snapshot === undefined) {
+      throw new HarnessError(`tool "${call.name}" interceptor produced non-lossless JSON`, 'INVALID_TOOL_OUTPUT')
+    }
+    return deepFreeze(snapshot)
+  }
+
+  /**
    * Surround admitted body dispatch in the executing Agent's scope, including nested program calls.
    * @param policy - wrapper that delegates exactly once and may replace the body outcome after delegation settles.
    * @param scope - installation scope, defaulting to the Provider scope.
@@ -631,15 +855,20 @@ export class NativeToolRegistry {
           return wrapper.policy(signal === call.signal ? call : { ...call, signal }, entry.declaration, next)
         })
     call.signal.throwIfAborted()
-    if (policies.length === 0 && entry.tool.finalizeResult === undefined) return executed
     const original = deepFreeze(executed)
-    const selected = await processAsyncWaterfall(policies.length, original, call.signal, (index, next) => {
+    // The post-tool point runs for every call, before result policies transform the
+    // outcome, so a blocking decision makes the model read corrective feedback instead
+    // of the output it was about to receive.
+    const accepted = await this.decideAfterCall(call, original)
+    call.signal.throwIfAborted()
+    if (policies.length === 0 && entry.tool.finalizeResult === undefined) return accepted
+    const selected = await processAsyncWaterfall(policies.length, accepted, call.signal, (index, next) => {
       const policy = policies[index]
       if (policy === undefined) throw new Error('native-tools: captured result policy is missing')
-      return policy.policy(call, original, next)
+      return policy.policy(call, accepted, next)
     })
     call.signal.throwIfAborted()
-    const finalized = entry.tool.finalizeResult === undefined ? selected : await entry.tool.finalizeResult(call, original, selected)
+    const finalized = entry.tool.finalizeResult === undefined ? selected : await entry.tool.finalizeResult(call, accepted, selected)
     call.signal.throwIfAborted()
     const snapshot = snapshotJsonValue(finalized)
     if (snapshot === undefined) throw new HarnessError(`tool "${call.name}" returned non-lossless JSON`, 'INVALID_TOOL_OUTPUT')
@@ -985,20 +1214,25 @@ export class NativeToolRegistry {
     const owners = [...policies, ...wrappers]
     const signal = AbortSignal.any([call.signal, entry.controller.signal, ...owners.map(policy => policy.controller.signal)])
     const authority = call.approvalAuthority
+    // The pre-tool point may replace the arguments the body runs with; the approval
+    // scope key and the dispatched invocation both read the effective value.
+    let effectiveArguments = deepFreeze(argumentsValue) as JsonValue
     const approvalRequest = (approval: NativeToolApproval, requestedSignal: AbortSignal, ordinary: boolean): NativeToolApprovalRequest => ({
       agent: call.agent, session: call.session, callId: call.callId, toolName: call.name,
       ...approval.reason === undefined ? {} : { reason: approval.reason },
       ...!ordinary || call.delegationContext !== undefined || approval.sessionContext === undefined ? {} : {
-        sessionGrant: { parameters: argumentsValue as JsonValue, context: Object.freeze({ ...approval.sessionContext }) },
+        sessionGrant: { parameters: effectiveArguments, context: Object.freeze({ ...approval.sessionContext }) },
       },
       signal: AbortSignal.any([signal, requestedSignal]),
     })
-    const admitted: NativeToolExecution = {
-      ...call, arguments: deepFreeze(argumentsValue), signal,
-      ...authority === undefined ? {} : {
-        authorize: (approval, requestedSignal) => authority.authorize(approvalRequest(approval, requestedSignal, true)),
-        requestApproval: (approval, requestedSignal) => authority.request(approvalRequest(approval, requestedSignal, false)),
-      },
+    const authorities = authority === undefined ? {} : {
+      authorize: (approval: NativeToolApproval, requestedSignal: AbortSignal) =>
+        authority.authorize(approvalRequest(approval, requestedSignal, true)),
+      requestApproval: (approval: NativeToolApproval, requestedSignal: AbortSignal) =>
+        authority.request(approvalRequest(approval, requestedSignal, false)),
+    }
+    let admitted: NativeToolExecution = {
+      ...call, arguments: effectiveArguments, signal, ...authorities,
     }
     const completion = Promise.withResolvers<void>()
     entry.pending.add(completion.promise)
@@ -1015,7 +1249,23 @@ export class NativeToolRegistry {
     signal.addEventListener('abort', cancelled, { once: true })
     try {
       signal.throwIfAborted()
-      entry.validate(admitted.arguments)
+      const decision = await this.decideBeforeCall(admitted, argumentsValue)
+      signal.throwIfAborted()
+      const denial = await this.resolvePreDecision(admitted, decision)
+      if (denial !== undefined) {
+        // A denied or refused call is recorded as an error result by the Session
+        // owner; preparing it would run the body the decision forbade.
+        release()
+        throw denial
+      }
+      if (decision.kind === 'allow' && decision.arguments !== undefined) {
+        effectiveArguments = decision.arguments as JsonValue
+
+        admitted = {
+          ...call, arguments: effectiveArguments, signal, ...authorities,
+        }
+      }
+      entry.validate(effectiveArguments)
       this.assertGuards(admitted)
       if (entry.tool.approval !== undefined) {
         if (admitted.authorize === undefined) throw new Error(`native-tools: tool ${call.name} requires an approval authority`)
@@ -1071,6 +1321,8 @@ export class NativeToolRegistry {
     const completions = [
       ...[...this.registrations].map(entry => entry.dispose()),
       ...[...this.policyRegistrations].map(entry => entry.dispose()),
+      ...[...this.preInterceptorRegistrations].map(entry => entry.dispose()),
+      ...[...this.postInterceptorRegistrations].map(entry => entry.dispose()),
       ...[...this.executionPolicyRegistrations].map(entry => entry.dispose()),
       ...[...this.ptcLogPolicyRegistrations].map(entry => entry.dispose()),
       ...this.ptcLogPending,

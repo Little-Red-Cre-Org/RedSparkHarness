@@ -31,6 +31,8 @@ Value 贡献声明输出 schema；注册表捕获它，校验分离的 JSON，�
 
 Engine 外部操作调用会延迟 `acceptResult()`，直到完整工具结果事件持久化。broker 也记录已接受的 settlement 后，`readAcceptedImages()` 才通过捕获的 Native 附件服务解析该结果及其 settlement contexts 中的图片引用；它不接受调用方提供的引用，并返回已验证的存储字节。
 
+`interceptBeforeCall(interceptor, scope?)` 与 `interceptAfterCall(interceptor, scope?)` 安装两个逐调用决策点。两者都是有序 waterfall：监听器要么用 `next()` 委托，要么自行作答，第一个作答的监听器结束整条链。前置决策允许、带理由拒绝，或向消费应用请求单次批准；`allow` 答案可以替换主体收到的已解析参数——已记录的 `tool/call` 参数不随之改写。后置决策放行主体结果，或将其阻断为失败，内容为纠正性反馈。后置的两种答案都可以附带带来源的用户消息，追加在该结果自身的上下文之后。阻断会丢弃主体提供的上下文，与兼容层 `tools/post-execute` 的规则一致。应用也会为自己的内建工具询问这两个点，因此一条策略按工具名声明一次，而不是按传输通道分别声明。
+
 贡献可以声明正数 `timeoutMs` 作为主体预算；注册表只记录它。`aroundExecution(policy, scope?)` 在每个主体外层、结果处理之外安装策略。策略收到冻结的工具声明，并且必须恰好调用一次 `next(signal?)`。替换信号会与调用方信号合并，策略自身的结果即为最终结果。先注册的策略包在后注册的策略外层。`onSettlement(policy, scope?)` 安装同步策略，它看到每个已记录结果及其已解析参数的冻结副本，且只能返回用户消息。应用为其记录的每个结果调用一次 `settlementContexts()`，PTC dispatch 对嵌套调用也这样做。这两个钩子支撑原生超时与重复调用 guard。
 
 纯 `./types` 和 `./presentation` 出口与 Host、Client Consumer 共享持久 PTC 事件 payload、通用调用视图和文件 diff。`./presentation` 是 `GenericCallView`、`ToolCallKind` 与 `FileLocation` 的权威声明；兼容 Tools 重新导出这些声明。注册表入口仅属于 Host。这些声明不安装 PTC executor，也不改变 Session 事件名或 payload 字段。
