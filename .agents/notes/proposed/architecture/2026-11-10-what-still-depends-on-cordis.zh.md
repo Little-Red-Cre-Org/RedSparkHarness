@@ -117,7 +117,13 @@ CLI 参考文档用自己的表格陈述了这个区分：`web`、`headless`、`
 
 因此建议是「裁剪」而非全量移植或退役：那两个持久 shell 工具是 `sdk-minimal` 唯一在 Native 侧缺失的能力，也正是它与 `native-sdk` 的区别所在。那两个工具是可移植而非被阻塞的：它们只注入 `tools` 与 `terminals`，而 `rsh-terminal` **已经原生提供 `terminals`**——`spawn`、`list`、`startSend`、`read`、`kill` 都在 Native 注册表上存在。唯一差别是 `spawn` 签名：Cordis 服务取 `(owner, request, signal)`，Native 取单个 `NativeTerminalSpawnSpec`。所以这次移植是在一个已存在的面之上重写 438/474 行，而不是新增能力。
 
-**建议：退役 `sdk-minimal` 这个 profile 名，而不是移植那两个工具。** 理由与代价如下：
+**建议：退役 `sdk-minimal` 这个 profile 名，而不是移植那两个工具**——但它不能当作清理工作直接删除。核查依赖之后，这个论证的代价一侧发生了变化。
+
+该名字被五个测试断言，其中包括一个端到端测试，会 dump 它的组合并逐行比对：`built-bin.e2e.ts` 运行 `--profile sdk-minimal --dump-default-config`，期望得到完全一致的有序 id 与包名列表；`profile-hmr.spec.ts` 断言它的树不含 HMR 模块；`profile.spec.ts` 直接钉住 `PROFILE_TEMPLATES` 条目。
+
+所以退役它意味着删除对一项已交付行为的有效覆盖，而不是改一行文档。方向仍然正确——一个只依赖 Cordis 的 profile 不可能比运行时活得更久——但它应当与「移除 Cordis 启动器」出现在同一次改动里，并且要在 `native-sdk` 已被验证能服务同样的 SDK 客户端之后，而不是作为独立的第一步。
+
+理由与否则的代价如下：
 
 `sdk-minimal` 只能通过 Cordis 模板表到达——`rsh/Programs/CLI/src` 中没有任何对它的引用，所以启动器并不特判这个名字，它也永远不会获得 Native 组合。因此退役它意味着：从 `PROFILE_TEMPLATES` 删一个条目、删一个 bundle 包、删 `reference/README.md` 中一行、以及删掉只有它挂载的那两个包。这比移植 900 行更小，而用户真正需要的能力——经 stdio 的 SDK 运行时——已由 `native-sdk` 提供，它组合完整 agent，也是 SDK 默认选用的名字。
 
@@ -170,6 +176,16 @@ CLI 参考文档用自己的表格陈述了这个区分：`web`、`headless`、`
 **按原录制不可回放。** `session-query-spill` 会 grep 一个形如 `/tmp/dsh-acp-snap-<随机>` 的绝对 spill 路径，任何 fixture 都无法预测。`skill-load` 复制的 preset 技能文件仓库已不再包含。
 
 十七个里只有三个（`advanced-toolchain`、`advanced-toolchain-runtime`、`cordis-inspect-jsdoc`）随 Cordis 一起消失。其余十四个各需 Native 装配器所没有的测试基础设施，或一次重新录制。
+
+## 删除真正经过的那道接缝
+
+这是实测而非推断：**384 个工作区包中有 266 个声明 `@redspark/cordis`**，`rsh/Compatibility/DSH` 有 721 个文件。与之相对，出厂 CLI 对 Cordis 的触及只是一个分支。
+
+`rsh/Programs/CLI/src/bin.ts` 先解析运行时。当 `profileRuntime(name)` 返回 `'native'` 时它导入 `native-profile-boot.ts`，完全不碰 Cordis。否则它调用 `requireCompatibilityRuntime()` 并惰性导入 `profile-boot.ts` 的 `runProfile`——这是 `rsh/Programs/CLI/src` 中唯一导入 `@redspark/cordis` 的文件，而且只是类型导入。
+
+所以移除 legacy 启动器是**一个分派分支加上 `profile-boot.ts`（381 行）与 `compatibility-runtime.ts`（29 行）**的改动；此后那 266 个声明包里，要么失去最后一个消费者，要么其消费者留在兼容 bundle 中——那正是 bundle 退役随后要解决的问题。CLI 的 178 个依赖届时可以去掉 `@redspark/cordis` 与 `@redspark/rsh-cordis-bridge`。
+
+由此得到的顺序与批量删除相反：先让分派不可达（确认每个出厂名字都解析到 Native 组合），删除两个 boot 文件及其导入，确认 CLI 不再声明 Cordis，然后才向外推进到「最后一个消费者是那个分支」的那些包。
 
 ## Acceptance criteria
 

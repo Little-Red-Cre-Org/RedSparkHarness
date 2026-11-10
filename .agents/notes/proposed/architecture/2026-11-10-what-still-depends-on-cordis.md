@@ -121,7 +121,13 @@ The CLI reference states the distinction in its own table: `web`, `headless`, `s
 
 So the recommendation is to prune rather than port or retire: those two persistent-shell tools are the only capability `sdk-minimal` offers that the Native side lacks, and they are what distinguishes it from `native-sdk`. Those two tools are portable rather than blocked: they inject only `tools` and `terminals`, and `rsh-terminal` **already provides `terminals` natively** — `spawn`, `list`, `startSend`, `read` and `kill` all exist on the Native registry. The one difference is the `spawn` signature: the Cordis service takes `(owner, request, signal)` and the Native one takes a single `NativeTerminalSpawnSpec`. So the port is a 438/474-line rewrite against a surface that already exists, not a new capability.
 
-**Recommendation: retire the `sdk-minimal` profile name rather than port those two tools.** The reasoning, with what it costs:
+**Recommendation: retire the `sdk-minimal` profile name rather than port those two tools** — but not by deleting it as a cleanup. Checking what depends on it changes the cost side of that argument.
+
+The name is asserted by five tests, including an end-to-end one that dumps its composition and compares every row: `built-bin.e2e.ts` runs `--profile sdk-minimal --dump-default-config` and expects the exact ordered list of ids and package names, and `profile-hmr.spec.ts` asserts that its tree carries no HMR module. `profile.spec.ts` pins the `PROFILE_TEMPLATES` entry itself.
+
+So retiring it means deleting working coverage of a shipped behaviour, not editing a documentation row. That is still the right direction — a Cordis-only profile cannot outlive the runtime — but it belongs in the same change that removes the Cordis launcher, after `native-sdk` has been verified to serve the same SDK clients, rather than as a standalone first step.
+
+The reasoning, with what it would otherwise cost:
 
 `sdk-minimal` is reachable only through the Cordis template table — `rsh/Programs/CLI/src` contains no reference to it, so nothing in the launcher special-cases the name, and it never gains a Native composition. Retiring it therefore means removing one entry from `PROFILE_TEMPLATES`, one bundle package, one row in `reference/README.md` and the two packages only it mounts. That is smaller than porting 900 lines, and the capability users actually need — an SDK runtime over stdio — is already served by `native-sdk`, which composes the full agent and is the name the SDK defaults to.
 
@@ -180,9 +186,23 @@ Only three of the seventeen (`advanced-toolchain`, `advanced-toolchain-runtime`,
 
 The proposals above are satisfied per package as each is resolved: a package that an existing Native package already owns needs its Cordis half deleted once nothing imports it; a `Cordis-shaped` package disappears with the runtime; a genuinely unported one gets a Native entry. The scenarios count when they replay on the Native profile in CI. The Web scope decision is recorded before any Web package moves.
 
-## Acceptance criteria
+## The exact seam the deletion runs through
+
+Measured, rather than assumed: **266 of 384 workspace packages declare `@redspark/cordis`**, and `rsh/Compatibility/DSH` holds 721 files. Against that, the shipped CLI's reach into Cordis is one branch.
+
+`rsh/Programs/CLI/src/bin.ts` resolves the runtime first. When `profileRuntime(name)` answers `'native'` it imports `native-profile-boot.ts` and never touches Cordis. Otherwise it calls `requireCompatibilityRuntime()` and lazily imports `runProfile` from `profile-boot.ts` — the only file in `rsh/Programs/CLI/src` that imports `@redspark/cordis`, and only as a type.
+
+So removing the legacy launcher is a change to **one dispatch branch plus `profile-boot.ts` (381 lines) and `compatibility-runtime.ts` (29 lines)**, after which the 266 declaring packages either lose their last consumer or keep one in the compatibility bundles, which is what the bundle retirement then has to settle. The CLI's 178 dependencies can shed `@redspark/cordis` and `@redspark/rsh-cordis-bridge` at that point.
+
+The order this implies is the reverse of a bulk delete: make the dispatch unreachable (verify every shipped name resolves to a Native composition), delete the two boot files and their imports, confirm the CLI no longer declares Cordis, and only then work outward through the packages whose last consumer was that branch.
+
+
 
 Every claim above is stated as a measured fact with the file or the command that produced it, so a later reader can re-run the check rather than trust the sentence. A package qualifies as deletable only when nothing imports it **and** no published profile composes it.
+
+## Acceptance criteria
+
+Every claim above names the file or command that produced it, so a later reader re-runs the check rather than trusting the sentence. A package qualifies as deletable only when nothing imports it **and** no published profile composes it.
 
 ## Risks
 
