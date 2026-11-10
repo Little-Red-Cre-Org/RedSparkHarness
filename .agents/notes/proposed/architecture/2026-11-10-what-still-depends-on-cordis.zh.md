@@ -24,6 +24,14 @@ Status: proposed
 
 真正卡住叶子删除的是：这些 bundle 层就是它们最后的消费者。五个 Cordis-only 叶子——`session-stats`、`session-turn-outline`、`session-checkpoint-policy`、`file-reference-local`、`agent-tool-presentation`——各只有一个依赖方，而那个依赖方正是 T-F 要退役的 `web-app`、`base` 或 `sdk-runtime` 层。它们不能在各自的 bundle 之前删除，而那个 bundle 又不能在它所服务的 profile 有 Native 等价物之前删除。
 
+有十四个 Cordis-only 叶子包完全无人依赖，但「叶子」不等于「死代码」。它们分三类：
+
+- **钉住的 Cordis 源码。** `@redspark/cordis-plugin-logger-console` 属于 Cordis 那棵树，随树一起消失，而不是更早。
+- **仍在使用、只是没有装进任何已发布组合的功能包。** `tool-str-replace-editor`、`storage-sqlite`、`typert/generator`、`e2b` 两个 Provider、Python SDK 运行时闭包，以及六个 `experimental/*` 包，都是有文档、能工作的 Provider 与工具，只是没有 bundle 挂载它们。删除它们是在砍能力而不是去依赖，所以各自需要明确决策，不能一刀切。
+- **已被 Native 半边取代。** 这个形状里只有 `time-context` 与 `tmux-context` 两个，现均已删除。
+
+第三类可复用的判据是：存在 Native 兄弟包、无人依赖该 Cordis 包、且没有任何 bundle 层引用它。两个满足，其余的都不满足——所以清扫停在两个而不是继续往下推。
+
 ## Acceptance criteria
 
 - 删除的每一步 `verify-native-dependencies` 都通过。

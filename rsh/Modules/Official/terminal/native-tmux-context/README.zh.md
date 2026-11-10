@@ -57,7 +57,6 @@ Provider 通过所选 `shell` 服务查询，并返回带来源信息的 user �
 - [tmux-context 子系统](../../../../Docs/subsystems/tmux-context.zh.md)
 - [Cordis-free tmux-context Definition](../../../../Engine/context/tmux-context-definition/README.zh.md)
 - [Native Headless](../../../../Engine/core/native-headless/README.zh.md)
-- [兼容 tmux-context Provider](../../../../Engine/context/tmux-context/README.zh.md)
 - [持久 Native tmux 位置决策](../../../../../.agents/notes/implemented/feature/2026-10-12-native-tmux-context.zh.md)
 
 <a id="model-experience"></a>

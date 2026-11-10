@@ -24,6 +24,14 @@ The six templates are exactly `acp`, `web`, `headless`, `rsh`, `sdk` and `sdk-mi
 
 What blocks the leaf deletions is that the bundle layers are their last consumers. Five Cordis-only leaves — `session-stats`, `session-turn-outline`, `session-checkpoint-policy`, `file-reference-local`, `agent-tool-presentation` — have exactly one dependent each, and it is the `web-app`, `base` or `sdk-runtime` layer that T-F retires. They cannot be deleted before their bundle, and their bundle cannot be deleted before the profiles those bundles serve have a Native equivalent.
 
+Fourteen Cordis-only leaves have no dependents at all, but a leaf is not automatically dead. They split three ways:
+
+- **Vendored Cordis sources.** `@redspark/cordis-plugin-logger-console` is part of the pinned Cordis tree; it disappears when the tree does, not before.
+- **Live feature packages with no shipped composition.** `tool-str-replace-editor`, `storage-sqlite`, `typert/generator`, the `e2b` providers, the Python SDK runtime closure and the six `experimental/*` packages are documented, working Providers and tools that no shipped bundle happens to mount. Deleting them would remove a capability rather than a dependency, so each needs an explicit decision, not a sweep.
+- **Replaced by a Native half.** `time-context` and `tmux-context` were the only two in this shape, and both are now deleted.
+
+The reusable test for the third group is: a Native sibling exists, nothing depends on the Cordis package, and no bundle layer names it. Two met it; the rest did not, which is why the sweep stops at two rather than continuing through the list.
+
 ## Acceptance criteria
 
 - `verify-native-dependencies` passes at every step of the deletion.
