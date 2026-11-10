@@ -21,7 +21,7 @@ kind: "package-reference"
 <a id="configuration"></a>
 ## 配置
 
-`./native` 入口只接受空配置对象并提供 `promptSections`。同一注册作用域内重复 section 名称会在注册时失败。渲染选择消费作用域可见的贡献；后代同名 section 遮蔽祖先 section，兄弟作用域相互隔离。disposer 只移除创建它的 section，而 Provider 释放会移除所有剩余 section。
+`./native` 入口提供 `promptSections`，并接受可选的 `personaPrefix` 与 `personaSuffix`：存在时必须为非空字符串，且都经过严格的 `{{variable}}` 插值。它们注册为 `deployment:persona-prefix`（顺序 0）与 `deployment:persona-suffix`（顺序 10200）——即 Cordis 提示词注册表使用的名称，因此 Agent 预设注册同名区段即可替换部署人格。其他任何配置字段在加载时失败。同一注册作用域内重复 section 名称会在注册时失败。渲染选择消费作用域可见的贡献；后代同名 section 遮蔽祖先 section，兄弟作用域相互隔离。disposer 只移除创建它的 section，而 Provider 释放会移除所有剩余 section。
 
 应用可以向 render(scope, context) 传入请求 Agent 的 scope 和可选的 NativePromptRenderContext。其中的 allowedTools（若存在）是 Session 显式配置的工具 allowlist，并非完整的已发出 schema 集合。依赖模型可见工具的 section 应将此约束与自身作用域内的工具视图结合；没有 context 时，可以只使用该视图。存在 programSchemas 时，它是该操作精确捕获的 PTC 目录，section 必须使用它，而不能重新查询实时注册表。应用仍须在模型分发前记录组装后的文本。
 

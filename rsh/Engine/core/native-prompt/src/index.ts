@@ -119,4 +119,11 @@ export class NativePromptRegistry {
   clear(): void { this.sections.clear() }
 }
 
+export {
+  type Config,
+  PERSONA_PREFIX_ORDER,
+  PERSONA_PREFIX_SECTION,
+  PERSONA_SUFFIX_ORDER,
+  PERSONA_SUFFIX_SECTION,
+} from './config.ts'
 export { plugin } from './native.ts'
