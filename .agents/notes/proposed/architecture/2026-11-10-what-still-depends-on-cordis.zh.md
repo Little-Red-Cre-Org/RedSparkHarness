@@ -67,6 +67,10 @@ Status: proposed
 
 所以真正可执行的剩余大约是七个包，每个只需要一句决定（作为被取代者删除、移植、或明确划出范围），加上已经识别出的那些删除。那是一份人能做完的清单；「85 个包」不是。
 
+**这七个今天一个都删不了，原因对它们全部相同：它们仍被 import。** 实测：`agent-default-model` 有 6 个引用方、`api-gateway` 5 个、`typert-registry` 3 个、`jobs-local` 与 `tool-present` 各 2 个、`session-checkpoint-policy` 与 `typert-loader` 各 1 个——而每一个案例里，至少有一个引用方是 `base` bundle 或仍在使用的 Web/CLI 包（`session-controller`、`webhook`、`sdk-runtime`）。此前看似死代码的 `time-context` 与 `tmux-context` 恰恰在这点上不同：没有任何东西 import 它们。
+
+这反转了目标里陈述的顺序。第 4 步无法在第 5 步之前完成，因为只要 bundle 层还 import 它，包就活着；只要 profile 模板还点名 bundle 层，bundle 层就活着。所以第一个真正的动作是让 Native profile 有能力取代 `base` 层——也就是那个 85 包的问题——或者删掉本身就是范围外的消费者（Web API、Python SDK 运行时）。
+
 ## Acceptance criteria
 
 - 删除的每一步 `verify-native-dependencies` 都通过。

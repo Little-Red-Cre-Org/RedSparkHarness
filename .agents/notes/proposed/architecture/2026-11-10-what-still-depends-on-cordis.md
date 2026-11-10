@@ -71,6 +71,10 @@ Checking the unported fourteen against the Native packages that exist resolves m
 
 So the actionable remainder is roughly seven packages, each needing a one-line decision (delete as superseded, port, or declare out of scope), plus the deletions already identified. That is a list a person can finish; "85 packages" was not.
 
+**None of those seven is deletable today, and the reason is the same for all of them: each is still imported.** Measured, `agent-default-model` has 6 importers, `api-gateway` 5, `typert-registry` 3, `jobs-local` and `tool-present` 2 each, and `session-checkpoint-policy` and `typert-loader` 1 each — and in every case at least one importer is the `base` bundle or a live Web/CLI package (`session-controller`, `webhook`, `sdk-runtime`). The two that earlier looked like dead code, `time-context` and `tmux-context`, differed in exactly this respect: nothing imported them.
+
+That inverts the ordering the objective states. Step 4 cannot be finished before step 5, because a package stays alive as long as its bundle layer imports it, and the bundle layer stays alive as long as a profile template names it. The first real move is therefore to make a Native profile able to replace the `base` layer — which is the 85-package question — or to delete the consumers that are themselves out of scope (the Web API, the Python SDK runtime).
+
 ## Acceptance criteria
 
 - `verify-native-dependencies` passes at every step of the deletion.
