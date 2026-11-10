@@ -63,6 +63,7 @@ const snapshotAdapters = [
   'snapshots/native-headless/web-tools-native.snapshot.ts',
   'snapshots/native-headless/workflow-native.snapshot.ts',
   'snapshots/native-headless/text-turn-native.snapshot.ts',
+  'snapshots/native-headless/todo-write-native.snapshot.ts',
   'snapshots/native-sdk/text-turn.snapshot.ts',
   'snapshots/native-sdk/staged-files.snapshot.ts',
   'snapshots/native-sdk/external-operation.snapshot.ts',
