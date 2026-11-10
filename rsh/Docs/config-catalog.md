@@ -871,7 +871,7 @@ export interface Config {
 }
 ```
 
-Source: [`rsh/Modules/Official/hooks/hooks-claude-code/src/index.ts:44`](../Modules/Official/hooks/hooks-claude-code/src/index.ts)
+Source: [`rsh/Modules/Official/hooks/hooks-claude-code/src/index.ts:46`](../Modules/Official/hooks/hooks-claude-code/src/index.ts)
 
 <a id="redsparkrsh-hooks-codex"></a>
 
@@ -898,7 +898,7 @@ export interface Config {
 }
 ```
 
-Source: [`rsh/Modules/Official/hooks/hooks-codex/src/index.ts:44`](../Modules/Official/hooks/hooks-codex/src/index.ts)
+Source: [`rsh/Modules/Official/hooks/hooks-codex/src/index.ts:46`](../Modules/Official/hooks/hooks-codex/src/index.ts)
 
 <a id="redsparkrsh-host-directory-picker-browse"></a>
 

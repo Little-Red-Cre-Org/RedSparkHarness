@@ -58,6 +58,10 @@
       "types": "./lib/types/native.d.ts",
       "default": "./lib/native.js"
     },
+    "./lifecycle-events": {
+      "types": "./lib/types/lifecycle-events.d.ts",
+      "default": "./lib/lifecycle-events.js"
+    },
     "./package.json": "./package.json"
   },
   "files": [

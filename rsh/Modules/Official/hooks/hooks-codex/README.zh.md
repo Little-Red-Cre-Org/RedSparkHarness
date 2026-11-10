@@ -104,11 +104,26 @@ matcher subject 是工具名称（`PreToolUse`／`PostToolUse`）或会话源（
 
 [hook-bridges Agent Note](../../../../../.agents/notes/archived/feature/2026-06-30-hook-bridges.md) 记录了桥接设计与延期缺口；[hook-protocol-lib Agent Note](../../../../../.agents/notes/archived/feature/2026-06-30-hook-protocol-lib.md) 记录了共享与逐方言的划分。
 
+### Native 入口
+
+本包发布第二个入口 `@redspark/rsh-hooks-codex/native`，在 Native profile 上响应同样的五个事件点，并复用同一份配置解析、payload 词汇、matcher、runner 与持久事件对。只有扩展点接线不同：
+
+| 事件点 | Cordis 入口 | Native 入口 |
+|---|---|---|
+| `SessionStart` | `agent/session-start`（分离运行，注入上下文） | `session/starting`（并行），由 request-context provider 消费，使首个请求会等待它 |
+| `UserPromptSubmit` | `agent/pre-step` waterfall | 活动 owner 的 `beforeStep` 准入钩子 |
+| `PreToolUse` | `tools/pre-execute` waterfall | `tools.interceptBeforeCall` |
+| `PostToolUse` | `tools/post-execute` waterfall | `tools.interceptAfterCall` |
+| `Stop` | `agent/turn-stopping` 加 `steer()` | `turn/stopping` 加 `next-step` 收件箱准入 |
+
+Native 入口声明 `shell` 为必需，`tools`、`requestContexts`、`activeSessions` 为可选，因此省略某项能力的 profile 只是失去对应事件点，不会激活失败。
+
 ### 源码地图
 
 | 文件 | 职责 |
 |---|---|
-| [`src/index.ts`](src/index.ts) | 插件入口：配置校验、监听器注册、逐事件 payload、决策映射 |
+| [`src/index.ts`](src/index.ts) | Cordis 入口：配置校验、监听器注册、逐事件 payload、决策映射 |
+| [`src/native.ts`](src/native.ts) | Native 入口：在拦截服务、request contexts 与已广播的生命周期事件上做同样的映射 |
 | [`src/config.ts`](src/config.ts) | Codex 配置解析：当前事件清单、五个已映射事件、matcher 校验与跳过原因 |
 | — | 不发布运行时不变式伴生入口；本桥接发布 hook-protocol 会话事件，既有 companion 负责校验每个结果所引用的调用事件。 |
 

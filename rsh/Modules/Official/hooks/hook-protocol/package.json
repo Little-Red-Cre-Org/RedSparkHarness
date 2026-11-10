@@ -1,46 +1,56 @@
 {
-  "name": "@redspark/rsh-hook-protocol",
-  "description": "Shared Claude Code / Codex hook wire protocol: matcher engine, stdin/exit-code/stdout codec, multi-hook merge, and hook/* session events",
-  "version": "1.0.0",
-  "publishConfig": {
-    "access": "public"
+ "name": "@redspark/rsh-hook-protocol",
+ "description": "Shared Claude Code / Codex hook wire protocol: matcher engine, stdin/exit-code/stdout codec, multi-hook merge, and hook/* session events",
+ "version": "1.0.0",
+ "publishConfig": {
+  "access": "public"
+ },
+ "repository": {
+  "type": "git",
+  "url": "git+https://github.com/Little-Red-Cre-Org/RedSparkHarness.git",
+  "directory": "rsh/Modules/Official/hooks/hook-protocol"
+ },
+ "type": "module",
+ "main": "lib/index.js",
+ "types": "lib/types/index.d.ts",
+ "exports": {
+  ".": {
+   "types": "./lib/types/index.d.ts",
+   "default": "./lib/index.js"
   },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/Little-Red-Cre-Org/RedSparkHarness.git",
-    "directory": "rsh/Modules/Official/hooks/hook-protocol"
+  "./native": {
+   "types": "./lib/types/native.d.ts",
+   "default": "./lib/native.js"
   },
-  "type": "module",
-  "main": "lib/index.js",
-  "types": "lib/types/index.d.ts",
-  "exports": {
-    ".": {
-      "types": "./lib/types/index.d.ts",
-      "default": "./lib/index.js"
-    },
-    "./invariant": {
-      "types": "./lib/types/invariant.d.ts",
-      "default": "./lib/invariant.js"
-    },
-    "./src/*": "./src/*",
-    "./package.json": "./package.json"
+  "./invariant": {
+   "types": "./lib/types/invariant.d.ts",
+   "default": "./lib/invariant.js"
   },
-  "files": [
-    "lib/index.js",
-    "lib/invariant.js",
-    "lib/types/**/*.d.ts"
-  ],
-  "license": "MIT",
-  "peerDependencies": {
-    "@redspark/rsh-shell": "workspace:^",
-    "@redspark/rsh-invariants": "workspace:^",
-    "@redspark/rsh-session": "workspace:^",
-    "@redspark/cordis": "workspace:^"
-  },
-  "devDependencies": {
-    "@redspark/rsh-shell": "workspace:^",
-    "@redspark/rsh-invariants": "workspace:^",
-    "@redspark/rsh-session": "workspace:^",
-    "@redspark/cordis": "workspace:^"
+  "./src/*": "./src/*",
+  "./package.json": "./package.json"
+ },
+ "files": [
+  "lib/index.js",
+  "lib/invariant.js",
+  "lib/native.js",
+  "lib/types/**/*.d.ts"
+ ],
+ "license": "MIT",
+ "peerDependencies": {
+  "@redspark/rsh-shell": "workspace:^",
+  "@redspark/rsh-invariants": "workspace:^",
+  "@redspark/rsh-session": "workspace:^",
+  "@redspark/cordis": "workspace:^"
+ },
+ "devDependencies": {
+  "@redspark/rsh-shell": "workspace:^",
+  "@redspark/rsh-invariants": "workspace:^",
+  "@redspark/rsh-session": "workspace:^",
+  "@redspark/cordis": "workspace:^"
+ },
+ "peerDependenciesMeta": {
+  "@redspark/cordis": {
+   "optional": true
   }
+ }
 }

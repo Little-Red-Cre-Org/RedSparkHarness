@@ -108,11 +108,27 @@ The three emit points (`SessionStart`, `SubagentStart`, `SubagentStop`) run deta
 
 The [hook-bridges Agent Note](../../../../../.agents/notes/archived/feature/2026-06-30-hook-bridges.md) records the bridge design and the deferred gaps; the [hook-protocol-lib Agent Note](../../../../../.agents/notes/archived/feature/2026-06-30-hook-protocol-lib.md) records the shared-versus-per-dialect split.
 
+### Native entry
+
+The package publishes a second entry, `@redspark/rsh-hooks-claude-code/native`, which answers the same seven points on a Native profile and shares the config parser, the payload vocabulary, the matcher, the runner and the durable event pair. Only the extension-point wiring differs, because the two runtimes expose different seams:
+
+| Point | Cordis entry | Native entry |
+|---|---|---|
+| `SessionStart` | `agent/session-start` (detached, injects context) | `session/starting` (parallel), consumed by a request-context provider so the opening request awaits it |
+| `UserPromptSubmit` | `agent/pre-step` waterfall | the active owner's `beforeStep` admission hook |
+| `PreToolUse` | `tools/pre-execute` waterfall | `tools.interceptBeforeCall` |
+| `PostToolUse` | `tools/post-execute` waterfall | `tools.interceptAfterCall` |
+| `Stop` | `agent/turn-stopping` plus `steer()` | `turn/stopping` plus a `next-step` inbox admission |
+| `SubagentStart` / `SubagentStop` | `subagent/start` / `subagent/end` | no counterpart — the Native subagent seam announces no child lifecycle edge |
+
+The Native entry declares `shell` as required and `tools`, `requestContexts` and `activeSessions` as optional, so a profile that omits a capability simply loses that point rather than failing activation.
+
 ### Source map
 
 | File | Role |
 |---|---|
-| [`src/index.ts`](src/index.ts) | Plugin entry: config validation, listener registration, per-event payloads, decision mapping |
+| [`src/index.ts`](src/index.ts) | Cordis entry: config validation, listener registration, per-event payloads, decision mapping |
+| [`src/native.ts`](src/native.ts) | Native entry: the same mapping over the interception service, request contexts and the announced lifecycle events |
 | [`src/config.ts`](src/config.ts) | Claude Code config parsing: supported events, matcher validation, command substitution |
 | — | No runtime invariant companion is published; this bridge publishes hook-protocol session events, whose companion owns which invocation event each result cites. |
 
@@ -176,6 +192,7 @@ These limits describe what your Claude Code hooks cannot do through this bridge 
 - **`UserPromptSubmit` is partial** — blocking and JSON `additionalContext` work, but plain stdout context, `sessionTitle`, and `suppressOriginalPrompt` are unsupported. Unless overridden, the bridge also uses its 600-second default instead of Claude Code's event-specific 30-second command timeout.
 - **`PreToolUse` is partial** — `deny` and `ask` decisions work; `allow` does not pre-approve, `defer` is unsupported, `additionalContext` is ignored, and `updatedInput` is logged + warned but not honored ([the pre-tool-input-rewrite Agent Note](../../../../../.agents/notes/proposed/feature/2026-06-30-pre-tool-input-rewrite.md)).
 - **`PostToolUse` is partial** — blocking feedback and JSON `additionalContext` work, but `updatedToolOutput` and `updatedMCPToolOutput` are unsupported and `tool_response` is flattened to text.
+- **The Native entry has no subagent points** — `SubagentStart` and `SubagentStop` run only from the Cordis entry, because the Native subagent seam announces no child lifecycle edge on the Native event bus; a Native profile with those events configured runs nothing for them.
 - **`SubagentStart` and `SubagentStop` are partial** — both report a constant `agent_type` of `general-purpose` and use the child session id where Claude Code reports the parent session. Start context is best-effort and can only reach a live in-process child; stop is observe-only and cannot block the subagent or feed it context. Stop omits `agent_transcript_path`, `last_assistant_message`, `background_tasks`, and `session_crons` and always reports `stop_hook_active: false`.
 - **`Stop` is partial** — blocking forces another model turn, but `stop_hook_active` is always `false`, `last_assistant_message`, `background_tasks`, and `session_crons` are omitted, and the consecutive-block cap is not implemented. An unconditionally blocking hook therefore force-continues every step unless it self-limits.
 - **Common payload and output fields are partial** — mapped event payloads omit `prompt_id`, `permission_mode`, and `effort` where Claude Code would provide them, and `transcript_path` is never populated: it is always the empty string, because the persistence seam exposes no artifact paths and the default Zstandard-compressed session log is not readable by hook scripts. `systemMessage` is logged + warned but not surfaced; `{"continue": false}` is recorded but does not halt the run; `suppressOutput`, `stopReason`, and `terminalSequence` are not applied.
