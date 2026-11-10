@@ -36,7 +36,7 @@ Status: proposed
 
 清单是第五处，也是唯一打坏打包车道的一处：`rsh/Programs/CLI/package.json` 可能仍以 `workspace:^` 引用被删的包，而 `pnpm pack` 拒绝解析指向已消失包的 workspace 协议。typecheck 与 lint 都看不见这一点，所以删除的本地校验是 `pnpm --dir rsh/Programs/CLI pack`，它同时也是证明 lockfile 与清单一致的最快方式。
 
-会牵动六处而非四处：包目录、`tsconfig.host.json` 的 project 引用、清单里的 `workspace:^` 行与 lockfile、点名它的每一页 README 行与链接、生成目录的中文评审对侧，以及架构页面——其中 `module-graph.md` 是生成的而 `event-producer-consumer.md` 是手写的。
+会牵动七处生成物或手工维护物：包目录、`tsconfig.host.json` 的 project 引用、清单里的 `workspace:^` 行与 lockfile、点名它的每一页 README 行与链接、生成目录的中文评审对侧、架构页面（其中 `module-graph.md` 是生成的、`event-producer-consumer.md` 是手写的），以及 `tsconfig.base.json`——它的包别名由工作区生成。七处里有四处是生成物，必须重新生成而不是手改：config catalog、module graph、包别名与工作区 lockfile。
 
 靠猜该跑哪些门禁行不通：到目前为止每次删除暴露的都是不同的一个，每次漏掉都要多走一轮 CI。可靠的本地顺序是先删文件、清引用、重跑生成页（`gen-config-catalog`、`gen-module-graph`）、重新记录配对，然后把 `pnpm run doc-sync` 与 `typecheck`、`pnpm --dir rsh/Programs/CLI pack` 作为一批跑——`doc-sync` 是拥有目录、链接、图、配对与换行诸门禁的聚合入口，一次就能报出全部问题。
 
