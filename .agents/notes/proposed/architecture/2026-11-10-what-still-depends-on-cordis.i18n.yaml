@@ -1,0 +1,6 @@
+# Bilingual-pair consistency record (rsh/Docs/i18n/README.md): the git blob hash of each
+# side as of the last confirmed-consistent state. Both languages carry equal authority;
+# after editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write .agents/notes/proposed/architecture/2026-11-10-what-still-depends-on-cordis.md
+2026-11-10-what-still-depends-on-cordis.md: ffad16826d648f83b17ec2e9b6618f966b3577f3
+2026-11-10-what-still-depends-on-cordis.zh.md: 14d03af60f8958dc0b078fd6e1f971b362740f37
