@@ -16,7 +16,7 @@ Record the measured shape now, so deleting Cordis is planned against facts rathe
 
 The 113 split by area as: `Programs/Web` 35, `Modules/Official` 21, `Modules/Community` 9, `Engine/core` 8, `Engine/session` 6, `Core/vendor` 6, `Engine/context` 4, `Engine/subagent` 4, `Core/typert` 4, `Engine/jobs` 3, and single digits across `Programs/{SDK,Desktop,CLI,ACP}`, `Core/{util,subprocess,storage,runtime-diagnostics}`, `Engine/{preset,llm,compaction}`.
 
-The largest group is the Web application surface, which the Native runtime does not yet host. The second is official Modules, several of which have Native Providers beside them — the Cordis half is what a scenario would still reach if it composed the compatibility bundlerather than the Native one.
+The largest group is the Web application surface, but it is **half migrated rather than untouched**: of its 75 packages, 33 already carry a `dsh.native` entry and only 35 are Cordis-only. The remaining Cordis half is the client UI that the compatibility renderer still mounts. The second is official Modules, several of which have Native Providers beside them — the Cordis half is what a scenario would still reach if it composed the compatibility bundlerather than the Native one.
 
 ## Acceptance criteria
 
@@ -31,7 +31,7 @@ Deleting Cordis is not a follow-on step to the scenario migration; it is a secon
 
 - **`Core/vendor` must go first or last, never in the middle.** Those six packages are the pinned Cordis sources themselves; anything that still imports `@redspark/cordis` depends on them transitively.
 - **`Core/subprocess`, `Core/storage` and `Core/util/launch-environment` are infrastructure, not leaves.** They have Native siblings (`subprocess-local`, the session backends) but the Cordis originals are still depended upon, so a deletion order has to break those edges explicitly rather than by deleting the package.
-- **The Web application surface is the largest single block.** It is a client, not an engine package, so it may be legitimately out of scope for a runtime deletion — that is a decision the plan must state, not one it can leave implicit.
+- **The Web application surface is the largest single block, and it is already half migrated.** 33 of its 75 packages run natively; the 35 Cordis-only ones are mostly client UI mounted by the compatibility renderer. Finishing them is a rendering migration, not a runtime one, and that distinction decides whether deleting Cordis is reachable at all.
 
 This note exists so the next round measures before it deletes. A package count is not a plan, but a plan without one is a guess.
 

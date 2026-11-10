@@ -16,7 +16,7 @@ Status: proposed
 
 这 113 个按区域分：\`Programs/Web\` 35、\`Modules/Official\` 21、\`Modules/Community\` 9、\`Engine/core\` 8、\`Engine/session\` 6、\`Core/vendor\` 6、\`Engine/context\` 4、\`Engine/subagent\` 4、\`Core/typert\` 4、\`Engine/jobs\` 3，其余散落在 \`Programs/{SDK,Desktop,CLI,ACP}\`、\`Core/{util,subprocess,storage,runtime-diagnostics}\`、\`Engine/{preset,llm,compaction}\`，各为一两个。
 
-最大的一块是 Web 应用面，Native 运行时目前还不承载它。第二块是官方 Modules，其中若干旁边已经有 Native Provider——Cordis 那一半正是组合了兼容 bundle 而不是 Native bundle 时场景仍会走到的部分。
+最大的一块是 Web 应用面，但它是**迁移到一半而不是没动过**：它 75 个包里 33 个已经有 `dsh.native` 入口，只有 35 个仍是 Cordis-only。剩下的那一半主要是兼容渲染器仍在挂载的客户端 UI。第二块是官方 Modules，其中若干旁边已经有 Native Provider——Cordis 那一半正是组合了兼容 bundle 而不是 Native bundle 时场景仍会走到的部分。
 
 ## Acceptance criteria
 
@@ -31,7 +31,7 @@ Status: proposed
 
 - **\`Core/vendor\` 必须最先或最后处理，不能卡在中间。** 那六个包就是钉住的 Cordis 源码本身；任何仍 import \`@redspark/cordis\` 的东西都传递依赖它们。
 - **\`Core/subprocess\`、\`Core/storage\`、\`Core/util/launch-environment\` 是基础设施而非叶子。** 它们有 Native 兄弟包（\`subprocess-local\`、各 session 后端），但 Cordis 原件仍被依赖，所以删除顺序必须显式切断这些边，而不是靠删包解决。
-- **Web 应用面是最大的一整块。** 它是客户端而不是引擎包，因此对「删运行时」而言可能合理地不在范围内——这必须是规划要明确写出的决定，而不能留成隐含。
+- **Web 应用面是最大的一整块，而且已经迁了一半。** 它 75 个包里 33 个已跑在 Native 上；剩下 35 个多是兼容渲染器挂载的客户端 UI。完成它们是**渲染迁移**而不是运行时迁移，而这个区分决定「删除 Cordis」到底能不能达到。
 
 这条笔记的存在是为了让下一轮先测量再删除。包计数不是计划，但没有计数的计划只是猜测。
 
