@@ -42,6 +42,8 @@ Guessing which gates to run does not work: each deletion so far surfaced a diffe
 
 `agent-instructions` needs three things together: a workspace directory whose name contains `:` (Windows refuses to create it, verified directly), the `delimiter-path` workspace setup that builds that directory, and a compaction policy so the recorded overflow happens. A copied turn template supplies none of them, which is why the scenario is not migrated rather than skipped-and-claimed.
 
+`session-query-spill` cannot be replayed as recorded: its bash step greps an absolute spill path under `/tmp/dsh-acp-snap-<random>`, which no fixture can predict, and the spill path is the subject of the assertion. A migration would have to rewrite the step to discover the path, which changes what the scenario proves.
+
 ## Acceptance criteria
 
 - `verify-native-dependencies` passes at every step of the deletion.
