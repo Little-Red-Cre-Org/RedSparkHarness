@@ -30,6 +30,8 @@ Six defects that would otherwise have shipped silently are fixed: the classified
 
 Five alternatives are recorded as ruled out, so they are not retried: a Native `rsh-agent-default-model`, `agent/created`/`agent/disposed` as SubagentStart/Stop, a serial `session/starting`, a boolean-returning `turn/stopping`, and enqueueing hook context from inside a step-admission hook (which deadlocks, because enqueue waits for the admission it is called from).
 
+**Scenarios a profile alone cannot replay.** Four groups need a decision rather than a composition. Host-specific sandbox behaviour (`partial-landlock-*`, `missing-sandbox-runner`) declares `platform: posix` and exercises Linux Landlock, so it can only be recorded on the platform it describes. A live fixture server (`web-fetch`, `web-search-endpoint-guidance`) needs a Cordis plugin and a deterministic `web` Provider, for which the Native assembler has no seam. A driver that changes the session mid-turn (`system-prompt-in-history`, `model-switch-notice`) records a prompt or model change between steps; a plain replay produces one system message and one request, so the change never happens. A recording older than the schema it exercises (`persistent-pwsh-tool-turn`, which omits the `description` both shell tools require) needs re-recording, not a relaxed parameter.
+
 ## Alternatives considered
 
 - **Write per-scenario guidance into each snapshot directory.** Rejected: the composition facts repeat across dozens of scenarios, and a note per scenario becomes noise that drifts from the runtime.

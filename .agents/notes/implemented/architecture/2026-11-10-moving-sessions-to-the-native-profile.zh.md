@@ -30,6 +30,8 @@ Status: implemented
 
 五个备选方案记为已排除，不会被重试：Native 版 `rsh-agent-default-model`、用 `agent/created`/`agent/disposed` 当 SubagentStart/Stop、串行的 `session/starting`、返回布尔的 `turn/stopping`，以及在 step 准入钩子内部 enqueue 钩子上下文（会死锁，因为 enqueue 等待的正是调用它的那次准入）。
 
+**只靠组合无法回放的场景。** 有四类需要一个决定而不是一次组合。依赖宿主沙箱行为的（`partial-landlock-*`、`missing-sandbox-runner`）声明 `platform: posix`，验证 Linux Landlock，只能在它们所描述的平台上录制。依赖活的 fixture 服务的（`web-fetch`、`web-search-endpoint-guidance`）需要一个 Cordis 插件和确定的 `web` Provider，而 Native 装配器没有对应接缝。依赖回合中途改变会话的驱动的（`system-prompt-in-history`、`model-switch-notice`）在步与步之间记录一次 prompt 或模型变更；纯回放只会产生一条 system message 和一次请求，变更根本不发生。比它所验证的 schema 更早的录制（`persistent-pwsh-tool-turn`，缺少两个 shell 工具都要求的 `description`）需要重新录制，而不是放宽参数。
+
 ## Alternatives considered
 
 - **把逐场景指引写进每个快照目录。** 否决：组合事实在几十个场景里重复，逐场景笔记会变成与运行时逐渐脱节的噪音。
