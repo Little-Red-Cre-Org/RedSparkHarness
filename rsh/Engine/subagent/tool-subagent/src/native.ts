@@ -136,7 +136,11 @@ export const plugin: NativePlugin = {
               meta: { kind: 'subagent', childSessionId: result.id, provider: result.provider, messageId: result.messageId } }
             if ('jobId' in result) return { isError: false, content: [{ type: 'text', text: `Background subagent started. Job: ${result.jobId}. Child session: ${result.id}. Use job_output to read output or wait; job_kill requests cancellation.` }],
               meta: { kind: 'subagent', childSessionId: result.id, provider: result.provider, jobId: result.jobId } }
-            const content: ContentBlock[] = [...result.output]
+            // A child's reasoning is its own; only its text answer is the parent's result.
+            // Passing every block through would hand the parent model the child's private
+            // chain of thought, which the compatibility tool never does.
+            const content: ContentBlock[] = result.output.filter(
+              (block): block is Extract<ContentBlock, { type: 'text' }> => block.type === 'text')
             if (result.stopReason !== 'completed') content.unshift({ type: 'text', text: `Subagent ended: ${result.stopReason}. Partial output follows.` })
             return { content, isError: result.stopReason !== 'completed', meta: {
               kind: 'subagent', ...'remoteId' in result ? { externalChildId: result.id, remoteId: result.remoteId }

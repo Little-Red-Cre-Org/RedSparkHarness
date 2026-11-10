@@ -79,6 +79,7 @@ const snapshotAdapters = [
   'snapshots/native-headless/workspace-edit-native.snapshot.ts',
   'snapshots/native-headless/bash-tool-turn-native.snapshot.ts',
   'snapshots/native-headless/error-finish-native.snapshot.ts',
+  'snapshots/native-headless/subagent-spawn-in-process-native.snapshot.ts',
   'snapshots/native-sdk/text-turn.snapshot.ts',
   'snapshots/native-sdk/staged-files.snapshot.ts',
   'snapshots/native-sdk/external-operation.snapshot.ts',
