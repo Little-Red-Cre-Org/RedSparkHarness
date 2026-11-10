@@ -96,6 +96,10 @@ class ReplayModel implements NativeModel {
       ...configuredModel?.inputModalities === undefined
         ? {}
         : { inputModalities: [...configuredModel.inputModalities] },
+      // A recorded route can declare in-history prompt updates; the loop reads it per step.
+      ...configuredModel?.systemPromptUpdate === undefined
+        ? {}
+        : { systemPromptUpdate: configuredModel.systemPromptUpdate },
     })
   }
 
