@@ -470,6 +470,7 @@ function install(context: NativeContext, settings: Settings): void {
   context.on('turn/stopping', async (notice) => {
     const merged = await runPoint(context, settings, 'Stop', '', stopPayload(notice.session), {
       session: notice.session, turn: notice.turn, signal: notice.signal,
+      ...notice.appendEvent === undefined ? {} : { append: notice.appendEvent as HookAppend },
     })
     if (merged.decision !== 'deny') return
     // A blocking Stop hook forces continuation; a block with no reason still forces

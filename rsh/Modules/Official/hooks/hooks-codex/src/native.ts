@@ -489,6 +489,7 @@ function install(context: NativeContext, settings: Settings): void {
     }
     const merged = await runPoint(context, settings, 'Stop', '', payload, {
       session: notice.session, turn: notice.turn, signal: notice.signal,
+      ...notice.appendEvent === undefined ? {} : { append: notice.appendEvent as HookAppend },
     })
     if (merged.decision !== 'deny') return
     const text = merged.reason ?? 'continue: blocked by Stop hook'

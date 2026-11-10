@@ -1968,7 +1968,9 @@ export class NativeHeadlessApplication implements NativeApplication {
                 // admit another step through the exact active owner; the batch settles
                 // before the next admission reads it.
                 if (activeOwner !== undefined) {
-                  await this.context.events.serial(this.context.scope, 'turn/stopping', { agent, session, turn, step, signal })
+                  const stoppingOwner = activeOwner
+                  await this.context.events.serial(this.context.scope, 'turn/stopping', { agent, session, turn, step, signal,
+                    appendEvent: (type, data, ...opts) => stoppingOwner.append(type, data, ...opts) })
                   await persist()
                   signal.throwIfAborted()
                   if (activeOwner.messages('next-step').length > 0) {
