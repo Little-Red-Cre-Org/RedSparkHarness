@@ -83,6 +83,10 @@ The next item checked, `tool-present`, does not resolve that way and is the firs
 
 Two items checked, one resolved for free and one a real port. That ratio is the useful output of this round: the list is not uniformly hard, but it is not uniformly free either, and only checking each item tells which it is.
 
+The third item, `typert-loader`, resolves to a third category: **it is Cordis-shaped by construction.** Its job is to watch Loader entries — it reacts to `internal/plugin` emissions, resolves each mounted entry's manifest, and withdraws registrations when the entry unmounts. The Native runtime has no Loader to watch, so nothing about it survives the deletion; the Native side contains zero references to `typert` at all. Its sibling `typert-registry` is likewise the reflection/RPC layer the Cordis Web API uses, and the Native Web host does not.
+
+So the categories are three, not two: **already owned by a Native package** (`session-checkpoint-policy`), **portable with extra seams** (`tool-present`), and **Cordis-shaped, deleted with the runtime** (`typert-loader`, and its registry once the Cordis Web API is out of scope). `agent-default-model` and `compat-*` belong to the third category too. That leaves genuinely open work at `jobs-local` and the Web `api-gateway` only, and both of those are gated behind deciding whether the Cordis Web API is in scope at all.
+
 So `base` is the layer every other template stands on, and it is the only one whose retirement actually means anything.
 
 The Native side already demonstrates that the shape is achievable: `native-ptc` composes 19 real product rows — agent, tools, prompt, model execution, jobs, sandbox policy, subprocess, shell, bash tool, code runtime and session persistence — and runs a working agent. What it lacks is not depth but breadth: no system prompt identity beyond the prompt registry, no agent instructions, no attachments at startup, no command surface, no Web API. Those are the 24 packages.

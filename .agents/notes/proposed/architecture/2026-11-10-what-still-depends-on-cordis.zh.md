@@ -79,6 +79,10 @@ Status: proposed
 
 核查两项：一项免费解决，一项是真正的移植。这个比例就是本轮有用的产出：清单不是一律困难，也不是一律免费，只有逐项核查才知道是哪一种。
 
+第三项 `typert-loader` 归入第三类：**它天然就是 Cordis 形状的。** 它的职责是监视 Loader 条目——响应 `internal/plugin` 事件、解析每个已挂载条目的 manifest、在条目卸载时撤回注册。Native 运行时没有 Loader 可监视，所以它在删除后没有任何部分能存活；Native 侧对 `typert` 的引用数为零。它的兄弟包 `typert-registry` 同样是 Cordis Web API 使用的反射/RPC 层，而 Native Web host 不用它。
+
+所以类别是三类而非两类：**已被 Native 包拥有**（`session-checkpoint-policy`）、**可移植但需额外接缝**（`tool-present`）、**Cordis 形状、随运行时删除**（`typert-loader`，以及一旦 Cordis Web API 划出范围后的它的注册表）。`agent-default-model` 与 `compat-*` 也属于第三类。这样真正开放的剩余工作只有 `jobs-local` 与 Web 的 `api-gateway`，而这两者都被「Cordis Web API 是否在范围内」这个决定所阻塞。
+
 所以 `base` 是所有其他模板立足的那一层，也唯一一个退役真正有意义的层。
 
 Native 一侧已经证明这个形状可行：`native-ptc` 组合了 19 个真实产品行——agent、tools、prompt、model execution、jobs、sandbox policy、subprocess、shell、bash tool、code runtime 与 session persistence——并跑起一个能工作的 agent。它缺的不是深度而是广度：除 prompt 注册表之外没有系统提示身份、没有 agent instructions、启动时没有 attachments、没有命令面、没有 Web API。那些就是那 24 个包。
