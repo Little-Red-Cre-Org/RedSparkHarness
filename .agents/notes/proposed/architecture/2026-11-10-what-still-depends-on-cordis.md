@@ -44,6 +44,14 @@ Guessing which gates to run does not work: each deletion so far surfaced a diffe
 
 `session-query-spill` cannot be replayed as recorded: its bash step greps an absolute spill path under `/tmp/dsh-acp-snap-<random>`, which no fixture can predict, and the spill path is the subject of the assertion. A migration would have to rewrite the step to discover the path, which changes what the scenario proves.
 
+## What retiring the templates actually requires
+
+The six templates name seven bundle packages. Measured, they are not comparable in size: `base` declares **88** dependencies and `web-app` **86**, while `headless` has 6, `rsh` 10, `sdk-app` 4, `sdk-minimal` 27 and `acp-app` 3. `base` is shared by every template except `sdk-minimal`, so it is the layer that must go last.
+
+The shipped Native profile composes **12 rows**, and only three of them name the same concerns as `base` at all. The other **85 packages `base` pulls in have no Native counterpart in the profile**: agent loop, system prompt, the tool presets, the command surface, the Web API and its client, and so on. A Native profile today is a headless skeleton, not a replacement for a full application bundle.
+
+That makes deleting Cordis a product-level migration rather than a packaging step: each of those 85 either needs a Native form, must be deleted as dead, or must be declared out of scope because the application it serves is itself retired. The scenario work in this note is necessary but not sufficient, and the number that governs the plan is 85, not 6.
+
 ## Acceptance criteria
 
 - `verify-native-dependencies` passes at every step of the deletion.

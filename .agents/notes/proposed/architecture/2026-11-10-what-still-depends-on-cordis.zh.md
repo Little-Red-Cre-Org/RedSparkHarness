@@ -40,6 +40,14 @@ Status: proposed
 
 靠猜该跑哪些门禁行不通：到目前为止每次删除暴露的都是不同的一个，每次漏掉都要多走一轮 CI。可靠的本地顺序是先删文件、清引用、重跑生成页（`gen-config-catalog`、`gen-module-graph`）、重新记录配对，然后把 `pnpm run doc-sync` 与 `typecheck`、`pnpm --dir rsh/Programs/CLI pack` 作为一批跑——`doc-sync` 是拥有目录、链接、图、配对与换行诸门禁的聚合入口，一次就能报出全部问题。
 
+## 退役模板究竟需要什么
+
+六个模板点名七个 bundle 包。实测它们的规模完全不可比：`base` 声明 **88** 个依赖、`web-app` **86** 个，而 `headless` 只有 6 个、`rsh` 10 个、`sdk-app` 4 个、`sdk-minimal` 27 个、`acp-app` 3 个。`base` 除 `sdk-minimal` 外被所有模板共享，所以它必须是最后消失的那一层。
+
+出厂 Native profile 只组合 **12 行**，其中只有三项与 `base` 关注点重叠。`base` 拉进来的其余 **85 个包在 profile 里没有 Native 对应物**：agent loop、system prompt、工具预设、命令面、Web API 及其客户端等等。今天的 Native profile 是一个无头骨架，不是完整应用 bundle 的替代品。
+
+这让删除 Cordis 成为一次产品级迁移而非打包步骤：那 85 个包各自要么需要 Native 形态、要么作为死代码删除、要么因为它所服务的应用本身要退役而被明确划出范围。本笔记里的场景工作是必要但不充分的，决定规划规模的数字是 85，不是 6。
+
 ## Acceptance criteria
 
 - 删除的每一步 `verify-native-dependencies` 都通过。
