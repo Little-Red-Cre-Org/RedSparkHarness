@@ -262,7 +262,6 @@ export const mixedNativeEntryDirectories: ReadonlyMap<string, string> = new Map(
   ['rsh/Modules/Official/lsp/lsp', 'Cordis and Native LSP registries share extension routing and conflict checks'],
   ['rsh/Modules/Official/lsp/lsp-stdio', 'Cordis and Native stdio providers share executable resolution, isolation, and teardown'],
   ['rsh/Modules/Official/lsp/tool-lsp', 'Cordis and Native lsp tools share argument checks, caps, and result rendering'],
-  ['rsh/Modules/Official/hooks/hook-protocol', 'Cordis and Native bridges share matching, command execution, outcome merging and the durable hook event pair'],
   ['rsh/Modules/Official/hooks/hooks-claude-code', 'Cordis and Native bridges share the Claude Code config parser and the dialect payload vocabulary while each binds its own extension points'],
   ['rsh/Modules/Official/hooks/hooks-codex', 'Cordis and Native bridges share the Codex config parser and the dialect payload vocabulary while each binds its own extension points'],
 ])
@@ -273,6 +272,7 @@ export const mixedNativeLibraryDirectories: ReadonlyMap<string, readonly ('host'
   ['rsh/Programs/Web/client/ui-goal', ['client']],
   ['rsh/Programs/Web/client/ui-workflow-run', ['client']],
   ['rsh/Programs/Web/client/ui-trajectory', ['client']],
+  ['rsh/Modules/Official/hooks/hook-protocol', ['host']],
   ['rsh/Modules/Official/spill/spill', ['host']],
   ['rsh/Modules/Official/sandbox/sandbox', ['host']],
   ['rsh/Programs/Web/client/ui-slots', ['client']],
