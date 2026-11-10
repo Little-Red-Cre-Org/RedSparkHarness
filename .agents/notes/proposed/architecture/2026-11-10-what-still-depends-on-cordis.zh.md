@@ -147,7 +147,7 @@ Native 一侧已经证明这个形状可行：`native-ptc` 组合了 19 个真�
 
 **需要宿主专属运行时。** `missing-sandbox-runner` 设 `RSH_SNAPSHOT_MISSING_SANDBOX_RUNNER=1` 模拟缺失的 Landlock runner。`partial-landlock-child-failure` 断言仅 Linux 的 Landlock 行为（`platform: posix`）。`ptc-python-turn` 同样标 `posix`，但真正的阻塞不同：它把 worker provider 换成 `@redspark/rsh-experimental-code-runtime-python`，而该包属于 `Modules/Community/experimental` 且没有 `dsh.native` 入口，所以 Native profile 根本无法运行 Python 代码。除此之外它的断言与录制完全吻合（一个外层 `run_code`、两次 `bash` 分发、渲染结果含 `CODE_ONE`），因此一旦该运行时获得 Native 形态即可迁移。`persistent-pwsh-tool-turn` 声明 `platform: pwsh`，且其录制早于该工具必需的 `description` 字段，所以除了 Windows PTY 还需要重新录制。
 
-**需要场景无法表达的 fixture 插件。** `session-reference-spill` 挂载 `source-session` 以播种被引用的 Session 与 spill 存储。`subagent-published-run-failure` 挂载 `subagent-durability-failure` 并通过环境变量注入 dispose 失败。`product-subagent-result-diagnostic` 挂载 `subagent-result-diagnostic`。`partial-landlock-child-failure` 挂载 `partial-landlock-sandbox`。`agent-instructions` 需要名称含 `:` 的工作区目录——Windows 拒绝创建——外加为其录制到的溢出准备的压缩策略。
+**需要场景无法表达的 fixture 插件。** `session-reference-spill` 挂载 `source-session` 以播种被引用的 Session 与 spill 存储。`subagent-published-run-failure` 挂载 `subagent-durability-failure` 并通过环境变量注入 dispose 失败。`product-subagent-result-diagnostic` 挂载 `subagent-result-diagnostic`。`partial-landlock-child-failure` 挂载 `partial-landlock-sandbox`。`agent-instructions` 需要名称含 `:` 的工作区目录，外加为其录制到的溢出准备的压缩策略。冒号不是偏好问题：`[System.IO.Directory]::CreateDirectory('…/scope:alt')` 在 Windows 上静默地什么都没创建（已实测——该路径此后不存在，`Test-Path -LiteralPath` 为 false），所以这个目录在本宿主上根本无法物化。
 
 **需要外部服务。** `lsp-definition` 驱动 LSP 服务器。`subagent-acp-diagnostic` 与 `product-subagent-result-diagnostic` 驱动 ACP 子进程。
 
