@@ -32,6 +32,8 @@ Fourteen Cordis-only leaves have no dependents at all, but a leaf is not automat
 
 The reusable test for the third group is: a Native sibling exists, nothing depends on the Cordis package, and no bundle layer names it. Two met it; the rest did not, which is why the sweep stops at two rather than continuing through the list.
 
+Deleting a package moves four things beyond its own directory, and each one fails a different gate: the `tsconfig.host.json` project reference (typecheck), the workspace lockfile (packed install), the group README row and any sibling README that links to it (translation pairing), and the reviewed `rsh/Docs/config-catalog.zh.md` counterpart of the generated catalog (documentation build, as a link to a source file that no longer exists). The first two catch a deletion locally; the last two only appear when the doc gates run, so a deletion is not finished until `verify-translation-pairing`, `verify-config-catalog` and the doc-site build pass.
+
 ## Acceptance criteria
 
 - `verify-native-dependencies` passes at every step of the deletion.

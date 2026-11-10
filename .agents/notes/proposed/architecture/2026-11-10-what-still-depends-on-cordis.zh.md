@@ -32,6 +32,8 @@ Status: proposed
 
 第三类可复用的判据是：存在 Native 兄弟包、无人依赖该 Cordis 包、且没有任何 bundle 层引用它。两个满足，其余的都不满足——所以清扫停在两个而不是继续往下推。
 
+删除一个包会牵动它自己目录之外的四处，而每一处失败在不同门禁上：`tsconfig.host.json` 的 project 引用（typecheck）、工作区 lockfile（打包安装）、组 README 那一行以及任何链接到它的兄弟 README（翻译配对）、以及生成目录的中文评审对侧 `rsh/Docs/config-catalog.zh.md`（文档构建，表现为链接到已不存在的源文件）。前两处在本地就会暴露；后两处只有跑文档门禁时才出现，所以一次删除在 `verify-translation-pairing`、`verify-config-catalog` 与文档站点构建都通过之前不算完成。
+
 ## Acceptance criteria
 
 - 删除的每一步 `verify-native-dependencies` 都通过。
