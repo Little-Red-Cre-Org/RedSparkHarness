@@ -85,5 +85,10 @@
     "@redspark/rsh-scope": "workspace:^",
     "@redspark/rsh-native-runtime": "workspace:^",
     "@redspark/rsh-native-tools": "workspace:^"
+  },
+  "peerDependenciesMeta": {
+    "@redspark/cordis": {
+      "optional": true
+    }
   }
 }
