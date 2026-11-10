@@ -139,6 +139,24 @@ Native 一侧已经证明这个形状可行：`native-ptc` 组合了 19 个真�
 
 `skill-load` 的阻塞来自内容而非能力：它的 setup 会复制 `agent-presets/presets/cordis/skills/editing-cordis-compositions/SKILL.md`，而该文件已不在仓库中。工具、注册表与文件系统来源都有 Native 入口，迁移后的场景能成功组合并调用它们——它回答该技能不存在，因为录制所依据的 fixture 已随 presets 退役。因此回放它需要针对仍然存在的技能重新录制，而不是 Native 移植。
 
+## 剩余十七个场景及其确切阻塞
+
+每一条都对照录制与其 manifest 核查过，而不是从场景名推断。
+
+**需要真实 HTTP 端点。** `web-fetch` 调用 `http://public.test:43117/menu.html` 并断言取回的页面文本；该录制没有 fixture 或 driver，只有一次真实请求。`web-search-endpoint-guidance` 对搜索 Provider 同形。两者都需要本地回环 fixture 服务器，而 Native 装配器不提供。
+
+**需要宿主专属运行时。** `missing-sandbox-runner` 设 `RSH_SNAPSHOT_MISSING_SANDBOX_RUNNER=1` 模拟缺失的 Landlock runner。`partial-landlock-child-failure` 与 `ptc-python-turn` 断言仅 Linux 的行为（`platform: posix`）。`persistent-pwsh-tool-turn` 声明 `platform: pwsh`，且其录制早于该工具必需的 `description` 字段，所以除了 Windows PTY 还需要重新录制。
+
+**需要场景无法表达的 fixture 插件。** `session-reference-spill` 挂载 `source-session` 以播种被引用的 Session 与 spill 存储。`subagent-published-run-failure` 挂载 `subagent-durability-failure` 并通过环境变量注入 dispose 失败。`product-subagent-result-diagnostic` 挂载 `subagent-result-diagnostic`。`partial-landlock-child-failure` 挂载 `partial-landlock-sandbox`。`agent-instructions` 需要名称含 `:` 的工作区目录——Windows 拒绝创建——外加为其录制到的溢出准备的压缩策略。
+
+**需要外部服务。** `lsp-definition` 驱动 LSP 服务器。`subagent-acp-diagnostic` 与 `product-subagent-result-diagnostic` 驱动 ACP 子进程。
+
+**随 Cordis 退役。** `advanced-toolchain`、`advanced-toolchain-runtime` 与 `cordis-inspect-jsdoc` 演练 Cordis 工具链本身（`cordis_define`、`cordis_undefine`、`cordis_inspect_query`），按设计没有 Native 形态。
+
+**按原录制不可回放。** `session-query-spill` 会 grep 一个形如 `/tmp/dsh-acp-snap-<随机>` 的绝对 spill 路径，任何 fixture 都无法预测。`skill-load` 复制的 preset 技能文件仓库已不再包含。
+
+十七个里只有三个（`advanced-toolchain`、`advanced-toolchain-runtime`、`cordis-inspect-jsdoc`）随 Cordis 一起消失。其余十四个各需 Native 装配器所没有的测试基础设施，或一次重新录制。
+
 ## Acceptance criteria
 
 上面的提案按包逐个满足：已被现有 Native 包拥有的，在无人引用后删掉它的 Cordis 那一半；Cordis 形状的随运行时消失；确实未移植的补上 Native 入口。场景以其在 CI 中于 Native profile 上回放通过为准。Web 的范围决定必须在任何 Web 包移动之前记录下来。

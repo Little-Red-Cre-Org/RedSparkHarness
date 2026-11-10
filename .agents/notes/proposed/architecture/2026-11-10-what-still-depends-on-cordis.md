@@ -144,9 +144,31 @@ Both are therefore recorded as blocked on runtime capability rather than on test
 
 `skill-load` is blocked by content, not by capability: its setup copies `agent-presets/presets/cordis/skills/editing-cordis-compositions/SKILL.md`, and that file no longer exists in the repository. The tool, the registry and the filesystem source all have Native entries and a migrated scenario composes and invokes them successfully — it answers that the skill is unknown, because the fixture it was recorded against was retired with the presets. Replaying it therefore needs a re-recording against a skill that still exists, not a Native port.
 
-## Acceptance criteria
+## The seventeen scenarios that remain, with their exact blocker
+
+Each entry was checked against the recording and its manifest rather than inferred from the scenario name.
+
+**Needs a real HTTP endpoint.** `web-fetch` calls `http://public.test:43117/menu.html` and asserts the fetched page text; the recording has no fixture or driver, only a real request. `web-search-endpoint-guidance` is the same shape for the search provider. Both need a loopback fixture server, which the Native assembler does not provide.
+
+**Needs a host-specific runtime.** `missing-sandbox-runner` sets `RSH_SNAPSHOT_MISSING_SANDBOX_RUNNER=1` to simulate an absent Landlock runner. `partial-landlock-child-failure` and `ptc-python-turn` assert Linux-only behaviour (`platform: posix`). `persistent-pwsh-tool-turn` declares `platform: pwsh` and its recording predates the required `description` field on that tool, so it needs re-recording as well as a Windows PTY.
+
+**Needs a fixture plugin that the scene cannot express.** `session-reference-spill` mounts `source-session` to seed a referenced Session and a spill store. `subagent-published-run-failure` mounts `subagent-durability-failure` and sets an environment variable to inject a dispose failure. `product-subagent-result-diagnostic` mounts `subagent-result-diagnostic`. `partial-landlock-child-failure` mounts `partial-landlock-sandbox`. `agent-instructions` needs a workspace directory whose name contains `:` — Windows refuses to create it — plus a compaction policy for its recorded overflow.
+
+**Needs an external service.** `lsp-definition` drives an LSP server. `subagent-acp-diagnostic` and `product-subagent-result-diagnostic` drive an ACP child.
+
+**Retires with Cordis.** `advanced-toolchain`, `advanced-toolchain-runtime` and `cordis-inspect-jsdoc` exercise the Cordis toolchain itself (`cordis_define`, `cordis_undefine`, `cordis_inspect_query`), which has no Native form by design.
+
+**Unreplayable as recorded.** `session-query-spill` greps an absolute `/tmp/dsh-acp-snap-<random>` spill path that no fixture can predict. `skill-load` copies a preset skill file that the repository no longer contains.
+
+Only three of the seventeen (`advanced-toolchain`, `advanced-toolchain-runtime`, `cordis-inspect-jsdoc`) disappear together with Cordis. The other fourteen each need test infrastructure the Native assembler does not have, or a re-recording.
+
+
 
 The proposals above are satisfied per package as each is resolved: a package that an existing Native package already owns needs its Cordis half deleted once nothing imports it; a `Cordis-shaped` package disappears with the runtime; a genuinely unported one gets a Native entry. The scenarios count when they replay on the Native profile in CI. The Web scope decision is recorded before any Web package moves.
+
+## Acceptance criteria
+
+Every claim above is stated as a measured fact with the file or the command that produced it, so a later reader can re-run the check rather than trust the sentence. A package qualifies as deletable only when nothing imports it **and** no published profile composes it.
 
 ## Risks
 
