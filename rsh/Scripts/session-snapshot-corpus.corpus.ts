@@ -123,6 +123,7 @@ const snapshotAdapters = [
   'snapshots/native-headless/background-job-admission-native.snapshot.ts',
   'snapshots/native-headless/system-prompt-in-history-native.snapshot.ts',
   'snapshots/native-headless/model-switch-notice-native.snapshot.ts',
+  'snapshots/native-headless/web-fetch-native.snapshot.ts',
   'snapshots/native-headless/ptc-read-image-native.snapshot.ts',
   'snapshots/native-headless/ptc-read-image-attachment-path-native.snapshot.ts',
   'snapshots/native-headless/packed-chunks-native.snapshot.ts',
