@@ -99,7 +99,9 @@ Native 一侧已经证明这个形状可行：`native-ptc` 组合了 19 个真�
 
 三者都没有 Native 入口，但处境不同。`subagent-codex` 与 `subagent-rsh-sdk` 的包级消费者为**零**——它们是用户通过 `dsh plugin add` 安装的已发布 profile bundle，所以「没有 import 方」并不等于死代码。`subagent-acp` 被 `base` bundle 引用。它们的 README 记录了各自的 Native 侧状态：Codex 适配器在 Native 请求上**在启动前就停止**，因为它尚未强制父级权限或继承的 `maxSteps`；SDK 桥同样如此记录。因此退役 `app-boot` 意味着要么把这三个适配器移植到 Native，要么退役这三个产品能力，而仓库已把前者记为未完成的工作。
 
-移植量比这句话听起来要小，实测说明了原因。`native-subagent` 已经提供了这些适配器所需的接缝：`external-driver.ts` 有 417 行，定义 `NativeExternalSubagentDriver` 及十九个配套接口——请求、审批中继、工具目录、工具调用授权、模型尝试租约、操作事件、结果——并由 `native-subagent` 内部消费。**包外没有任何实现者**，所以这份契约是建好而未使用的。因此一个 Native 桥是「适配到既有契约」，而它取代的 Cordis 源码是两个文件共 523 行（`index.ts` 188、`run.ts` 335）。工作是为 SDK 与 Codex app-server 实现 `NativeExternalSubagentDriver`，而不是设计新的委派模型。
+这个说法同样是错的，核查包之后就能看出原因。**Native 对应物已经存在。** `rsh/Modules/Official/subagent/` 下有 `sdk-child`、`codex-app-server` 与 `acp-child`，三者都带 `dsh.native` 入口并提供 `externalSubagentDriver`——正是 `native-subagent` 消费的那份契约。`sdk-child` 是一个完整适配器：它需要 `sdkChildRuntimeLauncher`，而 `rsh/Programs/CLI/src/native-profile-loader.ts` 会为 `sdk-child` 与 `acp-child` 行自动安装该服务。所以这三个 Cordis 桥不是「未移植的缺口」，而是与 Native 侧已交付能力并行的实现。
+
+差别在组合而非能力。出厂的 `sdk` profile 把 `subagents.providerName` 设为 `'spawn'` 且不组合任何子适配器行；只有 `native-sdk-dsh-child` 添加 `dsh-sdk-child` 并设 `providerName: 'dsh-sdk'`。因此剩下的是决定哪些 profile 名应当选用该外部驱动，而不是写一个。
 
 **六个 Cordis 模板名里已有五个具备出厂 Native 组合。** `rsh/Programs/CLI/src/native-profile-template.ts` 把 `headless` 映射到 `native-headless`、`web` 映射到 `native-web`、`sdk` 映射到 `native-sdk`、`acp` 映射到 `native-acp`、`rsh` 映射到 `native-tui`；只有 `sdk-minimal` 没有对应物。CLI 在其 manifest 中声明了十三个 native 模板，`native-web` 还自带客户端安装清单。所以第 5 步的工作不是「建一个 Native Web profile」——它已存在——而是「退役这些同名仍在解析到的 Cordis bundle」，并对 `sdk-minimal` 作出决定。
 
