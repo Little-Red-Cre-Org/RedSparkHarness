@@ -87,6 +87,7 @@ const snapshotAdapters = [
   'snapshots/native-headless/subagent-depth-two-rejection-native.snapshot.ts',
   'snapshots/native-headless/workflow-run-native.snapshot.ts',
   'snapshots/native-headless/subagent-child-question-rejection-native.snapshot.ts',
+  'snapshots/native-headless/ralph-loop-native.snapshot.ts',
   'snapshots/native-sdk/text-turn.snapshot.ts',
   'snapshots/native-sdk/staged-files.snapshot.ts',
   'snapshots/native-sdk/external-operation.snapshot.ts',
