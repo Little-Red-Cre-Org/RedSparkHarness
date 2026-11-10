@@ -14,7 +14,7 @@ Measured on the migration branch, **268 packages declare `@redspark/cordis` as a
 
 Record the measured shape now, so deleting Cordis is planned against facts rather than assumed to follow from the scenario migration.
 
-The 113 split by area as: `Programs/Web` 35, `Modules/Official` 21, `Modules/Community` 9, `Engine/core` 8, `Engine/session` 6, `Core/vendor` 6, `Engine/context` 4, `Engine/subagent` 4, `Core/typert` 4, `Engine/jobs` 3, and single digits across `Programs/{SDK,Desktop,CLI,ACP}`, `Core/{util,subprocess,storage,runtime-diagnostics}`, `Engine/{preset,llm,compaction}`.
+Measured on `origin/main` at `79cfd95da7` the figure is **108**, not the 113 this note first recorded; the rule is the same (a package that declares `@redspark/cordis` as a dependency or peer, has no `dsh.native` entry, and lives outside `rsh/Compatibility` and `rsh/Tests`), so the difference came from the tree moving under earlier work rather than from a change of criteria. The split by area as measured then was: `Programs/Web` 35, `Modules/Official` 21, `Modules/Community` 9, `Engine/core` 8, `Engine/session` 6, `Core/vendor` 6, `Engine/context` 4, `Engine/subagent` 4, `Core/typert` 4, `Engine/jobs` 3, and single digits across `Programs/{SDK,Desktop,CLI,ACP}`, `Core/{util,subprocess,storage,runtime-diagnostics}`, `Engine/{preset,llm,compaction}`.
 
 The largest group is the Web application surface, but it is **half migrated rather than untouched**: of its 75 packages, 33 already carry a `dsh.native` entry and only 35 are Cordis-only. The remaining Cordis half is the client UI that the compatibility renderer still mounts. The second is official Modules, several of which have Native Providers beside them — the Cordis half is what a scenario would still reach if it composed the compatibility bundlerather than the Native one.
 
@@ -97,7 +97,29 @@ That inverts the ordering the objective states. Step 4 cannot be finished before
 
 ## The Web surface decides the endgame
 
-The one item left open, the Web `api-gateway`, is not a package question but a scope question, and the measurement settles what each answer costs. Of the 75 packages under `rsh/Programs/Web`, **35 are Cordis-only, 33 already carry a `dsh.native` entry, and 7 neither**. The split matters: the client is already half migrated (27 native against 22 Cordis), while the API side is the reverse (2 native against 6 Cordis).
+**The shipped launcher no longer reads the Cordis template table at all.** Creating a fresh Harness home and running `dsh --profile headless` writes `profiles/headless/package.json` with `"runtime": "native"` and a 62-row `rsh.profile.json` composing `native-headless`, `native-agent`, `native-tools`, workflows, goals, agent instructions and the context providers. `rsh/Programs/CLI/src` contains **no reference to `app-boot`**, so `PROFILE_TEMPLATES` is unreachable from the launcher.
+
+That is why five of the six names already behave as Native profiles: the name-to-composition table in `native-profile-template.ts` is what the CLI consults, and the Cordis bundles are only reachable through `app-boot`, whose remaining consumers are three Cordis subagent bridges.
+
+None of the three has a Native entry, and their standing differs. `subagent-codex` and `subagent-rsh-sdk` have **zero** package consumers — they are published profile bundles a user installs with `dsh plugin add`, so their absence of importers does not make them dead. `subagent-acp` is imported by the `base` bundle. Their READMEs state the state of the Native path for each: the Codex adapter **stops before startup** on a Native request because it does not yet enforce parent authority or the inherited `maxSteps`, and the SDK bridge is documented the same way. So retiring `app-boot` means either porting these three adapters to Native or retiring the three product features, and the repository has already recorded the former as unfinished work.
+
+That framing is also wrong, and checking the packages showed why. **The Native counterparts already exist.** `rsh/Modules/Official/subagent/` contains `sdk-child`, `codex-app-server` and `acp-child`, and all three carry a `dsh.native` entry that provides `externalSubagentDriver` — the same contract `native-subagent` consumes. `sdk-child` is a complete adapter: it requires `sdkChildRuntimeLauncher`, which `rsh/Programs/CLI/src/native-profile-loader.ts` installs automatically for the `sdk-child` and `acp-child` rows. So the three Cordis bridges are not an unported gap; they are a parallel implementation of something the Native side already ships.
+
+The difference is composition, not capability. The shipped `sdk` profile sets `subagents.providerName: 'spawn'` and composes no child adapter row; only `native-sdk-dsh-child` adds `dsh-sdk-child` with `providerName: 'dsh-sdk'`. So what remains is deciding which profile names should select the external driver, not writing one. Verified by composing it: `dsh --profile native-sdk-dsh-child` writes a profile whose `subagents` row sets `providerName: 'dsh-sdk'` and which also composes `dsh-sdk-child`, and that profile boots — it exits only because the probe passed a task argument, not on a composition error. The loader adds the missing `sdkChildRuntimeLauncher` itself, and it will do the same for `acp-child` when a profile names that row.
+
+`sdk-child` is composed for that profile. The other two resolve differently, and checking them corrected the claim.
+
+`acp-child` has no composition anywhere, and `native-acp-dsh-child` explains why the absence is not an oversight: that profile derives from `native-acp` and **deliberately strips every subagent row** — `subagents`, `subagent-controls`, `subagent-directory`, `subagent-tool`, `subagent-tool-fork`, the three `workflow` rows and `ralph-tool` — because it is the *child* side of delegation, and a child that could delegate again would recurse without a bound. A probe confirms the result: 25 rows, no `subagents` and no `acp-child`. So `acp-child` is uncomposed because composing it would contradict that profile's purpose, not because nobody got to it.
+
+`codex-app-server` likewise has no row, and it is a different case again: the Cordis Codex bridge records that the adapter stops before startup on a Native request, so composing it would expose a feature the repository documents as unimplemented rather than make it reachable. That is the whole remaining difference between the Cordis bridges and their Native counterparts: three packages exist on both sides, and the Native side composes one of the three.
+
+**Five of the six Cordis template names already have a shipped Native composition.** `rsh/Programs/CLI/src/native-profile-template.ts` maps `headless` to `native-headless`, `web` to `native-web`, `sdk` to `native-sdk`, `acp` to `native-acp` and `rsh` to `native-tui`; only `sdk-minimal` has no counterpart. The CLI declares thirteen native templates in its manifest, and `native-web` ships its own client installations. So the step-5 work is not "build a Native Web profile" — that exists — but "retire the Cordis bundles that the same names still resolve to", and decide `sdk-minimal`.
+
+`sdk-minimal` is the one name with no native counterpart, and it is not an oversight. It is a deliberately standalone profile: its README says it exists for SDK clients that need a small explicit runtime, it **excludes `dsh-base`** by design, and all 27 of its dependencies are Cordis packages with zero `dsh.native` entries. `native-sdk` is a different composition, a full agent with subagents, workflows and commands. So closing this template is a product decision — either port a genuinely minimal Native composition, or retire the profile name — and it is the only step-5 item that cannot be settled by deleting a bundle.
+
+That distinction matters because the two readings imply very different remaining work, and the earlier reading in this note ("the Native Web path is built and never wired") was wrong: it is built *and* wired, and a Web e2e test composes it with twenty-four module links.
+
+The earlier measurement still describes the package inventory, so it stays as the cost of the residual Cordis surface. Of the 75 packages under `rsh/Programs/Web`, **35 are Cordis-only, 33 already carry a `dsh.native` entry, and 7 neither**. The split matters: the client is already half migrated (27 native against 22 Cordis), while the API side is the reverse (2 native against 6 Cordis).
 
 Decisively, `native-web-host` exists and is complete — it provides `nativeWebHost`, `hostConnection`, `httpRoutes` and `application` — but **nothing outside the package consumes it**. So the Native Web path is built and has never been wired into an application profile. Deleting Cordis outright therefore cannot happen before someone assembles a Native Web profile that composes `native-web-host` and the 27 migrated client packages, and ports or drops the remaining 28.
 
@@ -120,9 +142,33 @@ The second changes the selected model after a `todo_write` through `installModel
 
 Both are therefore recorded as blocked on runtime capability rather than on test infrastructure, which changes what unblocking them costs: it is loop work, and it must ship with its own scenario coverage, not as a fixture tweak.
 
-## Acceptance criteria
+`skill-load` is blocked by content, not by capability: its setup copies `agent-presets/presets/cordis/skills/editing-cordis-compositions/SKILL.md`, and that file no longer exists in the repository. The tool, the registry and the filesystem source all have Native entries and a migrated scenario composes and invokes them successfully — it answers that the skill is unknown, because the fixture it was recorded against was retired with the presets. Replaying it therefore needs a re-recording against a skill that still exists, not a Native port.
+
+## The seventeen scenarios that remain, with their exact blocker
+
+Each entry was checked against the recording and its manifest rather than inferred from the scenario name.
+
+**Needs a real HTTP endpoint.** `web-fetch` calls `http://public.test:43117/menu.html` and asserts the fetched page text; the recording has no fixture or driver, only a real request. `web-search-endpoint-guidance` is the same shape for the search provider. Both need a loopback fixture server, which the Native assembler does not provide.
+
+**Needs a host-specific runtime.** `missing-sandbox-runner` sets `RSH_SNAPSHOT_MISSING_SANDBOX_RUNNER=1` to simulate an absent Landlock runner. `partial-landlock-child-failure` asserts Linux-only Landlock behaviour (`platform: posix`). `ptc-python-turn` is also `posix`, but its real blocker is different: it swaps the worker provider for `@redspark/rsh-experimental-code-runtime-python`, and that package is `Modules/Community/experimental` with no `dsh.native` entry, so a Native profile cannot run Python code at all. Its assertions otherwise match its recording exactly (one outer `run_code`, two `bash` dispatches, `CODE_ONE` in the rendered result), so it would migrate the moment that runtime gained a Native form. `persistent-pwsh-tool-turn` declares `platform: pwsh` and its recording predates the required `description` field on that tool, so it needs re-recording as well as a Windows PTY.
+
+**Needs a fixture plugin that the scene cannot express.** `session-reference-spill` mounts `source-session` to seed a referenced Session and a spill store. `subagent-published-run-failure` mounts `subagent-durability-failure` and sets an environment variable to inject a dispose failure. `product-subagent-result-diagnostic` mounts `subagent-result-diagnostic`. `partial-landlock-child-failure` mounts `partial-landlock-sandbox`. `agent-instructions` needs a workspace directory whose name contains `:` — Windows refuses to create it — plus a compaction policy for its recorded overflow.
+
+**Needs an external service.** `lsp-definition` drives an LSP server. `subagent-acp-diagnostic` and `product-subagent-result-diagnostic` drive an ACP child.
+
+**Retires with Cordis.** `advanced-toolchain`, `advanced-toolchain-runtime` and `cordis-inspect-jsdoc` exercise the Cordis toolchain itself (`cordis_define`, `cordis_undefine`, `cordis_inspect_query`), which has no Native form by design.
+
+**Unreplayable as recorded.** `session-query-spill` greps an absolute `/tmp/dsh-acp-snap-<random>` spill path that no fixture can predict. `skill-load` copies a preset skill file that the repository no longer contains.
+
+Only three of the seventeen (`advanced-toolchain`, `advanced-toolchain-runtime`, `cordis-inspect-jsdoc`) disappear together with Cordis. The other fourteen each need test infrastructure the Native assembler does not have, or a re-recording.
+
+
 
 The proposals above are satisfied per package as each is resolved: a package that an existing Native package already owns needs its Cordis half deleted once nothing imports it; a `Cordis-shaped` package disappears with the runtime; a genuinely unported one gets a Native entry. The scenarios count when they replay on the Native profile in CI. The Web scope decision is recorded before any Web package moves.
+
+## Acceptance criteria
+
+Every claim above is stated as a measured fact with the file or the command that produced it, so a later reader can re-run the check rather than trust the sentence. A package qualifies as deletable only when nothing imports it **and** no published profile composes it.
 
 ## Risks
 

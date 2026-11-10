@@ -93,7 +93,29 @@ Native 一侧已经证明这个形状可行：`native-ptc` 组合了 19 个真�
 
 ## Web 面决定终局
 
-唯一仍未闭合的那一项——Web 的 `api-gateway`——不是包的问题而是范围的问题，而实测决定了每种答案的代价。`rsh/Programs/Web` 下 75 个包里，**35 个是 Cordis-only、33 个已有 `dsh.native` 入口、7 个两者皆无**。这个划分很关键：客户端已完成大半迁移（27 个 native 对 22 个 Cordis），而 API 侧恰好相反（2 个 native 对 6 个 Cordis）。
+**出厂启动器已经完全不读 Cordis 模板表。** 新建一个 Harness home 并运行 `dsh --profile headless`，写出的 `profiles/headless/package.json` 带 `"runtime": "native"`，其 `rsh.profile.json` 有 62 行，组合 `native-headless`、`native-agent`、`native-tools`、工作流、goal、agent instructions 与各上下文 Provider。`rsh/Programs/CLI/src` 中**没有任何对 `app-boot` 的引用**，所以 `PROFILE_TEMPLATES` 从启动器不可达。
+
+这也解释了为何六个名字里有五个已经以 Native profile 的形式工作：CLI 查询的是 `native-profile-template.ts` 的名字到组合表，而 Cordis bundle 只能通过 `app-boot` 到达，后者剩余的消费者是三个 Cordis 子代理桥。
+
+三者都没有 Native 入口，但处境不同。`subagent-codex` 与 `subagent-rsh-sdk` 的包级消费者为**零**——它们是用户通过 `dsh plugin add` 安装的已发布 profile bundle，所以「没有 import 方」并不等于死代码。`subagent-acp` 被 `base` bundle 引用。它们的 README 记录了各自的 Native 侧状态：Codex 适配器在 Native 请求上**在启动前就停止**，因为它尚未强制父级权限或继承的 `maxSteps`；SDK 桥同样如此记录。因此退役 `app-boot` 意味着要么把这三个适配器移植到 Native，要么退役这三个产品能力，而仓库已把前者记为未完成的工作。
+
+这个说法同样是错的，核查包之后就能看出原因。**Native 对应物已经存在。** `rsh/Modules/Official/subagent/` 下有 `sdk-child`、`codex-app-server` 与 `acp-child`，三者都带 `dsh.native` 入口并提供 `externalSubagentDriver`——正是 `native-subagent` 消费的那份契约。`sdk-child` 是一个完整适配器：它需要 `sdkChildRuntimeLauncher`，而 `rsh/Programs/CLI/src/native-profile-loader.ts` 会为 `sdk-child` 与 `acp-child` 行自动安装该服务。所以这三个 Cordis 桥不是「未移植的缺口」，而是与 Native 侧已交付能力并行的实现。
+
+差别在组合而非能力。出厂的 `sdk` profile 把 `subagents.providerName` 设为 `'spawn'` 且不组合任何子适配器行；只有 `native-sdk-dsh-child` 添加 `dsh-sdk-child` 并设 `providerName: 'dsh-sdk'`。因此剩下的是决定哪些 profile 名应当选用该外部驱动，而不是写一个。这一点通过组合验证过：`dsh --profile native-sdk-dsh-child` 写出的 profile，其 `subagents` 行设 `providerName: 'dsh-sdk'`，并同时组合 `dsh-sdk-child`，而且该 profile 能启动——它退出只因探针传了任务参数，不是因为组合错误。缺失的 `sdkChildRuntimeLauncher` 由 loader 自行补上，当某个 profile 点名 `acp-child` 行时它也会同样处理。
+
+`sdk-child` 已为该 profile 组合。另两个的结论不同，核查后我纠正了原先的说法。
+
+`acp-child` 在任何地方都没有组合，而 `native-acp-dsh-child` 解释了这不是疏漏：该 profile 派生自 `native-acp` 并**刻意剥掉所有子代理行**——`subagents`、`subagent-controls`、`subagent-directory`、`subagent-tool`、`subagent-tool-fork`、三个 `workflow` 行与 `ralph-tool`——因为它处在委派的**子**侧，而一个还能继续委派的子会无界递归。探针证实了结果：25 行，无 `subagents`、无 `acp-child`。所以 `acp-child` 未组合是因为组合它会与该 profile 的用途相抵触，而不是没人做。
+
+`codex-app-server` 同样没有行，而它又是另一种情形：Cordis 的 Codex 桥记录说该适配器在 Native 请求上启动前就停止，所以组合它只会把一个仓库已记录为未实现的能力暴露出来，并不会让它变得可用。这就是 Cordis 桥与 Native 对应物之间剩余的全部差别：三个包在两侧都存在，而 Native 侧只组合了三个中的一个。
+
+**六个 Cordis 模板名里已有五个具备出厂 Native 组合。** `rsh/Programs/CLI/src/native-profile-template.ts` 把 `headless` 映射到 `native-headless`、`web` 映射到 `native-web`、`sdk` 映射到 `native-sdk`、`acp` 映射到 `native-acp`、`rsh` 映射到 `native-tui`；只有 `sdk-minimal` 没有对应物。CLI 在其 manifest 中声明了十三个 native 模板，`native-web` 还自带客户端安装清单。所以第 5 步的工作不是「建一个 Native Web profile」——它已存在——而是「退役这些同名仍在解析到的 Cordis bundle」，并对 `sdk-minimal` 作出决定。
+
+`sdk-minimal` 是唯一没有 native 对应物的名字，而这并非疏漏。它是一个刻意独立的小型 profile：README 说明它为需要小型显式运行时的 SDK 客户端而存在，**按设计排除 `dsh-base`**，其 27 个依赖全部是 Cordis 包、零个 `dsh.native` 入口。`native-sdk` 是另一种组合——带子代理、工作流与命令的完整 agent。所以关闭这个模板是一个产品决定：要么移植一个真正极简的 Native 组合，要么退役这个 profile 名；它是第 5 步里唯一无法靠删除 bundle 了结的一项。
+
+这个区分很重要，因为两种理解的剩余工作量完全不同，而本笔记此前的说法（「Native Web 这条路建好但从未接线」）是错的：它既建好了**也**接线了，一个 Web e2e 测试用二十四个模块链接组合它。
+
+此前的量化仍然描述包清单，所以保留下来作为残余 Cordis 面的代价。`rsh/Programs/Web` 下 75 个包里，**35 个是 Cordis-only、33 个已有 `dsh.native` 入口、7 个两者皆无**。这个划分很关键：客户端已完成大半迁移（27 个 native 对 22 个 Cordis），而 API 侧恰好相反（2 个 native 对 6 个 Cordis）。
 
 决定性的证据是：`native-web-host` 已经存在且完整——它提供 `nativeWebHost`、`hostConnection`、`httpRoutes` 与 `application`——但**包外没有任何消费者**。也就是说 Native Web 这条路已经建好，却从未接进任何应用 profile。因此直接删除 Cordis 不可能发生，除非有人组装出一个组合 `native-web-host` 与那 27 个已迁移客户端包的 Native Web profile，并移植或删除剩下的 28 个。
 
@@ -114,6 +136,26 @@ Native 一侧已经证明这个形状可行：`native-ptc` 组合了 19 个真�
 第二个场景通过 `installModelSelection` 在 `todo_write` 之后切换所选模型，而该函数完全由两个 Cordis waterfall 搭成：`system-prompt/assemble` 改写 provider 与 model 变量，`agent/request` 改写已解析的调用配置。Native 循环没有对应接缝——它每一步从 `modelSelection` 服务读取路由，而后者需要 `modelDirectory`，replay Provider 不提供该服务，真实 Provider 也只能通过活的模型目录提供。因此要在 Native profile 上复现该录制，需要的是一个 Native 模型目录 fixture，而不是移植 driver：切换机制本身已经存在，只是它的输入无法仅由回放提供。
 
 所以两者都被记录为受运行时能力阻塞，而不是受测试基础设施阻塞——这改变了「解除阻塞」的代价：那是循环层的工作，且必须自带场景覆盖，而不是改一下 fixture。
+
+`skill-load` 的阻塞来自内容而非能力：它的 setup 会复制 `agent-presets/presets/cordis/skills/editing-cordis-compositions/SKILL.md`，而该文件已不在仓库中。工具、注册表与文件系统来源都有 Native 入口，迁移后的场景能成功组合并调用它们——它回答该技能不存在，因为录制所依据的 fixture 已随 presets 退役。因此回放它需要针对仍然存在的技能重新录制，而不是 Native 移植。
+
+## 剩余十七个场景及其确切阻塞
+
+每一条都对照录制与其 manifest 核查过，而不是从场景名推断。
+
+**需要真实 HTTP 端点。** `web-fetch` 调用 `http://public.test:43117/menu.html` 并断言取回的页面文本；该录制没有 fixture 或 driver，只有一次真实请求。`web-search-endpoint-guidance` 对搜索 Provider 同形。两者都需要本地回环 fixture 服务器，而 Native 装配器不提供。
+
+**需要宿主专属运行时。** `missing-sandbox-runner` 设 `RSH_SNAPSHOT_MISSING_SANDBOX_RUNNER=1` 模拟缺失的 Landlock runner。`partial-landlock-child-failure` 断言仅 Linux 的 Landlock 行为（`platform: posix`）。`ptc-python-turn` 同样标 `posix`，但真正的阻塞不同：它把 worker provider 换成 `@redspark/rsh-experimental-code-runtime-python`，而该包属于 `Modules/Community/experimental` 且没有 `dsh.native` 入口，所以 Native profile 根本无法运行 Python 代码。除此之外它的断言与录制完全吻合（一个外层 `run_code`、两次 `bash` 分发、渲染结果含 `CODE_ONE`），因此一旦该运行时获得 Native 形态即可迁移。`persistent-pwsh-tool-turn` 声明 `platform: pwsh`，且其录制早于该工具必需的 `description` 字段，所以除了 Windows PTY 还需要重新录制。
+
+**需要场景无法表达的 fixture 插件。** `session-reference-spill` 挂载 `source-session` 以播种被引用的 Session 与 spill 存储。`subagent-published-run-failure` 挂载 `subagent-durability-failure` 并通过环境变量注入 dispose 失败。`product-subagent-result-diagnostic` 挂载 `subagent-result-diagnostic`。`partial-landlock-child-failure` 挂载 `partial-landlock-sandbox`。`agent-instructions` 需要名称含 `:` 的工作区目录——Windows 拒绝创建——外加为其录制到的溢出准备的压缩策略。
+
+**需要外部服务。** `lsp-definition` 驱动 LSP 服务器。`subagent-acp-diagnostic` 与 `product-subagent-result-diagnostic` 驱动 ACP 子进程。
+
+**随 Cordis 退役。** `advanced-toolchain`、`advanced-toolchain-runtime` 与 `cordis-inspect-jsdoc` 演练 Cordis 工具链本身（`cordis_define`、`cordis_undefine`、`cordis_inspect_query`），按设计没有 Native 形态。
+
+**按原录制不可回放。** `session-query-spill` 会 grep 一个形如 `/tmp/dsh-acp-snap-<随机>` 的绝对 spill 路径，任何 fixture 都无法预测。`skill-load` 复制的 preset 技能文件仓库已不再包含。
+
+十七个里只有三个（`advanced-toolchain`、`advanced-toolchain-runtime`、`cordis-inspect-jsdoc`）随 Cordis 一起消失。其余十四个各需 Native 装配器所没有的测试基础设施，或一次重新录制。
 
 ## Acceptance criteria
 
