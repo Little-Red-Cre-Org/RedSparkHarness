@@ -380,6 +380,7 @@ async function admitPrompt(
   }
   const merged = await runPoint(context, settings, 'UserPromptSubmit', '', payload, {
     session: ask.owner.session, turn: ask.turn, plainStdoutAsContext: true, signal: ask.signal,
+    ...ask.appendEvent === undefined ? {} : { append: ask.appendEvent as HookAppend },
   })
   if (merged.decision === 'deny') return { kind: 'reject', discard: ask.candidates.map(message => message.id) }
   // Context alone is not a veto: DELEGATE so a later admission hook can still reject.

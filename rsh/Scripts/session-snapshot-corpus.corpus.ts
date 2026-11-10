@@ -103,6 +103,8 @@ const snapshotAdapters = [
   'snapshots/native-headless/hook-codex-pretool-block-native.snapshot.ts',
   'snapshots/native-headless/hook-cc-promptsubmit-block-native.snapshot.ts',
   'snapshots/native-headless/hook-cc-stop-continue-native.snapshot.ts',
+  'snapshots/native-headless/hook-codex-stop-continue-native.snapshot.ts',
+  'snapshots/native-headless/hook-codex-promptsubmit-block-native.snapshot.ts',
   'snapshots/native-sdk/text-turn.snapshot.ts',
   'snapshots/native-sdk/staged-files.snapshot.ts',
   'snapshots/native-sdk/external-operation.snapshot.ts',
