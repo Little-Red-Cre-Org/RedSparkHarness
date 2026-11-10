@@ -97,6 +97,10 @@ That inverts the ordering the objective states. Step 4 cannot be finished before
 
 ## The Web surface decides the endgame
 
+**The shipped launcher no longer reads the Cordis template table at all.** Creating a fresh Harness home and running `dsh --profile headless` writes `profiles/headless/package.json` with `"runtime": "native"` and a 62-row `rsh.profile.json` composing `native-headless`, `native-agent`, `native-tools`, workflows, goals, agent instructions and the context providers. `rsh/Programs/CLI/src` contains **no reference to `app-boot`**, so `PROFILE_TEMPLATES` is unreachable from the launcher.
+
+That is why five of the six names already behave as Native profiles: the name-to-composition table in `native-profile-template.ts` is what the CLI consults, and the Cordis bundles are only reachable through `app-boot`, whose remaining consumers are the two Cordis bridges (`subagent-codex`, `subagent-rsh-sdk`) and their Loader test fixtures.
+
 **Five of the six Cordis template names already have a shipped Native composition.** `rsh/Programs/CLI/src/native-profile-template.ts` maps `headless` to `native-headless`, `web` to `native-web`, `sdk` to `native-sdk`, `acp` to `native-acp` and `rsh` to `native-tui`; only `sdk-minimal` has no counterpart. The CLI declares thirteen native templates in its manifest, and `native-web` ships its own client installations. So the step-5 work is not "build a Native Web profile" — that exists — but "retire the Cordis bundles that the same names still resolve to", and decide `sdk-minimal`.
 
 `sdk-minimal` is the one name with no native counterpart, and it is not an oversight. It is a deliberately standalone profile: its README says it exists for SDK clients that need a small explicit runtime, it **excludes `dsh-base`** by design, and all 27 of its dependencies are Cordis packages with zero `dsh.native` entries. `native-sdk` is a different composition, a full agent with subagents, workflows and commands. So closing this template is a product decision — either port a genuinely minimal Native composition, or retire the profile name — and it is the only step-5 item that cannot be settled by deleting a bundle.
