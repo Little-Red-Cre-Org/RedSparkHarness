@@ -66,6 +66,7 @@ const snapshotAdapters = [
   'snapshots/native-headless/todo-write-native.snapshot.ts',
   'snapshots/native-headless/repeat-tool-reminder-native.snapshot.ts',
   'snapshots/native-headless/session-sandbox-root-native.snapshot.ts',
+  'snapshots/native-headless/fs-policy-reject-native.snapshot.ts',
   'snapshots/native-sdk/text-turn.snapshot.ts',
   'snapshots/native-sdk/staged-files.snapshot.ts',
   'snapshots/native-sdk/external-operation.snapshot.ts',
