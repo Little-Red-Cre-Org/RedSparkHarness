@@ -2699,40 +2699,6 @@ export type ShellDialect = 'bash' | 'pwsh'
 
 来源：[`rsh/Modules/Official/terminal/terminal-bash/src/config.ts:10`](../Modules/Official/terminal/terminal-bash/src/config.ts)
 
-<a id="redsparkrsh-time-context"></a>
-
-## `@redspark/rsh-time-context`
-
-需要：`agents` · `sessionProjections`
-
-```ts config-catalog
-/** Request-preparation clock formatting and append scheduling. Invalid values fail plugin load. */
-export interface Config {
-  /** Fallback display zone when the open turn has no unique browser zone. Omit to use the process zone. */
-  timeZone?: string
-  /** Minimum milliseconds between durable injections in one session. Omit or set to 0 to inject at every eligible step. */
-  refreshIntervalMs?: number
-}
-```
-
-来源：[`rsh/Engine/context/time-context/src/index.ts:49`](../Engine/context/time-context/src/index.ts)
-
-<a id="redsparkrsh-tmux-context"></a>
-
-## `@redspark/rsh-tmux-context`
-
-需要：`agents` · `sessionProjections`
-
-```ts config-catalog
-/** Per-turn tmux-location scheduling. Invalid values fail plugin load. */
-export interface Config {
-  /** Minimum milliseconds between durable injections in one session. Omit or set to 0 to inject on every eligible change. */
-  refreshIntervalMs?: number
-}
-```
-
-来源：[`rsh/Engine/context/tmux-context/src/index.ts:36`](../Engine/context/tmux-context/src/index.ts)
-
 <a id="redsparkrsh-token-meter"></a>
 
 ## `@redspark/rsh-token-meter`
