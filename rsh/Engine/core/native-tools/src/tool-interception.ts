@@ -13,7 +13,9 @@
 import type { ContentBlock, ToolCallId, UserMessage } from '@redspark/rsh-llm/native'
 import { deepFreeze, snapshotJsonValue, type JsonValue } from '@redspark/rsh-util-values'
 import type { NativeAgent } from '@redspark/rsh-native-agent'
-import type { Session } from '@redspark/rsh-session/native'
+import type {
+  Session, SessionEvent, SessionEventMap, SessionEventType, SurfaceEventType, SurfaceIntent,
+} from '@redspark/rsh-session/native'
 import type { NativeToolExecution, NativeToolResult } from './index.ts'
 
 /** Facts one pre-tool decision sees before the tool body runs. */
@@ -29,6 +31,16 @@ export interface NativeToolPreCall {
   readonly turn?: number
   /** Registry, policy and caller cancellation. */
   readonly signal: AbortSignal
+  /**
+   * Append and persist one event through the application's single tracked writer.
+   *
+   * A policy that records its own audit facts must use this rather than the Session
+   * directly: the application keeps one contiguous pending batch, and an append that
+   * bypasses it desynchronizes the next write.
+   */
+  readonly appendEvent?: <T extends SessionEventType>(
+    type: T, data: SessionEventMap[T], ...opts: T extends SurfaceEventType ? [opts: SurfaceIntent<T>] : []
+  ) => Promise<SessionEvent<T>>
 }
 
 /**
@@ -56,6 +68,8 @@ export interface NativeToolPostCall {
   readonly signal: AbortSignal
   /** Immutable body result before any post-tool decision transforms it. */
   readonly result: Readonly<NativeToolResult>
+  /** Append and persist one event through the application's single tracked writer. */
+  readonly appendEvent?: NativeToolPreCall['appendEvent']
 }
 
 /**

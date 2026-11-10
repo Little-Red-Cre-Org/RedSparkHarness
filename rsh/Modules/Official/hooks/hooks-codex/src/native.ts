@@ -27,8 +27,7 @@ import {
 import type { NativeStepAdmissionContext, NativeStepAdmissionDecision } from '@redspark/rsh-native-session-execution'
 import type { NativeSessionStartNotice } from '@redspark/rsh-native-headless/lifecycle-events'
 import {
-  appendHookInvoked,
-  appendHookResult,
+  summarizeStderr,
   createDetachedRuns,
   DEFAULT_HOOK_TIMEOUT_MS,
   DEFAULT_STDERR_SUMMARY_MAX_CHARS,
@@ -40,6 +39,27 @@ import {
   type MergedHookOutcome,
 } from '@redspark/rsh-hook-protocol/native'
 import { parseCodexConfig, type CodexHookConfig, type CodexSupportedEvent } from './config.ts'
+
+/**
+ * Record one log-only hook event through the application's tracked appender.
+ *
+ * The appender keeps the application's single contiguous pending batch; writing the
+ * Session directly would desynchronize its next persist.
+ * @param append - the invocation's tracked appender, absent outside an application.
+ * @param session - Session the event belongs to.
+ * @param event - the exact durable event to record.
+ */
+async function appendHook(
+  append: NativeToolPreCall['appendEvent'], session: Session,
+  event: { readonly type: 'hook/invoked' | 'hook/result'; readonly data: unknown },
+): Promise<void> {
+  if (append !== undefined) {
+    // The two hook events are log-only and carry no surface intent.
+    await (append as (type: string, data: unknown) => Promise<unknown>)(event.type, event.data)
+    return
+  }
+  ;(session.append as (type: 'hook/invoked' | 'hook/result', data: never) => unknown)(event.type, event.data as never)
+}
 
 /** The plugin source every context this bridge injects is stamped with. */
 const PLUGIN_SOURCE: MessageSource = { kind: 'plugin', plugin: 'hooks-codex' }
@@ -266,7 +286,14 @@ function postToolPayload(call: Readonly<NativeToolPostCall>, model: string): Rec
  */
 async function runPoint(
   context: NativeContext, settings: Settings, point: CodexSupportedEvent, matchQuery: string, payload: unknown,
-  opts: { readonly session?: Session; readonly turn?: number; readonly signal: AbortSignal; readonly plainStdoutAsContext?: boolean },
+  opts: {
+    readonly session?: Session
+    readonly turn?: number
+    readonly signal: AbortSignal
+    readonly plainStdoutAsContext?: boolean
+    /** The application's tracked appender; a hook event must be written through it. */
+    readonly append?: NativeToolPreCall['appendEvent']
+  },
 ): Promise<MergedHookOutcome> {
   const groups: MatcherGroup[] = settings.parsed[point] ?? []
   const outputs: HookOutput[] = []
@@ -281,9 +308,11 @@ async function runPoint(
       const turn = opts.turn
       const records = session !== undefined && turn !== undefined
       if (records) {
-        appendHookInvoked(session, {
-          turn, point, dialect: 'codex', handlerId,
-          ...group.matcher === undefined ? {} : { matcher: group.matcher },
+        await appendHook(opts.append, session, {
+          type: 'hook/invoked', data: {
+            turn, point, dialect: 'codex', handlerId,
+            ...group.matcher === undefined ? {} : { matcher: group.matcher },
+          },
         })
       }
       const { output, durationMs } = await runHook(context.require('shell'), hook, {
@@ -308,8 +337,15 @@ async function runPoint(
         console.warn(`hooks-codex: ${point} hook emitted a systemMessage, which is not surfaced (ignored)`)
       }
       if (records) {
-        appendHookResult(session, {
-          turn, point, handlerId, output, stderrSummaryMaxChars: settings.stderrSummaryMaxChars, durationMs,
+        const stderrSummary = summarizeStderr(output.stderr, settings.stderrSummaryMaxChars)
+        await appendHook(opts.append, session, {
+          type: 'hook/result', data: {
+            turn, point, handlerId,
+            decision: output.decision ?? (output.continue === false ? 'stop' : 'pass'),
+            ...output.exitCode === undefined ? {} : { exitCode: output.exitCode },
+            ...stderrSummary === undefined ? {} : { stderrSummary },
+            durationMs,
+          },
         })
       }
     }
