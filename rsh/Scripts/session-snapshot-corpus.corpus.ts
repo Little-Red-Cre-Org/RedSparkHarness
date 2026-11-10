@@ -119,6 +119,7 @@ const snapshotAdapters = [
   'snapshots/native-headless/read-image-text-route-native.snapshot.ts',
   'snapshots/native-headless/empty-response-retry-current-native.snapshot.ts',
   'snapshots/native-headless/empty-response-retry-native.snapshot.ts',
+  'snapshots/native-headless/fs-glob-sampling-native.snapshot.ts',
   'snapshots/native-headless/packed-chunks-native.snapshot.ts',
   'snapshots/native-headless/pty-tools-sandbox-backend-native.snapshot.ts',
   'snapshots/native-headless/product-subagent-codex-native.snapshot.ts',
