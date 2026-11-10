@@ -18,6 +18,8 @@ The 113 split by area as: `Programs/Web` 35, `Modules/Official` 21, `Modules/Com
 
 The largest group is the Web application surface, but it is **half migrated rather than untouched**: of its 75 packages, 33 already carry a `dsh.native` entry and only 35 are Cordis-only. The remaining Cordis half is the client UI that the compatibility renderer still mounts. The second is official Modules, several of which have Native Providers beside them — the Cordis half is what a scenario would still reach if it composed the compatibility bundlerather than the Native one.
 
+Three scenarios use tools that exist only on the Cordis side — `cordis_define`, `cordis_undefine`, `cordis_inspect_query` — provided by `@redspark/rsh-tool-cordis`, which is a Cordis plugin with no Native entry. `advanced-toolchain`, `advanced-toolchain-runtime` and `cordis-inspect-jsdoc` therefore describe a capability that disappears with the runtime, so they retire with it rather than migrating. Migrating them would mean porting a tool whose purpose is to manipulate the runtime being deleted.
+
 ## Acceptance criteria
 
 - `verify-native-dependencies` passes at every step of the deletion.

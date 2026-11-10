@@ -18,6 +18,8 @@ Status: proposed
 
 最大的一块是 Web 应用面，但它是**迁移到一半而不是没动过**：它 75 个包里 33 个已经有 `dsh.native` 入口，只有 35 个仍是 Cordis-only。剩下的那一半主要是兼容渲染器仍在挂载的客户端 UI。第二块是官方 Modules，其中若干旁边已经有 Native Provider——Cordis 那一半正是组合了兼容 bundle 而不是 Native bundle 时场景仍会走到的部分。
 
+有三个场景使用只存在于 Cordis 一侧的工具——`cordis_define`、`cordis_undefine`、`cordis_inspect_query`——由 `@redspark/rsh-tool-cordis` 提供，而它是 Cordis 插件、没有 Native 入口。因此 `advanced-toolchain`、`advanced-toolchain-runtime` 与 `cordis-inspect-jsdoc` 描述的能力会随运行时一起消失，它们随之退役而不是迁移。迁移它们等于移植一个以操作为删除对象的运行时为目的的工具。
+
 ## Acceptance criteria
 
 - 删除的每一步 `verify-native-dependencies` 都通过。
