@@ -7,12 +7,17 @@
  */
 
 import type { ShellOperations } from '@redspark/rsh-shell/native'
-import type { ShellExecutor } from '@redspark/rsh-shell'
 import { parseHookOutput } from './codec.ts'
 import type { CommandHook, HookOutput } from './types.ts'
 
-/** Either shell service the protocol accepts: a Cordis executor or a Native Provider. */
-export type HookShell = ShellOperations | ShellExecutor
+/**
+ * The shell capability a hook command runs through.
+ *
+ * The Cordis executor extends this same interface, so one type serves both
+ * bridges: the Native Provider satisfies it directly, and `ctx.shell` does by
+ * inheritance rather than by a union that would need the Cordis package here.
+ */
+export type HookShell = ShellOperations
 
 /**
  * The reference default per-hook timeout, in ms (10 minutes) — the value both
