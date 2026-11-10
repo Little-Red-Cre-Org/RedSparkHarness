@@ -101,6 +101,10 @@ it.skipIf(process.platform === 'win32')('replays the recorded ptc-read-image ses
       // The Registry wins the run_code name, so the recorded call reaches the real
       // code-runtime tool rather than the builtin transport's placeholder.
       { id: 'tool-code-runtime', plugin: '@redspark/rsh-tool-code-runtime', scope: 'root', config: {} },
+      // read_image materializes the attachment it reports, and the program's read binding
+      // only exists when the fs tool is installed.
+      { id: 'attachments', plugin: '@redspark/rsh-attachment-local', scope: 'root', config: {} },
+      { id: 'files', plugin: '@redspark/rsh-tool-fs', scope: 'root' },
 
     ],
   })
