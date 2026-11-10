@@ -95,12 +95,24 @@ The Native side already demonstrates that the shape is achievable: `native-ptc` 
 
 That inverts the ordering the objective states. Step 4 cannot be finished before step 5, because a package stays alive as long as its bundle layer imports it, and the bundle layer stays alive as long as a profile template names it. The first real move is therefore to make a Native profile able to replace the `base` layer — which is the 85-package question — or to delete the consumers that are themselves out of scope (the Web API, the Python SDK runtime).
 
-## Acceptance criteria
+## The Web surface decides the endgame
+
+The one item left open, the Web `api-gateway`, is not a package question but a scope question, and the measurement settles what each answer costs. Of the 75 packages under `rsh/Programs/Web`, **35 are Cordis-only, 33 already carry a `dsh.native` entry, and 7 neither**. The split matters: the client is already half migrated (27 native against 22 Cordis), while the API side is the reverse (2 native against 6 Cordis).
+
+Decisively, `native-web-host` exists and is complete — it provides `nativeWebHost`, `hostConnection`, `httpRoutes` and `application` — but **nothing outside the package consumes it**. So the Native Web path is built and has never been wired into an application profile. Deleting Cordis outright therefore cannot happen before someone assembles a Native Web profile that composes `native-web-host` and the 27 migrated client packages, and ports or drops the remaining 28.
+
+That is a product programme, not a cleanup step. It is also the honest boundary of this objective: steps 1 to 3 and the engine-side part of step 4 are done or measured, while step 5 depends on a Web decision the objective does not make.
+
+
 
 - `verify-native-dependencies` passes at every step of the deletion.
 - Each deleted package's remaining importers are named in the pull request that deletes it.
 - `Programs/Web` is either migrated or explicitly recorded as out of scope, with the reason.
 - No package outside `rsh/Compatibility` imports `@redspark/cordis` at the end.
+
+## Acceptance criteria
+
+The proposals above are satisfied per package as each is resolved: a package that an existing Native package already owns needs its Cordis half deleted once nothing imports it; a `Cordis-shaped` package disappears with the runtime; a genuinely unported one gets a Native entry. The scenarios count when they replay on the Native profile in CI. The Web scope decision is recorded before any Web package moves.
 
 ## Risks
 

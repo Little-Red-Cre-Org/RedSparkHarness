@@ -91,12 +91,23 @@ Native 一侧已经证明这个形状可行：`native-ptc` 组合了 19 个真�
 
 这反转了目标里陈述的顺序。第 4 步无法在第 5 步之前完成，因为只要 bundle 层还 import 它，包就活着；只要 profile 模板还点名 bundle 层，bundle 层就活着。所以第一个真正的动作是让 Native profile 有能力取代 `base` 层——也就是那个 85 包的问题——或者删掉本身就是范围外的消费者（Web API、Python SDK 运行时）。
 
-## Acceptance criteria
+## Web 面决定终局
+
+唯一仍未闭合的那一项——Web 的 `api-gateway`——不是包的问题而是范围的问题，而实测决定了每种答案的代价。`rsh/Programs/Web` 下 75 个包里，**35 个是 Cordis-only、33 个已有 `dsh.native` 入口、7 个两者皆无**。这个划分很关键：客户端已完成大半迁移（27 个 native 对 22 个 Cordis），而 API 侧恰好相反（2 个 native 对 6 个 Cordis）。
+
+决定性的证据是：`native-web-host` 已经存在且完整——它提供 `nativeWebHost`、`hostConnection`、`httpRoutes` 与 `application`——但**包外没有任何消费者**。也就是说 Native Web 这条路已经建好，却从未接进任何应用 profile。因此直接删除 Cordis 不可能发生，除非有人组装出一个组合 `native-web-host` 与那 27 个已迁移客户端包的 Native Web profile，并移植或删除剩下的 28 个。
+
+那是一项产品工程，不是一个清理步骤。它也正是本目标的诚实边界：第 1 至第 3 步、以及第 4 步的引擎侧部分已经完成或已量化，而第 5 步取决于一个目标本身没有做出的 Web 决定。
+
 
 - 删除的每一步 `verify-native-dependencies` 都通过。
 - 每个被删的包，其剩余 importer 都在删除它的 PR 里点名。
 - `Programs/Web` 要么迁移、要么明确记为不在范围内并写明理由。
 - 收尾时 `rsh/Compatibility` 之外没有任何包 import `@redspark/cordis`。
+
+## Acceptance criteria
+
+上面的提案按包逐个满足：已被现有 Native 包拥有的，在无人引用后删掉它的 Cordis 那一半；Cordis 形状的随运行时消失；确实未移植的补上 Native 入口。场景以其在 CI 中于 Native profile 上回放通过为准。Web 的范围决定必须在任何 Web 包移动之前记录下来。
 
 ## Risks
 
