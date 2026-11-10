@@ -212,7 +212,8 @@ Every claim above is stated as a measured fact with the file or the command that
 
 Checked one by one, they resolve into six capabilities rather than fifteen tasks. The grouping is what makes them estimable.
 
-**A durability checkpoint on the Native Session — 2 scenarios.** `subagent-published-run-failure` asserts through `session/flush`, which `Session.flush` dispatches in the Cordis session; `rsh/Engine/core/session/src/native.ts` has no `flush` concept. `session-reference-spill` stopped at the same layer from the other side: its hand-written persisted Session was not listed by `sessionQuery`.
+**A durability checkpoint on the Native Session — 2 scenarios.** `NativeContinuationSession` now carries one: `persist()` appends the tracked batch, then runs every registered `NativeDurabilityCheckpoint` before the writer flush, so a rejection aborts that flush and surfaces to the caller with the same shape as a storage error. `checkpoint(observer)` returns its exact removal. Wiring it to a plugin-visible service is what remains, and the fixture needs exactly that: a `session/flush`-equivalent observer that throws for one child turn.
+ `subagent-published-run-failure` asserts through `session/flush`, which `Session.flush` dispatches in the Cordis session; `rsh/Engine/core/session/src/native.ts` has no `flush` concept. `session-reference-spill` stopped at the same layer from the other side: its hand-written persisted Session was not listed by `sessionQuery`.
 
 **A Python code runtime — 1 scenario.** `ptc-python-turn` composes `@redspark/rsh-experimental-code-runtime-python`, which lives under `Modules/Community/experimental` with no `dsh.native` entry, so a Native profile cannot run Python at all.
 
