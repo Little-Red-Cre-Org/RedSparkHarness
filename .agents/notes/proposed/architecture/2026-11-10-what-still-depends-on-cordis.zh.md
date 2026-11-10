@@ -69,6 +69,8 @@ Status: proposed
 
 **这七个今天一个都删不了，原因对它们全部相同：它们仍被 import。** 实测：`agent-default-model` 有 6 个引用方、`api-gateway` 5 个、`typert-registry` 3 个、`jobs-local` 与 `tool-present` 各 2 个、`session-checkpoint-policy` 与 `typert-loader` 各 1 个——而每一个案例里，至少有一个引用方是 `base` bundle 或仍在使用的 Web/CLI 包（`session-controller`、`webhook`、`sdk-runtime`）。此前看似死代码的 `time-context` 与 `tmux-context` 恰恰在这点上不同：没有任何东西 import 它们。
 
+有十三个 Cordis-only 包完全没有引用方，但它们同样没有一个可以随意删除。`cordis-plugin-logger-console` 是钉住的 Cordis 源码。三个是 `experimental/*` 的 profile 与 bundle，是已发布产物，只是没有出厂 profile 恰好点名它们。`storage-sqlite`、`tool-str-replace-editor` 与 `typert/generator` 是有文档、能工作的接缝——`storage-sqlite` 就出现在 `capability-seams.md` 里作为可选后端的示例，工具编辑器登记在生成的 tool catalog 中。`fs-e2b` 与 `subprocess-e2b` 是远程执行适配器。Python SDK 运行时闭包是构建产物。删除其中任何一个，都会移除本仓库之外的消费者可能正在选用的能力。
+
 这反转了目标里陈述的顺序。第 4 步无法在第 5 步之前完成，因为只要 bundle 层还 import 它，包就活着；只要 profile 模板还点名 bundle 层，bundle 层就活着。所以第一个真正的动作是让 Native profile 有能力取代 `base` 层——也就是那个 85 包的问题——或者删掉本身就是范围外的消费者（Web API、Python SDK 运行时）。
 
 ## Acceptance criteria
