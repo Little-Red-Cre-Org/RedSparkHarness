@@ -44,6 +44,7 @@ const snapshotAdapters = [
   'snapshots/native-headless/goal-continuation.snapshot.ts',
   'snapshots/native-headless/human-question.snapshot.ts',
   'snapshots/native-headless/fs-read-native.snapshot.ts',
+  'snapshots/native-headless/native-persona.snapshot.ts',
   'snapshots/native-headless/fs-sandbox-tool-round.snapshot.ts',
   'snapshots/native-headless/external-operation.snapshot.ts',
   'snapshots/native-headless/mcp-image-native.snapshot.ts',
