@@ -60,7 +60,12 @@ Status: proposed
 
 **兼容桥接层。** `compat-settings-adapters`、`plugin-host`、`subagent-acp` 只为适配 Cordis 而存在，随它一起消失。
 
-所以计划从 24 个候选开始：其中约一半是删除，其余需要判断现有 Native 包是否已覆盖。那是一份可执行的清单；「85 个包」不是。
+把未移植的十四个与现有的 Native 包对照，大部分就解开了：
+
+- **已被另一个名字的 Native 包覆盖。** `agent-loop` 就是 `native-headless` 内部的循环（它提供 `application` 与 `rootExecution`）；`system-prompt` 是 `native-prompt`（提供 `promptSections`）；`session` 与 `llm` 是 Native 包直接 import 的库半边；`user-approval` 是 `native-approval`；`subagent-spawn-in-process` 与 `subagent-fork-in-process` 是 `native-subagent` 承载的 Provider。这些需要的是在无人引用后删掉 Cordis 那一半。
+- **确实未移植、值得单独决策。** `agent-default-model`（无 Native 消费方，已排除）、`jobs-local`、`tool-present`、`session-checkpoint-policy`、`typert-loader`、`typert-registry` 与 Web 的 `api-gateway` 没有 Native 对应物。`tool-present` 是被 Native 工具注册表取代的旧呈现机制；`typert-*` 是类型注册表而非运行时行为。
+
+所以真正可执行的剩余大约是七个包，每个只需要一句决定（作为被取代者删除、移植、或明确划出范围），加上已经识别出的那些删除。那是一份人能做完的清单；「85 个包」不是。
 
 ## Acceptance criteria
 

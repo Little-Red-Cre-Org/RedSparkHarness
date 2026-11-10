@@ -64,7 +64,12 @@ That 85 figure is the gap between `base`'s dependency list and the 12 rows the s
 
 **Compatibility bridges.** `compat-settings-adapters`, `plugin-host` and `subagent-acp` exist only to adapt Cordis; they disappear with it.
 
-So the plan starts from 24 candidates, of which about half are deletions and the rest need a decision on whether an existing Native package already covers them. That is a tractable list; "85 packages" was not.
+Checking the unported fourteen against the Native packages that exist resolves most of them:
+
+- **Covered by a Native package under another name.** `agent-loop` is the loop inside `native-headless` (which provides `application` and `rootExecution`); `system-prompt` is `native-prompt` (provides `promptSections`); `session` and `llm` are the library halves the Native packages import directly; `user-approval` is `native-approval`; `subagent-spawn-in-process` and `subagent-fork-in-process` are providers `native-subagent` hosts. These need their Cordis half deleted once nothing imports it.
+- **Truly unported and worth a decision.** `agent-default-model` (no Native consumer, already ruled out), `jobs-local`, `tool-present`, `session-checkpoint-policy`, `typert-loader`, `typert-registry` and the Web `api-gateway` have no Native counterpart. `tool-present` is an older presentation mechanism the Native tool registry supersedes; `typert-*` are the type registry, not runtime behaviour.
+
+So the actionable remainder is roughly seven packages, each needing a one-line decision (delete as superseded, port, or declare out of scope), plus the deletions already identified. That is a list a person can finish; "85 packages" was not.
 
 ## Acceptance criteria
 
