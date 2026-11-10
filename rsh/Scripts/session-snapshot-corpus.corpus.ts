@@ -122,6 +122,7 @@ const snapshotAdapters = [
   'snapshots/native-headless/fs-glob-sampling-native.snapshot.ts',
   'snapshots/native-headless/background-job-admission-native.snapshot.ts',
   'snapshots/native-headless/ptc-read-image-native.snapshot.ts',
+  'snapshots/native-headless/ptc-read-image-attachment-path-native.snapshot.ts',
   'snapshots/native-headless/packed-chunks-native.snapshot.ts',
   'snapshots/native-headless/pty-tools-sandbox-backend-native.snapshot.ts',
   'snapshots/native-headless/product-subagent-codex-native.snapshot.ts',
