@@ -79,6 +79,10 @@ The bundles are layered, not independent: `headless` declares only 6 dependencie
 
 That is the pattern to expect for most of the list: not a port, but a decision that an existing Native package already owns the concern. It also means the count of real work falls each time an item is checked.
 
+The next item checked, `tool-present`, does not resolve that way and is the first genuine port. It is a 109-line Cordis tool exposing `present`, the call that declares finished files as deliverables. **No Native profile composes it and no Native package implements it** — verified by searching for a `present` tool registration across `src` and for the row across every native test profile, both empty. It is portable in principle: it needs the scoped registry that already exists, plus two things the Native side does not expose — an open-turn boundary (it reads `sessionProjections.stateOf(session, 'turnBoundary')`) and the presented-files projection that the Web client renders. So the cost is the tool plus those two seams, not the 109 lines alone.
+
+Two items checked, one resolved for free and one a real port. That ratio is the useful output of this round: the list is not uniformly hard, but it is not uniformly free either, and only checking each item tells which it is.
+
 So `base` is the layer every other template stands on, and it is the only one whose retirement actually means anything.
 
 The Native side already demonstrates that the shape is achievable: `native-ptc` composes 19 real product rows — agent, tools, prompt, model execution, jobs, sandbox policy, subprocess, shell, bash tool, code runtime and session persistence — and runs a working agent. What it lacks is not depth but breadth: no system prompt identity beyond the prompt registry, no agent instructions, no attachments at startup, no command surface, no Web API. Those are the 24 packages.

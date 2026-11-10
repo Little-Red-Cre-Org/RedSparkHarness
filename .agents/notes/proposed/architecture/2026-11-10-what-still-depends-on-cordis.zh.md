@@ -75,6 +75,10 @@ Status: proposed
 
 这也是清单上大多数项的预期模式：不是移植，而是确认某个现有 Native 包已经拥有该关注点。它也意味着每核查一项，真实工作量就会下降。
 
+接下来核查的 `tool-present` 不属于这种情形，它是第一个真正的移植项。它是个 109 行的 Cordis 工具，暴露 `present`——声明完成文件为交付物的那次调用。**没有任何 Native profile 组合它，也没有任何 Native 包实现它**：在 `src` 中搜索 `present` 工具注册、在每个 native 测试 profile 中搜索该行，两者都是空的。原则上可移植：它需要已有的 scoped registry，外加两样 Native 侧尚未暴露的东西——开放回合边界（它读 `sessionProjections.stateOf(session, 'turnBoundary')`）与 Web 客户端渲染所依赖的 presented-files 投影。所以成本是工具本身加上这两个接缝，而不只是那 109 行。
+
+核查两项：一项免费解决，一项是真正的移植。这个比例就是本轮有用的产出：清单不是一律困难，也不是一律免费，只有逐项核查才知道是哪一种。
+
 所以 `base` 是所有其他模板立足的那一层，也唯一一个退役真正有意义的层。
 
 Native 一侧已经证明这个形状可行：`native-ptc` 组合了 19 个真实产品行——agent、tools、prompt、model execution、jobs、sandbox policy、subprocess、shell、bash tool、code runtime 与 session persistence——并跑起一个能工作的 agent。它缺的不是深度而是广度：除 prompt 注册表之外没有系统提示身份、没有 agent instructions、启动时没有 attachments、没有命令面、没有 Web API。那些就是那 24 个包。
