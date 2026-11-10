@@ -91,6 +91,7 @@ const snapshotAdapters = [
   'snapshots/native-headless/codex-subscription-replay-metadata-native.snapshot.ts',
   'snapshots/native-headless/archify-auto-routing-native.snapshot.ts',
   'snapshots/native-headless/fs-edit-native.snapshot.ts',
+  'snapshots/native-headless/fs-write-overwrite-bounded-native.snapshot.ts',
   'snapshots/native-sdk/text-turn.snapshot.ts',
   'snapshots/native-sdk/staged-files.snapshot.ts',
   'snapshots/native-sdk/external-operation.snapshot.ts',
