@@ -40,6 +40,8 @@ Seven generated or hand-maintained artifacts move: the package directory, the `t
 
 Guessing which gates to run does not work: each deletion so far surfaced a different one, and every miss cost a round-trip through CI. The reliable local sequence is to delete the files, remove the references, regenerate the generated pages (`gen-config-catalog`, `gen-module-graph`), re-record the pairs, and then run `pnpm run doc-sync` plus `typecheck` and `pnpm --dir rsh/Programs/CLI pack` as one batch — `doc-sync` is the aggregate that owns the catalog, link, graph, pairing and wrap gates together, so it reports all of them in one pass.
 
+`agent-instructions` needs three things together: a workspace directory whose name contains `:` (Windows refuses to create it, verified directly), the `delimiter-path` workspace setup that builds that directory, and a compaction policy so the recorded overflow happens. A copied turn template supplies none of them, which is why the scenario is not migrated rather than skipped-and-claimed.
+
 ## Acceptance criteria
 
 - `verify-native-dependencies` passes at every step of the deletion.
