@@ -81,6 +81,52 @@ export function processAsyncWaterfall<T>(
 }
 
 /**
+ * Run ordered interceptors that may stop the chain by returning without delegating.
+ *
+ * Unlike a result policy, an interceptor that answers without calling `next` is the
+ * terminal answer: denial, request for approval and blocking feedback all end the
+ * chain at the listener that decided.
+ * @param count - number of captured interceptors.
+ * @param signal - independently owned cancellation checked before callback entry.
+ * @param terminal - answer used when the whole chain delegates through.
+ * @param invoke - one interceptor receiving an exactly-once downstream delegate.
+ * @returns the answer selected by the stopping interceptor, or the terminal answer.
+ */
+export function processInterceptionChain<D>(
+  count: number, signal: AbortSignal, terminal: () => D,
+  invoke: (index: number, next: () => Promise<D>) => Promise<D>,
+): Promise<D> {
+  const delegate = async (index: number): Promise<D> => {
+    signal.throwIfAborted()
+    if (index === count) return terminal()
+    let downstream: Promise<D> | undefined
+    let delegated = false
+    let primary: { error: unknown } | undefined
+    let selected!: D
+    try {
+      selected = await invoke(index, () => {
+        if (delegated) throw new Error('native-tools: interceptor delegated more than once')
+        delegated = true
+        downstream = delegate(index + 1)
+        return downstream
+      })
+    } catch (error: unknown) { primary = { error } }
+    // A delegated branch is awaited for quiescence even when the listener's own answer is
+    // authoritative, so a failure after the answer still reaches the caller.
+    if (downstream !== undefined) {
+      try { await downstream }
+      catch (error: unknown) {
+        if (primary === undefined) primary = { error }
+        else if (primary.error !== error) primary = { error: new AggregateError([primary.error, error], 'tool interceptors failed') }
+      }
+    }
+    if (primary !== undefined) throw primary.error
+    return selected
+  }
+  return delegate(0)
+}
+
+/**
  * Run surrounding execution policies around one body; each policy owns the outcome it returns.
  * @param count - number of captured execution policies.
  * @param signal - admitted invocation cancellation, fused into every delegated signal.
