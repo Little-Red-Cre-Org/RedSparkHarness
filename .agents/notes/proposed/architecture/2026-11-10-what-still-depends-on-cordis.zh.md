@@ -113,7 +113,9 @@ Native 一侧已经证明这个形状可行：`native-ptc` 组合了 19 个真�
 
 CLI 参考文档用自己的表格陈述了这个区分：`web`、`headless`、`sdk` 与 `acp` 被标为 **「Legacy … template」**，而 `sdk-minimal` 那一行没有这个标记——文档本身已经在告诉读者哪些名字已被取代、哪些还没有。
 
-`sdk-minimal` 是唯一没有 native 对应物的名字，而这并非疏漏。它是一个刻意独立的小型 profile：README 说明它为需要小型显式运行时的 SDK 客户端而存在，**按设计排除 `dsh-base`**，其 27 个依赖全部是 Cordis 包、零个 `dsh.native` 入口。`native-sdk` 是另一种组合——带子代理、工作流与命令的完整 agent。所以关闭这个模板是一个产品决定：要么移植一个真正极简的 Native 组合，要么退役这个 profile 名；它是第 5 步里唯一无法靠删除 bundle 了结的一项。
+`sdk-minimal` 是唯一没有 native 对应物的名字，而这并非疏漏。它是一个刻意独立的小型 profile：README 说明它为需要小型显式运行时的 SDK 客户端而存在，**按设计排除 `dsh-base`**，其 27 个依赖全部是 Cordis 包、零个 `dsh.native` 入口。`native-sdk` 是另一种组合——带子代理、工作流与命令的完整 agent。按 manifest 实测，移植它比 27 个 Cordis 依赖暗示的要近得多：**12 个已有 native 形态**；剩下 15 个里，四个是 Native 侧直接消费的库（`llm`、`session`、`scope`、`invariants`），三个已有 `rsh-native-*` 兄弟包在别处被组合（`agent`、`tools`、`sandbox-policy`），一个是钉住的 Cordis 源码（`cordis-plugin-timer`）。于是**真正的缺口只剩两个：`tool-bash-persistent` 与 `tool-pwsh-persistent`**——也就是这个 profile 所宣称、而没有任何 Native profile 组合过的平台相关持久 shell。另外 `sdk-jsonrpc-server` 对 `native-sdk` 已被 `native-sdk-server` 取代。
+
+因此建议是「裁剪」而非全量移植或退役：那两个持久 shell 工具是 `sdk-minimal` 唯一在 Native 侧缺失的能力，也正是它与 `native-sdk` 的区别所在。用其他 native profile 已在用的包加一个 Native 持久 shell 组成极简组合即可关闭该模板；反之退役这个 profile 名，会移除一个恰恰因为比默认更小而存在的有文档 profile——这与迁移应当给用户带来的代价正好相反。
 
 这个区分很重要，因为两种理解的剩余工作量完全不同，而本笔记此前的说法（「Native Web 这条路建好但从未接线」）是错的：它既建好了**也**接线了，一个 Web e2e 测试用二十四个模块链接组合它。
 
