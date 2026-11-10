@@ -18,11 +18,17 @@
       "types": "./lib/types/index.d.ts",
       "default": "./lib/index.js"
     },
+    "./native": {
+      "types": "./lib/types/native.d.ts",
+      "default": "./lib/native.js"
+    },
     "./src/*": "./src/*",
     "./package.json": "./package.json"
   },
   "files": [
     "lib/index.js",
+    "lib/native.js",
+    "lib/shared-*.js",
     "lib/types/**/*.d.ts"
   ],
   "license": "MIT",
@@ -37,7 +43,11 @@
     "@redspark/rsh-subagent": "workspace:^",
     "@redspark/rsh-tools": "workspace:^",
     "@redspark/cordis": "workspace:^",
-    "@redspark/rsh-session-projection": "workspace:^"
+    "@redspark/rsh-session-projection": "workspace:^",
+    "@redspark/rsh-native-runtime": "workspace:^",
+    "@redspark/rsh-native-tools": "workspace:^",
+    "@redspark/rsh-request-context-definition": "workspace:^",
+    "@redspark/rsh-native-headless": "workspace:^"
   },
   "devDependencies": {
     "@redspark/rsh-agent": "workspace:^",
@@ -53,6 +63,28 @@
     "@redspark/rsh-subagent": "workspace:^",
     "@redspark/rsh-tools": "workspace:^",
     "@redspark/cordis": "workspace:^",
-    "@redspark/rsh-session-projection": "workspace:^"
+    "@redspark/rsh-session-projection": "workspace:^",
+    "@redspark/rsh-native-runtime": "workspace:^",
+    "@redspark/rsh-native-tools": "workspace:^",
+    "@redspark/rsh-request-context-definition": "workspace:^",
+    "@redspark/rsh-native-headless": "workspace:^"
+  },
+  "dsh": {
+    "native": {
+      "apiVersion": 1,
+      "entry": "./native",
+      "targets": [
+        "host"
+      ],
+      "requires": [
+        "shell"
+      ],
+      "optional": [
+        "tools",
+        "requestContexts",
+        "activeSessions"
+      ],
+      "provides": []
+    }
   }
 }

@@ -1661,6 +1661,9 @@ export class NativeHeadlessApplication implements NativeApplication {
             }
           })()
           let firstAdmission = true
+          // One announcement per Session, not per resumed turn: a restored Session whose
+          // first turn already ran starts at a later turn number and never re-announces.
+          let announcement: 'announced' | undefined = turn === 1 ? undefined : 'announced'
           for (let step = 1; step <= config.maxSteps;) {
             turnOwnership.preparingStep = true
             try {
@@ -1755,6 +1758,16 @@ export class NativeHeadlessApplication implements NativeApplication {
                       content: [{ type: 'text', text }],
                     }), { surfaceOp: 'append' }))
                   }
+                }
+                if (step === 1 && announcement !== 'announced') {
+                  announcement = 'announced'
+                  // A Native bridge cannot observe the compatibility session-start
+                  // point, so the application announces it once per Session, after the
+                  // opening inputs are durable and before the first request is built.
+                  await this.context.events.parallel(this.context.scope, 'session/starting', {
+                    agent, session, source: request.resume ? 'resume' : 'startup', signal,
+                  })
+                  signal.throwIfAborted()
                 }
                 if (selection?.notice !== undefined) track(session.append('user/message', selection.notice, { surfaceOp: 'append' }))
                 for (const instructionContext of instructionContexts ?? []) {
@@ -1945,6 +1958,18 @@ export class NativeHeadlessApplication implements NativeApplication {
               track(session.append('step/end', { turn, step }))
               await persist()
               if (calls.length === 0 || concludedByTool) {
+                // The turn has produced its last step. Awaited so a listener may still
+                // admit another step through the exact active owner; the batch settles
+                // before the next admission reads it.
+                if (activeOwner !== undefined) {
+                  await this.context.events.serial(this.context.scope, 'turn/stopping', { agent, session, turn, step, signal })
+                  await persist()
+                  signal.throwIfAborted()
+                  if (activeOwner.messages('next-step').length > 0) {
+                    step += 1
+                    continue
+                  }
+                }
                 settledAnswer = message.content.filter(block => block.type === 'text').map(block => block.text).join('')
                 exitCode = 0
                 break

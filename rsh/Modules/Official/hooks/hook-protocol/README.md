@@ -82,6 +82,7 @@ The [hook-protocol-lib Agent Note](../../../../../.agents/notes/archived/feature
 | File | Role |
 |---|---|
 | [`src/index.ts`](src/index.ts) | Public exports of every primitive and event helper |
+| [`src/native.ts`](src/native.ts) | Cordis-free exports of the same primitives, for a Native bridge that must not import the Cordis package root |
 | [`src/matcher.ts`](src/matcher.ts) | Match-all sentinels, literal-vs-regex mode, validation and runtime matching |
 | [`src/runner.ts`](src/runner.ts) | `runHook` execution through `ctx.shell` and `DEFAULT_HOOK_TIMEOUT_MS` |
 | [`src/codec.ts`](src/codec.ts) | Exit-code and structured-stdout decoding into `HookOutput` |

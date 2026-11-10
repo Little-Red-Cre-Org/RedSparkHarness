@@ -6,7 +6,7 @@
  * @module @redspark/rsh-hooks-claude-code/config
  */
 
-import { matcherDiagnostic, type MatcherGroup } from '@redspark/rsh-hook-protocol'
+import { matcherDiagnostic, type MatcherGroup } from '@redspark/rsh-hook-protocol/native'
 
 const CLAUDE_EVENTS = [
   'SessionStart',

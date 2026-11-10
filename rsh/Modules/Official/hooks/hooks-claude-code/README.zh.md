@@ -108,11 +108,27 @@ matcher subject 是工具名称（`PreToolUse`／`PostToolUse`）、会话源（
 
 [hook-bridges Agent Note](../../../../../.agents/notes/archived/feature/2026-06-30-hook-bridges.md) 记录了桥接设计与延期缺口；[hook-protocol-lib Agent Note](../../../../../.agents/notes/archived/feature/2026-06-30-hook-protocol-lib.md) 记录了共享与逐方言的划分。
 
+### Native 入口
+
+本包发布第二个入口 `@redspark/rsh-hooks-claude-code/native`，在 Native profile 上响应同样的七个事件点，并复用同一份配置解析、payload 词汇、matcher、runner 与持久事件对。只有扩展点接线不同，因为两个运行时暴露的接缝不同：
+
+| 事件点 | Cordis 入口 | Native 入口 |
+|---|---|---|
+| `SessionStart` | `agent/session-start`（分离运行，注入上下文） | `session/starting`（并行），由 request-context provider 消费，使首个请求会等待它 |
+| `UserPromptSubmit` | `agent/pre-step` waterfall | 活动 owner 的 `beforeStep` 准入钩子 |
+| `PreToolUse` | `tools/pre-execute` waterfall | `tools.interceptBeforeCall` |
+| `PostToolUse` | `tools/post-execute` waterfall | `tools.interceptAfterCall` |
+| `Stop` | `agent/turn-stopping` 加 `steer()` | `turn/stopping` 加 `next-step` 收件箱准入 |
+| `SubagentStart` / `SubagentStop` | `subagent/start` / `subagent/end` | 无对应物——Native subagent 接缝不广播子级生命周期边 |
+
+Native 入口声明 `shell` 为必需，`tools`、`requestContexts`、`activeSessions` 为可选，因此省略某项能力的 profile 只是失去对应事件点，不会激活失败。
+
 ### 源码地图
 
 | 文件 | 职责 |
 |---|---|
-| [`src/index.ts`](src/index.ts) | 插件入口：配置校验、监听器注册、逐事件 payload、决策映射 |
+| [`src/index.ts`](src/index.ts) | Cordis 入口：配置校验、监听器注册、逐事件 payload、决策映射 |
+| [`src/native.ts`](src/native.ts) | Native 入口：在拦截服务、request contexts 与已广播的生命周期事件上做同样的映射 |
 | [`src/config.ts`](src/config.ts) | Claude Code 配置解析：受支持事件、matcher 校验、命令替换 |
 | — | 不发布运行时不变式伴生入口；本桥接发布 hook-protocol 会话事件，既有 companion 负责校验每个结果所引用的调用事件。 |
 
@@ -176,6 +192,7 @@ hook 不返回上下文时没有成本。Hook 文本取决于数据，会被记�
 - **`UserPromptSubmit` 只支持部分功能**——支持阻塞与 JSON `additionalContext`，但不支持纯 stdout 上下文、`sessionTitle` 与 `suppressOriginalPrompt`。除非被覆盖，否则桥接还会使用自身 600 秒默认值，而非 Claude Code 的事件特定 30 秒 command 超时。
 - **`PreToolUse` 只支持部分功能**——`deny` 与 `ask` 决策可用；`allow` 不会预审批，`defer` 不受支持，`additionalContext` 会被忽略，`updatedInput` 会被记录 + 警告但不应用（见 [pre-tool-input-rewrite Agent Note](../../../../../.agents/notes/proposed/feature/2026-06-30-pre-tool-input-rewrite.zh.md)）。
 - **`PostToolUse` 只支持部分功能**——支持阻塞反馈与 JSON `additionalContext`，但不支持 `updatedToolOutput` 与 `updatedMCPToolOutput`，`tool_response` 会展平为文本。
+- **Native 入口没有子代理事件点**——`SubagentStart` 与 `SubagentStop` 只由 Cordis 入口运行，因为 Native subagent 接缝不在 Native 事件总线上广播子级生命周期边；配置了这些事件的 Native profile 对其不运行任何钩子。
 - **`SubagentStart` 与 `SubagentStop` 只支持部分功能**——两者均报告常量 `agent_type` `general-purpose`，并在 Claude Code 报告父会话的位置使用 child 会话 id。Start 上下文是尽力而为，且只能到达仍在运行的同进程 child；stop 只观测，无法阻塞 subagent 或向其提供上下文。Stop 省略 `agent_transcript_path`、`last_assistant_message`、`background_tasks` 与 `session_crons`，并始终报告 `stop_hook_active: false`。
 - **`Stop` 只支持部分功能**——阻塞会强制另一个模型轮次，但 `stop_hook_active` 始终为 `false`，会省略 `last_assistant_message`、`background_tasks` 与 `session_crons`，且未实现连续阻塞上限。因此，无条件阻塞 hook 会在每个步骤中强制 continuation，除非它自我限制。
 - **通用 payload 与输出字段只支持部分功能**——已映射事件会省略 Claude Code 原本会提供的 `prompt_id`、`permission_mode` 与 `effort`，且 `transcript_path` 永不填充：它始终为空字符串，因为持久化 seam 不暴露产物路径，且默认使用 Zstandard 压缩的会话日志无法被 hook 脚本读取。`systemMessage` 会被记录 + 警告但不呈现；`{"continue": false}` 会被记录但不会停止运行；`suppressOutput`、`stopReason` 与 `terminalSequence` 不会被应用。

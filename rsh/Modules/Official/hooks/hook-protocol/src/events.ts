@@ -6,7 +6,7 @@
  * @module @redspark/rsh-hook-protocol/events
  */
 
-import type { Session } from '@redspark/rsh-session'
+import type { Session } from '@redspark/rsh-session/native'
 import type { HookDialect, HookOutput } from './types.ts'
 
 /** What identifies a hook invocation across its invoked/result pair. */

@@ -58,13 +58,18 @@
       "types": "./lib/types/native.d.ts",
       "default": "./lib/native.js"
     },
+    "./lifecycle-events": {
+      "types": "./lib/types/lifecycle-events.d.ts",
+      "default": "./lib/lifecycle-events.js"
+    },
     "./package.json": "./package.json"
   },
   "files": [
     "lib/index.js",
     "lib/native.js",
     "lib/shared-*.js",
-    "lib/types/**/*.d.ts"
+    "lib/types/**/*.d.ts",
+    "lib/lifecycle-events.js"
   ],
   "license": "MIT",
   "devDependencies": {
