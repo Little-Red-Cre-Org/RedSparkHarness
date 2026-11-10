@@ -82,6 +82,7 @@ const snapshotAdapters = [
   'snapshots/native-headless/subagent-spawn-in-process-native.snapshot.ts',
   'snapshots/native-headless/subagent-parallel-native.snapshot.ts',
   'snapshots/native-headless/subagent-multi-native.snapshot.ts',
+  'snapshots/native-headless/subagent-tool-filter-native.snapshot.ts',
   'snapshots/native-sdk/text-turn.snapshot.ts',
   'snapshots/native-sdk/staged-files.snapshot.ts',
   'snapshots/native-sdk/external-operation.snapshot.ts',
