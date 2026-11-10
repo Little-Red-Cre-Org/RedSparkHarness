@@ -187,7 +187,11 @@ CLI 参考文档用自己的表格陈述了这个区分：`web`、`headless`、`
 
 那第一步的前提现已验证，并且它孤立出唯一仍在挡路的东西。在任何 profile 存在之前调用 `profileRuntime`，每个名字都返回 `'legacy'`——解析读的是磁盘上的 manifest，不是名字。而在 `ensureShippedNativeProfile` 运行之后，`headless`、`web`、`sdk`、`acp` 与 `rsh` 全部返回 `'native'`。`sdk-minimal` 无论如何都返回 `'legacy'`，且 `SHIPPED_NATIVE_PROFILES()` 不含它。
 
-所以仍然需要 legacy 分支的出厂名字恰好只有一个：`sdk-minimal`。因此「让分派不可达」不是验证五个 profile 的事，而是决定退役第六个名字的事——这就是为什么那两个问题其实是同一个问题。它的 `sdk-minimal` 测试、bundle 与文档行都属于同一次改动，因为名字不消失，那个分支就去不掉。
+所以仍然需要 legacy 分支的出厂名字恰好只有一个：`sdk-minimal`。因此「让分派不可达」不是验证五个 profile 的事，而是决定退役第六个名字的事——这就是为什么那两个问题其实是同一个问题。
+
+这个决定不是免费的，比较两种组合就能看出原因。`native-sdk` 组合了 30 个插件——工具、子代理、工作流、压缩、命令、模型执行——**而且没有 shell**：改用它将让 SDK 客户端无法运行命令。`sdk-minimal` 组合了一个隐藏的 `rsh-terminal` 加上 `terminal-bash`、`terminal-pwsh` 与两个持久工具，这正是它宣称的能力。所以 `native-sdk` **并不**覆盖 `sdk-minimal` 所服务的东西，此前那句「能力已由 `native-sdk` 提供」是错的。
+
+这让它成为真正的产品决定而不是清理工作：要么退役该 profile 并接受一个精简 SDK 运行时失去命令执行能力，要么给 `native-sdk` 一个 shell——对于持久版本而言，那就是本笔记实测为 438 与 474 行的那两个工具的移植。它的 `sdk-minimal` 测试、bundle 与文档行都属于同一次改动，因为名字不消失，那个分支就去不掉。
 
 由此得到的顺序与批量删除相反：先让分派不可达（确认每个出厂名字都解析到 Native 组合），删除两个 boot 文件及其导入，确认 CLI 不再声明 Cordis，然后才向外推进到「最后一个消费者是那个分支」的那些包。
 

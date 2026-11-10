@@ -196,7 +196,11 @@ So removing the legacy launcher is a change to **one dispatch branch plus `profi
 
 The precondition for that first step is now verified, and it isolates the one thing still in the way. Calling `profileRuntime` before any profile exists answers `'legacy'` for every name — resolution reads the manifest on disk, not the name. After `ensureShippedNativeProfile` runs, `headless`, `web`, `sdk`, `acp` and `rsh` all answer `'native'`. `sdk-minimal` answers `'legacy'` either way, and `SHIPPED_NATIVE_PROFILES()` does not contain it.
 
-So exactly one shipped name still requires the legacy branch: `sdk-minimal`. Making the dispatch unreachable is therefore not a matter of verifying five profiles — it is the decision to retire that sixth name, which is why the two questions are one question. Its `sdk-minimal` tests, its bundle and its documentation row all belong to this same change, because the branch cannot go until the name does.
+So exactly one shipped name still requires the legacy branch: `sdk-minimal`. Making the dispatch unreachable is therefore not a matter of verifying five profiles — it is the decision to retire that sixth name, which is why the two questions are one question.
+
+That decision is not free, and comparing the two compositions says why. `native-sdk` composes 30 plugins — tools, subagents, workflows, compaction, commands, model execution — and **no shell**: naming it instead would leave an SDK client unable to run a command. `sdk-minimal` composes a hidden `rsh-terminal` plus `terminal-bash`, `terminal-pwsh` and the two persistent tools, which is precisely the capability it advertises. So `native-sdk` does **not** cover what `sdk-minimal` serves, and the earlier claim that the capability "is already served by `native-sdk`" was wrong.
+
+That makes this a real product decision rather than a cleanup: retire the profile and accept that a small SDK runtime loses command execution, or give `native-sdk` a shell — which, for the persistent variant, is the two-tool port this note measured at 438 and 474 lines. Its `sdk-minimal` tests, its bundle and its documentation row all belong to this same change, because the branch cannot go until the name does.
 
 The order this implies is the reverse of a bulk delete: make the dispatch unreachable (verify every shipped name resolves to a Native composition), delete the two boot files and their imports, confirm the CLI no longer declares Cordis, and only then work outward through the packages whose last consumer was that branch.
 
