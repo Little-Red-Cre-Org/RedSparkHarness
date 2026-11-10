@@ -20,6 +20,10 @@ Status: proposed
 
 有三个场景使用只存在于 Cordis 一侧的工具——`cordis_define`、`cordis_undefine`、`cordis_inspect_query`——由 `@redspark/rsh-tool-cordis` 提供，而它是 Cordis 插件、没有 Native 入口。因此 `advanced-toolchain`、`advanced-toolchain-runtime` 与 `cordis-inspect-jsdoc` 描述的能力会随运行时一起消失，它们随之退役而不是迁移。迁移它们等于移植一个以操作为删除对象的运行时为目的的工具。
 
+六个模板正好是 `PROFILE_TEMPLATES`（`rsh/Compatibility/DSH/boot/app-boot/src/profile.ts`）里的 `acp`、`web`、`headless`、`rsh`、`sdk`、`sdk-minimal`。每个都列出 `dsh --profile <name>` 组合的 bundle 层，所以「退役模板」与「删除其 bundle」是同一步；七个 bundle 目录里，`base` 被所有非 minimal 模板共享。
+
+真正卡住叶子删除的是：这些 bundle 层就是它们最后的消费者。五个 Cordis-only 叶子——`session-stats`、`session-turn-outline`、`session-checkpoint-policy`、`file-reference-local`、`agent-tool-presentation`——各只有一个依赖方，而那个依赖方正是 T-F 要退役的 `web-app`、`base` 或 `sdk-runtime` 层。它们不能在各自的 bundle 之前删除，而那个 bundle 又不能在它所服务的 profile 有 Native 等价物之前删除。
+
 ## Acceptance criteria
 
 - 删除的每一步 `verify-native-dependencies` 都通过。

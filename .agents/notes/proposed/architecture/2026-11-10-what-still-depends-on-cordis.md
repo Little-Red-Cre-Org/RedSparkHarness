@@ -20,6 +20,10 @@ The largest group is the Web application surface, but it is **half migrated rath
 
 Three scenarios use tools that exist only on the Cordis side — `cordis_define`, `cordis_undefine`, `cordis_inspect_query` — provided by `@redspark/rsh-tool-cordis`, which is a Cordis plugin with no Native entry. `advanced-toolchain`, `advanced-toolchain-runtime` and `cordis-inspect-jsdoc` therefore describe a capability that disappears with the runtime, so they retire with it rather than migrating. Migrating them would mean porting a tool whose purpose is to manipulate the runtime being deleted.
 
+The six templates are exactly `acp`, `web`, `headless`, `rsh`, `sdk` and `sdk-minimal` in `PROFILE_TEMPLATES` (`rsh/Compatibility/DSH/boot/app-boot/src/profile.ts`). Each names the bundle layers `dsh --profile <name>` composes, so retiring a template and deleting its bundles are the same step; four of the seven bundle directories (`base`, `headless`, `rsh`, and the SDK pair) are named by those templates directly, while `base` is shared by every non-minimal template.
+
+What blocks the leaf deletions is that the bundle layers are their last consumers. Five Cordis-only leaves — `session-stats`, `session-turn-outline`, `session-checkpoint-policy`, `file-reference-local`, `agent-tool-presentation` — have exactly one dependent each, and it is the `web-app`, `base` or `sdk-runtime` layer that T-F retires. They cannot be deleted before their bundle, and their bundle cannot be deleted before the profiles those bundles serve have a Native equivalent.
+
 ## Acceptance criteria
 
 - `verify-native-dependencies` passes at every step of the deletion.
