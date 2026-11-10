@@ -34,6 +34,10 @@ Status: proposed
 
 删除一个包会牵动它自己目录之外的四处，而每一处失败在不同门禁上：`tsconfig.host.json` 的 project 引用（typecheck）、工作区 lockfile（打包安装）、组 README 那一行以及任何链接到它的兄弟 README（翻译配对）、以及生成目录的中文评审对侧 `rsh/Docs/config-catalog.zh.md`（文档构建，表现为链接到已不存在的源文件）。前两处在本地就会暴露；后两处只有跑文档门禁时才出现，所以一次删除在 `verify-translation-pairing`、`verify-config-catalog` 与文档站点构建都通过之前不算完成。
 
+清单是第五处，也是唯一打坏打包车道的一处：`rsh/Programs/CLI/package.json` 可能仍以 `workspace:^` 引用被删的包，而 `pnpm pack` 拒绝解析指向已消失包的 workspace 协议。typecheck 与 lint 都看不见这一点，所以删除的本地校验是 `pnpm --dir rsh/Programs/CLI pack`，它同时也是证明 lockfile 与清单一致的最快方式。
+
+因此删除一个 Cordis 包的完整本地流程是五步：删目录与其受管文件、去掉 `tsconfig.host.json` 的 project 引用、删掉所有以 `workspace:^` 点名它的行并跑 `pnpm install --lockfile-only`、修 README 行与链接并重新记录配对，然后在提交前跑 `typecheck`、`verify-config-catalog`、文档站点构建与 `pnpm --dir rsh/Programs/CLI pack`。
+
 ## Acceptance criteria
 
 - 删除的每一步 `verify-native-dependencies` 都通过。

@@ -34,6 +34,10 @@ The reusable test for the third group is: a Native sibling exists, nothing depen
 
 Deleting a package moves four things beyond its own directory, and each one fails a different gate: the `tsconfig.host.json` project reference (typecheck), the workspace lockfile (packed install), the group README row and any sibling README that links to it (translation pairing), and the reviewed `rsh/Docs/config-catalog.zh.md` counterpart of the generated catalog (documentation build, as a link to a source file that no longer exists). The first two catch a deletion locally; the last two only appear when the doc gates run, so a deletion is not finished until `verify-translation-pairing`, `verify-config-catalog` and the doc-site build pass.
 
+A manifest is the fifth artifact, and the only one that breaks the packed lane: `rsh/Programs/CLI/package.json` may name a deleted package under `workspace:^`, and `pnpm pack` refuses to resolve a workspace protocol whose package is gone. Neither typecheck nor lint sees this, so the local check for a deletion is `pnpm --dir rsh/Programs/CLI pack`, which is also the fastest way to prove the lockfile and the manifest agree.
+
+The complete local recipe for deleting one Cordis package is therefore five steps: remove the directory and its stored files, drop the `tsconfig.host.json` project reference, remove every `workspace:^` line naming it and run `pnpm install --lockfile-only`, fix the README rows and links and re-record the pairs, then run `typecheck`, `verify-config-catalog`, the doc-site build and `pnpm --dir rsh/Programs/CLI pack` before committing.
+
 ## Acceptance criteria
 
 - `verify-native-dependencies` passes at every step of the deletion.
