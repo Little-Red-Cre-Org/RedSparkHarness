@@ -292,8 +292,7 @@ with RedSparkHarness(config) as restored:
     tool_result = next(event for event in failed.events if event["type"] == "tool/result")
     assert tool_result["data"]["message"]["content"][0]["isError"] is True
     assert tool_result["data"]["message"]["content"][0]["content"] == [
-        {"type": "text", "text": "subagent run failed\nPartial output before the run ended:\npartial failed child output"},
-        {"type": "text", "text": "partial failed child output"}]
+        {"type": "text", "text": "subagent run failed\nPartial output before the run ended:\npartial failed child output"}]
     assert failed.final_response == result.final_response
     with restored.client.subscribe_session_notifications(session.id) as background_events:
         started = session.run("start a background child")
