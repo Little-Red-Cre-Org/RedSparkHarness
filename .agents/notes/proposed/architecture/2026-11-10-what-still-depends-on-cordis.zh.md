@@ -203,7 +203,7 @@ CLI 参考文档用自己的表格陈述了这个区分：`web`、`headless`、`
 
 **Python 代码运行时——1 个场景。** `ptc-python-turn` 组合 `@redspark/rsh-experimental-code-runtime-python`，该包位于 `Modules/Community/experimental` 且没有 `dsh.native` 入口，所以 Native profile 根本无法运行 Python。
 
-**持久 shell——1 个场景，外加第六个模板。** `tool-bash-persistent` 与 `tool-pwsh-persistent` 分别为 438 与 474 行，面向一个 Native 已存在的 `terminals` 服务；`persistent-pwsh-tool-turn` 还需要重录，因为它的录制早于必需的 `description` 字段。
+**持久 shell——1 个场景，外加第六个模板。** `tool-bash-persistent` 与 `tool-pwsh-persistent` 分别为 438 与 474 行，面向一个 Native 已存在的 `terminals` 服务。该接缝已端到端验证：`tool-terminal` 已发布 Native 入口并提供 `terminal_open`、`terminal_send`、`terminal_read`、`terminal_signal` 与 `terminal_close`，所以一个 Native 持久工具是在 `open`/`startSend`/`read` 之上的标记轮询循环，而非新的管线——Cordis 版本自身的辅助函数（标记生成、命令引用、截断、输出结算）可原样沿用。除此之外，只需补上 `sdk-minimal` 自身的缺口，而那既是技术选择也是策略选择；`persistent-pwsh-tool-turn` 还需要重录，因为它的录制早于必需的 `description` 字段。
 
 **外部 LSP 或 ACP 服务——3 个场景。** `lsp-definition` 驱动 LSP 服务器；`subagent-acp-diagnostic` 与 `product-subagent-result-diagnostic` 驱动 ACP 子进程（后者还挂载 `subagent-result-diagnostic`）。
 

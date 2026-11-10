@@ -216,7 +216,7 @@ Checked one by one, they resolve into six capabilities rather than fifteen tasks
 
 **A Python code runtime — 1 scenario.** `ptc-python-turn` composes `@redspark/rsh-experimental-code-runtime-python`, which lives under `Modules/Community/experimental` with no `dsh.native` entry, so a Native profile cannot run Python at all.
 
-**A persistent shell — 1 scenario, plus the sixth template.** `tool-bash-persistent` and `tool-pwsh-persistent` are 438 and 474 lines against a `terminals` service that already exists natively; `persistent-pwsh-tool-turn` also needs its recording refreshed, because it predates the required `description` field.
+**A persistent shell — 1 scenario, plus the sixth template.** `tool-bash-persistent` and `tool-pwsh-persistent` are 438 and 474 lines against a `terminals` service that already exists natively. The seam is proven end to end: `tool-terminal` already ships a Native entry exposing `terminal_open`, `terminal_send`, `terminal_read`, `terminal_signal` and `terminal_close`, so a Native persistent tool is a marker-poll loop over `open`/`startSend`/`read` rather than new plumbing — the Cordis version's own helpers (marker generation, command quoting, truncation, output settlement) carry over unchanged. Beyond that, it needs only `sdk-minimal`'s own gap closed, which is a policy choice as much as a technical one; `persistent-pwsh-tool-turn` also needs its recording refreshed, because it predates the required `description` field.
 
 **An external LSP or ACP service — 3 scenarios.** `lsp-definition` drives an LSP server; `subagent-acp-diagnostic` and `product-subagent-result-diagnostic` drive ACP children (the latter also mounts `subagent-result-diagnostic`).
 
