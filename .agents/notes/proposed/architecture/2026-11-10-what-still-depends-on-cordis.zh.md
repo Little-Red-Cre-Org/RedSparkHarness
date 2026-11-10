@@ -93,7 +93,9 @@ Native 一侧已经证明这个形状可行：`native-ptc` 组合了 19 个真�
 
 ## Web 面决定终局
 
-**六个 Cordis 模板名里已有五个具备出厂 Native 组合。** `rsh/Programs/CLI/src/native-profile-template.ts` 把 `headless` 映射到 `native-headless`、`web` 映射到 `native-web`、`sdk` 映射到 `native-sdk`、`acp` 映射到 `native-acp`、`rsh` 映射到 `native-tui`；只有 `sdk-minimal` 没有对应物。CLI 在其 manifest 中声明了十三个 native 模板，`native-web` 还自带客户端安装清单。所以第 5 步的工作不是「建一个 Native Web profile」——它已存在——而是「退役这些同名仍在解析到的 Cordis bundle」，并补上 `sdk-minimal`。
+**六个 Cordis 模板名里已有五个具备出厂 Native 组合。** `rsh/Programs/CLI/src/native-profile-template.ts` 把 `headless` 映射到 `native-headless`、`web` 映射到 `native-web`、`sdk` 映射到 `native-sdk`、`acp` 映射到 `native-acp`、`rsh` 映射到 `native-tui`；只有 `sdk-minimal` 没有对应物。CLI 在其 manifest 中声明了十三个 native 模板，`native-web` 还自带客户端安装清单。所以第 5 步的工作不是「建一个 Native Web profile」——它已存在——而是「退役这些同名仍在解析到的 Cordis bundle」，并对 `sdk-minimal` 作出决定。
+
+`sdk-minimal` 是唯一没有 native 对应物的名字，而这并非疏漏。它是一个刻意独立的小型 profile：README 说明它为需要小型显式运行时的 SDK 客户端而存在，**按设计排除 `dsh-base`**，其 27 个依赖全部是 Cordis 包、零个 `dsh.native` 入口。`native-sdk` 是另一种组合——带子代理、工作流与命令的完整 agent。所以关闭这个模板是一个产品决定：要么移植一个真正极简的 Native 组合，要么退役这个 profile 名；它是第 5 步里唯一无法靠删除 bundle 了结的一项。
 
 这个区分很重要，因为两种理解的剩余工作量完全不同，而本笔记此前的说法（「Native Web 这条路建好但从未接线」）是错的：它既建好了**也**接线了，一个 Web e2e 测试用二十四个模块链接组合它。
 
