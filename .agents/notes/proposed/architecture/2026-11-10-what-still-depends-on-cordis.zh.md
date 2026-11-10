@@ -111,7 +111,21 @@ Native 一侧已经证明这个形状可行：`native-ptc` 组合了 19 个真�
 
 **六个 Cordis 模板名里已有五个具备出厂 Native 组合。** `rsh/Programs/CLI/src/native-profile-template.ts` 把 `headless` 映射到 `native-headless`、`web` 映射到 `native-web`、`sdk` 映射到 `native-sdk`、`acp` 映射到 `native-acp`、`rsh` 映射到 `native-tui`；只有 `sdk-minimal` 没有对应物。CLI 在其 manifest 中声明了十三个 native 模板，`native-web` 还自带客户端安装清单。所以第 5 步的工作不是「建一个 Native Web profile」——它已存在——而是「退役这些同名仍在解析到的 Cordis bundle」，并对 `sdk-minimal` 作出决定。
 
-`sdk-minimal` 是唯一没有 native 对应物的名字，而这并非疏漏。它是一个刻意独立的小型 profile：README 说明它为需要小型显式运行时的 SDK 客户端而存在，**按设计排除 `dsh-base`**，其 27 个依赖全部是 Cordis 包、零个 `dsh.native` 入口。`native-sdk` 是另一种组合——带子代理、工作流与命令的完整 agent。所以关闭这个模板是一个产品决定：要么移植一个真正极简的 Native 组合，要么退役这个 profile 名；它是第 5 步里唯一无法靠删除 bundle 了结的一项。
+CLI 参考文档用自己的表格陈述了这个区分：`web`、`headless`、`sdk` 与 `acp` 被标为 **「Legacy … template」**，而 `sdk-minimal` 那一行没有这个标记——文档本身已经在告诉读者哪些名字已被取代、哪些还没有。
+
+`sdk-minimal` 是唯一没有 native 对应物的名字，而这并非疏漏。它是一个刻意独立的小型 profile：README 说明它为需要小型显式运行时的 SDK 客户端而存在，**按设计排除 `dsh-base`**，其 27 个依赖全部是 Cordis 包、零个 `dsh.native` 入口。`native-sdk` 是另一种组合——带子代理、工作流与命令的完整 agent。按 manifest 实测，移植它比 27 个 Cordis 依赖暗示的要近得多：**12 个已有 native 形态**；剩下 15 个里，四个是 Native 侧直接消费的库（`llm`、`session`、`scope`、`invariants`），三个已有 `rsh-native-*` 兄弟包在别处被组合（`agent`、`tools`、`sandbox-policy`），一个是钉住的 Cordis 源码（`cordis-plugin-timer`）。于是**真正的缺口只剩两个：`tool-bash-persistent` 与 `tool-pwsh-persistent`**——也就是这个 profile 所宣称、而没有任何 Native profile 组合过的平台相关持久 shell。另外 `sdk-jsonrpc-server` 对 `native-sdk` 已被 `native-sdk-server` 取代。
+
+因此建议是「裁剪」而非全量移植或退役：那两个持久 shell 工具是 `sdk-minimal` 唯一在 Native 侧缺失的能力，也正是它与 `native-sdk` 的区别所在。那两个工具是可移植而非被阻塞的：它们只注入 `tools` 与 `terminals`，而 `rsh-terminal` **已经原生提供 `terminals`**——`spawn`、`list`、`startSend`、`read`、`kill` 都在 Native 注册表上存在。唯一差别是 `spawn` 签名：Cordis 服务取 `(owner, request, signal)`，Native 取单个 `NativeTerminalSpawnSpec`。所以这次移植是在一个已存在的面之上重写 438/474 行，而不是新增能力。
+
+**建议：退役 `sdk-minimal` 这个 profile 名，而不是移植那两个工具。** 理由与代价如下：
+
+`sdk-minimal` 只能通过 Cordis 模板表到达——`rsh/Programs/CLI/src` 中没有任何对它的引用，所以启动器并不特判这个名字，它也永远不会获得 Native 组合。因此退役它意味着：从 `PROFILE_TEMPLATES` 删一个条目、删一个 bundle 包、删 `reference/README.md` 中一行、以及删掉只有它挂载的那两个包。这比移植 900 行更小，而用户真正需要的能力——经 stdio 的 SDK 运行时——已由 `native-sdk` 提供，它组合完整 agent，也是 SDK 默认选用的名字。
+
+反方理由也是真实的：`sdk-minimal` 的存在理由恰恰是它比默认更小，选它的人想要的是精简的树。但一个「唯一独有能力是别的 Native 组合都没挂载的持久 shell」的 profile，其主张比表面看起来要小；而保留它意味着在它所依赖的运行时消失之后仍要维护一条并行的 Cordis 工具链。
+
+无论如何，有两个事实界定了这次移植值多少。这两个工具只有两个依赖方——`sdk-minimal` 与 `rsh/Programs/SDK/python/sdk-runtime`——而 Python 运行时只是**声明**了它们：它没有任何 `cordis.yml` 组合二者，所以 `sdk-minimal` 是它们真正被挂载的唯一位置。这让它成为一个模板形状的任务而非产品范围的任务，也意味着这次移植的价值取决于那个 profile 本身是否值得保留。
+
+用其他 native profile 已在用的包加一个 Native 持久 shell 组成极简组合即可关闭该模板；反之退役这个 profile 名，会移除一个恰恰因为比默认更小而存在的有文档 profile——这与迁移应当给用户带来的代价正好相反。
 
 这个区分很重要，因为两种理解的剩余工作量完全不同，而本笔记此前的说法（「Native Web 这条路建好但从未接线」）是错的：它既建好了**也**接线了，一个 Web e2e 测试用二十四个模块链接组合它。
 
