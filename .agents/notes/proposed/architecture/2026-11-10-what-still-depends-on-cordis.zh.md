@@ -93,7 +93,11 @@ Native 一侧已经证明这个形状可行：`native-ptc` 组合了 19 个真�
 
 ## Web 面决定终局
 
-唯一仍未闭合的那一项——Web 的 `api-gateway`——不是包的问题而是范围的问题，而实测决定了每种答案的代价。`rsh/Programs/Web` 下 75 个包里，**35 个是 Cordis-only、33 个已有 `dsh.native` 入口、7 个两者皆无**。这个划分很关键：客户端已完成大半迁移（27 个 native 对 22 个 Cordis），而 API 侧恰好相反（2 个 native 对 6 个 Cordis）。
+**六个 Cordis 模板名里已有五个具备出厂 Native 组合。** `rsh/Programs/CLI/src/native-profile-template.ts` 把 `headless` 映射到 `native-headless`、`web` 映射到 `native-web`、`sdk` 映射到 `native-sdk`、`acp` 映射到 `native-acp`、`rsh` 映射到 `native-tui`；只有 `sdk-minimal` 没有对应物。CLI 在其 manifest 中声明了十三个 native 模板，`native-web` 还自带客户端安装清单。所以第 5 步的工作不是「建一个 Native Web profile」——它已存在——而是「退役这些同名仍在解析到的 Cordis bundle」，并补上 `sdk-minimal`。
+
+这个区分很重要，因为两种理解的剩余工作量完全不同，而本笔记此前的说法（「Native Web 这条路建好但从未接线」）是错的：它既建好了**也**接线了，一个 Web e2e 测试用二十四个模块链接组合它。
+
+此前的量化仍然描述包清单，所以保留下来作为残余 Cordis 面的代价。`rsh/Programs/Web` 下 75 个包里，**35 个是 Cordis-only、33 个已有 `dsh.native` 入口、7 个两者皆无**。这个划分很关键：客户端已完成大半迁移（27 个 native 对 22 个 Cordis），而 API 侧恰好相反（2 个 native 对 6 个 Cordis）。
 
 决定性的证据是：`native-web-host` 已经存在且完整——它提供 `nativeWebHost`、`hostConnection`、`httpRoutes` 与 `application`——但**包外没有任何消费者**。也就是说 Native Web 这条路已经建好，却从未接进任何应用 profile。因此直接删除 Cordis 不可能发生，除非有人组装出一个组合 `native-web-host` 与那 27 个已迁移客户端包的 Native Web profile，并移植或删除剩下的 28 个。
 
