@@ -828,6 +828,7 @@
       "@redspark/rsh-tool-fs-search/native": ["./rsh/Modules/Official/fs/tool-fs-search/src/native.ts"],
       "@redspark/rsh-tool-goal/native": ["./rsh/Engine/goal/tool-goal/src/native.ts"],
       "@redspark/rsh-tool-lsp/native": ["./rsh/Modules/Official/lsp/tool-lsp/src/native.ts"],
+      "@redspark/rsh-tool-present/native": ["./rsh/Modules/Official/fs/tool-present/src/native.ts"],
       "@redspark/rsh-tool-pwsh/native": ["./rsh/Modules/Official/shell/tool-pwsh/src/native.ts"],
       "@redspark/rsh-tool-ralph/native": ["./rsh/Engine/workflow/tool-ralph/src/native.ts"],
       "@redspark/rsh-tool-ralph/runtime": ["./rsh/Engine/workflow/tool-ralph/src/runtime.ts"],

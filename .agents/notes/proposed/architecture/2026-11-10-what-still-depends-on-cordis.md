@@ -44,12 +44,75 @@ Guessing which gates to run does not work: each deletion so far surfaced a diffe
 
 `session-query-spill` cannot be replayed as recorded: its bash step greps an absolute spill path under `/tmp/dsh-acp-snap-<random>`, which no fixture can predict, and the spill path is the subject of the assertion. A migration would have to rewrite the step to discover the path, which changes what the scenario proves.
 
-## Acceptance criteria
+## What retiring the templates actually requires
+
+The six templates name seven bundle packages. Measured, they are not comparable in size: `base` declares **88** dependencies and `web-app` **86**, while `headless` has 6, `rsh` 10, `sdk-app` 4, `sdk-minimal` 27 and `acp-app` 3. `base` is shared by every template except `sdk-minimal`, so it is the layer that must go last.
+
+The shipped Native profile composes **12 rows**, and only three of them name the same concerns as `base` at all. The other **85 packages `base` pulls in have no Native counterpart in the profile**: agent loop, system prompt, the tool presets, the command surface, the Web API and its client, and so on. A Native profile today is a headless skeleton, not a replacement for a full application bundle.
+
+That makes deleting Cordis a product-level migration rather than a packaging step: each of those 85 either needs a Native form, must be deleted as dead, or must be declared out of scope because the application it serves is itself retired. The scenario work in this note is necessary but not sufficient, and the number that governs the plan is 85, not 6.
+
+## The measured work behind the 88
+
+That 85 figure is the gap between `base`'s dependency list and the 12 rows the shipped Native profile names, but it overstates the work. Measured against package manifests, **64 of `base`'s 88 packages already carry a `dsh.native` entry**. Only 24 do not, and they fall into four groups:
+
+**Deletable as vendored Cordis.** `cordis-plugin-hmr` and `cordis-plugin-timer` are pinned Cordis sources with no Native form and no reason to acquire one.
+
+**Already replaced, under a sibling name.** `rsh-agent`, `rsh-tools`, `rsh-subagent`, `rsh-tool-jobs` and `rsh-sandbox-policy` each have a `rsh-native-*` twin that the Native profile composes instead. These need their Cordis half deleted once nothing else imports it, not migrated.
+
+**Genuinely unported, and the real target list.** `agent-loop`, `agent-default-model`, `llm`, `session`, `system-prompt`, `jobs-local`, `tool-present`, `session-checkpoint-policy`, `subagent-spawn-in-process`, `subagent-fork-in-process`, `user-approval`, `typert-loader`, `typert-registry` and the Web `api-gateway` have no Native counterpart. Some are already covered by a differently named Native package (`native-headless` owns the loop, `native-approval` owns approval), so each needs checking rather than porting blind.
+
+**Compatibility bridges.** `compat-settings-adapters`, `plugin-host` and `subagent-acp` exist only to adapt Cordis; they disappear with it.
+
+Checking the unported fourteen against the Native packages that exist resolves most of them:
+
+- **Covered by a Native package under another name.** `agent-loop` is the loop inside `native-headless` (which provides `application` and `rootExecution`); `system-prompt` is `native-prompt` (provides `promptSections`); `session` and `llm` are the library halves the Native packages import directly; `user-approval` is `native-approval`; `subagent-spawn-in-process` and `subagent-fork-in-process` are providers `native-subagent` hosts. These need their Cordis half deleted once nothing imports it.
+- **Truly unported and worth a decision.** `agent-default-model` (no Native consumer, already ruled out), `jobs-local`, `tool-present`, `session-checkpoint-policy`, `typert-loader`, `typert-registry` and the Web `api-gateway` have no Native counterpart. `tool-present` is an older presentation mechanism the Native tool registry supersedes; `typert-*` are the type registry, not runtime behaviour.
+
+So the actionable remainder is roughly seven packages, each needing a one-line decision (delete as superseded, port, or declare out of scope), plus the deletions already identified. That is a list a person can finish; "85 packages" was not.
+
+**None of those seven is deletable today, and the reason is the same for all of them: each is still imported.** Measured, `agent-default-model` has 6 importers, `api-gateway` 5, `typert-registry` 3, `jobs-local` and `tool-present` 2 each, and `session-checkpoint-policy` and `typert-loader` 1 each — and in every case at least one importer is the `base` bundle or a live Web/CLI package (`session-controller`, `webhook`, `sdk-runtime`). The two that earlier looked like dead code, `time-context` and `tmux-context`, differed in exactly this respect: nothing imported them.
+
+Thirteen Cordis-only packages have no importer at all, and none of them is a free deletion either. `cordis-plugin-logger-console` is vendored Cordis source. Three are the `experimental/*` profiles and bundles, which are published artifacts no shipped profile happens to name. `storage-sqlite`, `tool-str-replace-editor` and `typert/generator` are documented, working seams — `storage-sqlite` appears in `capability-seams.md` as the example of a selectable backend, and the tool editor is registered in the generated tool catalog. `fs-e2b` and `subprocess-e2b` are the remote-execution adapters. The Python SDK runtime closure is a build artifact. Deleting any of them removes a capability that a consumer outside this repository could be selecting.
+
+The bundles are layered, not independent: `headless` declares only 6 dependencies because it is a *patch over* `base` (`cordis.patch.yml` opens with "one-shot task mode directly over dsh-base" and adjusts three rows `base` already mounts). `web-app` has 86 of its own because it adds a whole Host and client. Taking one item from that list to resolution shows what the answer usually is. `session-checkpoint-policy` exists to flush the Session at three semantic boundaries: before a model request is dispatched, before a top-level tool body runs, and before the next step. `native-headless` already does all three itself — it appends `tool/call` and awaits `persist()` **before** invoking the body (line 1862 then 1864), persists the request prefix before dispatch, and persists at each step boundary. The separate Cordis plugin therefore has no Native counterpart because the Native loop inlined the guarantee rather than adopting it as a policy.
+
+That is the pattern to expect for most of the list: not a port, but a decision that an existing Native package already owns the concern. It also means the count of real work falls each time an item is checked.
+
+The next item checked, `tool-present`, does not resolve that way and is the first genuine port. It is a 109-line Cordis tool exposing `present`, the call that declares finished files as deliverables. **No Native profile composes it and no Native package implements it** — verified by searching for a `present` tool registration across `src` and for the row across every native test profile, both empty. It is portable in principle: it needs the scoped registry that already exists, plus two things the Native side does not expose — an open-turn boundary (it reads `sessionProjections.stateOf(session, 'turnBoundary')`) and the presented-files projection that the Web client renders. So the cost is the tool plus those two seams, not the 109 lines alone.
+
+Two items checked, one resolved for free and one a real port. That ratio is the useful output of this round: the list is not uniformly hard, but it is not uniformly free either, and only checking each item tells which it is.
+
+The third item, `typert-loader`, resolves to a third category: **it is Cordis-shaped by construction.** Its job is to watch Loader entries — it reacts to `internal/plugin` emissions, resolves each mounted entry's manifest, and withdraws registrations when the entry unmounts. The Native runtime has no Loader to watch, so nothing about it survives the deletion; the Native side contains zero references to `typert` at all. Its sibling `typert-registry` is likewise the reflection/RPC layer the Cordis Web API uses, and the Native Web host does not.
+
+So the categories are three, not two: **already owned by a Native package** (`session-checkpoint-policy`), **portable with extra seams** (`tool-present`), and **Cordis-shaped, deleted with the runtime** (`typert-loader`, and its registry once the Cordis Web API is out of scope). `agent-default-model` turns out to belong to the first category rather than being an open question: it provides `agentDefaultModel`, which has **no runtime consumer in `rsh/Engine`** — only documentation, generator scripts and its own tests name it — while `native-model-selection` provides `modelSelection`, the service Native profiles actually compose. `compat-*` belongs to the third category. `jobs-local` is the fourth item and belongs to the first category: `native-jobs` already provides the `jobs` service, and the Native background-job scenarios exercised it — `background-job-admission` asserts the concurrency limit through it. The two implementations differ in size (311 lines against 496) because the Cordis one carries extra production-side bookkeeping, not because the Native one lacks the capability the seam promises.
+
+That leaves one genuinely open item: the Web `api-gateway`, which is gated behind deciding whether the Cordis Web API is in scope at all.
+
+So `base` is the layer every other template stands on, and it is the only one whose retirement actually means anything.
+
+The Native side already demonstrates that the shape is achievable: `native-ptc` composes 19 real product rows — agent, tools, prompt, model execution, jobs, sandbox policy, subprocess, shell, bash tool, code runtime and session persistence — and runs a working agent. What it lacks is not depth but breadth: no system prompt identity beyond the prompt registry, no agent instructions, no attachments at startup, no command surface, no Web API. Those are the 24 packages.
+
+That inverts the ordering the objective states. Step 4 cannot be finished before step 5, because a package stays alive as long as its bundle layer imports it, and the bundle layer stays alive as long as a profile template names it. The first real move is therefore to make a Native profile able to replace the `base` layer — which is the 85-package question — or to delete the consumers that are themselves out of scope (the Web API, the Python SDK runtime).
+
+## The Web surface decides the endgame
+
+The one item left open, the Web `api-gateway`, is not a package question but a scope question, and the measurement settles what each answer costs. Of the 75 packages under `rsh/Programs/Web`, **35 are Cordis-only, 33 already carry a `dsh.native` entry, and 7 neither**. The split matters: the client is already half migrated (27 native against 22 Cordis), while the API side is the reverse (2 native against 6 Cordis).
+
+Decisively, `native-web-host` exists and is complete — it provides `nativeWebHost`, `hostConnection`, `httpRoutes` and `application` — but **nothing outside the package consumes it**. So the Native Web path is built and has never been wired into an application profile. Deleting Cordis outright therefore cannot happen before someone assembles a Native Web profile that composes `native-web-host` and the 27 migrated client packages, and ports or drops the remaining 28.
+
+That is a product programme, not a cleanup step. It is also the honest boundary of this objective: steps 1 to 3 and the engine-side part of step 4 are done or measured, while step 5 depends on a Web decision the objective does not make.
+
+
 
 - `verify-native-dependencies` passes at every step of the deletion.
 - Each deleted package's remaining importers are named in the pull request that deletes it.
 - `Programs/Web` is either migrated or explicitly recorded as out of scope, with the reason.
 - No package outside `rsh/Compatibility` imports `@redspark/cordis` at the end.
+
+## Acceptance criteria
+
+The proposals above are satisfied per package as each is resolved: a package that an existing Native package already owns needs its Cordis half deleted once nothing imports it; a `Cordis-shaped` package disappears with the runtime; a genuinely unported one gets a Native entry. The scenarios count when they replay on the Native profile in CI. The Web scope decision is recorded before any Web package moves.
 
 ## Risks
 
