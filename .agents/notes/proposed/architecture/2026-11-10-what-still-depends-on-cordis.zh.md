@@ -117,6 +117,8 @@ CLI 参考文档用自己的表格陈述了这个区分：`web`、`headless`、`
 
 因此建议是「裁剪」而非全量移植或退役：那两个持久 shell 工具是 `sdk-minimal` 唯一在 Native 侧缺失的能力，也正是它与 `native-sdk` 的区别所在。那两个工具是可移植而非被阻塞的：它们只注入 `tools` 与 `terminals`，而 `rsh-terminal` **已经原生提供 `terminals`**——`spawn`、`list`、`startSend`、`read`、`kill` 都在 Native 注册表上存在。唯一差别是 `spawn` 签名：Cordis 服务取 `(owner, request, signal)`，Native 取单个 `NativeTerminalSpawnSpec`。所以这次移植是在一个已存在的面之上重写 438/474 行，而不是新增能力。
 
+有两个事实界定了这件事值多少。这两个工具只有两个依赖方——`sdk-minimal` 与 `rsh/Programs/SDK/python/sdk-runtime`——而 Python 运行时只是**声明**了它们：它没有任何 `cordis.yml` 组合二者，所以 `sdk-minimal` 是它们真正被挂载的唯一位置。这让它成为一个模板形状的任务而非产品范围的任务，也意味着这次移植的价值取决于那个 profile 本身是否值得保留。
+
 用其他 native profile 已在用的包加一个 Native 持久 shell 组成极简组合即可关闭该模板；反之退役这个 profile 名，会移除一个恰恰因为比默认更小而存在的有文档 profile——这与迁移应当给用户带来的代价正好相反。
 
 这个区分很重要，因为两种理解的剩余工作量完全不同，而本笔记此前的说法（「Native Web 这条路建好但从未接线」）是错的：它既建好了**也**接线了，一个 Web e2e 测试用二十四个模块链接组合它。
