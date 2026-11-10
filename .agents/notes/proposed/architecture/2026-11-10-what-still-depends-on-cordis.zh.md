@@ -81,7 +81,9 @@ Status: proposed
 
 第三项 `typert-loader` 归入第三类：**它天然就是 Cordis 形状的。** 它的职责是监视 Loader 条目——响应 `internal/plugin` 事件、解析每个已挂载条目的 manifest、在条目卸载时撤回注册。Native 运行时没有 Loader 可监视，所以它在删除后没有任何部分能存活；Native 侧对 `typert` 的引用数为零。它的兄弟包 `typert-registry` 同样是 Cordis Web API 使用的反射/RPC 层，而 Native Web host 不用它。
 
-所以类别是三类而非两类：**已被 Native 包拥有**（`session-checkpoint-policy`）、**可移植但需额外接缝**（`tool-present`）、**Cordis 形状、随运行时删除**（`typert-loader`，以及一旦 Cordis Web API 划出范围后的它的注册表）。`agent-default-model` 与 `compat-*` 也属于第三类。这样真正开放的剩余工作只有 `jobs-local` 与 Web 的 `api-gateway`，而这两者都被「Cordis Web API 是否在范围内」这个决定所阻塞。
+所以类别是三类而非两类：**已被 Native 包拥有**（`session-checkpoint-policy`）、**可移植但需额外接缝**（`tool-present`）、**Cordis 形状、随运行时删除**（`typert-loader`，以及一旦 Cordis Web API 划出范围后的它的注册表）。`agent-default-model` 与 `compat-*` 也属于第三类。`jobs-local` 是第四项，属于第一类：`native-jobs` 已经提供 `jobs` 服务，且 Native 的后台任务场景跑的就是它——`background-job-admission` 通过它验证并发上限。两个实现体量不同（311 行对 496 行），是因为 Cordis 那份带了额外的生产侧记账，而不是 Native 那份缺少该接缝承诺的能力。
+
+这样真正开放的只剩一项：Web 的 `api-gateway`，它被「Cordis Web API 是否在范围内」这个决定所阻塞。
 
 所以 `base` 是所有其他模板立足的那一层，也唯一一个退役真正有意义的层。
 
