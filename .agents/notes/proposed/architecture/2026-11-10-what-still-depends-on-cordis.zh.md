@@ -101,7 +101,9 @@ Native 一侧已经证明这个形状可行：`native-ptc` 组合了 19 个真�
 
 这个说法同样是错的，核查包之后就能看出原因。**Native 对应物已经存在。** `rsh/Modules/Official/subagent/` 下有 `sdk-child`、`codex-app-server` 与 `acp-child`，三者都带 `dsh.native` 入口并提供 `externalSubagentDriver`——正是 `native-subagent` 消费的那份契约。`sdk-child` 是一个完整适配器：它需要 `sdkChildRuntimeLauncher`，而 `rsh/Programs/CLI/src/native-profile-loader.ts` 会为 `sdk-child` 与 `acp-child` 行自动安装该服务。所以这三个 Cordis 桥不是「未移植的缺口」，而是与 Native 侧已交付能力并行的实现。
 
-差别在组合而非能力。出厂的 `sdk` profile 把 `subagents.providerName` 设为 `'spawn'` 且不组合任何子适配器行；只有 `native-sdk-dsh-child` 添加 `dsh-sdk-child` 并设 `providerName: 'dsh-sdk'`。因此剩下的是决定哪些 profile 名应当选用该外部驱动，而不是写一个。
+差别在组合而非能力。出厂的 `sdk` profile 把 `subagents.providerName` 设为 `'spawn'` 且不组合任何子适配器行；只有 `native-sdk-dsh-child` 添加 `dsh-sdk-child` 并设 `providerName: 'dsh-sdk'`。因此剩下的是决定哪些 profile 名应当选用该外部驱动，而不是写一个。这一点通过组合验证过：`dsh --profile native-sdk-dsh-child` 写出的 profile，其 `subagents` 行设 `providerName: 'dsh-sdk'`，并同时组合 `dsh-sdk-child`，而且该 profile 能启动——它退出只因探针传了任务参数，不是因为组合错误。缺失的 `sdkChildRuntimeLauncher` 由 loader 自行补上，当某个 profile 点名 `acp-child` 行时它也会同样处理。
+
+`sdk-child` 已为该 profile 组合。`acp-child` 与 `codex-app-server` **具备资格但从未被任何 profile 组合**，所以它们的 Native 入口在实践中不可达。这就是 Cordis 桥与 Native 对应物之间剩余的全部差别：三个包在两侧都存在，而 Native 侧只组合了三个中的一个。
 
 **六个 Cordis 模板名里已有五个具备出厂 Native 组合。** `rsh/Programs/CLI/src/native-profile-template.ts` 把 `headless` 映射到 `native-headless`、`web` 映射到 `native-web`、`sdk` 映射到 `native-sdk`、`acp` 映射到 `native-acp`、`rsh` 映射到 `native-tui`；只有 `sdk-minimal` 没有对应物。CLI 在其 manifest 中声明了十三个 native 模板，`native-web` 还自带客户端安装清单。所以第 5 步的工作不是「建一个 Native Web profile」——它已存在——而是「退役这些同名仍在解析到的 Cordis bundle」，并对 `sdk-minimal` 作出决定。
 
