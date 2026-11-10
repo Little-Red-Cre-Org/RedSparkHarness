@@ -256,8 +256,6 @@
                                  "@redspark/rsh-skill-filesystem":  "workspace:^",
                                  "@redspark/rsh-terminal":  "workspace:^",
                                  "@redspark/rsh-terminal-bash":  "workspace:^",
-                                 "@redspark/rsh-time-context":  "workspace:^",
-                                 "@redspark/rsh-tmux-context":  "workspace:^",
                                  "@redspark/rsh-tool-bash-persistent":  "workspace:^",
                                  "@redspark/rsh-tool-cordis":  "workspace:^",
                                  "@redspark/rsh-tool-jobs":  "workspace:^",
