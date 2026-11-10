@@ -115,6 +115,8 @@ Native 一侧已经证明这个形状可行：`native-ptc` 组合了 19 个真�
 
 所以两者都被记录为受运行时能力阻塞，而不是受测试基础设施阻塞——这改变了「解除阻塞」的代价：那是循环层的工作，且必须自带场景覆盖，而不是改一下 fixture。
 
+`skill-load` 的阻塞来自内容而非能力：它的 setup 会复制 `agent-presets/presets/cordis/skills/editing-cordis-compositions/SKILL.md`，而该文件已不在仓库中。工具、注册表与文件系统来源都有 Native 入口，迁移后的场景能成功组合并调用它们——它回答该技能不存在，因为录制所依据的 fixture 已随 presets 退役。因此回放它需要针对仍然存在的技能重新录制，而不是 Native 移植。
+
 ## Acceptance criteria
 
 上面的提案按包逐个满足：已被现有 Native 包拥有的，在无人引用后删掉它的 Cordis 那一半；Cordis 形状的随运行时消失；确实未移植的补上 Native 入口。场景以其在 CI 中于 Native profile 上回放通过为准。Web 的范围决定必须在任何 Web 包移动之前记录下来。
