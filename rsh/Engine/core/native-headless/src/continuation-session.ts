@@ -1,5 +1,6 @@
 /** Program-owned resident Session storage and durable pending-message projection. */
-import { interruptedTurnClosers, Session, type SessionEvent, type SessionHeader, type TurnEndReason } from '@redspark/rsh-session/native'
+import { interruptedTurnClosers, Session, type SessionEvent, type SessionEventMap, type SessionEventType,
+  type SurfaceEventType, type SurfaceIntent, type SessionHeader, type TurnEndReason } from '@redspark/rsh-session/native'
 import type { MessageId, TextBlock, UserMessage } from '@redspark/rsh-llm/native'
 import type { InboxTarget } from '@redspark/rsh-native-agent'
 import { foldNativeInboxEvent, type NativeInboxState } from '@redspark/rsh-native-agent/inbox'
@@ -122,6 +123,27 @@ export class NativeContinuationSession {
     this.foldInbox(event)
     this.pending.push(event)
     for (const observer of this.tracked) observer(event)
+  }
+
+  /**
+   * Append one event to the single shared contiguous batch without persisting yet.
+   *
+   * An extension that records its own facts mid-turn uses this instead of the Session: the
+   * batch is contiguous, so an append that bypasses it desynchronizes the next persist.
+   * Persisting here would split the batch the caller is still assembling, so the caller's
+   * own persist point owns durability.
+   * @param type - durable event name.
+   * @param data - exact payload for that event.
+   * @param opts - surface intent for events that carry one.
+   * @returns the appended event, already tracked in the pending batch.
+   */
+  append<T extends SessionEventType>(type: T, data: SessionEventMap[T],
+    ...opts: T extends SurfaceEventType ? [opts: SurfaceIntent<T>] : []
+  ): SessionEvent<T> {
+    this.assertOpen()
+    const event = this.session.append(type, data, ...opts)
+    this.track(event as SessionEvent)
+    return event
   }
 
   /**

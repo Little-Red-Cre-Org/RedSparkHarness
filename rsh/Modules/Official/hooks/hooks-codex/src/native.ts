@@ -27,8 +27,7 @@ import {
 import type { NativeStepAdmissionContext, NativeStepAdmissionDecision } from '@redspark/rsh-native-session-execution'
 import type { NativeSessionStartNotice } from '@redspark/rsh-native-headless/lifecycle-events'
 import {
-  appendHookInvoked,
-  appendHookResult,
+  summarizeStderr,
   createDetachedRuns,
   DEFAULT_HOOK_TIMEOUT_MS,
   DEFAULT_STDERR_SUMMARY_MAX_CHARS,
@@ -40,6 +39,30 @@ import {
   type MergedHookOutcome,
 } from '@redspark/rsh-hook-protocol/native'
 import { parseCodexConfig, type CodexHookConfig, type CodexSupportedEvent } from './config.ts'
+
+/**
+ * Record one log-only hook event through the application's tracked appender.
+ *
+ * The appender keeps the application's single contiguous pending batch; writing the
+ * Session directly would desynchronize its next persist.
+ * @param append - the invocation's tracked appender, absent outside an application.
+ * @param session - Session the event belongs to.
+ * @param event - the exact durable event to record.
+ */
+async function appendHook(
+  append: HookAppend | undefined, session: Session,
+  event: { readonly type: 'hook/invoked' | 'hook/result'; readonly data: unknown },
+): Promise<void> {
+  if (append !== undefined) {
+    // The two hook events are log-only and carry no surface intent.
+    await (append as (type: string, data: unknown) => Promise<unknown>)(event.type, event.data)
+    return
+  }
+  ;(session.append as (type: 'hook/invoked' | 'hook/result', data: never) => unknown)(event.type, event.data as never)
+}
+
+/** One hook record's write path: the tracked appender may be synchronous or async. */
+type HookAppend = (type: 'hook/invoked' | 'hook/result', data: unknown) => unknown
 
 /** The plugin source every context this bridge injects is stamped with. */
 const PLUGIN_SOURCE: MessageSource = { kind: 'plugin', plugin: 'hooks-codex' }
@@ -266,7 +289,14 @@ function postToolPayload(call: Readonly<NativeToolPostCall>, model: string): Rec
  */
 async function runPoint(
   context: NativeContext, settings: Settings, point: CodexSupportedEvent, matchQuery: string, payload: unknown,
-  opts: { readonly session?: Session; readonly turn?: number; readonly signal: AbortSignal; readonly plainStdoutAsContext?: boolean },
+  opts: {
+    readonly session?: Session
+    readonly turn?: number
+    readonly signal: AbortSignal
+    readonly plainStdoutAsContext?: boolean
+    /** The application's tracked appender; a hook event must be written through it. */
+    readonly append?: HookAppend | undefined
+  },
 ): Promise<MergedHookOutcome> {
   const groups: MatcherGroup[] = settings.parsed[point] ?? []
   const outputs: HookOutput[] = []
@@ -281,9 +311,11 @@ async function runPoint(
       const turn = opts.turn
       const records = session !== undefined && turn !== undefined
       if (records) {
-        appendHookInvoked(session, {
-          turn, point, dialect: 'codex', handlerId,
-          ...group.matcher === undefined ? {} : { matcher: group.matcher },
+        await appendHook(opts.append, session, {
+          type: 'hook/invoked', data: {
+            turn, point, dialect: 'codex', handlerId,
+            ...group.matcher === undefined ? {} : { matcher: group.matcher },
+          },
         })
       }
       const { output, durationMs } = await runHook(context.require('shell'), hook, {
@@ -308,8 +340,15 @@ async function runPoint(
         console.warn(`hooks-codex: ${point} hook emitted a systemMessage, which is not surfaced (ignored)`)
       }
       if (records) {
-        appendHookResult(session, {
-          turn, point, handlerId, output, stderrSummaryMaxChars: settings.stderrSummaryMaxChars, durationMs,
+        const stderrSummary = summarizeStderr(output.stderr, settings.stderrSummaryMaxChars)
+        await appendHook(opts.append, session, {
+          type: 'hook/result', data: {
+            turn, point, handlerId,
+            decision: output.decision ?? (output.continue === false ? 'stop' : 'pass'),
+            ...output.exitCode === undefined ? {} : { exitCode: output.exitCode },
+            ...stderrSummary === undefined ? {} : { stderrSummary },
+            durationMs,
+          },
         })
       }
     }
@@ -341,14 +380,17 @@ async function admitPrompt(
   }
   const merged = await runPoint(context, settings, 'UserPromptSubmit', '', payload, {
     session: ask.owner.session, turn: ask.turn, plainStdoutAsContext: true, signal: ask.signal,
+    ...ask.appendEvent === undefined ? {} : { append: ask.appendEvent as HookAppend },
   })
   if (merged.decision === 'deny') return { kind: 'reject', discard: ask.candidates.map(message => message.id) }
   // Context alone is not a veto: DELEGATE so a later admission hook can still reject.
   const downstream = await next()
   if (downstream.kind !== 'enter') return downstream
   const ours = contextFrom(merged)
+  // Admission may only select captured input, so the hook's guidance rides beside the
+  // selection and the Program appends it to the opened step.
   if (ours === undefined) return downstream
-  return { ...downstream, messages: [...downstream.messages, ours] }
+  return { ...downstream, context: [...downstream.context ?? [], ours] }
 }
 
 /**
@@ -410,6 +452,7 @@ function install(context: NativeContext, settings: Settings): void {
         session: call.session,
         ...call.turn === undefined ? {} : { turn: call.turn },
         signal: call.signal,
+        ...call.appendEvent === undefined ? {} : { append: call.appendEvent as HookAppend },
       })
       if (merged.decision === 'deny') return { kind: 'deny', reason: merged.reason ?? 'blocked by PreToolUse hook' }
       return next()
@@ -420,6 +463,7 @@ function install(context: NativeContext, settings: Settings): void {
         session: call.session,
         ...call.turn === undefined ? {} : { turn: call.turn },
         signal: call.signal,
+        ...call.appendEvent === undefined ? {} : { append: call.appendEvent as HookAppend },
       })
       const ours = contextFrom(merged)
       if (merged.decision === 'deny') {
@@ -448,6 +492,7 @@ function install(context: NativeContext, settings: Settings): void {
     }
     const merged = await runPoint(context, settings, 'Stop', '', payload, {
       session: notice.session, turn: notice.turn, signal: notice.signal,
+      ...notice.appendEvent === undefined ? {} : { append: notice.appendEvent as HookAppend },
     })
     if (merged.decision !== 'deny') return
     const text = merged.reason ?? 'continue: blocked by Stop hook'

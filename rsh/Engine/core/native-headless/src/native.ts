@@ -1614,17 +1614,21 @@ export class NativeHeadlessApplication implements NativeApplication {
               if (this.requestContexts?.hasProviders(agent.scope) === true) {
                 throw new Error('native-headless: request-context providers require the exact active Session owner')
               }
+              // No admission ran, so there is no hook context to append.
               return { inputs: await owner.claim(step === 1 ? 'next-turn' : 'next-step'), snapshot: undefined,
-                commitChecks: [], ...prepared }
+                commitChecks: [], context: [] as readonly UserMessage[], ...prepared }
             }
             while (true) {
               const snapshot = eligibleInboxSnapshot(owner, step)
               const candidates = [...snapshot.nextStep, ...snapshot.nextTurn]
               const commitChecks: NativeStepAdmissionCommitCheck[] = []
+              const admissionOwner = activeOwner
               let registrationOpen = true
               let decision: Awaited<ReturnType<NativeProgramActiveSession['admission']['decide']>>
               try {
                 decision = await activeOwner.admission.decide({ owner: activeOwner, turn, step, candidates, signal,
+                  // Admission hooks record through the same batch the committed step uses.
+                  appendEvent: (type, data, ...opts) => admissionOwner.append(type, data, ...opts),
                   registerCommitCheck: (check) => {
                     if (!registrationOpen) throw new Error('native-headless: admission commit checks must register before admission settles')
                     commitChecks.push(check)
@@ -1635,13 +1639,18 @@ export class NativeHeadlessApplication implements NativeApplication {
               if (decision.kind === 'reject') {
                 if (turnOwnership !== undefined) turnOwnership.preparingStep = false
                 await owner.remove(decision.discard, 'canceled', signal)
+                // A hook that refuses the prompt ends the turn deliberately, so the run
+                // reports a blocked turn rather than the failure exit a crash produces.
                 reason = { kind: 'blocked' }
+                exitCode = 0
                 return undefined
               }
               const prepared = await prepare()
               signal.throwIfAborted()
               if (!eligibleInboxMatches(owner, step, snapshot)) continue
-              return { inputs: decision.messages, snapshot, commitChecks, ...prepared }
+              return { inputs: decision.messages, snapshot, commitChecks, ...prepared,
+                // A hook's own guidance is appended with the opened step, not selected.
+                ...decision.context === undefined ? {} : { context: decision.context } }
             }
           }
           const initialInputs = await (async () => {
@@ -1672,6 +1681,7 @@ export class NativeHeadlessApplication implements NativeApplication {
               firstAdmission = false
               if (admitted === undefined) break
               const { inputs, selection, preparedStep, commitChecks } = admitted
+              const hookContexts = admitted.context ?? []
               const hasCurrentCandidates = (): boolean => admitted.snapshot === undefined
               || eligibleInboxMatches(owner, step, admitted.snapshot)
               if (!hasCurrentCandidates()) continue
@@ -1744,6 +1754,12 @@ export class NativeHeadlessApplication implements NativeApplication {
                 }
                 for (const input of inputs) {
                   track(session.append('user/message', input, { surfaceOp: 'append' }))
+                }
+                // A prompt-admission hook's guidance joins the opened step as its own
+                // sourced message; it is not captured input, so it is appended rather
+                // than selected.
+                for (const context of hookContexts) {
+                  track(session.append('user/message', context, { surfaceOp: 'append' }))
                 }
                 // The standing policies reach the model as one runtime-context snapshot, which a
                 // later identical snapshot must not duplicate: only a superseded text is appended.
@@ -1962,7 +1978,9 @@ export class NativeHeadlessApplication implements NativeApplication {
                 // admit another step through the exact active owner; the batch settles
                 // before the next admission reads it.
                 if (activeOwner !== undefined) {
-                  await this.context.events.serial(this.context.scope, 'turn/stopping', { agent, session, turn, step, signal })
+                  const stoppingOwner = activeOwner
+                  await this.context.events.serial(this.context.scope, 'turn/stopping', { agent, session, turn, step, signal,
+                    appendEvent: (type, data, ...opts) => stoppingOwner.append(type, data, ...opts) })
                   await persist()
                   signal.throwIfAborted()
                   if (activeOwner.messages('next-step').length > 0) {
@@ -1983,9 +2001,15 @@ export class NativeHeadlessApplication implements NativeApplication {
             reason = { kind: 'error', error: { code: 'STEP_LIMIT', message: 'native-headless: model step limit reached' } }
           }
         } catch (error: unknown) {
+          // A model failure arrives with the provider-neutral code its adapter classified.
+          // Collapsing it to UNKNOWN would leave the durable turn/end unable to say whether
+          // the run failed on credentials, rate limits or a server fault.
           reason = signal.aborted
             ? { kind: 'aborted', reason: cancellationCause(signal.reason) }
-            : { kind: 'error', error: { code: 'UNKNOWN', message: error instanceof Error ? error.message : String(error) } }
+            : { kind: 'error', error: {
+              code: error instanceof HarnessError ? error.code : 'UNKNOWN',
+              message: error instanceof Error ? error.message : String(error),
+            } }
           throw error
         } finally {
           if (reason.kind === 'completed' || reason.kind === 'max-tokens' || reason.kind === 'error' && reason.error.code === 'STEP_LIMIT') {

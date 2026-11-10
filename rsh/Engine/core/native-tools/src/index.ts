@@ -584,9 +584,12 @@ export class NativeToolRegistry {
    * Ask the pre-tool interception points about one call and adopt their answer.
    * @param call - invocation whose Agent, Session and cancellation remain fixed.
    * @param candidate - parsed arguments the body would receive before any rewrite.
+   * @param append - the application's tracked appender an interceptor may record through.
    * @returns allow/deny/ask decision, with the arguments the body must run with.
    */
-  async decideBeforeCall(call: NativeToolPreCallInput, candidate: unknown): Promise<NativeToolPreDecision> {
+  async decideBeforeCall(
+    call: NativeToolPreCallInput, candidate: unknown, append?: NativeToolPreCall['appendEvent'],
+  ): Promise<NativeToolPreDecision> {
     if (this.disposal !== undefined) throw new Error('native-tools: registry is disposed')
     const interceptors = [...this.preInterceptors.visible(call.agent.scope).values()]
     if (interceptors.length === 0) return { kind: 'allow' }
@@ -595,6 +598,7 @@ export class NativeToolRegistry {
       agent: call.agent, session: call.session, callId: call.callId, name: call.name,
       arguments: deepFreeze(structuredClone(candidate)), signal,
       ...call.turn === undefined ? {} : { turn: call.turn },
+      ...append === undefined ? {} : { appendEvent: append },
     })
     const completion = this.beginInterception(interceptors)
     try {
@@ -612,9 +616,12 @@ export class NativeToolRegistry {
    * Ask the post-tool interception points about one body result and adopt their answer.
    * @param call - admitted invocation, or the application's own builtin facts.
    * @param result - body result before any post-tool decision transforms it.
+   * @param append - the application's tracked appender an interceptor may record through.
    * @returns the result to record, with decision contexts retained on it.
    */
-  async decideAfterCall(call: NativeToolPreCallInput, result: NativeToolResult): Promise<NativeToolResult> {
+  async decideAfterCall(
+    call: NativeToolPreCallInput, result: NativeToolResult, append?: NativeToolPreCall['appendEvent'],
+  ): Promise<NativeToolResult> {
     if (this.disposal !== undefined) throw new Error('native-tools: registry is disposed')
     const interceptors = [...this.postInterceptors.visible(call.agent.scope).values()]
     if (interceptors.length === 0) return result
@@ -630,6 +637,7 @@ export class NativeToolRegistry {
             agent: call.agent, session: call.session, callId: call.callId, name: call.name,
             arguments: call.arguments, signal, result: original,
             ...call.turn === undefined ? {} : { turn: call.turn },
+            ...append === undefined ? {} : { appendEvent: append },
           }), next)
         })
       return this.adoptPostDecision(call, original, decision)
@@ -859,7 +867,9 @@ export class NativeToolRegistry {
     // The post-tool point runs for every call, before result policies transform the
     // outcome, so a blocking decision makes the model read corrective feedback instead
     // of the output it was about to receive.
-    const accepted = await this.decideAfterCall(call, original)
+    // Interceptors may record their own audit facts; they must write through the same
+    // tracked appender the application uses, or the next persist sees a seq gap.
+    const accepted = await this.decideAfterCall(call, original, call.appendEvent)
     call.signal.throwIfAborted()
     if (policies.length === 0 && entry.tool.finalizeResult === undefined) return accepted
     const selected = await processAsyncWaterfall(policies.length, accepted, call.signal, (index, next) => {
@@ -1249,7 +1259,7 @@ export class NativeToolRegistry {
     signal.addEventListener('abort', cancelled, { once: true })
     try {
       signal.throwIfAborted()
-      const decision = await this.decideBeforeCall(admitted, argumentsValue)
+      const decision = await this.decideBeforeCall(admitted, argumentsValue, admitted.appendEvent)
       signal.throwIfAborted()
       const denial = await this.resolvePreDecision(admitted, decision)
       if (denial !== undefined) {

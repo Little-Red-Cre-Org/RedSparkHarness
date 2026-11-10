@@ -11,7 +11,7 @@
  */
 
 import type { NativeAgent } from '@redspark/rsh-native-agent'
-import type { Session } from '@redspark/rsh-session/native'
+import type { Session, SessionEvent, SessionEventMap, SessionEventType, SurfaceEventType, SurfaceIntent } from '@redspark/rsh-session/native'
 import type {} from '@redspark/rsh-native-runtime'
 
 /** Why a Session reached its start boundary. */
@@ -34,6 +34,15 @@ export interface NativeTurnStoppingNotice {
   readonly step: number
   /** Cancellation for work this announcement starts. */
   readonly signal: AbortSignal
+  /**
+   * Append one event to the application's single tracked batch, without persisting.
+   *
+   * A listener that records its own facts must use this rather than the Session: the
+   * batch is contiguous, and an append that bypasses it desynchronizes the turn this
+   * announcement is closing.
+   */
+  readonly appendEvent?: <T extends SessionEventType>(type: T, data: SessionEventMap[T],
+    ...opts: T extends SurfaceEventType ? [opts: SurfaceIntent<T>] : []) => SessionEvent<T>
 }
 
 declare module '@redspark/rsh-native-runtime' {

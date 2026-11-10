@@ -57,7 +57,6 @@ The Provider queries through the selected `shell` service and returns a source-a
 - [tmux-context subsystem](../../../../Docs/subsystems/tmux-context.md)
 - [Cordis-free tmux-context Definition](../../../../Engine/context/tmux-context-definition/README.md)
 - [Native Headless](../../../../Engine/core/native-headless/README.md)
-- [Compatibility tmux-context Provider](../../../../Engine/context/tmux-context/README.md)
 - [Durable Native tmux location decision](../../../../../.agents/notes/implemented/feature/2026-10-12-native-tmux-context.md)
 
 ## Model Experience

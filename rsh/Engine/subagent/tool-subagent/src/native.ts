@@ -2,7 +2,7 @@
 import type { NativePlugin } from '@redspark/rsh-native-runtime'
 import type { ContentBlock } from '@redspark/rsh-llm/native'
 import { ReasoningEffortId } from '@redspark/rsh-llm/native'
-import type { NativeExternalSubagentApprovalRequest, NativeSubagentOptions, NativeSubagentResult,
+import type { NativeExternalSubagentApprovalRequest, NativeSubagentOptions, NativeSubagentResult, NativeSubagentStopReason,
   NativeExternalSubagentResult, NativeSubagentBackground, NativeSubagentContinuation } from '@redspark/rsh-native-subagent'
 import type { NativeToolExecution, NativeValueToolContribution } from '@redspark/rsh-native-tools'
 import type {} from '@redspark/rsh-native-tool-jobs'
@@ -14,6 +14,21 @@ function responsesGeneration(call: NativeToolExecution): NativeToolExecution['re
     if (current.responsesGeneration !== undefined) return current.responsesGeneration
   }
   return undefined
+}
+
+/**
+ * Name one non-completed child outcome in the terms the compatibility tool uses.
+ * @param reason - the child's terminal stop reason.
+ * @returns the model-facing headline shown before the child's partial output.
+ */
+function stopReasonHeadline(reason: NativeSubagentStopReason): string {
+  switch (reason) {
+    case 'max-tokens': return 'subagent run hit its token limit before finishing'
+    case 'aborted': return 'subagent run was cancelled'
+    case 'refusal': return 'subagent declined the task'
+    case 'error': return 'subagent run failed'
+    default: return `subagent run ended abnormally (${reason})`
+  }
 }
 
 function resolveConfig(input: unknown): Config {
@@ -136,8 +151,22 @@ export const plugin: NativePlugin = {
               meta: { kind: 'subagent', childSessionId: result.id, provider: result.provider, messageId: result.messageId } }
             if ('jobId' in result) return { isError: false, content: [{ type: 'text', text: `Background subagent started. Job: ${result.jobId}. Child session: ${result.id}. Use job_output to read output or wait; job_kill requests cancellation.` }],
               meta: { kind: 'subagent', childSessionId: result.id, provider: result.provider, jobId: result.jobId } }
-            const content: ContentBlock[] = [...result.output]
-            if (result.stopReason !== 'completed') content.unshift({ type: 'text', text: `Subagent ended: ${result.stopReason}. Partial output follows.` })
+            // A child's reasoning is its own; only its text answer is the parent's result.
+            // Passing every block through would hand the parent model the child's private
+            // chain of thought, which the compatibility tool never does.
+            const content: ContentBlock[] = result.output.filter(
+              (block): block is Extract<ContentBlock, { type: 'text' }> => block.type === 'text')
+            if (result.stopReason !== 'completed') {
+              // The headline names what happened, then the child's own words follow as their
+              // own block; a model that only saw "ended: max-tokens" could not tell a refusal
+              // from a truncation, and would lose the partial answer the child did produce.
+              const partial = content.map(block => block.type === 'text' ? block.text : '').join('')
+              // One block carries the headline and the child's preserved partial answer, which
+              // is the shape the compatibility result renders.
+              content.splice(0, content.length, { type: 'text', text: partial.length === 0
+                ? stopReasonHeadline(result.stopReason)
+                : `${stopReasonHeadline(result.stopReason)}\nPartial output before the run ended:\n${partial}` })
+            }
             return { content, isError: result.stopReason !== 'completed', meta: {
               kind: 'subagent', ...'remoteId' in result ? { externalChildId: result.id, remoteId: result.remoteId }
                 : { childSessionId: result.id }, provider: result.provider, stopReason: result.stopReason,

@@ -2,7 +2,8 @@
 import type { NativeAgent } from '@redspark/rsh-native-agent/definition'
 import type { InboxTarget } from '@redspark/rsh-native-agent/inbox'
 import type { MessageId, TextBlock, UserMessage } from '@redspark/rsh-llm/native'
-import type { Session, SessionEvent, SessionId, TurnEndCancelCause, TurnEndReason } from '@redspark/rsh-session/native'
+import type { Session, SessionEvent, SessionEventMap, SessionEventType, SessionId, SurfaceEventType, SurfaceIntent,
+  TurnEndCancelCause, TurnEndReason } from '@redspark/rsh-session/native'
 
 /** Live Program-owned interaction recipient and the root Session displaying its requests. */
 export interface NativeProgramInteractionOwner {
@@ -19,6 +20,15 @@ export interface NativeStepAdmissionContext {
   readonly step: number
   readonly candidates: readonly UserMessage[]
   readonly signal: AbortSignal
+  /**
+   * Append one event to the application's single tracked batch, without persisting.
+   *
+   * An admission hook that records its own facts must use this rather than the Session:
+   * the batch is contiguous, and an append that bypasses it desynchronizes the step about
+   * to commit. Absent outside a Program that owns a live writer.
+   */
+  readonly appendEvent?: <T extends SessionEventType>(type: T, data: SessionEventMap[T],
+    ...opts: T extends SurfaceEventType ? [opts: SurfaceIntent<T>] : []) => SessionEvent<T>
   /** Register a synchronous final check after preparation; it returns admitted inputs to cancel before commit. */
   readonly registerCommitCheck: (check: NativeStepAdmissionCommitCheck) => void
 }
@@ -29,9 +39,19 @@ export interface NativeStepAdmissionContext {
  */
 export type NativeStepAdmissionCommitCheck = () => readonly MessageId[]
 
-/** Inputs selected from the unchanged captured candidates, or ids rejected without a model request. */
+/**
+ * Inputs selected from the unchanged captured candidates, or ids rejected without a model request.
+ *
+ * `context` carries messages an admission hook contributes on its own authority — a hook's
+ * guidance is not captured input, so it cannot be selected. The Program appends them to the
+ * opened step after admission settles; their ids are not validated against the candidates.
+ */
 export type NativeStepAdmissionDecision =
-  | { readonly kind: 'enter'; readonly messages: readonly UserMessage[] }
+  | {
+    readonly kind: 'enter'
+    readonly messages: readonly UserMessage[]
+    readonly context?: readonly UserMessage[]
+  }
   | { readonly kind: 'reject'; readonly discard: readonly MessageId[] }
 
 /** Ordered admission hook; delegate with next() and recheck owned state after it settles. */

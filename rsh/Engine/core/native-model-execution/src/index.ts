@@ -1,5 +1,5 @@
 /** Native model execution and Session recording for a single Agent step. */
-import { AssistantStreamAccumulator, BlockAssembler, createAssistantMessage, normalizeLlmFailure,
+import { AssistantStreamAccumulator, BlockAssembler, createAssistantMessage, LlmError, normalizeLlmFailure,
   resolveCallConfigWithModel, resolveRetryPolicy, callConfigEquals, type LlmCallConfig, type LlmFailure, type LlmImageRequestPricing, type PreparedAdapterCall, type LlmResolvedModelInfo, type ReasoningEffortId, type ResolvedRetryPolicy, type FinishReason, type GenerateOptions, type Message, type StreamChunk } from '@redspark/rsh-llm/native'
 import { deepFreeze } from '@redspark/rsh-util-values'
 import { type Session, type SessionEvent } from '@redspark/rsh-session/native'
@@ -326,7 +326,10 @@ export class NativeModelExecution {
       const failure = assembler.finish.failure
       const kind = assembler.finish.kind
       append(session.append('assistant/attempt', { turn, step, stream: [...accumulator.snapshot()] }))
-      if (options.signal?.aborted === true) throw new Error(`native-model-execution: model ${kind}: ${failure.message}`)
+      // Keep the provider-neutral code the adapter classified: the turn's durable
+      // `turn/end` records it, and a caller that only sees a plain Error would report
+      // every model failure as UNKNOWN.
+      if (options.signal?.aborted === true) throw new LlmError(`native-model-execution: model ${kind}: ${failure.message}`, failure.code)
       const generation = session.surface.replaceGeneration
       const action = await this.recover({
         session, turn, step, provider: options.provider, failure,
@@ -335,7 +338,7 @@ export class NativeModelExecution {
       })
       options.signal?.throwIfAborted()
       if (action?.kind !== 'retry') {
-        throw new Error(`native-model-execution: model ${kind}: ${failure.message}`)
+        throw new LlmError(`native-model-execution: model ${kind}: ${failure.message}`, failure.code)
       }
       if (session.surface.replaceGeneration !== generation) {
         options = request.rebuildOptions()

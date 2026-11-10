@@ -12,7 +12,7 @@
 
 import { cpSync, copyFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { dirname, join } from 'node:path'
+import { delimiter, dirname, join } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { execa } from 'execa'
 
@@ -53,6 +53,13 @@ export interface NativeScenarioOptions {
   readonly model?: { readonly plugin: string; readonly config: Record<string, unknown> }
   /** Additional `node_modules` packages materialized from source text. */
   readonly localPackages?: readonly { readonly name: string; readonly files: Readonly<Record<string, string>> }[]
+  /**
+   * Contiguous child-generation fixture files, in role order.
+   *
+   * A scenario that records a child Session replays each child from its own script;
+   * the replay Provider consumes these positionally, so order is the role order.
+   */
+  readonly childFixtures?: readonly string[]
 }
 
 /** Resolved directories one scenario reads and writes. */
@@ -156,7 +163,13 @@ export function assembleNativeScenario(options: NativeScenarioOptions): NativeSc
         join(options.root, 'rsh/Programs/CLI/lib/bin.js'),
         '--profile', 'native-headless', task,
       ], {
-        env: { ...process.env, RSH_HOME: paths.home, ...runOptions.env ?? {} },
+        env: {
+          ...process.env, RSH_HOME: paths.home,
+          // The replay Provider consumes child scripts positionally, in role order.
+          ...options.childFixtures === undefined || options.childFixtures.length === 0
+            ? {} : { RSH_SNAPSHOT_CHILD_FILES: options.childFixtures.join(delimiter) },
+          ...runOptions.env ?? {},
+        },
         reject: false,
         timeout: runOptions.timeoutMs ?? 30_000,
       })
