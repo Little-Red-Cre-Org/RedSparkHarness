@@ -1062,7 +1062,7 @@ export const plugin: NativePlugin = {
   apiVersion: 1, name: '@redspark/rsh-native-acp', targets: ['host'],
   requires: ['fs', 'sessionPersistence', 'model', 'modelExecution', 'agents', 'activeSessions'],
   optional: ['tools', 'promptSections', 'sandboxPolicy', 'approval', 'codeRuntime', 'timeContext', 'tmuxContext', 'agentInstructions', 'modelSelection',
-    'sessionExecution', 'agentPresets', 'workspaceRegistry', 'attachments', 'modelDirectory', 'commands', 'requestContexts', 'tokenMeter'],
+    'sessionExecution', 'agentPresets', 'workspaceRegistry', 'attachments', 'modelDirectory', 'commands', 'requestContexts', 'sessionReference', 'tokenMeter'],
   provides: ['application', 'rootExecution'],
   resolve(input) {
     const config = resolveConfig(input)

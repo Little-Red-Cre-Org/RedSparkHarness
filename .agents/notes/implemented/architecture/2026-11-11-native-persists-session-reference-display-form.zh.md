@@ -10,7 +10,7 @@ Cordis 在存储用户消息之前把规范的 `dsh-session:` 提及改写成 `@
 
 ## Decision
 
-`native-headless` 只在追加已准入的用户消息时调用 `sessionReference.rewrite`。`agent-instructions.prepare` 仍接收原始输入，它的上下文追加在运行时上下文快照之前。需要十二行测试 profile 所没有的行时，场景把出厂 profile 目录作为 `profileRoot` 传入。`session-reference-spill` 通过该 profile 回放，`workflow-native` 提交规范提及，并期望存储的是展示形态。
+`native-headless` 只在追加已准入的用户消息时调用 `sessionReference.rewrite`。`agent-instructions.prepare` 仍接收原始输入，它的上下文追加在运行时上下文快照之前。需要十二行测试 profile 所没有的行时，场景把出厂 profile 目录作为 `profileRoot` 传入。通过自己的 context 构造应用的程序，包括 TUI、ACP、Web 和 SDK server，把 `sessionReference` 声明为 optional，因为这次查找用的是调用方的 context。`session-reference-spill` 通过该 profile 回放，`workflow-native` 提交规范提及，并期望存储的是展示形态。
 
 ## Alternatives considered
 

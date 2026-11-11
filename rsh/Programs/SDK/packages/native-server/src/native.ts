@@ -663,7 +663,7 @@ export const plugin: NativePlugin = {
   apiVersion: 1, name: '@redspark/rsh-native-sdk-server', targets: ['host'],
   requires: ['fs', 'sessionPersistence', 'model', 'modelExecution', 'agents', 'sessionExecution', 'activeSessions', 'attachments'],
   optional: ['subagents', 'tools', 'promptSections', 'sandboxPolicy', 'approval', 'codeRuntime', 'timeContext', 'tmuxContext', 'agentInstructions', 'modelSelection',
-    'agentPresets', 'workspaceRegistry', 'commands', 'requestContexts'],
+    'agentPresets', 'workspaceRegistry', 'commands', 'requestContexts', 'sessionReference'],
   provides: ['application', 'rootExecution'],
   resolve(input) {
     const config = resolveConfig(input)
