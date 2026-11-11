@@ -299,6 +299,14 @@ That is the whole of step 3. Two of the eight are small and already have their s
 ## A build trap that hides source edits from scenarios
 
 `pnpm run build:lib:host` is incremental for these packages, and on `rsh/Engine/core/native-headless` it did not pick up an edit to `src/native.ts`: after editing the pre-step projection, the built chunk contained no `rewrite` call at all, while deleting `lib/` and rebuilding produced it immediately. A scenario runs the profile from `lib/`, so a source change that the build skipped looks exactly like a change that has no effect. Any investigation that concludes "the wiring does nothing" must first confirm the built chunk contains the change, or it will chase a phantom for several rounds — which is how long this one cost.
+## What the reference chain needs, confirmed against the runtime
+
+Reading `native-runtime/src/host.ts` settles the question the earlier attempts kept re-asking. Resolution is topological: every installation is visited after the providers of its `requires` **and** `optional` keys, so row order in the profile does not matter, and `context.optional(key)` returns the provider whenever one exists in the same or an ancestor scope — an optional key absent from the profile resolves to `undefined` rather than failing.
+
+That makes the chain's shape plain. `agent-instructions` declares `optional: ['tools', 'sessionReference']` and calls `references?.prepare(...)`; nothing in `native-headless` needs to wire `sessionReference` for that call to happen, because the provider reaching `agent-instructions` is its own installation's dependency. So the remaining gap is not a missing wire in the application: it is that `native-headless` is the only place that would supply `sessionReference` on this profile at all, and it does not — `git show origin/main:rsh/Engine/core/native-headless/src/native.ts` contains no `sessionReference` reference.
+
+`agent-instructions`'s own tests never exercise the reference branch: `agent-instructions.spec.ts` and `agent-instructions.e2e.ts` mention `sessionReference` zero times. A branch that no test covers and that no profile reaches is why this took so long to locate.
+
 ## Acceptance criteria
 
 Each claim above names the file or command that produced it, so a reader re-runs the check rather than trusting the sentence.

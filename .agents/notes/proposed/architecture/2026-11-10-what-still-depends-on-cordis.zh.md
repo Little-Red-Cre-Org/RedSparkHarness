@@ -283,6 +283,14 @@ Native provider 只返回上下文；它从不改写直接消息，而 `native-h
 
 `pnpm run build:lib:host` 对这些包是增量的，而在 `rsh/Engine/core/native-headless` 上它没有拾取对 `src/native.ts` 的修改：改完 pre-step 投影之后，构建出的 chunk 里完全没有 `rewrite` 调用，而删除 `lib/` 再重建后立刻就有了。场景是从 `lib/` 运行 profile 的，所以一次被构建跳过的源码改动，看起来和一次毫无效果的改动完全一样。任何得出「接线不起作用」结论的调查，都必须先确认构建产物里含有该改动，否则会追着一个幻影跑好几轮——这一轮花掉的时间就是如此。
 
+## 引用链究竟需要什么（对照运行时确认）
+
+读 `native-runtime/src/host.ts` 解决了此前反复追问的那个问题。解析是拓扑式的：每个安装都在其 `requires` **与** `optional` 键的提供者之后被访问，因此 profile 里的行顺序无关紧要；而只要同一作用域或祖先作用域中存在提供者，`context.optional(key)` 就会返回它——profile 中缺失的可选键会解析为 `undefined`，而不是报错。
+
+这让这条链的形态变得清楚。`agent-instructions` 声明了 `optional: ['tools', 'sessionReference']` 并调用 `references?.prepare(...)`；该调用不需要 `native-headless` 去接线 `sessionReference`，因为到达 `agent-instructions` 的提供者就是它自己安装的依赖。所以剩余缺口不是应用里缺少接线：真正的问题是，在这个 profile 上唯一会提供 `sessionReference` 的地方就是 `native-headless`，而它并没有提供——`git show origin/main:rsh/Engine/core/native-headless/src/native.ts` 中不含任何 `sessionReference` 引用。
+
+`agent-instructions` 自身的测试从未覆盖引用分支：`agent-instructions.spec.ts` 与 `agent-instructions.e2e.ts` 提及 `sessionReference` 的次数为零。一个既无测试覆盖、又无 profile 抵达的分支，正是它耗时如此之久才被定位的原因。
+
 ## Acceptance criteria
 
 上面的提案按包逐个满足：已被现有 Native 包拥有的，在无人引用后删掉它的 Cordis 那一半；Cordis 形状的随运行时消失；确实未移植的补上 Native 入口。场景以其在 CI 中于 Native profile 上回放通过为准。Web 的范围决定必须在任何 Web 包移动之前记录下来。
