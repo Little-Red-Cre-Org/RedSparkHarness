@@ -6,6 +6,9 @@ import type { InboxTarget } from '@redspark/rsh-native-agent'
 import { foldNativeInboxEvent, type NativeInboxState } from '@redspark/rsh-native-agent/inbox'
 import type { NativeSessionPersistenceOperations } from '@redspark/rsh-session-persistence/native'
 
+/** Durable barrier observer that may reject to fail the pending flush. */
+export type NativeDurabilityCheckpoint = (session: Session) => void | Promise<void>
+
 type Writer = Awaited<ReturnType<NativeSessionPersistenceOperations['open']>>
 type AppendObserver = (event: SessionEvent) => void
 
@@ -19,6 +22,7 @@ export class NativeContinuationSession {
   private persistence: Promise<void> = Promise.resolve()
   private failure: { readonly error: unknown } | undefined
   private closing: Promise<void> | undefined
+  private readonly checkpoints = new Set<NativeDurabilityCheckpoint>()
 
   private constructor(readonly session: Session, readonly writer: Writer, readonly initialEvents: readonly SessionEvent[]) {
     for (const event of initialEvents) this.foldInbox(event)
@@ -287,6 +291,20 @@ export class NativeContinuationSession {
     await this.persist()
   }
 
+  /**
+   * Observe every durability barrier this owner is about to pass.
+   *
+   * A checkpoint runs after the tracked batch has been appended and before the writer
+   * flush is accepted, so a rejection aborts that flush and surfaces to the caller —
+   * the same failure shape as a storage error.
+   * @param checkpoint - synchronous-or-async observer of the pending barrier.
+   * @returns exact removal of that observer.
+   */
+  checkpoint(checkpoint: NativeDurabilityCheckpoint): () => void {
+    this.checkpoints.add(checkpoint)
+    return () => { this.checkpoints.delete(checkpoint) }
+  }
+
   /** Persist all tracked events in sequence and flush. @returns completion of the selected writer's durability barrier. */
   persist(): Promise<void> {
     const operation = this.persistence.then(async () => {
@@ -296,6 +314,7 @@ export class NativeContinuationSession {
         await this.writer.append(events)
         this.pending.splice(0, events.length)
       }
+      for (const checkpoint of this.checkpoints) await checkpoint(this.session)
       await this.writer.flush()
       for (const event of events) {
         for (const observer of this.accepted) {

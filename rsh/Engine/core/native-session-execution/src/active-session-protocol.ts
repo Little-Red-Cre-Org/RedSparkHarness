@@ -5,6 +5,9 @@ import type { MessageId, TextBlock, UserMessage } from '@redspark/rsh-llm/native
 import type { Session, SessionEvent, SessionEventMap, SessionEventType, SessionId, SurfaceEventType, SurfaceIntent,
   TurnEndCancelCause, TurnEndReason } from '@redspark/rsh-session/native'
 
+/** Observer of one pending durability barrier; a rejection fails the flush it guards. */
+export type NativeDurabilityCheckpoint = (session: Session) => void | Promise<void>
+
 /** Live Program-owned interaction recipient and the root Session displaying its requests. */
 export interface NativeProgramInteractionOwner {
   readonly agent: NativeAgent
@@ -182,6 +185,16 @@ export interface NativeActiveSessionOwner {
    * @returns listener removal after accepted callbacks have drained.
    */
   onIdle(observer: (reason: TurnEndReason) => Promise<void>): () => Promise<void>
+  /**
+   * Observe every durability barrier this owner is about to pass.
+   *
+   * A checkpoint runs after the tracked batch is appended and before the writer flush is
+   * accepted, so a rejection aborts that flush and surfaces to the caller as a storage
+   * failure would. This is the Native counterpart of the Cordis `session/flush` waterfall.
+   * @param observer - synchronous-or-async barrier observer that may reject to fail the flush.
+   * @returns exact removal of that observer.
+   */
+  checkpoint?(observer: NativeDurabilityCheckpoint): () => void
   /**
    * Contribute step admission while the exact owner is live.
    * @param hook - ordered waterfall hook over detached durable candidates.
