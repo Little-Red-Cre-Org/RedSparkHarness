@@ -16,6 +16,13 @@ export interface NativeSessionReferenceOperations {
    * The caller appends them through its existing Session writer; cancellation or failure waits for
    * started reads and spills to settle before preparation rejects.
    */
+  /**
+   * Replace each canonical mention with its display label, leaving the reference ids in
+   * the accompanying context the caller appends.
+   * @param inputs - newly admitted user messages.
+   * @returns the same messages with mentions normalized for durable storage.
+   */
+  rewrite(inputs: readonly UserMessage[]): readonly UserMessage[]
   prepare(session: Session, inputs: readonly UserMessage[], signal: AbortSignal): Promise<readonly UserMessage[]>
 }
 
@@ -35,6 +42,22 @@ class NativeSessionReference implements NativeSessionReferenceOperations {
     private readonly config: NativeConfig,
     private readonly lifetime: AbortSignal,
   ) {}
+
+  /** @inheritdoc */
+  rewrite(inputs: readonly UserMessage[]): readonly UserMessage[] {
+    return inputs.map((message) => {
+      if (message.source.kind !== 'user') return message
+      let touched = false
+      const content = message.content.map((block) => {
+        if (block.type !== 'text') return block
+        const parsed = parseSessionReferenceText(block.text)
+        if (parsed.references.length === 0) return block
+        touched = true
+        return { type: 'text' as const, text: parsed.text }
+      })
+      return touched ? { ...message, content } : message
+    })
+  }
 
   /** @inheritdoc */
   async prepare(session: Session, inputs: readonly UserMessage[], signal: AbortSignal): Promise<readonly UserMessage[]> {
@@ -96,9 +119,10 @@ export const plugin: NativePlugin = {
   resolve(input) {
     const config = nativeConfig(input)
     return (context) => {
-      context.provide('sessionReference', new NativeSessionReference(
+      const reference = new NativeSessionReference(
         context.require('sessionQuery'), context.optional('spillStore'), config, context.signal,
-      ))
+      )
+      context.provide('sessionReference', reference)
     }
   },
 }
