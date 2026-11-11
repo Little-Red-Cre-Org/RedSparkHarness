@@ -237,6 +237,8 @@ Native provider 只返回上下文；它从不改写直接消息，而 `native-h
 
 **持久 shell——1 个场景，外加第六个模板。** `tool-bash-persistent` 与 `tool-pwsh-persistent` 分别为 438 与 474 行，面向一个 Native 已存在的 `terminals` 服务。该接缝已端到端验证：`tool-terminal` 已发布 Native 入口并提供 `terminal_open`、`terminal_send`、`terminal_read`、`terminal_signal` 与 `terminal_close`，所以一个 Native 持久工具是在 `open`/`startSend`/`read` 之上的标记轮询循环，而非新的管线——Cordis 版本自身的辅助函数（标记生成、命令引用、截断、输出结算）可原样沿用。除此之外，只需补上 `sdk-minimal` 自身的缺口，而那既是技术选择也是策略选择；`persistent-pwsh-tool-turn` 还需要重录，因为它的录制早于必需的 `description` 字段。
 
+**子代理失败时的产品诊断信息——1 个场景。** `product-subagent-result-diagnostic` 断言的工具结果形如 `Error: subagent run failed`，其后是 `Diagnostic: Product subagent failure (product: Claude Code; stage: query-run; category: limit)` 以及可能的部分输出。Cordis 的 fixture 通过实现 `SubagentProvider.start` 并返回 `{ output, diagnostic, stopReason: 'error' }` 来提供它。`NativeExternalSubagentOutcome` 只带 `output`、`structured` 与 `stopReason`，**没有 `diagnostic` 字段**，且 `tool-subagent` 的 Native schema 只发布 `stopReason`，因此 Native 侧无法承载产品给出的失败说明文本。要加上它意味着拓宽 external-driver 的 outcome 与工具 schema——那是真实的能力改动，而不是 fixture。
+
 **外部 LSP 或 ACP 服务——3 个场景。** `lsp-definition` 驱动 LSP 服务器；`subagent-acp-diagnostic` 与 `product-subagent-result-diagnostic` 驱动 ACP 子进程（后者还挂载 `subagent-result-diagnostic`）。
 
 **Linux 沙箱 runner——2 个场景。** `missing-sandbox-runner` 设 `RSH_SNAPSHOT_MISSING_SANDBOX_RUNNER=1` 模拟缺失的 Landlock runner；`partial-landlock-child-failure` 断言部分强制。
