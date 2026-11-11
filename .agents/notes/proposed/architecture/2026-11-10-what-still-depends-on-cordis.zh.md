@@ -283,6 +283,14 @@ Native provider 只返回上下文；它从不改写直接消息，而 `native-h
 
 `pnpm run build:lib:host` 对这些包是增量的，而在 `rsh/Engine/core/native-headless` 上它没有拾取对 `src/native.ts` 的修改：改完 pre-step 投影之后，构建出的 chunk 里完全没有 `rewrite` 调用，而删除 `lib/` 再重建后立刻就有了。场景是从 `lib/` 运行 profile 的，所以一次被构建跳过的源码改动，看起来和一次毫无效果的改动完全一样。任何得出「接线不起作用」结论的调查，都必须先确认构建产物里含有该改动，否则会追着一个幻影跑好几轮——这一轮花掉的时间就是如此。
 
+## 装配器此前做不到、现在能做的事
+
+`assembleNativeScenario` 只复制一个固定 profile——`rsh/Programs/CLI/tests/profiles/native-headless`，十二行且不含引用链——因此任何场景都无法从 CLI 真正生成的组合起步。它现在接受 `profileRoot`，让调用方生成出厂 `headless` 组合并把场景指向它。该包无法自行生成：导入 CLI 源码会违反本项目的 `rootDir`，所以目录由调用方传入。
+
+这让差异变得可见。使用出厂 profile 并在 pre-step 投影处改写后，持久化序列变为 `user, plugin, plugin, skill-catalog`，且第一条消息读作 `Use @Research as background`——提及按 Cordis 的方式被规范化。引用上下文仍然缺失，因为 `agent-instructions` 从未进入它的 `prepare`，而那个分支没有测试：`agent-instructions.spec.ts` 与其 e2e 都未提及 `sessionReference`。
+
+改写本身不在本次改动内。在投影处应用它会破坏 `workflow-native`，其 fixture 是 `authored` 且持久化了 `dsh-session:` 提及；两份录制期望对「存储消息携带什么」互相矛盾，解决它属于判定哪种行为正确，而不是接线修复。
+
 ## Acceptance criteria
 
 上面的提案按包逐个满足：已被现有 Native 包拥有的，在无人引用后删掉它的 Cordis 那一半；Cordis 形状的随运行时消失；确实未移植的补上 Native 入口。场景以其在 CI 中于 Native profile 上回放通过为准。Web 的范围决定必须在任何 Web 包移动之前记录下来。
