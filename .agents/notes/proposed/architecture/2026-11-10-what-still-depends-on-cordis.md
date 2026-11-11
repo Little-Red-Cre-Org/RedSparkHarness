@@ -188,6 +188,16 @@ Only three of the seventeen (`advanced-toolchain`, `advanced-toolchain-runtime`,
 
 The proposals above are satisfied per package as each is resolved: a package that an existing Native package already owns needs its Cordis half deleted once nothing imports it; a `Cordis-shaped` package disappears with the runtime; a genuinely unported one gets a Native entry. The scenarios count when they replay on the Native profile in CI. The Web scope decision is recorded before any Web package moves.
 
+## What still keeps the seven bundle packages alive
+
+Measured against the manifests, **all seven bundle packages have zero package consumers**: nothing declares `rsh-base`, `rsh-headless`, `rsh-web-app`, `rsh-rsh`, `rsh-acp-app` or `rsh-sdk-minimal` as a dependency, and only `sdk-minimal` names `rsh-sdk-app`. They survive because three things name them as strings rather than dependencies:
+
+- `PROFILE_TEMPLATES` in `app-boot`, which the shipped launcher no longer reads.
+- `DESKTOP_PROFILE_BUNDLES = ['@redspark/rsh-base', '@redspark/rsh-web-app']` in `rsh/Programs/Desktop/src/project-manager.ts`, which the Desktop application **does** use to compose a profile.
+- Test fixtures that assert the templates' exact bundle lists.
+
+So the last step needs a Desktop answer as well as a CLI one: the Desktop app still boots a Cordis profile, and that is a product surface the objective's "delete the Cordis layers" has to settle. This is the same shape as `sdk-minimal` — a capability decision, not a code gap.
+
 ## The exact seam the deletion runs through
 
 Measured, rather than assumed: **266 of 384 workspace packages declare `@redspark/cordis`**, and `rsh/Compatibility/DSH` holds 721 files. Against that, the shipped CLI's reach into Cordis is one branch.

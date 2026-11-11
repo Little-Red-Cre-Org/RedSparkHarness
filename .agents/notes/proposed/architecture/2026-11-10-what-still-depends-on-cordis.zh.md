@@ -179,6 +179,16 @@ CLI 参考文档用自己的表格陈述了这个区分：`web`、`headless`、`
 
 十七个里只有三个（`advanced-toolchain`、`advanced-toolchain-runtime`、`cordis-inspect-jsdoc`）随 Cordis 一起消失。其余十四个各需 Native 装配器所没有的测试基础设施，或一次重新录制。
 
+## 仍然让七个 bundle 包存活的还有什么
+
+按 manifest 实测，**七个 bundle 包全都没有包级消费者**：没有任何包把 `rsh-base`、`rsh-headless`、`rsh-web-app`、`rsh-rsh`、`rsh-acp-app` 或 `rsh-sdk-minimal` 声明为依赖，只有 `sdk-minimal` 点名 `rsh-sdk-app`。它们存活是因为有三处以**字符串**而非依赖的方式点名它们：
+
+- `app-boot` 里的 `PROFILE_TEMPLATES`，而出厂启动器已不再读它。
+- `rsh/Programs/Desktop/src/project-manager.ts` 里的 `DESKTOP_PROFILE_BUNDLES = ['@redspark/rsh-base', '@redspark/rsh-web-app']`，而桌面应用**确实**用它来组合 profile。
+- 断言各模板确切 bundle 列表的测试 fixture。
+
+所以最后一步除了 CLI 还需要一个桌面侧的答案：桌面应用仍在启动 Cordis profile，那是「删除 Cordis 层」必须了结的一个产品面。它与 `sdk-minimal` 同形——是能力决策，不是代码缺口。
+
 ## 删除真正经过的那道接缝
 
 这是实测而非推断：**384 个工作区包中有 266 个声明 `@redspark/cordis`**，`rsh/Compatibility/DSH` 有 721 个文件。与之相对，出厂 CLI 对 Cordis 的触及只是一个分支。
