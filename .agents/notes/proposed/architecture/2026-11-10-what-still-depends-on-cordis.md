@@ -250,6 +250,8 @@ Checked one by one, they resolve into six capabilities rather than fifteen tasks
 
 **A persistent shell — 1 scenario, plus the sixth template.** `tool-bash-persistent` and `tool-pwsh-persistent` are 438 and 474 lines against a `terminals` service that already exists natively. The seam is proven end to end: `tool-terminal` already ships a Native entry exposing `terminal_open`, `terminal_send`, `terminal_read`, `terminal_signal` and `terminal_close`, so a Native persistent tool is a marker-poll loop over `open`/`startSend`/`read` rather than new plumbing — the Cordis version's own helpers (marker generation, command quoting, truncation, output settlement) carry over unchanged. Beyond that, it needs only `sdk-minimal`'s own gap closed, which is a policy choice as much as a technical one; `persistent-pwsh-tool-turn` also needs its recording refreshed, because it predates the required `description` field.
 
+**A product diagnostic on subagent failure — 1 scenario.** `product-subagent-result-diagnostic` asserts a tool result of the form `Error: subagent run failed` followed by `Diagnostic: Product subagent failure (product: Claude Code; stage: query-run; category: limit)` and any partial output. The Cordis fixture supplies that by implementing `SubagentProvider.start` and returning `{ output, diagnostic, stopReason: 'error' }`. `NativeExternalSubagentOutcome` carries `output`, `structured` and `stopReason` and has **no `diagnostic` field**, and `tool-subagent`'s native schema publishes `stopReason` only, so the native side cannot carry a product's explanatory failure text. Adding it means widening the external-driver outcome and the tool schema — a real capability change, not a fixture.
+
 **An external LSP or ACP service — 3 scenarios.** `lsp-definition` drives an LSP server; `subagent-acp-diagnostic` and `product-subagent-result-diagnostic` drive ACP children (the latter also mounts `subagent-result-diagnostic`).
 
 **A Linux sandbox runner — 2 scenarios.** `missing-sandbox-runner` sets `RSH_SNAPSHOT_MISSING_SANDBOX_RUNNER=1` to simulate an absent Landlock runner; `partial-landlock-child-failure` asserts partial enforcement.
@@ -265,6 +267,28 @@ Three of the six capabilities are small and already have their seams (`terminals
 
 
 Every claim above names the file or command that produced it, so a later reader re-runs the check rather than trusting the sentence. A package qualifies as deletable only when nothing imports it **and** no published profile composes it.
+
+## The closing inventory
+
+Every one of the fifteen scenarios verified against the tree, with the action each needs. None of the actions is available without one of three decisions that are not mine to make.
+
+**Retire with Cordis — 3.** `advanced-toolchain`, `advanced-toolchain-runtime`, `cordis-inspect-jsdoc` exercise `cordis_define`, `cordis_undefine` and `cordis_inspect_query`. Action: delete the three scenario directories when the Cordis tool package goes.
+
+**Re-record — 4.** `session-reference-spill` (its authored transcript stores a display form no runtime produces), `session-query-spill` (greps an absolute `/tmp/dsh-acp-snap-<random>` path), `skill-load` (copies a preset skill file the repository no longer contains), `subagent-published-run-failure` (asserts a thrown disposal text where the native side records the failure instead). Action: `pnpm run test:snapshot:record` against the native profile, which needs `DEEPSEEK_API_KEY`.
+
+**Add a runtime capability — 8.** Each measured against the code that would have to change:
+
+| Scenario | Missing capability | Where it would change |
+| --- | --- | --- |
+| `ptc-python-turn` | Python execution | `experimental-code-runtime-python` has no `dsh.native` entry |
+| `lsp-definition` | an LSP server | no native LSP transport |
+| `subagent-acp-diagnostic` | an ACP child | `acp-child` has an adapter but no composable profile |
+| `product-subagent-result-diagnostic` | a product diagnostic on failure | `NativeExternalSubagentOutcome` and the tool schema carry `stopReason` only |
+| `persistent-pwsh-tool-turn` | a persistent shell | `tool-pwsh-persistent` has no `dsh.native` entry; `tool-terminal` proves the seam |
+| `missing-sandbox-runner`, `partial-landlock-child-failure` | a Linux sandbox runner | Landlock is Linux-only; CI owns the signal |
+| `agent-instructions` | a workspace path containing `:` | Windows cannot create one, verified through `CreateDirectory` |
+
+That is the whole of step 3. Two of the eight are small and already have their seams (`tool-terminal` for the shell, `acp-child`'s existing adapter); three are separate runtimes (Python, LSP, Landlock); one is a Windows limitation; one is a type and schema widening; one needs a re-record rather than code.
 
 ## Acceptance criteria
 

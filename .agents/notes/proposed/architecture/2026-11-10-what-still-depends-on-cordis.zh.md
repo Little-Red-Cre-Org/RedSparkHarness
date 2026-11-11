@@ -237,6 +237,8 @@ Native provider 只返回上下文；它从不改写直接消息，而 `native-h
 
 **持久 shell——1 个场景，外加第六个模板。** `tool-bash-persistent` 与 `tool-pwsh-persistent` 分别为 438 与 474 行，面向一个 Native 已存在的 `terminals` 服务。该接缝已端到端验证：`tool-terminal` 已发布 Native 入口并提供 `terminal_open`、`terminal_send`、`terminal_read`、`terminal_signal` 与 `terminal_close`，所以一个 Native 持久工具是在 `open`/`startSend`/`read` 之上的标记轮询循环，而非新的管线——Cordis 版本自身的辅助函数（标记生成、命令引用、截断、输出结算）可原样沿用。除此之外，只需补上 `sdk-minimal` 自身的缺口，而那既是技术选择也是策略选择；`persistent-pwsh-tool-turn` 还需要重录，因为它的录制早于必需的 `description` 字段。
 
+**子代理失败时的产品诊断信息——1 个场景。** `product-subagent-result-diagnostic` 断言的工具结果形如 `Error: subagent run failed`，其后是 `Diagnostic: Product subagent failure (product: Claude Code; stage: query-run; category: limit)` 以及可能的部分输出。Cordis 的 fixture 通过实现 `SubagentProvider.start` 并返回 `{ output, diagnostic, stopReason: 'error' }` 来提供它。`NativeExternalSubagentOutcome` 只带 `output`、`structured` 与 `stopReason`，**没有 `diagnostic` 字段**，且 `tool-subagent` 的 Native schema 只发布 `stopReason`，因此 Native 侧无法承载产品给出的失败说明文本。要加上它意味着拓宽 external-driver 的 outcome 与工具 schema——那是真实的能力改动，而不是 fixture。
+
 **外部 LSP 或 ACP 服务——3 个场景。** `lsp-definition` 驱动 LSP 服务器；`subagent-acp-diagnostic` 与 `product-subagent-result-diagnostic` 驱动 ACP 子进程（后者还挂载 `subagent-result-diagnostic`）。
 
 **Linux 沙箱 runner——2 个场景。** `missing-sandbox-runner` 设 `RSH_SNAPSHOT_MISSING_SANDBOX_RUNNER=1` 模拟缺失的 Landlock runner；`partial-landlock-child-failure` 断言部分强制。
@@ -248,6 +250,28 @@ Native provider 只返回上下文；它从不改写直接消息，而 `native-h
 **按原录制不可回放——2 个场景。** `session-query-spill` 会 grep 形如 `/tmp/dsh-acp-snap-<随机>` 的绝对路径；`skill-load` 复制的 preset 技能文件仓库已不再包含。两者都需要重录，而不是能力。
 
 六项能力里有三项规模不大且接缝已存在（`terminals`、持久化 Session 读取器、以及解锁了 `web-fetch` 的 fixture 服务器模式）。另三项则不是：Python、LSP/ACP 传输与 Landlock runner 都是独立运行时。这个划分才是有用的估算——而不是「还剩十二个场景」。
+
+## 收尾清单
+
+十五个场景逐一对照本树核实，并写明各自需要的动作。这些动作没有一个能在缺少以下三项决定之一的情况下执行，而那三项决定不属于我。
+
+**随 Cordis 退役——3 个。** `advanced-toolchain`、`advanced-toolchain-runtime`、`cordis-inspect-jsdoc` 演练 `cordis_define`、`cordis_undefine` 与 `cordis_inspect_query`。动作：Cordis 工具包移除时删除这三个场景目录。
+
+**重录——4 个。** `session-reference-spill`（其手写的转录存着一个没有任何运行时会产出的展示形态）、`session-query-spill`（grep 形如 `/tmp/dsh-acp-snap-<随机>` 的绝对路径）、`skill-load`（复制的 preset 技能文件仓库已不含）、`subagent-published-run-failure`（断言抛出的 dispose 文本，而 Native 侧改为记录该失败）。动作：针对 Native profile 运行 `pnpm run test:snapshot:record`，需要 `DEEPSEEK_API_KEY`。
+
+**新增运行时能力——8 个。** 每一项都对照了需要改动的代码：
+
+| 场景 | 缺失能力 | 改动位置 |
+| --- | --- | --- |
+| `ptc-python-turn` | Python 执行 | `experimental-code-runtime-python` 没有 `dsh.native` 入口 |
+| `lsp-definition` | LSP 服务器 | 没有 Native LSP 传输 |
+| `subagent-acp-diagnostic` | ACP 子进程 | `acp-child` 有适配器但无可组合 profile |
+| `product-subagent-result-diagnostic` | 失败时的产品诊断 | `NativeExternalSubagentOutcome` 与工具 schema 只带 `stopReason` |
+| `persistent-pwsh-tool-turn` | 持久 shell | `tool-pwsh-persistent` 没有 `dsh.native` 入口；`tool-terminal` 已证明接缝 |
+| `missing-sandbox-runner`、`partial-landlock-child-failure` | Linux 沙箱 runner | Landlock 仅限 Linux；CI 拥有该信号 |
+| `agent-instructions` | 含 `:` 的工作区路径 | Windows 无法创建，已通过 `CreateDirectory` 验证 |
+
+这就是第 3 步的全部。八项中有两项规模不大且接缝已存在（shell 用 `tool-terminal`，`acp-child` 已有适配器）；三项是独立运行时（Python、LSP、Landlock）；一项是 Windows 限制；一项是类型与 schema 拓宽；还有一项实际需要重录而非代码。
 
 ## Acceptance criteria
 
