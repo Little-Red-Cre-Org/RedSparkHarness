@@ -47,6 +47,12 @@ export interface NativeScenarioOptions {
   readonly modules?: readonly NativeScenarioModule[]
   /** Rewrite one shipped composition row; returning the row keeps it unchanged. */
   readonly composeRow?: (row: NativeScenarioRow, paths: NativeScenarioPaths) => NativeScenarioRow
+  /**
+   * Profile directory to start from, when a scenario needs rows the twelve-row test profile
+   * omits. The caller generates that composition (and its `node_modules`) itself, because this
+   * package cannot depend on the CLI's project.
+   */
+  readonly profileRoot?: string
   /** Rows appended after the shipped composition. */
   readonly extraRows?: (paths: NativeScenarioPaths) => readonly NativeScenarioRow[]
   /** Package the `model` row is replaced with, plus its installation config. */
@@ -124,7 +130,7 @@ export function assembleNativeScenario(options: NativeScenarioOptions): NativeSc
   mkdirSync(paths.modules, { recursive: true })
   mkdirSync(paths.profile, { recursive: true })
 
-  const shipped = join(options.root, 'rsh/Programs/CLI/tests/profiles/native-headless')
+  const shipped = options.profileRoot ?? join(options.root, 'rsh/Programs/CLI/tests/profiles/native-headless')
   copyFileSync(join(shipped, 'package.json'), join(paths.profile, 'package.json'))
 
   for (const [source, target] of Object.entries(options.workspaceFiles ?? {})) {

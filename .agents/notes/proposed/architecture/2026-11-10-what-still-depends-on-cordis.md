@@ -307,6 +307,14 @@ That makes the chain's shape plain. `agent-instructions` declares `optional: ['t
 
 `agent-instructions`'s own tests never exercise the reference branch: `agent-instructions.spec.ts` and `agent-instructions.e2e.ts` mention `sessionReference` zero times. A branch that no test covers and that no profile reaches is why this took so long to locate.
 
+## What the harness could not do, and now can
+
+`assembleNativeScenario` copied one fixed profile — `rsh/Programs/CLI/tests/profiles/native-headless`, twelve rows with no reference chain — so no scenario could start from the composition the CLI actually generates. It now accepts `profileRoot`, which lets the caller generate the shipped `headless` composition and point the scenario at it. The package cannot generate it itself: importing the CLI source breaks this project's `rootDir`, so the directory is passed in.
+
+That made the difference visible. With the shipped profile and a rewrite at the pre-step projection, the persisted sequence becomes `user, plugin, plugin, skill-catalog` and the first message reads `Use @Research as background` — the mention is normalized as Cordis does it. The reference context is still absent, because `agent-instructions` never enters its `prepare`, and that branch has no test: neither `agent-instructions.spec.ts` nor its e2e mentions `sessionReference`.
+
+The rewrite is not in this change. Applying it at the projection breaks `workflow-native`, whose fixtures are `authored` with the `dsh-session:` mention persisted; two recorded expectations disagree about what the stored message carries, and settling that is a decision about which behaviour is correct, not a wiring fix.
+
 ## Acceptance criteria
 
 Each claim above names the file or command that produced it, so a reader re-runs the check rather than trusting the sentence.
