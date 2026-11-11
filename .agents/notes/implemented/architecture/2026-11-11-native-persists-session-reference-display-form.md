@@ -10,7 +10,7 @@ Cordis rewrites a canonical `dsh-session:` mention to `@label` before storing th
 
 ## Decision
 
-`native-headless` calls `sessionReference.rewrite` only while appending admitted user messages. `agent-instructions.prepare` still receives the original inputs, and its contexts are appended before the runtime-context snapshot. A scenario that needs rows the twelve-row test profile omits passes the shipped profile directory as `profileRoot`. Programs that construct the application through their own context, including TUI, ACP, Web, and the SDK server, declare `sessionReference` optional, because the lookup uses the caller context. `session-reference-spill` replays through that profile, and `workflow-native` submits the canonical mention while expecting the stored display form.
+`native-headless` calls `sessionReference.rewrite` only while appending admitted user messages. `agent-instructions.prepare` still receives the original inputs, and its contexts are appended before the runtime-context snapshot. A scenario that needs rows the twelve-row test profile omits passes the shipped profile directory as `profileRoot`. Programs that construct the application through their own context, including TUI, ACP, Web, the SDK server, and the SDK descendant fixture, declare `sessionReference` optional, because the lookup uses the caller context. `session-reference-spill` replays through that profile, and `workflow-native` submits the canonical mention while expecting the stored display form.
 
 ## Alternatives considered
 
