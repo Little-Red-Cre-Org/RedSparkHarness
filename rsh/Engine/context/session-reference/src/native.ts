@@ -47,15 +47,13 @@ class NativeSessionReference implements NativeSessionReferenceOperations {
   rewrite(inputs: readonly UserMessage[]): readonly UserMessage[] {
     return inputs.map((message) => {
       if (message.source.kind !== 'user') return message
-      let touched = false
       const content = message.content.map((block) => {
         if (block.type !== 'text') return block
         const parsed = parseSessionReferenceText(block.text)
-        if (parsed.references.length === 0) return block
-        touched = true
-        return { type: 'text' as const, text: parsed.text }
+        return parsed.references.length === 0 ? block : { type: 'text' as const, text: parsed.text }
       })
-      return touched ? { ...message, content } : message
+      const changed = content.some((block, index) => block !== message.content[index])
+      return changed ? { ...message, content } : message
     })
   }
 

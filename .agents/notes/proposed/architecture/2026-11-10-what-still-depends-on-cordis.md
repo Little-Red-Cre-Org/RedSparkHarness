@@ -208,7 +208,7 @@ So the last step needs a Desktop answer as well as a CLI one: the Desktop app st
 
 `rsh/Programs/Desktop/src/core-package-set.ts` makes that concrete: it lists `rsh-base`, `rsh-headless`, `rsh-rsh`, `rsh-web-app`, `rsh-sdk-app`, `rsh-sdk-minimal`, `rsh-tool-bash-persistent` and `rsh-tool-pwsh-persistent` among the packages shipped inside the desktop app. Any one of those retirements changes what the desktop artifact contains.
 
-That list is also stale and ungated. It still names `@redspark/rsh-time-context` and `@redspark/rsh-tmux-context`, which no longer exist in the workspace, and nothing in `rsh/Scripts` verifies it. So before the bundles can be retired, this list needs the same treatment `tsconfig` and the lockfile already get: a gate that resolves every name against the workspace, which would have caught both the two deleted packages and any future retirement.
+That list is also stale and ungated. It still names `@redspark/rsh-time-context` and `@redspark/rsh-tmux-context`, which no longer exist in the workspace, and nothing in `rsh/Scripts` verifies it. So before the bundles can be retired, this list needs the same treatment `tsconfig` and the lockfile already get: a gate that resolves every name against the workspace, which would have caught both the two deleted packages and any future retirement. `verify-core-package-set` now does that — it reads the names out of the module, resolves each against `WORKSPACE_MANIFEST_GLOBS`, and fails on any that no manifest defines. Run against the tree as it stood, it named exactly `@redspark/rsh-time-context` and `@redspark/rsh-tmux-context`; with those two lines removed it resolves all 37.
 
 ## The exact seam the deletion runs through
 

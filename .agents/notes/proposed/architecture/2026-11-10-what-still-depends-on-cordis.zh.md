@@ -199,7 +199,7 @@ Native provider 只返回上下文；它从不改写直接消息，而 `native-h
 
 `rsh/Programs/Desktop/src/core-package-set.ts` 让这一点具体化：它把 `rsh-base`、`rsh-headless`、`rsh-rsh`、`rsh-web-app`、`rsh-sdk-app`、`rsh-sdk-minimal`、`rsh-tool-bash-persistent` 与 `rsh-tool-pwsh-persistent` 列入桌面应用内置的包中。其中任何一项退役都会改变桌面产物包含什么。
 
-这份清单也已陈旧且无门禁。它仍然点名 `@redspark/rsh-time-context` 与 `@redspark/rsh-tmux-context`，而这两个包在工作区中已不存在，且 `rsh/Scripts` 中没有任何东西校验它。所以在这批 bundle 可以退役之前，这份清单需要和 `tsconfig`、lockfile 一样的处理：一个把每个名字解析到工作区的门禁，它本可以同时抓住那两个已删包与未来任何一次退役。
+这份清单也已陈旧且无门禁。它仍然点名 `@redspark/rsh-time-context` 与 `@redspark/rsh-tmux-context`，而这两个包在工作区中已不存在，且 `rsh/Scripts` 中没有任何东西校验它。所以在这批 bundle 可以退役之前，这份清单需要和 `tsconfig`、lockfile 一样的处理：一个把每个名字解析到工作区的门禁，它本可以同时抓住那两个已删包与未来任何一次退役。`verify-core-package-set` 现在做的正是这件事——它从模块中读出包名，逐个解析到 `WORKSPACE_MANIFEST_GLOBS`，并对任何没有 manifest 定义的名字失败。对改动前的树运行，它恰好点名 `@redspark/rsh-time-context` 与 `@redspark/rsh-tmux-context`；删掉那两行后，37 个名字全部解析成功。
 
 ## 删除真正经过的那道接缝
 
