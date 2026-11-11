@@ -197,6 +197,10 @@ Native provider 只返回上下文；它从不改写直接消息，而 `native-h
 
 所以最后一步除了 CLI 还需要一个桌面侧的答案：桌面应用仍在启动 Cordis profile，那是「删除 Cordis 层」必须了结的一个产品面。它与 `sdk-minimal` 同形——是能力决策，不是代码缺口。
 
+`rsh/Programs/Desktop/src/core-package-set.ts` 让这一点具体化：它把 `rsh-base`、`rsh-headless`、`rsh-rsh`、`rsh-web-app`、`rsh-sdk-app`、`rsh-sdk-minimal`、`rsh-tool-bash-persistent` 与 `rsh-tool-pwsh-persistent` 列入桌面应用内置的包中。其中任何一项退役都会改变桌面产物包含什么。
+
+这份清单也已陈旧且无门禁。它仍然点名 `@redspark/rsh-time-context` 与 `@redspark/rsh-tmux-context`，而这两个包在工作区中已不存在，且 `rsh/Scripts` 中没有任何东西校验它。所以在这批 bundle 可以退役之前，这份清单需要和 `tsconfig`、lockfile 一样的处理：一个把每个名字解析到工作区的门禁，它本可以同时抓住那两个已删包与未来任何一次退役。
+
 ## 删除真正经过的那道接缝
 
 这是实测而非推断：**384 个工作区包中有 266 个声明 `@redspark/cordis`**，`rsh/Compatibility/DSH` 有 721 个文件。与之相对，出厂 CLI 对 Cordis 的触及只是一个分支。

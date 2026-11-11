@@ -206,6 +206,10 @@ Measured against the manifests, **all seven bundle packages have zero package co
 
 So the last step needs a Desktop answer as well as a CLI one: the Desktop app still boots a Cordis profile, and that is a product surface the objective's "delete the Cordis layers" has to settle. This is the same shape as `sdk-minimal` — a capability decision, not a code gap.
 
+`rsh/Programs/Desktop/src/core-package-set.ts` makes that concrete: it lists `rsh-base`, `rsh-headless`, `rsh-rsh`, `rsh-web-app`, `rsh-sdk-app`, `rsh-sdk-minimal`, `rsh-tool-bash-persistent` and `rsh-tool-pwsh-persistent` among the packages shipped inside the desktop app. Any one of those retirements changes what the desktop artifact contains.
+
+That list is also stale and ungated. It still names `@redspark/rsh-time-context` and `@redspark/rsh-tmux-context`, which no longer exist in the workspace, and nothing in `rsh/Scripts` verifies it. So before the bundles can be retired, this list needs the same treatment `tsconfig` and the lockfile already get: a gate that resolves every name against the workspace, which would have caught both the two deleted packages and any future retirement.
+
 ## The exact seam the deletion runs through
 
 Measured, rather than assumed: **266 of 384 workspace packages declare `@redspark/cordis`**, and `rsh/Compatibility/DSH` holds 721 files. Against that, the shipped CLI's reach into Cordis is one branch.
