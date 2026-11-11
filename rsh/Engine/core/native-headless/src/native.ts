@@ -1650,10 +1650,7 @@ export class NativeHeadlessApplication implements NativeApplication {
               const prepared = await prepare()
               signal.throwIfAborted()
               if (!eligibleInboxMatches(owner, step, snapshot)) continue
-              // Normalize canonical session mentions to their display form, as the Cordis
-              // pre-step listener does; the reference context is appended by agent-instructions.
-              const admitted = this.sessionReference?.rewrite(decision.messages) ?? decision.messages
-              return { inputs: admitted, snapshot, commitChecks, ...prepared,
+              return { inputs: decision.messages, snapshot, commitChecks, ...prepared,
                 // A hook's own guidance is appended with the opened step, not selected.
                 ...decision.context === undefined ? {} : { context: decision.context } }
             }
@@ -1768,7 +1765,9 @@ export class NativeHeadlessApplication implements NativeApplication {
                   track(session.append('system/message', { turn, step, message: createSystemMessage(stepPrompt, 'native-headless') },
                     { surfaceOp: 'append' }))
                 }
-                for (const input of inputs) {
+                // Stored in display form: the mention parser already collected the reference ids
+                // for the context appended below, so what persists is the readable citation.
+                for (const input of this.sessionReference?.rewrite(inputs) ?? inputs) {
                   track(session.append('user/message', input, { surfaceOp: 'append' }))
                 }
                 // A prompt-admission hook's guidance joins the opened step as its own
