@@ -16,6 +16,7 @@ export interface NativeSessionReferenceOperations {
    * The caller appends them through its existing Session writer; cancellation or failure waits for
    * started reads and spills to settle before preparation rejects.
    */
+  prepare(session: Session, inputs: readonly UserMessage[], signal: AbortSignal): Promise<readonly UserMessage[]>
   /**
    * Replace each canonical mention with its display label, leaving the reference ids in
    * the accompanying context the caller appends.
@@ -23,7 +24,6 @@ export interface NativeSessionReferenceOperations {
    * @returns the same messages with mentions normalized for durable storage.
    */
   rewrite(inputs: readonly UserMessage[]): readonly UserMessage[]
-  prepare(session: Session, inputs: readonly UserMessage[], signal: AbortSignal): Promise<readonly UserMessage[]>
 }
 
 declare module '@redspark/rsh-native-runtime' {
