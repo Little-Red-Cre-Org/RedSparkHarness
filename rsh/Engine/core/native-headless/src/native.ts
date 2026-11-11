@@ -57,6 +57,7 @@ import {
   type NativeApprovalSessionGrant,
 } from '@redspark/rsh-approval-definition'
 import type { NativeCodeRuntime } from '@redspark/rsh-code-runtime-definition'
+import type { NativeSessionReferenceOperations } from '@redspark/rsh-session-reference/native'
 import type { NativeAgentInstructions } from '@redspark/rsh-agent-instructions/native'
 import type { NativeRequestContexts } from '@redspark/rsh-request-context-definition'
 import type { NativeTimeContext } from '@redspark/rsh-native-time-context'
@@ -607,6 +608,7 @@ export class NativeHeadlessApplication implements NativeApplication {
     private readonly agentInstructions?: NativeAgentInstructions,
     private readonly attachments?: AttachmentOperations,
     private readonly requestContexts?: NativeRequestContexts,
+    private readonly sessionReference?: NativeSessionReferenceOperations,
   ) {
     const route = resolveRootRoute(config)
     this.workspaceRoutes = new NativeWorkspaceRoutes(route, config.workspaceRoutes, workspaceRegistry, fs, sandboxPolicy, context.signal,
@@ -1648,7 +1650,10 @@ export class NativeHeadlessApplication implements NativeApplication {
               const prepared = await prepare()
               signal.throwIfAborted()
               if (!eligibleInboxMatches(owner, step, snapshot)) continue
-              return { inputs: decision.messages, snapshot, commitChecks, ...prepared,
+              // Normalize canonical session mentions to their display form, as the Cordis
+              // pre-step listener does; the reference context is appended by agent-instructions.
+              const admitted = this.sessionReference?.rewrite(decision.messages) ?? decision.messages
+              return { inputs: admitted, snapshot, commitChecks, ...prepared,
                 // A hook's own guidance is appended with the opened step, not selected.
                 ...decision.context === undefined ? {} : { context: decision.context } }
             }
@@ -3418,7 +3423,7 @@ export function createNativeHeadlessApplication(context: NativeContext, config: 
 export const plugin: NativePlugin = {
   apiVersion: 1, name: '@redspark/rsh-native-headless', targets: ['host'],
   requires: ['fs', 'sessionPersistence', 'modelExecution', 'agents'],
-  optional: ['tools', 'promptSections', 'sandboxPolicy', 'approval', 'codeRuntime', 'timeContext', 'tmuxContext', 'sessionExecution', 'activeSessions', 'modelSelection', 'agentPresets', 'workspaceRegistry', 'agentInstructions', 'attachments', 'requestContexts'],
+  optional: ['tools', 'promptSections', 'sandboxPolicy', 'approval', 'codeRuntime', 'timeContext', 'tmuxContext', 'sessionExecution', 'activeSessions', 'modelSelection', 'agentPresets', 'workspaceRegistry', 'agentInstructions', 'attachments', 'requestContexts', 'sessionReference'],
   provides: ['application', 'rootExecution'],
   resolve(input) {
     const config = resolveNativeHeadlessConfig(input)
