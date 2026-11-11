@@ -171,6 +171,10 @@ CLI 参考文档用自己的表格陈述了这个区分：`web`、`headless`、`
 
 实际运行还带来两点。第一，出厂的 `headless` profile **已经**组合了 `session-query`、`session-reference`、`agent-instructions`、`spill-local` 与 app 行，所以通过 `extraRows` 再次添加会产生重复行，而无法解析的正是那些重复行——这正是最初失败的原因。第二，`rewrite` 可用但不能用在我最初放的位置，两份录制期望正好证明了这一点。`session-reference-spill` 存的是展示形态（`Use @Research as background`），而 `workflow-native` 断言相反：持久化父 Session 里仍须保留原始的 `@[prior finding](dsh-session:…)` 提及，且模型请求里带有该事实。因此在追加处写入展示形态会删掉另一个场景所需的持久化提及——我这么做时 `workflow-native` 立刻以 `expected undefined to be defined` 失败。两个场景只有在该消息保留提及时才同时通过，所以 PersistedSession 的改写应放在 Cordis 放的位置，即 pre-step 投影，而不是存储记录里。
 
+那个投影已经存在且可用：`workflow-native` 今天在出厂 profile 上通过，持久化父 Session 保留其 `dsh-session:` 提及、模型请求携带该事实。所以「让模型看到引用」不需要任何运行时改动。
+
+因此 `session-reference-spill` 属于**归类错误**而非被阻塞。它的 `snapshot.yml` 写着 `recording: authored`，其 `session.v3.jsonl` 存的是展示形态，而它自己的 inbox 事件携带 URI——这个组合本树中没有任何运行时会产生：持久化消息会保留提及（正如 `workflow-native` 所断言），只有投影会被改写。该场景应针对 Native profile 重录，而不是迁移；这与 `session-log-spill` 一类同为一种处置，需要 `pnpm run test:snapshot:record`，而不是改代码。
+
 与此同时引用上下文仍然缺失，而对 `NativeSessionReference.prepare` 加日志显示它**从未被进入**：该接线已回退，因为我恢复了一个构造字段、而它的实参此前被我删掉，且仅这个恢复就重排了 `workflow-run`。所以剩余缺口位于 provider 上游，即谁调用 `agent-instructions`、以及用什么输入。种子在运行时存在之后，引用消息仍未出现，正是这一点指向 `native-headless` 根本不读取 `sessionReference`。它消费 `agentInstructions` 与 `requestContexts`，却没有对引用的等价调用，所以组合 `session-reference` 毫无效果。因此阻塞点是循环中缺失的集成点，而种子布局是另一个独立问题。
 
 那个集成其实并不缺失：`agent-instructions` 早已把 `sessionReference` 声明为可选，并调用 `references.prepare(...)` 把结果并进自己的上下文，所以只要 profile 组合了 `session-query`、`session-reference` 与 `agent-instructions`，整条链就接通了。真正失败的位置更早：录制的 inbox 携带 `Use @[Research](dsh-session:InJlZmVyZW5jZS1zb3VyY2Ui) as background`，而持久化的用户消息读作 `Use @Research as background`——提及在消息到达 session **之前**就被改写成展示形态，于是等任何 provider 去解析时，已不再有 `dsh-session:` URI。那次改写正是 `parseSessionReferenceText` 自身的行为：它把每处提及在返回的文本里替换为 `@${label}`，同时把 ID 收集进 `references`。所以录制里的展示形态是**预期输出**，而不是提及丢失的证据；provider 拿到的是原始文本，返回两半。Native provider 只读取 `.references`，从不持久化被改写的 `.text`，这意味着持久化的展示形态必须来自写入已准入消息的那一处。
