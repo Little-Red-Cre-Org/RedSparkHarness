@@ -173,6 +173,10 @@ CLI 参考文档用自己的表格陈述了这个区分：`web`、`headless`、`
 
 那个投影已经存在且可用：`workflow-native` 今天在出厂 profile 上通过，持久化父 Session 保留其 `dsh-session:` 提及、模型请求携带该事实。所以「让模型看到引用」不需要任何运行时改动。
 
+重新测量：**legacy profile 确实会持久化展示形态**。用 `dsh --profile legacy-headless` 刷新 `session-reference-spill`，其 `user/message` 逐字节仍是 `Use @Research as background`，说明那次改写是真正到达存储日志的 Cordis 行为——`agent-loop` 的 step 追加的正是 pre-step 决策里的消息。我此前把这个运行时依赖描述反了。
+
+`workflow-native` 的 fixture 同样是 `recording: authored`，其 `session.v3.jsonl` 由测试写入、持久化的是 URI。所以两个场景的分歧源于两份录制都是手写的，而不是任何运行时会同时产出两种形态。Native profile 应当满足那份来自真实 profile 的录制。
+
 因此 `session-reference-spill` 属于**归类错误**而非被阻塞。它的 `snapshot.yml` 写着 `recording: authored`，其 `session.v3.jsonl` 存的是展示形态，而它自己的 inbox 事件携带 URI——这个组合本树中没有任何运行时会产生：持久化消息会保留提及（正如 `workflow-native` 所断言），只有投影会被改写。该场景应针对 Native profile 重录，而不是迁移；这与 `session-log-spill` 一类同为一种处置，需要 `pnpm run test:snapshot:record`，而不是改代码。
 
 与此同时引用上下文仍然缺失，而对 `NativeSessionReference.prepare` 加日志显示它**从未被进入**：该接线已回退，因为我恢复了一个构造字段、而它的实参此前被我删掉，且仅这个恢复就重排了 `workflow-run`。所以剩余缺口位于 provider 上游，即谁调用 `agent-instructions`、以及用什么输入。种子在运行时存在之后，引用消息仍未出现，正是这一点指向 `native-headless` 根本不读取 `sessionReference`。它消费 `agentInstructions` 与 `requestContexts`，却没有对引用的等价调用，所以组合 `session-reference` 毫无效果。因此阻塞点是循环中缺失的集成点，而种子布局是另一个独立问题。
