@@ -268,6 +268,28 @@ Three of the six capabilities are small and already have their seams (`terminals
 
 Every claim above names the file or command that produced it, so a later reader re-runs the check rather than trusting the sentence. A package qualifies as deletable only when nothing imports it **and** no published profile composes it.
 
+## The closing inventory
+
+Every one of the fifteen scenarios verified against the tree, with the action each needs. None of the actions is available without one of three decisions that are not mine to make.
+
+**Retire with Cordis — 3.** `advanced-toolchain`, `advanced-toolchain-runtime`, `cordis-inspect-jsdoc` exercise `cordis_define`, `cordis_undefine` and `cordis_inspect_query`. Action: delete the three scenario directories when the Cordis tool package goes.
+
+**Re-record — 4.** `session-reference-spill` (its authored transcript stores a display form no runtime produces), `session-query-spill` (greps an absolute `/tmp/dsh-acp-snap-<random>` path), `skill-load` (copies a preset skill file the repository no longer contains), `subagent-published-run-failure` (asserts a thrown disposal text where the native side records the failure instead). Action: `pnpm run test:snapshot:record` against the native profile, which needs `DEEPSEEK_API_KEY`.
+
+**Add a runtime capability — 8.** Each measured against the code that would have to change:
+
+| Scenario | Missing capability | Where it would change |
+| --- | --- | --- |
+| `ptc-python-turn` | Python execution | `experimental-code-runtime-python` has no `dsh.native` entry |
+| `lsp-definition` | an LSP server | no native LSP transport |
+| `subagent-acp-diagnostic` | an ACP child | `acp-child` has an adapter but no composable profile |
+| `product-subagent-result-diagnostic` | a product diagnostic on failure | `NativeExternalSubagentOutcome` and the tool schema carry `stopReason` only |
+| `persistent-pwsh-tool-turn` | a persistent shell | `tool-pwsh-persistent` has no `dsh.native` entry; `tool-terminal` proves the seam |
+| `missing-sandbox-runner`, `partial-landlock-child-failure` | a Linux sandbox runner | Landlock is Linux-only; CI owns the signal |
+| `agent-instructions` | a workspace path containing `:` | Windows cannot create one, verified through `CreateDirectory` |
+
+That is the whole of step 3. Two of the eight are small and already have their seams (`tool-terminal` for the shell, `acp-child`'s existing adapter); three are separate runtimes (Python, LSP, Landlock); one is a Windows limitation; one is a type and schema widening; one needs a re-record rather than code.
+
 ## Acceptance criteria
 
 Each claim above names the file or command that produced it, so a reader re-runs the check rather than trusting the sentence.
