@@ -1,0 +1,6 @@
+# Bilingual-pair consistency record (rsh/Docs/i18n/README.md): the git blob hash of each
+# side as of the last confirmed-consistent state. Both languages carry equal authority;
+# after editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write .agents/notes/implemented/architecture/2026-11-11-native-missing-sandbox-runner-replay.md
+2026-11-11-native-missing-sandbox-runner-replay.md: f6cb6c6979fa99d306b6c812662c8ec3171571df
+2026-11-11-native-missing-sandbox-runner-replay.zh.md: d97fdfb26f60ae83a1d70b188a0946d73d546f19
