@@ -92,7 +92,8 @@
         "modelDirectory",
         "userQuestions",
         "attachments",
-        "requestContexts"
+        "requestContexts",
+        "sessionReference"
       ],
       "provides": [
         "application",

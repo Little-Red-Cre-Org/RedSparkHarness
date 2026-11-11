@@ -58,6 +58,7 @@ import {
 } from '@redspark/rsh-approval-definition'
 import type { NativeCodeRuntime } from '@redspark/rsh-code-runtime-definition'
 import type { NativeAgentInstructions } from '@redspark/rsh-agent-instructions/native'
+import type { NativeSessionReferenceOperations } from '@redspark/rsh-session-reference/native'
 import type { NativeRequestContexts } from '@redspark/rsh-request-context-definition'
 import type { NativeTimeContext } from '@redspark/rsh-native-time-context'
 import type { NativeTmuxContext } from '@redspark/rsh-tmux-context-definition'
@@ -607,6 +608,7 @@ export class NativeHeadlessApplication implements NativeApplication {
     private readonly agentInstructions?: NativeAgentInstructions,
     private readonly attachments?: AttachmentOperations,
     private readonly requestContexts?: NativeRequestContexts,
+    private readonly sessionReference?: NativeSessionReferenceOperations,
   ) {
     const route = resolveRootRoute(config)
     this.workspaceRoutes = new NativeWorkspaceRoutes(route, config.workspaceRoutes, workspaceRegistry, fs, sandboxPolicy, context.signal,
@@ -1763,7 +1765,10 @@ export class NativeHeadlessApplication implements NativeApplication {
                   track(session.append('system/message', { turn, step, message: createSystemMessage(stepPrompt, 'native-headless') },
                     { surfaceOp: 'append' }))
                 }
-                for (const input of inputs) {
+                // Prepare already parsed the canonical mentions. Persist the display form
+                // Cordis stores; rewriting earlier would hide those mentions from prepare.
+                const persistedInputs = this.sessionReference?.rewrite(inputs) ?? inputs
+                for (const input of persistedInputs) {
                   track(session.append('user/message', input, { surfaceOp: 'append' }))
                 }
                 // A prompt-admission hook's guidance joins the opened step as its own
@@ -1771,6 +1776,12 @@ export class NativeHeadlessApplication implements NativeApplication {
                 // than selected.
                 for (const context of hookContexts) {
                   track(session.append('user/message', context, { surfaceOp: 'append' }))
+                }
+                // References and workspace instructions are part of the admitted input, so they
+                // precede the runtime-context snapshot. That is the order the compatibility
+                // pre-step projection persists.
+                for (const instructionContext of instructionContexts ?? []) {
+                  track(session.append('user/message', instructionContext, { surfaceOp: 'append' }))
                 }
                 // The standing policies reach the model as one runtime-context snapshot, which a
                 // later identical snapshot must not duplicate: only a superseded text is appended.
@@ -1797,9 +1808,6 @@ export class NativeHeadlessApplication implements NativeApplication {
                   signal.throwIfAborted()
                 }
                 if (selection?.notice !== undefined) track(session.append('user/message', selection.notice, { surfaceOp: 'append' }))
-                for (const instructionContext of instructionContexts ?? []) {
-                  track(session.append('user/message', instructionContext, { surfaceOp: 'append' }))
-                }
                 if (timeContext !== undefined) track(session.append('user/message', timeContext, { surfaceOp: 'append' }))
                 if (tmuxContext !== undefined) track(session.append('user/message', tmuxContext, { surfaceOp: 'append' }))
                 for (const requestContextMessage of requestContextMessages) {
@@ -3408,7 +3416,7 @@ export function createNativeHeadlessApplication(context: NativeContext, config: 
     authority?.defaultModelSelection,
     context.optional('agentPresets'), authority?.workspaceRegistry ?? context.optional('workspaceRegistry'), executionScope,
     context.optional('agentInstructions'), authority?.attachments ?? context.optional('attachments'),
-    context.optional('requestContexts'),
+    context.optional('requestContexts'), context.optional('sessionReference'),
   )
   context.own(() => application.dispose())
   return application
@@ -3418,7 +3426,7 @@ export function createNativeHeadlessApplication(context: NativeContext, config: 
 export const plugin: NativePlugin = {
   apiVersion: 1, name: '@redspark/rsh-native-headless', targets: ['host'],
   requires: ['fs', 'sessionPersistence', 'modelExecution', 'agents'],
-  optional: ['tools', 'promptSections', 'sandboxPolicy', 'approval', 'codeRuntime', 'timeContext', 'tmuxContext', 'sessionExecution', 'activeSessions', 'modelSelection', 'agentPresets', 'workspaceRegistry', 'agentInstructions', 'attachments', 'requestContexts'],
+  optional: ['tools', 'promptSections', 'sandboxPolicy', 'approval', 'codeRuntime', 'timeContext', 'tmuxContext', 'sessionExecution', 'activeSessions', 'modelSelection', 'agentPresets', 'workspaceRegistry', 'agentInstructions', 'attachments', 'requestContexts', 'sessionReference'],
   provides: ['application', 'rootExecution'],
   resolve(input) {
     const config = resolveNativeHeadlessConfig(input)

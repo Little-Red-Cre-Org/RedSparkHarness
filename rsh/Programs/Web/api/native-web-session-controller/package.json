@@ -66,6 +66,7 @@
         "commands",
         "pluginInventory",
         "requestContexts",
+    "sessionReference",
         "sessionFeedback",
         "messageFeedback", "fileReferences"
       ],

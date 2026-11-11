@@ -35,8 +35,10 @@ function fixtureEntries(): { readonly task: string; readonly parent: ReturnType<
   const initial = parentEvents.find(event => event.type === 'user/message' && event.data.source.kind === 'user')
   const userTask = initial?.type === 'user/message' ? initial.data.content.find(block => block.type === 'text') : undefined
   if (userTask?.type !== 'text') throw new Error('workflow-native: missing recorded task')
-  const taskWithReference = userTask.text.includes(referenceMention)
-    ? userTask.text
+  // The durable user message keeps the display form. Replay still submits the canonical
+  // mention; otherwise a refreshed fixture would append that mention a second time.
+  const taskWithReference = userTask.text.includes(referenceMention) || userTask.text.includes('@prior finding')
+    ? task
     : `${userTask.text} Use this prior finding: ${referenceMention}`
   const children = parsed.slice(1).map(events => {
     const first = events.find(event => event.type === 'user/message' && event.data.source.kind === 'user')
@@ -202,11 +204,12 @@ it('replays real workflow children and a committed structured report through dsh
     const parentRaw = stored[parentIndex]
     if (parentRaw === undefined) throw new Error('workflow-native: parent Session is missing')
     const parentEvents = parseSessionLog(parentRaw)
-    const originalReferenceMention = parentEvents.find(event => event.type === 'user/message'
-      && event.data.source.kind === 'user' && JSON.stringify(event.data.content).includes(referenceMention))
+    const persistedMention = parentEvents.find(event => event.type === 'user/message'
+      && event.data.source.kind === 'user' && JSON.stringify(event.data.content).includes('@prior finding'))
     const durableReference = parentEvents.find(event => event.type === 'user/message'
       && JSON.stringify(event.data.source).includes('session-reference'))
-    expect(originalReferenceMention).toBeDefined()
+    expect(persistedMention).toBeDefined()
+    expect(JSON.stringify(persistedMention?.data.content)).not.toContain('dsh-session:')
     expect(JSON.stringify(durableReference)).toContain(referenceFact)
     expect(readFileSync(modelRequests, 'utf8')).toContain(referenceFact)
     const starts = parentEvents.filter(event => event.type === 'tool-workflow/agent-start')

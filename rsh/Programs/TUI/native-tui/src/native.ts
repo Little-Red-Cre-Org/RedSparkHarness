@@ -130,7 +130,7 @@ export class NativeTuiApplication extends TerminalController implements NativeAp
 export const plugin: NativePlugin = {
   apiVersion: 1, name: '@redspark/rsh-native-tui', targets: ['host'],
   requires: ['fs', 'sessionPersistence', 'modelExecution', 'agents', 'sessionExecution', 'activeSessions'],
-  optional: ['tools', 'promptSections', 'sandboxPolicy', 'approval', 'codeRuntime', 'timeContext', 'tmuxContext', 'agentPresets', 'commands', 'skillInvocations', 'workspaceRegistry', 'agentInstructions', 'modelSelection', 'modelDirectory', 'userQuestions', 'attachments', 'requestContexts'],
+  optional: ['tools', 'promptSections', 'sandboxPolicy', 'approval', 'codeRuntime', 'timeContext', 'tmuxContext', 'agentPresets', 'commands', 'skillInvocations', 'workspaceRegistry', 'agentInstructions', 'modelSelection', 'modelDirectory', 'userQuestions', 'attachments', 'requestContexts', 'sessionReference'],
   provides: ['application', 'rootExecution'],
   resolve(input) {
     const config = resolveNativeTuiConfig(input)
