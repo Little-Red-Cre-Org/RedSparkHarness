@@ -296,6 +296,9 @@ Every one of the fifteen scenarios verified against the tree, with the action ea
 
 That is the whole of step 3. Two of the eight are small and already have their seams (`tool-terminal` for the shell, `acp-child`'s existing adapter); three are separate runtimes (Python, LSP, Landlock); one is a Windows limitation; one is a type and schema widening; one needs a re-record rather than code.
 
+## A build trap that hides source edits from scenarios
+
+`pnpm run build:lib:host` is incremental for these packages, and on `rsh/Engine/core/native-headless` it did not pick up an edit to `src/native.ts`: after editing the pre-step projection, the built chunk contained no `rewrite` call at all, while deleting `lib/` and rebuilding produced it immediately. A scenario runs the profile from `lib/`, so a source change that the build skipped looks exactly like a change that has no effect. Any investigation that concludes "the wiring does nothing" must first confirm the built chunk contains the change, or it will chase a phantom for several rounds — which is how long this one cost.
 ## Acceptance criteria
 
 Each claim above names the file or command that produced it, so a reader re-runs the check rather than trusting the sentence.

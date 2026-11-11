@@ -279,6 +279,10 @@ Native provider 只返回上下文；它从不改写直接消息，而 `native-h
 
 这就是第 3 步的全部。八项中有两项规模不大且接缝已存在（shell 用 `tool-terminal`，`acp-child` 已有适配器）；三项是独立运行时（Python、LSP、Landlock）；一项是 Windows 限制；一项是类型与 schema 拓宽；还有一项实际需要重录而非代码。
 
+## 一个会隐藏源码改动的构建陷阱
+
+`pnpm run build:lib:host` 对这些包是增量的，而在 `rsh/Engine/core/native-headless` 上它没有拾取对 `src/native.ts` 的修改：改完 pre-step 投影之后，构建出的 chunk 里完全没有 `rewrite` 调用，而删除 `lib/` 再重建后立刻就有了。场景是从 `lib/` 运行 profile 的，所以一次被构建跳过的源码改动，看起来和一次毫无效果的改动完全一样。任何得出「接线不起作用」结论的调查，都必须先确认构建产物里含有该改动，否则会追着一个幻影跑好几轮——这一轮花掉的时间就是如此。
+
 ## Acceptance criteria
 
 上面的提案按包逐个满足：已被现有 Native 包拥有的，在无人引用后删掉它的 Cordis 那一半；Cordis 形状的随运行时消失；确实未移植的补上 Native 入口。场景以其在 CI 中于 Native profile 上回放通过为准。Web 的范围决定必须在任何 Web 包移动之前记录下来。
