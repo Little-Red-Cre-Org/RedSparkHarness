@@ -303,6 +303,7 @@ function ciSharedStaticGates(): Gate[] {
   return [
     pnpmScript('runtime-closure', 'verify-runtime-closure', { label: 'runtime closure' }),
     pnpmScript('application-entrypoints', 'verify-application-entrypoints', { label: 'application entrypoints' }),
+    pnpmScript('core-package-set', 'verify-core-package-set', { label: 'core package set' }),
     pnpmScript('constraints', 'constraints'),
     pnpmScript('native-dependencies', 'verify-native-dependencies'),
     pnpmScript('package-dependencies', 'verify-package-dependencies', { label: 'package dependencies' }),
@@ -733,6 +734,7 @@ function hygieneLeafGates(options: { artifactNeeds?: string[] } = {}): Gate[] {
     pnpmScript('native-dependencies', 'verify-native-dependencies'),
     pnpmScript('package-dependencies', 'verify-package-dependencies', { label: 'package dependencies' }),
     pnpmScript('application-entrypoints', 'verify-application-entrypoints', { label: 'application entrypoints' }),
+    pnpmScript('core-package-set', 'verify-core-package-set', { label: 'core package set' }),
     pnpmScript('dsh-package-licenses', 'verify-dsh-package-licenses', { label: 'DSH package licenses' }),
     pnpmScript('package-invariants', 'verify-package-invariants', { label: 'package invariants' }),
     builtPackageInvariantsGate(options.artifactNeeds),

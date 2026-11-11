@@ -57,6 +57,7 @@ import {
   type NativeApprovalSessionGrant,
 } from '@redspark/rsh-approval-definition'
 import type { NativeCodeRuntime } from '@redspark/rsh-code-runtime-definition'
+import type { NativeSessionReferenceOperations } from '@redspark/rsh-session-reference/native'
 import type { NativeAgentInstructions } from '@redspark/rsh-agent-instructions/native'
 import type { NativeRequestContexts } from '@redspark/rsh-request-context-definition'
 import type { NativeTimeContext } from '@redspark/rsh-native-time-context'
@@ -607,6 +608,7 @@ export class NativeHeadlessApplication implements NativeApplication {
     private readonly agentInstructions?: NativeAgentInstructions,
     private readonly attachments?: AttachmentOperations,
     private readonly requestContexts?: NativeRequestContexts,
+    private readonly sessionReference?: NativeSessionReferenceOperations,
   ) {
     const route = resolveRootRoute(config)
     this.workspaceRoutes = new NativeWorkspaceRoutes(route, config.workspaceRoutes, workspaceRegistry, fs, sandboxPolicy, context.signal,
@@ -1763,7 +1765,9 @@ export class NativeHeadlessApplication implements NativeApplication {
                   track(session.append('system/message', { turn, step, message: createSystemMessage(stepPrompt, 'native-headless') },
                     { surfaceOp: 'append' }))
                 }
-                for (const input of inputs) {
+                // Stored in display form: the mention parser already collected the reference ids
+                // for the context appended below, so what persists is the readable citation.
+                for (const input of this.sessionReference?.rewrite(inputs) ?? inputs) {
                   track(session.append('user/message', input, { surfaceOp: 'append' }))
                 }
                 // A prompt-admission hook's guidance joins the opened step as its own
@@ -3418,7 +3422,7 @@ export function createNativeHeadlessApplication(context: NativeContext, config: 
 export const plugin: NativePlugin = {
   apiVersion: 1, name: '@redspark/rsh-native-headless', targets: ['host'],
   requires: ['fs', 'sessionPersistence', 'modelExecution', 'agents'],
-  optional: ['tools', 'promptSections', 'sandboxPolicy', 'approval', 'codeRuntime', 'timeContext', 'tmuxContext', 'sessionExecution', 'activeSessions', 'modelSelection', 'agentPresets', 'workspaceRegistry', 'agentInstructions', 'attachments', 'requestContexts'],
+  optional: ['tools', 'promptSections', 'sandboxPolicy', 'approval', 'codeRuntime', 'timeContext', 'tmuxContext', 'sessionExecution', 'activeSessions', 'modelSelection', 'agentPresets', 'workspaceRegistry', 'agentInstructions', 'attachments', 'requestContexts', 'sessionReference'],
   provides: ['application', 'rootExecution'],
   resolve(input) {
     const config = resolveNativeHeadlessConfig(input)

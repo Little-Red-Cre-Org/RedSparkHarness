@@ -53,8 +53,6 @@ export const DESKTOP_COMPATIBILITY_OPTIONAL_DEPENDENCIES = [
   '@redspark/rsh-rsh',
   '@redspark/rsh-sdk-app',
   '@redspark/rsh-sdk-minimal',
-  '@redspark/rsh-time-context',
-  '@redspark/rsh-tmux-context',
   '@redspark/rsh-tool-bash-persistent',
   '@redspark/rsh-tool-cordis',
   '@redspark/rsh-tool-jobs',

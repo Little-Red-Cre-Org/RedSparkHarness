@@ -124,7 +124,7 @@ interface PreparedReferencedMessage {
 }
 ```
 
-`NativeSessionReferenceOperations` prepares contexts for newly admitted canonical mentions through `NativeSessionQueryOperations`. It leaves the input messages unchanged. The Native headless consumer appends returned contexts with those messages through its existing Session writer; later history reconstruction reads those persisted context messages rather than resolving the historical URI again.
+`NativeSessionReferenceOperations` prepares contexts for newly admitted canonical mentions through `NativeSessionQueryOperations`. `prepare` leaves the input messages unchanged and returns the contexts to append. `rewrite` is the separate normalization the headless consumer applies at the point it persists an admitted message: it replaces each parsed mention with its display label, so the durable transcript records the readable citation while `prepare` still saw the raw URI. The consumer appends the returned contexts through its existing Session writer; later history reconstruction reads those persisted context messages rather than resolving the historical URI again.
 
 ```ts type-equiv
 /** Native read-only context preparation over the exact session query owner. */
@@ -135,6 +135,13 @@ interface NativeSessionReferenceOperations {
    * started reads and spills to settle before preparation rejects.
    */
   prepare(session: Session, inputs: readonly UserMessage[], signal: AbortSignal): Promise<readonly UserMessage[]>
+  /**
+   * Replace each canonical mention with its display label, leaving the reference ids in
+   * the accompanying context the caller appends.
+   * @param inputs - newly admitted user messages.
+   * @returns the same messages with mentions normalized for durable storage.
+   */
+  rewrite(inputs: readonly UserMessage[]): readonly UserMessage[]
 }
 ```
 
