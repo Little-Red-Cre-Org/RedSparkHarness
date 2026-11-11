@@ -152,6 +152,7 @@ export function hasSessionPublication(session: Session): boolean {
 export class Session {
   private log: SessionEvent[] = []
   private readonly appendGuards = new Set<(event: SessionEvent) => void>()
+  private readonly appendObservers = new Set<(event: SessionEvent) => void>()
   private checkingAppendGuards = false
   /** Single incremental owner of surface acceptance and projection state. */
   private readonly surfaceManager = new SurfaceManager(this.log)
@@ -407,6 +408,21 @@ export class Session {
   }
 
   /**
+   * Observe one event after it is in this Session's log.
+   * The observer must not append. A throw does not remove the accepted event.
+   * @param observer - synchronous recorder for the accepted event.
+   * @returns exact registration disposer; removal is idempotent.
+   */
+  onAppend(observer: (event: SessionEvent) => void): () => void {
+    this.appendObservers.add(observer)
+    return () => { this.appendObservers.delete(observer) }
+  }
+
+  private publishAppend(event: SessionEvent): void {
+    for (const observer of this.appendObservers) observer(event)
+  }
+
+  /**
    * Append one typed event to the log and synchronously notify observers via
    * the store-owned, module-private publication hooks. The hot path never blocks
    * on I/O — persistence plugins buffer asynchronously. Once the event enters
@@ -486,6 +502,7 @@ export class Session {
       this.log.push(event as SessionEvent)
       this.eventsSnapshot = undefined
       publish?.()
+      this.publishAppend(event as SessionEvent)
       return event
     } finally {
       if (entry !== undefined) {
@@ -535,6 +552,7 @@ export class Session {
         for (const event of candidates) this.log.push(event)
         if (candidates.length > 0) this.eventsSnapshot = undefined
         for (const publish of publications) publish?.()
+        for (const event of candidates) this.publishAppend(event)
         return Object.freeze(candidates)
       } finally {
         if (entry !== undefined) {

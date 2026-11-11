@@ -24,7 +24,10 @@ export class NativeContinuationSession {
   private closing: Promise<void> | undefined
   private readonly checkpoints = new Set<NativeDurabilityCheckpoint>()
 
+  private readonly stopAppend: () => void
+
   private constructor(readonly session: Session, readonly writer: Writer, readonly initialEvents: readonly SessionEvent[]) {
+    this.stopAppend = session.onAppend((event) => { this.track(event) })
     for (const event of initialEvents) this.foldInbox(event)
     const origins = initialEvents.filter(event => event.seq >= writer.inheritedEventCount && event.type === 'session/root-origin')
     if (origins.length > 1) throw new Error('native-continuation: Session has duplicate root origin records')
@@ -120,9 +123,11 @@ export class NativeContinuationSession {
 
   /**
    * Track a Session-owner append in the single shared contiguous batch.
+   * An event already in the pending batch is ignored, because {@link Session.onAppend} delivers the same object.
    * @param event - exact event already appended by this Session owner.
    */
   track(event: SessionEvent): void {
+    if (this.pending.includes(event)) return
     this.assertOpen()
     this.foldInbox(event)
     this.pending.push(event)
@@ -346,6 +351,7 @@ export class NativeContinuationSession {
   /** Close admission, drain accepted writes and release the only writer. @returns the memoized quiescent close transaction. */
   close(): Promise<void> {
     if (this.closing !== undefined) return this.closing
+    this.stopAppend()
     const completed = Promise.withResolvers<void>()
     this.closing = completed.promise
     void this.closeInternal().then(completed.resolve, completed.reject)
