@@ -173,6 +173,12 @@ CLI 参考文档用自己的表格陈述了这个区分：`web`、`headless`、`
 
 那个投影已经存在且可用：`workflow-native` 今天在出厂 profile 上通过，持久化父 Session 保留其 `dsh-session:` 提及、模型请求携带该事实。所以「让模型看到引用」不需要任何运行时改动。
 
+重新测量：**legacy profile 确实会持久化展示形态**。用 `dsh --profile legacy-headless` 刷新 `session-reference-spill`，其 `user/message` 逐字节仍是 `Use @Research as background`，说明那次改写是真正到达存储日志的 Cordis 行为——`agent-loop` 的 step 追加的正是 pre-step 决策里的消息。我此前把这个运行时依赖描述反了。
+
+`workflow-native` 的 fixture 同样是 `recording: authored`，其 `session.v3.jsonl` 由测试写入、持久化的是 URI。所以两个场景的分歧源于两份录制都是手写的，而不是任何运行时会同时产出两种形态。Native profile 应当满足那份来自真实 profile 的录制。
+
+阻塞点比上面所有描述都更具体：`assembleNativeScenario` 复制的是 `rsh/Programs/CLI/tests/profiles/native-headless`，而那个测试 profile 只有**十二行**——`app`、`agents`、`jobs`、`tools`、`tool-jobs`、`model-execution`、`code-runtime`、`time-context`、`storage`、`fs`、`policy`、`model`。它不含 `session-reference`、`agent-instructions`、`session-query` 或 spill store，所以场景必须自己通过 `extraRows` 安装这条链；而加上 `session-query` 还需要来自 `native-session-execution` 的 `activeSessions`。此前读到的 `headless` profile 那 62 行是另一个 profile，不是这一个。
+
 因此 `session-reference-spill` 属于**归类错误**而非被阻塞。它的 `snapshot.yml` 写着 `recording: authored`，其 `session.v3.jsonl` 存的是展示形态，而它自己的 inbox 事件携带 URI——这个组合本树中没有任何运行时会产生：持久化消息会保留提及（正如 `workflow-native` 所断言），只有投影会被改写。该场景应针对 Native profile 重录，而不是迁移；这与 `session-log-spill` 一类同为一种处置，需要 `pnpm run test:snapshot:record`，而不是改代码。
 
 与此同时引用上下文仍然缺失，而对 `NativeSessionReference.prepare` 加日志显示它**从未被进入**：该接线已回退，因为我恢复了一个构造字段、而它的实参此前被我删掉，且仅这个恢复就重排了 `workflow-run`。所以剩余缺口位于 provider 上游，即谁调用 `agent-instructions`、以及用什么输入。种子在运行时存在之后，引用消息仍未出现，正是这一点指向 `native-headless` 根本不读取 `sessionReference`。它消费 `agentInstructions` 与 `requestContexts`，却没有对引用的等价调用，所以组合 `session-reference` 毫无效果。因此阻塞点是循环中缺失的集成点，而种子布局是另一个独立问题。
@@ -272,6 +278,10 @@ Native provider 只返回上下文；它从不改写直接消息，而 `native-h
 | `agent-instructions` | 含 `:` 的工作区路径 | Windows 无法创建，已通过 `CreateDirectory` 验证 |
 
 这就是第 3 步的全部。八项中有两项规模不大且接缝已存在（shell 用 `tool-terminal`，`acp-child` 已有适配器）；三项是独立运行时（Python、LSP、Landlock）；一项是 Windows 限制；一项是类型与 schema 拓宽；还有一项实际需要重录而非代码。
+
+## 一个会隐藏源码改动的构建陷阱
+
+`pnpm run build:lib:host` 对这些包是增量的，而在 `rsh/Engine/core/native-headless` 上它没有拾取对 `src/native.ts` 的修改：改完 pre-step 投影之后，构建出的 chunk 里完全没有 `rewrite` 调用，而删除 `lib/` 再重建后立刻就有了。场景是从 `lib/` 运行 profile 的，所以一次被构建跳过的源码改动，看起来和一次毫无效果的改动完全一样。任何得出「接线不起作用」结论的调查，都必须先确认构建产物里含有该改动，否则会追着一个幻影跑好几轮——这一轮花掉的时间就是如此。
 
 ## Acceptance criteria
 

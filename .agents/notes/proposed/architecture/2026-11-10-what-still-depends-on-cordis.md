@@ -178,6 +178,12 @@ Two further findings from running it. First, the shipped `headless` profile **al
 
 That projection already exists and works: `workflow-native` passes on the shipped profile today, with the durable parent keeping its `dsh-session:` mention and the model request carrying the fact. So no runtime change is needed for the model to see a reference.
 
+Re-measured: the legacy profile **does** persist the display form. Refreshing `session-reference-spill` through `dsh --profile legacy-headless` leaves its `user/message` at `Use @Research as background`, byte for byte, so the rewrite is genuine Cordis behaviour that reaches the stored log — `agent-loop`'s step appends the pre-step decision's messages. That runtime dependency is what I earlier described backwards.
+
+`workflow-native`'s fixtures are likewise `recording: authored`, and its `session.v3.jsonl` was written by the test with the URI persisted. So the two scenarios disagree because both recordings were authored, not because any runtime produces both shapes. A Native profile must satisfy the one that came from a real profile.
+
+The blocker is narrower than any of that: `assembleNativeScenario` copies `rsh/Programs/CLI/tests/profiles/native-headless`, and that test profile carries **twelve rows** — `app`, `agents`, `jobs`, `tools`, `tool-jobs`, `model-execution`, `code-runtime`, `time-context`, `storage`, `fs`, `policy`, `model`. It contains no `session-reference`, `agent-instructions`, `session-query` or spill store, so a scenario has to install that chain itself through `extraRows`, and adding `session-query` additionally requires `activeSessions` from `native-session-execution`. Earlier readings of the `headless` profile's 62 rows described a different profile, not this one.
+
 `session-reference-spill` is therefore misclassified rather than blocked. Its `snapshot.yml` says `recording: authored`, and its `session.v3.jsonl` stores the display form while its own inbox event carries the URI — a combination no runtime in this tree produces, since the persisted message would keep the mention (as `workflow-native` asserts) and only the projection would rewrite it. The scenario should be re-recorded from the native profile instead of migrated, which is the same disposition as `session-log-spill` cases and needs `pnpm run test:snapshot:record`, not a code change.
 
 The reference context is still absent meanwhile, and instrumenting `NativeSessionReference.prepare` shows it is **never entered**: the wiring was reverted because I had restored a constructor field whose argument I had earlier removed, and that restored field alone reordered `workflow-run`. So the remaining gap is upstream of the provider, in what calls `agent-instructions` and with which inputs. With the seed present at run time the reference message still did not appear, which is what pointed at `native-headless` not reading `sessionReference` at all. It consumes `agentInstructions` and `requestContexts` and has no equivalent call for references, so composing `session-reference` has no effect. The blocker is therefore a missing integration point in the loop, and the seed layout was a second, independent problem.
@@ -290,6 +296,9 @@ Every one of the fifteen scenarios verified against the tree, with the action ea
 
 That is the whole of step 3. Two of the eight are small and already have their seams (`tool-terminal` for the shell, `acp-child`'s existing adapter); three are separate runtimes (Python, LSP, Landlock); one is a Windows limitation; one is a type and schema widening; one needs a re-record rather than code.
 
+## A build trap that hides source edits from scenarios
+
+`pnpm run build:lib:host` is incremental for these packages, and on `rsh/Engine/core/native-headless` it did not pick up an edit to `src/native.ts`: after editing the pre-step projection, the built chunk contained no `rewrite` call at all, while deleting `lib/` and rebuilding produced it immediately. A scenario runs the profile from `lib/`, so a source change that the build skipped looks exactly like a change that has no effect. Any investigation that concludes "the wiring does nothing" must first confirm the built chunk contains the change, or it will chase a phantom for several rounds — which is how long this one cost.
 ## Acceptance criteria
 
 Each claim above names the file or command that produced it, so a reader re-runs the check rather than trusting the sentence.
