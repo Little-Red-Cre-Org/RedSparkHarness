@@ -39,8 +39,7 @@
         "workspaceRegistry",
         "agentInstructions",
         "attachments",
-        "requestContexts",
-        "sessionReference"
+        "requestContexts"
       ],
       "provides": [
         "application",
