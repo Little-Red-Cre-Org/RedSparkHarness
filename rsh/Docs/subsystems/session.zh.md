@@ -535,6 +535,13 @@ declare class Session {
    */
   onBeforeAppend(guard: (event: SessionEvent) => void): () => void;
   /**
+   * Observe one event after it is in this Session's log.
+   * The observer must not append. A throw does not remove the accepted event.
+   * @param observer - synchronous recorder for the accepted event.
+   * @returns exact registration disposer; removal is idempotent.
+   */
+  onAppend(observer: (event: SessionEvent) => void): () => void;
+  /**
    * Append one typed event to the log and synchronously notify observers via
    * the store-owned, module-private publication hooks. The hot path never blocks
    * on I/O — persistence plugins buffer asynchronously. Once the event enters
