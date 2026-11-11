@@ -1,0 +1,6 @@
+# Bilingual-pair consistency record (rsh/Docs/i18n/README.md): the git blob hash of each
+# side as of the last confirmed-consistent state. Both languages carry equal authority;
+# after editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write .agents/notes/implemented/architecture/2026-11-11-native-lsp-definition-replay.md
+2026-11-11-native-lsp-definition-replay.md: c53f37c08f9dc83b5c6279b0df0ce34f00f8e27f
+2026-11-11-native-lsp-definition-replay.zh.md: 59e3d3fbee5f69252bdf58673ea87f64d019c539
