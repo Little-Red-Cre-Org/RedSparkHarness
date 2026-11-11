@@ -299,6 +299,14 @@ That is the whole of step 3. Two of the eight are small and already have their s
 ## A build trap that hides source edits from scenarios
 
 `pnpm run build:lib:host` is incremental for these packages, and on `rsh/Engine/core/native-headless` it did not pick up an edit to `src/native.ts`: after editing the pre-step projection, the built chunk contained no `rewrite` call at all, while deleting `lib/` and rebuilding produced it immediately. A scenario runs the profile from `lib/`, so a source change that the build skipped looks exactly like a change that has no effect. Any investigation that concludes "the wiring does nothing" must first confirm the built chunk contains the change, or it will chase a phantom for several rounds — which is how long this one cost.
+## What the harness could not do, and now can
+
+`assembleNativeScenario` copied one fixed profile — `rsh/Programs/CLI/tests/profiles/native-headless`, twelve rows with no reference chain — so no scenario could start from the composition the CLI actually generates. It now accepts `profileRoot`, which lets the caller generate the shipped `headless` composition and point the scenario at it. The package cannot generate it itself: importing the CLI source breaks this project's `rootDir`, so the directory is passed in.
+
+That made the difference visible. With the shipped profile and a rewrite at the pre-step projection, the persisted sequence becomes `user, plugin, plugin, skill-catalog` and the first message reads `Use @Research as background` — the mention is normalized as Cordis does it. The reference context is still absent, because `agent-instructions` never enters its `prepare`, and that branch has no test: neither `agent-instructions.spec.ts` nor its e2e mentions `sessionReference`.
+
+The rewrite is not in this change. Applying it at the projection breaks `workflow-native`, whose fixtures are `authored` with the `dsh-session:` mention persisted; two recorded expectations disagree about what the stored message carries, and settling that is a decision about which behaviour is correct, not a wiring fix.
+
 ## Acceptance criteria
 
 Each claim above names the file or command that produced it, so a reader re-runs the check rather than trusting the sentence.
