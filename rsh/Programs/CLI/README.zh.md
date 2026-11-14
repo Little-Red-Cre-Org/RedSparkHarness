@@ -2,7 +2,7 @@
 
 [English](README.md) | 中文
 
-`dsh` 是唯一受支持的 Node 应用启动器；profile 由多个插件组合包 patch 层按顺序叠加而成，其上再应用用户自己的覆盖配置。SDK 与 ACP（Agent Client Protocol）都是 profile，而不是独立的公开可执行命令。Python 运行时 wheel 包中也包含同一个命令；SDK 默认使用 `sdk`，极简示例选择 `sdk-minimal`。Windows 上可选的 `rsh` Shell shim 会路由到源码中的 `dsh --profile rsh` 启动器，并不会引入第二个 Node 应用表层。[`src/args.ts`](src/args.ts) 负责命令语法，[`src/bin.ts`](src/bin.ts) 只加载选中的运行器。无效命令、来自其他模式的选项、配置错误和启动失败都会以非零状态退出。
+`dsh` 是唯一受支持的 Node 应用启动器；profile 由多个插件组合包 patch 层按顺序叠加而成，其上再应用用户自己的覆盖配置。SDK 与 ACP（Agent Client Protocol）都是 profile，而不是独立的公开可执行命令。Python 运行时 wheel 包中也包含同一个命令；SDK 与极简示例都选择 `sdk`。Windows 上可选的 `rsh` Shell shim 会路由到源码中的 `dsh --profile rsh` 启动器，并不会引入第二个 Node 应用表层。[`src/args.ts`](src/args.ts) 负责命令语法，[`src/bin.ts`](src/bin.ts) 只加载选中的运行器。无效命令、来自其他模式的选项、配置错误和启动失败都会以非零状态退出。
 
 ## 入口模式
 
@@ -17,11 +17,11 @@
 | `dsh --profile sdk` | 通过 JSON-RPC stdio 为 SDK 客户端提供服务，直至关闭或断开连接。 |
 | `dsh --profile native-sdk` | 通过 JSON-RPC stdio 提供文本与图片 SDK 轮次、实时模型分块、Session 取消、下一步引导与已结束轮次分叉。 |
 | `dsh --profile native-acp` | 通过标准 ACP 标准输入输出驱动原生文本／图片 Session、模型配置、取消与持久恢复。 |
-| `dsh --profile sdk-minimal` | 以独立极简 agent（智能体）配置树为 SDK 客户端提供服务。 |
+| `dsh --profile sdk-minimal` | 已拒绝。请改用 `dsh --profile sdk`。已有目录不会被改写。 |
 | `dsh web` | `--profile web` 的别名。 |
 | `dsh plugin --profile <name> <pnpm args>` | 通过在 profile 目录中转发给 pnpm 来管理该 profile 的插件。 |
 
-运行命令时所在的目录将作为默认 workspace 根目录。新建的 `headless`、`web`、`sdk`、`acp` 和 `rsh` profile 分别初始化为 `native-headless`、`native-web`、`native-sdk`、`native-acp` 和 `native-tui`，同时保留请求中的 profile 名称。八个 `native-*` profile 仍可显式选择，`sdk-minimal` 仍是 legacy profile。已有 `package.json` 会保留所选 runtime，初始化不会改写它。使用 `--from-default-profile` 和未使用的自定义名称（如 `legacy-web`）可从随附 Cordis 组合包模板创建 legacy profile；`dsh plugin` 则可初始化以 base 为基础的 legacy profile。`desktop` 名称保留给 Electron 持有的 profile，因此 CLI（命令行界面）会拒绝针对它的启动、配置 dump 和插件管理请求。
+运行命令时所在的目录将作为默认 workspace 根目录。新建的 `headless`、`web`、`sdk`、`acp` 和 `rsh` profile 分别初始化为 `native-headless`、`native-web`、`native-sdk`、`native-acp` 和 `native-tui`，同时保留请求中的 profile 名称。八个 `native-*` profile 仍可显式选择。启动器在启动、导出配置、插件管理和 `--from-default-profile` 上拒绝 `sdk-minimal`。已有 `package.json` 会保留所选 runtime，初始化不会改写它。使用 `--from-default-profile` 和未使用的自定义名称（如 `legacy-web`）可从随附 Cordis 组合包模板创建 legacy profile；`dsh plugin` 则可初始化以 base 为基础的 legacy profile。`desktop` 名称保留给 Electron 持有的 profile，因此 CLI（命令行界面）会拒绝针对它的启动、配置 dump 和插件管理请求。
 
 `native-headless`、`native-headless-query`、`native-tui` 和 `native-web` 会话默认值使用随附 pi-ai 的 `deepseek` 路由和 `deepseek-flash` 模型。Native ACP 保留显式的 `deepseek-official` 路由。
 
@@ -67,7 +67,7 @@ legacy profile 目录包含一个 `package.json`，其中记录树外插件依�
 
 CLI 的原生启动器直接依赖原生运行时。Cordis、profile 启动、配置转储和 profile 包管理依赖属于可选包；普通安装会包含它们，纯原生部署则可省略可选依赖。此时启动旧 profile 或调用仅供兼容层使用的 CLI 模式，会在导入 Cordis 前提示所需的安装方式。原生插件仍由选中的 profile 自行声明为依赖。
 
-标准名称 `headless`、`web`、`sdk`、`acp` 和 `rsh` 在目录中没有 `package.json` 时会创建 Native profile；runtime resolver 继续为已有 manifest 选择运行时。`sdk-minimal` 仍是 legacy 组合包 profile。原生 Session 执行 Provider 提供选定的执行注册表与活动 Session 所有者，CLI 解析器将该 Provider 声明为直接依赖。
+标准名称 `headless`、`web`、`sdk`、`acp` 和 `rsh` 在目录中没有 `package.json` 时会创建 Native profile；runtime resolver 继续为已有 manifest 选择运行时。启动器在启动、导出配置、插件管理和 `--from-default-profile` 上拒绝 `sdk-minimal`。原生 Session 执行 Provider 提供选定的执行注册表与活动 Session 所有者，CLI 解析器将该 Provider 声明为直接依赖。
 
 Host 配置在导入插件前捕获继承环境、调用目录与 Harness 主目录环境层。兼容启动共用同一验证加载器；每个根作用域拥有真实启动快照 Provider。每个 Host 根作用域还会获得 `pluginInventory` Provider，列出运行中 Host 的安装状态；重载后仍读取被保留的 Host。仅 Client 的配置两者都不安装。
 

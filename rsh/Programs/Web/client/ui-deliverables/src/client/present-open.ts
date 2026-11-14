@@ -1,17 +1,47 @@
 /** Shared native-open status for delivery cards and closing-message file mentions. */
-import { createSnapshotStore } from '@redspark/rsh-client-store'
 import type { SessionId } from '@redspark/rsh-session/types'
 import { presentedFileUrl, PRESENT_HOST_PATH, isPresentedHost, type PresentedAction, type PresentedHost } from '../presented.ts'
 
 /** State of the latest explicit open gesture for one saved file. */
 export type PresentedOpenPhase = 'opening' | 'opened' | 'revealing' | 'revealed' | 'error' | 'revealError' | 'nativeUnavailable'
 
+/** Read-only external-store seat shared by the controller and `useSyncExternalStore`. */
+interface PresentStore<T> {
+  getSnapshot(): T
+  subscribe(listener: () => void): () => void
+  set(next: T): void
+}
+
+/**
+ * Private store for controller state. The controller never needs persistence,
+ * development freezing, or selector subscriptions, and this package's Native
+ * export must not add a cross-package runtime edge for those unused features.
+ * @param initial - value before any gesture or metadata read.
+ * @returns the observable seat with a synchronous notify on every write.
+ */
+function createPresentStore<T>(initial: T): PresentStore<T> {
+  let snapshot = initial
+  const listeners = new Set<() => void>()
+  const publish = (): void => { for (const listener of listeners) listener() }
+  return {
+    getSnapshot: () => snapshot,
+    subscribe: (listener) => {
+      listeners.add(listener)
+      return () => { listeners.delete(listener) }
+    },
+    set: (next) => {
+      snapshot = next
+      publish()
+    },
+  }
+}
+
 /** One browser plugin's file-open requests, cancelled when that plugin is disposed. */
 export class PresentedOpenController {
   /** File action URLs key the state across Sessions, turns, and both clickable surfaces. */
-  readonly state = createSnapshotStore<Record<string, PresentedOpenPhase | undefined>>({})
+  readonly state = createPresentStore<Record<string, PresentedOpenPhase | undefined>>({})
   /** Native destination metadata, or a retryable read failure. */
-  readonly host = createSnapshotStore<PresentedHost | 'error' | null>(null)
+  readonly host = createPresentStore<PresentedHost | 'error' | null>(null)
   private loading: Promise<void> | undefined
   private metadata = new AbortController()
   private readonly lifetime = new AbortController()
@@ -30,7 +60,7 @@ export class PresentedOpenController {
     const url = presentedFileUrl(sessionId, seq, index)
     const phase = this.state.getSnapshot()[url]
     if (this.lifetime.signal.aborted || phase === 'opening' || phase === 'revealing') return
-    this.state.update((state) => { state[url] = action === 'open' ? 'opening' : 'revealing' })
+    this.state.set({ ...this.state.getSnapshot(), [url]: action === 'open' ? 'opening' : 'revealing' })
     const task = this.request(url, action)
     this.pending.add(task)
     try {
@@ -98,6 +128,6 @@ export class PresentedOpenController {
       // Transport failures share the retryable card state with Host open failures.
       phase = failure
     }
-    if (!this.lifetime.signal.aborted) this.state.update((state) => { state[url] = phase })
+    if (!this.lifetime.signal.aborted) this.state.set({ ...this.state.getSnapshot(), [url]: phase })
   }
 }

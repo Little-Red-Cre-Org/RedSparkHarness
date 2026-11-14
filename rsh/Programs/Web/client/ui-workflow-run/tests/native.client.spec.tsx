@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
-import { afterEach, expect, it } from 'vitest'
+import { afterEach, expect, it, vi } from 'vitest'
+import type { SessionId } from '@redspark/rsh-session/types'
 import type { SessionEvent } from '@redspark/rsh-session/types'
 import { NativeWorkflowRunPanel, workflowRunsFromSessionEvents } from '../src/native.ts'
 
@@ -58,4 +59,16 @@ it('renders localized disclosures with read-only members and zero-member copy', 
   rerender(<NativeWorkflowRunPanel data={{ name: 'Empty', status: 'completed', phases: [] }} locale="zh" />)
   fireEvent.click(screen.getByText('Empty'))
   expect(screen.getByText('没有启动成员')).toBeTruthy()
+})
+
+it('opens only when both an eligible id and a select callback are provided', () => {
+  const data = workflowRunsFromSessionEvents(starts)[0]!.data
+  const openSession = vi.fn()
+  const { rerender } = render(<NativeWorkflowRunPanel data={data} locale="en" openSession={openSession} />)
+  expect(screen.queryByRole('button', { name: 'Open Unphased member' })).toBeNull()
+  rerender(<NativeWorkflowRunPanel data={data} locale="en" navigable={['a' as SessionId]} />)
+  expect(screen.queryByRole('button', { name: 'Open Unphased member' })).toBeNull()
+  rerender(<NativeWorkflowRunPanel data={data} locale="en" navigable={['a' as SessionId]} openSession={openSession} />)
+  fireEvent.click(screen.getByRole('button', { name: 'Open Unphased member' }))
+  expect(openSession).toHaveBeenCalledWith('a')
 })

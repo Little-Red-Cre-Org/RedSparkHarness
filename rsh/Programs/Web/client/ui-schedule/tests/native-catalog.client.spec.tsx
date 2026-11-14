@@ -8,14 +8,16 @@
  * pins the fold, the ordering applied on top of it, and the row text that
  * differs between the two record sets.
  */
-import { useSyncExternalStore } from 'react'
+import { useSyncExternalStore, type ComponentType } from 'react'
 import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { makeTranslate } from '@redspark/rsh-client-test-runtime'
 import type { NativeScheduleFrame, NativeScheduledJob } from '@redspark/rsh-client-native-session/schedule-types'
-import type { SessionId } from '@redspark/rsh-session/types'
+import type { NativeConversationSnapshot } from '@redspark/rsh-client-ui-session/native'
+import type { SessionEvent, SessionId } from '@redspark/rsh-session/types'
 import {
-  applyScheduleFrame, NativeScheduleCatalog, orderNativeSchedule, plugin, type NativeSchedulesBySession,
+  applyScheduleFrame, foldScheduleRows, NativeScheduleCatalog, orderNativeSchedule, plugin,
+  type NativeConversationEvents, type NativeSchedulesBySession,
 } from '../src/native.ts'
 import { zh } from '../src/client/locales.ts'
 
@@ -75,8 +77,33 @@ function hookFor(grouped: NativeSchedulesBySession) {
     useSyncExternalStore(() => () => {}, () => selector(grouped))) as never
 }
 
-function mount(grouped: NativeSchedulesBySession) {
-  return render(<NativeScheduleCatalog sessionId={SESSION} useSchedules={hookFor(grouped)} t={t} />)
+/** One controller snapshot with the selected Session's loaded events. */
+function conversation(
+  events: readonly SessionEvent[] = [],
+  overrides: Partial<NativeConversationSnapshot> = {},
+): NativeConversationEvents {
+  const snapshot: NativeConversationSnapshot = {
+    sessions: [], selected: SESSION, state: 'ready', events, ...overrides,
+  }
+  return { getSnapshot: () => snapshot, subscribe: () => () => {} }
+}
+
+function catalog(grouped: NativeSchedulesBySession, events: readonly SessionEvent[] = []) {
+  return <NativeScheduleCatalog conversation={conversation(events)} useSchedules={hookFor(grouped)} t={t} />
+}
+
+function mount(grouped: NativeSchedulesBySession, events: readonly SessionEvent[] = []) {
+  return render(catalog(grouped, events))
+}
+
+/** One durable `schedule/change` create event for the selected Session. */
+function createEvent(id: string, prompt: string): SessionEvent {
+  return {
+    type: 'schedule/change', seq: 0, time: START,
+    data: { version: 1, operation: 'create', schedule: {
+      id, kind: 'after', prompt, afterSeconds: 60, scheduledAt: new Date(START + 60_000).toISOString(),
+    } },
+  } as unknown as SessionEvent
 }
 
 /** Rows in render order, one entry per cell that carries text. */
@@ -139,6 +166,26 @@ describe('applyScheduleFrame', () => {
   })
 })
 
+describe('foldScheduleRows', () => {
+  it('treats a Session without loaded events as having no reminders', () => {
+    expect(foldScheduleRows(undefined, undefined, t)).toEqual([])
+  })
+
+  it('treats an undecodable durable record as having no reminders', () => {
+    const corrupt = {
+      ...createEvent('broken', 'Broken'),
+      data: { version: 1, operation: 'create', schedule: { id: 'broken' } },
+    } as SessionEvent
+    expect(foldScheduleRows([corrupt], undefined, t)).toEqual([])
+  })
+
+  it('rethrows a failure that is not a durable-log error', () => {
+    const failing = (() => { throw new Error('translator failed') }) as never
+    expect(() => foldScheduleRows([createEvent('row-1', 'Review')], undefined, failing))
+      .toThrow('translator failed')
+  })
+})
+
 describe('orderNativeSchedule', () => {
   it('puts overdue rows first, then ascending targets', () => {
     const rows = orderNativeSchedule([
@@ -162,6 +209,35 @@ describe('orderNativeSchedule', () => {
 describe('NativeScheduleCatalog', () => {
   it('renders nothing while the Session has no reminders', () => {
     const { container } = mount({})
+    expect(container.innerHTML).toBe('')
+  })
+
+  it('renders nothing before a Session is selected', () => {
+    const snapshot: NativeConversationSnapshot = { sessions: [], selected: undefined, state: 'loading' }
+    const { container } = render(<NativeScheduleCatalog
+      conversation={{ getSnapshot: () => snapshot, subscribe: () => () => {} }}
+      useSchedules={hookFor({})} t={t} />)
+    expect(container.innerHTML).toBe('')
+  })
+
+  it('renders a reminder folded from the open Session log when the scheduler lists none', () => {
+    mount({}, [createEvent('log-1', 'Review overdue deployment')])
+    fireEvent.click(screen.getByRole('button', { name: '1 个提醒' }))
+    const cells = rowCells()[0] as string[]
+    expect(cells[1]).toBe('Review overdue deployment')
+    expect(cells[2]).toContain(zh['frequency.once'])
+  })
+
+  it('prefers the log title over a scheduler row with the same id', () => {
+    mount({ [SESSION]: [job('shared', { title: 'scheduler title' })] }, [createEvent('shared', 'log title')])
+    fireEvent.click(screen.getByRole('button'))
+    expect(rowCells()[0]?.[1]).toBe('log title')
+  })
+
+  it('ignores a reminder in the inherited fork prefix', () => {
+    const { container } = render(<NativeScheduleCatalog
+      conversation={conversation([createEvent('parent', 'Parent reminder')], { inheritedEventCount: 1 })}
+      useSchedules={hookFor({})} t={t} />)
     expect(container.innerHTML).toBe('')
   })
 
@@ -216,7 +292,7 @@ describe('NativeScheduleCatalog', () => {
     fireEvent.click(screen.getByRole('button'))
     expect(screen.getByRole('list')).toBeDefined()
 
-    rerender(<NativeScheduleCatalog sessionId={SESSION} useSchedules={hookFor({})} t={t} />)
+    rerender(catalog({}))
     expect(container.innerHTML).toBe('')
   })
 })
@@ -230,5 +306,48 @@ describe('native Schedule installation', () => {
     ])
     expect(plugin.optional).toEqual([])
     expect(plugin.provides).toEqual([])
+  })
+
+  it('injects the Conversation controller into its header action', async () => {
+    const followFailure = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const releases: Array<() => void | Promise<void>> = []
+    const registrations: Array<{ options: Record<string, unknown>; component: unknown }> = []
+    const conversationService = conversation()
+    const context = {
+      signal: new AbortController().signal,
+      require: (key: string) => key === 'clientSlots' ? {
+        inject: (_name: string, factory: () => unknown) => { factory(); return () => {} },
+        register: (options: Record<string, unknown>, component: unknown) => {
+          registrations.push({ options, component })
+          return () => {}
+        },
+      } : key === 'clientLocale' ? { register: () => () => {} }
+        : key === 'clientNativeSchedule' ? {
+          follow: async function* () {
+            yield { type: 'baseline', jobs: [job('live-1')] } satisfies NativeScheduleFrame
+            throw new Error('feed failed')
+          },
+        } : conversationService,
+      own: (dispose: () => void | Promise<void>) => { releases.push(dispose) },
+    }
+    await plugin.resolve(undefined)(context as never)
+    expect(registrations).toHaveLength(1)
+    const registration = registrations[0]!
+    expect(registration.options).toMatchObject({ name: 'native.conversation.actions', id: 'schedule-catalog', order: 15 })
+    const injected = (registration.options['inject'] as () => {
+      conversation: NativeConversationEvents
+    })()
+    expect(injected.conversation).toBe(conversationService)
+    const Injected = registration.component as ComponentType<{
+      useSchedules: ReturnType<typeof hookFor>
+      conversation: NativeConversationEvents
+      t: typeof t
+    }>
+    const { container } = render(
+      <Injected useSchedules={hookFor({})} conversation={conversationService} t={t} />,
+    )
+    expect(container.innerHTML).toBe('')
+    for (const release of releases) await release()
+    expect(followFailure).toHaveBeenCalledWith('native schedule catalog: follow failed', expect.any(Error))
   })
 })

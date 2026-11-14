@@ -68,7 +68,8 @@
     "@redspark/rsh-client-ui-trajectory": "workspace:^",
     "@redspark/rsh-native-runtime": "workspace:^",
     "@redspark/rsh-native-tools": "workspace:^",
-    "@redspark/rsh-client-ui-workflow-run": "workspace:^"
+    "@redspark/rsh-client-ui-workflow-run": "workspace:^",
+    "@redspark/rsh-util-workspace-path": "workspace:^"
   },
   "scripts": {
     "bundle": "tsdown"
@@ -94,6 +95,7 @@
     "@redspark/rsh-client-locale": "workspace:^",
     "@redspark/rsh-client-ui-slots": "workspace:^",
     "@redspark/rsh-client-ui-session": "workspace:^",
+    "@redspark/rsh-client-ui-deliverables": "workspace:^",
     "@redspark/rsh-client-ui-layout": "workspace:^",
     "@redspark/rsh-client-ui-sidebar": "workspace:^",
     "@redspark/rsh-client-ui-sidebar-right": "workspace:^",

@@ -2,5 +2,5 @@
 # side as of the last confirmed-consistent state. Both languages carry equal authority;
 # after editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write .agents/notes/implemented/bug-fix/2026-10-11-native-web-scheduler-session-list-cycle.md
-2026-10-11-native-web-scheduler-session-list-cycle.md: cc49d64f390dd2e44b9a2b86226b29d0cfedf760
-2026-10-11-native-web-scheduler-session-list-cycle.zh.md: fbe9389880985e5cec1e40eb0ae2d576824d0dce
+2026-10-11-native-web-scheduler-session-list-cycle.md: 81e3416853cd2bc6288406aef87508c7293e176c
+2026-10-11-native-web-scheduler-session-list-cycle.zh.md: b176a1dcaeec1c9f9d4b25ccac8c7861a4ec3a50

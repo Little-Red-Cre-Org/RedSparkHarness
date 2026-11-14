@@ -1,5 +1,5 @@
 /** Recorded fs-glob-sampling scenario replayed through a Native profile. */
-import { existsSync, readFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, utimesSync, writeFileSync } from 'node:fs'
 import { readdir } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -40,6 +40,8 @@ it.skipIf(process.platform === 'win32')('replays the recorded fs-glob-sampling s
       { name: 'rsh-native-session-execution', path: 'rsh/Engine/core/native-session-execution' },
       { name: 'rsh-native-prompt', path: 'rsh/Engine/core/native-prompt' },
       { name: 'rsh-tool-fs', path: 'rsh/Modules/Official/fs/tool-fs' },
+      { name: 'rsh-subprocess-local', path: 'rsh/Core/subprocess/subprocess-local' },
+      { name: 'rsh-tool-fs-search', path: 'rsh/Modules/Official/fs/tool-fs-search' },
       { name: 'rsh-llm-replay', path: 'rsh/Tests/test-support/llm-replay' },
     ],
     localPackages: [
@@ -86,6 +88,9 @@ it.skipIf(process.platform === 'win32')('replays the recorded fs-glob-sampling s
       { id: 'approval', plugin: '@redspark/rsh-native-approval', scope: 'root', config: { policy: 'ask' } },
       { id: 'approval-answerer', plugin: 'native-fs-glob-sampling-approval', scope: 'root' },
       { id: 'files', plugin: '@redspark/rsh-tool-fs', scope: 'root' },
+      { id: 'subprocess', plugin: '@redspark/rsh-subprocess-local', scope: 'root' },
+      { id: 'search-tools', plugin: '@redspark/rsh-tool-fs-search', scope: 'root',
+        config: { sampleOverCapGlobResults: true, globMaxResults: 4 } },
     ],
   })
   for (const [relative, day] of TREE) {

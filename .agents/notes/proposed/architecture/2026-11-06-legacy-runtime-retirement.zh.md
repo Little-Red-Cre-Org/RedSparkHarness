@@ -69,6 +69,8 @@ Status: proposed
 2. 遥测或用户报告确认没有活跃 profile 解析为 `legacy`。本地检查是在真实 home 下对各个 profile 跑 `profileRuntime(name)`。
 3. `rsh/Docs/native-config-migration.md` 已写明旧 profile 必须变成什么，包括插件集合的差异。
 
+2026-11-14 对活跃 home 的本地 `profileRuntime` 检查中，`web` 与 `desktop` 都返回 `legacy`，并且各自的警告写明该 profile 仍选择 Cordis 执行。第 2 条不成立。不要凭这次检查拒绝这两个名字，也不要改 `initProfile`。第 3 条现在有已核实的插件集合差异，见[原生配置迁移](../../../../rsh/Docs/native-config-migration.zh.md)。这一节不使第 2 条成立。
+
 ## Risks
 
 - 用 `--from-default-profile` 或 `dsh plugin` 以自定义名创建的 profile 会失去可用性。这两条是当前命令，因此缓解手段是迁移文档加一条点名 profile 与文件的拒绝；静默改写不是。

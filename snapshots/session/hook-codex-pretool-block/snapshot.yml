@@ -1,6 +1,6 @@
 version: 1
 scenario: hook-codex-pretool-block
-profile: legacy-headless
+profile: headless
 composition: default
 recording: live
 header:

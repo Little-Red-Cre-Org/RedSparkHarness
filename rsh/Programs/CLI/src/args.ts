@@ -71,6 +71,22 @@ function rejectElectronProfile(program: Command, profile: string): void {
   }
 }
 
+const RETIRED_SDK_MINIMAL_PROFILE = 'sdk-minimal'
+
+/**
+ * Refuse the retired sdk-minimal profile name on boot, dump, plugin
+ * management, and template initialization. Existing directories stay on disk.
+ * --profile sdk is the supported replacement.
+ */
+function rejectRetiredSdkMinimal(program: Command, profile: string, fromDefaultProfile?: string): void {
+  if (profile === RETIRED_SDK_MINIMAL_PROFILE) {
+    program.error('error: profile "sdk-minimal" no longer boots; use --profile sdk (see rsh/Docs/native-config-migration.md)')
+  }
+  if (fromDefaultProfile === RETIRED_SDK_MINIMAL_PROFILE) {
+    program.error('error: --from-default-profile "sdk-minimal" no longer initializes a profile; use --profile sdk (see rsh/Docs/native-config-migration.md)')
+  }
+}
+
 /** The launcher's own help text; each app prints its own. */
 const HELP_EXAMPLES = `
 Examples:
@@ -157,6 +173,7 @@ export function parseRshArgs(argv: readonly string[], version: string): DshInvoc
       const profile = options.profile
       if (profile === '') program.error('error: --profile needs a name')
       rejectElectronProfile(program, profile)
+      rejectRetiredSdkMinimal(program, profile, options.fromDefaultProfile)
       resolved = resolveBoot(program, profile, options, args)
     })
 
@@ -196,6 +213,7 @@ export function parseRshArgs(argv: readonly string[], version: string): DshInvoc
       rejectParentOptions('plugin')
       if (options.profile === '') program.error('error: --profile needs a name')
       rejectElectronProfile(plugin, options.profile)
+      rejectRetiredSdkMinimal(plugin, options.profile)
       if (args.length === 0) program.error('error: plugin needs pnpm arguments to forward (e.g. add <package>)')
       resolved = { mode: 'plugin', profile: options.profile, args }
     })

@@ -266,6 +266,9 @@ export async function prepareNativeClientProfileBundle(
     platform: 'browser',
     format: 'esm',
     target: 'es2022',
+    // Workspace packages keep resolving through tsconfig paths, whose Client face imports the automatic runtime.
+    jsx: 'automatic',
+    jsxImportSource: 'react',
     outdir: join(projectDir, '.dsh-native-client-build'),
     entryNames: 'profile-[hash]',
     assetNames: 'assets/[name]-[hash]',

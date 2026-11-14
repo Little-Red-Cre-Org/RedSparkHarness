@@ -1,6 +1,6 @@
 version: 1
 scenario: text-turn
-profile: legacy-sdk
+profile: sdk
 composition: sdk-upload
 recording: live
 environment:

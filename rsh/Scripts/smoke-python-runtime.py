@@ -36,8 +36,6 @@ CODE_PROMPT = "Use run_code to compute the packaged worker smoke value."
 CODE_WORKER_TEXT = "code worker smoke ok"
 WORKFLOW_PROMPT = "Use workflow to compute the packaged worker smoke value without agents."
 WORKFLOW_WORKER_TEXT = "workflow worker smoke ok"
-MINIMAL_PROMPT = "Exercise the packaged minimal agent's persistent shell."
-MINIMAL_TEXT = "minimal agent smoke ok"
 FS_SEARCH_PROMPT = "Exercise the packaged filesystem search tools."
 FS_SEARCH_TEXT = "filesystem search smoke ok"
 FS_SEARCH_MARKER = "PACKAGED_FS_SEARCH_OK"
@@ -93,7 +91,6 @@ MINIMAL_SHELL_COMMAND = (
         "if [ \"$counter\" -eq 1 ]; then cd /tmp; fi"
     )
 )
-MINIMAL_SHELL_SECOND_CWD = str(Path(tempfile.gettempdir()).resolve()) if IS_WINDOWS else "/tmp"
 SPAWN_NODE_PROMPT = "Run node --version through the packaged shell tool."
 SPAWN_NODE_TEXT = "spawn node smoke ok"
 SPAWN_NODE_CALL_ID = "spawn-node-shell"
@@ -166,16 +163,6 @@ ADVANCED_SNAPSHOT_DIRECTORY = (
 ADVANCED_SNAPSHOT_FILENAMES = (
     "result.json", "session.v3.jsonl", "session.1.v3.jsonl", "session.2.v3.jsonl",
 )
-MINIMAL_SNAPSHOT_DIRECTORY = (
-    Path(__file__).resolve().parent / "snapshots" / "python-sdk-single-exe" / "minimal"
-)
-if IS_WINDOWS:
-    MINIMAL_SNAPSHOT_DIRECTORY /= "win-x64"
-MINIMAL_SNAPSHOT_FILENAMES = ("model-visible.json",)
-IN_HISTORY_SNAPSHOT_DIRECTORY = (
-    Path(__file__).resolve().parent / "snapshots" / "python-sdk-single-exe" / "minimal-in-history"
-)
-IN_HISTORY_SNAPSHOT_FILENAMES = ("prompt-history.json",)
 RESTART_SNAPSHOT_DIRECTORY = (
     Path(__file__).resolve().parent / "snapshots" / "python-sdk-single-exe" / "restart"
 )
@@ -408,9 +395,6 @@ def completion_chunks(body: dict[str, object]) -> list[dict[str, object]]:
         spawn_node = spawn_node_tool_followup(call_id, tool_name, tool_text)
         if spawn_node is not None:
             return spawn_node
-        minimal = minimal_tool_followup(call_id, tool_name, tool_text)
-        if minimal is not None:
-            return minimal
         advanced = advanced_tool_followup(body, call_id, tool_name, tool_text)
         if advanced is not None:
             return advanced
@@ -427,15 +411,6 @@ def completion_chunks(body: dict[str, object]) -> list[dict[str, object]]:
         for message in reversed(messages)
         if isinstance(message, dict) and message.get("role") == "user"
     ]
-    minimal_prompt = next((prompt for prompt in user_prompts if prompt == MINIMAL_PROMPT), None)
-    # The minimal composition's assembled system prompt, advertised tool schemas, and
-    # model-visible messages are pinned by its snapshot, not asserted here.
-    if minimal_prompt is not None:
-        return tool_call_chunks(
-            "minimal-bash-1",
-            MINIMAL_SHELL_TOOL,
-            {"command": MINIMAL_SHELL_COMMAND},
-        )
     scenario_prompts = {
         SNAPSHOT_DIRECT_CHILD_PROMPT,
         SNAPSHOT_WORKFLOW_CHILD_PROMPT,
@@ -675,30 +650,6 @@ def spawn_node_tool_followup(
     return text_chunks(SPAWN_NODE_TEXT)
 
 
-def minimal_tool_followup(
-    call_id: str,
-    tool_name: str,
-    tool_text: str,
-) -> list[dict[str, object]] | None:
-    """Verify the checked-in minimal composition's persistent PTY."""
-    if not call_id.startswith("minimal-"):
-        return None
-    if call_id == "minimal-bash-1" and tool_name == MINIMAL_SHELL_TOOL:
-        if "COUNT=1" not in tool_text:
-            raise AssertionError(f"first persistent shell call lost its output: {tool_text}")
-        return tool_call_chunks(
-            "minimal-bash-2",
-            MINIMAL_SHELL_TOOL,
-            {"command": MINIMAL_SHELL_COMMAND},
-        )
-    if call_id == "minimal-bash-2" and tool_name == MINIMAL_SHELL_TOOL:
-        expected = f"COUNT=2 CWD={MINIMAL_SHELL_SECOND_CWD}"
-        if expected.lower() not in tool_text.lower():
-            raise AssertionError(f"persistent shell did not retain state: {tool_text}")
-        return text_chunks(MINIMAL_TEXT)
-    raise AssertionError(f"unexpected minimal-agent follow-up: {call_id} {tool_name}: {tool_text}")
-
-
 def advanced_tool_followup(
     body: dict[str, object],
     call_id: str,
@@ -912,8 +863,8 @@ def main() -> None:
         args.exe = assert_installed_wheel_environment()
     if args.scenario in {"all", "sdk-custom", "sdk-minimal", "sdk-minimal-in-history", "sdk-fs-search", "sdk-spawn-node", "sdk-snapshot", "sdk-restart", "runner", "direct"} and args.exe is None:
         parser.error("--exe is required for custom, minimal, fs-search, spawn-node, snapshot, restart, runner, and direct scenarios")
-    if args.update_snapshots and args.scenario not in {"all", "sdk-minimal", "sdk-minimal-in-history", "sdk-snapshot", "sdk-restart"}:
-        parser.error("--update-snapshots requires --scenario sdk-minimal, sdk-minimal-in-history, sdk-snapshot, sdk-restart, or all")
+    if args.update_snapshots and args.scenario not in {"all", "sdk-snapshot", "sdk-restart"}:
+        parser.error("--update-snapshots requires --scenario sdk-snapshot, sdk-restart, or all")
     if args.exe is not None and not args.exe.is_file():
         parser.error(f"runtime executable does not exist: {args.exe}")
 
@@ -929,6 +880,13 @@ def main() -> None:
         print("smoke-python-runtime: sdk-live passed")
         return
 
+    if args.scenario in {"all", "sdk-minimal", "sdk-minimal-in-history"}:
+        assert args.exe is not None
+        assert_retired_sdk_minimal(args.exe.resolve())
+    if args.scenario in {"sdk-minimal", "sdk-minimal-in-history"}:
+        print("smoke-python-runtime: sdk-minimal refused")
+        return
+
     with MockModel() as model:
         if args.scenario in {"all", "sdk-default"}:
             smoke_sdk_default(model.url)
@@ -938,12 +896,6 @@ def main() -> None:
         if args.scenario in {"all", "sdk-custom"}:
             assert args.exe is not None
             smoke_sdk_custom(model.url, args.exe.resolve())
-        if args.scenario in {"all", "sdk-minimal"}:
-            assert args.exe is not None
-            smoke_sdk_minimal(model.url, args.exe.resolve(), args.update_snapshots)
-        if args.scenario in {"all", "sdk-minimal-in-history"}:
-            assert args.exe is not None
-            smoke_sdk_minimal(model.url, args.exe.resolve(), args.update_snapshots, in_history=True)
         if args.scenario in {"all", "sdk-fs-search"}:
             assert args.exe is not None
             smoke_sdk_fs_search(model.url, args.exe.resolve())
@@ -2034,62 +1986,46 @@ def sdk_run_diagnostic(result: "RunResult") -> str:
     return json.dumps(summary, ensure_ascii=False, separators=(",", ":"))
 
 
-def smoke_sdk_minimal(
-    base_url: str, executable: Path, update_snapshots: bool, *, in_history: bool = False,
-) -> None:
-    """Exercise the shipped standalone minimal profile through the packaged executable."""
-    from redspark_harness import RedSparkHarness
-
-    # One mock model serves every scenario of a run, so the snapshot takes this turn's slice.
-    first_request = len(MockModelHandler.requests)
-    with tempfile.TemporaryDirectory(prefix="dsh-sdk-minimal-") as temporary:
+def assert_retired_sdk_minimal(executable: Path) -> None:
+    """The packaged executable refuses the sdk-minimal profile name."""
+    with tempfile.TemporaryDirectory(prefix="dsh-sdk-minimal-refused-") as temporary:
         root = Path(temporary).resolve()
         rsh_home = root / "home"
-        sessions = rsh_home / "sessions"
-        patches = ()
-        if in_history:
-            patch = root / "in-history.patch.yml"
-            patch.write_text(json.dumps([
-                {"id": "llm-deepseek", "config": {"models": [
-                    {"id": "smoke-model", "systemPromptUpdate": "in-history"},
-                ]}},
-                {"insert": [{
-                    "id": "in-history-prompt",
-                    "name": (Path(__file__).resolve().parent / "fixtures/python-sdk-in-history-prompt.mjs").as_uri(),
-                }]},
-            ]))
-            patches = (str(patch),)
-        with RedSparkHarness(
-            provider="deepseek-official",
-            model="smoke-model",
-            cwd=str(root),
-            dsh_bin=str(executable),
-            rsh_home=str(rsh_home),
-            profile="sdk-minimal",
-            patches=patches,
-            api_key="sk-keyless-smoke",
-            base_url=base_url,
-            request_timeout_seconds=60,
-        ) as harness:
-            result = harness.run(MINIMAL_PROMPT, session_id="minimal-agent-smoke")
-
-        event_text = json.dumps(result.events)
-        if MINIMAL_TEXT not in event_text:
-            raise AssertionError(f"minimal agent run emitted no final response: {result.events}")
-        assert_session_log(sessions, root, MINIMAL_TEXT, "COUNT=1", "COUNT=2")
-
-        requests = MockModelHandler.requests[first_request:]
-        if in_history:
-            logs = read_session_logs(sessions)
-            files = build_in_history_snapshot_files(result, requests, logs[result.session_id])
-            compare_snapshot_files(
-                files, update_snapshots, IN_HISTORY_SNAPSHOT_DIRECTORY, IN_HISTORY_SNAPSHOT_FILENAMES,
+        rsh_home.mkdir()
+        env = {**os.environ, "RSH_HOME": str(rsh_home)}
+        checks = (
+            (
+                [str(executable), "--profile", "sdk-minimal", "--dump-default-config"],
+                'profile "sdk-minimal" no longer boots',
+            ),
+            (
+                [
+                    str(executable), "--profile", "rescue",
+                    "--from-default-profile", "sdk-minimal", "--dump-default-config",
+                ],
+                '--from-default-profile "sdk-minimal" no longer initializes',
+            ),
+        )
+        for command, expected in checks:
+            result = subprocess.run(
+                command,
+                cwd=root,
+                env=env,
+                text=True,
+                capture_output=True,
+                check=False,
+                timeout=60,
             )
-        else:
-            files = build_minimal_snapshot_files(requests, root)
-            compare_snapshot_files(
-                files, update_snapshots, MINIMAL_SNAPSHOT_DIRECTORY, MINIMAL_SNAPSHOT_FILENAMES,
-            )
+            if result.returncode == 0 or expected not in result.stderr or "use --profile sdk" not in result.stderr:
+                raise AssertionError(
+                    "sdk-minimal was not refused: "
+                    f"command={command!r} returncode={result.returncode} "
+                    f"stdout={result.stdout!r} stderr={result.stderr!r}"
+                )
+        for name in ("sdk-minimal", "rescue"):
+            created = rsh_home / "profiles" / name
+            if created.exists():
+                raise AssertionError(f"refused profile name created {created}")
 
 
 def smoke_sdk_fs_search(base_url: str, executable: Path) -> None:
@@ -2828,119 +2764,6 @@ def snapshot_child_ids(result: "RunResult") -> list[str]:
     if len(child_ids) != 2:
         raise AssertionError(f"advanced snapshot expected two child session ids: {child_ids}")
     return child_ids
-
-
-def build_in_history_snapshot_files(
-    result: "RunResult",
-    requests: list[dict[str, object]],
-    log: list[dict[str, object]],
-) -> dict[str, str]:
-    """Assert live requests, SDK subscriptions, and persistence retain both prompts."""
-    systems = [event for event in result.events if event.get("type") == "system/message"]
-    assert len(systems) == 2, systems
-    assert [event.get("surfaceOp") for event in systems] == ["append", "append"], systems
-    prompts = [message_text(event["data"]["message"]["content"]) for event in systems]
-    assert "Python SDK prompt version 1." in prompts[0], prompts
-    assert "Python SDK prompt version 2." not in prompts[0], prompts
-    assert "Python SDK prompt version 2." in prompts[1], prompts
-    assert "Python SDK prompt version 1." not in prompts[1], prompts
-    assert prompts[0] != prompts[1], prompts
-    assert [event for event in log if event.get("type") == "system/message"] == systems
-    subscribed = [
-        notification.payload["event"]
-        for notification in result.notifications
-        if notification.method == "session.event"
-        and notification.payload.get("event", {}).get("type") == "system/message"
-    ]
-    assert subscribed == systems, subscribed
-    contexts = [event["data"] for event in result.events if event.get("type") == "request/context"]
-    assert contexts and all(context.get("systemPromptUpdate") == "in-history" for context in contexts), contexts
-    assert len([event for event in result.events if event.get("type") == "request/header"]) == 1
-    assert all(event.get("surfaceOp") in (None, "append") for event in result.events)
-    first_tool = next(index for index, event in enumerate(result.events) if event.get("type") == "tool/result")
-    assert result.events.index(systems[1]) > first_tool
-    assert len(requests) == 3, requests
-    request_prompts = []
-    for index, request in enumerate(requests):
-        messages = request["messages"]
-        assert messages[0]["role"] == "system" and message_text(messages[0]["content"]) == prompts[0]
-        assert request["tools"] == requests[0]["tools"], "prompt update changed tool schemas"
-        positions = [position for position, message in enumerate(messages) if message["role"] == "system"]
-        texts = [message_text(messages[position]["content"]) for position in positions]
-        assert texts == (prompts[:1] if index == 0 else prompts), texts
-        if index > 0:
-            assert messages[positions[1] - 1]["role"] == "tool", messages
-        request_prompts.append(texts)
-    evidence = {
-        "requestSystemPrompts": request_prompts,
-        "systemMessageOperations": [event["surfaceOp"] for event in systems],
-        "subscribedSystemPrompts": prompts,
-        "requestContexts": contexts,
-    }
-    return {"prompt-history.json": json.dumps(evidence, indent=2, ensure_ascii=False) + "\n"}
-
-
-def build_minimal_snapshot_files(
-    requests: list[dict[str, object]],
-    cwd: Path,
-) -> dict[str, str]:
-    """Render the minimal composition's model-visible surface as expected output.
-
-    Every assembled system prompt, advertised tool schema, and system or user message is
-    kept verbatim: they carry what the deployment actually shows the model, so a plugin
-    that contributes an unintended system section or user message cannot pass unnoticed.
-    Assistant and tool payloads keep only their call identity because their text differs
-    across the platforms this expected output must replay on. The shipped profile omits
-    dynamic runtime context, so every message it emits is compared.
-    """
-    snapshot = []
-    for body in requests:
-        messages = body.get("messages")
-        if not isinstance(messages, list):
-            raise AssertionError(f"minimal model request has no messages: {body}")
-        snapshot.append({
-            "tools": minimal_snapshot_text(body.get("tools"), cwd),
-            "messages": [
-                minimal_snapshot_message(message, cwd)
-                for message in messages
-            ],
-        })
-    return {"model-visible.json": json.dumps(snapshot, indent=2, ensure_ascii=False) + "\n"}
-
-
-def minimal_snapshot_message(message: object, cwd: Path) -> dict[str, object]:
-    """Reduce one model-visible message to its stable, behavior-carrying parts."""
-    if not isinstance(message, dict):
-        raise AssertionError(f"minimal model request has an invalid message: {message}")
-    role = message.get("role")
-    if role in ("system", "user"):
-        return {"role": role, "text": minimal_snapshot_text(message_text(message.get("content")), cwd)}
-    if role == "assistant":
-        calls = message.get("tool_calls")
-        if not isinstance(calls, list):
-            raise AssertionError(f"minimal assistant message has no tool calls: {message}")
-        return {
-            "role": role,
-            "toolCalls": [
-                {"id": call.get("id"), "name": (call.get("function") or {}).get("name")}
-                for call in calls
-                if isinstance(call, dict)
-            ],
-        }
-    if role == "tool":
-        return {"role": role, "toolCallId": message.get("tool_call_id"), "text": "{{tool-result}}"}
-    raise AssertionError(f"minimal model request has an unexpected message role: {message}")
-
-
-def minimal_snapshot_text(value: object, cwd: Path) -> object:
-    """Replace the scenario's temporary working directory everywhere it appears."""
-    if isinstance(value, str):
-        return value.replace(str(cwd), "{{cwd}}")
-    if isinstance(value, list):
-        return [minimal_snapshot_text(item, cwd) for item in value]
-    if isinstance(value, dict):
-        return {key: minimal_snapshot_text(item, cwd) for key, item in value.items()}
-    return value
 
 
 def build_snapshot_files(

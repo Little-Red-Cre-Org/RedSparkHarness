@@ -12,7 +12,7 @@
 
 组合包名称先从 dsh 安装目录解析，再从 profile 目录解析。因此，内置组合包（`@redspark/rsh-base`、`@redspark/rsh-web-app`、`@redspark/rsh-headless`、`@redspark/rsh-sdk-app`、`@redspark/rsh-sdk-minimal`、`@redspark/rsh-acp-app`）始终来自当前运行的 `dsh` 所属的安装；树外组合包则来自 profile 中由 pnpm 管理的 `node_modules`。patch 行中的裸插件 `name` 会从 profile 目录开始，按照 Node 的模块解析规则逐级向父目录查找，直至由 dsh 维护的安装后备目录 `$RSH_HOME/profiles/node_modules`。普通 Node 安装会为依赖闭包中的每个包放置并修复一个符号链接。pkg 可执行程序则放置真实 ESM 代理，镜像显式 exports 并重新导出虚拟包 URL，因为操作系统符号链接无法进入 pkg 的 `/snapshot` 文件系统。每次启动还会把仅由所选外部组合包携带的包经 dsh 自有目录链接到当前 profile 的 `node_modules`；已有 pnpm 条目优先，且每个 profile 独立拥有自己的链接。
 
-标准名称 `headless`、`web`、`sdk`、`acp` 和 `rsh` 首次使用时会初始化对应 Native 组合：`native-headless`、`native-web`、`native-sdk`、`native-acp` 和 `native-tui`。profile 目录仍使用请求中的名称，Web 项目文件和 scheduler 数据也保留在该目录下。八个 `native-*` 名称仍可显式选择，`sdk-minimal` 仍从独立 legacy 组合包初始化。若 `package.json` 已存在，则按 profile 标记和组合包列表解析 Native 或 legacy 执行；初始化不会改写该 profile。其他缺失的名称会显式报错，并提示运行 `dsh plugin --profile <name> add <package>`。
+标准名称 `headless`、`web`、`sdk`、`acp` 和 `rsh` 首次使用时会初始化对应 Native 组合：`native-headless`、`native-web`、`native-sdk`、`native-acp` 和 `native-tui`。profile 目录仍使用请求中的名称，Web 项目文件和 scheduler 数据也保留在该目录下。八个 `native-*` 名称仍可显式选择。启动器在启动、导出配置、插件管理和 `--from-default-profile` 上拒绝 profile 名 `sdk-minimal`；请改用 `--profile sdk`。已有目录不会被改写。若 `package.json` 已存在，则按 profile 标记和组合包列表解析 Native 或 legacy 执行；初始化不会改写该 profile。其他缺失的名称会显式报错，并提示运行 `dsh plugin --profile <name> add <package>`。
 
 ### Native profile 重载
 
@@ -20,7 +20,7 @@
 
 原生 profile runtime 标记以及 CLI 对 settings 和环境变量的迁移规则见[原生配置迁移参考](../../../Docs/native-config-migration.zh.md)。Native 启动会在加载 profile 插件前安装配置的全局代理，并在 Host 关闭后释放它。
 
-`dsh --profile <name> --from-default-profile <template>` 会显式从五个随附 Cordis 组合包模板（`web`、`headless`、`sdk`、`sdk-minimal` 或 `acp`）之一创建新的 legacy profile，再启动它。请使用 `legacy-web` 这类自定义目标名称；目标不能使用随附 profile 名称，且其完整目录必须不存在。launcher 会以独占方式领取该目录，因此残留文件和另一个并发创建者都会在不作修改的情况下被拒绝。它把模板当前的组合包列表和 `patchReload` 值复制进一份依赖为空、用户 patch 为空的新 manifest。它不会读取 `<template>` 指定的本地同名 profile，不会复制其依赖或 patch，也不会持久化继承字段；模板列表之后的变化不会改写新 profile。复制列表中指名的内置组合包仍从当前 dsh 安装目录解析。初始化成功不会增加 launcher 输出。
+`dsh --profile <name> --from-default-profile <template>` 会显式从随附 Cordis 组合包模板（`web`、`headless`、`sdk` 或 `acp`）之一创建新的 legacy profile，再启动它。名称 `sdk-minimal` 会被拒绝。请使用 `legacy-web` 这类自定义目标名称；目标不能使用随附 profile 名称，且其完整目录必须不存在。launcher 会以独占方式领取该目录，因此残留文件和另一个并发创建者都会在不作修改的情况下被拒绝。它把模板当前的组合包列表和 `patchReload` 值复制进一份依赖为空、用户 patch 为空的新 manifest。它不会读取 `<template>` 指定的本地同名 profile，不会复制其依赖或 patch，也不会持久化继承字段；模板列表之后的变化不会改写新 profile。复制列表中指名的内置组合包仍从当前 dsh 安装目录解析。初始化成功不会增加 launcher 输出。
 
 profile 已经存在时，`--from-default-profile` 会被拒绝，且不会修改或启动它；去掉该选项即可使用它。残留的目标目录同样会被原样保留，此时必须改用另一个 profile 名称。未知模板或随附目标名称会在创建目标之前失败；未知模板的诊断会列出有效模板。初始化在组合包解析和应用启动之前提交，因此后续失败仍会把新 profile 留在磁盘上，重试时需要去掉创建选项。`--dump-config` 和 `--dump-default-config` 接受该选项：它们初始化目标并打印所请求的配置树，但不启动应用。
 
@@ -44,7 +44,7 @@ dsh --profile rescue
 | Legacy `web` 模板 | `--host`、`--port`、可重复的 `--trusted-host`、`--no-open` |
 | Legacy `headless` 模板 | 任务文本，作为位置参数 |
 | Legacy `sdk` 模板 | 无选项；stdio 携带 JSON-RPC 协议 |
-| `sdk-minimal` | 无选项；stdio 携带相同的 JSON-RPC 协议 |
+| `sdk-minimal` | 已拒绝。请改用 `--profile sdk`。 |
 | Legacy `acp` 模板 | 无选项；stdio 携带 ACP（Agent Client Protocol） |
 
 一次性任务（`dsh --profile headless "run the tests"`）通过核心注册表创建一个全新的持久化 Agent（智能体），提交任务、等待完全停稳并对会话执行 flush，再从其持久化事件区间中推导最后一个非空 assistant 文本与最终 `turn/end` 原因。它在 `dsh: reasoning:` 标题下将非空的提供方推理（reasoning）增量流式写入 stderr，只在 stdout 打印最终文本，并在原因为 `completed` 时以 0 退出，否则以 1 退出；没有推理内容的成功响应会保持 stderr 为空。没有任务的调用是该应用的用法错误。随附 headless profile 不挂载浏览器 Connection、HTTP 服务器、Web 运行时或浏览器客户端，也不会打开监听端口。

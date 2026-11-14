@@ -123,7 +123,8 @@ function sse(text: string): string {
 }
 
 function lastUserText(request: ModelRequest): string {
-  const latest = [...request.messages].reverse().find(message => message.role === 'user')
+  const latest = [...request.messages].reverse().find(message => message.role === 'user'
+    && !(typeof message.content === 'string' && message.content.startsWith('Current runtime context')))
   if (typeof latest?.content === 'string') return latest.content
   if (Array.isArray(latest?.content)) {
     const block = latest.content.find((item): item is { type: 'text'; text: string } =>

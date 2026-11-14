@@ -1,12 +1,12 @@
 /** Present call status and expandable durable result text. */
 import { useState } from 'react'
 import { DisclosureRow, StateDot } from '@redspark/rsh-client-ui-primitives'
-import type { ToolCallViewProps } from '@redspark/rsh-client-ui-tool/client'
+import type { ToolCallBlock } from '@redspark/rsh-client-ui-conversation/tool-records'
 import type { PropsLocale } from '@redspark/rsh-client-ui-slots'
 import type { NS } from './locales.ts'
 import css from './PresentRow.module.css'
 
-type PresentRowProps = ToolCallViewProps & PropsLocale<typeof NS>
+type PresentRowProps = { block: ToolCallBlock; inspect?: (() => void) | undefined } & PropsLocale<typeof NS>
 
 /** Raw arguments can be partial while a call is streaming. */
 function fileNames(raw: string): string {

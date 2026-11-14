@@ -2,9 +2,9 @@
 
 English | [中文](README.zh.md)
 
-Runnable Python SDK example over the sole application launcher, `dsh --profile sdk-minimal`. The Python client owns JSON-RPC stdio; the profile owns the agent composition, persistence, execution policy, and plugins.
+Runnable Python SDK example over the sole application launcher, `dsh --profile sdk`. The Python client owns JSON-RPC stdio; the profile owns the agent composition, persistence, execution policy, and plugins.
 
-## Run the minimal agent
+## Run the example
 
 Install `redspark-harness-sdk`, export a model credential, then supply an isolated Harness home and workspace:
 
@@ -17,15 +17,9 @@ python rsh/Programs/SDK/python/sdk/examples/minimal.py \
   "Inspect the repository and fix the failing tests."
 ```
 
-Set `DEEPSEEK_BASE_URL` for a compatible proxy, `RSH_MODEL` for the script's default model, or `RSH_SYSTEM_PROMPT` for the deployment persona. `--model` is the single runtime model selection; no matching environment variable is required. `--profile` can select another SDK-serving profile. The selected home stores the generated `sdk-minimal` profile and uncompressed JSONL session logs under `sessions/`; the script never reads `~/.dsh` implicitly.
+Set `DEEPSEEK_BASE_URL` for a compatible proxy, `RSH_MODEL` for the script's default model, or `RSH_SYSTEM_PROMPT` for the deployment persona. `--model` is the single runtime model selection; no matching environment variable is required. `--profile` can select another SDK-serving profile. The selected home stores the initialized `sdk` profile and uncompressed JSONL session logs under `sessions/`; the script never reads `~/.dsh` implicitly.
 
-The shipped [`@redspark/rsh-sdk-minimal` bundle](../../../../../Compatibility/DSH/bundle/sdk-minimal/README.md) is the complete explicit Cordis tree for this mode. It exposes exactly:
-
-- owner-scoped persistent `bash` on Linux/macOS or `pwsh` on Windows
-
-The bundle does not include `dsh-base`, so every additional row is an explicit profile change. Runtime context, filesystem tools, local instruction discovery, compaction, settings, managed credentials, telemetry, Web tools, subagents, and the full default tool roster are absent. The tree retains SDK startup and JSON-RPC serving, one environment-configured DeepSeek adapter, local execution, and JSONL persistence.
-
-The persistent PTY can modify any path available to the runtime process, so use a disposable checkout or container.
+`sdk` initializes as the native-sdk composition. It includes the platform persistent shell and the local filesystem provider, and it pins `danger-full-access`. Use a disposable checkout or container. The launcher refuses the profile name `sdk-minimal`. See the [Python SDK tutorial](../../../../../Docs/user/guide/python-sdk.md) and [native configuration migration](../../../../../Docs/native-config-migration.md).
 
 ## Add plugins
 
@@ -33,11 +27,9 @@ Use the runtime wheel's `dsh` command against the same explicit home for persist
 
 ```sh
 export RSH_HOME=/absolute/path/to/example-dsh-home
-dsh plugin --profile sdk-minimal add file:/absolute/path/to/my-plugin-bundle
+dsh plugin --profile sdk add file:/absolute/path/to/my-plugin-bundle
 ```
 
-Use `sdk-minimal` in that command to extend this example, or `sdk` to extend the full base-backed SDK profile. The Python call can also pass additional absolute patch paths in `patches=(...)`; later files win. A selected profile must retain `@redspark/rsh-sdk-app` or another JSON-RPC server row. The example accepts no complete Cordis file or arbitrary process argv.
-
-The same runtime wheel packages the `web` profile and its frontend assets for direct CLI use: `dsh web` starts that separate application. A Python SDK client cannot select `web` because it has no JSON-RPC server row.
+The selected profile must retain a JSON-RPC server row. The example accepts no complete configuration file or arbitrary process argv. The same runtime wheel packages the `web` profile and its frontend assets for direct CLI use: `dsh web` starts that separate application. A Python SDK client cannot select `web` because it has no JSON-RPC server row.
 
 See the [Python SDK tutorial](../../../../../Docs/user/guide/python-sdk.md) and [SDK reference](../README.md).

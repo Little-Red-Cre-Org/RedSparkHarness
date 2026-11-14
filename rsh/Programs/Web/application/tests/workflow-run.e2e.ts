@@ -219,7 +219,7 @@ describe.skipIf(MODE === 'record')('web e2e: durable workflow run in Chat', () =
   it('stays clean and owns only its one golden', async () => {
     expect(tripwire.pageErrors).toEqual([])
     expect(tripwire.warnings).toEqual([])
-    await assertFixtureInventory(SNAPSHOT_DIR, ['ui-live.expected.md', 'ui.expected.md'])
+    await assertFixtureInventory(SNAPSHOT_DIR, ['ui-live.expected.md', 'ui.expected.md'], 'native-web')
     const evidence = process.env.RSH_CORDIS_WORKFLOW_EVIDENCE
     if (evidence !== undefined) {
       await mkdir(evidence, { recursive: true })

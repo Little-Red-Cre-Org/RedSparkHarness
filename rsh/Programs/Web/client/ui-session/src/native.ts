@@ -7,7 +7,7 @@ import type {
   StandardSourceBinding,
 } from '@redspark/rsh-client-ui-slots'
 import type { NativePlugin } from '@redspark/rsh-native-runtime'
-import type { SessionHeader, SessionId } from '@redspark/rsh-session/types'
+import type { SessionEvent, SessionHeader, SessionId } from '@redspark/rsh-session/types'
 import type { MessageId } from '@redspark/rsh-llm/brand'
 import { workspaceTitleOf } from '@redspark/rsh-util-workspace-path'
 import type { NativeSessionListItem } from '@redspark/rsh-client-native-session/native'
@@ -71,6 +71,10 @@ export interface NativeConversationSnapshot {
   readonly sessions: readonly NativeSessionListItem[]
   /** Selected identity, if any. */
   readonly selected?: SessionId | undefined
+  /** Durable events already read for the selected Session, in log order. */
+  readonly events?: readonly SessionEvent[] | undefined
+  /** Fork prefix excluded from the selected Session's own events; absent means zero. */
+  readonly inheritedEventCount?: number | undefined
   /** Readiness of the sole Native Conversation controller. */
   readonly state: 'loading' | 'ready' | 'sending' | 'cancelling' | 'closed'
   /** Whether a new Session connection currently blocks composer submissions. */

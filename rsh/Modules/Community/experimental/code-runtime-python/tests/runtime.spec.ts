@@ -187,7 +187,7 @@ describe('PythonCodeRuntime — seam descriptors and misuse', () => {
     // would admit it (50 MiB * 12 = 600 MiB < 1 GiB - 64 MiB).
     const script = [
       "import { Context } from '@redspark/cordis'",
-      "import { PythonCodeRuntime } from './packages/experimental/code-runtime-python/src/index.ts'",
+      "import { PythonCodeRuntime } from './rsh/Modules/Community/experimental/code-runtime-python/src/index.ts'",
       'const ctx = new Context()',
       'try {',
       '  await ctx.plugin(PythonCodeRuntime, { maxValueBytes: 50 * 1024 * 1024, addressSpaceMb: 1024 })',
@@ -199,7 +199,7 @@ describe('PythonCodeRuntime — seam descriptors and misuse', () => {
       '}',
     ].join('\n')
     const out = execFileSync(process.execPath, ['--max-old-space-size=128', '--import', 'tsx', '-e', script], {
-      cwd: resolve(import.meta.dirname, '../../../..'),
+      cwd: resolve(import.meta.dirname, '../../../../../../'),
       encoding: 'utf8',
       timeout: 60_000,
       env: { ...process.env, TSX_TSCONFIG_PATH: resolve(import.meta.dirname, '../../../../../../tsconfig.json') },
@@ -401,7 +401,7 @@ describe('PythonCodeRuntime — seam descriptors and misuse', () => {
   it('resolves pythonBin once so a later PATH change cannot switch interpreters', async () => {
     const firstDir = await mkdtemp(join(tmpdir(), 'dsh-python-first-'))
     const secondDir = await mkdtemp(join(tmpdir(), 'dsh-python-second-'))
-    const wrapper = (marker: string): string => `#!/bin/sh\nDSH_TEST_PYTHON=${marker}\nexport RSH_TEST_PYTHON\nexec "${PYABS}" "$@"\n`
+    const wrapper = (marker: string): string => `#!/bin/sh\nRSH_TEST_PYTHON=${marker}\nexport RSH_TEST_PYTHON\nexec "${PYABS}" "$@"\n`
     await writeFile(join(firstDir, 'python3'), wrapper('first'), { mode: 0o755 })
     await writeFile(join(secondDir, 'python3'), wrapper('second'), { mode: 0o755 })
     vi.stubEnv('PATH', firstDir)

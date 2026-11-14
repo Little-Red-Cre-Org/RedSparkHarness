@@ -12,22 +12,28 @@
  * same chips, the same disclosure, the same file cards and copy.
  */
 import type { TranslateNS } from '@redspark/rsh-client-ui-slots'
-import type { ReactElement } from 'react'
+import { useEffect, useSyncExternalStore, type ReactElement } from 'react'
 import { en as commonEn, formatLocaleTemplate, zh as commonZh } from '@redspark/rsh-client-locale/dictionary'
+import { FileTypeIcon, fileExtension } from '@redspark/rsh-client-ui-primitives'
+import { resolveWorkspacePath } from '@redspark/rsh-util-workspace-path'
 import { PresentRow } from './client/PresentRow.tsx'
 import { PresentedFileCard } from './client/PresentedFileCard.tsx'
 import { ProducedFiles } from './client/ProducedFiles.tsx'
-import type { PresentedOpenPhase } from './client/present-open.ts'
-import type { PresentedPath } from './client/turn-deliverables.ts'
+import { PresentedOpenController, type PresentedOpenPhase } from './client/present-open.ts'
 import { en, NS, zh, type DeliverablesKey } from './client/locales.ts'
-import type { PresentedAction, PresentedHost } from './presented.ts'
-import type { ToolCallViewProps } from '@redspark/rsh-client-ui-tool/client'
+import { basename, presentedFileUrl, type PresentedAction, type PresentedHost } from './presented.ts'
+import type { PresentedPath } from './fold-deliverables.ts'
+import type { ToolCallBlock } from '@redspark/rsh-client-ui-tool/native'
+import type { SessionId } from '@redspark/rsh-session/types'
+import css from './client/Deliverables.module.css'
 
 export { NS, en, zh, type DeliverablesKey } from './client/locales.ts'
+export { PresentedOpenController } from './client/present-open.ts'
 export type { PresentedOpenPhase } from './client/present-open.ts'
-export type { PresentedPath } from './client/turn-deliverables.ts'
+export type { PresentedPath } from './fold-deliverables.ts'
 export type { PresentedAction, PresentedHost } from './presented.ts'
 export type { ToolCallBlock, ToolResultNode, RunningToolCall } from '@redspark/rsh-client-ui-tool/native'
+export { foldDeliverables, type TurnDeliverables } from './fold-deliverables.ts'
 
 /** Props of the changed-files row: selector-matched paths arrive from the caller. */
 export interface NativeProducedFilesProps {
@@ -42,7 +48,7 @@ export interface NativeProducedFilesProps {
 /** Props of the `present` tool row: the tool slice arrives from the caller. */
 export interface NativePresentRowProps {
   /** Frozen running call or settled result node, as logged by the Host. */
-  readonly block: ToolCallViewProps['block']
+  readonly block: ToolCallBlock
   /** Locale for the row's copy, so no locale service is required. */
   readonly locale: 'en' | 'zh'
   /** Inspect this call in the trajectory view when the caller has one. */
@@ -64,6 +70,20 @@ export interface NativePresentedFileCardProps {
   /** Open in the default application or reveal it in the file manager. */
   readonly onAction: (action: PresentedAction) => void
   /** Locale for the card's copy, so no locale service is required. */
+  readonly locale: 'en' | 'zh'
+}
+
+/** Props of one Turn's declared-file row. */
+export interface NativePresentedFilesProps {
+  /** Session whose delivery events carry these files. */
+  readonly sessionId: SessionId
+  /** Declared files for the Turn, in event order. */
+  readonly files: readonly PresentedPath[]
+  /** Session workspace root used to resolve card titles. */
+  readonly cwd: string | undefined
+  /** Shared open-gesture status and Host capabilities. */
+  readonly controller: PresentedOpenController
+  /** Locale for the row's copy, so no locale service is required. */
   readonly locale: 'en' | 'zh'
 }
 
@@ -90,7 +110,7 @@ type ProducedFilesComponent = (props: {
 }) => ReactElement
 
 type PresentRowComponent = (props: {
-  block: ToolCallViewProps['block']
+  block: ToolCallBlock
   inspect?: (() => void) | undefined
   t: TranslateNS<typeof NS>
 }) => ReactElement
@@ -135,4 +155,73 @@ export function NativePresentRow({ block, locale, inspect }: NativePresentRowPro
  */
 export function NativePresentedFileCard({ locale, ...card }: NativePresentedFileCardProps): ReactElement {
   return <FileCard {...card} t={translate(locale)} />
+}
+
+/**
+ * Render one Turn's declared files with their open and reveal gestures.
+ *
+ * The Native transcript has no sidebar-tab opener yet, so this row offers the
+ * default-application and file-manager actions directly instead of the Cordis
+ * card's sidebar preview.
+ * @param props - durable file coordinates, workspace root, open controller and locale.
+ * @returns the declared-file row, or null when the Turn declared nothing.
+ */
+export function NativePresentedFiles({ sessionId, files, cwd, controller, locale }: NativePresentedFilesProps): ReactElement | null {
+  const states = useSyncExternalStore(
+    onChange => controller.state.subscribe(onChange),
+    () => controller.state.getSnapshot(),
+  )
+  const host = useSyncExternalStore(
+    onChange => controller.host.subscribe(onChange),
+    () => controller.host.getSnapshot(),
+  )
+  useEffect(() => {
+    if (files.length > 0 && host === null) void controller.loadHost()
+  }, [files.length, host, controller])
+  if (files.length === 0) return null
+  const t = translate(locale)
+  const reveal = host === null || host === 'error' ? 'directory' : host.fileManager ?? 'directory'
+  return <div className={css.root}>
+    {host === 'error' && <div className={css.hostStatus}>
+      <span>{t('presented.hostError')}</span>
+      <button type="button" onClick={() => { void controller.loadHost() }}>{t('presented.retry')}</button>
+    </div>}
+    {host !== null && host !== 'error' && !host.available
+      && <span className={css.hostStatus}>{t('presented.unavailable')}</span>}
+    <div className={css.presented} data-presented-files-row data-single={files.length === 1 ? true : undefined}>
+      {files.map((file) => {
+        const phase = states[presentedFileUrl(sessionId, file.seq, file.index)]
+        const pending = phase === 'opening' || phase === 'revealing'
+        const disabled = pending || host === null || host === 'error' || !host.available
+        const status = phase === undefined
+          ? file.description ?? (fileExtension(basename(file.path)) || t('presented.file'))
+          : t(reveal === 'directory' && phase === 'revealed' ? 'presented.directoryOpened'
+            : reveal === 'directory' && phase === 'revealing' ? 'presented.directoryOpening'
+              : reveal === 'directory' && phase === 'revealError' ? 'presented.directoryError'
+                : `presented.${phase}`)
+        return <div key={`${file.seq}:${file.index}`} className={css.file} data-presented-file>
+          <span className={css.fileIcon}><FileTypeIcon path={file.path} size={20} /></span>
+          <div className={css.fileBody}>
+            <div className={css.details}>
+              <span className={css.fileName} title={resolveWorkspacePath(cwd, file.path)}>{basename(file.path)}</span>
+              <span className={css.description} role={phase === undefined ? undefined : 'status'}
+                data-error={phase === 'error' || phase === 'revealError' || phase === 'nativeUnavailable' ? true : undefined}>
+                {status}
+              </span>
+            </div>
+            <div className={css.split}>
+              <button type="button" className={css.open} disabled={disabled}
+                aria-label={t('presented.openButton', { name: file.path })}
+                onClick={() => { void controller.open(sessionId, file.seq, file.index) }}>{t('presented.action')}</button>
+              <button type="button" className={css.chevron} disabled={disabled}
+                aria-label={t('presented.revealButton', { name: file.path })}
+                onClick={() => { void controller.open(sessionId, file.seq, file.index, 'reveal') }}>
+                <span>{t(reveal === 'finder' ? 'presented.finder' : reveal === 'explorer' ? 'presented.explorer' : 'presented.directory')}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      })}
+    </div>
+  </div>
 }

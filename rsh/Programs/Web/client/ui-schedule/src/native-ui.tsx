@@ -4,29 +4,33 @@
  * The browser half renders the host-computed `schedule` projection for the open
  * Session. A Native client has no projection registry; `clientNativeSchedule`
  * follows the same Host record set as baseline/upsert/remove frames. This half
- * therefore folds those frames per Session and contributes the same header
- * action into `native.conversation.actions`.
+ * therefore merges those frames with the active records folded from the open
+ * Session's already-read `schedule/change` events, and contributes the same
+ * header action into `native.conversation.actions`.
  *
- * Row text is where the two halves differ, and only there: a Native row carries
- * the Host's own `schedule` expression instead of a `kind`/`everySeconds`
- * pair, so the frequency line is that string. Ordering and the two
- * ISO-time formatters are the browser half's own, applied to `nextRunAt`.
+ * Row text follows the row's source: a scheduler row carries the Host's own
+ * `schedule` expression, while a log row uses the browser half's
+ * `formatScheduleFrequency`. Ordering and the two ISO-time formatters are the
+ * browser half's own, applied to `nextRunAt`.
  */
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import type { CSSProperties, KeyboardEvent } from 'react'
 import type { NativePlugin } from '@redspark/rsh-native-runtime'
 import type { SnapshotSelectorHook, TranslateNS } from '@redspark/rsh-client-ui-slots'
 import type { NativeScheduleFrame, NativeScheduledJob } from '@redspark/rsh-client-native-session/schedule-types'
-import type { SessionId } from '@redspark/rsh-session/types'
+import type { NativeConversationSnapshot } from '@redspark/rsh-client-ui-session/native'
+import { SessionLogOffset, type SessionEvent, type SessionId } from '@redspark/rsh-session/types'
 import { createSnapshotStore } from '@redspark/rsh-client-store'
+import { foldScheduleEvents, ScheduleLogError } from '@redspark/rsh-schedule/domain'
 import type {} from '@redspark/rsh-client-ui-renderer/native'
-import type {} from '@redspark/rsh-client-ui-session/native'
 import type {} from '@redspark/rsh-client-native-session/native'
 import type {} from '@redspark/rsh-client-locale/native'
 import {
   IconAlarmClockOutline16, IconChevronDownOutline14, useAnchoredPosition, useDismissOnOutsidePointer,
 } from '@redspark/rsh-client-ui-primitives'
-import { formatScheduleLocalTime, formatScheduleRelative } from './client/ScheduleCatalogAction.tsx'
+import {
+  formatScheduleFrequency, formatScheduleLocalTime, formatScheduleRelative,
+} from './client/ScheduleCatalogAction.tsx'
 import css from './client/ScheduleCatalogAction.module.css'
 import { NS, en, zh, type ScheduleCatalogKey } from './client/locales.ts'
 
@@ -80,8 +84,66 @@ export function applyScheduleFrame(
   }
 }
 
+/** The fields this catalog renders; scheduler frames and folded log records both supply them. */
+export interface NativeScheduleRow {
+  /** Session-local reminder identity. */
+  readonly id: string
+  /** Prompt shown as the row title. */
+  readonly title: string
+  /** Frequency line: a Host expression or the browser formatter's text. */
+  readonly schedule: string
+  /** Next target instant, when the plan has one. */
+  readonly nextRunAt?: number
+}
+
+/**
+ * Fold the open Session's already-read events into catalog rows.
+ *
+ * Only events the controller already read are folded: the catalog never scans
+ * persisted Sessions, adopts a published root, or wakes a cold owner. The fork
+ * prefix is excluded because those reminders belong to the parent Session.
+ * @param events - events loaded for the selected Session, when any.
+ * @param inheritedEventCount - prefix excluded from this Session's ownership; absent means zero.
+ * @param t - translator used for the frequency line.
+ * @returns rows in create order; empty when the log has no active reminder or cannot be decoded.
+ */
+export function foldScheduleRows(
+  events: readonly SessionEvent[] | undefined,
+  inheritedEventCount: number | undefined,
+  t: TranslateNS<typeof NS>,
+): NativeScheduleRow[] {
+  if (events === undefined) return []
+  try {
+    return foldScheduleEvents(events, SessionLogOffset(inheritedEventCount ?? 0)).active.map(record => ({
+      id: record.id,
+      title: record.prompt,
+      schedule: formatScheduleFrequency(record, t),
+      nextRunAt: Date.parse(record.scheduledAt),
+    }))
+  } catch (error: unknown) {
+    if (error instanceof ScheduleLogError || error instanceof TypeError) return []
+    throw error
+  }
+}
+
+/**
+ * Merge scheduler rows with folded log rows; a log row wins on a shared id.
+ * @param jobs - rows from `clientNativeSchedule`.
+ * @param folded - rows folded from the open Session's log.
+ * @returns a new array, in scheduler order with log-only rows appended.
+ */
+export function mergeScheduleRows(
+  jobs: readonly NativeScheduleRow[],
+  folded: readonly NativeScheduleRow[],
+): NativeScheduleRow[] {
+  if (folded.length === 0) return [...jobs]
+  const byId = new Map(jobs.map(job => [job.id, job]))
+  for (const row of folded) byId.set(row.id, row)
+  return [...byId.values()]
+}
+
 /** The row's target instant; a plan without one never becomes overdue. */
-function targetOf(job: NativeScheduledJob): number | undefined {
+function targetOf(job: NativeScheduleRow): number | undefined {
   return job.nextRunAt
 }
 
@@ -95,9 +157,9 @@ function targetOf(job: NativeScheduledJob): number | undefined {
  * @returns a new array in display order.
  */
 export function orderNativeSchedule(
-  jobs: readonly NativeScheduledJob[],
+  jobs: readonly NativeScheduleRow[],
   now: number,
-): NativeScheduledJob[] {
+): NativeScheduleRow[] {
   return jobs.map((job, index) => ({ job, index })).sort((left, right) => {
     const leftAt = targetOf(left.job)
     const rightAt = targetOf(right.job)
@@ -112,10 +174,18 @@ export function orderNativeSchedule(
   }).map(({ job }) => job)
 }
 
+/** The Native Conversation controller slice this catalog subscribes to. */
+export interface NativeConversationEvents {
+  /** Read the current Conversation snapshot. */
+  getSnapshot(): NativeConversationSnapshot
+  /** Subscribe to Conversation snapshot changes. */
+  subscribe(listener: () => void): () => void
+}
+
 /** Props the catalog receives from the Native Session action row. */
 export interface NativeScheduleCatalogProps {
-  /** Session whose reminders this row shows. */
-  readonly sessionId: SessionId
+  /** Controller that owns the selected Session and its loaded events. */
+  readonly conversation: NativeConversationEvents
   /** Grouped reminders, subscribed through the slot hook. */
   readonly useSchedules: SnapshotSelectorHook<NativeSchedulesBySession>
   /** Namespace translator supplied by the slot. */
@@ -127,12 +197,25 @@ export interface NativeScheduleCatalogProps {
  *
  * Rows with a target show the browser half's relative and absolute time lines;
  * a row without one (paused or failed) shows its Host state word instead.
- * @param props - the owning Session, the grouped-reminder hook and the translator.
+ * @param props - the Conversation controller, the grouped-reminder hook and the translator.
  * @returns the trigger and its popover list, or null when the Session has no reminders.
  */
-export function NativeScheduleCatalog({ sessionId, useSchedules, t }: NativeScheduleCatalogProps) {
+export function NativeScheduleCatalog({ conversation, useSchedules, t }: NativeScheduleCatalogProps) {
   const grouped = useSchedules(value => value)
-  const jobs = grouped[sessionId] ?? []
+  const subscribe = useCallback((listener: () => void) => conversation.subscribe(listener), [conversation])
+  const getSnapshot = useCallback(() => conversation.getSnapshot(), [conversation])
+  const snapshot = useSyncExternalStore(subscribe, getSnapshot, getSnapshot)
+  const sessionId: SessionId | undefined = snapshot.selected
+  const folded = useMemo(
+    () => snapshot.selected === undefined
+      ? []
+      : foldScheduleRows(snapshot.events, snapshot.inheritedEventCount, t),
+    [snapshot.selected, snapshot.events, snapshot.inheritedEventCount, t],
+  )
+  const jobs = useMemo(
+    () => sessionId === undefined ? [] : mergeScheduleRows(grouped[sessionId] ?? [], folded),
+    [grouped, sessionId, folded],
+  )
   const [open, setOpen] = useState(false)
   const [now, setNow] = useState(() => Date.now())
   const rootRef = useRef<HTMLDivElement>(null)
@@ -255,14 +338,13 @@ export const plugin: NativePlugin = {
       // The plan chip precedes this entry; the background-job list follows it.
       order: 15,
       locale: NS,
-      inject: () => ({ hooks: { schedules: store } }),
-    }, ({ useSchedules, t }: {
+      inject: () => ({ hooks: { schedules: store }, conversation }),
+    }, ({ useSchedules, conversation: nativeConversation, t }: {
       useSchedules: SnapshotSelectorHook<NativeSchedulesBySession>
+      conversation: NativeConversationEvents
       t: TranslateNS<typeof NS>
     }) => {
-      const selected = conversation.getSnapshot().selected
-      if (selected === undefined) return null
-      return <NativeScheduleCatalog sessionId={selected} useSchedules={useSchedules} t={t} />
+      return <NativeScheduleCatalog conversation={nativeConversation} useSchedules={useSchedules} t={t} />
     })))
   },
 }

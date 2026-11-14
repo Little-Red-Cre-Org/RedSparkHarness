@@ -154,4 +154,4 @@ This package does not alter the history prefix; a new user message extends the r
 <a id="known-limitations-and-deferred-work"></a>
 
 - Full product UI and audio uploads are not provided by this package; file uploads are available through typed Client operations.
-- The Host can report active schedules only for an attached root owner; cold Session rows report `hasActiveSchedule: false` because the scheduler list is owner-scoped.
+- The sidebar Schedule marker comes from folding the `schedule/change` records in the bounded history the Host already reads for that Session row; the fork prefix is excluded, and an unreadable or undecodable log reports `hasActiveSchedule: false`. The Native catalog folds only the selected Session's loaded events, so it neither scans persisted Sessions nor wakes a cold owner.

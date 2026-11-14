@@ -48,7 +48,7 @@ The Provider overrides only those permission and sandbox fields. An optional ins
 
 Each product's permission fact contains only the effective mode, request category, unattended decision, and a fixed safe reason. Claude Code derives those facts from SDK callbacks and `permission_denied` messages. Codex derives them from app-server requests, declined items, and structured `sandboxError` terminals. Raw stderr is forwarded to the Host but is neither classified nor copied into the diagnostic. Both Providers place their failure line before the latest contributing permission fact. A successful result returns only the strict final answer; local cancellation remains `aborted` without permission detail; an unpublished startup failure still rejects `start()`. The Provider never adds either diagnostic fact to assistant output, structured output, or `subagent/end.lastAssistantMessage`.
 
-The foreground consumer presents the stop-reason headline, then the optional diagnostic, then any partial assistant output. The one-shot background adapter stores the same diagnostic beside the stop reason in the failed Job detail. Providers that omit the field retain their previous behavior.
+The foreground consumer presents the stop-reason headline, then the optional diagnostic, then any partial assistant output. The one-shot background adapter stores the same diagnostic beside the stop reason in the failed Job detail. Providers that omit the field retain their previous behavior. The Native outcome carries the same optional field, and the Native subagent tool renders a non-empty diagnostic in that order. [Native external diagnostic](../architecture/2026-11-13-native-external-diagnostic.md) records the field.
 
 ### Ownership and lifecycle
 

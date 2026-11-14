@@ -28,6 +28,7 @@ function fakeChildWithThrowingFd3(): EventEmitter {
     pid?: number
     stdout: PassThrough
     stderr: PassThrough
+    stdin: PassThrough
     stdio: unknown[]
   }
   // Leave `pid` absent: `finish()` still runs its `clearTimeout(wallTimer)` /
@@ -41,6 +42,7 @@ function fakeChildWithThrowingFd3(): EventEmitter {
   const proto = new PassThrough()
   proto.write = () => { throw Object.assign(new Error('EPIPE: broken pipe, write'), { code: 'EPIPE' }) }
   child.stdio = [new PassThrough(), child.stdout, child.stderr, proto]
+  child.stdin = new PassThrough()
   return child
 }
 
@@ -55,12 +57,14 @@ function fakeChildWithAsyncSpawnError(): EventEmitter {
     pid?: number
     stdout: PassThrough
     stderr: PassThrough
+    stdin: PassThrough
     stdio: unknown[]
   }
   child.stdout = new PassThrough()
   child.stderr = new PassThrough()
   const proto = new PassThrough()
   child.stdio = [new PassThrough(), child.stdout, child.stderr, proto]
+  child.stdin = new PassThrough()
   // `spawn` reports an async failure via the child's `error` event; the run
   // settles on it as a worker-exit without waiting for `close`.
   setImmediate(() => {
@@ -75,6 +79,7 @@ function fakeChildWithAckThenThrowingFd3(): EventEmitter {
     pid?: number
     stdout: PassThrough
     stderr: PassThrough
+    stdin: PassThrough
     stdio: unknown[]
   }
   child.stdout = new PassThrough()
@@ -87,6 +92,7 @@ function fakeChildWithAckThenThrowingFd3(): EventEmitter {
     throw Object.assign(new Error('EPIPE: broken pipe, write'), { code: 'EPIPE' })
   }
   child.stdio = [new PassThrough(), child.stdout, child.stderr, proto]
+  child.stdin = new PassThrough()
   // Emit the boot-ack after the boot write, so the run-frame write fires and
   // hits the throwing pipe.
   setImmediate(() => proto.emit('data', Buffer.from('{"type":"boot-ack"}\n')))
@@ -105,6 +111,7 @@ function fakeChildBackpressuredThenDestroyed(): { child: EventEmitter; proto: Pa
     pid?: number
     stdout: PassThrough
     stderr: PassThrough
+    stdin: PassThrough
     stdio: unknown[]
   }
   child.stdout = new PassThrough()
@@ -114,6 +121,7 @@ function fakeChildBackpressuredThenDestroyed(): { child: EventEmitter; proto: Pa
   // reply drain can proceed is the pipe being destroyed under it.
   proto.write = () => false
   child.stdio = [new PassThrough(), child.stdout, child.stderr, proto]
+  child.stdin = new PassThrough()
   // Boot-ack → run frame → two binding calls whose replies backpressure, then
   // destroy the pipe while the host still waits for `drain`: the drain loop
   // resumes with a queued reply left and must break on the destroyed pipe.

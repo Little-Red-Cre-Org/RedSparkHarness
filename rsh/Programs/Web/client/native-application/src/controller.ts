@@ -30,6 +30,8 @@ export interface ConversationSnapshot {
   /** Whether a pending navigation blocks composer submissions. */
   readonly navigationPending?: boolean | undefined
   readonly events: readonly SessionEvent[]
+  /** Fork prefix excluded from this Session's durable Schedule fold. Absent means zero. */
+  readonly inheritedEventCount?: number | undefined
   readonly liveText?: string | undefined
   readonly liveTruncated?: boolean | undefined
   readonly state: 'loading' | 'ready' | 'sending' | 'cancelling' | 'closed'
@@ -193,7 +195,8 @@ export class NativeConversationController {
     const modeControls = await this.client.modeControls(id, this.lifetime.signal)
     const permissionControls = await this.client.permissionControls(id, this.lifetime.signal)
     const history = await this.client.history(id, this.lifetime.signal)
-    this.publish({ selected: id, header: history.header, events: history.events, modeControls, permissionControls,
+    this.publish({ selected: id, header: history.header, events: history.events,
+      inheritedEventCount: history.inheritedEventCount, modeControls, permissionControls,
       ...this.snapshot.selected === id ? {} : { submissions: undefined } })
     await this.refreshSubmissions(id, this.selectionEpoch)
     // With no active turn this still re-reads history once: the turn may have settled before attach.
@@ -478,8 +481,8 @@ export class NativeConversationController {
     await this.detachTurn()
     this.followErrorOwner = undefined
     this.beginSelection()
-    this.publish({ state: 'ready', selected: undefined, header: undefined, events: [], modeControls: undefined,
-      permissionControls: undefined, submissions: undefined, error: undefined })
+    this.publish({ state: 'ready', selected: undefined, header: undefined, events: [], inheritedEventCount: undefined,
+      modeControls: undefined, permissionControls: undefined, submissions: undefined, error: undefined })
   }
 
   private async detachTurn(): Promise<void> {
@@ -504,7 +507,7 @@ export class NativeConversationController {
     this.beginSelection()
     this.publish({ selected: undefined, header: undefined, modeControls: undefined, permissionControls: undefined,
       submissions: undefined, human: undefined, answeringHuman: undefined, submissionBusy: false, submissionError: undefined,
-      events: [], liveText: undefined, liveTruncated: undefined, error: undefined, state: 'ready' })
+      events: [], inheritedEventCount: undefined, liveText: undefined, liveTruncated: undefined, error: undefined, state: 'ready' })
   }
 
   /** Pin an edited title through the selected Host's existing Session writer.
@@ -667,7 +670,8 @@ export class NativeConversationController {
           const matched = submissions.submissions.some(item => item.requestId === reconcileDraft.requestId)
             || history.events.some(event => event.type === 'user/message' && event.data.id === String(reconcileDraft.requestId))
           const selected = this.selectionEpoch === reconcileDraft.epoch && this.snapshot.selected === id
-          if (selected) this.publish({ header: history.header, events: history.events })
+          if (selected) this.publish({ header: history.header, events: history.events,
+            inheritedEventCount: history.inheritedEventCount })
           if (selected && read === this.submissionRead && submissions.throughSeq >= this.submissionFloor
             && submissions.throughSeq >= (this.snapshot.submissions?.throughSeq ?? -1)) {
             this.publish({ submissions, submissionError: undefined })

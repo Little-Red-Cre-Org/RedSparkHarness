@@ -27,6 +27,8 @@ kind: "package-reference"
 
 在 agent 需要在命令之间保持 PowerShell 状态的任何组合中加载本插件——它是 `dsh-tool-pwsh` 的持久对应物，用于依赖跨调用状态的工作。它注册 `pwsh` 工具，需要 `ctx.tools` 与 `ctx.terminals` 服务，并在执行时需要拥有者 agent 会话。
 
+`./native` 入口在 Native 宿主上注册同一个 `pwsh` 工具。它需要 native 的 `agents`、`terminals` 与 `tools` 服务，以及由 `backendType` 点名的终端后端。Native 组合选择 `@redspark/rsh-tool-pwsh-persistent/native`；包根仍是 Cordis 插件，只在 `apply` 运行时加载。`@redspark/cordis`、`@redspark/rsh-agent` 与 `@redspark/rsh-tools` 是可选 peer，因此 Cordis 组合仍须安装它们，Native 组合则不必。
+
 ### 何时选择
 
 当工作依赖跨调用 PowerShell 状态时选择持久工具；当每条命令都应从已知、干净的环境开始时选择 `dsh-tool-pwsh`。这里不支持需要交互 stdin 的命令——读取输入的前台子进程会一直阻塞到命令超时，随后重置 shell——因此交互工作属于 terminal 工具。
@@ -81,12 +83,14 @@ kind: "package-reference"
 
 | 文件 | 职责 |
 |---|---|
-| [`src/index.ts`](src/index.ts) | 插件入口：shell 注册表、prompt 设置、命令包装、scrollback 轮询、提取与渲染 |
-| — | 不发布运行时不变式伴生入口；适配器私有的 owner-to-shell 缓存不存在可观察的事件或数据关系。生命周期测试无需仅为不变式增加公共 API 即可验证其清理。 |
+| [`src/persistent-core.ts`](src/persistent-core.ts) | 运行时中立的 shell 复用、prompt 设置、标记提取与渲染 |
+| [`src/index.ts`](src/index.ts) | Cordis 适配器：工具注册与按 owner 的终端端口 |
+| [`src/native.ts`](src/native.ts) | Native 适配器：同一工具，走 native 终端注册表 |
+| — | 不发布运行时不变式伴生入口；core 私有的 owner-to-shell 缓存没有可观察的事件或数据关系。shell 复用仍可通过工具执行观察。生命周期测试会验证其清理行为，无需仅为不变式增加公共 API。 |
 
 ### 命令流程
 
-首条命令通过 `ctx.terminals.spawn` 生成 shell，安装 `prompt` 覆盖，并等待就绪。随后每条命令都包装成一行物理文本——`Write-Output` 起始标记、用反引号转义进双引号字符串的命令体、`Write-Output` 结束标记加退出状态——因此 PSReadLine 对换行包装的回显无法伪造完成。工具以 1,000 行一页轮询 scrollback，直到出现结束标记或完成的提示符，提取区间、剥离回显的包装与提示符，并连同任何状态标记一起渲染。超时会中止截止时间、捕获部分输出并重置 shell。
+首条命令通过所选终端端口生成 shell（Cordis 走 `ctx.terminals.spawn`，Native 走 `terminals.open`），安装 `prompt` 覆盖，并等待就绪。随后每条命令都包装成一行物理文本——`Write-Output` 起始标记、用反引号转义进双引号字符串的命令体、`Write-Output` 结束标记加退出状态——因此 PSReadLine 对换行包装的回显无法伪造完成。工具以 1,000 行一页轮询 scrollback，直到出现结束标记或完成的提示符，提取区间、剥离回显的包装与提示符，并连同任何状态标记一起渲染。超时会中止截止时间、捕获部分输出并重置 shell。
 
 </details>
 
@@ -101,6 +105,7 @@ kind: "package-reference"
 - [terminal seam](../../terminal/terminal/README.zh.md)——工具背后的 `ctx.terminals` 服务。
 - [terminal-bash 后端](../../terminal/terminal-bash/README.zh.md)——默认后端，配置 `shellDialect: pwsh`。
 - [pwsh 持久 PTY Agent Note](../../../../../.agents/notes/archived/architecture/2026-08-11-pwsh-persistent-pty.md)——pwsh 侧会话设计及其理由。
+- [Native 持久 PowerShell](../../../../../.agents/notes/implemented/architecture/2026-11-13-native-persistent-pwsh.zh.md)——运行时中立的 core，以及 Cordis 与 Native 适配器。
 - [持久 PTY 会话 Agent Note](../../../../../.agents/notes/implemented/feature/2026-07-16-persistent-pty-sessions.zh.md)——按所有者会话的设计及其理由。
 - [生成的工具目录](../../../../Docs/tool-catalog.zh.md#redsparkrsh-tool-pwsh-persistent)——`pwsh` 参数 schema 的确切内容。
 - [生成的配置目录](../../../../Docs/config-catalog.zh.md#redsparkrsh-tool-pwsh-persistent)——每个受支持配置字段及其源声明。
@@ -128,7 +133,7 @@ kind: "package-reference"
 
 #### 模型看到什么
 
-命令共享每个 agent 一个 shell，因此 cwd、`$env:` 变量、函数与后台任务都会跨调用保留。结果排除私有完成标记、shell 提示词与回显的输入行（PSReadLine 会把提交的输入渲染回流中；标记锚定提取与包装源码剥离会移除它）。非零的包装命令追加 `[exit code: N]`——命令运行原生程序时给出确切原生退出码，PowerShell 终止错误则为 `1`。在报告该状态前就退出的 shell 改为追加 `[shell exited: code N]`、`[shell killed by signal: SIG]`，或后端两者都未提供时的 `[shell exited]`（Windows 强制终止报告 exit 1 且没有信号），然后重置并告诉模型下一次调用从全新状态开始。长输出保留最早的已保留前缀并附裁剪通知；若 terminal 已经丢弃该前缀，结果会明确说明。超时返回有界部分输出、关闭不确定的 shell 并报告重置。
+命令共享每个 agent 一个 shell，因此 cwd、`$env:` 变量、函数与后台任务都会跨调用保留。结果排除私有完成标记、shell 提示词与回显的输入行（PSReadLine 会把提交的输入渲染回流中；标记锚定提取与包装源码剥离会移除它）。非零的包装命令追加 `[exit code: N]`——命令运行原生程序时给出确切原生退出码，PowerShell 终止错误则为 `1`。在报告该状态前就退出的 shell 改为追加 `[shell exited: code N]`、`[shell killed by signal: SIG]`，或后端两者都未提供时的 `[shell exited]`（Windows 强制终止报告 exit 1 且没有信号），然后重置并告诉模型下一次调用从全新状态开始。长输出保留最早的已保留前缀并附裁剪通知；若 terminal 已经丢弃该前缀，结果会明确说明。超时返回有界部分输出、关闭不确定的 shell 并报告重置。Native 的 list 快照只带 `running`、`exited` 或 `failed`，没有退出码或信号，因此不再处于运行中的 shell 渲染 `[shell exited]` 并附上重置说明。
 
 #### Token 影响
 

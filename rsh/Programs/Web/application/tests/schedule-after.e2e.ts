@@ -819,7 +819,7 @@ describe.skipIf(MODE === 'record')('web e2e: active Schedule catalog', () => {
       'session.v3.jsonl',
       'system-prompt.expected.md',
       'tool-schemas.expected.json',
-    ])
+    ], 'native-web')
     expect(tripwire.pageErrors).toEqual([])
     expect(tripwire.warnings).toEqual([])
   }, 60_000)

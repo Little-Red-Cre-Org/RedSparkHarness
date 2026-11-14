@@ -26,6 +26,10 @@
       "types": "./lib/types/client.d.ts",
       "default": "./lib/types/client.js"
     },
+    "./domain": {
+      "types": "./lib/types/domain.d.ts",
+      "default": "./lib/types/domain.js"
+    },
     "./native": {
       "types": "./lib/types/native.d.ts",
       "default": "./lib/native.js"

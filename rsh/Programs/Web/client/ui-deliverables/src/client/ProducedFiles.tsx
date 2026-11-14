@@ -1,7 +1,6 @@
 import { LinkIcon, classifyLinkPath } from '@redspark/rsh-client-ui-primitives'
 import type { PropsLocale } from '@redspark/rsh-client-ui-slots'
-import type { TurnTailOwnerProps } from '@redspark/rsh-client-ui-chat/client'
-import { basename } from './turn-deliverables.ts'
+import { basename } from '../presented.ts'
 import type { NS } from './locales.ts'
 import css from './ProducedFiles.module.css'
 
@@ -9,7 +8,9 @@ import css from './ProducedFiles.module.css'
 const SHOWN_LIMIT = 6
 
 /** Matched paths, the opener, and the locale seat. */
-export type ProducedFilesProps = Pick<TurnTailOwnerProps, 'openFile'> & {
+export type ProducedFilesProps = {
+  /** Open one produced path in the view's file surface. */
+  openFile: (path: string) => void
   matched: readonly string[]
 } & PropsLocale<typeof NS>
 

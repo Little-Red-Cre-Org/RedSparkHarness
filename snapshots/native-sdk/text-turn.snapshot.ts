@@ -60,7 +60,9 @@ it('replays a native SDK turn with exact model input, output and durable Session
         response.write(`data: ${JSON.stringify({ choices: [{ delta: { role: 'assistant', content: reply } }] })}\n\n`)
         return
       }
-      const last = (modelRequest.messages as Array<{ role: string; content: unknown }>).at(-1)
+      const messages = modelRequest.messages as Array<{ role: string; content: unknown }>
+      const last = [...messages].reverse().find(message => !(message.role === 'user' && typeof message.content === 'string'
+        && message.content.startsWith('Current runtime context')))
       const continuationCommand = last?.role === 'user' ? String(last.content) : ''
       if (continuationCommand === 'await the continuation settlement notice') {
         response.end([

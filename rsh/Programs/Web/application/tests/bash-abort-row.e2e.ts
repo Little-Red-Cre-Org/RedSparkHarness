@@ -76,7 +76,7 @@ describe.skipIf(MODE === 'record')('web e2e: cancelled Bash row disclosure', () 
     expect(tripwire.warnings).toEqual([])
   }, 60_000)
 
-  it('keeps its snapshot inventory closed', async () => {
-    await assertFixtureInventory(SNAPSHOT_DIR, ['ui.expected.md'])
+  it('records a native-web inventory', async () => {
+    await assertFixtureInventory(SNAPSHOT_DIR, ['ui.expected.md'], 'native-web')
   })
 })

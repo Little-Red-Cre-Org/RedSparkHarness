@@ -51,7 +51,7 @@ dsh web --patch rsh/Programs/CLI/config/examples/schedule/cordis.yml
 
 ### Native 半边
 
-Native 入口（`exports["./native"]`）没有投影注册表，因此自己跟随 `clientNativeSchedule` 的 baseline/upsert/remove 帧，并折叠进同一套按 Session 分组（`applyScheduleFrame`）。它以顺序 15 把 `schedule-catalog` 贡献到 `native.conversation.actions`——在计划徽章之后、后台任务列表之前。两套记录的行文不同：Native 行携带宿主的 `schedule` 表达式，而不是 `kind`/`everySeconds` 一对，所以该字符串就是频率行；没有 `nextRunAt` 的行（暂停或失败）排在最后，并且只显示该表达式。排序、绝对时间格式化与相对时间格式化仍是浏览器半边自己的。
+Native 入口（`exports["./native"]`）没有投影注册表，因此跟随 `clientNativeSchedule` 的 baseline/upsert/remove 帧，并折叠选中 Session 已读到的 `schedule/change` 事件（`foldScheduleRows`）；两套记录按 id 合并，同 id 时日志行优先。它以顺序 15 把 `schedule-catalog` 贡献到 `native.conversation.actions`——在计划徽章之后、后台任务列表之前。scheduler 行携带宿主的 `schedule` 表达式；日志行使用浏览器半边的 `formatScheduleFrequency`。没有 `nextRunAt` 的行（暂停或失败）排在最后，并且只显示该表达式。排序、绝对时间格式化与相对时间格式化仍是浏览器半边自己的。折叠只读取控制器已加载的事件；目录不扫描持久化 Session，也不唤醒冷态 owner。
 
 ### 源码地图
 

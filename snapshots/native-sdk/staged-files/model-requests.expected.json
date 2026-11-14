@@ -24,6 +24,10 @@
             "text": "[File \"first.txt\" (48 bytes, sha256:9bbac3bf): verbatim read-only copy saved at \"{{home}}/attachments/v1/files/9b/9bbac3bf387f8cad4b3f74f6fc9a9f17a91dc734488f04debbd4d65fd82593f0/first.txt\". Read that path with your file tools when its contents are needed; copy it to a writable location before modifying it. When delegating file work, include this saved path in the delegation prompt; only subagents sharing this execution environment can read it.]"
           }
         ]
+      },
+      {
+        "role": "user",
+        "content": "Current runtime context. This snapshot supersedes earlier runtime-context snapshots.\n\nCurrent DSH file policy: danger-full-access. The DSH file sandbox does not restrict file modifications by available operations.\n\nApproval prompts are disabled in this session: actions that require approval are rejected automatically — do not request sandbox escalation (do not set `sandbox_permissions`)."
       }
     ],
     "tools": [
@@ -55,6 +59,10 @@
             "text": "[File \"first.txt\" (48 bytes, sha256:9bbac3bf): verbatim read-only copy saved at \"{{home}}/attachments/v1/files/9b/9bbac3bf387f8cad4b3f74f6fc9a9f17a91dc734488f04debbd4d65fd82593f0/first.txt\". Read that path with your file tools when its contents are needed; copy it to a writable location before modifying it. When delegating file work, include this saved path in the delegation prompt; only subagents sharing this execution environment can read it.]"
           }
         ]
+      },
+      {
+        "role": "user",
+        "content": "Current runtime context. This snapshot supersedes earlier runtime-context snapshots.\n\nCurrent DSH file policy: danger-full-access. The DSH file sandbox does not restrict file modifications by available operations.\n\nApproval prompts are disabled in this session: actions that require approval are rejected automatically — do not request sandbox escalation (do not set `sandbox_permissions`)."
       },
       {
         "role": "assistant",
@@ -109,6 +117,10 @@
             "text": "[File \"first.txt\" (48 bytes, sha256:9bbac3bf): verbatim read-only copy saved at \"{{home}}/attachments/v1/files/9b/9bbac3bf387f8cad4b3f74f6fc9a9f17a91dc734488f04debbd4d65fd82593f0/first.txt\". Read that path with your file tools when its contents are needed; copy it to a writable location before modifying it. When delegating file work, include this saved path in the delegation prompt; only subagents sharing this execution environment can read it.]"
           }
         ]
+      },
+      {
+        "role": "user",
+        "content": "Current runtime context. This snapshot supersedes earlier runtime-context snapshots.\n\nCurrent DSH file policy: danger-full-access. The DSH file sandbox does not restrict file modifications by available operations.\n\nApproval prompts are disabled in this session: actions that require approval are rejected automatically — do not request sandbox escalation (do not set `sandbox_permissions`)."
       },
       {
         "role": "assistant",
@@ -182,6 +194,10 @@
             "text": "[File \"first.txt\" (48 bytes, sha256:9bbac3bf): verbatim read-only copy saved at \"{{home}}/attachments/v1/files/9b/9bbac3bf387f8cad4b3f74f6fc9a9f17a91dc734488f04debbd4d65fd82593f0/first.txt\". Read that path with your file tools when its contents are needed; copy it to a writable location before modifying it. When delegating file work, include this saved path in the delegation prompt; only subagents sharing this execution environment can read it.]"
           }
         ]
+      },
+      {
+        "role": "user",
+        "content": "Current runtime context. This snapshot supersedes earlier runtime-context snapshots.\n\nCurrent DSH file policy: danger-full-access. The DSH file sandbox does not restrict file modifications by available operations.\n\nApproval prompts are disabled in this session: actions that require approval are rejected automatically — do not request sandbox escalation (do not set `sandbox_permissions`)."
       },
       {
         "role": "assistant",
@@ -263,6 +279,10 @@
             "text": "[File \"first.txt\" (48 bytes, sha256:9bbac3bf): verbatim read-only copy saved at \"{{home}}/attachments/v1/files/9b/9bbac3bf387f8cad4b3f74f6fc9a9f17a91dc734488f04debbd4d65fd82593f0/first.txt\". Read that path with your file tools when its contents are needed; copy it to a writable location before modifying it. When delegating file work, include this saved path in the delegation prompt; only subagents sharing this execution environment can read it.]"
           }
         ]
+      },
+      {
+        "role": "user",
+        "content": "Current runtime context. This snapshot supersedes earlier runtime-context snapshots.\n\nCurrent DSH file policy: danger-full-access. The DSH file sandbox does not restrict file modifications by available operations.\n\nApproval prompts are disabled in this session: actions that require approval are rejected automatically — do not request sandbox escalation (do not set `sandbox_permissions`)."
       },
       {
         "role": "assistant",

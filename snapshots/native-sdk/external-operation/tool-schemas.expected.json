@@ -142,7 +142,7 @@
     },
     {
       "name": "subagent",
-      "description": "Delegate one task to a fresh child without your conversation. This call waits for its final result and cleanup.",
+      "description": "Delegate one task to a fresh child without your conversation. By default wait for its final result and cleanup. run_in_background returns after child readiness; use job_output/job_kill to observe or cancel the Agent-owned job.",
       "parameters": {
         "type": "object",
         "additionalProperties": false,
@@ -156,6 +156,9 @@
           },
           "prompt": {
             "type": "string"
+          },
+          "run_in_background": {
+            "type": "boolean"
           }
         }
       }
@@ -222,6 +225,23 @@
           "meta"
         ],
         "additionalProperties": false
+      }
+    },
+    {
+      "name": "bash",
+      "description": "Run commands in a bash shell\n* When invoking this tool, the contents of the \"command\" parameter does NOT need to be XML-escaped.\n* Network access depends on the task environment. Prefer configured mirrors/proxies when they are available.\n* State is persistent across command calls and discussions with the user.\n* To inspect a particular line range of a file, e.g. lines 10-25, try 'sed -n 10,25p /path/to/the/file'.\n* Please avoid commands that may produce a very large amount of output.\n* Please run long lived commands in the background, e.g. 'sleep 10 &' or start a server in the background.",
+      "parameters": {
+        "type": "object",
+        "required": [
+          "command"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "command": {
+            "type": "string",
+            "description": "The bash command to run. Relative path is preferred in the command."
+          }
+        }
       }
     },
     {
@@ -464,7 +484,7 @@
       },
       {
         "name": "subagent",
-        "description": "Delegate one task to a fresh child without your conversation. This call waits for its final result and cleanup.",
+        "description": "Delegate one task to a fresh child without your conversation. By default wait for its final result and cleanup. run_in_background returns after child readiness; use job_output/job_kill to observe or cancel the Agent-owned job.",
         "parameters": {
           "type": "object",
           "additionalProperties": false,
@@ -478,6 +498,9 @@
             },
             "prompt": {
               "type": "string"
+            },
+            "run_in_background": {
+              "type": "boolean"
             }
           }
         }
@@ -544,6 +567,23 @@
             "meta"
           ],
           "additionalProperties": false
+        }
+      },
+      {
+        "name": "bash",
+        "description": "Run commands in a bash shell\n* When invoking this tool, the contents of the \"command\" parameter does NOT need to be XML-escaped.\n* Network access depends on the task environment. Prefer configured mirrors/proxies when they are available.\n* State is persistent across command calls and discussions with the user.\n* To inspect a particular line range of a file, e.g. lines 10-25, try 'sed -n 10,25p /path/to/the/file'.\n* Please avoid commands that may produce a very large amount of output.\n* Please run long lived commands in the background, e.g. 'sleep 10 &' or start a server in the background.",
+        "parameters": {
+          "type": "object",
+          "required": [
+            "command"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "command": {
+              "type": "string",
+              "description": "The bash command to run. Relative path is preferred in the command."
+            }
+          }
         }
       },
       {

@@ -85,7 +85,7 @@ Chat 与 Trajectory 通过纯操作 `uiConversation.inspectSystemPrompt` 解释�
 
 ## Testing
 
-生命周期验证要求：提示词未变更时不产生事件，具备能力的路由在恢复后追加变更后的提示词。TypeScript 与 Python SDK 的期望输出都必须包含带类型的追加 `system/message` 事件，遵循 [SDK 快照策略](../../../../rsh/Docs/testing.zh.md)。[TypeScript SDK 通知](../../../../snapshots/sdk/system-prompt-in-history/notifications.expected.jsonl)与 [Python SDK 提示词历史](../../../../rsh/Scripts/snapshots/python-sdk-single-exe/minimal-in-history/prompt-history.json)记录了追加的提示词事件与保留的提示词版本。
+生命周期验证要求：提示词未变更时不产生事件，具备能力的路由在恢复后追加变更后的提示词。TypeScript 与 Python SDK 的期望输出都必须包含带类型的追加 `system/message` 事件，遵循 [SDK 快照策略](../../../../rsh/Docs/testing.zh.md)。[TypeScript SDK 通知](../../../../snapshots/sdk/system-prompt-in-history/notifications.expected.jsonl)记录了追加的提示词事件与保留的提示词版本；`rsh/Scripts/snapshots/python-sdk-single-exe/minimal-in-history/` 下的 Python SDK 提示词历史在 `sdk-minimal` 退役前钉住同一约定。
 
 - `rsh/Engine/core/agent-loop/tests/system-prompt-admission.spec.ts` 覆盖文本变化或未变时从具备能力切换到不具备能力的路由、反向路由切换、恢复时的路由准入、请求中间件或准备阶段取消，以及已准备路由保持绑定时并发选择发生变化。重试压缩用例覆盖遮蔽最新提示词后有或没有更早更新存活的情况，并验证复用已接纳的组装结果、用户消息仅接纳一次，以及未变的后续重试不会多记序列 header。具备和不具备能力路由的清除用例会移除三个生效提示词版本，验证重复请求与带 seed 的恢复保持为空且不多记提示词事件，并仅恢复新文本；日志重建与 pi 转换器都不保留旧指令。`src/agent.ts` 与 `src/runtime-context.ts` 的聚焦覆盖率在语句、分支、函数和行四项均达到 100%。
 - `rsh/Engine/core/agent-loop/tests/system-prompt-projection.spec.ts` 钉住序列延续时的追加、序列开始时无论是否存在后续存活节点、有效文本是否变化都执行的重新基线化、空提示词对所有生效版本的清除，以及不具备能力时只做替换的行为。

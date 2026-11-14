@@ -13,9 +13,7 @@ import {
 } from '@agentclientprotocol/sdk'
 import { initProfile, PROFILE_TEMPLATES } from '@redspark/rsh-app-boot'
 import { startMockLlmServer } from '@redspark/rsh-llm-mock-server'
-import { entryListSchema } from '@redspark/cordis-plugin-include'
 import { execa } from 'execa'
-import * as yaml from 'js-yaml'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { loadNativeProfile } from '../src/native-profile-loader.ts'
 import { ensureShippedNativeProfile } from '../src/native-profile-template.ts'
@@ -2026,51 +2024,17 @@ describe.skipIf(process.env.RSH_EXAMPLE_MODE !== 'lib' && !existsSync(rshBin))('
       expect(stdout).not.toMatch(/name: '@redspark\/dsh-client-/)
     }, SPAWN_TIMEOUT_MS + 30_000)
 
-    it('prints the exact standalone sdk-minimal tree without dsh-base', async () => {
+    it('refuses the retired sdk-minimal profile instead of printing a tree', async () => {
       const { stdout, code, stderr } = await runBuiltBin(
         ['--profile', 'sdk-minimal', '--dump-default-config'],
         { RSH_HOME: home },
       )
-      expect(code).toBe(0)
-      expect(stderr).toBe('')
-      const rows = yaml.load(stdout, { schema: entryListSchema }) as Array<{ id?: string; name?: string }>
-      expect(rows.map(row => [row.id, row.name])).toEqual([
-        ['sdk-app-startup', '@redspark/rsh-sdk-app'],
-        ['sdk-jsonrpc-server', '@redspark/rsh-sdk-jsonrpc-server'],
-        ['deepseek-llm-api-extensions', '@redspark/rsh-deepseek-llm-api-extensions'],
-        ['session-log-deepseek', '@redspark/rsh-session-log-deepseek'],
-        ['plugin-package-inventory-deepseek', '@redspark/rsh-plugin-package-inventory-deepseek'],
-        ['llm-deepseek', '@redspark/rsh-llm-deepseek'],
-        ['sandbox', '@redspark/rsh-sandbox-local'],
-        ['session-projection', '@redspark/rsh-session-projection'],
-        ['sandbox-policy', '@redspark/rsh-sandbox-policy'],
-        ['subprocess', '@redspark/rsh-subprocess-local'],
-        ['pty', '@redspark/rsh-terminal'],
-        ['terminal-bash', '@redspark/rsh-terminal-bash'],
-        ['terminal-pwsh', '@redspark/rsh-terminal-bash'],
-        ['timer', '@redspark/cordis-plugin-timer'],
-        ['llm', '@redspark/rsh-llm'],
-        ['session', '@redspark/rsh-session'],
-        ['session-title', '@redspark/rsh-session-title'],
-        ['system-prompt', '@redspark/rsh-system-prompt'],
-        ['tools', '@redspark/rsh-tools'],
-        ['agent', '@redspark/rsh-agent'],
-        ['llm-retry', '@redspark/rsh-llm-retry'],
-        ['jobs', '@redspark/rsh-jobs-local'],
-        ['invariants', '@redspark/rsh-invariants'],
-        ['session-invariant', '@redspark/rsh-session/invariant'],
-        ['agent-invariant', '@redspark/rsh-agent/invariant'],
-        ['scope-invariant', '@redspark/rsh-scope/invariant'],
-        ['agent-loop-invariant', '@redspark/rsh-agent-loop/invariant'],
-        ['agent-loop', '@redspark/rsh-agent-loop'],
-        ['persistent-bash', '@redspark/rsh-tool-bash-persistent'],
-        ['persistent-pwsh', '@redspark/rsh-tool-pwsh-persistent'],
-        ['sessions', '@redspark/rsh-session-persistence-jsonl'],
-      ])
-      expect(stdout).toContain('# == @redspark/rsh-sdk-minimal')
-      expect(stdout).not.toContain('@redspark/rsh-base')
-      expect(stdout).not.toContain('@redspark/rsh-web-app')
-    }, SPAWN_TIMEOUT_MS * 2 + 30_000)
+      expect(code).toBe(1)
+      expect(stdout).toBe('')
+      expect(stderr).toContain('profile "sdk-minimal" no longer boots')
+      expect(stderr).toContain('use --profile sdk')
+      expect(existsSync(join(home, 'profiles', 'sdk-minimal'))).toBe(false)
+    }, SPAWN_TIMEOUT_MS + 30_000)
 
     it('composes the profile user layer and a --patch overlay in order', async () => {
       // Create a legacy custom profile first, then write its user layer.

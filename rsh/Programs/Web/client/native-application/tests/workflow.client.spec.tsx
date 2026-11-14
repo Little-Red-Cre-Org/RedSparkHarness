@@ -1,7 +1,8 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
-import { afterEach, expect, it } from 'vitest'
-import type { SessionEvent, SessionId } from '@redspark/rsh-session/types'
+import { afterEach, expect, it, vi } from 'vitest'
+import { SESSION_FORMAT_VERSION, type SessionEvent, type SessionId } from '@redspark/rsh-session/types'
+import type { NativeSessionListItem } from '@redspark/rsh-client-native-session/native'
 import { makeTranslate } from '@redspark/rsh-client-test-runtime'
 import { NativeTranscript, groupNativeTranscriptEvents } from '../src/native-transcript.tsx'
 import { toolCardRecords } from '../src/tool-cards.tsx'
@@ -79,4 +80,38 @@ it.each(['running', 'completed'] as const)('resets %s run disclosure when switch
   expect(header().getAttribute('aria-expanded')).toBe(status === 'running' ? 'false' : 'true')
   rerender(<NativeTranscript {...props} sessionId={'second' as SessionId} snapshot={snapshot} />)
   expect(header().getAttribute('aria-expanded')).toBe(status === 'running' ? 'true' : 'false')
+})
+
+function childRow(id: string, parent: string, running: boolean, origin?: 'subagent'): NativeSessionListItem {
+  return {
+    header: {
+      version: SESSION_FORMAT_VERSION, id: id as SessionId, createdAt: 1, isSeeded: false,
+      parentSession: parent as SessionId, ...(origin === undefined ? {} : { origin }),
+    },
+    titleProjection: { status: 'absent' }, updatedAt: 1, blank: false, running, completed: !running,
+    runningSubagentCount: 0, hasActiveSchedule: false,
+  }
+}
+
+it('opens a running child listed as this Session subagent and refuses the other rows', () => {
+  const openSession = vi.fn()
+  const eligible = childRow('child', 'parent', true, 'subagent')
+  const { rerender } = render(<NativeTranscript {...props} openSession={openSession}
+    snapshot={{ sessions: [eligible], events: history, state: 'ready' }} />)
+  fireEvent.click(screen.getByRole('button', { name: 'Open Reviewer' }))
+  expect(openSession).toHaveBeenCalledWith('child')
+  for (const sessions of [
+    [childRow('child', 'parent', false, 'subagent')],
+    [childRow('child', 'other', true, 'subagent')],
+    [childRow('child', 'parent', true)],
+    [],
+  ]) {
+    rerender(<NativeTranscript {...props} openSession={openSession}
+      snapshot={{ sessions, events: history, state: 'ready' }} />)
+    expect(screen.queryByRole('button', { name: 'Open Reviewer' })).toBeNull()
+  }
+  const ended = [...history, at(5, 'tool-workflow/agent-end', { runId: 'run', seq: 1, outcome: 'completed' })]
+  rerender(<NativeTranscript {...props} openSession={openSession}
+    snapshot={{ sessions: [eligible], events: ended, state: 'ready' }} />)
+  expect(screen.queryByRole('button', { name: 'Open Reviewer' })).toBeNull()
 })

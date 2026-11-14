@@ -45,6 +45,9 @@
       "path": "../../../../Engine/session/session-title/tsconfig.json"
     },
     {
+      "path": "../../../../Engine/schedule/schedule"
+    },
+    {
       "path": "../../../../Engine/core/native-model-execution/tsconfig.host.json"
     },
     {
@@ -112,6 +115,9 @@
     },
     {
       "path": "../../../../Core/util/native-command"
+    },
+    {
+      "path": "../../../../Modules/Official/fs/tool-present"
     },
     {
       "path": "../../host/directory-picker-native"

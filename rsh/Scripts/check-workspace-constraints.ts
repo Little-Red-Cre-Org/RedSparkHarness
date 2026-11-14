@@ -264,7 +264,7 @@ const packageFileExtras: Readonly<Record<string, readonly string[]>> = {
   '@redspark/rsh-launch-environment': ['lib/layers.js', 'lib/shared-*.js'],
   '@redspark/rsh-mcp-client': ['lib/types.js', 'lib/acp-config.js', 'lib/shared-*.js'],
   // The CPython side ships as source .py files, published as-is rather than built.
-  '@redspark/rsh-experimental-code-runtime-python': ['py/**/*.py'],
+  '@redspark/rsh-experimental-code-runtime-python': ['py/**/*.py', 'lib/shared-*.js'],
   // The shipped preset compositions travel inside the roster package.
   '@redspark/rsh-agent-preset-standing': ['lib/shared-*.js'],
   '@redspark/rsh-plan-mode': ['lib/shared-*.js'],
@@ -357,7 +357,9 @@ const packageFileExtras: Readonly<Record<string, readonly string[]>> = {
   '@redspark/rsh-pwsh-local': ['lib/resolve.js', 'lib/shared-*.js'],
   '@redspark/rsh-pwsh-sandbox': ['lib/shared-*.js'],
   '@redspark/rsh-tool-bash': ['lib/shared-*.js'],
+  '@redspark/rsh-tool-bash-persistent': ['lib/shared-*.js'],
   '@redspark/rsh-tool-pwsh': ['lib/shared-*.js'],
+  '@redspark/rsh-tool-pwsh-persistent': ['lib/shared-*.js'],
   '@redspark/rsh-terminal': ['lib/protocol.js', 'lib/error.js', 'lib/shared-*.js'],
   '@redspark/rsh-terminal-bash': ['lib/shared-*.js'],
   '@redspark/rsh-tool-terminal': ['lib/shared-*.js'],

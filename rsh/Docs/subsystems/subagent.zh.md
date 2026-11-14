@@ -77,6 +77,13 @@ interface NativeExternalSubagentOutcome {
   readonly output: readonly ContentBlock[]
   /** Schema-valid product value when the request carries an output schema. */
   readonly structured?: unknown
+  /**
+   * Product-authored failure detail for a non-completed result. Products keep this
+   * text free of tool inputs, file contents, environment values, credentials, and raw
+   * protocol payloads. The engine limits it to 4096 UTF-8 bytes and omits it for a
+   * completed result. Consumers present it separately from {@link output}.
+   */
+  readonly diagnostic?: string
   /** Product terminal reason after child execution settles. */
   readonly stopReason: NativeSubagentStopReason
 }

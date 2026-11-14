@@ -1,4 +1,4 @@
-/** End-to-end SDK continuation through built dsh sdk-minimal with an explicitly mounted file editor. */
+/** End-to-end SDK continuation through the sdk-minimal bundle under a custom legacy profile name. */
 
 import { mkdir, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
@@ -22,6 +22,24 @@ async function run(root: string): Promise<ProfileReport> {
   const cwd = join(root, 'workspace')
   await mkdir(cwd, { recursive: true })
   await mkdir(home, { recursive: true })
+  const profileName = 'bench-minimal'
+  const profileDir = join(home, 'profiles', profileName)
+  await mkdir(profileDir, { recursive: true })
+  await writeFile(join(profileDir, 'package.json'), JSON.stringify({
+    name: `dsh-profile-${profileName}`,
+    private: true,
+    dependencies: {},
+    dsh: { profile: { bundles: ['@redspark/rsh-sdk-minimal'], patchReload: 'startup' } },
+  }, undefined, 2) + '\n')
+  await writeFile(join(profileDir, 'cordis.patch.yml'), '[]\n')
+  await writeFile(join(profileDir, 'pnpm-workspace.yaml'), [
+    'packages:',
+    '  - .',
+    '',
+    'nodeLinker: hoisted',
+    'autoInstallPeers: false',
+    '',
+  ].join('\n'))
   await writeFile(join(cwd, 'synthetic.txt'), resultText(0))
   const patch = join(root, 'profile.patch.yml')
   await writeFile(patch, [
@@ -38,8 +56,8 @@ async function run(root: string): Promise<ProfileReport> {
     RSH_AGENTS_HOME: join(home, 'agents'),
   }
   const harness = new RedSparkHarness({
-    rshBin: join(import.meta.dirname, '..', '..', '..', 'apps', 'cli', 'lib', 'bin.js'),
-    profile: 'sdk-minimal', rshHome: home, processCwd: cwd, cwd,
+    rshBin: join(import.meta.dirname, '..', '..', '..', 'Programs', 'CLI', 'lib', 'bin.js'),
+    profile: profileName, rshHome: home, processCwd: cwd, cwd,
     provider: 'bench', model: 'bench', patches: [patch], env,
     initializeTimeoutMs: 15_000, requestTimeoutMs: 15_000,
   })

@@ -45,16 +45,17 @@ Native 侧没有任何文件读取 Cordis 服务名：没有 `native.ts`、也�
 
 ### 阶段 A —— 封住 legacy 出口
 
-- `dsh.nativeProfileTemplates` 里的 13 个名字都以 Native 启动。`sdk-minimal` 是唯一仍走 legacy 的已发布名字，也是唯一把 `rsh-terminal` 与两个 persistent shell 组合在一起的 profile。
-- 定了 `sdk-minimal` 就定了 A：要么给 `native-sdk` 补一个 shell——它组合了 30 个插件却没有 shell——要么拒绝这个名字并记录它的能力去了哪里。
+- `dsh.nativeProfileTemplates` 里的 13 个名字都以 Native 启动。已发布名字 `sdk-minimal` 不再启动；它的 bundle 仍可由自定义 legacy profile 组合。`native-sdk` 现在承载 `sdk-minimal` 与 `rsh-terminal` 组合的那个平台持久 shell。
+- 启动器在启动、导出配置、插件管理和 `--from-default-profile` 上拒绝 `sdk-minimal`，并指向 `--profile sdk`。已有目录不会被改写。打包的 Python 冒烟断言这次拒绝，不再比对 minimal 快照。续跑基准使用自定义名字 `bench-minimal`，因此仍能组合 `@redspark/rsh-sdk-minimal`。三个 legacy 臂和其他自定义 legacy 名字仍在。
+- 对活跃 home 的本地 `profileRuntime` 检查中，`web` 与 `desktop` 都返回 `legacy`。[Legacy 运行时退场](2026-11-06-legacy-runtime-retirement.zh.md) 的第 2 条还不成立，所以本阶段不拒绝这两个名字，也不改 `initProfile`。
 - `bin.ts` 里的三条 legacy 分支（`profile`、`plugin`、`dump-config`）在 `2026-11-06-legacy-runtime-retirement.md` 之后退休，由那份 Note 记录什么会变得不可达。
 - 出口：每个已发布名字都以 Native 启动，需要 legacy 的自定义名字被按名字拒绝，且 `initProfile` 不再写 legacy manifest。
 
 ### 阶段 B —— 补齐 Native 能力
 
-- 实测还剩三个能力缺口：`tool-bash-persistent` 与 `tool-pwsh-persistent` 完全没有 `dsh` 块，`code-runtime-python` 没有 Native 入口，`NativeExternalSubagentOutcome`（`rsh/Engine/subagent/native-subagent/src/external-driver.ts:315`）有 `output`、`structured` 和 `stopReason` 却没有 diagnostic。
-- 可组装的 ACP child 不再是缺口：`rsh-acp-child` 已经提供 `externalSubagentDriver`，所以 B 要做的是两个 persistent shell、一个 Native Python code runtime、一个可选的 diagnostic 字段，以及把它们挂起来的 profile。
-- 207 个 legacy 与 web 用例按场景分批迁到 Native profile，每批把用例差异作为自己的证据。
+- `NativeExternalSubagentOutcome`（`rsh/Engine/subagent/native-subagent/src/external-driver.ts:361`）的可选 diagnostic 已经发布；[Native 外部 diagnostic](../../implemented/architecture/2026-11-13-native-external-diagnostic.zh.md) 记录它。`native-sdk` 挂载平台对应的持久 shell。`code-runtime-python` 保持不挂载。[Native SDK 持久 shell](../../implemented/architecture/2026-11-13-native-sdk-persistent-shell.zh.md) 记录这两个决定。外部一次性执行也可以作为归 Agent 所有的 job 运行；[Native 外部后台](../../implemented/architecture/2026-11-14-native-external-background.zh.md) 记录它。
+- 可组装的 ACP child 不再是缺口：`rsh-acp-child` 已经提供 `externalSubagentDriver`。没有已发布 profile 承载实验性的 Python runtime：已发布的包不得点名它，而且运行代码的 profile 已经通过 `@redspark/rsh-code-runtime-process-sandbox` 提供 `codeRuntime`。
+- 207 个 legacy 与 web 用例按场景分批迁到 Native profile，每批把用例差异作为自己的证据。80 个 Native 回放已通过的 `snapshots/session/` 目录现在是 `profile: headless`，因此 Cordis 启动器不再选中它们。[Cordis 回放在 Native 回放通过后停止](../../implemented/testing/2026-11-14-cordis-replay-stops-when-native-passes.zh.md) 记录 composition 规则，以及让其余 6 个 `legacy-headless` 目录、加上 `legacy-acp` 和其余 `web` 目录留下的阻塞原因。`native-web-session-core`、`native-conversation`、`native-question-cancel`、`native-session-grant` 与 `bash-abort-row` 在各自的 Native 回放通过后离开该清单。34 个 `snapshots/web/` 目录仍是 `profile: web`。`default` 的 web 成员 `skill-tool-row` 与 `workflow-run` 在 `native-workflow-open.e2e.ts` 通过后离开。`web-schedule` 在 `native-schedule-catalog.e2e.ts` 用 Session 日志折叠出的目录与侧栏标记通过后离开。`minimal-preset` 留下，因为它的模型面组合仍是 `agent.cordis.yml`。`web-ptc` 在 `native-present.e2e.ts` 与 `native-ptc-round.e2e.ts` 都通过后离开。`sdk-upload`、`session-title`、`image`、`system-prompt-in-history`、`ptc`、`sdk-minimal`、`sdk-default` 与 `sdk-dsh-sdk-diagnostic` 在各自的 Native 回放通过后离开 SDK 启动器；9 个 `snapshots/sdk/` 目录仍是 `legacy-sdk`。其余 `legacy-sdk` 与 `legacy-acp` 用例的阻塞原因记在那篇笔记里。
 - 出口：没有任何用例在没有记录阻塞原因的情况下仍通过 `legacy-headless`、`legacy-sdk` 或 `legacy-acp` 回放，且 `native-sdk` 覆盖 `sdk-minimal` 原本覆盖的能力。
 
 ### 阶段 C —— 脱掉 Cordis 骨架

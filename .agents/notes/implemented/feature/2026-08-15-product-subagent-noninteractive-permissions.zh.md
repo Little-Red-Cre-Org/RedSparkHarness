@@ -48,7 +48,7 @@ Codex 默认使用 `never`，并接受 Codex 0.159.0 公开的三种原生非交
 
 每个产品的权限事实都只包含有效模式、请求类别、无人值守决定与固定的安全原因。Claude Code 从 SDK 回调和 `permission_denied` 消息取得这些事实。Codex 从 app-server 请求、被拒绝的 item 与结构化 `sandboxError` 终态取得事实。原始 stderr 仍会转发给 Host，但既不会被分类，也绝不会复制进诊断。两个提供方都会把失败行放在最新参与失败的权限事实之前。成功结果只返回严格的最终答案；本地取消仍以 `aborted` 结算且不附带权限说明；未发布的启动失败仍会拒绝 `start()`。提供方绝不会把任一诊断事实写入 assistant 输出、结构化输出或 `subagent/end.lastAssistantMessage`。
 
-前台消费方依次呈现终止原因标题、可选诊断和任何部分 assistant 输出。一次性后台适配器会在失败 Job 的 detail 中，把同一诊断与终止原因一起保存。没有填写该字段的提供方保持原有行为。
+前台消费方依次呈现终止原因标题、可选诊断和任何部分 assistant 输出。一次性后台适配器会在失败 Job 的 detail 中，把同一诊断与终止原因一起保存。没有填写该字段的提供方保持原有行为。Native 结果携带同一个可选字段，Native subagent 工具按这个顺序渲染非空 diagnostic。[Native 外部 diagnostic](../architecture/2026-11-13-native-external-diagnostic.zh.md) 记录该字段。
 
 ### 所有权与生命周期
 

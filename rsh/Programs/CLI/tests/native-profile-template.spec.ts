@@ -237,9 +237,40 @@ it('keeps the child SDK sandbox opt-in and confines its selected file provider',
 
   const standard = new Map(shippedNativeProfileComposition('C:/rsh-standard', 'native-sdk', 'win32').installations.map(row => [row.id, row]))
   expect(standard.get('fs')?.plugin).toBe('@redspark/rsh-fs-local')
-  expect(standard.has('sandbox-policy')).toBe(false)
+  expect(standard.get('sandbox-policy')).toMatchObject({
+    plugin: '@redspark/rsh-native-sandbox-policy',
+    config: { mode: 'danger-full-access', workspaceRoot: process.cwd() },
+  })
   expect(standard.has('process-sandbox')).toBe(false)
   expect(standard.has('dsh-sdk-child')).toBe(false)
+})
+
+it('gives native-sdk the sdk-minimal persistent shell and leaves the other SDK profiles without it', () => {
+  const linux = new Map(shippedNativeProfileComposition('/rsh', 'native-sdk', 'linux').installations.map(row => [row.id, row]))
+  expect(linux.get('terminal-bash')).toMatchObject({
+    plugin: '@redspark/rsh-terminal-bash',
+    config: { type: 'shell', timeoutMs: 300_000 },
+  })
+  expect(linux.get('terminal-bash')?.config).not.toHaveProperty('shellDialect')
+  expect(linux.get('persistent-bash')).toMatchObject({
+    plugin: '@redspark/rsh-tool-bash-persistent',
+    config: { timeoutMs: 300_000, description: expect.stringContaining('Run commands in a bash shell') as string },
+  })
+  expect(linux.has('persistent-pwsh')).toBe(false)
+
+  const windows = new Map(shippedNativeProfileComposition('C:/rsh', 'native-sdk', 'win32').installations.map(row => [row.id, row]))
+  expect(windows.get('terminal-bash')?.config).toMatchObject({ type: 'shell', shellDialect: 'pwsh', timeoutMs: 300_000 })
+  expect(windows.get('persistent-pwsh')).toMatchObject({
+    plugin: '@redspark/rsh-tool-pwsh-persistent',
+    config: { timeoutMs: 300_000, description: expect.stringContaining('Run commands in a PowerShell shell') as string },
+  })
+  expect(windows.has('persistent-bash')).toBe(false)
+
+  for (const name of ['native-sdk-dsh-child', 'native-acp'] as const) {
+    const ids = shippedNativeProfileComposition('/rsh', name, 'linux').installations.map(row => row.id)
+    expect(ids).not.toContain('persistent-bash')
+    expect(ids).not.toContain('terminals')
+  }
 })
 
 it('defines a native-acp Host composition without Cordis rows', () => {

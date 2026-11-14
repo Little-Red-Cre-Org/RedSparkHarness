@@ -865,7 +865,7 @@ Source: [`rsh/Engine/subagent/subagent-protocol/src/descriptor.ts:42`](../Engine
 
 Types: [NativeExternalSubagentFinishedEvent](subsystems/subagent.md)
 
-Source: [`rsh/Engine/subagent/native-subagent/src/external-driver.ts:402`](../Engine/subagent/native-subagent/src/external-driver.ts)
+Source: [`rsh/Engine/subagent/native-subagent/src/external-driver.ts:444`](../Engine/subagent/native-subagent/src/external-driver.ts)
 
 <a id="subagentexternal-operation--log-only"></a>
 
@@ -879,7 +879,7 @@ Source: [`rsh/Engine/subagent/native-subagent/src/external-driver.ts:402`](../En
 'subagent/external-operation': NativeExternalOperationEvent
 ```
 
-Source: [`rsh/Engine/subagent/native-subagent/src/external-driver.ts:407`](../Engine/subagent/native-subagent/src/external-driver.ts)
+Source: [`rsh/Engine/subagent/native-subagent/src/external-driver.ts:449`](../Engine/subagent/native-subagent/src/external-driver.ts)
 
 <a id="subagentexternal-start--log-only"></a>
 
@@ -895,7 +895,7 @@ Source: [`rsh/Engine/subagent/native-subagent/src/external-driver.ts:407`](../En
 
 Types: [NativeExternalSubagentStartedEvent](subsystems/subagent.md)
 
-Source: [`rsh/Engine/subagent/native-subagent/src/external-driver.ts:398`](../Engine/subagent/native-subagent/src/external-driver.ts)
+Source: [`rsh/Engine/subagent/native-subagent/src/external-driver.ts:440`](../Engine/subagent/native-subagent/src/external-driver.ts)
 
 <a id="subagentmodel-selection-policy--log-only"></a>
 

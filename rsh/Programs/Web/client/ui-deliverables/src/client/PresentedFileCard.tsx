@@ -8,7 +8,8 @@ import {
 import type { PropsLocale } from '@redspark/rsh-client-ui-slots'
 import type { PresentedAction, PresentedHost } from '../presented.ts'
 import type { PresentedOpenPhase } from './present-open.ts'
-import { basename, type PresentedPath } from './turn-deliverables.ts'
+import { basename } from '../presented.ts'
+import type { PresentedPath } from '../fold-deliverables.ts'
 import type { NS } from './locales.ts'
 import css from './Deliverables.module.css'
 

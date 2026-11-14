@@ -311,12 +311,54 @@ export interface NativeExternalSubagentRequest {
   readonly approval?: NativeExternalSubagentApprovalRelay
 }
 
+/** Maximum UTF-8 size of a product diagnostic accepted from an external child. */
+const MAX_EXTERNAL_DIAGNOSTIC_BYTES = 4_096
+const DIAGNOSTIC_TRUNCATION_SUFFIX = '\n[diagnostic truncated]'
+
+/**
+ * Limit product-authored failure detail without splitting a UTF-8 sequence.
+ * @param diagnostic - safe diagnostic text produced by the product.
+ * @returns the original text, or a visibly truncated value within the limit.
+ */
+export function limitExternalDiagnostic(diagnostic: string): string {
+  const bytes = new TextEncoder().encode(diagnostic)
+  if (bytes.byteLength <= MAX_EXTERNAL_DIAGNOSTIC_BYTES) return diagnostic
+  const suffixBytes = new TextEncoder().encode(DIAGNOSTIC_TRUNCATION_SUFFIX).byteLength
+  let prefixBytes = MAX_EXTERNAL_DIAGNOSTIC_BYTES - suffixBytes
+  while (((bytes[prefixBytes] as number) & 0b1100_0000) === 0b1000_0000) prefixBytes -= 1
+  return new TextDecoder().decode(bytes.subarray(0, prefixBytes)) + DIAGNOSTIC_TRUNCATION_SUFFIX
+}
+
+/**
+ * Keep a product diagnostic only for a non-completed outcome, and within the byte limit.
+ * A completed outcome and a blank detail omit the field.
+ * @param outcome - product terminal data.
+ * @returns the outcome with a limited diagnostic, or without the field.
+ */
+export function acceptExternalOutcome(outcome: NativeExternalSubagentOutcome): NativeExternalSubagentOutcome {
+  const diagnostic = outcome.diagnostic
+  if (diagnostic === undefined) return outcome
+  if (diagnostic.trim().length === 0 || outcome.stopReason === 'completed') {
+    const { diagnostic: _omitted, ...rest } = outcome
+    return rest
+  }
+  const limited = limitExternalDiagnostic(diagnostic)
+  return limited === diagnostic ? outcome : { ...outcome, diagnostic: limited }
+}
+
 /** Terminal data returned by the external product after its real child has settled. */
 export interface NativeExternalSubagentOutcome {
   /** Final child output reported by the selected product. */
   readonly output: readonly ContentBlock[]
   /** Schema-valid product value when the request carries an output schema. */
   readonly structured?: unknown
+  /**
+   * Product-authored failure detail for a non-completed result. Products keep this
+   * text free of tool inputs, file contents, environment values, credentials, and raw
+   * protocol payloads. The engine limits it to 4096 UTF-8 bytes and omits it for a
+   * completed result. Consumers present it separately from {@link output}.
+   */
+  readonly diagnostic?: string
   /** Product terminal reason after child execution settles. */
   readonly stopReason: NativeSubagentStopReason
 }

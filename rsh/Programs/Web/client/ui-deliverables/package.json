@@ -54,6 +54,11 @@
     "@redspark/rsh-util-workspace-path": "workspace:^",
     "@redspark/rsh-client-locale": "workspace:^"
   },
+  "peerDependenciesMeta": {
+    "@redspark/cordis": {
+      "optional": true
+    }
+  },
   "devDependencies": {
     "@redspark/rsh-api-remotes": "workspace:^",
     "@redspark/rsh-client-connection": "workspace:^",

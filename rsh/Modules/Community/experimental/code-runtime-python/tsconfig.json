@@ -25,6 +25,12 @@
     },
     {
       "path": "../../../../Core/util/values"
+    },
+    {
+      "path": "../../../../Core/runtime-diagnostics/native-runtime"
+    },
+    {
+      "path": "../../../../Engine/core/code-runtime-definition"
     }
   ]
 }

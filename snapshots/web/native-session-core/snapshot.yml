@@ -1,6 +1,6 @@
 version: 1
 scenario: native-session-core
-profile: web
+profile: native-web
 composition: native-web-session-core
 recording: authored
 header:

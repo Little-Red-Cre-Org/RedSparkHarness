@@ -201,7 +201,10 @@ const CLIENT_RUNTIME_DEPENDENCIES = {
 /** Legacy Host peers omitted by the separately published native entry. */
 export const OPTIONAL_NATIVE_HOST_PEERS: Readonly<Record<string, readonly string[]>> = {
   '@redspark/rsh-tool-pwsh': ['@redspark/rsh-tools'],
+  '@redspark/rsh-tool-pwsh-persistent': ['@redspark/rsh-tools'],
+  '@redspark/rsh-experimental-code-runtime-python': ['@redspark/rsh-code-runtime'],
   '@redspark/rsh-tool-bash': ['@redspark/rsh-tools'],
+  '@redspark/rsh-tool-bash-persistent': ['@redspark/rsh-tools'],
   '@redspark/rsh-file-reference': ['@redspark/rsh-agent'],
   '@redspark/rsh-skill': ['@redspark/rsh-scope'],
   '@redspark/rsh-workflow': ['@redspark/rsh-agent'],

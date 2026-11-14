@@ -2,6 +2,7 @@ import type { PropsLocale, PropsRuntime } from '@redspark/rsh-client-ui-slots'
 import type { SessionListState } from '@redspark/rsh-api-session-controller/client'
 import { shallowEqual } from '@redspark/rsh-client-store'
 import type { SessionId } from '@redspark/rsh-session/types'
+import { navigableWorkflowMembers } from '../workflow-projection.ts'
 import { WorkflowRunView } from '../WorkflowRunView.tsx'
 import type { WorkflowRunPhaseData } from './workflow-definition.ts'
 
@@ -22,20 +23,16 @@ function navigableMembers(
   parentId: SessionId,
 ): readonly SessionId[] {
   const ordinary = new Set(sessions.ids)
-  const result: SessionId[] = []
-  for (const phase of phases) {
-    for (const member of phase.members) {
-      const summary = sessions.byId[member.childId]
-      if (member.status === 'running'
-        && ordinary.has(member.childId)
-        && summary?.origin === 'subagent'
-        && summary.parentId === parentId
-        && summary.running) {
-        result.push(member.childId)
-      }
+  return navigableWorkflowMembers(phases, parentId, (childId) => {
+    if (!ordinary.has(childId)) return undefined
+    const summary = sessions.byId[childId]
+    if (summary === undefined) return undefined
+    return {
+      ...summary.origin === 'subagent' ? { origin: 'subagent' as const } : {},
+      ...summary.parentId === undefined ? {} : { parentId: summary.parentId },
+      running: summary.running,
     }
-  }
-  return result
+  })
 }
 
 /** Adapt Cordis Session navigation to the shared workflow view.

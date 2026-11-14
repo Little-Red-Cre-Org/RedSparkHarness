@@ -1,6 +1,6 @@
 version: 1
 scenario: persistent-tools
-profile: legacy-sdk
+profile: sdk
 composition: sdk-minimal
 recording: live
 platform: posix

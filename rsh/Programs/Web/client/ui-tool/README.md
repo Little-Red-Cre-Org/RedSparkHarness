@@ -105,7 +105,7 @@ These limits define the dispatch depth and the view ownership; they are current 
 <a id="dev-note"></a>
 ### Dev Note
 
-`./native` exposes the props-only `NativeToolCard` with shared call/result types, typed English/Chinese copy and existing file, terminal, search, diff and generic models. It reads recorded result metadata and recursively renders PTC sub-calls; it registers no Tool or Session service. Missing `openFile` and `inspect` props omit those actions. Its ESM and stylesheet artifacts are independent of the compatibility `./client` module-table entry.
+`./native` exposes the props-only `NativeToolCard` with shared call/result types, typed English/Chinese copy and existing file, terminal, search, diff and generic models. It reads recorded result metadata and recursively renders PTC sub-calls; it registers no Tool or Session service. A `bash` call, including a PTC child, renders through the same pure Bash card as the compatibility toolview, so its `[data-sample=bash]` row expands to the inline terminal. Missing `openFile` and `inspect` props omit those actions. Its ESM and stylesheet artifacts are independent of the compatibility `./client` module-table entry.
 
 <details>
 <summary>Working context for maintainers — click to expand</summary>

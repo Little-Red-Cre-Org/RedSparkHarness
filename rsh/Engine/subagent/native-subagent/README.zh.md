@@ -31,7 +31,7 @@ kind: "package-reference"
 
 外部 Provider 仅支持一次性执行。`resolve()` 会签发私有的一次性准入，绑定精确的活跃父级与调用根所有者、各自 epoch、选定驱动，以及已解析的路由、工作区与预算。复制请求、重放以及已替换的所有者都会在启动前被拒绝。驱动收到的是脱离 Native 对象的请求 DTO，只包含 Session id 与 epoch，不包含 Native Agent、Session、Cordis Context 或 writer。启动前会拒绝不受支持的路由字段或子任务限制；预算来自父级且只能缩小。驱动的 `start()` 仅在真实子任务完成就绪握手后返回。Native 通过父级唯一 writer 写入并刷新 `subagent/external-start` 后才向消费者发布就绪；只有驱动确认完整子任务范围已静止后，才写入并刷新 `subagent/external-end`。父级 detach 会关闭新输入准入、取消并排空已接受的子任务，同时让 writer 保持可用，直到分离中的消费者持久化终止事实。子任务结果普通拒绝会在清理成功后传给调用方，不会使所有者排空或 Provider 释放失败；子进程范围清理与父级 lineage 持久化失败会对精确所有者和 Provider 保持粘性。
 
-后台执行复制相同的已解析子权限与预算。Jobs 保留有界实时文本及最终输出；job_kill 请求取消，带 wait 的 job_output 等待终止清理。调用者取消在真实子任务就绪前拥有启动；发布后，父 Agent、Jobs 取消与提供者卸载拥有子任务，其生命周期独立于普通父回合。 Provider 通过 backgroundJobs 暴露选定的注册表。 continuationTools 标识子权限限制所用注册表；可持续控制必须选择同一注册表。
+后台执行复制相同的已解析子权限与预算。Jobs 保留有界实时文本及最终输出；job_kill 请求取消，带 wait 的 job_output 等待终止清理。调用者取消在真实子任务就绪前拥有启动；发布后，父 Agent、Jobs 取消与提供者卸载拥有子任务，其生命周期独立于普通父回合。 Provider 通过 backgroundJobs 暴露选定的注册表。 continuationTools 标识子权限限制所用注册表；可持续控制必须选择同一注册表。外部一次性执行使用同一注册表。它的句柄 id 是父级拥有的操作，不是子 Session，remote id 才是产品子进程的名字。
 
 可持续启动通过 Program 提交描述符与首次收件箱准入后返回。sendMessage 只允许直接父子相邻关系，从持久描述符恢复已关闭的直接子任务，并返回已接受消息 id，不等待回答。list 读取选定 Program 的持久目录而不加载 Agent，穿过普通 Session 与一次性子任务，只返回此 Provider 的可持续描述符及实际驻留状态或逐项读取诊断。冷恢复保留路由、persona、工具限制与工作区。V4 继承型 Native child 还会持久化逻辑深度、直接工具、内建工具与程序工具授权；恢复要求当前继承授权，并将这些授权和持久资源上限取交集。描述符中的子级路由保持权威，每次激活预算受所选部署默认值限制。共享 Cordis Provider 无法恢复这些授权，因此会拒绝带 V4 继承上下文的 child。interrupt 请求当前回合停止，并将未认领输入停放至另一条消息唤醒子任务。请求返回时，当前回合的清理尚未结束。父级销毁和提供者卸载等待驻留子任务清理；执行与清理失败使操作拒绝。
 

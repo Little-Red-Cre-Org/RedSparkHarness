@@ -27,6 +27,8 @@ This package gives an agent a `bash` tool whose cwd, exported variables, functio
 
 Load this plugin in any composition where the agent should keep shell state between commands — for example long build sessions, activated environments, or scripts that export variables for later steps. It registers the `bash` tool and requires the `ctx.tools` and `ctx.terminals` services plus an owning agent session at execution time.
 
+The `./native` entry registers the same `bash` tool on a Native host. It requires the native `agents`, `terminals`, and `tools` services plus a terminal backend named by `backendType`. A Native composition selects `@redspark/rsh-tool-bash-persistent/native`; the package root remains the Cordis plugin and loads only when `apply` runs. `@redspark/cordis`, `@redspark/rsh-agent`, and `@redspark/rsh-tools` are optional peers, so a Cordis composition must still install them, while a Native composition does not.
+
 ### When to choose it
 
 Choose the persistent tool when work depends on cross-call state: a one-shot `dsh-tool-bash` call cannot remember a `cd` or an exported variable. Choose the one-shot tool when every command should start from a known, clean environment, or when the command is short and self-contained. Commands that need interactive stdin are unsupported here — a foreground child that reads input blocks until the command timeout — so interactive work belongs to the terminal tools.
@@ -73,18 +75,20 @@ This section explains the design decisions behind the tool and points at the cod
 - **One shell per owner, nothing shared.** The shell registry keys every session by the calling `Agent`, so concurrent agents never share state, and commands for the same agent are serialized through a per-owner queue.
 - **Marker-anchored extraction.** Each command is wrapped with unique start/end markers carrying the exit status; the tool polls the PTY scrollback and extracts the span between the real markers, so prompts and echoed input never leak into results.
 - **Reset, never repair.** Any uncertain state — an explicit `exit`, a timeout, a send failure, an abort — closes the shell and starts the next call fresh, because a half-known shell is worse than a clean one.
-- **Owner-scoped lifecycle.** Shells are created lazily on first use and killed on plugin disposal or owner teardown; the owner-scoped `ctx.terminals` service fences every operation to the owning agent.
+- **Owner-scoped lifecycle.** Shells are created lazily on first use and killed on plugin disposal or owner teardown; the owner-scoped terminal service fences every operation to the owning agent.
 
 ### Source map
 
 | File | Role |
 |---|---|
-| [`src/index.ts`](src/index.ts) | Plugin entry: shell registry, command wrapping, scrollback polling, extraction and rendering |
-| — | No runtime invariant companion is published; the adapter's private owner-to-shell cache has no observable event or data relation. Shell reuse remains observable through tool execution. Lifecycle tests prove its cleanup without adding a public API solely for an invariant. |
+| [`src/persistent-core.ts`](src/persistent-core.ts) | Runtime-neutral shell reuse, marker extraction and rendering |
+| [`src/index.ts`](src/index.ts) | Cordis adapter: tool registration and the owner-scoped terminal port |
+| [`src/native.ts`](src/native.ts) | Native adapter: the same tool over the native terminal registry |
+| — | No runtime invariant companion is published; the core's private owner-to-shell cache has no observable event or data relation. Shell reuse remains observable through tool execution. Lifecycle tests prove its cleanup without adding a public API solely for an invariant. |
 
 ### Command flow
 
-A first command spawns the shell through `ctx.terminals.spawn`, disables input echo (`stty -echo`), and waits for readiness. Each command is then wrapped into one physical line — a printf of the start marker, the command body escaped with `$'…'`, and a printf of the end marker plus `$?` — so embedded newlines cannot leak terminal prompts into the result. The tool polls the scrollback in 1,000-line pages until the end marker appears, extracts the span, and renders it with any status marker. A timeout aborts the deadline, captures the partial output, and resets the shell.
+A first command spawns the shell through the selected terminal port (`ctx.terminals.spawn` on Cordis, `terminals.open` on Native), disables input echo (`stty -echo`), and waits for readiness. Each command is then wrapped into one physical line — a printf of the start marker, the command body escaped with `$'…'`, and a printf of the end marker plus `$?` — so embedded newlines cannot leak terminal prompts into the result. The tool polls the scrollback in 1,000-line pages until the end marker appears, extracts the span, and renders it with any status marker. A timeout aborts the deadline, captures the partial output, and resets the shell.
 
 </details>
 
@@ -100,6 +104,7 @@ Read these pages when the package-level contract is not enough. They move from t
 - [terminal-bash backend](../../terminal/terminal-bash/README.md) — the default `shell` backend.
 - [tool-terminal](../../terminal/tool-terminal/README.md) — six model-facing terminal tools for interactive work.
 - [Persistent PTY sessions Agent Note](../../../../../.agents/notes/implemented/feature/2026-07-16-persistent-pty-sessions.md) — the owner-scoped session design and its rationale.
+- [Native persistent Bash](../../../../../.agents/notes/implemented/architecture/2026-11-13-native-persistent-bash.md) — the runtime-neutral core and the Cordis and Native adapters.
 - [Generated tool catalog](../../../../Docs/tool-catalog.md#redsparkrsh-tool-bash-persistent) — the exact `bash` argument schema.
 - [Generated configuration catalog](../../../../Docs/config-catalog.md#redsparkrsh-tool-bash-persistent) — every accepted config field and its source declaration.
 
@@ -126,7 +131,7 @@ Prefix-stable while the configured description and schema remain unchanged.
 
 #### What the model sees
 
-Commands share one shell per agent, so cwd, exported variables, activated environments, functions, and background jobs persist across calls. Results exclude private completion markers. When the shell reads stdin again without having printed the completion marker — after `exec`, an interrupt, or an interactive foreground child whose stdin wait the provider proves — the call returns the captured partial output, which can end with the backend's own prompt text. Every settled command appends `[Command finished with exit code N]`; a shell that exits before reporting that status instead appends `[shell exited: code N]`, `[shell killed by signal: SIG]`, or `[shell exited]` when the backend supplies neither, then resets and tells the model that the next call starts fresh. Long output keeps the earliest retained prefix plus a clipping notice. If the PTY has already dropped that prefix, the result says so explicitly instead of presenting a tail as complete output. Timeout returns bounded partial output followed by `[Command timed out or OOM]`, closes the uncertain shell, and reports the reset.
+Commands share one shell per agent, so cwd, exported variables, activated environments, functions, and background jobs persist across calls. Results exclude private completion markers. When the shell reads stdin again without having printed the completion marker — after `exec`, an interrupt, or an interactive foreground child whose stdin wait the provider proves — the call returns the captured partial output, which can end with the backend's own prompt text. Every settled command appends `[Command finished with exit code N]`; a shell that exits before reporting that status instead appends `[shell exited: code N]`, `[shell killed by signal: SIG]`, or `[shell exited]` when the backend supplies neither, then resets and tells the model that the next call starts fresh. Long output keeps the earliest retained prefix plus a clipping notice. If the PTY has already dropped that prefix, the result says so explicitly instead of presenting a tail as complete output. Timeout returns bounded partial output followed by `[Command timed out or OOM]`, closes the uncertain shell, and reports the reset. A Native list snapshot carries `running`, `exited`, or `failed` and no exit code or signal, so a shell that is no longer running renders `[shell exited]` and the reset notice.
 
 #### Token effect
 

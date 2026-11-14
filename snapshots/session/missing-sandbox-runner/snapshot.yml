@@ -1,6 +1,6 @@
 version: 1
 scenario: missing-sandbox-runner
-profile: legacy-headless
+profile: headless
 composition: partial-landlock
 recording: authored
 header:

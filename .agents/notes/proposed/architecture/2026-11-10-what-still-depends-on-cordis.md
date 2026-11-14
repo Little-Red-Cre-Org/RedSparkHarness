@@ -42,7 +42,7 @@ Guessing which gates to run does not work: each deletion so far surfaced a diffe
 
 `agent-instructions` needs three things together: a workspace directory whose name contains `:` (Windows refuses to create it, verified directly), the `delimiter-path` workspace setup that builds that directory, and a compaction policy so the recorded overflow happens. A copied turn template supplies none of them, which is why the scenario is not migrated rather than skipped-and-claimed.
 
-`session-query-spill` cannot be replayed as recorded: its bash step greps an absolute spill path under `/tmp/dsh-acp-snap-<random>`, which no fixture can predict, and the spill path is the subject of the assertion. A migration would have to rewrite the step to discover the path, which changes what the scenario proves.
+`session-query-spill` replays without rewriting the bash step. The recorded `fromRequest` override extracts the live spill path. Native does not log `permission/preset`, `sandbox/mode`, or `approval/policy`, so the request header that the recording reads at seq 10 is seq 7. The replay copies that override and changes only the first seq. The shared file still serves the Cordis scenario.
 
 ## What retiring the templates actually requires
 
@@ -121,6 +121,8 @@ The CLI reference states the distinction in its own table: `web`, `headless`, `s
 
 So the recommendation is to prune rather than port or retire: those two persistent-shell tools are the only capability `sdk-minimal` offers that the Native side lacks, and they are what distinguishes it from `native-sdk`. Those two tools are portable rather than blocked: they inject only `tools` and `terminals`, and `rsh-terminal` **already provides `terminals` natively** — `spawn`, `list`, `startSend`, `read` and `kill` all exist on the Native registry. The one difference is the `spawn` signature: the Cordis service takes `(owner, request, signal)` and the Native one takes a single `NativeTerminalSpawnSpec`. So the port is a 438/474-line rewrite against a surface that already exists, not a new capability.
 
+Both persistent-shell entries have since shipped. `native-sdk` mounts the platform one. [Native SDK persistent shell](../../implemented/architecture/2026-11-13-native-sdk-persistent-shell.md) records that choice. Deciding `sdk-minimal` remains with [Cordis retirement, five phases](2026-11-12-cordis-retirement-five-phases.md).
+
 **Recommendation: retire the `sdk-minimal` profile name rather than port those two tools** — but not by deleting it as a cleanup. Checking what depends on it changes the cost side of that argument.
 
 The name is asserted by five tests, including an end-to-end one that dumps its composition and compares every row: `built-bin.e2e.ts` runs `--profile sdk-minimal --dump-default-config` and expects the exact ordered list of ids and package names, and `profile-hmr.spec.ts` asserts that its tree carries no HMR module. `profile.spec.ts` pins the `PROFILE_TEMPLATES` entry itself.
@@ -162,7 +164,7 @@ The second changes the selected model after a `todo_write` through `installModel
 
 Both are therefore recorded as blocked on runtime capability rather than on test infrastructure, which changes what unblocking them costs: it is loop work, and it must ship with its own scenario coverage, not as a fixture tweak.
 
-`skill-load` is blocked by content, not by capability: its setup copies `agent-presets/presets/cordis/skills/editing-cordis-compositions/SKILL.md`, and that file no longer exists in the repository. The tool, the registry and the filesystem source all have Native entries and a migrated scenario composes and invokes them successfully — it answers that the skill is unknown, because the fixture it was recorded against was retired with the presets. Replaying it therefore needs a re-recording against a skill that still exists, not a Native port.
+`skill-load` no longer needs a re-recording. The preset file `agent-presets/presets/cordis/skills/editing-cordis-compositions/SKILL.md` is gone, so its Native replay plants the recorded instruction body and asserts the heading and `DONE`. The `default` composition then left the Cordis runner. [Cordis replay stops when the Native replay passes](../../implemented/testing/2026-11-14-cordis-replay-stops-when-native-passes.md) records that rule.
 
 ## The seventeen scenarios that remain, with their exact blocker
 
@@ -171,6 +173,8 @@ Each entry was checked against the recording and its manifest rather than inferr
 **Needs a real HTTP endpoint.** `web-fetch` calls `http://public.test:43117/menu.html` and asserts the fetched page text; the recording has no fixture or driver, only a real request. `web-search-endpoint-guidance` is the same shape for the search provider. Both need a loopback fixture server, which the Native assembler does not provide.
 
 **Needs a host-specific runtime.** `missing-sandbox-runner` sets `RSH_SNAPSHOT_MISSING_SANDBOX_RUNNER=1` to simulate an absent Landlock runner. `partial-landlock-child-failure` asserts Linux-only Landlock behaviour (`platform: posix`). `ptc-python-turn` is also `posix`, but its real blocker is different: it swaps the worker provider for `@redspark/rsh-experimental-code-runtime-python`, and that package is `Modules/Community/experimental` with no `dsh.native` entry, so a Native profile cannot run Python code at all. Its assertions otherwise match its recording exactly (one outer `run_code`, two `bash` dispatches, `CODE_ONE` in the rendered result), so it would migrate the moment that runtime gained a Native form. `persistent-pwsh-tool-turn` declares `platform: pwsh` and its recording predates the required `description` field on that tool, so it needs re-recording as well as a Windows PTY.
+
+That Python entry has since shipped and remains unmounted. [Native Python code runtime](../../implemented/architecture/2026-11-13-native-python-code-runtime.md) records it. A release package must not name this experimental package. [Native SDK persistent shell](../../implemented/architecture/2026-11-13-native-sdk-persistent-shell.md) leaves it unmounted.
 
 **Needs a fixture plugin that the scene cannot express.** `session-reference-spill` was attempted and stopped short, and the reason is now reproducible rather than vague. Composing `session-query`, `session-reference` and `spill-local` all load and the seed is written, but `sessionQuery` lists nothing. Probing the backend directly shows why: a flat `<root>/reference-source.jsonl` is **ignored** (zero records listed), and a `<root>/<id>/session.v3.jsonl` layout is rejected with `uses the unsupported flat-file layout; use a separate root or move it into a project/session directory before loading`. The store wants a project directory *above* the session directory. So the seed failed on layout, not on capability. The layout is now pinned by probing the backend: a Session is listed only at `<root>/<cwd-group>/<id>/session.vN.jsonl`, where a Session recorded without a `cwd` lives under the literal group `_no-cwd`. A file at that path loads and lists; a header whose `id` disagrees with its directory is rejected as a corrupt log. Writing the seed there is therefore a known step rather than an open question — except that the layout alone is not enough. A hand-written `session.v3.jsonl` at that path is **listed** by the store but reads back with **zero events**, because each stored event must carry a `seq` assigned by a `Session` and the header must be the one the store encodes. A seed therefore has to be produced through `Session` plus the persistence handle rather than written as JSON by hand. `snapshots/session/session-reference-spill/native-source-session.ts` does exactly that: it appends the three source events to a `Session`, persists `ownEvents()` through a storage handle, and the result lists **and** reads back as `user/message,user/message,assistant/message`. The Cordis fixture did not need this because it never persisted — it entered a live Session through `ctx.sessions`, and the Native runtime has no equivalent service, so the source has to be durable.
 
@@ -198,13 +202,13 @@ The Native provider returns only the contexts; it never rewrites the direct mess
 
 The earlier attempt to wire `sessionReference` into `native-headless` was therefore not just harmful but redundant, and the timing break it produced is a separate lesson: Adding `sessionReference.prepare(session, inputs, signal)` beside `agentInstructions.prepare(...)`, appending its contexts and declaring the service optional in both the code and `package.json`, left `workflow-run` failing consistently: its workflow and ralph tool results landed one step earlier than recorded. Guarding the call so it only suspends when the service is installed, and collapsing the extra `signal.throwIfAborted()`, did not change that, and the scenario passes on the unmodified tree — verified twice. So the loop's step boundary is sensitive to an additional `await` even when the awaited call returns nothing, and any future attempt has to preserve the exact suspension sequence rather than just insert a call. The change was reverted rather than shipped with the scenario red. `subagent-published-run-failure` mounts `subagent-durability-failure` (157 lines) and sets `RSH_SUBAGENT_PUBLISHED_FAILURE=1`. The checkpoint it also registers is now possible natively, but that is not what this recording asserts. Its assertions come from the *other* half of the fixture: it replaces `agents.create` so a published handle's `followup` throws `snapshot published run failed` and its `dispose` throws `snapshot published handle disposal failed`, and the tool result echoes both. The Native subagent has no equivalent injection: its failure text comes from `tool-subagent`'s own `stopReason` mapping, and the external-driver seam asks a product adapter to fail rather than letting a test replace a service method. Checking whether the external-driver seam already supplies it: it does not, and the reason is a deliberate difference rather than a gap. `NativeExternalSubagentRun.dispose()` may reject, but `native-subagent` catches that rejection in `disposeChild` and converts it into `{ kind: 'failed', error }` after `recordExternalDrainFailure` — so the failure is **recorded**, never rethrown into the tool result. The Cordis fixture achieves its text by making `dispose` throw straight through the replaced service. Reproducing that on a Native profile would mean changing how the Native subagent reports drain failures, which is a behaviour change to satisfy a test rather than a missing capability. This scenario is therefore the one that should be re-recorded against Native's own drain-failure shape, not ported. `product-subagent-result-diagnostic` mounts `subagent-result-diagnostic`. `partial-landlock-child-failure` mounts `partial-landlock-sandbox`. `agent-instructions` needs a workspace directory whose name contains `:`, plus a compaction policy for its recorded overflow. The colon is not a preference: `[System.IO.Directory]::CreateDirectory('…/scope:alt')` silently creates nothing on Windows (verified — the path does not exist afterwards, and `Test-Path -LiteralPath` is false), so the directory cannot be materialized on this host at all.
 
-**Needs an external service.** `lsp-definition` drives an LSP server. `subagent-acp-diagnostic` and `product-subagent-result-diagnostic` drive an ACP child.
+**Needs an external service.** `lsp-definition` drives an LSP server. `subagent-acp-diagnostic` and `product-subagent-result-diagnostic` replay against stub drivers.
 
 **Retires with Cordis.** `advanced-toolchain`, `advanced-toolchain-runtime` and `cordis-inspect-jsdoc` exercise the Cordis toolchain itself (`cordis_define`, `cordis_undefine`, `cordis_inspect_query`), which has no Native form by design.
 
-**Unreplayable as recorded.** `session-query-spill` greps an absolute `/tmp/dsh-acp-snap-<random>` spill path that no fixture can predict. `skill-load` copies a preset skill file that the repository no longer contains.
+**Replayed without re-recording.** `session-query-spill` reuses the recorded `fromRequest` override for the spill path and reads the request header at seq 7.
 
-Only three of the seventeen (`advanced-toolchain`, `advanced-toolchain-runtime`, `cordis-inspect-jsdoc`) disappear together with Cordis. The other fourteen each need test infrastructure the Native assembler does not have, or a re-recording.
+Only three of the seventeen (`advanced-toolchain`, `advanced-toolchain-runtime`, `cordis-inspect-jsdoc`) disappear together with Cordis. Thirteen still need test infrastructure the Native assembler does not have, or a re-recording. `session-query-spill` is not in that remainder.
 
 
 
@@ -252,13 +256,15 @@ Checked one by one, they resolve into six capabilities rather than fifteen tasks
 
 **A durability checkpoint on the Native Session — 2 scenarios.** `NativeContinuationSession` now carries one: `persist()` appends the tracked batch, then runs every registered `NativeDurabilityCheckpoint` before the writer flush, so a rejection aborts that flush and surfaces to the caller with the same shape as a storage error. `checkpoint(observer)` returns its exact removal, and the owner exposes it through `NativeActiveSessionOwner.checkpoint` — optional on the interface, so the test doubles that model an owner keep compiling — which the Program forwards to the session. That is the whole `session/flush` capability a plugin needs: register once, throw from the callback for the turn you want to fail.
 
-**A Python code runtime — 1 scenario.** `ptc-python-turn` composes `@redspark/rsh-experimental-code-runtime-python`, which lives under `Modules/Community/experimental` with no `dsh.native` entry, so a Native profile cannot run Python at all.
+**A Python code runtime — replayed, not shipped.** `ptc-python-turn` now replays through `snapshots/native-headless/ptc-python-turn-native.snapshot.ts`. That isolated scenario mounts `@redspark/rsh-experimental-code-runtime-python`. A shipped profile still must not name the experimental package.
 
-**A persistent shell — 1 scenario, plus the sixth template.** `tool-bash-persistent` and `tool-pwsh-persistent` are 438 and 474 lines against a `terminals` service that already exists natively. The seam is proven end to end: `tool-terminal` already ships a Native entry exposing `terminal_open`, `terminal_send`, `terminal_read`, `terminal_signal` and `terminal_close`, so a Native persistent tool is a marker-poll loop over `open`/`startSend`/`read` rather than new plumbing — the Cordis version's own helpers (marker generation, command quoting, truncation, output settlement) carry over unchanged. Beyond that, it needs only `sdk-minimal`'s own gap closed, which is a policy choice as much as a technical one; `persistent-pwsh-tool-turn` also needs its recording refreshed, because it predates the required `description` field.
+**A persistent shell — 1 scenario, plus the sixth template.** `tool-bash-persistent` and `tool-pwsh-persistent` are 438 and 474 lines against a `terminals` service that already exists natively. The seam is proven end to end: `tool-terminal` already ships a Native entry exposing `terminal_open`, `terminal_send`, `terminal_read`, `terminal_signal` and `terminal_close`, so a Native persistent tool is a marker-poll loop over `open`/`startSend`/`read` rather than new plumbing — the Cordis version's own helpers (marker generation, command quoting, truncation, output settlement) carry over unchanged. Beyond that, it needs only `sdk-minimal`'s own gap closed, which is a policy choice as much as a technical one; `persistent-pwsh-tool-turn` also needs its recording refreshed, because it predates the required `description` field. Both packages now publish `./native`. `native-sdk` mounts the platform one; the scenario still needs a Native recording.
 
 **A product diagnostic on subagent failure — 1 scenario.** `product-subagent-result-diagnostic` asserts a tool result of the form `Error: subagent run failed` followed by `Diagnostic: Product subagent failure (product: Claude Code; stage: query-run; category: limit)` and any partial output. The Cordis fixture supplies that by implementing `SubagentProvider.start` and returning `{ output, diagnostic, stopReason: 'error' }`. `NativeExternalSubagentOutcome` carries `output`, `structured` and `stopReason` and has **no `diagnostic` field**, and `tool-subagent`'s native schema publishes `stopReason` only, so the native side cannot carry a product's explanatory failure text. Adding it means widening the external-driver outcome and the tool schema — a real capability change, not a fixture.
 
-**An external LSP or ACP service — 3 scenarios.** `lsp-definition` drives an LSP server; `subagent-acp-diagnostic` and `product-subagent-result-diagnostic` drive ACP children (the latter also mounts `subagent-result-diagnostic`).
+That field has since shipped. [Native external diagnostic](../../implemented/architecture/2026-11-13-native-external-diagnostic.md) records it. The recorded calls now replay against a stub driver and Agent-owned jobs, so the scenario is no longer blocked on an ACP child.
+
+**An external LSP or ACP service — 1 scenario.** `lsp-definition` drives an LSP server. `subagent-acp-diagnostic` and `product-subagent-result-diagnostic` replay against stub drivers and do not start a product child.
 
 **A Linux sandbox runner — 2 scenarios.** `missing-sandbox-runner` sets `RSH_SNAPSHOT_MISSING_SANDBOX_RUNNER=1` to simulate an absent Landlock runner; `partial-landlock-child-failure` asserts partial enforcement.
 
@@ -266,9 +272,9 @@ Checked one by one, they resolve into six capabilities rather than fifteen tasks
 
 **Retire with Cordis — 3 scenarios.** `advanced-toolchain`, `advanced-toolchain-runtime` and `cordis-inspect-jsdoc` exercise `cordis_define`, `cordis_undefine` and `cordis_inspect_query`.
 
-**Unreplayable as recorded — 2 scenarios.** `session-query-spill` greps an absolute `/tmp/dsh-acp-snap-<random>` path; `skill-load` copies a preset skill file the repository no longer contains. Both need re-recording, not a capability.
+**Replayed without re-recording — 1 scenario.** `session-query-spill` reuses the recorded `fromRequest` override and reads the request header at seq 7. It does not need re-recording.
 
-Three of the six capabilities are small and already have their seams (`terminals`; the persisted-Session reader; the fixture-server pattern that unblocked `web-fetch`). Three are not: Python, LSP/ACP transports and a Landlock runner are separate runtimes. That split is the useful estimate — not "twelve scenarios remain".
+Three of the six capabilities are small and already have their seams (`terminals`; the persisted-Session reader; the fixture-server pattern that unblocked `web-fetch`). Python now publishes `./native` and is not mounted. LSP/ACP transports and a Landlock runner remain separate runtimes. That split is the useful estimate — not "twelve scenarios remain".
 
 
 
@@ -276,25 +282,25 @@ Every claim above names the file or command that produced it, so a later reader 
 
 ## The closing inventory
 
-Every one of the fifteen scenarios verified against the tree, with the action each needs. None of the actions is available without one of three decisions that are not mine to make.
+Every one of the fifteen scenarios verified against the tree, with the action each needs. `session-query-spill` replays without re-recording. The remaining actions are not available without one of three decisions that are not mine to make.
 
 **Retire with Cordis — 3.** `advanced-toolchain`, `advanced-toolchain-runtime`, `cordis-inspect-jsdoc` exercise `cordis_define`, `cordis_undefine` and `cordis_inspect_query`. Action: delete the three scenario directories when the Cordis tool package goes.
 
-**Re-record — 4.** `session-reference-spill` (its authored transcript stores a display form no runtime produces), `session-query-spill` (greps an absolute `/tmp/dsh-acp-snap-<random>` path), `skill-load` (copies a preset skill file the repository no longer contains), `subagent-published-run-failure` (asserts a thrown disposal text where the native side records the failure instead). Action: `pnpm run test:snapshot:record` against the native profile, which needs `DEEPSEEK_API_KEY`.
+**Re-record — 2.** `session-reference-spill` (its authored transcript stores a display form no runtime produces) and `subagent-published-run-failure` (asserts a thrown disposal text where the native side records the failure instead). `session-query-spill` is not in this list. Action: `pnpm run test:snapshot:record` against the native profile, which needs `DEEPSEEK_API_KEY`.
 
 **Add a runtime capability — 8.** Each measured against the code that would have to change:
 
 | Scenario | Missing capability | Where it would change |
 | --- | --- | --- |
-| `ptc-python-turn` | Python execution | `experimental-code-runtime-python` has no `dsh.native` entry |
+| `ptc-python-turn` | Python execution | replayed in an isolated scenario; a shipped profile still must not name `experimental-code-runtime-python` |
 | `lsp-definition` | an LSP server | no native LSP transport |
-| `subagent-acp-diagnostic` | an ACP child | `acp-child` has an adapter but no composable profile |
-| `product-subagent-result-diagnostic` | a product diagnostic on failure | `NativeExternalSubagentOutcome` and the tool schema carry `stopReason` only |
-| `persistent-pwsh-tool-turn` | a persistent shell | `tool-pwsh-persistent` has no `dsh.native` entry; `tool-terminal` proves the seam |
+| `subagent-acp-diagnostic` | an ACP diagnostic | replayed through `subagent_acp` and a stub driver; it does not start an ACP child |
+| `product-subagent-result-diagnostic` | a product diagnostic on failure | replayed against a stub driver and Agent-owned jobs; it does not start a product child |
+| `persistent-pwsh-tool-turn` | a persistent shell | `tool-pwsh-persistent` publishes `./native` and `native-sdk` mounts the platform shell; the scenario still needs a Native recording |
 | `missing-sandbox-runner`, `partial-landlock-child-failure` | a Linux sandbox runner | Landlock is Linux-only; CI owns the signal |
 | `agent-instructions` | a workspace path containing `:` | Windows cannot create one, verified through `CreateDirectory` |
 
-That is the whole of step 3. Two of the eight are small and already have their seams (`tool-terminal` for the shell, `acp-child`'s existing adapter); three are separate runtimes (Python, LSP, Landlock); one is a Windows limitation; one is a type and schema widening; one needs a re-record rather than code.
+That is the whole of step 3. Two of the eight are small and already have their seams (`tool-terminal` for the shell, `acp-child`'s existing adapter); Python publishes `./native` and is not mounted; two remain separate runtimes (LSP, Landlock); one is a Windows limitation; one is a type and schema widening; one needs a re-record rather than code.
 
 ## A build trap that hides source edits from scenarios
 

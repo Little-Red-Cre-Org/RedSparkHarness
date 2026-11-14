@@ -133,7 +133,8 @@ it('projects external child facts through both SDKs and cold-restores the native
       const modelRequest = JSON.parse(body) as Record<string, unknown>
       modelRequests.push(modelRequest)
       const messages = modelRequest.messages as Array<{ role: string; content: unknown }>
-      const last = messages.at(-1)
+      const last = [...messages].reverse().find(message => !(message.role === 'user' && typeof message.content === 'string'
+        && message.content.startsWith('Current runtime context')))
       if (last?.role === 'user' && last.content === firstTask) {
         completion(response, [
           { choices: [{ delta: { role: 'assistant', tool_calls: [{ index: 0, id: 'sdk-external-child',

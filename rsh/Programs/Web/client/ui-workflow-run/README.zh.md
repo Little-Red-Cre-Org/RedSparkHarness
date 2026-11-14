@@ -27,7 +27,7 @@ kind: "package-reference"
 
 经 `dsh-tool-workflow` 发起的顶层工作流运行会在对话中显示为独立节点：展开运行查看其阶段，展开阶段查看其成员。阶段组只来自开始过的成员；成员结算只改变状态，不删除或重排成员。
 
-`./native` 导出 `workflowRunsFromSessionEvents` 与 `NativeWorkflowRunPanel`。Native 从所选 Session 历史中按每个 run-start 序号插入一个只读面板，并保留普通工具卡片。成员行不提供导航。只有所属 Step 或 Turn 已关闭才可推断中断；传输活动不参与判断。
+`./native` 导出 `workflowRunsFromSessionEvents`、`navigableWorkflowMembers` 与 `NativeWorkflowRunPanel`。Native 从所选 Session 历史中按每个 run-start 序号插入一个面板，并保留普通工具卡片。外壳同时传入合格子 id 列表和选择回调时，成员行打开其子会话；没有该回调时行不可交互。只有所属 Step 或 Turn 已关闭才可推断中断；传输活动不参与判断。
 
 ### 导航节点
 

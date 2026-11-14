@@ -4,7 +4,7 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-Measure long-history request processing, cold tool-heavy continuation, and repeated discovery of inactive fork children without network services or recorded user data. The SDK variant drives 100 turns and 800 real file reads through the shipped sdk-minimal profile with an explicit editor patch; other cases isolate backend service costs. No case renders a browser.
+Measure long-history request processing, cold tool-heavy continuation, and repeated discovery of inactive fork children without network services or recorded user data. The SDK variant drives 100 turns and 800 real file reads through a custom legacy profile named `bench-minimal` that composes `@redspark/rsh-sdk-minimal`, plus an explicit editor patch. The shipped name `sdk-minimal` is refused. Other cases isolate backend service costs. No case renders a browser.
 
 ## Table of Contents
 
