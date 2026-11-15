@@ -123,6 +123,16 @@ declare module '@redspark/rsh-client-ui-slots' {
   }
 }
 
+/**
+ * Safari reports Escape during IME composition only through the deprecated
+ * `keyCode`; read it structurally so the modern path stays free of it.
+ * @param event - React's native keyboard event.
+ * @returns the legacy key code, when the engine provides one.
+ */
+function legacyKeyCode(event: { readonly keyCode?: number }): number | undefined {
+  return event.keyCode
+}
+
 function Conversation({ snapshot, useLocale, settingsActions, bindComposer, listWorkspaces, chooseWorkspace, addWorkspace, listDirectory,
   createDirectory, loadImage, send, cancel, answerHuman, selectModel, selectPreset, selectSession,
   selectPlanMode, selectPermissionPreset, submitPending, changePending, editPending, refreshPendingSubmissions,
@@ -475,8 +485,7 @@ function Conversation({ snapshot, useLocale, settingsActions, bindComposer, list
             if (palette.keydown(event)) return
             if (event.key === 'Escape' && sending && snapshot.state !== 'cancelling'
               && !event.nativeEvent.isComposing
-              // oxlint-disable-next-line typescript/no-deprecated -- Safari IME composition Escape is only detectable via keyCode 229.
-              && event.nativeEvent.keyCode !== 229) {
+              && legacyKeyCode(event.nativeEvent) !== 229) {
               event.preventDefault()
               cancel()
               return
@@ -606,7 +615,8 @@ function Conversation({ snapshot, useLocale, settingsActions, bindComposer, list
             <section aria-label={t('facts')}>
               <NativeTranscript snapshot={snapshot} sessionId={selected} locale={activeLocale} loadImage={loadImage}
                 markdownLabels={markdownLabels} imageGroupClassName={css.images} truncatedClassName={css.extra}
-                activity={sending && snapshot.liveText === undefined ? t(snapshot.state) : undefined} t={t} renderSlot={renderSlot} />
+                activity={sending && snapshot.liveText === undefined ? t(snapshot.state) : undefined} t={t} renderSlot={renderSlot}
+                openSession={(id) => { void selectSession(id) }} />
               {snapshot.human === undefined ? null : <div className={css.human}><HumanInteraction key={snapshot.human.id}
                 answerHuman={answerHuman} prompt={snapshot.human}
                 disabled={snapshot.answeringHuman === true || snapshot.state !== 'sending'} locale={activeLocale} /></div>}
@@ -648,6 +658,8 @@ export const plugin: NativePlugin = {
       if (locale !== undefined) clientLocale.setLocale(locale)
       const controller = new NativeConversationController(client, { maxLiveTextChars, maxLiveEvents })
       const sendCancel = { requested: false }
+      /** Read cancellation after the admitted send settles; `cancel` can flip it during the await. */
+      const cancelRequested = (): boolean => sendCancel.requested
       const refreshModelControls = controller.refreshModelControls.bind(controller)
       const settingsActions = createNativeSettingsActions(client)
       const listDirectory = async (path?: string, signal?: AbortSignal): Promise<DirectoryBrowserListing> => {
@@ -759,8 +771,7 @@ export const plugin: NativePlugin = {
           send: async (text: string, files: readonly File[], attachments: readonly File[] = []) => {
             sendCancel.requested = false
             const admitted = await controller.send(text, files, attachments)
-            // oxlint-disable-next-line typescript/no-unnecessary-condition -- cancel() may set it during the await.
-            return admitted && !sendCancel.requested && controller.getSnapshot().error === undefined
+            return admitted && !cancelRequested() && controller.getSnapshot().error === undefined
           },
           submitPending: controller.submitPending.bind(controller),
           changePending: controller.changePending.bind(controller),

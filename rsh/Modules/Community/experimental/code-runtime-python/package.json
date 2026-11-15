@@ -8,6 +8,7 @@
     "directory": "rsh/Modules/Community/experimental/code-runtime-python"
   },
   "type": "module",
+  "dsh": { "native": { "apiVersion": 1, "entry": "./native", "targets": ["host"], "requires": [], "optional": [], "provides": ["codeRuntime"] } },
   "main": "lib/index.js",
   "types": "lib/types/index.d.ts",
   "exports": {
@@ -15,11 +16,18 @@
       "types": "./lib/types/index.d.ts",
       "default": "./lib/index.js"
     },
+    "./native": {
+      "types": "./lib/types/native.d.ts",
+      "default": "./lib/native.js"
+    },
+    "./src/*": "./src/*",
     "./package.json": "./package.json"
   },
   "files": [
     "lib/index.js",
+    "lib/native.js",
     "py/**/*.py",
+    "lib/shared-*.js",
     "lib/types/**/*.d.ts"
   ],
   "license": "MIT",
@@ -29,6 +37,10 @@
     "@redspark/cordis": "workspace:^",
     "@redspark/rsh-util-values": "workspace:^"
   },
+  "peerDependenciesMeta": {
+    "@redspark/rsh-code-runtime": { "optional": true },
+    "@redspark/cordis": { "optional": true }
+  },
   "devDependencies": {
     "@redspark/rsh-code-runtime": "workspace:^",
     "@redspark/rsh-timeout": "workspace:^",
@@ -36,7 +48,9 @@
     "@redspark/rsh-util-values": "workspace:^"
   },
   "dependencies": {
-    "@redspark/schemastery": "workspace:^"
+    "@redspark/schemastery": "workspace:^",
+    "@redspark/rsh-native-runtime": "workspace:^",
+    "@redspark/rsh-code-runtime-definition": "workspace:^"
   },
   "private": true
 }

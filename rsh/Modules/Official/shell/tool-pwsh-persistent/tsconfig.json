@@ -11,6 +11,9 @@
     { "path": "../../../../Engine/core/agent" },
     { "path": "../../../../Engine/core/tools" },
     { "path": "../../terminal/terminal" },
-    { "path": "../../../../Core/util/timeout" }
+    { "path": "../../../../Core/util/timeout" },
+    { "path": "../../../../Core/runtime-diagnostics/native-runtime" },
+    { "path": "../../../../Engine/core/native-tools/tsconfig.host.json" },
+    { "path": "../../../../Engine/core/native-agent/tsconfig.host.json" }
   ]
 }

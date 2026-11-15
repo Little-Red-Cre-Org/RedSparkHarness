@@ -27,7 +27,7 @@ Use `dsh-client-ui-workflow-run` to inspect each durable top-level workflow run 
 
 A top-level workflow run through `dsh-tool-workflow` appears in the conversation as its own node: expand the run to see its phases, and expand a phase to see its members. Phase groups come only from members that started, and settlement changes status without removing or reordering members.
 
-The `./native` export provides `workflowRunsFromSessionEvents` and `NativeWorkflowRunPanel`. Native renders one read-only panel at each run-start sequence from the selected Session history, alongside ordinary tool cards. Member rows do not navigate. Only closure of the owning Step or Turn permits inferred interruption; transport activity does not.
+The `./native` export provides `workflowRunsFromSessionEvents`, `navigableWorkflowMembers`, and `NativeWorkflowRunPanel`. Native renders one panel at each run-start sequence from the selected Session history, alongside ordinary tool cards. A member row opens its child when the shell passes both an eligible id list and a select callback; without that callback the row stays non-interactive. Only closure of the owning Step or Turn permits inferred interruption; transport activity does not.
 
 ### Navigating the node
 

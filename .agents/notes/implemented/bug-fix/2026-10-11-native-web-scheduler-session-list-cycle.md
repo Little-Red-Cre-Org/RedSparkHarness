@@ -10,7 +10,7 @@ The Native Web Session controller provides `rootExecution`, and the `taskSchedul
 
 ## Decision
 
-The Session controller does not select `taskScheduler` and reports `hasActiveSchedule: false` for every Session row. The scheduler remains selected in the `native-web` profile and uses the controller's root execution Provider.
+The Session controller does not select `taskScheduler`. It derives `hasActiveSchedule` by folding the `schedule/change` records in the bounded Session history it already reads for the row, after the fork prefix. The scheduler remains selected in the `native-web` profile and uses the controller's root execution Provider.
 
 ## Alternatives considered
 
@@ -24,4 +24,4 @@ The native profile template test resolves the complete shipped Native Web Host p
 
 ## Consequences
 
-Native Web does not mark Sessions with active schedules. The task scheduler continues to execute and manage scheduled work through the selected root executor.
+Native Web marks a Session from its own durable Schedule log, so a stored reminder is visible without an active scheduler owner. The task scheduler continues to execute and manage scheduled work through the selected root executor.

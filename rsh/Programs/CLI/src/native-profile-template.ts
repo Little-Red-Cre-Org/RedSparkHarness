@@ -80,6 +80,44 @@ export function shippedNativeProfileClientComposition(name: string): readonly Na
   return profile === 'native-web' ? NATIVE_WEB_CLIENT_INSTALLATIONS : []
 }
 
+const SDK_MINIMAL_BASH_DESCRIPTION = [
+  'Run commands in a bash shell',
+  '* When invoking this tool, the contents of the "command" parameter does NOT need to be XML-escaped.',
+  '* Network access depends on the task environment. Prefer configured mirrors/proxies when they are available.',
+  '* State is persistent across command calls and discussions with the user.',
+  "* To inspect a particular line range of a file, e.g. lines 10-25, try 'sed -n 10,25p /path/to/the/file'.",
+  '* Please avoid commands that may produce a very large amount of output.',
+  "* Please run long lived commands in the background, e.g. 'sleep 10 &' or start a server in the background.",
+].join('\n')
+
+const SDK_MINIMAL_PWSH_DESCRIPTION = [
+  'Run commands in a PowerShell shell',
+  '* When invoking this tool, the contents of the "command" parameter does NOT need to be XML-escaped.',
+  "* You don't have access to the internet via this tool.",
+  '* State is persistent across command calls and discussions with the user.',
+  '* Use native Windows paths (C:\\...) and $env:NAME variables; this is PowerShell, not bash.',
+  '* Please avoid commands that may produce a very large amount of output.',
+  "* Please run long lived commands in the background, e.g. 'Start-Job' or start a server with Start-Process.",
+].join('\n')
+
+/** Persistent shell rows that let native-sdk cover sdk-minimal. The child and ACP profiles stay unchanged. */
+function nativeSdkShellInstallations(platform: NodeJS.Platform) {
+  const windows = platform === 'win32'
+  return [
+    { id: 'subprocess', plugin: '@redspark/rsh-subprocess-local', scope: ROOT },
+    { id: 'sandbox-policy', plugin: '@redspark/rsh-native-sandbox-policy', scope: ROOT,
+      config: { mode: 'danger-full-access', workspaceRoot: process.cwd() } },
+    { id: 'terminals', plugin: '@redspark/rsh-terminal', scope: ROOT },
+    { id: 'terminal-bash', plugin: '@redspark/rsh-terminal-bash', scope: ROOT,
+      config: { type: 'shell', timeoutMs: 300_000, ...(windows ? { shellDialect: 'pwsh' } : {}) } },
+    windows
+      ? { id: 'persistent-pwsh', plugin: '@redspark/rsh-tool-pwsh-persistent', scope: ROOT,
+        config: { timeoutMs: 300_000, description: SDK_MINIMAL_PWSH_DESCRIPTION } }
+      : { id: 'persistent-bash', plugin: '@redspark/rsh-tool-bash-persistent', scope: ROOT,
+        config: { timeoutMs: 300_000, description: SDK_MINIMAL_BASH_DESCRIPTION } },
+  ]
+}
+
 function nativeWorkflowInstallations(subagentProvider: string, structuredOutput = true) {
   return [
     { id: 'workflow', plugin: '@redspark/rsh-workflow', scope: ROOT },
@@ -257,6 +295,7 @@ export function shippedNativeProfileComposition(
       }]),
       ...nativeWorkflowInstallations(profile === 'native-sdk-dsh-child' ? 'dsh-sdk' : 'spawn', profile !== 'native-sdk-dsh-child'),
       { id: 'agents', plugin: '@redspark/rsh-native-agent', scope: ROOT },
+      ...profile === 'native-sdk' ? nativeSdkShellInstallations(platform) : [],
       { id: 'commands', plugin: '@redspark/rsh-commands', scope: ROOT },
       { id: 'model-execution', plugin: '@redspark/rsh-native-model-execution', scope: ROOT },
       { id: 'llm-retry', plugin: '@redspark/rsh-llm-retry', scope: ROOT },

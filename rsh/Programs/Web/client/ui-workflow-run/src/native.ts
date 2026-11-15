@@ -1,2 +1,2 @@
-/** Cordis-free workflow projection and read-only panel. */
+/** Cordis-free workflow projection and panel. */
 export * from './native-workflow.tsx'

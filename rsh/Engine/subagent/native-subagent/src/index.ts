@@ -25,7 +25,7 @@ import type { NativeExternalSubagentDriver, NativeExternalSubagentFinishedEvent,
   NativeExternalSubagentRouteOverrides, NativeExternalSubagentStartedEvent, NativeExternalSubagentRouteField,
   NativeExternalModelAttemptLease, NativeExternalModelFailure, NativeExternalModelRequest, NativeExternalModelResponse,
   NativeExternalOperationEvent, NativeExternalSubagentModelOperations, NativeSubagentStopReason } from './external-driver.ts'
-import { issueNativeExternalModelAttemptLease, issueNativeExternalToolCallGrant } from './external-driver.ts'
+import { acceptExternalOutcome, issueNativeExternalModelAttemptLease, issueNativeExternalToolCallGrant } from './external-driver.ts'
 
 export type * from './external-driver.ts'
 export { serializeNativeExternalJson } from './external-driver.ts'
@@ -138,6 +138,14 @@ export interface NativeSubagentBackground {
   readonly provider: string
 }
 
+/** Agent-owned job for one external one-shot child. The id is the parent-owned operation, not a child Session. */
+export interface NativeExternalSubagentBackground {
+  readonly id: NativeExternalSubagentId
+  readonly remoteId: string
+  readonly jobId: NativeJobId
+  readonly provider: string
+}
+
 /** Durable continuation and initial inbox acceptance. */
 export interface NativeSubagentContinuation {
   readonly id: SessionId
@@ -214,11 +222,12 @@ export interface NativeSubagentOperations {
   start(request: NativeSubagentRequest, signal: AbortSignal): Promise<NativeSubagentRun>
   /**
    * Start an Agent-owned child under the selected Jobs registry.
+   * An external driver starts a one-shot product run and returns its parent-owned operation id, not a child Session.
    * @param request - resolved child request with the foreground permission restrictions.
    * @param signal - startup cancellation, relinquished only after actual child readiness.
-   * @returns real child identity and job handle after its initial durable facts are committed; startup failures reject after cleanup.
+   * @returns child identity and job handle after initial durable facts are committed; startup failures reject after cleanup.
    */
-  startBackground(request: NativeSubagentRequest, signal: AbortSignal): Promise<NativeSubagentBackground>
+  startBackground(request: NativeSubagentRequest, signal: AbortSignal): Promise<NativeSubagentBackground | NativeExternalSubagentBackground>
   /** Create a durable continuable child and accept its first message without waiting for model output.
    * @param request - resolved child permissions and startup composition.
    * @param signal - cancellation before durable message acceptance.
@@ -504,8 +513,12 @@ export class NativeSpawnSubagents implements NativeSubagentOperations {
   }
 
   /** @inheritdoc */
-  async startBackground(request: NativeSubagentRequest, signal: AbortSignal): Promise<NativeSubagentBackground> {
+  async startBackground(
+    request: NativeSubagentRequest,
+    signal: AbortSignal,
+  ): Promise<NativeSubagentBackground | NativeExternalSubagentBackground> {
     if (this.closing) throw new Error('native-subagent: Provider is closing')
+    if (this.externalDriver !== undefined) return this.startExternalBackground(request, signal)
     this.assertSessionBackedProvider()
     const jobs = this.backgroundJobs
     if (jobs === undefined) throw new Error('native-subagent: background execution requires jobs')
@@ -545,6 +558,64 @@ export class NativeSpawnSubagents implements NativeSubagentOperations {
         throw new Error('native-subagent: child ended before readiness')
       }
       return { id, jobId, provider: this.providerName }
+    } finally {
+      signal.removeEventListener('abort', cancelStartup)
+    }
+  }
+
+  private async startExternalBackground(request: NativeSubagentRequest, signal: AbortSignal): Promise<NativeExternalSubagentBackground> {
+    const driver = this.externalDriver
+    if (driver === undefined) throw new Error('native-subagent: external background requires an external driver')
+    const jobs = this.backgroundJobs
+    if (jobs === undefined) throw new Error('native-subagent: background execution requires jobs')
+    signal.throwIfAborted()
+    const admission = this.externalAdmissions.get(request)
+    if (admission === undefined || admission.state !== 'issued' || admission.driver !== driver) {
+      throw new Error('native-subagent: external child requires an unused request issued by this Provider')
+    }
+    this.assertExternalAdmission(admission)
+    admission.state = 'consumed'
+    const ready = Promise.withResolvers<void>()
+    const startup = new AbortController()
+    const cancelStartup = (): void => { startup.abort(signal.reason) }
+    signal.addEventListener('abort', cancelStartup, { once: true })
+    const publication: { ready: boolean; id?: NativeExternalSubagentId; remoteId?: string } = { ready: false }
+    let task: Promise<NativeExternalSubagentResult> | undefined
+    try {
+      const jobId = jobs.start({ agent: request.agent, kind: 'subagent', label: request.label,
+        run: async (jobSignal, publishOutput) => {
+          const effective = AbortSignal.any([jobSignal, startup.signal, this.context.signal, this.cancellation.signal])
+          task = this.track(this.executeExternal(admission, effective, {
+            onReady: (started) => {
+              if (publication.ready) return
+              effective.throwIfAborted()
+              publication.ready = true
+              publication.id = started.id
+              publication.remoteId = started.remoteId
+              signal.removeEventListener('abort', cancelStartup)
+              ready.resolve()
+            },
+          }), effective)
+          try {
+            const result = await task
+            const partial = result.output.filter(block => block.type === 'text').map(block => block.text).join('')
+            const diagnostic = result.diagnostic !== undefined && result.diagnostic.length > 0
+              ? `Diagnostic: ${result.diagnostic}` : ''
+            const text = [diagnostic, partial].filter(part => part.length > 0).join('\n')
+            if (text.length > 0) publishOutput(text)
+            return { status: result.stopReason === 'completed' ? 'completed'
+              : result.stopReason === 'aborted' ? 'cancelled' : 'failed', detail: result.stopReason, output: text }
+          } finally {
+            if (!publication.ready) ready.resolve()
+          }
+        },
+      })
+      await ready.promise
+      if (!publication.ready || publication.id === undefined || publication.remoteId === undefined) {
+        await task
+        throw new Error('native-subagent: external child ended before readiness')
+      }
+      return { id: publication.id, remoteId: publication.remoteId, jobId, provider: this.providerName }
     } finally {
       signal.removeEventListener('abort', cancelStartup)
     }
@@ -945,7 +1016,9 @@ export class NativeSpawnSubagents implements NativeSubagentOperations {
     operation.drainFailures.push(error)
   }
 
-  private async executeExternal(admission: ExternalAdmission, signal: AbortSignal): Promise<NativeExternalSubagentResult> {
+  private async executeExternal(admission: ExternalAdmission, signal: AbortSignal, hooks?: {
+    readonly onReady?: (started: { readonly id: NativeExternalSubagentId; readonly remoteId: string }) => void
+  }): Promise<NativeExternalSubagentResult> {
     const { request, driver, parent: parentOwner, root: rootOwner, parentEpoch, rootEpoch } = admission
     const routeFields = Object.keys(request.routeOverrides) as NativeExternalSubagentRouteField[]
     const unsupported = routeFields.find(field => !driver.routeFields.includes(field))
@@ -1142,12 +1215,13 @@ export class NativeSpawnSubagents implements NativeSubagentOperations {
       startedPersisted = true
       this.settleExternalModelGate(operation)
       this.publishExternalStarted({ parentAgent: owners.parent.agent, parentSession: owners.parent.session, event: started })
+      hooks?.onReady?.({ id, remoteId: child.remoteId })
       const terminal = child.result.then(
         result => ({ kind: 'result' as const, result }),
         (error: unknown) => ({ kind: 'failure' as const, error }))
       const cleanupFailure = cleanupFailed.promise.then((error: unknown) => ({ kind: 'cleanup-failure' as const, error }))
       const settled = await Promise.race([terminal, cleanupFailure])
-      if (settled.kind === 'result') outcome = settled.result
+      if (settled.kind === 'result') outcome = acceptExternalOutcome(settled.result)
       else if (settled.kind === 'failure') failure = { error: settled.error }
     } catch (error: unknown) {
       failure = { error }

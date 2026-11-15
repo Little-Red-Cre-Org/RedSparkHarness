@@ -11,6 +11,7 @@
     "directory": "rsh/Modules/Official/shell/tool-pwsh-persistent"
   },
   "type": "module",
+  "dsh": { "native": { "apiVersion": 1, "entry": "./native", "targets": ["host"], "requires": ["agents", "terminals", "tools"], "optional": [], "provides": [] } },
   "main": "lib/index.js",
   "types": "lib/types/index.d.ts",
   "exports": {
@@ -18,10 +19,17 @@
       "types": "./lib/types/index.d.ts",
       "default": "./lib/index.js"
     },
+    "./native": {
+      "types": "./lib/types/native.d.ts",
+      "default": "./lib/native.js"
+    },
+    "./src/*": "./src/*",
     "./package.json": "./package.json"
   },
   "files": [
     "lib/index.js",
+    "lib/native.js",
+    "lib/shared-*.js",
     "lib/types/**/*.d.ts"
   ],
   "license": "MIT",
@@ -32,8 +40,16 @@
     "@redspark/rsh-tools": "workspace:^",
     "@redspark/cordis": "workspace:^"
   },
+  "peerDependenciesMeta": {
+    "@redspark/rsh-agent": { "optional": true },
+    "@redspark/rsh-tools": { "optional": true },
+    "@redspark/cordis": { "optional": true }
+  },
   "dependencies": {
-    "@redspark/schemastery": "workspace:^"
+    "@redspark/schemastery": "workspace:^",
+    "@redspark/rsh-native-runtime": "workspace:^",
+    "@redspark/rsh-native-tools": "workspace:^",
+    "@redspark/rsh-native-agent": "workspace:^"
   },
   "devDependencies": {
     "@redspark/cordis-plugin-include": "workspace:^",

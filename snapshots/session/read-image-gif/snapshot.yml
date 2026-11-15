@@ -1,6 +1,6 @@
 version: 1
 scenario: read-image-gif
-profile: legacy-headless
+profile: headless
 composition: image
 recording: authored
 header:

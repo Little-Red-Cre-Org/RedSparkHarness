@@ -69,6 +69,8 @@ Retirement may start only when all of these hold:
 2. Telemetry or a user report establishes that no active profile resolves `legacy`. A local check is `profileRuntime(name)` over the profiles under a real home.
 3. `rsh/Docs/native-config-migration.md` documents what an old profile must become, including the plugin-set difference.
 
+A local `profileRuntime` check of the active home on 2026-11-14 returned `legacy` for `web` and `desktop`, and each warning said the profile still selects Cordis execution. Criterion 2 does not hold. Do not refuse those names, and do not change `initProfile`, on the strength of this check. Criterion 3 now has the verified plugin-set differences in [Native configuration migration](../../../../rsh/Docs/native-config-migration.md). That section does not make criterion 2 hold.
+
 ## Risks
 
 - A user whose profile was created by `--from-default-profile` or `dsh plugin` under a custom name would lose it. Those are current commands, so the migration doc plus a refusal that names the profile and the file is the mitigation; a silent rewrite is not.

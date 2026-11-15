@@ -3,7 +3,7 @@ import type { NativePlugin } from '@redspark/rsh-native-runtime'
 import type { ContentBlock } from '@redspark/rsh-llm/native'
 import { ReasoningEffortId } from '@redspark/rsh-llm/native'
 import type { NativeExternalSubagentApprovalRequest, NativeSubagentOptions, NativeSubagentResult, NativeSubagentStopReason,
-  NativeExternalSubagentResult, NativeSubagentBackground, NativeSubagentContinuation } from '@redspark/rsh-native-subagent'
+  NativeExternalSubagentResult, NativeSubagentBackground, NativeExternalSubagentBackground, NativeSubagentContinuation } from '@redspark/rsh-native-subagent'
 import type { NativeToolExecution, NativeValueToolContribution } from '@redspark/rsh-native-tools'
 import type {} from '@redspark/rsh-native-tool-jobs'
 
@@ -112,7 +112,7 @@ export const plugin: NativePlugin = {
         throw new Error('native tool-subagent: continuable mode requires controls bound to the same Provider and tool registry')
       }
       const inherit = config.options.inheritCompletedTurns === true
-      const background = !inherit && !external && (continuation || controls !== undefined)
+      const background = !inherit && (external ? controls !== undefined : continuation || controls !== undefined)
       const contribution: NativeValueToolContribution = {
         schema: { name: config.toolName, description: inherit
           ? 'Delegate a task to a subagent that inherits this conversation: a child agent seeded with all '
@@ -136,19 +136,26 @@ export const plugin: NativePlugin = {
             output: { type: 'array', items: { type: 'object', additionalProperties: true } },
           } }, { type: 'object', additionalProperties: false, required: ['id', 'jobId', 'provider'], properties: {
             id: { type: 'string' }, jobId: { type: 'string' }, provider: { type: 'string' },
-          } }, ...continuation ? [{ type: 'object' as const, additionalProperties: false, required: ['id', 'provider', 'messageId'], properties: {
+          } }, ...external && background ? [{ type: 'object' as const, additionalProperties: false, required: ['id', 'jobId', 'provider', 'remoteId'], properties: {
+            id: { type: 'string' as const }, jobId: { type: 'string' as const }, provider: { type: 'string' as const }, remoteId: { type: 'string' as const },
+          } }] : [], ...continuation ? [{ type: 'object' as const, additionalProperties: false, required: ['id', 'provider', 'messageId'], properties: {
             id: { type: 'string' as const }, provider: { type: 'string' as const }, messageId: { type: 'string' as const },
           } }] : [], { type: 'object', additionalProperties: false, required: ['id', 'provider', 'remoteId', 'stopReason', 'output'], properties: {
             id: { type: 'string' }, provider: { type: 'string' }, remoteId: { type: 'string' },
             stopReason: { type: 'string', enum: ['completed', 'max-tokens', 'aborted', 'refusal', 'error'] },
             output: { type: 'array', items: { type: 'object', additionalProperties: true } },
+            diagnostic: { type: 'string' },
           } }] },
           render: (_call, value) => {
             // The Provider supplies typed content; NativeTools owns its lossless JSON snapshot.
             const result = value as unknown as NativeSubagentResult | NativeExternalSubagentResult
-              | NativeSubagentBackground | NativeSubagentContinuation
+              | NativeSubagentBackground | NativeExternalSubagentBackground | NativeSubagentContinuation
             if ('messageId' in result) return { isError: false, content: [{ type: 'text', text: `started subagent ${result.id}` }],
               meta: { kind: 'subagent', childSessionId: result.id, provider: result.provider, messageId: result.messageId } }
+            if ('jobId' in result && 'remoteId' in result) {
+              return { isError: false, content: [{ type: 'text', text: `Background subagent started. Job: ${result.jobId}. Remote id: ${result.remoteId}. Use job_output to read output or wait; job_kill requests cancellation.` }],
+                meta: { kind: 'subagent', externalChildId: result.id, remoteId: result.remoteId, provider: result.provider, jobId: result.jobId } }
+            }
             if ('jobId' in result) return { isError: false, content: [{ type: 'text', text: `Background subagent started. Job: ${result.jobId}. Child session: ${result.id}. Use job_output to read output or wait; job_kill requests cancellation.` }],
               meta: { kind: 'subagent', childSessionId: result.id, provider: result.provider, jobId: result.jobId } }
             // A child's reasoning is its own; only its text answer is the parent's result.
@@ -157,15 +164,15 @@ export const plugin: NativePlugin = {
             const content: ContentBlock[] = result.output.filter(
               (block): block is Extract<ContentBlock, { type: 'text' }> => block.type === 'text')
             if (result.stopReason !== 'completed') {
-              // The headline names what happened, then the child's own words follow as their
-              // own block; a model that only saw "ended: max-tokens" could not tell a refusal
-              // from a truncation, and would lose the partial answer the child did produce.
+              // The headline names what happened, then the product diagnostic, then the child's
+              // own words. A model that only saw the headline could not tell a refusal from a
+              // truncation, and would lose both the product detail and the partial answer.
               const partial = content.map(block => block.type === 'text' ? block.text : '').join('')
-              // One block carries the headline and the child's preserved partial answer, which
-              // is the shape the compatibility result renders.
-              content.splice(0, content.length, { type: 'text', text: partial.length === 0
-                ? stopReasonHeadline(result.stopReason)
-                : `${stopReasonHeadline(result.stopReason)}\nPartial output before the run ended:\n${partial}` })
+              const diagnostic = 'remoteId' in result && result.diagnostic !== undefined && result.diagnostic.length > 0
+                ? `\nDiagnostic: ${result.diagnostic}`
+                : ''
+              const preserved = partial.length === 0 ? '' : `\nPartial output before the run ended:\n${partial}`
+              content.splice(0, content.length, { type: 'text', text: `${stopReasonHeadline(result.stopReason)}${diagnostic}${preserved}` })
             }
             return { content, isError: result.stopReason !== 'completed', meta: {
               kind: 'subagent', ...'remoteId' in result ? { externalChildId: result.id, remoteId: result.remoteId }

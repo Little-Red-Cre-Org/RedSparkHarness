@@ -1,6 +1,6 @@
 version: 1
 scenario: native-question-cancel
-profile: web
+profile: native-web
 composition: native-web-question-cancel
 recording: authored
 header:

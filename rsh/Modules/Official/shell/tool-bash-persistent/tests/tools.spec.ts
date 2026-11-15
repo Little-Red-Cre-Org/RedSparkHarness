@@ -18,6 +18,7 @@ import type {
 import SystemPrompt from '@redspark/rsh-system-prompt'
 import ToolRuntime from '@redspark/rsh-tools'
 import * as ToolBashPersistent from '@redspark/rsh-tool-bash-persistent'
+import { createPersistentBashRuntime, resolvePersistentBashConfig } from '../src/persistent-core.ts'
 import { unsupportedInbox } from '@redspark/rsh-agent-loop-testkit'
 
 const contexts: Context[] = []
@@ -576,6 +577,34 @@ describe('tool-bash-persistent', () => {
     await spawnAborted.promise
     expect((await running).isError).toBe(true)
     expect(ctx.terminals.list(owner)).toEqual([])
+  })
+
+  it('fails a cached shell after the terminal session has disappeared', async () => {
+    const { ctx, owner, stub } = await setup()
+    await call(ctx, owner, 'warm up')
+    const id = ctx.terminals.list(owner)[0]?.sessionId
+    expect(id).toBeDefined()
+    await ctx.terminals.kill(owner, id!, 'external cleanup')
+    const failed = await call(ctx, owner, 'echo gone')
+    expect(failed.isError).toBe(true)
+    expect(text(failed)).toContain('unknown PTY session')
+    expect(stub.sessions[0]?.closed).toEqual(['external cleanup'])
+    expect(text(await call(ctx, owner, 'echo fresh'))).toBe('hello from stub\n[Command finished with exit code 0]')
+    expect(stub.sessions).toHaveLength(2)
+  })
+
+  it('rejects an empty command inside the runtime before opening a shell', async () => {
+    const runtime = createPersistentBashRuntime({
+      status: () => undefined,
+      close: async () => {},
+      startSend: () => { throw new Error('should not send') },
+      read: () => ({ text: '', totalLines: 0, lineBegin: 0, lineEnd: 0, truncated: false }),
+      onDispose: () => {},
+      onOwnerDispose: () => {},
+    }, resolvePersistentBashConfig({}, 'tool-bash-persistent'))
+    await expect(runtime.execute({}, '   ', new AbortController().signal, async () => {
+      throw new Error('should not spawn')
+    })).rejects.toThrow('command must be a non-empty string')
   })
 
   it('rejects invalid config and invalid calls', async () => {

@@ -10,7 +10,7 @@ Status: implemented
 
 ## 决定
 
-Session 控制器不选择 `taskScheduler`，并对所有 Session 行返回 `hasActiveSchedule: false`。`native-web` profile 仍选择 scheduler，由控制器提供的 root execution Provider 为其执行任务。
+Session 控制器不选择 `taskScheduler`。它折叠该行已读取的有界 Session 历史中分叉前缀之后的 `schedule/change` 记录来推导 `hasActiveSchedule`。`native-web` profile 仍选择 scheduler，由控制器提供的 root execution Provider 为其执行任务。
 
 ## 考虑过的替代方案
 
@@ -24,4 +24,4 @@ Session 控制器不选择 `taskScheduler`，并对所有 Session 行返回 `has
 
 ## 后果
 
-原生 Web 不会标记带有活动调度任务的 Session。task scheduler 仍通过所选 root executor 执行和管理计划任务。
+原生 Web 从 Session 自己的持久化 Schedule 日志生成标记，因此没有活动的 scheduler owner 时也能显示已存的提醒。task scheduler 仍通过所选 root executor 执行和管理计划任务。

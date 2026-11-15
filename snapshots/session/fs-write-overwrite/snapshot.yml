@@ -1,6 +1,6 @@
 version: 1
 scenario: fs-write-overwrite
-profile: legacy-headless
+profile: headless
 composition: default
 recording: live
 header:

@@ -1,6 +1,7 @@
 /** Native adapter from durable Session events to shared chat presentation. */
-import { Fragment, useMemo } from 'react'
-import { NativeWorkflowRunPanel, workflowRunsFromSessionEvents } from '@redspark/rsh-client-ui-workflow-run/native'
+import { Fragment, useEffect, useMemo, useState } from 'react'
+import { NativeWorkflowRunPanel, navigableWorkflowMembers, workflowRunsFromSessionEvents } from '@redspark/rsh-client-ui-workflow-run/native'
+import { foldDeliverables, NativePresentedFiles, PresentedOpenController } from '@redspark/rsh-client-ui-deliverables/native'
 import {
   ChatAssistantMessage, ChatContextMessage, ChatMessageActionMeta, ChatMessageActionRow, ChatMessageCopyAction,
   ChatReasoningDisclosure, ChatTranscript, ChatTurnActivity, ChatTurnGroup, ChatUserMessage, JsonBlock, MarkdownText,
@@ -201,12 +202,31 @@ function Message({ event, stepStartedAt, locale, t, sessionId, loadImage, markdo
   </ChatAssistantMessage>
 }
 
+function navigableForRun(
+  sessions: ConversationSnapshot['sessions'],
+  phases: Parameters<typeof navigableWorkflowMembers>[0],
+  parentId: SessionId,
+): readonly SessionId[] {
+  const byId = new Map(sessions.map(session => [session.header.id, session]))
+  return navigableWorkflowMembers(phases, parentId, (childId) => {
+    const item = byId.get(childId)
+    if (item === undefined) return undefined
+    return {
+      ...item.header.origin === 'subagent' ? { origin: 'subagent' as const } : {},
+      ...item.header.parentSession === undefined ? {} : { parentId: item.header.parentSession },
+      running: item.running,
+    }
+  })
+}
+
 /** Render native turns, message metadata and the existing root Tool cards.
- * @param props - current Session events, image loader and locale-owned copy.
+ * Workflow member rows open only when `openSession` is provided and the ordinary Session list proves the child eligible.
+ * @param props - current Session events, image loader, locale-owned copy, and the optional child select callback.
  * @returns grouped Native transcript rows.
  */
 export function NativeTranscript({
   snapshot, sessionId, locale, loadImage, t, markdownLabels, imageGroupClassName, truncatedClassName, activity, renderSlot,
+  openSession,
 }: {
   snapshot: ConversationSnapshot
   sessionId: SessionId
@@ -218,6 +238,8 @@ export function NativeTranscript({
   truncatedClassName: string | undefined
   activity?: string | undefined
   renderSlot: PropsRenderSlots<'native.conversation.message.actions'>['renderSlot']
+  /** Selects a child Session. Omitted keeps workflow members non-interactive. */
+  openSession?: (id: SessionId) => void
 }) {
   const workflows = useMemo(
     () => new Map(workflowRunsFromSessionEvents(snapshot.events).map(run => [run.seq, run.data])),
@@ -225,6 +247,9 @@ export function NativeTranscript({
   )
   const cards = useMemo(() => new Map(toolCardRecords(snapshot.events).map(record => [record.seq, record.block])), [snapshot.events])
   const turns = useMemo(() => groupNativeTranscriptEvents(snapshot.events, cards), [snapshot.events, cards])
+  const deliverables = useMemo(() => new Map(foldDeliverables(snapshot.events).map(item => [item.turn, item.presented])), [snapshot.events])
+  const presentedOpen = useState(() => new PresentedOpenController())[0]
+  useEffect(() => () => { void presentedOpen.dispose() }, [presentedOpen])
   const stepStarts = useMemo(() => new Map(snapshot.events.flatMap(event =>
     event.type === 'step/start' ? [[`${event.data.turn}:${event.data.step}`, event.time] as const] : [])), [snapshot.events])
   const liveTurn = turns.at(-1)?.turn
@@ -233,7 +258,13 @@ export function NativeTranscript({
     {turns.map(({ key, turn, events }) => {
       const rows = events.map((event) => {
         const workflow = workflows.get(event.seq)
-        if (workflow !== undefined) return <NativeWorkflowRunPanel key={`${sessionId}:${event.seq}`} data={workflow} locale={locale} />
+        if (workflow !== undefined) {
+          const navigation = openSession === undefined ? {} : {
+            navigable: navigableForRun(snapshot.sessions, workflow.phases, sessionId),
+            openSession,
+          }
+          return <NativeWorkflowRunPanel key={`${sessionId}:${event.seq}`} data={workflow} locale={locale} {...navigation} />
+        }
         const card = cards.get(event.seq)
         return card === undefined
           ? <Message key={event.seq} event={event}
@@ -244,7 +275,11 @@ export function NativeTranscript({
       })
       return turn === undefined
         ? <Fragment key={key}>{rows}</Fragment>
-        : <ChatTurnGroup key={key} turn={turn}>{rows}</ChatTurnGroup>
+        : <ChatTurnGroup key={key} turn={turn}>
+          {rows}
+          <NativePresentedFiles sessionId={sessionId} files={deliverables.get(turn) ?? []}
+            cwd={snapshot.header?.cwd} controller={presentedOpen} locale={locale} />
+        </ChatTurnGroup>
     })}
     {snapshot.liveText === undefined && activity === undefined ? null : <ChatTurnGroup turn={liveTurn ?? 0}>
       <ChatAssistantMessage streaming>

@@ -27,6 +27,8 @@ This private experimental package lets source-checkout compositions run model-ge
 
 Choose this private experimental package only in an explicit source-checkout composition. Register `PythonCodeRuntime` beside `dsh-tools` and `run()` executes each program in a fresh CPython 3.10+ subprocess, resolving with `result.value` on success and `result.error` on failure (the orthogonal `CodeRunFailure.kind` taxonomy classifies parse failures, thrown exceptions, invalid completions, output overflows, budget expiry, aborts, and substrate death). It rejects only for seam misuse — a malformed binding namespace, or a call after disposal. Configuration is rejected at load: a non-Unix platform; an explicit `pythonBin` that is not an executable regular file or a bare name that does not resolve on `PATH`; a non-CPython, pre-3.10, or probe-failing interpreter; a non-positive or non-integer budget; a `maxLogBytes` below the truncation-marker floor (64); a timer value `setTimeout` would clamp; a budget larger than the effective fd-3 frame cap (lowered when the host heap cannot safely parse a near-cap frame); or an `addressSpaceMb`/output-budget pair whose worst-case peak would breach `RLIMIT_AS`.
 
+The `./native` entry provides the same runtime as `codeRuntime`. It requires no other Native service. A Native composition selects `@redspark/rsh-experimental-code-runtime-python/native`; the package root remains the Cordis plugin. `@redspark/cordis` and `@redspark/rsh-code-runtime` are optional peers, so a Cordis composition must still install them, while a Native composition does not. No shipped profile mounts this entry.
+
 ### What you get
 
 The package's default export is the `PythonCodeRuntime` plugin. Its public surface also re-exports the host-side protocol vocabulary: `validateChildFrame` (rebuilds every inbound frame), the lossless-JSON codec and meters (`encodeJsonPlain`, `checkDoneValue`, `hasUnsafeIntegerToken`, `hasNonLosslessNumber`), `logTruncationMarker` (the shared truncation-marker text), plus `resolvePythonBin` (interpreter lookup against the current `PATH`), `readProcessStart` (process-start statistics for tests), `detachResidual` (a test seam for the settled run's resource cleanup), and `hostFrameParseCeiling` (the heap-derived frame parse cap a given heap limit admits). Every cap is a validated `Config` field with a default: `cpuSeconds` (60), `maxWallMs` (600000), `addressSpaceMb` (512, not applied on Darwin), `maxLogBytes` (65536), `maxValueBytes` (32768), `graceMs` (3000), and `pythonBin` (`python3`, resolved, executable-checked, version-probed under a five-second force-kill deadline, and frozen at load). Each child receives only `TMPDIR`; ambient credentials, `PATH`, `HOME`, and other host state stay unavailable.
@@ -69,7 +71,9 @@ Completion values and binding arguments cross as exact JSON: values serialize wi
 
 | File | Role |
 |---|---|
-| [`src/index.ts`](src/index.ts) | Plugin entry: `PythonCodeRuntime` — spawn, frame pump, budgets, containment, teardown; re-exports the protocol vocabulary |
+| [`src/index.ts`](src/index.ts) | Cordis adapter: `PythonCodeRuntime` registers the shared runtime and re-exports the protocol vocabulary |
+| [`src/runtime.ts`](src/runtime.ts) | Shared runtime: spawn, frame pump, budgets, containment, teardown |
+| [`src/native.ts`](src/native.ts) | Native installer: provides `codeRuntime` and owns teardown |
 | [`src/protocol.ts`](src/protocol.ts) | Host side: frame codec, hostile-frame validators, lossless-JSON meters, shared marker text |
 | [`py/bootstrap.py`](py/bootstrap.py) | Child side: fd-3 channel, program execution, binding dispatch, ledger and settlement |
 | [`py/protocol.py`](py/protocol.py) | Python side: `PROTOCOL_FD`, `TypedDict` frame mirrors, `log_truncation_marker` |
@@ -88,6 +92,7 @@ Read these when the runtime contract is not enough. They move from the seam defi
 
 - [Code runtime seam](../../../../Compatibility/DSH/bridge/compat-code-runtime/README.md) — the abstract contract this backend implements.
 - [fd-3 protocol Agent Note](../../../../../.agents/notes/implemented/architecture/2026-07-31-code-runtime-python-fd3-protocol.md) — design rationale and wire contract.
+- [Native Python code runtime](../../../../../.agents/notes/implemented/architecture/2026-11-13-native-python-code-runtime.md) — the shared runtime and the Cordis and Native installers.
 - [Settlement-fixes Agent Note](../../../../../.agents/notes/archived/bug-fix/2026-07-31-code-runtime-python-settlement-fixes.md) — settlement, metering, and containment fixes and their regression cases.
 - [Worker-thread backend](../../../Official/code-runtime/code-runtime-worker-thread/README.md) — the released TypeScript sibling.
 - [Code runtime subsystem reference](../../../../Docs/subsystems/code-runtime.md) — request/result vocabulary, bindings, and failure taxonomy.
@@ -114,7 +119,7 @@ These limits define what the package does and does not cover; they are current p
 - **A descendant that escapes the child's process group with `setsid()` is not reaped by the group teardown** — `kill(-pid)` cannot reach it; the run still settles on the value the done frame decided, and the close-deadline backstop forces settlement if the orphan holds the pipes open, but the orphan itself outlives the fiber until it exits on its own.
 - **A `log` frame that arrives after settlement is dropped** — once the run has settled, host-side capture is closed; a late fd-3 `log` frame (from a thread that outlived the done frame) is discarded rather than appended to `logs`.
 - **A binding REPLY value has no seam-level byte or depth cap** — `maxValueBytes` meters only the done frame's completion value; a wide binding reply is rebuilt host-side (`snapshotJsonValue` traversal) and encoded whole, bounded on both sides only by process memory (like a binding argument, which has no child-side budget either).
-- **No shipped profile mounts this provider** — the keyless `ptc-python-turn` snapshot replaces the headless PTC runtime through the real Loader; released profiles continue to use the worker-thread backend.
+- **No shipped profile mounts this provider** — `./native` publishes `codeRuntime` and is not mounted; a release package must not name this experimental package. The keyless `ptc-python-turn` snapshot still replaces the headless PTC runtime through the Cordis loader; released profiles continue to use the worker-thread backend.
 - **Cross-channel log interleaving is backend-dependent** — Python stdout, stderr, and fd-3 log frames travel independently; each channel preserves its own order, while their total order in `result.logs` may differ.
 - **CPython 3.10 or newer is required** — the configured executable is resolved and version-probed at load; unsupported interpreters fail before `ctx.codeRuntime` is registered.
 - **The truncation-marker text and the tempdir prefix keep the pre-rename short names** — the marker `[dsh-code-runtime-python] log capture truncated at <N> bytes` and the `dsh-code-runtime-python-` tempdir prefix are byte-anchored by tests and are independent of the npm package name; promotion (dropping the `experimental-` prefix) does not rename them.

@@ -117,6 +117,8 @@ CLI 参考文档用自己的表格陈述了这个区分：`web`、`headless`、`
 
 因此建议是「裁剪」而非全量移植或退役：那两个持久 shell 工具是 `sdk-minimal` 唯一在 Native 侧缺失的能力，也正是它与 `native-sdk` 的区别所在。那两个工具是可移植而非被阻塞的：它们只注入 `tools` 与 `terminals`，而 `rsh-terminal` **已经原生提供 `terminals`**——`spawn`、`list`、`startSend`、`read`、`kill` 都在 Native 注册表上存在。唯一差别是 `spawn` 签名：Cordis 服务取 `(owner, request, signal)`，Native 取单个 `NativeTerminalSpawnSpec`。所以这次移植是在一个已存在的面之上重写 438/474 行，而不是新增能力。
 
+这两个持久 shell 入口此后已经发布。`native-sdk` 挂载平台对应的那个。[Native SDK 持久 shell](../../implemented/architecture/2026-11-13-native-sdk-persistent-shell.zh.md) 记录这个决定。对 `sdk-minimal` 作出决定仍由 [Cordis 退役五阶段](2026-11-12-cordis-retirement-five-phases.zh.md) 负责。
+
 **建议：退役 `sdk-minimal` 这个 profile 名，而不是移植那两个工具**——但它不能当作清理工作直接删除。核查依赖之后，这个论证的代价一侧发生了变化。
 
 该名字被五个测试断言，其中包括一个端到端测试，会 dump 它的组合并逐行比对：`built-bin.e2e.ts` 运行 `--profile sdk-minimal --dump-default-config`，期望得到完全一致的有序 id 与包名列表；`profile-hmr.spec.ts` 断言它的树不含 HMR 模块；`profile.spec.ts` 直接钉住 `PROFILE_TEMPLATES` 条目。
@@ -157,7 +159,7 @@ CLI 参考文档用自己的表格陈述了这个区分：`web`、`headless`、`
 
 所以两者都被记录为受运行时能力阻塞，而不是受测试基础设施阻塞——这改变了「解除阻塞」的代价：那是循环层的工作，且必须自带场景覆盖，而不是改一下 fixture。
 
-`skill-load` 的阻塞来自内容而非能力：它的 setup 会复制 `agent-presets/presets/cordis/skills/editing-cordis-compositions/SKILL.md`，而该文件已不在仓库中。工具、注册表与文件系统来源都有 Native 入口，迁移后的场景能成功组合并调用它们——它回答该技能不存在，因为录制所依据的 fixture 已随 presets 退役。因此回放它需要针对仍然存在的技能重新录制，而不是 Native 移植。
+`skill-load` 不再需要重新录制。preset 文件 `agent-presets/presets/cordis/skills/editing-cordis-compositions/SKILL.md` 已不在仓库中，所以它的 Native 回放写入录制里的指令正文，并断言标题与 `DONE`。`default` composition 随后离开了 Cordis 启动器。[Cordis 回放在 Native 回放通过后停止](../../implemented/testing/2026-11-14-cordis-replay-stops-when-native-passes.zh.md) 记录这条规则。
 
 ## 剩余十七个场景及其确切阻塞
 
@@ -166,6 +168,8 @@ CLI 参考文档用自己的表格陈述了这个区分：`web`、`headless`、`
 **需要真实 HTTP 端点。** `web-fetch` 调用 `http://public.test:43117/menu.html` 并断言取回的页面文本；该录制没有 fixture 或 driver，只有一次真实请求。`web-search-endpoint-guidance` 对搜索 Provider 同形。两者都需要本地回环 fixture 服务器，而 Native 装配器不提供。
 
 **需要宿主专属运行时。** `missing-sandbox-runner` 设 `RSH_SNAPSHOT_MISSING_SANDBOX_RUNNER=1` 模拟缺失的 Landlock runner。`partial-landlock-child-failure` 断言仅 Linux 的 Landlock 行为（`platform: posix`）。`ptc-python-turn` 同样标 `posix`，但真正的阻塞不同：它把 worker provider 换成 `@redspark/rsh-experimental-code-runtime-python`，而该包属于 `Modules/Community/experimental` 且没有 `dsh.native` 入口，所以 Native profile 根本无法运行 Python 代码。除此之外它的断言与录制完全吻合（一个外层 `run_code`、两次 `bash` 分发、渲染结果含 `CODE_ONE`），因此一旦该运行时获得 Native 形态即可迁移。`persistent-pwsh-tool-turn` 声明 `platform: pwsh`，且其录制早于该工具必需的 `description` 字段，所以除了 Windows PTY 还需要重新录制。
+
+这个 Python 入口此后已经发布，并且仍未挂载。[Native Python code runtime](../../implemented/architecture/2026-11-13-native-python-code-runtime.zh.md) 记录它。发布包不得点名这个实验包。[Native SDK 持久 shell](../../implemented/architecture/2026-11-13-native-sdk-persistent-shell.zh.md) 决定保持不挂载。
 
 **需要场景无法表达的 fixture 插件。** `session-reference-spill` 已尝试但未走完，原因现在可复现而非含糊。组合 `session-query`、`session-reference` 与 `spill-local` 都能加载且种子已写入，但 `sessionQuery` 什么都不列出。直接探测后端就看出原因：扁平的 `<root>/reference-source.jsonl` 会被**忽略**（列出 0 条），而 `<root>/<id>/session.v3.jsonl` 布局会被拒绝，报 `uses the unsupported flat-file layout; use a separate root or move it into a project/session directory before loading`。存储要求在 session 目录**之上**还有一层 project 目录。所以种子失败在布局而非能力。该布局现已通过探测后端确定：一个 Session 只有在 `<root>/<cwd-分组>/<id>/session.vN.jsonl` 路径下才会被列出，其中没有记录 `cwd` 的 Session 位于字面分组 `_no-cwd` 之下。该路径上的文件可以加载并列出；而 header 的 `id` 与其目录不一致会被判为损坏日志。因此在那里写入种子是一个已知步骤，而不是开放问题——只是仅有布局还不够。该路径上手写的 `session.v3.jsonl` 会被存储**列出**，但读回来是**零个事件**，因为每个已存事件必须带有由 `Session` 分配的 `seq`，且 header 必须是存储编码出的那一个。所以种子必须通过 `Session` 加持久化句柄生成，而不是手写 JSON。`snapshots/session/session-reference-spill/native-source-session.ts` 正是这样做的：它把三个源事件追加进一个 `Session`，通过存储句柄持久化 `ownEvents()`，结果是既能**列出**、也能读回 `user/message,user/message,assistant/message`。Cordis 的 fixture 不需要这些，因为它从不持久化——它通过 `ctx.sessions` 进入一个活动 Session，而 Native 运行时没有等价服务，所以源必须是持久化的。
 
@@ -193,13 +197,13 @@ Native provider 只返回上下文；它从不改写直接消息，而 `native-h
 
 所以先前把 `sessionReference` 接进 `native-headless` 不只是有害，还是多余的；而它引发的时序中断是另一条独立的教训：在 `agentInstructions.prepare(...)` 旁边加上 `sessionReference.prepare(session, inputs, signal)`、追加其上下文、并在代码与 `package.json` 中都把该服务声明为可选，会让 `workflow-run` 稳定失败：它的 workflow 与 ralph 工具结果比录制提前了一个步骤。把该调用改成「仅在服务已安装时才挂起」，并去掉多余的那个 `signal.throwIfAborted()`，都没有改变结果；而未改动的树上该场景可以通过——验证了两次。所以循环的步骤边界对一次额外的 `await` 敏感，即使被等待的调用什么也不返回；未来任何尝试都必须保持既有的挂起顺序，而不是简单插入一次调用。该改动已回退，而不是带着红场景提交。`subagent-published-run-failure` 挂载 `subagent-durability-failure`（157 行）并设置 `RSH_SUBAGENT_PUBLISHED_FAILURE=1`。它同时注册的检查点现已能在 Native 上实现，但这不是该录制断言的内容。其断言来自 fixture 的**另一半**：它替换 `agents.create`，让已发布句柄的 `followup` 抛出 `snapshot published run failed`、`dispose` 抛出 `snapshot published handle disposal failed`，工具结果回显二者。Native 子代理没有等价注入：它的失败文本来自 `tool-subagent` 自身的 `stopReason` 映射，而 external-driver 接缝要求产品适配器失败，而不是让测试替换服务方法。核查 external-driver 接缝是否已提供它：并没有，而原因是刻意的差异而非缺口。`NativeExternalSubagentRun.dispose()` 可以拒绝，但 `native-subagent` 在 `disposeChild` 中捕获该拒绝，并在 `recordExternalDrainFailure` 之后转换成 `{ kind: 'failed', error }`——也就是说失败被**记录**，从不重新抛进工具结果。Cordis 的 fixture 是通过让 `dispose` 直接穿透被替换的服务来获得那段文本的。要在 Native profile 上复现它，就得改变 Native 子代理报告 drain 失败的方式，那是为满足一个测试而改变行为，而不是缺失能力。因此这个场景应当针对 Native 自身的 drain 失败形态重录，而不是移植。`product-subagent-result-diagnostic` 挂载 `subagent-result-diagnostic`。`partial-landlock-child-failure` 挂载 `partial-landlock-sandbox`。`agent-instructions` 需要名称含 `:` 的工作区目录，外加为其录制到的溢出准备的压缩策略。冒号不是偏好问题：`[System.IO.Directory]::CreateDirectory('…/scope:alt')` 在 Windows 上静默地什么都没创建（已实测——该路径此后不存在，`Test-Path -LiteralPath` 为 false），所以这个目录在本宿主上根本无法物化。
 
-**需要外部服务。** `lsp-definition` 驱动 LSP 服务器。`subagent-acp-diagnostic` 与 `product-subagent-result-diagnostic` 驱动 ACP 子进程。
+**需要外部服务。** `lsp-definition` 驱动 LSP 服务器。`subagent-acp-diagnostic` 与 `product-subagent-result-diagnostic` 对着 stub 驱动回放。
 
 **随 Cordis 退役。** `advanced-toolchain`、`advanced-toolchain-runtime` 与 `cordis-inspect-jsdoc` 演练 Cordis 工具链本身（`cordis_define`、`cordis_undefine`、`cordis_inspect_query`），按设计没有 Native 形态。
 
-**按原录制不可回放。** `session-query-spill` 会 grep 一个形如 `/tmp/dsh-acp-snap-<随机>` 的绝对 spill 路径，任何 fixture 都无法预测。`skill-load` 复制的 preset 技能文件仓库已不再包含。
+**已回放，无需重录。** `session-query-spill` 复用已录制的 `fromRequest` override 取得 spill 路径，并把请求头读作 seq 7。
 
-十七个里只有三个（`advanced-toolchain`、`advanced-toolchain-runtime`、`cordis-inspect-jsdoc`）随 Cordis 一起消失。其余十四个各需 Native 装配器所没有的测试基础设施，或一次重新录制。
+十七个里只有三个（`advanced-toolchain`、`advanced-toolchain-runtime`、`cordis-inspect-jsdoc`）随 Cordis 一起消失。十三个仍需 Native 装配器所没有的测试基础设施，或一次重新录制。`session-query-spill` 不在这其余部分里。
 
 ## 仍然让七个 bundle 包存活的还有什么
 
@@ -239,13 +243,15 @@ Native provider 只返回上下文；它从不改写直接消息，而 `native-h
 
 **Native Session 上的持久化检查点——2 个场景。** `NativeContinuationSession` 现已带有一个：`persist()` 先追加受管批次，随后在 writer flush 之前运行每个已注册的 `NativeDurabilityCheckpoint`，因此拒绝会中止该次 flush 并以与存储错误相同的形式浮出给调用方。`checkpoint(observer)` 返回其精确移除句柄，而 owner 通过 `NativeActiveSessionOwner.checkpoint` 暴露它——该成员在接口上是可选的，因此模拟 owner 的测试替身不必改动即可编译——Program 再把它转发到 session。这就是插件所需的完整 `session/flush` 能力：注册一次，在想失败的那个回合从回调中抛出即可。
 
-**Python 代码运行时——1 个场景。** `ptc-python-turn` 组合 `@redspark/rsh-experimental-code-runtime-python`，该包位于 `Modules/Community/experimental` 且没有 `dsh.native` 入口，所以 Native profile 根本无法运行 Python。
+**Python 代码运行时——已回放，未随包发布。** `ptc-python-turn` 现在通过 `snapshots/native-headless/ptc-python-turn-native.snapshot.ts` 回放。该隔离场景挂载 `@redspark/rsh-experimental-code-runtime-python`。已发布 profile 仍不得点名这个实验包。
 
-**持久 shell——1 个场景，外加第六个模板。** `tool-bash-persistent` 与 `tool-pwsh-persistent` 分别为 438 与 474 行，面向一个 Native 已存在的 `terminals` 服务。该接缝已端到端验证：`tool-terminal` 已发布 Native 入口并提供 `terminal_open`、`terminal_send`、`terminal_read`、`terminal_signal` 与 `terminal_close`，所以一个 Native 持久工具是在 `open`/`startSend`/`read` 之上的标记轮询循环，而非新的管线——Cordis 版本自身的辅助函数（标记生成、命令引用、截断、输出结算）可原样沿用。除此之外，只需补上 `sdk-minimal` 自身的缺口，而那既是技术选择也是策略选择；`persistent-pwsh-tool-turn` 还需要重录，因为它的录制早于必需的 `description` 字段。
+**持久 shell——1 个场景，外加第六个模板。** `tool-bash-persistent` 与 `tool-pwsh-persistent` 分别为 438 与 474 行，面向一个 Native 已存在的 `terminals` 服务。该接缝已端到端验证：`tool-terminal` 已发布 Native 入口并提供 `terminal_open`、`terminal_send`、`terminal_read`、`terminal_signal` 与 `terminal_close`，所以一个 Native 持久工具是在 `open`/`startSend`/`read` 之上的标记轮询循环，而非新的管线——Cordis 版本自身的辅助函数（标记生成、命令引用、截断、输出结算）可原样沿用。除此之外，只需补上 `sdk-minimal` 自身的缺口，而那既是技术选择也是策略选择；`persistent-pwsh-tool-turn` 还需要重录，因为它的录制早于必需的 `description` 字段。两个包现在都已发布 `./native`。`native-sdk` 挂载平台对应的那个；该场景仍需 Native 重录。
 
 **子代理失败时的产品诊断信息——1 个场景。** `product-subagent-result-diagnostic` 断言的工具结果形如 `Error: subagent run failed`，其后是 `Diagnostic: Product subagent failure (product: Claude Code; stage: query-run; category: limit)` 以及可能的部分输出。Cordis 的 fixture 通过实现 `SubagentProvider.start` 并返回 `{ output, diagnostic, stopReason: 'error' }` 来提供它。`NativeExternalSubagentOutcome` 只带 `output`、`structured` 与 `stopReason`，**没有 `diagnostic` 字段**，且 `tool-subagent` 的 Native schema 只发布 `stopReason`，因此 Native 侧无法承载产品给出的失败说明文本。要加上它意味着拓宽 external-driver 的 outcome 与工具 schema——那是真实的能力改动，而不是 fixture。
 
-**外部 LSP 或 ACP 服务——3 个场景。** `lsp-definition` 驱动 LSP 服务器；`subagent-acp-diagnostic` 与 `product-subagent-result-diagnostic` 驱动 ACP 子进程（后者还挂载 `subagent-result-diagnostic`）。
+该字段此后已经发布。[Native 外部 diagnostic](../../implemented/architecture/2026-11-13-native-external-diagnostic.zh.md) 记录它。已录制的调用现在对着 stub 驱动和归 Agent 所有的 job 回放，所以该场景不再被 ACP 子进程挡住。
+
+**外部 LSP 或 ACP 服务——1 个场景。** `lsp-definition` 驱动 LSP 服务器。`subagent-acp-diagnostic` 与 `product-subagent-result-diagnostic` 对着 stub 驱动回放，不启动产品子进程。
 
 **Linux 沙箱 runner——2 个场景。** `missing-sandbox-runner` 设 `RSH_SNAPSHOT_MISSING_SANDBOX_RUNNER=1` 模拟缺失的 Landlock runner；`partial-landlock-child-failure` 断言部分强制。
 
@@ -253,31 +259,31 @@ Native provider 只返回上下文；它从不改写直接消息，而 `native-h
 
 **随 Cordis 退役——3 个场景。** `advanced-toolchain`、`advanced-toolchain-runtime` 与 `cordis-inspect-jsdoc` 演练 `cordis_define`、`cordis_undefine`、`cordis_inspect_query`。
 
-**按原录制不可回放——2 个场景。** `session-query-spill` 会 grep 形如 `/tmp/dsh-acp-snap-<随机>` 的绝对路径；`skill-load` 复制的 preset 技能文件仓库已不再包含。两者都需要重录，而不是能力。
+**已回放，无需重录——1 个场景。** `session-query-spill` 复用已录制的 `fromRequest` override，并把请求头读作 seq 7。它不需要重录。
 
-六项能力里有三项规模不大且接缝已存在（`terminals`、持久化 Session 读取器、以及解锁了 `web-fetch` 的 fixture 服务器模式）。另三项则不是：Python、LSP/ACP 传输与 Landlock runner 都是独立运行时。这个划分才是有用的估算——而不是「还剩十二个场景」。
+六项能力里有三项规模不大且接缝已存在（`terminals`、持久化 Session 读取器、以及解锁了 `web-fetch` 的 fixture 服务器模式）。Python 现在已发布 `./native` 且未挂载。LSP/ACP 传输与 Landlock runner 仍是独立运行时。这个划分才是有用的估算——而不是「还剩十二个场景」。
 
 ## 收尾清单
 
-十五个场景逐一对照本树核实，并写明各自需要的动作。这些动作没有一个能在缺少以下三项决定之一的情况下执行，而那三项决定不属于我。
+十五个场景逐一对照本树核实，并写明各自需要的动作。`session-query-spill` 已回放，无需重录。其余动作在缺少以下三项决定之一时仍不能执行，而那三项决定不属于我。
 
 **随 Cordis 退役——3 个。** `advanced-toolchain`、`advanced-toolchain-runtime`、`cordis-inspect-jsdoc` 演练 `cordis_define`、`cordis_undefine` 与 `cordis_inspect_query`。动作：Cordis 工具包移除时删除这三个场景目录。
 
-**重录——4 个。** `session-reference-spill`（其手写的转录存着一个没有任何运行时会产出的展示形态）、`session-query-spill`（grep 形如 `/tmp/dsh-acp-snap-<随机>` 的绝对路径）、`skill-load`（复制的 preset 技能文件仓库已不含）、`subagent-published-run-failure`（断言抛出的 dispose 文本，而 Native 侧改为记录该失败）。动作：针对 Native profile 运行 `pnpm run test:snapshot:record`，需要 `DEEPSEEK_API_KEY`。
+**重录——2 个。** `session-reference-spill`（其手写的转录存着一个没有任何运行时会产出的展示形态）与 `subagent-published-run-failure`（断言抛出的 dispose 文本，而 Native 侧改为记录该失败）。`session-query-spill` 不在这份名单里。动作：针对 Native profile 运行 `pnpm run test:snapshot:record`，需要 `DEEPSEEK_API_KEY`。
 
 **新增运行时能力——8 个。** 每一项都对照了需要改动的代码：
 
 | 场景 | 缺失能力 | 改动位置 |
 | --- | --- | --- |
-| `ptc-python-turn` | Python 执行 | `experimental-code-runtime-python` 没有 `dsh.native` 入口 |
+| `ptc-python-turn` | Python 执行 | 已在隔离场景回放；已发布 profile 仍不得点名 `experimental-code-runtime-python` |
 | `lsp-definition` | LSP 服务器 | 没有 Native LSP 传输 |
-| `subagent-acp-diagnostic` | ACP 子进程 | `acp-child` 有适配器但无可组合 profile |
-| `product-subagent-result-diagnostic` | 失败时的产品诊断 | `NativeExternalSubagentOutcome` 与工具 schema 只带 `stopReason` |
-| `persistent-pwsh-tool-turn` | 持久 shell | `tool-pwsh-persistent` 没有 `dsh.native` 入口；`tool-terminal` 已证明接缝 |
+| `subagent-acp-diagnostic` | ACP 诊断 | 已通过 `subagent_acp` 和 stub 驱动回放；不启动 ACP 子进程 |
+| `product-subagent-result-diagnostic` | 失败时的产品诊断 | 已对着 stub 驱动和归 Agent 所有的 job 回放；不启动产品子进程 |
+| `persistent-pwsh-tool-turn` | 持久 shell | `tool-pwsh-persistent` 已发布 `./native`，且 `native-sdk` 挂载平台对应的 shell；该场景仍需 Native 重录 |
 | `missing-sandbox-runner`、`partial-landlock-child-failure` | Linux 沙箱 runner | Landlock 仅限 Linux；CI 拥有该信号 |
 | `agent-instructions` | 含 `:` 的工作区路径 | Windows 无法创建，已通过 `CreateDirectory` 验证 |
 
-这就是第 3 步的全部。八项中有两项规模不大且接缝已存在（shell 用 `tool-terminal`，`acp-child` 已有适配器）；三项是独立运行时（Python、LSP、Landlock）；一项是 Windows 限制；一项是类型与 schema 拓宽；还有一项实际需要重录而非代码。
+这就是第 3 步的全部。八项中有两项规模不大且接缝已存在（shell 用 `tool-terminal`，`acp-child` 已有适配器）；Python 已发布 `./native` 且未挂载；两项仍是独立运行时（LSP、Landlock）；一项是 Windows 限制；一项是类型与 schema 拓宽；还有一项实际需要重录而非代码。
 
 ## 一个会隐藏源码改动的构建陷阱
 

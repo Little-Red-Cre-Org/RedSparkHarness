@@ -1,6 +1,6 @@
 version: 1
 scenario: workflow-run
-profile: web
+profile: native-web
 composition: default
 recording: authored
 header:

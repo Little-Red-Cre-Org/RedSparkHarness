@@ -18,7 +18,7 @@ No privileged core needs patching: plugins mount beside each other, and registra
 
 A running `dsh` is a plugin tree composed at boot from ordered layers.
 
-A **profile** is a named composition stored in the Harness home. It lists the bundles it stacks, holds any out-of-tree plugins it installs, and keeps the user's own `cordis.patch.yml`. `web`, `headless`, `sdk`, `sdk-minimal`, and `acp` ship as templates.
+A **profile** is a named composition stored in the Harness home. It lists the bundles it stacks, holds any out-of-tree plugins it installs, and keeps the user's own `cordis.patch.yml`. `web`, `headless`, `sdk`, and `acp` ship as templates.
 
 A **bundle** is a distribution format for Cordis config rows and the code they mount, so whatever it inserts stays patchable by the layers above it.
 
@@ -28,7 +28,7 @@ Each declares itself in its own `package.json` under a `dsh` field: `dsh.profile
 
 Layers apply to an empty entry list in this order: each bundle in the profile's listed order, then the profile's `cordis.patch.yml`, then the home-level one, then any `--patch` overlay. A patch targets a row by id and replaces its whole config, or inserts new rows.
 
-Custom profiles default to live reload. `web` reloads live; `headless`, `sdk`, `sdk-minimal`, and `acp` load once because replacing dependencies after work starts invalidates one-shot or stdio lifecycles. Loader-managed fresh agents await composition when persistence is absent.
+Custom profiles default to live reload. `web` reloads live; `headless`, `sdk`, and `acp` load once because replacing dependencies after work starts invalidates one-shot or stdio lifecycles. Loader-managed fresh agents await composition when persistence is absent.
 
 Native `native-web` sets `dsh.profile.configReload: live` to watch `rsh.profile.json` and explicit JSON `--patch` files, then replace the Host installation plan. `native-headless`, `native-sdk`, `native-acp`, and `native-tui` remain startup-only. See [the CLI reload contract](../Programs/CLI/reference/README.md); Host config reload is separate from Cordis patch reload and Web Client asset rebuilding.
 
@@ -44,11 +44,11 @@ Composition mechanics are in [app-boot](../Compatibility/DSH/boot/app-boot/READM
 
 ## Application launch
 
-Every supported Node application starts at the `dsh` CLI with a named profile. The shipped applications are `dsh web` (the deliberate alias for `--profile web`), `dsh --profile headless`, `dsh --profile sdk`, `dsh --profile sdk-minimal`, and `dsh --profile acp`. The TypeScript SDK resolves its same-version `dsh` dependency and selects `sdk`; custom plugin composition remains a profile plus ordered patch files, not another executable or inline application tree. `sdk-minimal` is a repository-owned standalone bundle behind the same launcher, not a caller-supplied Cordis tree.
+Every supported Node application starts at the `dsh` CLI with a named profile. The shipped applications are `dsh web` (the deliberate alias for `--profile web`), `dsh --profile headless`, `dsh --profile sdk`, and `dsh --profile acp`. The TypeScript SDK resolves its same-version `dsh` dependency and selects `sdk`; custom plugin composition remains a profile plus ordered patch files, not another executable or inline application tree. The launcher refuses the name `sdk-minimal`; use `--profile sdk`. Existing directories are not rewritten.
 
 Vendored CLIs, build-only and test-only executables, direct in-process plugin mounting, and the private browser WebWorker preview are not Harness application launchers. [`verify-application-entrypoints`](../Scripts/verify-application-entrypoints.ts) keeps every package bin, executable source, and root demo in an explicit class and rejects a Node application path that bypasses `dsh`.
 
-The Python SDK follows the same application architecture. Its runtime wheel packages the normal `dsh` CLI as `redspark-harness-sdk-runtime-<platform>-<arch>`, and the client launches `dsh --profile sdk` with an explicit Harness home by default. The minimal example selects the shipped `sdk-minimal` profile. Python exposes profile selection and ordered patch files rather than a complete Cordis tree; persistent external plugins are installed through `dsh plugin`. The removed private direct-config carrier has no compatibility bin or fallback parser.
+The Python SDK follows the same application architecture. Its runtime wheel packages the normal `dsh` CLI as `redspark-harness-sdk-runtime-<platform>-<arch>`, and the client launches `dsh --profile sdk` with an explicit Harness home by default. The minimal example also selects `sdk`. Python exposes profile selection and ordered patch files rather than a complete Cordis tree; persistent external plugins are installed through `dsh plugin`. The removed private direct-config carrier has no compatibility bin or fallback parser.
 
 ## Desktop application
 

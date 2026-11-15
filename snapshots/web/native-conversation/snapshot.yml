@@ -1,6 +1,6 @@
 version: 1
 scenario: native-conversation
-profile: web
+profile: native-web
 composition: native-web-conversation
 recording: authored
 header:

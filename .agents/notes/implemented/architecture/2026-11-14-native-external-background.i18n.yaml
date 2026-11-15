@@ -1,0 +1,6 @@
+# Bilingual-pair consistency record (rsh/Docs/i18n/README.md): the git blob hash of each
+# side as of the last confirmed-consistent state. Both languages carry equal authority;
+# after editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write .agents/notes/implemented/architecture/2026-11-14-native-external-background.md
+2026-11-14-native-external-background.md: 5ef6633c7633f9e9480c1bd6a68b189809c87bb9
+2026-11-14-native-external-background.zh.md: 4ba9da7116f73584166c570d0638db6d495ed7d5

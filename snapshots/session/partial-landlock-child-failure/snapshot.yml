@@ -1,6 +1,6 @@
 version: 1
 scenario: partial-landlock-child-failure
-profile: legacy-headless
+profile: headless
 composition: partial-landlock
 recording: authored
 header:

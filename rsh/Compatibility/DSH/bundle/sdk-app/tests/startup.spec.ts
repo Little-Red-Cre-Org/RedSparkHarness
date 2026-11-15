@@ -64,8 +64,8 @@ describe('SDK app startup', () => {
   })
 
   it('renders the selected SDK profile name in help', () => {
-    const { out } = start(['--help'], { profile: 'sdk-minimal' })
-    expect(out()).toContain('Usage: dsh --profile sdk-minimal')
-    expect(out()).toContain('dsh --profile sdk-minimal')
+    const { out } = start(['--help'], { profile: 'custom-sdk' })
+    expect(out()).toContain('Usage: dsh --profile custom-sdk')
+    expect(out()).toContain('dsh --profile custom-sdk')
   })
 })

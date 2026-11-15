@@ -1,6 +1,6 @@
 import { EventEmitter } from 'node:events'
 import { Readable } from 'node:stream'
-import type { IncomingMessage, ServerResponse } from 'node:http'
+import { createServer, type IncomingMessage, type ServerResponse } from 'node:http'
 import { describe, expect, it } from 'vitest'
 import { bridge } from '../src/http-bridge.ts'
 
@@ -48,6 +48,7 @@ describe('HTTP bridge abort', () => {
     const response = Object.assign(new EventEmitter(), {
       writableEnded: false,
       writeHead() { return this },
+      flushHeaders() { return this },
       write() { return true },
       end() { this.writableEnded = true; return this },
     }) as unknown as ServerResponse
@@ -90,6 +91,7 @@ describe('HTTP bridge abort', () => {
     const response = Object.assign(new EventEmitter(), {
       writableEnded: false,
       writeHead(code: number) { status = code; return this },
+      flushHeaders() { return this },
       write(chunk: Uint8Array) { responseBytes.push(chunk); return true },
       end(this: { writableEnded: boolean }) { this.writableEnded = true; return this },
     }) as unknown as ServerResponse
@@ -132,6 +134,7 @@ describe('HTTP bridge abort', () => {
     const response = Object.assign(new EventEmitter(), {
       writableEnded: false,
       writeHead(code: number, values?: unknown) { status = code; headers = values; return this },
+      flushHeaders() { return this },
       write() { return true },
       end(this: { writableEnded: boolean }) { this.writableEnded = true; return this },
     }) as unknown as ServerResponse
@@ -143,5 +146,47 @@ describe('HTTP bridge abort', () => {
     expect(status).toBe(415)
     expect(headers).toMatchObject({ connection: 'close' })
     expect(destroyed).toEqual([true])
+  })
+})
+
+describe('HTTP bridge header flush', () => {
+  it('sends SSE headers before the first body chunk', async () => {
+    let release!: () => void
+    const opened = new Promise<void>((resolve) => { release = resolve })
+    const server = createServer((req, res) => {
+      void bridge(req, res, {
+        requestBodyMode: () => 'buffered',
+        fetch: () => {
+          const stream = new ReadableStream<Uint8Array>({
+            async pull(controller) {
+              await opened
+              controller.enqueue(new TextEncoder().encode('data: late\n\n'))
+              controller.close()
+            },
+          })
+          return Promise.resolve(new Response(stream, {
+            headers: { 'content-type': 'text/event-stream', 'cache-control': 'no-store' },
+          }))
+        },
+      }, 1000)
+    })
+    await new Promise<void>((resolve) => { server.listen(0, '127.0.0.1', () => { resolve() }) })
+    const address = server.address()
+    if (address === null || typeof address === 'string') throw new Error('bridge test server has no port')
+    try {
+      const response = await Promise.race([
+        fetch(`http://127.0.0.1:${address.port}/api/events`),
+        new Promise<Response>((_resolve, reject) => {
+          setTimeout(() => { reject(new Error('headers did not arrive before the first SSE chunk')) }, 1000)
+        }),
+      ])
+      expect(response.status).toBe(200)
+      expect(response.headers.get('content-type')).toBe('text/event-stream')
+      release()
+      expect(await response.text()).toBe('data: late\n\n')
+    } finally {
+      release()
+      await new Promise<void>((resolve) => { server.close(() => { resolve() }) })
+    }
   })
 })

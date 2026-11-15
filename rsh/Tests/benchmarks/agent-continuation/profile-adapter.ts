@@ -1,4 +1,4 @@
-/** Compiled synthetic model for the shipped sdk-minimal profile; tools remain production plugins. */
+/** Compiled synthetic model for the sdk-minimal bundle; tools remain production plugins. */
 
 import type { Context } from '@redspark/cordis'
 import { LlmAdapter, ToolCallId } from '@redspark/rsh-llm'

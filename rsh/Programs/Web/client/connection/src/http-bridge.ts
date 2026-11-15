@@ -84,6 +84,10 @@ export async function bridge(
   const requestUnread = bodyMode === 'streaming' && !req.readableEnded
   const responseHeaders = Object.fromEntries(response.headers.entries())
   res.writeHead(response.status, requestUnread ? { ...responseHeaders, connection: 'close' } : responseHeaders)
+  // writeHead queues the status line until the first body write. An SSE stream
+  // that waits for an event never writes that chunk, so the browser holds the
+  // HTTP/1.1 connection and will not open another request to this host.
+  res.flushHeaders()
   if (response.body === null) {
     res.end()
     if (requestUnread) req.destroy()

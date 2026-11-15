@@ -4,7 +4,7 @@ import { readdir } from 'node:fs/promises'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { expect, it } from 'vitest'
-import { deriveReplayScript, parseSessionLog } from '@redspark/rsh-llm-replay'
+import { parseSessionLog } from '@redspark/rsh-llm-replay'
 import { JsonlSessionBackend } from '@redspark/rsh-session-persistence-jsonl'
 import { assembleNativeScenario, reexportPackage } from '@redspark/rsh-session-snapshot'
 
@@ -24,7 +24,7 @@ it.skipIf(process.platform === 'win32')('replays the recorded ptc-read-image-att
   const scenario = assembleNativeScenario({
     root,
     scene,
-    workspaceFiles: { 'workspace/red.png': 'workspace/red.png' },
+    workspaceFiles: { 'workspace/red.png': 'red.png' },
     modules: [
       { name: 'rsh-permission-presets', path: 'rsh/Modules/Official/interaction/permission-presets' },
       { name: 'rsh-session-title', path: 'rsh/Engine/session/session-title' },
@@ -75,11 +75,14 @@ it.skipIf(process.platform === 'win32')('replays the recorded ptc-read-image-att
           systemPrompt: 'Use the read and write tools.', maxSteps: 6 } }
       }
       // The recorded turn dispatches through run_code, so the code-runtime rows stay enabled.
-  if (['time-context', 'jobs', 'tool-jobs'].includes(row.id)) return { ...row, disabled: true }
-  if (row.id.startsWith('code-runtime')) return { ...row, disabled: false }
+      if (['time-context', 'jobs', 'tool-jobs'].includes(row.id)) return { ...row, disabled: true }
+      if (row.id.startsWith('code-runtime')) return { ...row, disabled: false }
       return row
     },
-    model: { plugin: 'rsh-llm-replay-native', config: { file: fixture, script: deriveReplayScript(recorded),
+    model: { plugin: 'rsh-llm-replay-native', config: { file: fixture,
+      // The sidecar rewrites the second path from the live first result. The
+      // derived script keeps the recording token {{cwd}}, which is not a live path.
+      overrideFile: join(scene, 'replay.override.json'),
       // read_image refuses a route that declares no image input.
       providers: [{ id: 'deepseek-official', models: [{
         id: 'deepseek-v4-flash-vision-exp', inputModalities: ['text', 'image'],
@@ -103,8 +106,10 @@ it.skipIf(process.platform === 'win32')('replays the recorded ptc-read-image-att
       // code-runtime tool rather than the builtin transport's placeholder.
       { id: 'tool-code-runtime', plugin: '@redspark/rsh-tool-code-runtime', scope: 'root', config: {} },
       // read_image materializes the attachment it reports, and the program's read binding
-      // only exists when the fs tool is installed.
-      { id: 'attachments', plugin: '@redspark/rsh-attachment-local', scope: 'root', config: {} },
+      // only exists when the fs tool is installed. The committed override addresses
+      // <cwd>/.dsh/attachments/v1/objects/<hash>; the store root is rshHome/attachments/v1.
+      { id: 'attachments', plugin: '@redspark/rsh-attachment-local', scope: 'root',
+        config: { rshHome: join(paths.workspace, '.dsh') } },
       { id: 'files', plugin: '@redspark/rsh-tool-fs', scope: 'root' },
 
     ],
@@ -118,16 +123,19 @@ it.skipIf(process.platform === 'win32')('replays the recorded ptc-read-image-att
       const reader = await storage.open(id, 'read')
       try {
         const events = (await reader.read()).events
-        // The recorded call ran one program that dispatched two nested tool calls.
+        // The override is two run_code calls; each dispatches one read_image.
         expect(events.filter(event => event.type === 'tool/call').map(event => event.type === 'tool/call' ? event.data.name : undefined))
-          .toEqual(['run_code'])
+          .toEqual(['run_code', 'run_code'])
 
         // The program read the workspace image twice through the binding; the second read
         // addresses the attachment store's own copy.
         const dispatch = events.filter(event => event.type === 'tool/ptc-dispatch')
         expect(dispatch.map(entry => entry.type === 'tool/ptc-dispatch' ? entry.data.name : null))
           .toEqual(['read_image', 'read_image'])
-        for (const entry of dispatch) expect(entry).toMatchObject({ data: { isError: false } })
+        for (const entry of dispatch) {
+          if (entry.type !== 'tool/ptc-dispatch') continue
+          expect(entry.data.isError, JSON.stringify(entry.data.content)).toBe(false)
+        }
         const results = events.filter(event => event.type === 'tool/result')
         expect(results.length).toBeGreaterThanOrEqual(1)
         const rendered = results.map((result) => result.type === 'tool/result'

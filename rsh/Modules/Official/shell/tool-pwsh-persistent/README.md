@@ -27,6 +27,8 @@ English | [中文](README.zh.md)
 
 Load this plugin in any composition where the agent should keep PowerShell state between commands — the persistent counterpart of `dsh-tool-pwsh` for work that needs cross-call state. It registers the `pwsh` tool and requires the `ctx.tools` and `ctx.terminals` services plus an owning agent session at execution time.
 
+The `./native` entry registers the same `pwsh` tool on a Native host. It requires the native `agents`, `terminals`, and `tools` services plus a terminal backend named by `backendType`. A Native composition selects `@redspark/rsh-tool-pwsh-persistent/native`; the package root remains the Cordis plugin and loads only when `apply` runs. `@redspark/cordis`, `@redspark/rsh-agent`, and `@redspark/rsh-tools` are optional peers, so a Cordis composition must still install them, while a Native composition does not.
+
 ### When to choose it
 
 Choose the persistent tool when work depends on cross-call PowerShell state, and choose `dsh-tool-pwsh` when every command should start from a known, clean environment. Commands that need interactive stdin are unsupported here — a foreground child that reads input blocks until the command timeout, which resets the shell — so interactive work belongs to the terminal tools.
@@ -81,12 +83,14 @@ This section explains the design decisions behind the tool and points at the cod
 
 | File | Role |
 |---|---|
-| [`src/index.ts`](src/index.ts) | Plugin entry: shell registry, prompt setup, command wrapping, scrollback polling, extraction and rendering |
-| — | No runtime invariant companion is published; the adapter's private owner-to-shell cache has no observable event or data relation. Lifecycle tests prove its cleanup without adding a public API solely for an invariant. |
+| [`src/persistent-core.ts`](src/persistent-core.ts) | Runtime-neutral shell reuse, prompt setup, marker extraction and rendering |
+| [`src/index.ts`](src/index.ts) | Cordis adapter: tool registration and the owner-scoped terminal port |
+| [`src/native.ts`](src/native.ts) | Native adapter: the same tool over the native terminal registry |
+| — | No runtime invariant companion is published; the core's private owner-to-shell cache has no observable event or data relation. Shell reuse remains observable through tool execution. Lifecycle tests prove its cleanup without adding a public API solely for an invariant. |
 
 ### Command flow
 
-A first command spawns the shell through `ctx.terminals.spawn`, installs the `prompt` override, and waits for readiness. Each command is wrapped into one physical line — `Write-Output` of the start marker, the body escaped with backtick escapes into a double-quoted string, and `Write-Output` of the end marker plus the exit status — so PSReadLine's echo of a wrapped line cannot fabricate completion. The tool polls the scrollback in 1,000-line pages until the end marker or a completed prompt appears, extracts the span, strips the echoed wrapper and prompts, and renders it with any status marker. A timeout aborts the deadline, captures the partial output, and resets the shell.
+A first command spawns the shell through the selected terminal port (`ctx.terminals.spawn` on Cordis, `terminals.open` on Native), installs the `prompt` override, and waits for readiness. Each command is wrapped into one physical line — `Write-Output` of the start marker, the body escaped with backtick escapes into a double-quoted string, and `Write-Output` of the end marker plus the exit status — so PSReadLine's echo of a wrapped line cannot fabricate completion. The tool polls the scrollback in 1,000-line pages until the end marker or a completed prompt appears, extracts the span, strips the echoed wrapper and prompts, and renders it with any status marker. A timeout aborts the deadline, captures the partial output, and resets the shell.
 
 </details>
 
@@ -101,6 +105,7 @@ Read these pages when the package-level contract is not enough. They move from t
 - [terminal seam](../../terminal/terminal/README.md) — the `ctx.terminals` service behind the tool.
 - [terminal-bash backend](../../terminal/terminal-bash/README.md) — the default backend, configured with `shellDialect: pwsh`.
 - [pwsh persistent PTY Agent Note](../../../../../.agents/notes/archived/architecture/2026-08-11-pwsh-persistent-pty.md) — the pwsh-side session design and its rationale.
+- [Native persistent PowerShell](../../../../../.agents/notes/implemented/architecture/2026-11-13-native-persistent-pwsh.md) — the runtime-neutral core and the Cordis and Native adapters.
 - [Persistent PTY sessions Agent Note](../../../../../.agents/notes/implemented/feature/2026-07-16-persistent-pty-sessions.md) — the owner-scoped session design and its rationale.
 - [Generated tool catalog](../../../../Docs/tool-catalog.md#redsparkrsh-tool-pwsh-persistent) — the exact `pwsh` argument schema.
 - [Generated configuration catalog](../../../../Docs/config-catalog.md#redsparkrsh-tool-pwsh-persistent) — every accepted config field and its source declaration.
@@ -128,7 +133,7 @@ Prefix-stable while the configured description and schema remain unchanged.
 
 #### What the model sees
 
-Commands share one shell per Agent, so cwd, `$env:` variables, functions, and background jobs persist across calls. Results exclude private completion markers, the shell prompt, and the echoed input line (PSReadLine renders submitted input back into the stream; the marker-anchored extraction and the wrapper-source strip remove it). A nonzero wrapped command appends `[exit code: N]` — the exact native exit code when the command ran a native program, `1` for a terminating PowerShell error. A shell that exits before reporting that status instead appends `[shell exited: code N]`, `[shell killed by signal: SIG]`, or `[shell exited]` when the backend supplies neither (Windows forced termination reports exit 1 without a signal), then resets and tells the model that the next call starts fresh. Long output keeps the earliest retained prefix plus a clipping notice; if the terminal has already dropped that prefix, the result says so explicitly. Timeout returns bounded partial output, closes the uncertain shell, and reports the reset.
+Commands share one shell per Agent, so cwd, `$env:` variables, functions, and background jobs persist across calls. Results exclude private completion markers, the shell prompt, and the echoed input line (PSReadLine renders submitted input back into the stream; the marker-anchored extraction and the wrapper-source strip remove it). A nonzero wrapped command appends `[exit code: N]` — the exact native exit code when the command ran a native program, `1` for a terminating PowerShell error. A shell that exits before reporting that status instead appends `[shell exited: code N]`, `[shell killed by signal: SIG]`, or `[shell exited]` when the backend supplies neither (Windows forced termination reports exit 1 without a signal), then resets and tells the model that the next call starts fresh. Long output keeps the earliest retained prefix plus a clipping notice; if the terminal has already dropped that prefix, the result says so explicitly. Timeout returns bounded partial output, closes the uncertain shell, and reports the reset. A Native list snapshot carries `running`, `exited`, or `failed` and no exit code or signal, so a shell that is no longer running renders `[shell exited]` and the reset notice.
 
 #### Token effect
 

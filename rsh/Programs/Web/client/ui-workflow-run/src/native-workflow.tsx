@@ -1,11 +1,13 @@
-/** Cordis-free workflow run projection and read-only presentation. */
-import type { SessionEvent } from '@redspark/rsh-session/types'
+/** Cordis-free workflow run projection and presentation. */
+import type { SessionEvent, SessionId } from '@redspark/rsh-session/types'
 import type { Translate } from '@redspark/rsh-client-ui-slots'
 import { WorkflowRunView } from './WorkflowRunView.tsx'
 import {
   projectWorkflowState, updateAgentEnd, updateAgentStart,
   type WorkflowRunChatData, type WorkflowState,
 } from './workflow-projection.ts'
+
+export { navigableWorkflowMembers } from './workflow-projection.ts'
 import { en, zh, type WorkflowRunKey } from './client/locales.ts'
 
 /** One Native run anchored at its durable run-start sequence. */
@@ -54,16 +56,21 @@ export function workflowRunsFromSessionEvents(events: readonly SessionEvent[]): 
 }
 
 const NO_NAVIGATION: readonly never[] = []
-/* v8 ignore next -- Native members never receive navigation eligibility, so the shared view cannot invoke this callback. */
+/* v8 ignore next -- an omitted openSession also clears navigable, so the view cannot invoke this callback. */
 function readOnly(): void {}
 
-/** Render a workflow run with read-only members using the shared Cordis presentation.
- * @param props - durable projected run and Native locale.
+/** Render a workflow run using the shared presentation.
+ * A member opens only when both `navigable` and `openSession` are provided; otherwise the row stays non-interactive.
+ * @param props - durable projected run, Native locale, eligible child ids, and the select callback.
  * @returns status-driven workflow and phase disclosures.
  */
-export function NativeWorkflowRunPanel({ data, locale }: {
+export function NativeWorkflowRunPanel({ data, locale, navigable, openSession }: {
   readonly data: WorkflowRunChatData
   readonly locale: 'en' | 'zh'
+  /** Child ids already proven eligible. Omitted, or omitted `openSession`, keeps every member non-interactive. */
+  readonly navigable?: readonly SessionId[]
+  /** Selects the child Session. Omitted keeps every member non-interactive. */
+  readonly openSession?: (id: SessionId) => void
 }) {
   const dictionary = locale === 'zh' ? zh : en
   const t: Translate<WorkflowRunKey> = (key, params) => {
@@ -71,5 +78,10 @@ export function NativeWorkflowRunPanel({ data, locale }: {
     for (const [name, replacement] of Object.entries(params ?? {})) value = value.replace(`{${name}}`, String(replacement))
     return value
   }
-  return <WorkflowRunView data={data} navigable={NO_NAVIGATION} openSession={readOnly} t={t} />
+  return <WorkflowRunView
+    data={data}
+    navigable={openSession === undefined || navigable === undefined ? NO_NAVIGATION : navigable}
+    openSession={openSession ?? readOnly}
+    t={t}
+  />
 }

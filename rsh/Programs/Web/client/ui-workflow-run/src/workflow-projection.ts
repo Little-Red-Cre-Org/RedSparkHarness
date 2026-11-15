@@ -140,3 +140,39 @@ export function updateAgentEnd(state: WorkflowState, data: ToolWorkflowAgentEndD
       : member),
   }
 }
+
+/** Ordinary Session-list facts read when deciding whether a member row may open. */
+export interface WorkflowChildListRow {
+  /** Durable origin. Only `subagent` may open. */
+  readonly origin?: 'subagent'
+  /** Parent Session recorded on the list row. */
+  readonly parentId?: SessionId
+  /** Whether that list row is still running. */
+  readonly running: boolean
+}
+
+/** Child Session ids whose member row may open.
+ * A missing row means the child is absent from the ordinary Session list.
+ * @param phases - projected phases of one run.
+ * @param parentId - Session that owns the run.
+ * @param row - ordinary-list facts for a child id, or undefined when that id is not listed.
+ * @returns child ids, in phase order, that are running members of a running subagent row of `parentId`.
+ */
+export function navigableWorkflowMembers(
+  phases: readonly WorkflowRunPhaseData[],
+  parentId: SessionId,
+  row: (childId: SessionId) => WorkflowChildListRow | undefined,
+): readonly SessionId[] {
+  const result: SessionId[] = []
+  for (const phase of phases) {
+    for (const member of phase.members) {
+      const summary = row(member.childId)
+      if (member.status === 'running'
+        && summary !== undefined
+        && summary.origin === 'subagent'
+        && summary.parentId === parentId
+        && summary.running) result.push(member.childId)
+    }
+  }
+  return result
+}

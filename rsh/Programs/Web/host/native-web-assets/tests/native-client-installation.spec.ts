@@ -118,6 +118,45 @@ it('defines only public Client environment values and fixes the browser bundle t
   })
 })
 
+it('compiles a workspace TSX entry with the automatic JSX runtime', async () => {
+  const home = await mkdtemp(join(tmpdir(), 'rsh-native-client-jsx-'))
+  const project = join(home, 'profile'), runtime = join(home, 'runtime')
+  const fixture = join(runtime, 'node_modules', 'jsx-client')
+  const react = join(runtime, 'node_modules', 'react')
+  try {
+    await mkdir(project)
+    await mkdir(fixture, { recursive: true })
+    await mkdir(react)
+    await writeFile(join(react, 'package.json'), JSON.stringify({
+      name: 'react', type: 'module', exports: { './jsx-runtime': './jsx-runtime.mjs' },
+    }))
+    await writeFile(join(react, 'jsx-runtime.mjs'), [
+      'export const jsx = (type, props) => ({ type, props })',
+      'export const jsxs = jsx',
+    ].join('\n'))
+    await writeFile(join(fixture, 'package.json'), JSON.stringify({
+      name: 'jsx-client', type: 'module', exports: { './native': './native.tsx' },
+      dsh: { native: { apiVersion: 1, entry: './native', targets: ['client'], requires: [], optional: [], provides: [] } },
+    }))
+    await writeFile(join(fixture, 'native.tsx'), [
+      'export const plugin = { apiVersion: 1, name: "jsx-client", targets: ["client"], requires: [], provides: [], resolve: () => () => {} }',
+      'export const render = () => <span className="marker">presented</span>',
+    ].join('\n'))
+    await writeFile(join(project, 'rsh.client.json'), JSON.stringify({
+      formatVersion: 1, installations: [{ id: 'client', plugin: 'jsx-client' }],
+    }))
+
+    const bundle = await prepareNativeClientBundle(project, runtime)
+    const asset = bundle?.assets.get(bundle.wire.bundle)
+    const module = await import(`data:text/javascript;base64,${Buffer.from(asset!.body).toString('base64')}`) as {
+      plugins: { client: { render: () => unknown } }
+    }
+    expect(module.plugins.client.render()).toEqual({ type: 'span', props: { className: 'marker', children: 'presented' } })
+  } finally {
+    await rm(home, { recursive: true, force: true })
+  }
+})
+
 it('embeds the official build profile when the Host process supplies none', async () => {
   vi.stubEnv('RSH_CLIENT_BUILD_PROFILE', undefined)
   // Every build-profile gate in a Native Client reads this value; without the

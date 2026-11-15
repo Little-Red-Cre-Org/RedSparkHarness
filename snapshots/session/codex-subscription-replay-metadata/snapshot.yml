@@ -1,6 +1,6 @@
 version: 1
 scenario: codex-subscription-replay-metadata
-profile: legacy-headless
+profile: headless
 composition: codex-subscription
 recording: authored
 header:

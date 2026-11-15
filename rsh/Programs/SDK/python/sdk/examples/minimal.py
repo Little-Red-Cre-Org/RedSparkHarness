@@ -21,17 +21,17 @@ def main() -> None:
         type=Path,
         default=Path(configured_home) if configured_home.strip() else None,
     )
-    parser.add_argument("--profile", default="sdk-minimal")
+    parser.add_argument("--profile", default="sdk")
     parser.add_argument("--session-id")
     parser.add_argument("--provider", default="deepseek-official")
     parser.add_argument("--model", default=os.environ.get("RSH_MODEL", "deepseek-v4-flash"))
     parser.add_argument("--max-tokens", type=int)
     args = parser.parse_args()
-    if args.rsh_home is None:
+    if args.dsh_home is None:
         parser.error("--dsh-home or a non-empty RSH_HOME is required")
 
     workspace = args.workspace.resolve()
-    rsh_home = args.rsh_home.resolve()
+    rsh_home = args.dsh_home.resolve()
     with RedSparkHarness(
         provider=args.provider,
         model=args.model,

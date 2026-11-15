@@ -1,5 +1,6 @@
 /** Authenticated browser Session operations using the selected native execution authority. */
 import { randomUUID } from 'node:crypto'
+import { hostname } from 'node:os'
 import { constants as fsConstants } from 'node:fs'
 import type { BigIntStats } from 'node:fs'
 import { open, opendir, readdir, readlink, realpath, stat } from 'node:fs/promises'
@@ -22,6 +23,7 @@ import type {} from '@redspark/rsh-native-session-execution/native'
 import type {} from '@redspark/rsh-llm-pi-ai/native'
 import type {} from '@redspark/rsh-authorization/native'
 import { readNativeSessionHistory } from '@redspark/rsh-native-session-execution/read-history'
+import { foldScheduleEvents, ScheduleLogError } from '@redspark/rsh-schedule/domain'
 import { foldSessionTitle } from '@redspark/rsh-session-title/native'
 import type { NativeSessionTitles } from '@redspark/rsh-session-title/native'
 import { createNativeHeadlessApplication, resolveNativeHeadlessConfig, type Config as TurnConfig,
@@ -32,7 +34,7 @@ import type { NativeStagedFileBlock, NativeStagedFileReceiptId } from '@redspark
 import type { NativeSessionPersistenceOperations } from '@redspark/rsh-session-persistence/native'
 import type { SessionEvent } from '@redspark/rsh-session/types'
 import { SessionId } from '@redspark/rsh-session/native'
-import { SessionSeq } from '@redspark/rsh-session/types'
+import { SessionLogOffset, SessionSeq } from '@redspark/rsh-session/types'
 import type { WorkspaceId } from '@redspark/rsh-workspace-definition'
 import type { WorkspaceRegistryRuntime } from '@redspark/rsh-workspace/native'
 import type {} from '@redspark/rsh-workspace/native'
@@ -73,7 +75,8 @@ import { credentialRef } from '@redspark/rsh-credentials/native'
 import { parseCredentialKey } from '@redspark/rsh-credentials/native'
 import type { CredentialInfo, NativeCredentials } from '@redspark/rsh-credentials/native'
 import type {} from '@redspark/rsh-credentials/native'
-import { canOpenNativePath, openNativePath, openNativeTextFile } from '@redspark/rsh-native-command'
+import { canOpenNativePath, nativeFileManager, openNativePath, openNativeTextFile, revealNativePath } from '@redspark/rsh-native-command'
+import type {} from '@redspark/rsh-tool-present/types'
 import { NativeSettingsConflictError } from '@redspark/rsh-settings/native'
 import type { NativeSettingsPathOp, NativeSettingsScope, NativeSettingsSection, NativeSettingsService } from '@redspark/rsh-settings-definition/native'
 import type { NativeCommandOperations } from '@redspark/rsh-commands/native'
@@ -164,8 +167,27 @@ const nativeWorkspaceFileRead = nativeWorkspaceFilePath.extend({
   range: z.strictObject({ offset: z.number().optional(), limit: z.number().optional() }),
 })
 const nativeWorkspaceFileRelated = nativeWorkspaceFilePath.extend({ relativePath: z.string().min(1) })
+
+/** Wire paths shared with the browser Deliverables controller. */
+const PRESENT_HOST_PATH = '/api/present.host'
+const PRESENT_OPEN_PATH = '/api/present.open'
 /** One `@`-mention query: path text after `@` or `@"`, empty for the workspace root. */
 const nativeWorkspaceFileSearch = z.strictObject({ sessionId: z.string().min(1).max(256), query: z.string() })
+
+/** Whether the already-read log still has an active reminder after the fork prefix.
+ * @param events - complete bounded history for one row; overflow is refused before this call.
+ * @param inheritedEventCount - prefix excluded from this Session's ownership.
+ * @returns false when the fold is empty or the durable records cannot be decoded.
+ */
+function hasFoldedActiveSchedule(events: readonly SessionEvent[], inheritedEventCount: number): boolean {
+  try {
+    return foldScheduleEvents(events, SessionLogOffset(inheritedEventCount)).active.length > 0
+  } catch (error: unknown) {
+    /* v8 ignore next -- a supplied event array makes foldScheduleEvents raise only ScheduleLogError. */
+    if (!(error instanceof ScheduleLogError || error instanceof TypeError)) throw error
+    return false
+  }
+}
 
 declare module '@redspark/rsh-native-runtime' {
   interface NativeServices {
@@ -1679,6 +1701,81 @@ export class NativeWebSessionService {
     })
   }
 
+  /**
+   * Report the serving desktop's file-open capability for Declared files.
+   * @returns Host name, availability, and the platform file manager.
+   */
+  presentHost(): Response {
+    const fileManager = nativeFileManager()
+    return Response.json({ name: hostname(), available: fileManager !== null && canOpenNativePath(), fileManager },
+      { headers: { 'cache-control': 'no-store' } })
+  }
+
+  /**
+   * Open or reveal one file declared by a durable `deliverables/presented` event.
+   *
+   * Coordinates come from the browser and are re-read from the Session log: the
+   * request never supplies the path itself. The resolved target must stay inside
+   * the Session workspace and name a regular file.
+   * @param request - authenticated POST with Session, event sequence, index, and action.
+   * @returns 204 after the desktop opener accepts the path, or a typed refusal.
+   */
+  async presentOpen(request: Request): Promise<Response> {
+    return this.controls.run(request.signal, async (signal) => {
+      const query = new URL(request.url).searchParams
+      const action = query.get('action') ?? 'open'
+      const idText = query.get('sessionId')
+      const seqText = query.get('seq')
+      const indexText = query.get('index')
+      if ((action !== 'open' && action !== 'reveal') || idText === null || seqText === null || indexText === null
+        || !/^\d+$/.test(seqText) || !/^\d+$/.test(indexText)) {
+        return new Response('Invalid declared-file action.', { status: 400 })
+      }
+      const seq = Number(seqText)
+      const index = Number(indexText)
+      if (!Number.isSafeInteger(seq) || !Number.isSafeInteger(index)) return new Response('Invalid declared-file coordinates.', { status: 400 })
+      if (!canOpenNativePath()) return new Response('Host desktop unavailable.', { status: 409 })
+      const fs = this.fileSystem
+      if (fs === undefined) return new Response('Host desktop unavailable.', { status: 409 })
+      const reader = await this.persistence.open(sessionId(idText), 'read', { signal })
+      let header: { readonly cwd?: string }
+      let events: readonly SessionEvent[]
+      try {
+        header = reader.header
+        events = (await reader.read(0, undefined, { signal })).events
+      } finally {
+        await reader.close()
+      }
+      signal.throwIfAborted()
+      const event = events.find(candidate => candidate.seq === seq)
+      if (event?.type !== 'deliverables/presented') return new Response('Declared file not found in this Session.', { status: 404 })
+      const file = event.data.files[index]
+      if (file === undefined || file.path.trim().length === 0) return new Response('Declared file not found in this Session.', { status: 404 })
+      const root = header.cwd ?? this.config.cwd
+      let hostPath: string | undefined
+      try {
+        const rootTarget = await fs.resolve(root, { signal })
+        const target = await fs.resolve(file.path, { cwd: root, signal })
+        if (!fs.contains(rootTarget, target)) return new Response('Declared file is outside the Session workspace.', { status: 422 })
+        const info = await fs.stat(target, signal)
+        if (info?.type !== 'file') return new Response('Declared file is unavailable.', { status: 404 })
+        hostPath = fs.hostPathFor(fs.processPath(target))
+      } catch (error: unknown) {
+        signal.throwIfAborted()
+        return new Response(error instanceof Error ? error.message : 'Declared file is unavailable.', { status: 404 })
+      }
+      if (hostPath === undefined) return new Response('Declared file has no Host path.', { status: 422 })
+      try {
+        if (action === 'reveal') await revealNativePath(hostPath, signal)
+        else await openNativePath(hostPath, signal)
+      } catch (error: unknown) {
+        signal.throwIfAborted()
+        return new Response(error instanceof Error ? error.message : 'Could not open declared file.', { status: 500 })
+      }
+      return new Response(null, { status: 204, headers: { 'cache-control': 'no-store' } })
+    })
+  }
+
   private async settle(payload: unknown, signal: AbortSignal): Promise<unknown> {
     const fields = object(payload)
     for (const key of Object.keys(fields)) if (!['sessionId', 'admissionId'].includes(key)) throw new Error('native web session: unexpected settlement field')
@@ -1829,6 +1926,8 @@ export class NativeWebSessionService {
         }
         if (endpoint === 'session/mode-controls') {
           const id = sessionId(fields.sessionId)
+          const delegated = this.delegatedOwner(id)
+          if (delegated !== undefined) return this.delegatedModeControls(delegated)
           const route = await this.routeForSession(id, accepted)
           return await this.executor.executeSessionOperation({ id, resume: true, route }, async (owner, operationSignal) => {
             const events = await owner.readEvents({ signal: operationSignal })
@@ -1851,6 +1950,7 @@ export class NativeWebSessionService {
         }
         if (endpoint === 'session/permission-controls') {
           const id = sessionId(fields.sessionId)
+          if (this.delegatedOwner(id) !== undefined) return { available: false, currentValue: null, options: [] }
           const route = await this.routeForSession(id, accepted)
           const permissions = this.selections.permissionPresets
           if (permissions === undefined) return { available: false, currentValue: null, options: [] }
@@ -2156,7 +2256,8 @@ export class NativeWebSessionService {
       runningSubagentCount: context.runningSubagentCount.get(id) ?? 0,
       ...(pendingKind === undefined ? {} : { pendingInteraction: { kind: pendingKind } }),
       ...(workspaceId === undefined ? {} : { workspaceId }),
-      hasActiveSchedule: false,
+      hasActiveSchedule: history === undefined ? false
+        : hasFoldedActiveSchedule(history.events, history.inheritedEventCount),
     }
   }
 
@@ -2222,9 +2323,31 @@ export class NativeWebSessionService {
     }
   }
 
-  private async routeForSession(id: SessionId, signal: AbortSignal): Promise<NativeRootRouteId> {
+  private delegatedOwner(id: SessionId): NativeActiveSessionOwner | undefined {
+    return this.active.owners().find(candidate => candidate.session.id === id && candidate.invocation === 'delegated')
+  }
+
+  /** A running child is not a root owner. Do not admit it or read its writer while its turn is live. */
+  private delegatedModeControls(owner: NativeActiveSessionOwner) {
+    const presets = this.selections.presets?.list() ?? []
+    return {
+      current: owner.session.header.agentPreset ?? null,
+      options: presets.map(({ id: presetId, name, description }) => ({ id: presetId, name,
+        ...description === undefined ? {} : { description } })),
+      revision: null,
+      locked: true,
+      canSelect: false,
+      planMode: { available: this.selections.planMode !== undefined, active: false },
+    }
+  }
+
+  private async routeForSession(id: SessionId, signal: AbortSignal, seen: ReadonlySet<SessionId> = new Set()): Promise<NativeRootRouteId> {
     const owner = this.active.owners().find(candidate => candidate.session.id === id && candidate.invocation === 'root')
     if (owner !== undefined) return this.executor.rootExecution.capture(owner).id
+    const parentId = this.delegatedOwner(id)?.session.header.parentSession
+    if (parentId !== undefined && parentId !== id && !seen.has(id)) {
+      return this.routeForSession(parentId, signal, new Set([...seen, id]))
+    }
     const workspace = this.workspaceForSession(id)
     if (workspace === undefined) return this.titleRoute()
     const route = this.executor.rootExecution.workspaceRoutes().find(candidate => candidate.workspaceId === workspace.id)
@@ -2464,6 +2587,10 @@ export const plugin: NativePlugin = {
         fetch: request => authorization.frames(request) }))
       context.own(context.require('hostConnection').fetch.register({ path: '/api/native-session/settings-events', methods: ['POST'], requestBody: 'buffered',
         fetch: request => settingsEvents.stream(request) }))
+      context.own(context.require('hostConnection').fetch.register({ path: PRESENT_HOST_PATH, methods: ['GET'], requestBody: 'buffered',
+        fetch: () => Promise.resolve(service.presentHost()) }))
+      context.own(context.require('hostConnection').fetch.register({ path: PRESENT_OPEN_PATH, methods: ['POST'], requestBody: 'buffered',
+        fetch: request => service.presentOpen(request) }))
       context.provide('nativeWebSession', service)
       context.provide('rootExecution', executor.rootExecution)
     }

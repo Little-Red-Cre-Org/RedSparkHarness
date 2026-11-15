@@ -3,6 +3,7 @@ import { en, zh } from '@redspark/rsh-client-ui-conversation/conversation-copy'
 import { en as commonEn, zh as commonZh, formatLocaleTemplate } from '@redspark/rsh-client-locale/dictionary'
 import type { TranslateNS } from '@redspark/rsh-client-ui-slots'
 import { GenericToolCard } from '../client/tool/toolviews/GenericToolCard.tsx'
+import { BashCard } from '../client/tool/toolviews/bash-card.tsx'
 import css from '../client/tool/ToolCallTree.module.css'
 export type { ToolCallBlock, ToolResultNode, RunningToolCall } from '@redspark/rsh-client-ui-conversation/tool-records'
 import type { ToolCallOwnerProps } from '../tool-renderer-types.ts'
@@ -26,7 +27,9 @@ export function NativeToolCard({ locale, ...props }: NativeToolCardProps) {
   }
   const { block } = props
   return <div className={css.callRow} data-chat-call-id={block.callId}>
-    <GenericToolCard {...props} t={t} />
+    {props.toolName === 'bash'
+      ? <BashCard toolName={props.toolName} block={block} cwd={props.cwd} inspect={props.inspect} t={t} />
+      : <GenericToolCard {...props} t={t} />}
     {block.subCalls.length === 0 ? null : <div className={css.subCalls} data-subcalls>
       {block.subCalls.map(child => <NativeToolCard key={child.callId} {...props} locale={locale} callId={child.callId} block={child}
         toolName={'kind' in child ? child.call?.name ?? child.callId : child.name} />)}

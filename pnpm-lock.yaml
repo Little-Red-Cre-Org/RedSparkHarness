@@ -5435,6 +5435,12 @@ importers:
 
   rsh/Modules/Community/experimental/code-runtime-python:
     dependencies:
+      '@redspark/rsh-code-runtime-definition':
+        specifier: workspace:^
+        version: link:../../../../Engine/core/code-runtime-definition
+      '@redspark/rsh-native-runtime':
+        specifier: workspace:^
+        version: link:../../../../Core/runtime-diagnostics/native-runtime
       '@redspark/schemastery':
         specifier: link:../../../../Core/vendor/schemastery
         version: link:../../../../Core/vendor/schemastery
@@ -8181,6 +8187,15 @@ importers:
 
   rsh/Modules/Official/shell/tool-bash-persistent:
     dependencies:
+      '@redspark/rsh-native-agent':
+        specifier: workspace:^
+        version: link:../../../../Engine/core/native-agent
+      '@redspark/rsh-native-runtime':
+        specifier: workspace:^
+        version: link:../../../../Core/runtime-diagnostics/native-runtime
+      '@redspark/rsh-native-tools':
+        specifier: workspace:^
+        version: link:../../../../Engine/core/native-tools
       '@redspark/schemastery':
         specifier: link:../../../../Core/vendor/schemastery
         version: link:../../../../Core/vendor/schemastery
@@ -8321,6 +8336,15 @@ importers:
 
   rsh/Modules/Official/shell/tool-pwsh-persistent:
     dependencies:
+      '@redspark/rsh-native-agent':
+        specifier: workspace:^
+        version: link:../../../../Engine/core/native-agent
+      '@redspark/rsh-native-runtime':
+        specifier: workspace:^
+        version: link:../../../../Core/runtime-diagnostics/native-runtime
+      '@redspark/rsh-native-tools':
+        specifier: workspace:^
+        version: link:../../../../Engine/core/native-tools
       '@redspark/schemastery':
         specifier: link:../../../../Core/vendor/schemastery
         version: link:../../../../Core/vendor/schemastery
@@ -11252,6 +11276,9 @@ importers:
       '@redspark/rsh-plan-mode':
         specifier: workspace:^
         version: link:../../../../Modules/Official/plan/plan-mode
+      '@redspark/rsh-schedule':
+        specifier: workspace:^
+        version: link:../../../../Engine/schedule/schedule
       '@redspark/rsh-session':
         specifier: workspace:^
         version: link:../../../../Engine/core/session
@@ -11313,6 +11340,9 @@ importers:
       '@redspark/rsh-storage-json':
         specifier: workspace:^
         version: link:../../../../Core/storage/storage-json
+      '@redspark/rsh-tool-present':
+        specifier: workspace:^
+        version: link:../../../../Modules/Official/fs/tool-present
       '@redspark/rsh-webhook':
         specifier: workspace:^
         version: link:../../../../Modules/Official/webhook/webhook
@@ -12004,6 +12034,9 @@ importers:
       '@redspark/rsh-native-tools':
         specifier: workspace:^
         version: link:../../../../Engine/core/native-tools
+      '@redspark/rsh-util-workspace-path':
+        specifier: workspace:^
+        version: link:../../../../Core/util/workspace-path
     devDependencies:
       '@redspark/rsh-authorization':
         specifier: workspace:^
@@ -12017,6 +12050,9 @@ importers:
       '@redspark/rsh-client-ui-approval':
         specifier: workspace:^
         version: link:../ui-approval
+      '@redspark/rsh-client-ui-deliverables':
+        specifier: workspace:^
+        version: link:../ui-deliverables
       '@redspark/rsh-client-ui-layout':
         specifier: workspace:^
         version: link:../ui-layout

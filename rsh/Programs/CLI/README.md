@@ -2,7 +2,7 @@
 
 English | [中文](README.zh.md)
 
-The `dsh` command is the sole supported Node application launcher: profiles are ordered stacks of plugin-bundle patch layers under the user's own overrides. SDK and ACP are profiles, not separate public bins. The Python runtime wheel packages this same command; the SDK defaults to `sdk`, and the minimal example selects `sdk-minimal`. On Windows, the optional `rsh` shell shim routes to the source `dsh --profile rsh` launcher and adds no second Node application surface. [`src/args.ts`](src/args.ts) owns the command grammar, and [`src/bin.ts`](src/bin.ts) loads only the selected runner. Invalid commands, options from another mode, configuration errors, and boot failures exit nonzero.
+The `dsh` command is the sole supported Node application launcher: profiles are ordered stacks of plugin-bundle patch layers under the user's own overrides. SDK and ACP are profiles, not separate public bins. The Python runtime wheel packages this same command; the SDK and the minimal example both select `sdk`. On Windows, the optional `rsh` shell shim routes to the source `dsh --profile rsh` launcher and adds no second Node application surface. [`src/args.ts`](src/args.ts) owns the command grammar, and [`src/bin.ts`](src/bin.ts) loads only the selected runner. Invalid commands, options from another mode, configuration errors, and boot failures exit nonzero.
 
 ## Entry modes
 
@@ -17,11 +17,11 @@ The `dsh` command is the sole supported Node application launcher: profiles are 
 | `dsh --profile sdk` | Serve SDK clients over JSON-RPC stdio until shutdown or disconnect. |
 | `dsh --profile native-sdk` | Serve text and image SDK turns, live model chunks, Session cancellation, next-step steering and closed-turn forks over JSON-RPC stdio. |
 | `dsh --profile native-acp` | Drive native text/image Sessions, model configuration, cancellation, and durable resume over standard ACP stdio. |
-| `dsh --profile sdk-minimal` | Serve SDK clients with the standalone minimal agent tree. |
+| `dsh --profile sdk-minimal` | Refused. Use `dsh --profile sdk`. Existing directories are not rewritten. |
 | `dsh web` | Alias of `--profile web`. |
 | `dsh plugin --profile <name> <pnpm args>` | Manage a profile's plugins by forwarding to pnpm in the profile directory. |
 
-The invoking directory is the default workspace root. New `headless`, `web`, `sdk`, `acp`, and `rsh` profiles initialize as `native-headless`, `native-web`, `native-sdk`, `native-acp`, and `native-tui` while retaining the requested profile name. The eight `native-*` profiles remain explicit aliases, and `sdk-minimal` remains a legacy profile. An existing `package.json` keeps its selected runtime and is never rewritten by this initialization. Use `--from-default-profile` with an unused custom name such as `legacy-web` to create a legacy profile from one of the shipped Cordis bundle templates, or use `dsh plugin` to initialize a base-backed legacy profile. The `desktop` name is reserved for the Electron-owned profile, so the CLI rejects boot, config-dump, and plugin-management requests for it.
+The invoking directory is the default workspace root. New `headless`, `web`, `sdk`, `acp`, and `rsh` profiles initialize as `native-headless`, `native-web`, `native-sdk`, `native-acp`, and `native-tui` while retaining the requested profile name. The eight `native-*` profiles remain explicit aliases. The launcher refuses `sdk-minimal` on boot, dump, plugin management, and `--from-default-profile`. An existing `package.json` keeps its selected runtime and is never rewritten by this initialization. Use `--from-default-profile` with an unused custom name such as `legacy-web` to create a legacy profile from one of the shipped Cordis bundle templates, or use `dsh plugin` to initialize a base-backed legacy profile. The `desktop` name is reserved for the Electron-owned profile, so the CLI rejects boot, config-dump, and plugin-management requests for it.
 
 The native-headless, native-headless-query, native-tui, and native-web session defaults select the installed pi-ai route `deepseek` with model `deepseek-flash`. Native ACP keeps its explicit `deepseek-official` route.
 
@@ -67,7 +67,7 @@ An existing profile manifest selects legacy execution only when it declares `run
 
 The CLI's native launcher depends on the native runtime directly. Cordis, profile boot, config dump, and profile package-management dependencies are optional packages; ordinary installs include them, while native-only deployments may omit optional dependencies. A legacy profile or legacy-only CLI mode then reports the required installation change before importing Cordis. Native profile plugins remain dependencies of the selected profile.
 
-The standard names `headless`, `web`, `sdk`, `acp`, and `rsh` create Native profiles when their directory has no `package.json`; the runtime resolver continues to select the runtime for existing manifests. `sdk-minimal` remains a legacy bundle profile. The Native Session execution Provider supplies the selected execution registry and active Session owners, and the CLI resolver declares it as a direct dependency.
+The standard names `headless`, `web`, `sdk`, `acp`, and `rsh` create Native profiles when their directory has no `package.json`; the runtime resolver continues to select the runtime for existing manifests. The launcher refuses the profile name `sdk-minimal`; use `--profile sdk`. The Native Session execution Provider supplies the selected execution registry and active Session owners, and the CLI resolver declares it as a direct dependency.
 
 Host profiles capture inherited, invoking-directory and Harness-home environment layers before plugin imports. The same checked loader serves compatibility boot; every root scope owns the real launch snapshot Provider. Each Host root scope also gets a `pluginInventory` Provider that lists the running Host's installation states; a reload keeps reading the retained Host. Client-only profiles install neither.
 

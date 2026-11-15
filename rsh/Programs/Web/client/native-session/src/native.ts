@@ -559,7 +559,11 @@ export interface NativeSessionClient {
     settingsNs: string, request: NativeModelDiscoveryRequest, signal?: AbortSignal,
   ): Promise<readonly NativeDiscoveredModel[]>
   /** Watch Settings, credential-reference and model-adapter invalidations.
-   * @param signal - caller cancellation; abort closes the stream cleanly.
+   * Every caller on this client shares one HTTP stream. A caller that
+   * subscribes later only sees frames that arrive after it subscribes.
+   * Aborting one caller ends only that iteration; the stream stays open
+   * until the last caller aborts.
+   * @param signal - caller cancellation; abort ends this caller's iteration.
    * @returns notification frames without Settings or credential values.
    */
   settingsEvents(signal: AbortSignal): AsyncIterable<NativeSettingsEvent>
@@ -1515,6 +1519,84 @@ export function createNativeSessionClient(
   const pendingFollows = new Set<Promise<void>>()
   const pendingListFollows = new Set<Promise<void>>()
   const pendingUploads = new Set<Promise<unknown>>()
+  type SettingsEvent = z.infer<typeof settingsEventSchema>
+  type SettingsSubscriber = {
+    push(event: SettingsEvent): void
+    fail(error: unknown): void
+    finish(): void
+  }
+  type SettingsHub = {
+    subscribers: Set<SettingsSubscriber>
+    abort: AbortController
+    done: boolean
+  }
+  let settingsHub: SettingsHub | undefined
+  const pendingSettings = new Set<Promise<void>>()
+  function runSettingsHub(
+    owned: SettingsHub,
+    responseOperation: NonNullable<ClientConnectionRpc['response']>,
+  ): void {
+    const accepted = AbortSignal.any([lifetime, owned.abort.signal])
+    const task = (async () => {
+      try {
+        const response = await responseOperation('/api', 'native-session/settings-events', {}, accepted)
+        if (accepted.aborted) {
+          if (response.body !== null) await response.body.cancel()
+          return
+        }
+        if (!response.ok || response.body === null || response.headers.get('content-type') !== 'text/event-stream') {
+          throw new Error(`native settings events: invalid response HTTP ${response.status}`)
+        }
+        const body = response.body
+        const reader = body.pipeThrough(new TextDecoderStream())
+          .pipeThrough(new EventSourceParserStream({ maxBufferSize: config.maxFollowBufferChars, onError: 'terminate' }))
+          .getReader()
+        const cancelRead = (): void => { void reader.cancel() }
+        accepted.addEventListener('abort', cancelRead, { once: true })
+        try {
+          while (true) {
+            const { done, value } = await reader.read()
+            if (done) break
+            const event = settingsEventSchema.parse(JSON.parse(value.data))
+            for (const subscriber of owned.subscribers) subscriber.push(event)
+          }
+          for (const subscriber of owned.subscribers) subscriber.finish()
+        } finally {
+          accepted.removeEventListener('abort', cancelRead)
+        }
+      } catch (error: unknown) {
+        if (!accepted.aborted) {
+          for (const subscriber of owned.subscribers) subscriber.fail(error)
+        }
+      } finally {
+        owned.done = true
+        if (settingsHub === owned) settingsHub = undefined
+      }
+    })()
+    pendingSettings.add(task)
+    void task.finally(() => { pendingSettings.delete(task) })
+  }
+  function attachSettings(
+    subscriber: SettingsSubscriber,
+    responseOperation: NonNullable<ClientConnectionRpc['response']>,
+  ): () => void {
+    let owned = settingsHub
+    if (owned === undefined) {
+      owned = { subscribers: new Set(), abort: new AbortController(), done: false }
+      settingsHub = owned
+      owned.subscribers.add(subscriber)
+      runSettingsHub(owned, responseOperation)
+    } else {
+      owned.subscribers.add(subscriber)
+    }
+    return () => {
+      owned.subscribers.delete(subscriber)
+      if (owned.subscribers.size === 0 && !owned.done) {
+        owned.abort.abort()
+        settingsHub = undefined
+      }
+    }
+  }
   async function call<T>(endpoint: string, payload: object, signal?: AbortSignal, useLifetime = true): Promise<T> {
     const accepted = !useLifetime ? signal : signal === undefined ? lifetime : AbortSignal.any([lifetime, signal])
     const result = await rpc.call('/api', endpoint, payload, accepted)
@@ -1720,20 +1802,52 @@ export function createNativeSessionClient(
       for await (const { data } of frames) yield authorizationFrameSchema.parse(JSON.parse(data)) as AuthorizationFrame
     },
     async *settingsEvents(signal) {
-      const accepted = AbortSignal.any([lifetime, signal])
       const responseOperation = rpc.response
       if (responseOperation === undefined) throw new Error('native Session Client: selected carrier has no Fetch response operation')
+      const accepted = AbortSignal.any([lifetime, signal])
+      if (accepted.aborted) return
+      const queue: SettingsEvent[] = []
+      let waiter: (() => void) | undefined
+      const status: { closed: boolean; failure?: Error } = { closed: false }
+      const isAborted = (): boolean => accepted.aborted
+      const wake = (): void => {
+        const current = waiter
+        waiter = undefined
+        current?.()
+      }
+      const subscriber: SettingsSubscriber = {
+        push(event) {
+          queue.push(event)
+          wake()
+        },
+        fail(error) {
+          status.failure = error instanceof Error ? error : new Error(String(error))
+          status.closed = true
+          wake()
+        },
+        finish() {
+          status.closed = true
+          wake()
+        },
+      }
+      const detach = attachSettings(subscriber, responseOperation)
+      accepted.addEventListener('abort', () => { subscriber.finish() }, { once: true })
       try {
-        const response = await responseOperation('/api', 'native-session/settings-events', {}, accepted)
-        if (!response.ok || response.body === null || response.headers.get('content-type') !== 'text/event-stream') {
-          throw new Error(`native settings events: invalid response HTTP ${response.status}`)
+        while (true) {
+          if (isAborted()) return
+          const next = queue.shift()
+          if (next !== undefined) {
+            yield next
+            continue
+          }
+          if (status.closed) {
+            if (status.failure !== undefined) throw status.failure
+            return
+          }
+          await new Promise<void>((resolve) => { waiter = resolve })
         }
-        const frames = response.body.pipeThrough(new TextDecoderStream())
-          .pipeThrough(new EventSourceParserStream({ maxBufferSize: config.maxFollowBufferChars, onError: 'terminate' }))
-        for await (const { data } of frames) yield settingsEventSchema.parse(JSON.parse(data))
-      } catch (error: unknown) {
-        if (accepted.aborted) return
-        throw error
+      } finally {
+        detach()
       }
     },
     async authorizationAnswer(key, attemptId, promptId, value, signal) {
@@ -1759,8 +1873,13 @@ export function createNativeSessionClient(
     },
     async close() {
       shutdown.abort(new Error('native Session Client disposed'))
-      while (pendingPrompts.size > 0 || pendingFollows.size > 0 || pendingListFollows.size > 0 || pendingUploads.size > 0) {
-        await Promise.allSettled([...pendingPrompts, ...pendingFollows, ...pendingListFollows, ...pendingUploads])
+      while (
+        pendingPrompts.size > 0 || pendingFollows.size > 0 || pendingListFollows.size > 0
+        || pendingUploads.size > 0 || pendingSettings.size > 0
+      ) {
+        await Promise.allSettled([
+          ...pendingPrompts, ...pendingFollows, ...pendingListFollows, ...pendingUploads, ...pendingSettings,
+        ])
       }
     },
     async answerHuman(sessionId, id, answer, signal) {

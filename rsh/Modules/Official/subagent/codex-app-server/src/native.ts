@@ -86,8 +86,13 @@ function unsupportedRequest(request: NativeExternalSubagentRequest): void {
 }
 
 function toOutcome(result: { readonly output: readonly { readonly type: 'text'; readonly text: string }[]
-  readonly stopReason: CodexRunStopReason }): NativeExternalSubagentOutcome {
-  return { output: result.output, stopReason: result.stopReason }
+  readonly stopReason: CodexRunStopReason
+  readonly diagnostic?: string }): NativeExternalSubagentOutcome {
+  return {
+    output: result.output,
+    stopReason: result.stopReason,
+    ...result.diagnostic === undefined ? {} : { diagnostic: result.diagnostic },
+  }
 }
 
 function installDriver(context: NativeContext, config: CodexConfig): void {

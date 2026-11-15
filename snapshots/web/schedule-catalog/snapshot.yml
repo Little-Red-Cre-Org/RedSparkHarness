@@ -1,6 +1,6 @@
 version: 1
 scenario: schedule-catalog
-profile: web
+profile: native-web
 composition: web-schedule
 recording: authored
 header:

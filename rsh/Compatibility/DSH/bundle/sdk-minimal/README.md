@@ -1,5 +1,5 @@
 ---
-description: "Standalone single-tool SDK profile for users who need a minimal cross-platform coding agent without the shared base bundle."
+description: "Standalone Cordis tree for a minimal coding agent. The shipped profile name sdk-minimal is refused; use dsh --profile sdk."
 kind: "package-bundle"
 ---
 
@@ -9,7 +9,7 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-Use `dsh --profile sdk-minimal` when an SDK client needs a small, explicit coding-agent runtime. The profile advertises only a platform-selected persistent shell, persists sessions as uncompressed JSONL, and selects the model from the SDK initialization request. It supplies a complete Cordis tree and deliberately excludes `dsh-base`, Web, settings, managed credentials, telemetry, compaction, filesystem tools, workspace instructions, skills, jobs, and subagents. Its danger-full-access policy lets the shell modify any path available to the process, so use it only with an isolated workspace.
+The launcher refuses the profile name `sdk-minimal` on boot, dump, plugin management, and `--from-default-profile`. Use `dsh --profile sdk` for a supported SDK launch; see [native configuration migration](../../../../Docs/native-config-migration.md). This package remains the standalone Cordis tree a custom legacy profile can compose. It advertises only a platform-selected persistent shell, persists sessions as uncompressed JSONL, and selects the model from the SDK initialization request. It deliberately excludes `dsh-base`, Web, settings, managed credentials, telemetry, compaction, filesystem tools, workspace instructions, skills, jobs, and subagents. Its danger-full-access policy lets the shell modify any path available to the process, so use it only with an isolated workspace.
 
 ## Table of Contents
 
@@ -25,16 +25,16 @@ Use `dsh --profile sdk-minimal` when an SDK client needs a small, explicit codin
 <a id="use-this-package"></a>
 ## Use this package
 
-Launch the profile directly or select it from the Python SDK. Supply an explicit `RSH_HOME`, use a disposable workspace, and provide the model credential through `DEEPSEEK_API_KEY`.
+Do not launch, dump, or manage plugins under the name `sdk-minimal`. The launcher refuses those commands and does not rewrite an existing directory. A custom legacy profile can still list `@redspark/rsh-sdk-minimal` in `dsh.profile.bundles`. Supply an explicit `RSH_HOME` and a disposable workspace when composing it. The supported SDK launch is:
 
 ```sh
 export RSH_HOME=/absolute/path/to/example-dsh-home
-dsh --profile sdk-minimal
+dsh --profile sdk
 ```
 
 `RSH_CONTEXT_WINDOW` sets the fallback capacity for a model absent from the adapter's advisory catalog. `RSH_SYSTEM_PROMPT` replaces the default persona. The SDK initialization request is the sole model selection and overrides environment defaults.
 
-Use `dsh plugin --profile sdk-minimal` to manage persistent external dependencies. Profile, home, and ordered `--patch` files can replace rows or insert bundles above the complete default tree. The shipped template applies patches only at startup.
+Plugin management under the name `sdk-minimal` is refused. Use `dsh plugin --profile sdk` for the supported SDK profile, or manage plugins on a custom legacy profile that composes this bundle. Ordered `--patch` files can replace rows or insert bundles above this package's complete default tree. A profile that composes this bundle and sets `patchReload: startup` applies those patches only at startup.
 
 The profile mounts exactly one persistent shell stack: Bash on Linux and macOS, or PowerShell on Windows. Both stacks use a 300-second timeout and one owner-scoped terminal; the other platform's rows remain disabled.
 
@@ -64,7 +64,7 @@ The bundle's single insert is the complete application tree: SDK stdio startup a
 <a id="further-exploration"></a>
 ## Further Exploration
 
-- [Python SDK example](../../../../Programs/SDK/python/sdk/examples/README.md) — launches this profile from Python against an explicit Harness home.
+- [Python SDK example](../../../../Programs/SDK/python/sdk/examples/README.md) — selects `dsh --profile sdk`, not this package's refused name.
 - [SDK application bundle](../sdk-app/README.md) — the JSON-RPC application layer reused by full and minimal SDK profiles.
 - [Base bundle](../base/README.md) — the full product foundation that this profile deliberately omits.
 
@@ -91,6 +91,7 @@ Stable for a fixed persona, platform, provider, model, and bundle patch stack. P
 
 <a id="known-limitations-and-deferred-work"></a>
 
+- **The shipped name no longer boots** — `dsh --profile sdk-minimal`, `--from-default-profile sdk-minimal`, and `dsh plugin --profile sdk-minimal` exit with an error. Existing directories are not rewritten. Use `dsh --profile sdk`, or compose this bundle from a custom legacy profile name.
 - **The composition intentionally omits shared product services** — select `dsh --profile sdk` when settings, managed credentials, policy presets, telemetry, Web tools, or the full default tool roster are required.
 - **User patches can expand the tree and corrupt stdout** — profile customization is trusted application composition; a plugin that writes ordinary text to stdout can break JSON-RPC framing.
 

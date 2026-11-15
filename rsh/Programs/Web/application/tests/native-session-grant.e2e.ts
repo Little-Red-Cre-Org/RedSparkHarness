@@ -6,6 +6,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url'
 import { execa } from 'execa'
 import { expect, it } from 'vitest'
 import { chromium, type Browser } from 'playwright'
+import { connectNativeWorkspace } from './support.ts'
 import { ensureShippedNativeProfile, shippedNativeProfileComposition } from '../../../../../rsh/Programs/CLI/src/native-profile-template.ts'
 import { WORKSPACE_MANIFEST_GLOBS } from '../../../../../rsh/Scripts/workspace-manifest-globs.ts'
 import { SESSION_FORMAT_VERSION } from '@redspark/rsh-session/native'
@@ -50,6 +51,7 @@ it.each([{ content: 'Approved exact operation.' }])('reuses a remembered scope t
   const rows = shipped.installations.filter(row => selected.has(row.id)).map((row) => {
     const config = row.id === 'app' ? { ...row.config as object, port: 0 }
       : row.id === 'session-controller' ? { cwd: workspace, provider: 'mock', model: 'fixture', systemPrompt: 'Answer the user.',
+        workspaceRoutes: { maxRoutes: 2, allowedRoots: [workspace] },
         maxSteps: 3, builtinTools: false, maxPendingRequests: 2, maxHistoryEvents: 100, maxPromptChars: 100,
         maxFollowBufferBytes: 1000000, maxFollowers: 4, maxPendingHumanRequests: 2 }
         : row.id === 'fs' ? { cwd: workspace }
@@ -137,11 +139,7 @@ export const plugin = {
     await page.getByRole('button', { name: 'Continue', exact: true }).click()
     await page.locator('[class*="onboardingOverlay"]').waitFor({ state: 'detached' })
     await page.getByRole('heading', { name: 'RedSpark Harness', exact: true }).waitFor()
-    await page.locator('[data-slot="sidebar"]').getByRole('button', { name: 'New session', exact: true }).filter({ hasText: 'New Session' }).click()
-    await page.waitForFunction(() => {
-      const editor = document.querySelector<HTMLTextAreaElement>('textarea[aria-label="Message"]')
-      return editor !== null && !editor.disabled
-    })
+    await connectNativeWorkspace(page, workspace)
     await page.getByRole('textbox', { name: 'Message', exact: true }).fill(task)
     const started = page.waitForResponse(response => new URL(response.url()).pathname === '/api/session/start')
     await page.getByRole('button', { name: 'Send', exact: true }).click()
@@ -182,7 +180,7 @@ export const plugin = {
     const reply = await response.json() as { result: { ok: boolean } }
     expect(reply.result.ok).toBe(true)
     await card.waitFor({ state: 'detached' })
-    await page.getByText('Two writes completed with one Host approval.', { exact: true }).waitFor()
+    await page.getByLabel('Session records').getByText('Two writes completed with one Host approval.', { exact: true }).waitFor()
     await page.waitForFunction(() => !document.querySelector<HTMLTextAreaElement>('textarea[aria-label="Message"]')?.disabled)
     const messages = JSON.parse(readFileSync(modelRequests, 'utf8')) as { content: { type: string; isError?: boolean; toolCallId?: string }[] }[][]
     expect(messages).toHaveLength(3)

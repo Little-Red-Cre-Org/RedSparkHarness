@@ -5,14 +5,22 @@ const parse = (argv: string[]) => parseRshArgs(argv, '1.2.3')
 
 /** Capture the process exit code while muting Commander's output. */
 function exitCode(argv: string[]): number {
+  return exitResult(argv).code
+}
+
+function exitResult(argv: string[]): { code: number; stderr: string } {
+  let stderr = ''
   const exit = vi.spyOn(process, 'exit').mockImplementation(() => { throw new Error('exit') })
   vi.spyOn(process.stdout, 'write').mockReturnValue(true)
-  vi.spyOn(process.stderr, 'write').mockReturnValue(true)
+  vi.spyOn(process.stderr, 'write').mockImplementation((chunk: unknown) => {
+    stderr += String(chunk)
+    return true
+  })
   try {
     parse(argv)
     throw new Error(`expected ${JSON.stringify(argv)} to exit`)
   } catch {
-    return exit.mock.calls.at(-1)?.[0] as number
+    return { code: exit.mock.calls.at(-1)?.[0] as number, stderr }
   } finally {
     vi.restoreAllMocks()
   }
@@ -122,8 +130,24 @@ describe('parseRshArgs', () => {
     expect(exitCode(['--profile', 'desktop', '--dump-config'])).toBe(1)
     expect(exitCode(['plugin', '--profile', 'desktop', 'add', 'x'])).toBe(1)
     expect(exitCode(['plugin', '--profile', 'Desktop', 'add', 'x'])).toBe(1)
+    expect(exitCode(['--profile', 'sdk-minimal'])).toBe(1)
+    expect(exitCode(['--profile', 'sdk-minimal', '--dump-config'])).toBe(1)
+    expect(exitCode(['--profile', 'sdk-minimal', '--dump-default-config'])).toBe(1)
+    expect(exitCode(['plugin', '--profile', 'sdk-minimal', 'add', 'x'])).toBe(1)
+    expect(exitCode(['--profile', 'rescue', '--from-default-profile', 'sdk-minimal'])).toBe(1)
     expect(exitCode(['--profile', 'x', 'plugin', 'add', 'y'])).toBe(1)
     expect(exitCode(['--from-default-profile', 'web', 'plugin', '--profile', 'x', 'add', 'y'])).toBe(1)
+  })
+
+  it('points a refused sdk-minimal invocation at the sdk profile and the migration reference', () => {
+    const boot = exitResult(['--profile', 'sdk-minimal', '--dump-default-config'])
+    expect(boot.code).toBe(1)
+    expect(boot.stderr).toContain('profile "sdk-minimal" no longer boots')
+    expect(boot.stderr).toContain('use --profile sdk')
+    expect(boot.stderr).toContain('rsh/Docs/native-config-migration.md')
+    const template = exitResult(['--profile', 'rescue', '--from-default-profile', 'sdk-minimal'])
+    expect(template.code).toBe(1)
+    expect(template.stderr).toContain('--from-default-profile "sdk-minimal" no longer initializes a profile')
   })
 
   it('keeps its own help for an invocation with no app to hand it to', () => {

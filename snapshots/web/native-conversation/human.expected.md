@@ -1,24 +1,18 @@
-Tool approval
-
-guarded
-
+Waiting for approval
 Protect this action.
-
-Allow once
 Reject
+Allow once
 
-Tool approval
-
-guarded
-
+Waiting for approval
 Protect this action.
-
-Allow once
 Reject
+Allow once
 
-Pending questions
 Choose mode
+1
 One
+2
 Two
-Other answer
-Submit answer
+1 / 1
+Skip this question
+Submit

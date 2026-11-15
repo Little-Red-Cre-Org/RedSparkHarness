@@ -78,6 +78,6 @@ describe.skipIf(MODE === 'record')('web e2e: dedicated Skill tool row', () => {
   }, 60_000)
 
   it('keeps its snapshot inventory closed', async () => {
-    await assertFixtureInventory(SNAPSHOT_DIR, ['ui.expected.md'])
+    await assertFixtureInventory(SNAPSHOT_DIR, ['ui.expected.md'], 'native-web')
   })
 })

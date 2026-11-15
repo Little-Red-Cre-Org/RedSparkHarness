@@ -27,6 +27,8 @@ kind: "package-reference"
 
 在 agent 需要在命令之间保持 shell 状态的任何组合中加载本插件——例如长时间构建会话、已激活的环境，或为后续步骤导出变量的脚本。它注册 `bash` 工具，需要 `ctx.tools` 与 `ctx.terminals` 服务，并在执行时需要拥有者 agent 会话。
 
+`./native` 入口在 Native 宿主上注册同一个 `bash` 工具。它需要 native 的 `agents`、`terminals` 与 `tools` 服务，以及由 `backendType` 点名的终端后端。Native 组合选择 `@redspark/rsh-tool-bash-persistent/native`；包根仍是 Cordis 插件，只在 `apply` 运行时加载。`@redspark/cordis`、`@redspark/rsh-agent` 与 `@redspark/rsh-tools` 是可选 peer，因此 Cordis 组合仍须安装它们，Native 组合则不必。
+
 ### 何时选择
 
 当工作依赖跨调用状态时选择持久工具：一次性 `dsh-tool-bash` 调用无法记住 `cd` 或导出的变量。当每条命令都应从已知、干净的环境开始，或命令又短又独立时，选择一次性工具。这里不支持需要交互 stdin 的命令——读取输入的前台子进程会一直阻塞到命令超时——因此交互工作属于 terminal 工具。
@@ -73,18 +75,20 @@ kind: "package-reference"
 - **每个 owner 一个 shell，互不共享。** shell 注册表按调用方 `Agent` 为每个会话建键，因此并发 agent 永不共享状态，同一 agent 的命令通过按 owner 的队列串行化。
 - **标记锚定提取。** 每条命令都用携带退出状态的唯一起止标记包装；工具轮询 PTY scrollback 并提取真实标记之间的区间，因此提示符与回显输入永不泄漏进结果。
 - **重置，而非修复。** 任何不确定状态——显式 `exit`、超时、发送失败、中止——都会关闭 shell 并让下一次调用从全新状态开始，因为半知情的 shell 不如干净的 shell。
-- **按 owner 的生命周期。** shell 在首次使用时惰性创建，在插件释放或 owner 拆除时终止；按所有者隔离的 `ctx.terminals` 服务把每个操作都围栏到拥有它的 agent。
+- **按 owner 的生命周期。** shell 在首次使用时惰性创建，在插件释放或 owner 拆除时终止；按所有者隔离的终端服务把每个操作都围栏到拥有它的 agent。
 
 ### 源码地图
 
 | 文件 | 职责 |
 |---|---|
-| [`src/index.ts`](src/index.ts) | 插件入口：shell 注册表、命令包装、scrollback 轮询、提取与渲染 |
-| — | 不发布运行时不变式伴生入口；适配器私有的 owner-to-shell 缓存没有可观察的事件或数据关系。shell 复用仍可通过工具执行观察。生命周期测试会验证其清理行为，无需仅为不变式增加公共 API。 |
+| [`src/persistent-core.ts`](src/persistent-core.ts) | 运行时中立的 shell 复用、标记提取与渲染 |
+| [`src/index.ts`](src/index.ts) | Cordis 适配器：工具注册与按 owner 的终端端口 |
+| [`src/native.ts`](src/native.ts) | Native 适配器：同一工具，走 native 终端注册表 |
+| — | 不发布运行时不变式伴生入口；core 私有的 owner-to-shell 缓存没有可观察的事件或数据关系。shell 复用仍可通过工具执行观察。生命周期测试会验证其清理行为，无需仅为不变式增加公共 API。 |
 
 ### 命令流程
 
-首条命令通过 `ctx.terminals.spawn` 生成 shell，禁用输入回显（`stty -echo`），并等待就绪。随后每条命令都包装成一行物理文本——printf 起始标记、用 `$'…'` 转义的命令体、printf 结束标记加 `$?`——因此内嵌换行无法把终端提示符泄漏进结果。工具以 1,000 行一页轮询 scrollback，直到出现结束标记，提取区间并连同任何状态标记一起渲染。超时会中止截止时间、捕获部分输出并重置 shell。
+首条命令通过所选终端端口生成 shell（Cordis 走 `ctx.terminals.spawn`，Native 走 `terminals.open`），禁用输入回显（`stty -echo`），并等待就绪。随后每条命令都包装成一行物理文本——printf 起始标记、用 `$'…'` 转义的命令体、printf 结束标记加 `$?`——因此内嵌换行无法把终端提示符泄漏进结果。工具以 1,000 行一页轮询 scrollback，直到出现结束标记，提取区间并连同任何状态标记一起渲染。超时会中止截止时间、捕获部分输出并重置 shell。
 
 </details>
 
@@ -100,6 +104,7 @@ kind: "package-reference"
 - [terminal-bash 后端](../../terminal/terminal-bash/README.zh.md)——默认的 `shell` 后端。
 - [tool-terminal](../../terminal/tool-terminal/README.zh.md)——面向交互工作的六个模型侧 terminal 工具。
 - [持久 PTY 会话 Agent Note](../../../../../.agents/notes/implemented/feature/2026-07-16-persistent-pty-sessions.zh.md)——按所有者会话的设计及其理由。
+- [Native 持久 Bash](../../../../../.agents/notes/implemented/architecture/2026-11-13-native-persistent-bash.zh.md)——运行时中立的 core，以及 Cordis 与 Native 适配器。
 - [生成的工具目录](../../../../Docs/tool-catalog.zh.md#redsparkrsh-tool-bash-persistent)——`bash` 参数 schema 的确切内容。
 - [生成的配置目录](../../../../Docs/config-catalog.zh.md#redsparkrsh-tool-bash-persistent)——每个受支持配置字段及其源声明。
 
@@ -126,7 +131,7 @@ kind: "package-reference"
 
 #### 模型看到什么
 
-命令共享每个 agent 一个 shell，因此 cwd、导出的变量、已激活的环境、函数与后台任务都会跨调用保留。结果排除私有完成标记。当 shell 在没有打印完成标记的情况下再次读取 stdin——`exec`、中断，或提供方证明其 stdin 等待的交互式前台子进程之后——调用返回捕获的部分输出，它可能以后端自己的提示符文本结尾。每条完成的命令都追加 `[Command finished with exit code N]`；在报告该状态前就退出的 shell 改为追加 `[shell exited: code N]`、`[shell killed by signal: SIG]`，或后端两者都未提供时的 `[shell exited]`，然后重置并告诉模型下一次调用从全新状态开始。长输出保留最早的已保留前缀并附裁剪通知。若 PTY 已经丢弃该前缀，结果会明确说明，而不是把尾部当作完整输出呈现。超时返回有界部分输出并追加 `[Command timed out or OOM]`、关闭不确定的 shell 并报告重置。
+命令共享每个 agent 一个 shell，因此 cwd、导出的变量、已激活的环境、函数与后台任务都会跨调用保留。结果排除私有完成标记。当 shell 在没有打印完成标记的情况下再次读取 stdin——`exec`、中断，或提供方证明其 stdin 等待的交互式前台子进程之后——调用返回捕获的部分输出，它可能以后端自己的提示符文本结尾。每条完成的命令都追加 `[Command finished with exit code N]`；在报告该状态前就退出的 shell 改为追加 `[shell exited: code N]`、`[shell killed by signal: SIG]`，或后端两者都未提供时的 `[shell exited]`，然后重置并告诉模型下一次调用从全新状态开始。长输出保留最早的已保留前缀并附裁剪通知。若 PTY 已经丢弃该前缀，结果会明确说明，而不是把尾部当作完整输出呈现。超时返回有界部分输出并追加 `[Command timed out or OOM]`、关闭不确定的 shell 并报告重置。Native 的 list 快照只带 `running`、`exited` 或 `failed`，没有退出码或信号，因此不再处于运行中的 shell 渲染 `[shell exited]` 并附上重置说明。
 
 #### Token 影响
 

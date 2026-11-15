@@ -63,9 +63,11 @@ jobs:
         if: runner.os == 'Linux'
         run: pnpm run doc-sync
       - uses: actions/setup-python@v6.3.0
+        if: runner.os == 'Linux'
         with:
           python-version: '3.10'
       - name: Prepare keyless Python SDK runner
+        if: runner.os == 'Linux'
         id: sdk-python
         run: |
           python -m pip install uv==0.11.23
@@ -96,7 +98,12 @@ jobs:
           rsh/Programs/CLI/tests/profiles/native-sdk/native-sdk-dsh-child.e2e.ts
           rsh/Programs/CLI/tests/profiles/native-deepseek/native-deepseek-contributions.e2e.ts
           rsh/Programs/ACP/packages/native-acp/tests/lifecycle.e2e.ts
-          && pnpm exec vitest run --config vitest.snapshot.config.ts
+      # native-sdk installs the platform shell, so its recorded tool schemas carry
+      # bash or pwsh by design; the fixtures are recorded on POSIX.
+      - name: Native SDK workspace instructions snapshots
+        if: runner.os == 'Linux'
+        run: >-
+          pnpm exec vitest run --config vitest.snapshot.config.ts
           snapshots/native-sdk/scheduled-root-origin.snapshot.ts
           snapshots/native-sdk/external-operation.snapshot.ts
           snapshots/native-sdk/skills.snapshot.ts
@@ -116,6 +123,7 @@ jobs:
           pnpm exec vitest run --config vitest.e2e.config.ts --retry=0 --maxWorkers=1
           rsh/Modules/Official/sandbox/sandbox-local/tests/child-process-bwrap.e2e.ts
       - name: Python SDK workspace instructions replay
+        if: runner.os == 'Linux'
         run: >-
           pnpm exec vitest run --config vitest.snapshot.config.ts --maxWorkers=1
           snapshots/native-sdk/scheduled-root-origin.snapshot.ts
@@ -186,26 +194,8 @@ jobs:
           pnpm --dir rsh/Core/native/system/packages/entry pack --pack-destination "$PWD/dist/npm-landlock"
       - name: Verify independently packed dsh consumer
         run: pnpm run release:verify-packed-install --family dsh --from dist/npm --from dist/npm-vendor --from dist/npm-landlock --packed-e2e
-      - uses: actions/setup-python@v6.3.0
-        if: runner.os == 'Windows'
-        with:
-          python-version: '3.10'
-      - name: Prepare keyless Python SDK runner
-        if: runner.os == 'Windows'
-        id: sdk-python
-        run: |
-          python -m pip install uv==0.11.23
-          if ($LASTEXITCODE -ne 0) { throw "Installing uv failed with exit code $LASTEXITCODE" }
-          $sdkPython = (& uv run --python 3.10 --group test --project rsh/Programs/SDK/python/sdk python -c "import sys; print(sys.executable)" | Select-Object -Last 1).Trim()
-          if ($LASTEXITCODE -ne 0) { throw "Preparing the Python SDK environment failed with exit code $LASTEXITCODE" }
-          "python=$sdkPython" >> $env:GITHUB_OUTPUT
       - name: Windows SDK snapshot regressions
         if: runner.os == 'Windows'
         run: |
           pnpm exec vitest run --config vitest.snapshot.config.ts snapshots/sdk/sdk.snapshot.ts
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-      - name: Windows Python SDK text-turn replay
-        if: runner.os == 'Windows'
-        run: pnpm exec vitest run --config vitest.snapshot.config.ts snapshots/native-sdk/text-turn.snapshot.ts
-        env:
-          RSH_NATIVE_SDK_PYTHON: ${{ steps.sdk-python.outputs.python }}

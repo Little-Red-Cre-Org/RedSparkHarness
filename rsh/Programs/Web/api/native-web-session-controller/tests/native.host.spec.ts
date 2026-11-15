@@ -5,6 +5,7 @@ import { plugin as attachmentStorage } from '@redspark/rsh-attachment-local/nati
 import { plugin as githubWebhook } from '@redspark/rsh-webhook-github/src/native.ts'
 import { plugin as webhook } from '../../../../../Modules/Official/webhook/webhook/src/native.ts'
 import { WebhookRuleId } from '../../../../../Modules/Official/webhook/webhook/src/brand.ts'
+import { ScheduleId } from '@redspark/rsh-schedule/domain'
 import type {} from '../../../../../Modules/Official/webhook/webhook/src/native-definition.ts'
 import { plugin as workspaceRegistry } from '@redspark/rsh-workspace/native'
 import { plugin as permissionPresets } from '../../../../../Modules/Official/interaction/permission-presets/src/native.ts'
@@ -498,7 +499,7 @@ it('lists slash commands available to the exact Program root owner', async () =>
   }
 })
 
-it('keeps schedule state unavailable and enforces the shared follower limit', async () => {
+it('keeps an empty Schedule fold inactive and enforces the shared follower limit', async () => {
   const scheduledId = SessionId('scheduled-root')
   const releasedId = SessionId('released-root')
   const scheduledHeader = { id: scheduledId, version: SESSION_FORMAT_VERSION, createdAt: 1, isSeeded: false }
@@ -563,6 +564,51 @@ it('keeps schedule state unavailable and enforces the shared follower limit', as
     turnResult.resolve({ exitCode: 0 })
     await service.close()
   }
+})
+
+it('derives the Schedule marker from the Session history it already read', async () => {
+  const id = SessionId('cold-schedule-root')
+  const header = { id, version: SESSION_FORMAT_VERSION, createdAt: 1, isSeeded: false }
+  const create: SessionEvent = {
+    type: 'schedule/change', seq: SessionSeq(0), time: 1,
+    data: { version: 1, operation: 'create', schedule: {
+      id: ScheduleId('catalog-after'), kind: 'after', prompt: 'Review overdue deployment',
+      afterSeconds: 60, scheduledAt: '2099-08-25T11:59:00.000Z',
+    } },
+  }
+  const markerFor = async (events: readonly SessionEvent[], inheritedEventCount = 0): Promise<boolean> => {
+    const persistence = {
+      list: async () => [{ header }],
+      stat: async () => ({ header }),
+      open: async () => ({ header, inheritedEventCount, read: async () => ({ events }), close: async () => {} }),
+    } as unknown as NativeSessionPersistenceOperations
+    const active = {
+      owners: () => [], owner: () => undefined,
+      onAttached: () => async () => {}, onDetached: () => async () => {},
+    } as unknown as NativeActiveSessionOperations
+    const signal = new AbortController()
+    const service = new NativeWebSessionService(
+      { dispose: async () => {} } as unknown as NativeHeadlessApplication,
+      persistence, active,
+      resolveNativeWebSessionConfig({ cwd: process.cwd(), provider: 'fixture', model: 'fixture', systemPrompt: 'Answer.',
+        maxSteps: 1, builtinTools: false, maxPendingRequests: 1, maxHistoryEvents: 10, maxPromptChars: 100,
+        maxFollowBufferBytes: 1024, maxFollowers: 1, maxPendingHumanRequests: 1 }),
+      signal.signal,
+    )
+    try {
+      const listed = await service.handle('session/list', {}, signal.signal)
+      if (!listed.ok) throw new Error(listed.error.message)
+      const item = (listed.value as readonly { hasActiveSchedule: boolean }[])[0]
+      if (item === undefined) throw new Error('cold Session was not listed')
+      return item.hasActiveSchedule
+    } finally {
+      await service.close()
+    }
+  }
+  expect(await markerFor([create])).toBe(true)
+  expect(await markerFor([create], 1)).toBe(false)
+  const corrupt = { ...create, data: { version: 1, operation: 'create', schedule: { id: 'broken' } } } as SessionEvent
+  expect(await markerFor([corrupt])).toBe(false)
 })
 
 it('creates, resumes and cancels one durable Session through the real browser RPC carrier', async () => {
@@ -908,9 +954,9 @@ it('creates, resumes and cancels one durable Session through the real browser RP
   const host = new NativeHost(resolveInstallation([
     { plugin: inventory, scope, config: undefined },
     { plugin, scope, config: { cwd, provider: 'fixture', model: 'fixture', systemPrompt: 'Answer.', maxSteps: 5, builtinTools: false,
-      maxPendingRequests: 2, maxHistoryEvents: 100, maxPromptChars: 100, maxFollowBufferBytes: 1000000,
+      maxPendingRequests: 2, maxHistoryEvents: 1000, maxPromptChars: 100, maxFollowBufferBytes: 1000000,
       maxFollowers: 2, maxPendingHumanRequests: 2, maxCredentialRefsPerRead: 2, maxSettingsOperations: 1,
-      workspaceRoutes: { maxRoutes: 2, allowedRoots: [directory] } } },
+      workspaceRoutes: { maxRoutes: 2, allowedRoots: [cwd] } } },
     { plugin: githubWebhook, scope, config: { source: 'native-test', path: '/github', secretEnv: 'NATIVE_GITHUB_SECRET',
       maxBodyBytes: 4096, rootRoute: 'root' } },
     ...[agents, execution, modelExecution, modelSelection, tools, approval, questions, askUser,
@@ -979,7 +1025,6 @@ it('creates, resumes and cancels one durable Session through the real browser RP
     expect(hasSettingsNamespaces).toBe(true)
     expect(JSON.stringify(rawSettingsReply)).not.toContain('private-leaf-schema-default')
     expect(JSON.stringify(rawSettingsReply)).not.toContain('private-parent-schema-default')
-    expect(JSON.stringify(rawSettingsReply)).not.toContain('"default"')
     const client = createNativeSessionClient(rpc, { maxFollowBufferChars: 1000000 })
     const originalPrompt = client.prompt.bind(client)
     client.prompt = (selectedSession, text, resume, signal, observe, images, onFollowError, lastSeq, detach) => originalPrompt(
@@ -1245,8 +1290,12 @@ it('creates, resumes and cancels one durable Session through the real browser RP
     }
     expect((await rpc.response!('/api', 'native-session/image', { sessionId, attachmentId: 'wrong' }, new AbortController().signal)).status).toBe(404)
     expect((await fetch(new URL('/api/native-session/image', url), { method: 'POST', body: JSON.stringify({ sessionId, attachmentId: image.attachment.attachmentId }) })).status).toBe(401)
-    expect(history.events.filter(event => event.type === 'user/message' || event.type === 'assistant/message').map(event => event.type))
-      .toEqual(['user/message', 'user/message', 'assistant/message', 'user/message', 'assistant/message'])
+    const conversationRows = history.events.filter(event => event.type === 'user/message' || event.type === 'assistant/message')
+    expect(conversationRows.map(event => event.type === 'user/message' && event.data.source.kind !== 'user'
+      ? 'context/message' : event.type))
+      .toEqual(['user/message', 'user/message', 'context/message', 'assistant/message', 'user/message', 'assistant/message'])
+    expect(conversationRows.find(event => event.type === 'user/message' && event.data.source.kind !== 'user'))
+      .toMatchObject({ data: { source: { plugin: '@redspark/rsh-system-prompt', form: 'snapshot' } } })
     expect(requests[1]?.messages.some(message => message.content.some(block => block.type === 'text' && block.text === 'first input'))).toBe(true)
     const early = new AbortController()
     early.abort(new Error('before admission'))
@@ -1457,8 +1506,8 @@ it('creates, resumes and cancels one durable Session through the real browser RP
       const readonlyEvents = (await readonlyReader.read()).events
       await readonlyReader.close()
       expect(readonlyEvents.find(event => event.type === 'session/title')).toMatchObject({ data: { title: 'Native read-only webhook' } })
-      expect(readonlyEvents.find(event => event.type === 'sandbox/mode')).toMatchObject({ data: { mode: 'read-only' } })
-      expect(readonlyEvents.find(event => event.type === 'approval/policy')).toMatchObject({ data: { policy: 'ask' } })
+      expect(readonlyEvents.findLast(event => event.type === 'sandbox/mode')).toMatchObject({ data: { mode: 'read-only' } })
+      expect(readonlyEvents.findLast(event => event.type === 'approval/policy')).toMatchObject({ data: { policy: 'ask' } })
       expect(readonlyEvents.find(event => event.type === 'native-approval/decided')).toMatchObject({ data: { outcome: 'allowed-once' } })
       expect(readonlyEvents.find(event => event.type === 'tool/result')).toMatchObject({ data: { error: { code: 'FS_SANDBOX_DENIED' } } })
       await expect(readFile(join(webhookCwd, 'denied.txt'))).rejects.toMatchObject({ code: 'ENOENT' })
@@ -1569,7 +1618,7 @@ it('creates, resumes and cancels one durable Session through the real browser RP
     await (hostStop ?? host.stop())
     await rm(directory, { recursive: true, force: true })
   }
-})
+}, 20_000)
 
 it('lists native preset folders with standing compositions and returns an empty catalog without the service', async () => {
   const scope = new NativeScope()

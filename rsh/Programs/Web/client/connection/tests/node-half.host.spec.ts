@@ -70,6 +70,7 @@ function fakeResponse(): {
       if (headers !== undefined) state.headers = headers
       return this
     },
+    flushHeaders() { return this },
     write(value: string | Uint8Array) { chunks.push(Buffer.from(value)); return true },
     end(this: { writableEnded: boolean }, value?: unknown) {
       if (typeof value === 'string' || value instanceof Uint8Array) chunks.push(Buffer.from(value))

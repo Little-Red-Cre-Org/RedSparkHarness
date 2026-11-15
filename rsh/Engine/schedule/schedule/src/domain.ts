@@ -3,8 +3,8 @@
  * @module @redspark/rsh-schedule
  */
 
-import { SessionLogOffset } from '@redspark/rsh-session/native'
-import type { SessionEvent, SessionLogOffset as SessionLogOffsetType } from '@redspark/rsh-session/native'
+import { SessionLogOffset } from '@redspark/rsh-session/types'
+import type { SessionEvent, SessionLogOffset as SessionLogOffsetType } from '@redspark/rsh-session/types'
 import type {
   AfterScheduleRecord,
   AtInput,

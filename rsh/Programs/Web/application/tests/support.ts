@@ -141,6 +141,38 @@ export async function connectFreshWorkspaceZh(page: Page, root: string, name = '
 }
 
 /**
+ * Adopt an existing directory as the Native page's first workspace.
+ * The sidebar New Session action returns without creating a session while no
+ * workspace is connected; the header button opens the directory dialog, and
+ * adopting the path selects the connected session. Resolves after the Message
+ * composer enables.
+ * @param page - the page under test.
+ * @param path - existing absolute directory already admitted by the Host allowed roots.
+ */
+export async function connectNativeWorkspace(page: Page, path: string): Promise<void> {
+  const add = page.locator('[data-slot="sidebar"]').getByRole('button', { name: 'New workspace', exact: true })
+  await add.waitFor({ timeout: 15_000 })
+  await page.waitForFunction(() => {
+    const button = document.querySelector<HTMLButtonElement>('[data-slot="sidebar"] button[aria-label="New workspace"]')
+    return button !== null && !button.disabled
+  })
+  await add.click()
+  const dialog = page.getByRole('dialog', { name: 'Select Workspace Directory' })
+  await dialog.waitFor({ timeout: 10_000 })
+  await dialog.getByRole('button', { name: 'Edit path', exact: true }).click()
+  const pathInput = dialog.locator('input[aria-label="Edit path"]')
+  await pathInput.fill(path)
+  // The dialog does not always hold focus, so the page keyboard can miss this input.
+  await pathInput.press('Enter')
+  await dialog.getByRole('button', { name: 'Open', exact: true }).click()
+  await dialog.waitFor({ state: 'hidden', timeout: 15_000 })
+  await page.waitForFunction(() => {
+    const editor = document.querySelector<HTMLTextAreaElement>('textarea[aria-label="Message"]')
+    return editor !== null && !editor.disabled
+  })
+}
+
+/**
  * Replace the composer draft through per-key gestures. `fill()` issues
  * select-all and insertText inside one task; directly after a trigger-menu or
  * chip interaction Lexical's internal selection has not yet absorbed the DOM

@@ -1,6 +1,6 @@
 version: 1
 scenario: present
-profile: web
+profile: native-web
 composition: web-ptc
 recording: live
 header:

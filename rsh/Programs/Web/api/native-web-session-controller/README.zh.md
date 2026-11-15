@@ -36,13 +36,15 @@ Client Consumer 提供列表、空白创建、历史、显式新建／恢复提�
 
 Session 文件 RPC 使用 `session/files/list`、`stat`、`read`、`read-all` 和 `read-related`，请求包含 `{ sessionId, path }`，必要时还包含 `range` 或 `relativePath`。Host 将每个路径（包括从基础文件目录解析的 `readRelated` 路径）限制在 Session 的 `cwd` 内；header 缺少 `cwd` 时使用所选 Workspace 或配置根目录。绝对路径以及解析到根目录外的路径或符号链接会以 `native/session-files` 失败。Host 会先解析根目录，因此 Session `cwd` 是目录符号链接时也可列出 `.`。Linux 文件包含检查使用已打开描述符的 `/proc/self/fd` 路径。没有 `/proc` 的系统会在真实路径上检查包含关系，将已打开描述符与重新打开的路径按设备号和 inode 核对，并确认路径仍解析到自身。文件读取和 stat 使用原始描述符。Linux 列表从已打开的目录描述符枚举；macOS 列表使用已验证的真实目录路径，并在读取后复核其设备号和 inode。`list` 返回 `{ path, entries, truncated }`；`stat` 返回文件身份与版本；`read` 接受从 1 开始的行范围；完整读取返回 base64 字节。经过身份验证的 POST `/api/native-session/files-follow` 会在入队前过滤观察，以 `maxFollowBufferBytes` 限制待发送 SSE 编码字节，并在超限时关闭；断开或取消也会关闭流并释放跟随者槽位。
 
+控制器还提供经过身份验证的 GET `/api/present.host` 与 POST `/api/present.open?sessionId=&seq=&index=&action=`。host 读取返回服务 Host 名称、桌面可用性和文件管理器类型。open 路由从冷 Session 句柄重新读取指定 `deliverables/presented` 事件，不启动 Agent；随后要求声明路径在 Session `cwd`（header 缺少时使用配置根目录）内解析为普通文件，再映射到 Host 进程路径，并通过选定的 Native command Provider 打开或显示。坐标无效返回 400，桌面不可用返回 409，声明或文件不存在返回 404，目标越出根目录或无法映射返回 422。
+
 控制器要求 `workspaceRegistry`，并提供 `workspaces/list`、`workspaces/create`、`workspaces/rename`、`workspaces/delete`、`workspaces/reorder`、`workspaces/reorder-session`、`workspaces/archive-session`、`workspaces/search` 与 `workspaces/connect`。经过身份验证的 POST `/api/workspaces/follow` 先发送完整基线，再发送 Workspace upsert/remove/order 与归档集合帧。移除 Workspace 注册前，`workspaces/delete` 会退休其空闲 Session owner 并释放已选运行时路由；目录与 Session 日志都会保留。native-web profile 将 Workspace 注册表安装到共享 JSON domain 存储，并配置 `workspaceRoutes`；路由准入会拒绝受保护的系统目录，并要求规范路径位于 `allowedRoots` 内或已经信任。`workspace-trust` 设置 namespace 会持久化获准的规范路径。创建和连接都会使用该信任列表；`trust: true` 会先保存请求路径，再重试准入。根目录外失败使用带 `{ path }` 的 `native/workspace-untrusted`；受保护目录使用 `native/workspace-forbidden` 和拒绝原因。其他失败保留 `native/workspaces` 代码与通用文案。所选 sandbox policy 会按 Session `cwd` 解析 workspace root，因此文件系统写入仍限制在各 Workspace 内。
 
 控制器还提供 `directories/pick`、`directories/list` 与 `directories/create-directory`。picker 会打开现有 Host OS 目录对话框；list 返回 `{ path, home, entries, crumbs }`，未给出路径时从启动 `cwd` 开始，create-directory 创建一个子目录。其他 Workspace 失败使用 `native/workspaces`；目录失败使用通用错误消息和 `native/directories`。
 
 可选 modelDirectory 提供模型元数据与 Provider 失败；modelSelection 通过唯一 Session 维护所有者验证并记录意图。选择请求携带确切持久化修订号，并拒绝待完成轮次。保留的 writer 在目录解析及持久化选择之前占用空闲 Agent 维护准入；冷态操作保留既有维护准入。可选 agentPresets 提供已安装组合；rootExecution 执行空白根选择并等待 epoch 清理。`agent-presets/list` 只接受 `{}`，返回默认 preset、已就绪的常驻组合及扫描到的目录摘要；匹配的组合使用目录信任级别，profile 独有的组合使用 `profile`。未注册目录保留扫描状态；没有 Registry 时返回 `{ default: null, presets: [] }`。错误码为 `native/agent-presets`。缺少选择 Provider 时显式修改请求失败，不替换成默认值。
 
-`session/mode-controls` 通过确切 root owner 读取所选 preset、已安装选项、修订号与永久空白 Session 锁定状态；未安装 preset Registry 时没有选项且 `canSelect: false`。`session/select-preset` 保留 root executor 的修订检查与空白 Session 要求。同一读取还会返回 plan mode 的可用性与状态。`session/select-plan-mode` 委托已安装的 Native plan-mode 状态机，包括等待下一 step 应用的选择。
+`session/mode-controls` 通过确切 root owner 读取所选 preset、已安装选项、修订号与永久空白 Session 锁定状态；未安装 preset Registry 时没有选项且 `canSelect: false`。活动中的委托 owner 用 `header.agentPreset` 返回锁定控件，不读取事件，也不占用 root 准入；其权限控件不可用，路由沿 `header.parentSession` 解析。`session/select-preset` 保留 root executor 的修订检查与空白 Session 要求。同一读取还会返回 plan mode 的可用性与状态。`session/select-plan-mode` 委托已安装的 Native plan-mode 状态机，包括等待下一 step 应用的选择。
 
 `session/permission-controls` 返回所选 permission Provider 的有效常驻策略与选项；未安装 Provider 时返回不可用状态。`session/select-permission` 通过 Provider 和确切 Session owner 使用既有 permission、sandbox 与 approval policy 事件写入。它不会回答待处理的一次性审批。Provider、存储与选择失败使用 `native/session`。
 
@@ -107,4 +109,4 @@ CLI 直接携带原生 Web Host、Session 控制器与前端静态产物包。�
 <a id="known-limitations-and-deferred-work"></a>
 
 - 产品 UI 与音频上传呈现不由该包提供；经过身份验证的 Session API 提供暂存文件上传，不承担页面策略或集成。
-- 控制器对所有 Session 行均返回 `hasActiveSchedule: false`。控制器提供 `rootExecution`，而 `taskScheduler` 要求该服务；若控制器依赖 scheduler 会形成加载循环。
+- 控制器用已为标题和空白状态读取的同一份有界 Session 历史推导 `hasActiveSchedule`，并折叠分叉前缀之后的 `schedule/change`；历史缺失或解不出时为 `false`。控制器提供 `rootExecution`，而 `taskScheduler` 要求该服务，因此依赖 scheduler 会形成加载循环。

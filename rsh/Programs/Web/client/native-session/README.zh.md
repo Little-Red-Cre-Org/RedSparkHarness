@@ -154,4 +154,4 @@ interface NativeSettingsDescription {
 <a id="known-limitations-and-deferred-work"></a>
 
 - 完整产品 UI 和音频上传不由该包提供；文件上传可通过带类型的 Client 操作完成。
-- Host 只能为已附加的 root owner 查询活动定时任务；冷态 Session 行的 `hasActiveSchedule` 为 `false`，因为 scheduler 清单按 owner 限定。
+- 侧栏的定时任务标记来自折叠 Host 已为该 Session 行读取的有界历史中的 `schedule/change` 记录；分叉前缀不计入，日志读不到或解不出时 `hasActiveSchedule` 为 `false`。Native 目录只折叠已选中 Session 已加载的事件，因此既不扫描持久化 Session，也不唤醒冷态 owner。

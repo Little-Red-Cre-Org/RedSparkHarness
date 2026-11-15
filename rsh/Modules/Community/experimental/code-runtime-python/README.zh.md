@@ -27,6 +27,8 @@ kind: "package-reference"
 
 仅在显式源码检出组合中选择这个私有实验包。将 `PythonCodeRuntime` 与 `dsh-tools` 一起注册后，`run()` 会在全新的 CPython 3.10+ 子进程中执行每个程序；成功时以 `result.value` resolve，失败时以 `result.error` resolve（正交的 `CodeRunFailure.kind` 分类涵盖解析失败、抛出异常、无效完成值、输出溢出、预算到期、中止与执行基底终止）。仅有 seam 误用会 reject——binding 命名空间不合法，或在 dispose 后调用。配置在加载期拒绝：非 Unix 平台；不是可执行普通文件的显式 `pythonBin`，或无法在 `PATH` 上解析的裸名；非 CPython、低于 3.10 或探测失败的解释器；非正或非整数预算；低于截断标记下限（64）的 `maxLogBytes`；会被 `setTimeout` 截断的定时器值；超过有效 fd-3 帧上限的预算（宿主堆无法安全解析接近上限的帧时，该上限会降低）；或最坏峰值会突破 `RLIMIT_AS` 的 `addressSpaceMb`／输出预算组合。
 
+`./native` 入口把同一运行时提供为 `codeRuntime`。它不依赖其他 Native 服务。Native 组合选择 `@redspark/rsh-experimental-code-runtime-python/native`；包根仍是 Cordis 插件。`@redspark/cordis` 与 `@redspark/rsh-code-runtime` 是可选 peer，因此 Cordis 组合仍须安装它们，Native 组合则不必。已发布 profile 均不挂载这个入口。
+
 ### 你得到什么
 
 包的默认导出是 `PythonCodeRuntime` 插件。其公开面还重新导出宿主侧协议词汇：`validateChildFrame`（重建每条入站帧）、无损 JSON codec 与计量器（`encodeJsonPlain`、`checkDoneValue`、`hasUnsafeIntegerToken`、`hasNonLosslessNumber`）、`logTruncationMarker`（共享截断标记文本），以及 `resolvePythonBin`（对照当前 `PATH` 的解释器查找）、`readProcessStart`（供测试用的进程启动统计）、`detachResidual`（已结算运行的资源清理测试 seam）与 `hostFrameParseCeiling`（给定堆上限可容纳的堆推导帧解析上限）。每个上限都是带默认值并经校验的 `Config` 字段：`cpuSeconds`（60）、`maxWallMs`（600000）、`addressSpaceMb`（512，Darwin 上不生效）、`maxLogBytes`（65536）、`maxValueBytes`（32768）、`graceMs`（3000）与 `pythonBin`（`python3`，在加载期解析、检查可执行性，在五秒强制终止期限内探测版本并固定）。每个子进程只接收 `TMPDIR`；环境中的凭证、`PATH`、`HOME` 与其他宿主状态均不可见。
@@ -69,7 +71,9 @@ kind: "package-reference"
 
 | 文件 | 职责 |
 |---|---|
-| [`src/index.ts`](src/index.ts) | 插件入口：`PythonCodeRuntime`——spawn、帧 pump、预算、隔离、拆卸；重新导出协议词汇 |
+| [`src/index.ts`](src/index.ts) | Cordis 适配器：`PythonCodeRuntime` 登记共享运行时并重新导出协议词汇 |
+| [`src/runtime.ts`](src/runtime.ts) | 共享运行时：spawn、帧 pump、预算、隔离、拆卸 |
+| [`src/native.ts`](src/native.ts) | Native 安装器：提供 `codeRuntime` 并登记拆卸 |
 | [`src/protocol.ts`](src/protocol.ts) | 宿主侧：帧 codec、不可信帧校验器、无损 JSON 计量器、共享标记文本 |
 | [`py/bootstrap.py`](py/bootstrap.py) | 子进程侧：fd-3 通道、程序执行、binding 分发、账本与结算 |
 | [`py/protocol.py`](py/protocol.py) | Python 侧：`PROTOCOL_FD`、`TypedDict` 帧镜像、`log_truncation_marker` |
@@ -88,6 +92,7 @@ kind: "package-reference"
 
 - [Code runtime seam](../../../../Compatibility/DSH/bridge/compat-code-runtime/README.zh.md) — 本后端实现的抽象契约。
 - [fd-3 协议 Agent Note](../../../../../.agents/notes/implemented/architecture/2026-07-31-code-runtime-python-fd3-protocol.zh.md) — 设计理由与 wire 契约。
+- [Native Python code runtime](../../../../../.agents/notes/implemented/architecture/2026-11-13-native-python-code-runtime.zh.md) — 共享运行时，以及 Cordis 与 Native 安装器。
 - [结算修复 Agent Note](../../../../../.agents/notes/archived/bug-fix/2026-07-31-code-runtime-python-settlement-fixes.md) — 结算、计量与隔离修复及其回归用例。
 - [Worker 线程后端](../../../Official/code-runtime/code-runtime-worker-thread/README.zh.md) — 已发布的 TypeScript 兄弟。
 - [Code runtime 子系统参考](../../../../Docs/subsystems/code-runtime.zh.md) — 请求／结果词汇、binding 与失败分类。
@@ -114,7 +119,7 @@ kind: "package-reference"
 - **以 `setsid()` 逃出子进程组后代不被组拆卸回收**——`kill(-pid)` 够不到它；运行仍按 done 帧决定的值结算，若该孤儿持有管道，close 截止兜底会强制结算，但孤儿本身在自行退出前一直存活到 fiber 之外。
 - **结算后到达的 `log` 帧被丢弃**——运行一旦结算，宿主侧捕获即关闭；迟到的 fd-3 `log` 帧（来自比 done 帧存活更久的线程）会被丢弃，而不是追加到 `logs`。
 - **binding 回复值没有 seam 级字节或深度上限**——`maxValueBytes` 只计量 done 帧的完成值；宽 binding 回复在宿主侧重建（`snapshotJsonValue` 遍历）并整帧编码，两侧都只受进程内存约束（与没有子进程侧预算的 binding 实参一样）。
-- **已发布 profile 均不挂载本提供方**——keyless `ptc-python-turn` 快照通过真实 Loader 替换 headless PTC 运行时；已发布 profile 继续使用 Worker 线程后端。
+- **已发布 profile 均不挂载本提供方**——`./native` 已发布 `codeRuntime` 且未挂载；发布包不得点名这个实验包。keyless `ptc-python-turn` 快照仍通过 Cordis loader 替换 headless PTC 运行时；已发布 profile 继续使用 Worker 线程后端。
 - **跨通道日志交错由后端决定**——Python stdout、stderr 与 fd-3 日志帧彼此独立传输；每个通道保留自身顺序，但它们在 `result.logs` 中的总顺序可能不同。
 - **需要 CPython 3.10 或更高版本**——配置的可执行文件会在加载期完成解析与版本探测；不受支持的解释器会在 `ctx.codeRuntime` 注册前失败。
 - **截断标记文本与临时目录前缀保留改名前的短名**——标记 `[dsh-code-runtime-python] log capture truncated at <N> bytes` 与 `dsh-code-runtime-python-` 临时目录前缀被测试逐字节锚定，且独立于 npm 包名；promotion（去掉 `experimental-` 前缀）不会重命名它们。

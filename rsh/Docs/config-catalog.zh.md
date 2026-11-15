@@ -658,7 +658,7 @@ export interface Config {
 }
 ```
 
-来源：[`rsh/Modules/Community/experimental/code-runtime-python/src/index.ts:42`](../Modules/Community/experimental/code-runtime-python/src/index.ts)
+来源：[`rsh/Modules/Community/experimental/code-runtime-python/src/runtime.ts:38`](../Modules/Community/experimental/code-runtime-python/src/runtime.ts)
 
 <a id="redsparkrsh-experimental-inspector"></a>
 
@@ -2748,7 +2748,7 @@ export interface Config {
 }
 ```
 
-来源：[`rsh/Modules/Official/shell/tool-bash-persistent/src/index.ts:435`](../Modules/Official/shell/tool-bash-persistent/src/index.ts)
+来源：[`rsh/Modules/Official/shell/tool-bash-persistent/src/index.ts:22`](../Modules/Official/shell/tool-bash-persistent/src/index.ts)
 
 <a id="redsparkrsh-tool-fs"></a>
 
@@ -2929,7 +2929,7 @@ export interface Config {
 }
 ```
 
-来源：[`rsh/Modules/Official/shell/tool-pwsh-persistent/src/index.ts:472`](../Modules/Official/shell/tool-pwsh-persistent/src/index.ts)
+来源：[`rsh/Modules/Official/shell/tool-pwsh-persistent/src/index.ts:25`](../Modules/Official/shell/tool-pwsh-persistent/src/index.ts)
 
 <a id="redsparkrsh-tool-ralph"></a>
 

@@ -1,6 +1,6 @@
 version: 1
 scenario: bash-abort-row
-profile: web
+profile: native-web
 composition: acp-default
 recording: authored
 header:

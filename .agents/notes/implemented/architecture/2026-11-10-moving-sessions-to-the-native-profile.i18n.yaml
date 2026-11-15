@@ -2,5 +2,5 @@
 # side as of the last confirmed-consistent state. Both languages carry equal authority;
 # after editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write .agents/notes/implemented/architecture/2026-11-10-moving-sessions-to-the-native-profile.md
-2026-11-10-moving-sessions-to-the-native-profile.md: 4b0f752f25bf38483f4728d9fe0e0163a87c9106
-2026-11-10-moving-sessions-to-the-native-profile.zh.md: e10006ef3a6bd27264bec389486f92fab3ad1df0
+2026-11-10-moving-sessions-to-the-native-profile.md: 33b8575139765c041433bdc95a970a4e8874f207
+2026-11-10-moving-sessions-to-the-native-profile.zh.md: 9d9fa3dc2d0d252d5d7c9dc2ae11248ff4773f07

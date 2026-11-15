@@ -1535,8 +1535,9 @@ export async function compareOrRefreshGolden(goldenPath: string, actual: string,
  * files and every committed JSONL is a header-scrubbed, typed-redaction fixed point.
  * @param dir - the scenario snapshot directory.
  * @param expected - the exact expected file inventory.
+ * @param profile - expected `snapshot.yml` profile. Defaults to `web`.
  */
-export async function assertFixtureInventory(dir: string, expected: string[]): Promise<void> {
+export async function assertFixtureInventory(dir: string, expected: string[], profile = 'web'): Promise<void> {
   const entries = (await readdir(dir)).sort()
   const ownsManifest = entries.includes('snapshot.yml')
   const artifacts = entries.filter(name => name !== 'snapshot.yml')
@@ -1548,7 +1549,7 @@ export async function assertFixtureInventory(dir: string, expected: string[]): P
   if (ownsManifest) {
     const manifestPath = join(dir, 'snapshot.yml')
     const manifest = parseSnapshotManifest(await readFile(manifestPath, 'utf8'), manifestPath)
-    expect(manifest.profile).toBe('web')
+    expect(manifest.profile).toBe(profile)
     if (manifest.session === undefined) {
       expect(
         artifacts.some(name => parseSessionFixtureName(name)?.index === 0),

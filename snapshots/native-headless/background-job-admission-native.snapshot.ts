@@ -71,7 +71,9 @@ it.skipIf(process.platform === 'win32')('replays the recorded background-job-adm
       }
       // The scenario's subject is background job admission, so the Jobs rows stay enabled.
       if (['code-runtime', 'time-context'].includes(row.id)) return { ...row, disabled: true }
-      if (row.id === 'jobs' || row.id === 'tool-jobs') return { ...row, disabled: false }
+      // The recording admits one live job per owner. Native's default ceiling is 10.
+      if (row.id === 'jobs') return { ...row, disabled: false, config: { maxConcurrentPerAgent: 1 } }
+      if (row.id === 'tool-jobs') return { ...row, disabled: false }
       return row
     },
     model: { plugin: 'rsh-llm-replay-native', config: { file: fixture, script: deriveReplayScript(recorded) } },
@@ -101,14 +103,19 @@ it.skipIf(process.platform === 'win32')('replays the recorded background-job-adm
       const reader = await storage.open(id, 'read')
       try {
         const events = (await reader.read()).events
-        // The bash tool ran the recorded command and the model read its output.
+        // The recording is four calls: hold the slot, reject the second producer,
+        // free the slot, then verify the rejected producer did not run.
         const results = events.filter(event => event.type === 'tool/result')
-        expect(results).toHaveLength(1)
-        const rendered = results[0]?.type === 'tool/result'
-          ? results[0].data.message.content[0]?.content[0]?.text ?? '' : ''
-        expect(rendered).toContain('TERMINAL_OK')
+        expect(results).toHaveLength(4)
+        const rendered = results.map(result => result.type === 'tool/result'
+          ? result.data.message.content[0]?.content[0]?.text ?? '' : '')
+        expect(rendered[0]).toContain('started background job')
+        expect(rendered[1]).toContain('live-job limit reached')
+        expect(rendered[1]).toContain('limit: 1')
+        expect(rendered[2]).toContain('requested cancellation of job')
+        expect(rendered[3]).toContain('(no output)')
         expect(events.filter(event => event.type === 'tool/call').map(event => event.type === 'tool/call' ? event.data.name : undefined))
-          .toEqual(['bash'])
+          .toEqual(['bash', 'bash', 'job_kill', 'bash'])
         expect(events.filter(event => event.type === 'turn/end'))
           .toMatchObject([{ data: { reason: { kind: 'completed' } } }])
 
