@@ -445,7 +445,7 @@ it('replays a native SDK turn with exact model input, output and durable Session
     }
     expect(result.finalResponse).toBe(reply)
     expect(result.events.at(-1)).toMatchObject({ type: 'turn/end', data: { reason: { kind: 'completed' } } })
-    expect(requests, JSON.stringify(result.events.filter(event => event.type === 'tool/result'))).toHaveLength(40)
+    expect(requests, JSON.stringify(result.events.filter(event => event.type === 'tool/result'))).toHaveLength(41)
     expect(result.notifications.filter(notification => notification.method === 'subagent.started').map(notification => notification.params))
       .toEqual([{ parentSessionId: 'sdk-recorded-fork', childSessionId: 'sdk-recorded-child' },
         { parentSessionId: 'sdk-recorded-fork', childSessionId: expect.any(String) }])

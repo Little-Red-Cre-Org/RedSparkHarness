@@ -2,5 +2,5 @@
 # side as of the last confirmed-consistent state. Both languages carry equal authority;
 # after editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write .agents/notes/implemented/testing/2026-11-14-cordis-replay-stops-when-native-passes.md
-2026-11-14-cordis-replay-stops-when-native-passes.md: c55debfa1755ca7c22da3d5afffbe9086774c87c
-2026-11-14-cordis-replay-stops-when-native-passes.zh.md: 963345cade3057e9d29a43780d44ee5e560273a4
+2026-11-14-cordis-replay-stops-when-native-passes.md: 93c91f71c10dbf0f055f23b589e18f69b0ec5769
+2026-11-14-cordis-replay-stops-when-native-passes.zh.md: bc0697159c5d8a91ee7fb7ed50a969582f811d56
