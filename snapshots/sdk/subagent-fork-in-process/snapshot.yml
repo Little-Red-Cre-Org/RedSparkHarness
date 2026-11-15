@@ -1,6 +1,6 @@
 version: 1
 scenario: subagent-fork-in-process
-profile: legacy-sdk
+profile: sdk
 composition: default
 recording: live
 header:
