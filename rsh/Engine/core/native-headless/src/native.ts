@@ -1807,8 +1807,9 @@ export class NativeHeadlessApplication implements NativeApplication {
                   ? undefined
                   : this.sandboxPolicy?.resolve({ session })
                 if (standingPolicy !== undefined) {
+                  const sessionApproval = sessionApprovalPolicy(session)
                   const sections = policySections(standingPolicy.mode, standingPolicy.workspaceRoot,
-                    this.approval?.policy === 'ask')
+                    (sessionApproval ?? this.approval?.policy) === 'ask')
                   const text = runtimeContextText(sections)
                   if (retainedRuntimeContext(session) !== text) {
                     track(session.append('user/message', createUserMessage({

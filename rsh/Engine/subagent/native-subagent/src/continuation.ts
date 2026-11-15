@@ -10,6 +10,7 @@ import type { NativeDelegationSetup, NativeSessionContinuation, NativeSessionCon
 import type { NativeToolDelegationContext } from '@redspark/rsh-native-tools/types'
 import { createAdjacentAgentMessage, createSettlementMessage, finalAssistantOutput, subagentEpochStopReason, foldSubagentDescriptor, snapshotSubagentDescriptor, withContinuableReturnGuidance, type ContinuableSubagentDescriptorData, type SubagentDelegationContext } from '@redspark/rsh-subagent-protocol'
 import type { NativeSubagentCatalogEntry, NativeSubagentFinished, NativeSubagentRequest } from './index.ts'
+import { appendDelegatedPolicy, captureDelegatedPolicy } from './delegated-policy.ts'
 
 interface OwnedChild { readonly handle: NativeSessionContinuation; readonly parent: NativeAgent }
 
@@ -76,6 +77,8 @@ export class NativeSubagentContinuations {
   async start(request: NativeSubagentRequest, signal: AbortSignal): Promise<{ id: SessionId; provider: string; messageId: MessageId }> {
     const operations = this.operations(request.agent, request.session)
     signal.throwIfAborted()
+    const authority = this.context.require('sessionExecution').delegationAuthority(request.agent, request.session)
+    const delegatedPolicy = captureDelegatedPolicy(request.session, authority?.approvalRequired === true)
     const id = SessionId(randomUUID())
     const descriptor = snapshotSubagentDescriptor({ mode: 'continuable', provider: this.provider, label: request.label,
       agentProvider: request.config.provider, agentModel: request.config.model,
@@ -99,6 +102,7 @@ export class NativeSubagentContinuations {
       await operations.maintenance(id, async (owner, admitted) => {
         admitted.throwIfAborted()
         owner.append('subagent/descriptor', descriptor)
+        appendDelegatedPolicy(owner.append.bind(owner), delegatedPolicy)
         await owner.flush()
       }, signal)
       const hasReturnTool = this.context.optional('tools')?.schemas(child.agent.scope).some(tool => tool.name === 'send_message') === true

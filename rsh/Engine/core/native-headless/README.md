@@ -88,7 +88,7 @@ Continuation input to a busy recipient uses its actual active owner as soon as t
 
 #### What the model sees
 
-The model receives the configured `systemPrompt` followed by registered prompt sections before the user message. A visible complete section replaces that base prompt. A visible runtime-context suppressor omits the system-prompt snapshot.
+The model receives the configured `systemPrompt` followed by registered prompt sections before the user message. A visible complete section replaces that base prompt. A visible runtime-context suppressor omits the system-prompt snapshot. When the snapshot is included, its approval sentence uses the latest `approval/policy` event on that Session, or the installed approval policy when the Session has none.
 
 ##### Profile prompt
 
