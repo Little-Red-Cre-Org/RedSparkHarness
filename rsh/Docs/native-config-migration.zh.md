@@ -20,7 +20,7 @@ Native CLI 检查 `rsh.profile.json` 中已安装且启用的插件，以及由�
 
 `native-headless`、`native-web` 与 `native-tui` 安装 `@redspark/rsh-code-runtime-process-sandbox`（`rsh/Programs/CLI/src/native-profile-template.ts:459`）。`native-sdk` 与 `native-acp` 在该行之前返回。没有任何已发布模板安装 `@redspark/rsh-experimental-code-runtime-python`。
 
-`web` 与 `rsh` 把 Minimal 登记为名册 id，描述是 `Task tracking tools without Goal tools`（`rsh/Programs/CLI/src/native-profile-template.ts:171`）。该行不加载 `rsh/Engine/preset/agent-presets/presets/minimal/agent.cordis.yml`。
+`web` 与 `rsh` 把 Minimal 安装成独立 scope。常驻行只保留平台持久 shell（`bash` 或 `pwsh`），并跳过压缩；人格行是固定完整提示词 `You are a helpful software engineer assistant.`，且抑制运行时上下文。该 scope 不加载 `rsh/Engine/preset/agent-presets/presets/minimal/agent.cordis.yml`。
 
 ## `settings.yaml` 中的值
 

@@ -20,7 +20,10 @@
   "license": "MIT",
   "dependencies": {
     "@redspark/rsh-agent-presets": "workspace:^",
+    "@redspark/rsh-compaction": "workspace:^",
+    "@redspark/rsh-native-agent": "workspace:^",
     "@redspark/rsh-native-runtime": "workspace:^",
+    "@redspark/rsh-native-tools": "workspace:^",
     "zod": "^4.4.3"
   },
   "dsh": {
@@ -29,7 +32,7 @@
       "entry": "./native",
       "targets": ["host"],
       "requires": ["agentPresets"],
-      "optional": [],
+      "optional": ["tools", "agents", "compaction"],
       "provides": []
     }
   }

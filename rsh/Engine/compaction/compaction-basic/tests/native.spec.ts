@@ -214,6 +214,25 @@ describe('native compaction hook lifecycle', () => {
   })
 })
 
+it('skips automatic and manual compaction for an exempt scope', async () => {
+  const scope = new NativeScope()
+  const engine = new NativeBasicCompaction({
+    model: {} as never, tokenMeter: {} as never, activeSessions: {} as never,
+  }, resolveNativeBasicCompactionConfig(undefined))
+  const release = engine.exempt(scope)
+  const owner = {
+    agent: { id: NativeAgentId('exempt'), scope },
+    session: {} as Session,
+    writerAvailable: true,
+    append: () => { throw new Error('append') },
+    flush: () => { throw new Error('flush') },
+  }
+  await expect(engine.compactIfNeeded(owner, 'pressure', new AbortController().signal)).resolves.toBeNull()
+  await expect(engine.compactNow(owner, new AbortController().signal)).resolves.toBeNull()
+  release()
+  await expect(engine.compactIfNeeded(owner, 'pressure', new AbortController().signal)).rejects.toThrow()
+})
+
 describe('native step-boundary pressure compaction', () => {
   it('replaces older history with one checkpoint before the next step enters', async () => {
     const state = await fixture([

@@ -117,7 +117,7 @@ kind: "package-reference"
 
 ### 原生 profile
 
-`./native` 是供原生 profile 使用的无 Cordis Service Definition。它为 `NativeServices.compaction` 增补 `compactIfNeeded(owner, trigger, signal)` 与 `compactNow(owner, signal, sourceCommandId?)`。owner 是 Program 为每个会话提供的 writer 视图（`session`、`writerAvailable`、`append` 与 `flush()`），而不是 Cordis `Agent`。事件形状、标记对、检查点来源辅助函数、工具配对辅助函数与 `ManualCompactionError` 均与兼容入口共享，因此两种运行时持久化完全相同的 `compaction/*` 日志。运行时不变式伴生入口仍只用于兼容入口。
+`./native` 是供原生 profile 使用的无 Cordis Service Definition。它为 `NativeServices.compaction` 增补 `compactIfNeeded(owner, trigger, signal)`、`compactNow(owner, signal, sourceCommandId?)` 与 `exempt(scope)`。当 owner 的 Agent scope 是该 scope 或其后代时，`exempt(scope)` 会跳过自动压力压缩、溢出恢复和手动压缩。owner 是 Program 为每个会话提供的 writer 视图（`session`、`writerAvailable`、`append` 与 `flush()`），而不是 Cordis `Agent`。事件形状、标记对、检查点来源辅助函数、工具配对辅助函数与 `ManualCompactionError` 均与兼容入口共享，因此两种运行时持久化完全相同的 `compaction/*` 日志。运行时不变式伴生入口仍只用于兼容入口。
 
 </details>
 

@@ -6,6 +6,7 @@
  */
 
 import type { CommandId } from '@redspark/rsh-commands/brand'
+import type { NativeScope } from '@redspark/rsh-native-runtime'
 import type {} from '@redspark/rsh-native-runtime'
 import type { Session } from '@redspark/rsh-session/native'
 import type { CompactionTrigger } from './errors.ts'
@@ -63,6 +64,12 @@ export interface NativeCompactionOperations {
    * preserves its abort reason.
    */
   compactNow(owner: NativeCompactionOwner, signal: AbortSignal, sourceCommandId?: CommandId): Promise<CompactionResult | null>
+  /**
+   * Skip automatic pressure compaction, overflow recovery, and manual compaction for one scope and its descendants.
+   * @param scope - preset or Agent scope that must not replace history.
+   * @returns removal of this exact exemption.
+   */
+  exempt(scope: NativeScope): () => void
 }
 
 declare module '@redspark/rsh-native-runtime' {

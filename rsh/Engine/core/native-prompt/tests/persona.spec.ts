@@ -67,4 +67,33 @@ describe('native prompt persona', () => {
     for (const dispose of effects) dispose()
     expect(await registry.render()).toBe('')
   })
+
+  it('renders one complete section and ignores every other visible section', async () => {
+    const { registry, scope } = install({ personaPrefix: 'deployment persona', personaSuffix: 'suffix' })
+    const agentScope = new NativeScope(scope)
+    registry.register({ name: 'guidance', order: 20, text: () => 'guidance' }, agentScope)
+    registry.register({ name: 'fixed', order: 1, complete: true, text: () => 'You are a helpful software engineer assistant.' }, agentScope)
+    expect(registry.hasCompleteSection(agentScope)).toBe(true)
+    expect(await registry.render(agentScope)).toBe('You are a helpful software engineer assistant.')
+    expect(await registry.render()).toBe('deployment persona\n\nsuffix')
+  })
+
+  it('rejects two visible complete sections', () => {
+    const { registry } = install(undefined)
+    registry.register({ name: 'one', order: 1, complete: true, text: () => 'one' })
+    registry.register({ name: 'two', order: 2, complete: true, text: () => 'two' })
+    expect(() => registry.hasCompleteSection()).toThrow(/multiple complete sections/)
+  })
+
+  it('suppresses runtime context for a scope without suppressing its parent', () => {
+    const { registry, scope } = install(undefined)
+    const agentScope = new NativeScope(scope)
+    const dispose = registry.suppressRuntimeContext(agentScope)
+    expect(registry.runtimeContextSuppressed(agentScope)).toBe(true)
+    expect(registry.runtimeContextSuppressed(scope)).toBe(false)
+    const child = new NativeScope(agentScope)
+    expect(registry.runtimeContextSuppressed(child)).toBe(true)
+    dispose()
+    expect(registry.runtimeContextSuppressed(child)).toBe(false)
+  })
 })

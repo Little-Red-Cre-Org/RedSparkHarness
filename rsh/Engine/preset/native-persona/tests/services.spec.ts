@@ -12,19 +12,26 @@ import { bridgedSystemPrompt, personaServices, PERSONA_PREFIX_SECTION, PERSONA_S
  */
 function promptRegistry(): {
   registry: NativePromptRegistry
-  rows: Map<string, { order: number; text: string }>
+  rows: Map<string, { order: number; text: string; complete?: boolean }>
   scopes: Map<string, unknown>
+  suppressed: unknown[]
 } {
-  const rows = new Map<string, { order: number; text: string }>()
+  const rows = new Map<string, { order: number; text: string; complete?: boolean }>()
   const scopes = new Map<string, unknown>()
+  const suppressed: unknown[] = []
   const registry = {
-    register: (section: { name: string; order: number; text: () => string }, scope?: unknown) => {
-      rows.set(section.name, { order: section.order, text: section.text() })
+    register: (section: { name: string; order: number; text: () => string; complete?: boolean }, scope?: unknown) => {
+      rows.set(section.name, { order: section.order, text: section.text(),
+        ...(section.complete === true ? { complete: true } : {}) })
       scopes.set(section.name, scope)
       return () => { rows.delete(section.name); scopes.delete(section.name) }
     },
+    suppressRuntimeContext: (scope?: unknown) => {
+      suppressed.push(scope)
+      return () => { suppressed.splice(suppressed.indexOf(scope), 1) }
+    },
   } as unknown as NativePromptRegistry
-  return { registry, rows, scopes }
+  return { registry, rows, scopes, suppressed }
 }
 
 describe('bridgedSystemPrompt', () => {
@@ -47,10 +54,16 @@ describe('bridgedSystemPrompt', () => {
       bridged.getSectionOrder('DEPLOYMENT_PERSONA_SUFFIX'))
   })
 
-  it('accepts a suppression request without claiming it took effect', () => {
-    const { registry } = promptRegistry()
-    // The Native registry owns suppression at the assembly level; the bridge must not throw.
-    expect(() => { bridgedSystemPrompt(registry).suppressRuntimeContext() }).not.toThrow()
+  it('forwards a complete section and records runtime-context suppression on the installation scope', () => {
+    const { registry, rows, suppressed } = promptRegistry()
+    const scope = { id: 'minimal' }
+    const effects: (() => void)[] = []
+    const bridged = bridgedSystemPrompt(registry, scope as never, { effect: (dispose) => { effects.push(dispose); return () => {} } })
+    bridged.section({ name: 'deployment:persona-prefix', order: 1, text: 'fixed', complete: true })
+    bridged.suppressRuntimeContext()
+    expect(rows.get('deployment:persona-prefix')).toMatchObject({ text: 'fixed', complete: true })
+    expect(suppressed).toEqual([scope])
+    expect(effects).toHaveLength(1)
   })
 })
 

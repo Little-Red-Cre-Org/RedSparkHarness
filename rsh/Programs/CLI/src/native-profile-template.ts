@@ -164,22 +164,50 @@ const CREATION_PERSONA = {
   suffix: 'Your working directory is {{cwd}}.',
 } as const
 
-const NATIVE_AGENT_PRESET_INSTALLATIONS = [
-  { id: 'agent-presets', plugin: '@redspark/rsh-agent-presets', scope: ROOT, config: { default: 'standard' } },
-  { id: 'preset-standard', plugin: '@redspark/rsh-agent-preset-standing', scope: 'standard',
-    config: { id: 'standard', name: 'Standard', description: 'Goal planning and task tracking tools.' } },
-  { id: 'preset-minimal', plugin: '@redspark/rsh-agent-preset-standing', scope: 'minimal',
-    config: { id: 'minimal', name: 'Minimal', description: 'Task tracking tools without Goal tools.' } },
-  { id: 'preset-ptc', plugin: '@redspark/rsh-agent-preset-standing', scope: 'ptc',
-    config: { id: 'ptc', name: 'PTC 模式', description: '功能完整的编码 Agent，但默认不提供 workflow 工具；其他工具通过 PTC 模式 SDK 呈现，让模型用一个 TypeScript 程序组合多步操作。' } },
-  { id: 'preset-creation', plugin: '@redspark/rsh-agent-preset-standing', scope: 'creation',
-    config: { id: 'creation', name: '创造模式', description: '用于创建自定义 Agent preset 和 Native 模块：具备标准模式的全部能力，并提供 Native 创作指导。' } },
-  { id: 'persona-standard', plugin: '@redspark/rsh-native-persona', scope: 'standard', config: STANDARD_PERSONA },
-  { id: 'persona-ptc', plugin: '@redspark/rsh-native-persona', scope: 'ptc', config: STANDARD_PERSONA },
-  { id: 'persona-creation', plugin: '@redspark/rsh-native-persona', scope: 'creation', config: CREATION_PERSONA },
-  { id: 'code-tool-ptc', plugin: '@redspark/rsh-tool-code-runtime', scope: 'ptc',
-    config: { sdkPrompt: true, presentation: 'ptc', denyTools: ['workflow'] } },
-] as const
+const MINIMAL_PERSONA = {
+  prefix: 'You are a helpful software engineer assistant.',
+  suffix: '',
+  complete: true,
+  includeRuntimeContext: false,
+} as const
+
+/** Standing presets for native-web and native-tui. Minimal keeps one persistent shell and does not compact. */
+function nativeAgentPresetInstallations(platform: NodeJS.Platform) {
+  const shell = platform === 'win32' ? 'pwsh' : 'bash'
+  return [
+    { id: 'agent-presets', plugin: '@redspark/rsh-agent-presets', scope: ROOT, config: { default: 'standard' } },
+    { id: 'preset-standard', plugin: '@redspark/rsh-agent-preset-standing', scope: 'standard',
+      config: { id: 'standard', name: 'Standard', description: 'Goal planning and task tracking tools.' } },
+    { id: 'preset-minimal', plugin: '@redspark/rsh-agent-preset-standing', scope: 'minimal',
+      config: { id: 'minimal', name: 'Minimal', description: 'Fixed prompt and one persistent shell.',
+        allowedTools: [shell], compaction: false } },
+    { id: 'preset-ptc', plugin: '@redspark/rsh-agent-preset-standing', scope: 'ptc',
+      config: { id: 'ptc', name: 'PTC 模式', description: '功能完整的编码 Agent，但默认不提供 workflow 工具；其他工具通过 PTC 模式 SDK 呈现，让模型用一个 TypeScript 程序组合多步操作。' } },
+    { id: 'preset-creation', plugin: '@redspark/rsh-agent-preset-standing', scope: 'creation',
+      config: { id: 'creation', name: '创造模式', description: '用于创建自定义 Agent preset 和 Native 模块：具备标准模式的全部能力，并提供 Native 创作指导。' } },
+    { id: 'persona-standard', plugin: '@redspark/rsh-native-persona', scope: 'standard', config: STANDARD_PERSONA },
+    { id: 'persona-minimal', plugin: '@redspark/rsh-native-persona', scope: 'minimal', config: MINIMAL_PERSONA },
+    { id: 'persona-ptc', plugin: '@redspark/rsh-native-persona', scope: 'ptc', config: STANDARD_PERSONA },
+    { id: 'persona-creation', plugin: '@redspark/rsh-native-persona', scope: 'creation', config: CREATION_PERSONA },
+    { id: 'code-tool-ptc', plugin: '@redspark/rsh-tool-code-runtime', scope: 'ptc',
+      config: { sdkPrompt: true, presentation: 'ptc', denyTools: ['workflow'] } },
+  ]
+}
+
+/** Persistent shell isolated to the Minimal scope. Root sessions keep the one-shot shell. */
+function nativeMinimalShellInstallations(platform: NodeJS.Platform) {
+  const windows = platform === 'win32'
+  return [
+    { id: 'minimal-terminals', plugin: '@redspark/rsh-terminal', scope: 'minimal' },
+    { id: 'minimal-terminal-bash', plugin: '@redspark/rsh-terminal-bash', scope: 'minimal',
+      config: { type: 'shell', timeoutMs: 300_000, ...(windows ? { shellDialect: 'pwsh' } : {}) } },
+    windows
+      ? { id: 'minimal-persistent-pwsh', plugin: '@redspark/rsh-tool-pwsh-persistent', scope: 'minimal',
+        config: { timeoutMs: 300_000, description: SDK_MINIMAL_PWSH_DESCRIPTION } }
+      : { id: 'minimal-persistent-bash', plugin: '@redspark/rsh-tool-bash-persistent', scope: 'minimal',
+        config: { timeoutMs: 300_000, description: SDK_MINIMAL_BASH_DESCRIPTION } },
+  ]
+}
 
 /**
  * Root of the CLI package whose manifest declares the shipped profile templates.
@@ -369,7 +397,8 @@ export function shippedNativeProfileComposition(
       ] : []),
       ...(profile === 'native-web' || profile === 'native-tui' ? [
         { id: 'plan-mode', plugin: '@redspark/rsh-plan-mode', scope: ROOT, config: { section: PLAN_MODE_SECTION } },
-        ...NATIVE_AGENT_PRESET_INSTALLATIONS,
+        ...nativeAgentPresetInstallations(platform),
+        ...nativeMinimalShellInstallations(platform),
       ] : []),
       { id: 'agents', plugin: '@redspark/rsh-native-agent', scope: ROOT },
       { id: 'session-execution', plugin: '@redspark/rsh-native-session-execution', scope: ROOT },
@@ -418,8 +447,6 @@ export function shippedNativeProfileComposition(
       { id: 'tool-jobs', plugin: '@redspark/rsh-native-tool-jobs', scope: ROOT },
       { id: 'tool-todo', plugin: '@redspark/rsh-tool-todo', scope: profile === 'native-tui' ? 'standard' : ROOT,
         config: { allowParallelInProgress: true } },
-      ...(profile === 'native-tui' ? [{ id: 'tool-todo-minimal', plugin: '@redspark/rsh-tool-todo', scope: 'minimal',
-        config: { allowParallelInProgress: true } }] : []),
       { id: 'model-execution', plugin: '@redspark/rsh-native-model-execution', scope: ROOT },
       { id: 'llm-retry', plugin: '@redspark/rsh-llm-retry', scope: ROOT },
       ...NATIVE_COMPACTION_INSTALLATIONS,

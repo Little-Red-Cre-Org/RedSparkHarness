@@ -94,6 +94,10 @@ async function fixture(
     maxSteps?: number
     /** Persona template registered as a prompt section; `{{variable}}` references render strictly. */
     persona?: string
+    /** Make the persona section the only system prompt. */
+    completePersona?: boolean
+    /** Suppress the system-prompt runtime-context snapshot for this scope. */
+    suppressRuntimeContext?: boolean
     directory?: string
     workspaceWriteRoot?: string
     codeRuntimeProvider?: NativePlugin
@@ -266,9 +270,12 @@ async function fixture(
           // The persona template is a prompt section, exactly like a shipped preset row: the
           // variables it references are resolved by the Registry at render time, not here.
           resolve: () => (context: NativeContext): void => {
-            context.require('promptSections').register({
+            const registry = context.require('promptSections')
+            registry.register({
               name: 'deployment:persona-prefix', order: 10_000, text: () => options.persona!,
+              ...(options.completePersona === true ? { complete: true } : {}),
             })
+            if (options.suppressRuntimeContext === true) registry.suppressRuntimeContext(context.scope)
           },
         },
         scope,
@@ -3060,6 +3067,30 @@ it('keeps one schema per tool when the profile also registers the builtin run_co
     expect(runCode[0]?.description).toBe('REGISTRY-RUN-CODE-MARKER')
   } finally {
     await removeRunCode?.()
+    await state.host.stop()
+    await rm(state.directory, { recursive: true, force: true })
+  }
+})
+
+it('uses a complete persona as the only system prompt and omits runtime context', async () => {
+  const policy = new NativeSandboxPolicy({ mode: 'workspace-write', workspaceRoot: process.cwd() })
+  const state = await fixture([textResponse('done')], {
+    persona: 'You are a helpful software engineer assistant.',
+    completePersona: true,
+    suppressRuntimeContext: true,
+    sandboxPolicy: policy,
+    approvalPolicy: 'ask',
+  })
+  try {
+    await state.app.run(['go'], new AbortController().signal)
+    const system = state.adapter.requests[0]?.messages.find(message => message.role === 'system')
+    if (system?.role !== 'system') throw new Error('missing system message')
+    const text = system.content.map(part => part.type === 'text' ? part.text : '').join('')
+    expect(text).toBe('You are a helpful software engineer assistant.')
+    expect(state.adapter.requests[0]?.messages.some(message =>
+      message.role === 'user' && message.source.kind === 'plugin' && message.source.plugin === '@redspark/rsh-system-prompt',
+    )).toBe(false)
+  } finally {
     await state.host.stop()
     await rm(state.directory, { recursive: true, force: true })
   }

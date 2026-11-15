@@ -59,13 +59,9 @@
                          "zod":  "^4.4.3"
                      },
     "devDependencies":  {
-                            "@redspark/rsh-client-native-session":  "workspace:^",
-                            "@redspark/cordis":  "workspace:^"
+                            "@redspark/rsh-client-native-session":  "workspace:^"
                         },
     "scripts":  {
                     "bundle":  "tsdown"
-                },
-    "peerDependencies":  {
-                             "@redspark/cordis":  "workspace:^"
-                         }
+                }
 }

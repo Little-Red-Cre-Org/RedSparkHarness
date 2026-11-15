@@ -37,6 +37,8 @@ Status: proposed
 | `mixed` | 169 | 有一个入口（通常是 `./native`）已经无 Cordis，其余是 legacy 半边 |
 | `native-clean` | 10 | 声明了 peer 却没有任何东西到达它：这条声明是陈旧的 |
 
+这三级是 2026-11-12 的测量。[Cordis cleanup keeps the legacy writers and three packages](2026-11-15-cordis-cleanup-keeps-legacy-writers.zh.md) 已经重算。不要把 84、169 或 10 当作现在的数字。
+
 ### Native 半边已经没有 Cordis
 
 Native 侧没有任何文件读取 Cordis 服务名：没有 `native.ts`、也没有任何 `src/native-*` 文件调用 `ctx.sessions`、`ctx.tools` 或别的 `ctx.<service>`。Native 入口通过能力键解析依赖，全树共提供 103 个不同的能力键。有两个包是故意从 Native 入口托管 Cordis 插件的——`rsh/Core/runtime-diagnostics/cordis-bridge` 与 `rsh/Engine/preset/native-persona`——两者都记在 `rsh/Scripts/native-package-policy.ts` 里。
@@ -75,28 +77,29 @@ Native 侧没有任何文件读取 Cordis 服务名：没有 `native.ts`、也�
 ### 阶段 D —— 排空剩余引用
 
 - 456 个文件只为类型而 import `@redspark/cordis`。每个都要把它的声明搬到所属包或一个 `./native` 子路径下，而 25 个被 import 的名字集中在 `Context`（1153 处）与 `Service`（102 处）。
-- 84 个包是 `cordis-only`，其中 35 个在 `rsh/Programs/Web`、20 个在 `rsh/Modules/Official`，所以 D 的形状跟着 E2 和 E3 走。
+- 2026-11-12 时有 84 个 `cordis-only` 包，35 个在 `rsh/Programs/Web`，20 个在 `rsh/Modules/Official`。现在的分级在 [Cordis cleanup keeps the legacy writers and three packages](2026-11-15-cordis-cleanup-keeps-legacy-writers.zh.md)。D 仍跟着仍然是 `cordis-only` 的那些包走。
 - 出口：`@redspark/cordis` 只被 `rsh/Core/vendor` 和那两个受许可的托管入口 import。
 
 ### 阶段 E —— 删包
 
-- E1 现在就能做：有三个包没有任何 manifest 消费者——`rsh-storage-sqlite`、`rsh-experimental-inspector` 与 `rsh-experimental-agent-team-web-profile`——最后一个要连同 `rsh/Scripts/release/families.spec.ts:60` 一起改。
+- E1 不是一次删除。这三个包仍然没有别的 manifest 消费者，而 [Cordis cleanup keeps the legacy writers and three packages](2026-11-15-cordis-cleanup-keeps-legacy-writers.zh.md) 把它们留下。
 - `Core/vendor` 只能最先或最后，绝不能中间：只要还有任何一个 Cordis 包活着，vendor 的 `Service`、`Context` 与 loader 就是它的依赖。
 - `dsh-python-runtime-closure` 是反向检查表。它的 workspace 依赖就是 Python wheel 要发布的集合，所以一个不在其中的包需要的理由与在其中的包不同。
 - 出口：没有任何 manifest 声明 `@redspark/cordis`，且构建、类型检查、单元测试与 keyless 快照回放全部通过。
 
 ### 邻近几份 Note 各自 owns 什么
 
-这条路线是嵌在三份提案之间的，而不是替代它们，所以每份各自保留自己的主题：
+这条路线是嵌在四份提案之间的，而不是替代它们，所以每份各自保留自己的主题：
 
 - [Legacy 运行时退休](2026-11-06-legacy-runtime-retirement.zh.md) owns 哪些 profile 形状会走到 legacy，以及它们停下时什么会变得不可达；阶段 A 消费它的结论，而不是重述一遍。
 - [还有什么依赖 Cordis](2026-11-10-what-still-depends-on-cordis.zh.md) owns 逐包清单，以及那些无法回放场景背后的能力缺口；阶段 B、D、E 把它当作持续维护的分类来读，而不是另存一份。
 - [Native 运行时与可选 Cordis](2026-09-22-rsh-native-runtime-and-optional-cordis.zh.md) owns 建造 Native 运行时的 P0–P6 路线；A–E 在 P5 之后开始，回答那条路线留下的删除问题。
+- [Cordis cleanup keeps the legacy writers and three packages](2026-11-15-cordis-cleanup-keeps-legacy-writers.zh.md) owns 2026-11-15 的执行暂停：桌面端和 Web 留下，三个零消费者包留下，并且在这些写入者还在时阶段 C 不开始。
 
 ### 阶段之间的硬依赖
 
 - A 先于 B，B 先于 C，C 先于 D，D 先于 E。每个阶段的出口就是下一阶段可用的输入，把任何一对颠倒过来都意味着同时维护两套组合。
-- E 内部：E1 独立，E6 最先或最后，E5 要显式断边而不是等级联波及到它。
+- E 内部：E1 不是一次独立删除，E6 最先或最后，E5 要显式断边而不是等级联波及到它。
 - 只有 B 的快照批次与 C 的类批次可以并行；两者都从新抓的 `origin/main` 切出、各自单独成 PR。
 
 ## Alternatives considered

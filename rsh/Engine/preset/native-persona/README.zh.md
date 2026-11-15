@@ -21,7 +21,7 @@ kind: "package-reference"
 <a id="configuration"></a>
 ## 配置
 
-该行接受 Cordis persona 配置：必需的 `prefix`、可选的 `suffix`，以及可选的 `complete` 和 `includeRuntimeContext`。它必须安装在能够读取 `promptSections` 的预设作用域里。Native 的 web 和 TUI 模板把它安装在 `standard` 作用域上。
+该行接受 Cordis persona 配置：必需的 `prefix`、可选的 `suffix`，以及可选的 `complete` 和 `includeRuntimeContext`。它必须安装在能够读取 `promptSections` 的预设作用域里。Native 的 web 和 TUI 模板把它安装在 `standard` 和 `minimal` 作用域上。
 
 `personaServices` 把 Native 提示词注册表翻译成 persona 插件所读的 Cordis 服务界面，并把 persona 段落登记在安装作用域上，而不是注册表根上。
 
@@ -38,8 +38,8 @@ kind: "package-reference"
 
 <a id="known-limitations-and-deferred-work"></a>
 
-- `complete` 不会替换整份 Native 提示词。
-- `includeRuntimeContext: false` 不会抑制 Native 的运行时上下文段落。
+- `complete` 会替换其余可见提示词段落。`native-headless` 把这段文本当作整份系统提示词。
+- `includeRuntimeContext: false` 会抑制该 scope 及其后代 Agent 的系统提示词运行时上下文快照。
 
 不发布 invariant 伴随包。提示词所有权仍属于消费方应用。
 

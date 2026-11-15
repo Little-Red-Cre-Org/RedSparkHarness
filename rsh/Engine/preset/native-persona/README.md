@@ -21,7 +21,7 @@ English | [中文](README.zh.md)
 <a id="configuration"></a>
 ## Configuration
 
-The row accepts the Cordis persona configuration: a required `prefix`, an optional `suffix`, and the optional `complete` and `includeRuntimeContext` flags. It must be installed in a preset scope that can read `promptSections`. The Native web and TUI templates install it on the `standard` scope.
+The row accepts the Cordis persona configuration: a required `prefix`, an optional `suffix`, and the optional `complete` and `includeRuntimeContext` flags. It must be installed in a preset scope that can read `promptSections`. The Native web and TUI templates install it on the `standard` and `minimal` scopes.
 
 `personaServices` translates the Native prompt registry into the Cordis service surface the persona plugin reads, and registers the persona sections on the installation scope rather than the registry root.
 
@@ -38,8 +38,8 @@ The consuming application owns request-prefix changes from the contributed secti
 
 <a id="known-limitations-and-deferred-work"></a>
 
-- `complete` does not replace the whole Native prompt.
-- `includeRuntimeContext: false` does not suppress Native runtime-context sections.
+- `complete` replaces every other visible prompt section. `native-headless` uses that text as the whole system prompt.
+- `includeRuntimeContext: false` suppresses the system-prompt runtime-context snapshot for that scope and its descendant Agents.
 
 No invariant companion is published. Prompt ownership remains with the consuming application.
 

@@ -43,7 +43,9 @@ Add a native installation row to the profile composition and provide its exact s
   "config": {
     "id": "minimal",
     "name": "Minimal",
-    "description": "Task tracking tools without Goal tools."
+    "description": "Fixed prompt and one persistent shell.",
+    "allowedTools": ["bash"],
+    "compaction": false
   }
 }
 ```
@@ -53,6 +55,8 @@ Add a native installation row to the profile composition and provide its exact s
 | `id` | required | Registry identifier; must match `[a-z0-9][a-z0-9-]*` |
 | `name` | required | Non-empty name shown in the preset picker |
 | `description` | omitted | Optional non-empty description shown with the name |
+| `allowedTools` | omitted | Inherited tool names kept for Agents in this scope; omitted keeps every inherited tool |
+| `compaction` | omitted | `false` skips automatic and manual compaction for this scope and its Agents |
 
 The accepted fields come from the schema in [`src/native.ts`](src/native.ts).
 

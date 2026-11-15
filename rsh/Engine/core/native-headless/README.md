@@ -88,7 +88,7 @@ Continuation input to a busy recipient uses its actual active owner as soon as t
 
 #### What the model sees
 
-The model receives the configured `systemPrompt` followed by registered prompt sections before the user message.
+The model receives the configured `systemPrompt` followed by registered prompt sections before the user message. A visible complete section replaces that base prompt. A visible runtime-context suppressor omits the system-prompt snapshot.
 
 ##### Profile prompt
 

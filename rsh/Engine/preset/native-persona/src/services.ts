@@ -35,26 +35,32 @@ export interface BridgedSystemPrompt {
 /**
  * Present a Native prompt registry as the Cordis `systemPrompt` service.
  *
- * `complete` is not carried across: the Native registry has no whole-prompt takeover, so a
- * bridged persona contributes a section like any other. A preset that needs to replace the
- * entire prompt must use the Native persona row instead.
+ * A complete section replaces every other visible section. Runtime-context suppression is
+ * recorded on the installation scope and removed with that Native row.
  * @param registry - the scope's Native prompt registry.
  * @param scope - preset scope that owns the sections. Omitted sections land on the registry root.
+ * @param owner - Native activation that disposes suppression with the persona row.
  * @returns the Cordis service a persona row reads.
  */
-export function bridgedSystemPrompt(registry: NativePromptRegistry, scope?: NativeScope): BridgedSystemPrompt {
+export function bridgedSystemPrompt(
+  registry: NativePromptRegistry,
+  scope?: NativeScope,
+  owner?: { effect(dispose: () => void): () => Promise<void> | void },
+): BridgedSystemPrompt {
   return {
     section: section => registry.register({
       name: section.name,
       order: section.order,
       text: () => section.text,
+      ...(section.complete === true ? { complete: true } : {}),
     }, scope),
     getSectionOrder: name => name === 'DEPLOYMENT_PERSONA_PREFIX'
       ? PREFIX_ORDER
       : name === 'DEPLOYMENT_PERSONA_SUFFIX' ? SUFFIX_ORDER : PREFIX_ORDER,
-    // The Native registry owns runtime-context suppression at the assembly level; a preset
-    // cannot switch it per row, so a bridged persona records nothing here.
-    suppressRuntimeContext: () => undefined,
+    suppressRuntimeContext: () => {
+      const dispose = registry.suppressRuntimeContext(scope)
+      owner?.effect(dispose)
+    },
   }
 }
 
@@ -72,7 +78,7 @@ export interface PersonaServices {
  * @returns the bridged service set.
  */
 export function personaServices(context: NativeContext): PersonaServices {
-  return { systemPrompt: bridgedSystemPrompt(context.require('promptSections'), context.scope) }
+  return { systemPrompt: bridgedSystemPrompt(context.require('promptSections'), context.scope, context) }
 }
 
 declare module '@redspark/rsh-native-runtime' {
