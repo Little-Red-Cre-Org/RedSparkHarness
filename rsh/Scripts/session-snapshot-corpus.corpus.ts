@@ -154,6 +154,7 @@ const snapshotAdapters = [
   'snapshots/native-sdk/legacy-subagent-fork.snapshot.ts',
   'snapshots/native-sdk/legacy-subagent-mixed.snapshot.ts',
   'snapshots/native-sdk/legacy-max-tokens.snapshot.ts',
+  'snapshots/native-sdk/legacy-multi-turn.snapshot.ts',
   'snapshots/native-sdk/legacy-dsh-sdk-diagnostic.snapshot.ts',
   'snapshots/native-sdk/legacy-dynamic-route.snapshot.ts',
   'snapshots/native-sdk/legacy-list-agents.snapshot.ts',
