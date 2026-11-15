@@ -2,5 +2,5 @@
 # side as of the last confirmed-consistent state. Both languages carry equal authority;
 # after editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write .agents/notes/proposed/architecture/2026-11-12-cordis-retirement-five-phases.md
-2026-11-12-cordis-retirement-five-phases.md: 5cec6f58996e90f26143d7b256349049bc5e7a94
-2026-11-12-cordis-retirement-five-phases.zh.md: 3ce22ec7bc72f4648db48d995a3e3a4bfa8e21d2
+2026-11-12-cordis-retirement-five-phases.md: 436bed378891a7f4d4847219d01eb0e75eead24e
+2026-11-12-cordis-retirement-five-phases.zh.md: 2dd374fd76b45039e06655c5da63d38adf6834c7

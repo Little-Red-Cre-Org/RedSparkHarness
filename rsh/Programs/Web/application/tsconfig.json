@@ -33,6 +33,7 @@
     "tests/native-session-grant.e2e.ts",
     "tests/native-skill-tool-row.e2e.ts",
     "tests/native-workflow-open.e2e.ts",
+    "tests/native-minimal-preset.e2e.ts",
     "tests/scaffold.ts",
     "tests/scaffold-generation.spec.ts",
     "tests/scaffold-hermetic.e2e.ts",

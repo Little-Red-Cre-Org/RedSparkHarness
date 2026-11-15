@@ -91,6 +91,8 @@ async function fixture(
     ptc?: boolean
     fileReferences?: boolean
     allowedTools?: readonly string[]
+    /** Start without a tool Registry so builtin schemas are not filtered by an allow list. */
+    omitTools?: boolean
     maxSteps?: number
     /** Persona template registered as a prompt section; `{{variable}}` references render strictly. */
     persona?: string
@@ -184,14 +186,18 @@ async function fixture(
     },
   }
   const capture: NativePlugin = {
-    apiVersion: 1, name: 'test-capture', targets: ['host'], requires: ['application', 'fs', 'agents', 'tools', 'rootExecution', 'sessionPersistence'], optional: ['approval', 'codeRuntime', 'sessionExecution', 'subagents', 'skills'], provides: [],
+    apiVersion: 1, name: 'test-capture', targets: ['host'],
+    requires: options.omitTools === true
+      ? ['application', 'fs', 'agents', 'rootExecution', 'sessionPersistence']
+      : ['application', 'fs', 'agents', 'tools', 'rootExecution', 'sessionPersistence'],
+    optional: ['approval', 'codeRuntime', 'sessionExecution', 'subagents', 'skills'], provides: [],
     resolve: () => (context) => {
       app = context.require('application') as NativeHeadlessApplication
       const provided = context.require('fs')
       if (!(provided instanceof LocalFileSystemBackend)) throw new Error('missing local filesystem')
       filesystem = provided
       agents = context.require('agents')
-      tools = context.require('tools')
+      tools = options.omitTools === true ? undefined : context.require('tools')
       rootExecution = context.require('rootExecution')
       persistence = context.require('sessionPersistence')
       sessionExecution = context.optional('sessionExecution')
@@ -247,7 +253,7 @@ async function fixture(
       ...(options.timeContext === undefined ? [] : [{ plugin: timeContextPlugin, scope, config: options.timeContext }]),
       ...(options.tmuxContext === undefined ? [] : [{ plugin: tmuxContextPlugin, scope, config: options.tmuxContext }]),
       ...(options.instructions ? [{ plugin: instructionsPlugin, scope, config: { maxBytes: 65_536, rshHome: directory } }] : []),
-      toolsRequest,
+      ...(options.omitTools === true ? [] : [toolsRequest]),
       ...(skillDirectory === undefined ? [] : [
         { plugin: toolSkillPlugin, scope, config: undefined },
       ]),
@@ -284,7 +290,8 @@ async function fixture(
     ]
     host = new NativeHost(resolveInstallation(requests, 'host'))
     await host.start()
-    if (app === undefined || filesystem === undefined || agents === undefined || tools === undefined
+    if (app === undefined || filesystem === undefined || agents === undefined
+      || (options.omitTools !== true && tools === undefined)
       || rootExecution === undefined || persistence === undefined) {
       throw new Error('missing native application dependencies')
     }  } catch (error: unknown) {
@@ -3067,6 +3074,44 @@ it('keeps one schema per tool when the profile also registers the builtin run_co
     expect(runCode[0]?.description).toBe('REGISTRY-RUN-CODE-MARKER')
   } finally {
     await removeRunCode?.()
+    await state.host.stop()
+    await rm(state.directory, { recursive: true, force: true })
+  }
+})
+
+it('hides builtin tools that a descendant allow list does not name', async () => {
+  const state = await fixture([textResponse('only bash')])
+  let removeBash: (() => Promise<void>) | undefined
+  let stopCreated: (() => Promise<void>) | undefined
+  try {
+    removeBash = state.tools.registerValueTool({
+      schema: { name: 'bash', description: 'Shell.', parameters: { type: 'object', properties: {} } },
+      output: { schema: { type: 'string' }, render: () => ({ content: [], isError: false }) },
+      async execute() { return 'ran' },
+    })
+    stopCreated = state.host.events.on(state.scope, 'agent/created', (agent) => {
+      state.tools.restrict({ allow: ['bash'] }, agent.scope)
+    })
+    const invocation = new AbortController()
+    await state.app.run(['go'], invocation.signal)
+    const names = state.adapter.requests.flatMap(request => (request.tools ?? []).map(tool => tool.name))
+    expect(names).toEqual(['bash'])
+  } finally {
+    await stopCreated?.()
+    await removeBash?.()
+    await state.host.stop()
+    await rm(state.directory, { recursive: true, force: true })
+  }
+})
+
+it('keeps builtin tools when no tool Registry is installed', async () => {
+  const state = await fixture([textResponse('builtins stay')], { omitTools: true })
+  try {
+    const invocation = new AbortController()
+    await state.app.run(['go'], invocation.signal)
+    const names = state.adapter.requests.flatMap(request => (request.tools ?? []).map(tool => tool.name))
+    expect(names).toEqual(['read_file', 'write_file', 'run_code'])
+  } finally {
     await state.host.stop()
     await rm(state.directory, { recursive: true, force: true })
   }

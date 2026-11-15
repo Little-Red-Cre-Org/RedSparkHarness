@@ -278,6 +278,74 @@ it('hides an inherited tool denied before the ancestor registers it', async () =
   }
 })
 
+it('a scope allow list hides builtin names it does not include', async () => {
+  const scope = new NativeScope()
+  const child = new NativeScope(scope)
+  const agents = new NativeAgentRegistry({ emit() {} })
+  const registry = new NativeToolRegistry(agents, scope)
+  const remove = registry.registerValueTool({
+    schema: { name: 'bash', description: 'Shell.', parameters: { type: 'object', properties: {} } },
+    output: { schema: { type: 'string' }, render: () => ({ content: [], isError: false }) },
+    async execute() { return 'ran' },
+  })
+  const restore = registry.restrict({ allow: ['bash'] }, child)
+  const removeSchedule = registry.registerValueTool({
+    schema: { name: 'task_schedule', description: 'Schedule.', parameters: { type: 'object', properties: {} } },
+    output: { schema: { type: 'string' }, render: () => ({ content: [], isError: false }) },
+    async execute() { return 'ran' },
+  }, child)
+  try {
+    expect(registry.allowsModelName('bash', child)).toBe(true)
+    expect(registry.allowsModelName('read_file', child)).toBe(false)
+    expect(registry.allowsModelName('run_code', child)).toBe(false)
+    expect(registry.allowsModelName('read_file', scope)).toBe(true)
+    expect(registry.schemas(child).map(schema => schema.name)).toEqual(['bash'])
+  } finally {
+    restore()
+    expect(registry.allowsModelName('read_file', child)).toBe(true)
+    expect(registry.schemas(child).map(schema => schema.name)).toEqual(['bash', 'task_schedule'])
+    await removeSchedule()
+    await remove()
+    await registry.clear()
+    expect(() => registry.allowsModelName('bash')).toThrow('native-tools: registry is disposed')
+  }
+})
+
+it('a scope deny list hides a tool registered later on that scope', async () => {
+  const scope = new NativeScope()
+  const child = new NativeScope(scope)
+  const agents = new NativeAgentRegistry({ emit() {} })
+  const registry = new NativeToolRegistry(agents, scope)
+  const removeBash = registry.registerValueTool({
+    schema: { name: 'bash', description: 'Shell.', parameters: { type: 'object', properties: {} } },
+    output: { schema: { type: 'string' }, render: () => ({ content: [], isError: false }) },
+    async execute() { return 'ran' },
+  })
+  const restore = registry.restrict({ deny: ['secret'] }, child)
+  const removeSecret = registry.registerValueTool({
+    schema: { name: 'secret', description: 'Secret.', parameters: { type: 'object', properties: {} } },
+    output: { schema: { type: 'string' }, render: () => ({ content: [], isError: false }) },
+    async execute() { return 'ran' },
+  }, child)
+  const removeOther = registry.registerValueTool({
+    schema: { name: 'other', description: 'Other.', parameters: { type: 'object', properties: {} } },
+    output: { schema: { type: 'string' }, render: () => ({ content: [], isError: false }) },
+    async execute() { return 'ran' },
+  }, child)
+  try {
+    expect(registry.allowsModelName('secret', child)).toBe(false)
+    expect(registry.allowsModelName('other', child)).toBe(true)
+    expect(registry.allowsModelName('bash', child)).toBe(true)
+    expect(registry.schemas(child).map(schema => schema.name)).toEqual(['bash', 'other'])
+  } finally {
+    restore()
+    expect(registry.schemas(child).map(schema => schema.name)).toEqual(['bash', 'secret', 'other'])
+    await removeOther()
+    await removeSecret()
+    await removeBash()
+  }
+})
+
 it('drains a replaced contribution before resources acquired after registration are released', async () => {
   const scope = new NativeScope()
   const entered = Promise.withResolvers<undefined>()

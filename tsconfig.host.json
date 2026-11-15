@@ -119,6 +119,7 @@
     "rsh/Programs/Web/application/tests/pwsh-terminal.e2e.ts",
     "rsh/Programs/Web/application/tests/workflow-run.e2e.ts",
     "rsh/Programs/Web/application/tests/native-workflow-open.e2e.ts",
+    "rsh/Programs/Web/application/tests/native-minimal-preset.e2e.ts",
     "rsh/Programs/Web/application/stress-tests/reasoning-chunks.stress.ts",
     "rsh/Programs/CLI/tests/**/*.ts",
     "rsh/Programs/DesktopHost/tests/**/*.ts",
