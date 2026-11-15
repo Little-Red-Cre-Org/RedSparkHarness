@@ -92,7 +92,7 @@ Headless 为 external Responses capture 绑定当前已准入的模型步骤。�
 
 #### 模型看到什么
 
-模型在用户消息前收到配置的 `systemPrompt` 及已注册提示词 section。可见的 complete section 会替换该基础提示词。可见的运行时上下文抑制器会省略系统提示词快照。
+模型在用户消息前收到配置的 `systemPrompt` 及已注册提示词 section。可见的 complete section 会替换该基础提示词。可见的运行时上下文抑制器会省略系统提示词快照。包含该快照时，审批句采用该 Session 最新的 `approval/policy` 事件；Session 没有该事件时，采用已安装的审批策略。
 
 ##### Profile 提示词
 

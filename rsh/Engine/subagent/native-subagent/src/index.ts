@@ -6,6 +6,7 @@ import { createUserMessage, type ContentBlock, type ReasoningEffortId, type Stre
   type ToolCallId } from '@redspark/rsh-llm/native'
 import { SessionId, type Session, type SessionEvent, type TurnEndReason } from '@redspark/rsh-session/native'
 import { NativeSubagentContinuations } from './continuation.ts'
+import { appendDelegatedPolicy, captureDelegatedPolicy } from './delegated-policy.ts'
 import type { NativeActiveSessionOwner, NativeDelegationSetup,
   NativeSessionConfiguration } from '@redspark/rsh-native-session-execution'
 import type { NativeJobId, NativeJobRegistry } from '@redspark/rsh-native-jobs'
@@ -1423,6 +1424,8 @@ export class NativeSpawnSubagents implements NativeSubagentOperations {
     readonly publishOutput?: (text: string) => void
     readonly agentLifetime?: boolean
   }): Promise<NativeSubagentResult> {
+    const authority = this.context.require('sessionExecution').delegationAuthority(request.agent, request.session)
+    const delegatedPolicy = captureDelegatedPolicy(request.session, authority?.approvalRequired === true)
     const id = background?.id ?? SessionId(randomUUID())
     const output = new AssistantOutputFold()
     let end: TurnEndReason | undefined
@@ -1442,7 +1445,10 @@ export class NativeSpawnSubagents implements NativeSubagentOperations {
         } },
         message: createUserMessage({ source: { kind: 'user' }, content: [...request.prompt] }),
         prepare: (setup) => { structured = this.prepare(request, setup) },
-        initialize: (append) => { append('subagent/descriptor', descriptor) },
+        initialize: (append) => {
+          append('subagent/descriptor', descriptor)
+          appendDelegatedPolicy(append, delegatedPolicy)
+        },
         onEvent: (event) => {
           output.push(event)
           if (event.type === 'turn/end') end = event.data.reason

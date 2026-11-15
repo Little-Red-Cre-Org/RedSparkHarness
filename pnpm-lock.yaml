@@ -4579,6 +4579,9 @@ importers:
       '@redspark/rsh-native-tools':
         specifier: workspace:^
         version: link:../../core/native-tools
+      '@redspark/rsh-sandbox':
+        specifier: workspace:^
+        version: link:../../../Modules/Official/sandbox/sandbox
       '@redspark/rsh-session':
         specifier: workspace:^
         version: link:../../core/session

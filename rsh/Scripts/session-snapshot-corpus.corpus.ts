@@ -159,6 +159,7 @@ const snapshotAdapters = [
   'snapshots/native-sdk/legacy-list-agents.snapshot.ts',
   'snapshots/native-sdk/legacy-continuable.snapshot.ts',
   'snapshots/native-sdk/legacy-send-message.snapshot.ts',
+  'snapshots/native-sdk/legacy-inheritance.snapshot.ts',
   'snapshots/native-sdk/staged-files.snapshot.ts',
   'snapshots/native-sdk/external-operation.snapshot.ts',
   'snapshots/native-sdk/inbox-moved.snapshot.ts',

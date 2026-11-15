@@ -15,14 +15,20 @@ import { NativeSpawnSubagents, type NativeSubagentRequest } from '../src/index.t
 
 it('reports a finished-listener failure and continues without changing the settled child result', async () => {
   const parent = { scope: {} } as NativeAgent
-  const session = { id: SessionId('parent') } as Session
+  const parentId = SessionId('finished-listener-parent')
+  const session = Session.create(parentId, undefined, {
+    version: SESSION_FORMAT_VERSION, id: parentId, createdAt: 0, cwd: '/selected', isSeeded: false, delegationDepth: 0,
+  })
   const result: unknown[] = []
   const failure = new Error('observer failed')
   const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
-  const execution = { delegate: async (_agent: NativeAgent, _session: Session, request: NativeSessionDelegation) => {
-    request.onEvent?.({ type: 'turn/end', data: { reason: { kind: 'completed' } } } as SessionEvent)
-    return { exitCode: 0 }
-  } }
+  const execution = {
+    delegationAuthority: () => ({ toolNames: [], programToolNames: [], builtinToolNames: [], approvalRequired: false }),
+    delegate: async (_agent: NativeAgent, _session: Session, request: NativeSessionDelegation) => {
+      request.onEvent?.({ type: 'turn/end', data: { reason: { kind: 'completed' } } } as SessionEvent)
+      return { exitCode: 0 }
+    },
+  }
   const activeSessions = { onDetached: () => async () => {} }
   const context = { signal: new AbortController().signal, require: (name: string) => name === 'activeSessions' ? activeSessions : execution,
     optional: () => undefined } as unknown as NativeContext
