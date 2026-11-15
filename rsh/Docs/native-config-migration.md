@@ -20,7 +20,7 @@ An existing directory is not converted by renaming it. `dsh.profile.bundles` or 
 
 `native-headless`, `native-web`, and `native-tui` install `@redspark/rsh-code-runtime-process-sandbox` (`rsh/Programs/CLI/src/native-profile-template.ts:459`). `native-sdk` and `native-acp` return before that row. No shipped template installs `@redspark/rsh-experimental-code-runtime-python`.
 
-`web` and `rsh` register Minimal as a roster id whose description is `Task tracking tools without Goal tools` (`rsh/Programs/CLI/src/native-profile-template.ts:171`). That row does not load `rsh/Engine/preset/agent-presets/presets/minimal/agent.cordis.yml`.
+`web` and `rsh` install Minimal as its own scope. The standing row keeps only the platform persistent shell (`bash` or `pwsh`), skips compaction, and the persona row is the fixed complete prompt `You are a helpful software engineer assistant.` with runtime context suppressed. That scope does not load `rsh/Engine/preset/agent-presets/presets/minimal/agent.cordis.yml`.
 
 ## `settings.yaml` values
 

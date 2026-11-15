@@ -12,7 +12,7 @@ import type {
   CompactionResult, CompactionTrigger, NativeCompactionOperations, NativeCompactionOwner,
 } from '@redspark/rsh-compaction/native'
 import type { CommandId } from '@redspark/rsh-commands/brand'
-import type { NativePlugin } from '@redspark/rsh-native-runtime'
+import type { NativePlugin, NativeScope } from '@redspark/rsh-native-runtime'
 import type { NativeModel } from '@redspark/rsh-native-model-execution'
 import type { NativeModelExecution, NativeModelRecoveryRequest } from '@redspark/rsh-native-model-execution'
 import type {} from '@redspark/rsh-native-model-execution/native'
@@ -90,6 +90,7 @@ export interface NativeBasicCompactionServices {
 export class NativeBasicCompaction implements NativeCompactionOperations {
   private readonly warnedPressureConfigTargets = new Set<string>()
   private readonly hooks = new Map<NativeActiveSessionOwner, () => Promise<void>>()
+  private readonly exemptions = new Set<NativeScope>()
   private readonly overflowRetries = new WeakMap<Session, { turn: number; step: number; retries: number }>()
 
   /**
@@ -192,7 +193,14 @@ export class NativeBasicCompaction implements NativeCompactionOperations {
   }
 
   /** @inheritdoc */
+  exempt(scope: NativeScope): () => void {
+    this.exemptions.add(scope)
+    return () => { this.exemptions.delete(scope) }
+  }
+
+  /** @inheritdoc */
   async compactIfNeeded(owner: NativeCompactionOwner, trigger: CompactionTrigger, signal: AbortSignal): Promise<CompactionResult | null> {
+    if (this.exempted(owner)) return null
     const { model, tokenMeter, toolResultPruner } = this.services
     return compactForTrigger(this.config.compaction, {
       session: owner.session,
@@ -212,6 +220,7 @@ export class NativeBasicCompaction implements NativeCompactionOperations {
   /** @inheritdoc */
   async compactNow(owner: NativeCompactionOwner, signal: AbortSignal, sourceCommandId?: CommandId): Promise<CompactionResult | null> {
     signal.throwIfAborted()
+    if (this.exempted(owner)) return null
     if (!owner.writerAvailable) {
       throw new ManualCompactionError('busy', 'manual compaction requires the live Session writer')
     }
@@ -219,8 +228,16 @@ export class NativeBasicCompaction implements NativeCompactionOperations {
   }
 
   /** Compact before the remaining admission chain; failures warn once per target and never block the step. */
+  private exempted(owner: NativeCompactionOwner): boolean {
+    const scope = (owner as NativeCompactionOwner & { readonly agent?: { readonly scope: NativeScope } }).agent?.scope
+    if (scope === undefined) return false
+    for (const exempt of this.exemptions) if (exempt.contains(scope)) return true
+    return false
+  }
+
   private admission(owner: NativeActiveSessionOwner): NativeStepAdmissionHook {
     return async (context, next) => {
+      if (this.exempted(owner)) return await next()
       await compactForStepPressure(
         () => this.compactIfNeeded(owner, 'pressure', context.signal),
         context.signal,

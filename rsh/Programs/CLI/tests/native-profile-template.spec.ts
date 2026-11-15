@@ -364,7 +364,7 @@ it('defines a native-tui composition over the shared headless Providers', () => 
     { id: 'tool-goal', plugin: '@redspark/rsh-tool-goal', scope: 'standard' },
   ])
   expect(profile.scopes).toEqual([{ id: 'root' }, { id: 'standard', parent: 'root' }, { id: 'minimal', parent: 'root' }, { id: 'ptc', parent: 'root' }, { id: 'creation', parent: 'root' }])
-  expect(profile.installations.filter(row => ['commands', 'command-goal', 'agent-presets', 'preset-standard', 'preset-minimal', 'tool-todo', 'tool-todo-minimal'].includes(row.id)))
+  expect(profile.installations.filter(row => ['commands', 'command-goal', 'agent-presets', 'preset-standard', 'preset-minimal', 'tool-todo'].includes(row.id)))
     .toEqual([
       { id: 'commands', plugin: '@redspark/rsh-commands', scope: 'root' },
       { id: 'command-goal', plugin: '@redspark/rsh-command-goal', scope: 'root' },
@@ -372,9 +372,9 @@ it('defines a native-tui composition over the shared headless Providers', () => 
       { id: 'preset-standard', plugin: '@redspark/rsh-agent-preset-standing', scope: 'standard',
         config: { id: 'standard', name: 'Standard', description: 'Goal planning and task tracking tools.' } },
       { id: 'preset-minimal', plugin: '@redspark/rsh-agent-preset-standing', scope: 'minimal',
-        config: { id: 'minimal', name: 'Minimal', description: 'Task tracking tools without Goal tools.' } },
+        config: { id: 'minimal', name: 'Minimal', description: 'Fixed prompt and one persistent shell.',
+          allowedTools: ['pwsh'], compaction: false } },
       { id: 'tool-todo', plugin: '@redspark/rsh-tool-todo', scope: 'standard', config: { allowParallelInProgress: true } },
-      { id: 'tool-todo-minimal', plugin: '@redspark/rsh-tool-todo', scope: 'minimal', config: { allowParallelInProgress: true } },
     ])
   expect(profile.installations.filter(row => row.id === 'session-execution')).toHaveLength(1)
 })
@@ -543,7 +543,8 @@ it.each(['native-tui', 'native-web'] as const)('installs plan mode and a preset 
     { id: 'preset-standard', plugin: '@redspark/rsh-agent-preset-standing', scope: 'standard',
       config: { id: 'standard', name: 'Standard', description: 'Goal planning and task tracking tools.' } },
     { id: 'preset-minimal', plugin: '@redspark/rsh-agent-preset-standing', scope: 'minimal',
-      config: { id: 'minimal', name: 'Minimal', description: 'Task tracking tools without Goal tools.' } },
+      config: { id: 'minimal', name: 'Minimal', description: 'Fixed prompt and one persistent shell.',
+        allowedTools: ['bash'], compaction: false } },
   ])
   expect(profile.installations.find(row => row.id === 'persona-standard')).toEqual({
     id: 'persona-standard', plugin: '@redspark/rsh-native-persona', scope: 'standard',
@@ -551,6 +552,21 @@ it.each(['native-tui', 'native-web'] as const)('installs plan mode and a preset 
       prefix: 'You are a coding agent powered by the {{model}} model.',
       suffix: 'Your working directory is {{cwd}}.',
     },
+  })
+  expect(profile.installations.find(row => row.id === 'persona-minimal')).toEqual({
+    id: 'persona-minimal', plugin: '@redspark/rsh-native-persona', scope: 'minimal',
+    config: {
+      prefix: 'You are a helpful software engineer assistant.',
+      suffix: '',
+      complete: true,
+      includeRuntimeContext: false,
+    },
+  })
+  expect(profile.installations.find(row => row.id === 'minimal-persistent-bash')).toMatchObject({
+    plugin: '@redspark/rsh-tool-bash-persistent', scope: 'minimal',
+  })
+  expect(profile.installations.find(row => row.id === 'minimal-terminals')).toEqual({
+    id: 'minimal-terminals', plugin: '@redspark/rsh-terminal', scope: 'minimal',
   })
   expect(profile.installations.find(row => row.id === 'preset-ptc')).toMatchObject({
     plugin: '@redspark/rsh-agent-preset-standing', scope: 'ptc',

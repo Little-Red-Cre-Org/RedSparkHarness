@@ -1,0 +1,6 @@
+# Bilingual-pair consistency record (rsh/Docs/i18n/README.md): the git blob hash of each
+# side as of the last confirmed-consistent state. Both languages carry equal authority;
+# after editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write .agents/notes/implemented/architecture/2026-11-15-native-minimal-preset.md
+2026-11-15-native-minimal-preset.md: 087bee45ad084db6a1217a27fdbca90e0c430e65
+2026-11-15-native-minimal-preset.zh.md: 7b062f4e60dd637f359e72af8408bd5eefae6e2a

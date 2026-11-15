@@ -3528,9 +3528,18 @@ importers:
       '@redspark/rsh-agent-presets':
         specifier: workspace:^
         version: link:../agent-presets
+      '@redspark/rsh-compaction':
+        specifier: workspace:^
+        version: link:../../compaction/compaction
+      '@redspark/rsh-native-agent':
+        specifier: workspace:^
+        version: link:../../core/native-agent
       '@redspark/rsh-native-runtime':
         specifier: workspace:^
         version: link:../../../Core/runtime-diagnostics/native-runtime
+      '@redspark/rsh-native-tools':
+        specifier: workspace:^
+        version: link:../../core/native-tools
       zod:
         specifier: ^4.4.3
         version: 4.4.3
@@ -11195,9 +11204,6 @@ importers:
         specifier: ^4.4.3
         version: 4.4.3
     devDependencies:
-      '@redspark/cordis':
-        specifier: workspace:^
-        version: link:../../../../Core/vendor/cordis
       '@redspark/rsh-client-native-session':
         specifier: workspace:^
         version: link:../../client/native-session

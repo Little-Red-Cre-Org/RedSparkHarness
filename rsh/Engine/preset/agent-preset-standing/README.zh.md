@@ -43,7 +43,9 @@ kind: "package-reference"
   "config": {
     "id": "minimal",
     "name": "Minimal",
-    "description": "Task tracking tools without Goal tools."
+    "description": "Fixed prompt and one persistent shell.",
+    "allowedTools": ["bash"],
+    "compaction": false
   }
 }
 ```
@@ -53,6 +55,8 @@ kind: "package-reference"
 | `id` | 必填 | Registry 标识；必须匹配 `[a-z0-9][a-z0-9-]*` |
 | `name` | 必填 | preset 选择器中显示的非空名称 |
 | `description` | 省略 | 随名称展示的可选非空说明 |
+| `allowedTools` | 省略 | 该 scope 中 Agent 保留的继承工具名；省略则保留全部继承工具 |
+| `compaction` | 省略 | `false` 时该 scope 及其 Agent 跳过自动与手动压缩 |
 
 可接受字段来自 [`src/native.ts`](src/native.ts) 中的 schema。
 

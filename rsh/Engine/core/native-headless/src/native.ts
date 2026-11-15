@@ -965,6 +965,26 @@ export class NativeHeadlessApplication implements NativeApplication {
     }
   }
 
+  /**
+   * Assemble the model-visible system prompt.
+   * A complete section replaces the application base prompt.
+   * @param scope - consuming Agent scope.
+   * @param base - application prompt used when no complete section is visible.
+   * @param context - render variables and tool constraints.
+   * @returns the prompt recorded before the request.
+   */
+  private async composedSystemPrompt(
+    scope: NativeScope,
+    base: string,
+    context: Parameters<NativePromptRegistry['render']>[1],
+  ): Promise<string> {
+    const sections = this.promptSections
+    if (sections === undefined) return base
+    const additions = await sections.render(scope, context)
+    if (sections.hasCompleteSection(scope)) return additions
+    return additions === '' ? base : `${base}\n\n${additions}`
+  }
+
   /** Execute one turn after its native Agent lifecycle is visible. */
   private async runTurn(
     request: NativeTurnRequest & Pick<NativeSessionDelegation, 'initialize' | 'onReady' | 'delegationContext'>,
@@ -995,8 +1015,7 @@ export class NativeHeadlessApplication implements NativeApplication {
         ...config.allowedTools === undefined ? {} : { allowedTools: config.allowedTools },
         variables: promptVariables(config),
       }
-      const additions = await this.promptSections?.render(agent.scope, promptContext) ?? ''
-      const systemPrompt = additions === '' ? config.systemPrompt : `${config.systemPrompt}\n\n${additions}`
+      const systemPrompt = await this.composedSystemPrompt(agent.scope, config.systemPrompt, promptContext)
       const root = await this.fs.resolve(config.cwd, { signal })
       const rootInfo = await this.fs.stat(root, signal)
       if (rootInfo?.type !== 'directory') throw new Error('native-headless: cwd must be a directory')
@@ -1370,12 +1389,11 @@ export class NativeHeadlessApplication implements NativeApplication {
               }
             }
             const programSchemas = externalProgramSchemas
-            const promptSections = await this.promptSections?.render(agent.scope, {
+            const promptText = await this.composedSystemPrompt(agent.scope, config.systemPrompt, {
               allowedTools: delegation.toolNames, programSchemas,
               variables: { ...promptVariables(config), cwd: delegation.cwd },
-            }) ?? ''
+            })
             captureSignal.throwIfAborted()
-            const promptText = promptSections === '' ? config.systemPrompt : `${config.systemPrompt}\n\n${promptSections}`
             const capturedRoot = await this.fs.resolve(delegation.cwd, { signal: captureSignal })
             if (!this.fs.contains(root, capturedRoot) || (await this.fs.stat(capturedRoot, captureSignal))?.type !== 'directory') {
               throw new FsError('external tool workspace is outside the active Session', 'FS_SANDBOX_DENIED')
@@ -1744,8 +1762,7 @@ export class NativeHeadlessApplication implements NativeApplication {
                 // null, so its indices cannot index surface.nodes.
                 // Re-render sections here: a section may change between steps, and the
                 // in-history route records the changed prompt after the cached one.
-                const stepAdditions = await this.promptSections?.render(agent.scope, promptContext) ?? ''
-                const stepPrompt = stepAdditions === '' ? config.systemPrompt : `${config.systemPrompt}\n\n${stepAdditions}`
+                const stepPrompt = await this.composedSystemPrompt(agent.scope, config.systemPrompt, promptContext)
                 const systemSeq = firstSystemNodeSeq(session)
                 const storedText = systemSeq === undefined ? undefined : systemNodeText(session, systemSeq)
                 const promptChanged = storedText !== undefined
@@ -1785,7 +1802,9 @@ export class NativeHeadlessApplication implements NativeApplication {
                 }
                 // The standing policies reach the model as one runtime-context snapshot, which a
                 // later identical snapshot must not duplicate: only a superseded text is appended.
-                const standingPolicy = this.sandboxPolicy?.resolve({ session })
+                const standingPolicy = this.promptSections?.runtimeContextSuppressed(agent.scope) === true
+                  ? undefined
+                  : this.sandboxPolicy?.resolve({ session })
                 if (standingPolicy !== undefined) {
                   const sections = policySections(standingPolicy.mode, standingPolicy.workspaceRoot,
                     this.approval?.policy === 'ask')

@@ -163,9 +163,9 @@ autoInstallPeers: false
  * pnpm settings out-of-tree plugins need. Existing files are never touched,
  * so re-running is a no-op on an initialized profile.
  * @param dir - the profile directory from {@link resolveProfileDir}.
- * @param bundles - ignored; the manifest no longer records a bundle list.
- * @param patchReload - ignored; a native profile reloads through `configReload`.
- * @returns nothing; a newly written manifest selects native execution.
+ * @param bundles - bundle package names stored on `dsh.profile.bundles`. A bundle list selects legacy execution.
+ * @param patchReload - reload policy stored on `dsh.profile.patchReload`.
+ * @returns nothing. A new manifest does not set `runtime: 'native'`.
  */
 export function initProfile(
   dir: string,

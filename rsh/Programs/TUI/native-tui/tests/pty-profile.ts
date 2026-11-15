@@ -110,7 +110,7 @@ export function terminalFixture(cancellation: boolean, script?: readonly ReplayE
   }
   const shipped = shippedNativeProfileComposition(home, 'native-tui')
   const selected = new Set(['app', 'session-execution', 'agents', 'tools', 'model-execution', 'storage'])
-  if (presetMode === 'shipped') for (const id of ['prompt', 'goal', 'goal-round-driver', 'tool-goal', 'tool-todo', 'tool-todo-minimal',
+  if (presetMode === 'shipped') for (const id of ['prompt', 'goal', 'goal-round-driver', 'tool-goal', 'tool-todo',
     'commands', 'command-goal', 'agent-presets', 'preset-standard', 'preset-minimal']) selected.add(id)
   if (modelControls) selected.add('model-selection')
   if (taskScheduler) selected.add('task-scheduler')

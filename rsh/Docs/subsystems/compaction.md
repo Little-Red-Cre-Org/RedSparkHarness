@@ -138,6 +138,12 @@ interface NativeCompactionOperations {
    * preserves its abort reason.
    */
   compactNow(owner: NativeCompactionOwner, signal: AbortSignal, sourceCommandId?: CommandId): Promise<CompactionResult | null>
+  /**
+   * Skip automatic pressure compaction, overflow recovery, and manual compaction for one scope and its descendants.
+   * @param scope - preset or Agent scope that must not replace history.
+   * @returns removal of this exact exemption.
+   */
+  exempt(scope: NativeScope): () => void
 }
 ```
 

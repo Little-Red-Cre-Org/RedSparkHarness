@@ -117,7 +117,7 @@ The `compaction/*` events extend `SessionEventMap` (merge-extensible) via declar
 
 ### Native profile
 
-`./native` is the Cordis-free Service Definition for native profiles. It augments `NativeServices.compaction` with `compactIfNeeded(owner, trigger, signal)` and `compactNow(owner, signal, sourceCommandId?)`. The owner is the Program's per-session writer view (`session`, `writerAvailable`, `append`, and `flush()`) rather than a Cordis `Agent`. Event shapes, the bracket, checkpoint source helpers, tool-pairing helpers, and `ManualCompactionError` are shared with the compatibility entry, so both runtimes persist identical `compaction/*` logs. The runtime invariant companion remains compatibility-only.
+`./native` is the Cordis-free Service Definition for native profiles. It augments `NativeServices.compaction` with `compactIfNeeded(owner, trigger, signal)`, `compactNow(owner, signal, sourceCommandId?)`, and `exempt(scope)`. `exempt(scope)` skips automatic pressure compaction, overflow recovery, and manual compaction when the owner's Agent scope is that scope or a descendant. The owner is the Program's per-session writer view (`session`, `writerAvailable`, `append`, and `flush()`) rather than a Cordis `Agent`. Event shapes, the bracket, checkpoint source helpers, tool-pairing helpers, and `ManualCompactionError` are shared with the compatibility entry, so both runtimes persist identical `compaction/*` logs. The runtime invariant companion remains compatibility-only.
 
 </details>
 

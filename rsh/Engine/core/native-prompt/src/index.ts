@@ -73,6 +73,11 @@ export interface NativePromptSection {
   readonly name: string
   readonly order: number
   /**
+   * When true, this section is the only rendered text for its scope.
+   * More than one visible complete section fails rendering.
+   */
+  readonly complete?: boolean
+  /**
    * @param scope - exact consuming Agent scope.
    * @param context - Session tool allowlist constraint, when supplied.
    * @returns text logged by the Program before its request.
@@ -83,9 +88,13 @@ export interface NativePromptSection {
 /** Native system-prompt registry; applications own final assembly and Session logging. */
 export class NativePromptRegistry {
   private readonly sections: NativeContributions<NativePromptSection>
+  private readonly runtimeContextSuppressors: NativeContributions<true>
 
   /** @param scope - Provider scope containing its contributions and consuming Agents. */
-  constructor(private readonly scope: NativeScope) { this.sections = new NativeContributions(scope) }
+  constructor(private readonly scope: NativeScope) {
+    this.sections = new NativeContributions(scope)
+    this.runtimeContextSuppressors = new NativeContributions(scope)
+  }
 
   /**
    * Register one section and return its exact disposer.
@@ -99,14 +108,43 @@ export class NativePromptRegistry {
   }
 
   /**
+   * Stop system-prompt runtime-context snapshots for one scope and its descendants.
+   * @param scope - installation scope, defaulting to the Provider scope.
+   * @returns removal of this exact suppressor.
+   */
+  suppressRuntimeContext(scope = this.scope): () => void {
+    return this.runtimeContextSuppressors.register('runtime-context', true, scope)
+  }
+
+  /**
+   * Report whether system-prompt runtime-context snapshots are suppressed here.
+   * @param scope - consuming Agent scope.
+   * @returns whether this scope or an ancestor suppressed runtime-context snapshots.
+   */
+  runtimeContextSuppressed(scope = this.scope): boolean {
+    return this.runtimeContextSuppressors.visible(scope).has('runtime-context')
+  }
+
+  /**
+   * Report whether one visible section replaces every other section.
+   * @param scope - consuming Agent scope.
+   * @returns whether one visible section replaces every other section.
+   * @throws when more than one visible section is complete.
+   */
+  hasCompleteSection(scope = this.scope): boolean {
+    return this.selected(scope).some(section => section.complete === true)
+  }
+
+  /**
    * Render current sections in stable order, omitting empty text.
+   * A single visible complete section is the entire result.
    * @param scope - consuming scope, defaulting to the Provider scope for diagnostics.
    * @param context - Session tool allowlist constraint, when available.
    * @returns assembled system-prompt additions.
+   * @throws when more than one visible section is complete.
    */
   async render(scope = this.scope, context?: NativePromptRenderContext): Promise<string> {
-    const ordered = [...this.sections.visible(scope).values()].sort((left, right) => left.order - right.order
-      || (left.name < right.name ? -1 : left.name > right.name ? 1 : 0))
+    const ordered = this.selected(scope)
     const text = await Promise.all(ordered.map(async section => section.text(scope, context)))
     const variables = context?.variables ?? {}
     return text
@@ -116,7 +154,20 @@ export class NativePromptRegistry {
   }
 
   /** Remove all contributions during Provider teardown. */
-  clear(): void { this.sections.clear() }
+  clear(): void {
+    this.sections.clear()
+    this.runtimeContextSuppressors.clear()
+  }
+
+  private selected(scope: NativeScope): NativePromptSection[] {
+    const ordered = [...this.sections.visible(scope).values()].sort((left, right) => left.order - right.order
+      || (left.name < right.name ? -1 : left.name > right.name ? 1 : 0))
+    const complete = ordered.filter(section => section.complete === true)
+    if (complete.length > 1) {
+      throw new Error(`native-prompt: multiple complete sections are active: ${complete.map(section => JSON.stringify(section.name)).join(', ')}`)
+    }
+    return complete.length === 1 ? complete : ordered
+  }
 }
 
 export {

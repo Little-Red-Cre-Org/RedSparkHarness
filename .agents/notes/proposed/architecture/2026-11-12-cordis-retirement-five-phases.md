@@ -37,6 +37,8 @@ Each of the 263 declaring packages falls into one grade, decided by resolving ev
 | `mixed` | 169 | One entry, usually `./native`, is already Cordis-free; the rest is the legacy half |
 | `native-clean` | 10 | Declares the peer and nothing reaches it: the declaration is stale |
 
+These three grades are the 2026-11-12 measurement. [Cordis cleanup keeps the legacy writers and three packages](2026-11-15-cordis-cleanup-keeps-legacy-writers.md) recomputed them. Do not use 84, 169, or 10 as the current counts.
+
 ### The Native half is already Cordis-free
 
 No file on a Native side reads a Cordis service name: no `native.ts` and no `src/native-*` file calls `ctx.sessions`, `ctx.tools` or any other `ctx.<service>`. Native entries resolve dependencies through capability keys, and 103 distinct keys are provided across the tree. Two packages host a Cordis plugin from a Native entry on purpose — `rsh/Core/runtime-diagnostics/cordis-bridge` and `rsh/Engine/preset/native-persona` — and `rsh/Scripts/native-package-policy.ts` records both.
@@ -75,28 +77,29 @@ That bounds phase C: it is not 165 entry rewrites but the deletion of each legac
 ### Phase D — drain the remaining references
 
 - 456 files import `@redspark/cordis` for types only. Each needs its declarations moved to the owning package or to a `./native` subpath, and the 25 imported names concentrate in `Context` (1153 sites) and `Service` (102).
-- 84 packages are `cordis-only`; 35 of them are `rsh/Programs/Web` and 20 are `rsh/Modules/Official`, so D's shape follows E2 and E3.
+- On 2026-11-12, 84 packages were `cordis-only`, 35 under `rsh/Programs/Web` and 20 under `rsh/Modules/Official`. The current grades are in [Cordis cleanup keeps the legacy writers and three packages](2026-11-15-cordis-cleanup-keeps-legacy-writers.md). D still follows whichever packages remain `cordis-only`.
 - Exit: `@redspark/cordis` is imported only by `rsh/Core/vendor` and the two sanctioned hosting entries.
 
 ### Phase E — delete packages
 
-- E1 is available now: three packages have no manifest consumer — `rsh-storage-sqlite`, `rsh-experimental-inspector` and `rsh-experimental-agent-team-web-profile` — and the last needs `rsh/Scripts/release/families.spec.ts:60` edited with it.
+- E1 is not a deletion. Those three packages still have no other manifest consumer, and [Cordis cleanup keeps the legacy writers and three packages](2026-11-15-cordis-cleanup-keeps-legacy-writers.md) keeps them.
 - `Core/vendor` goes first or last and never in between: while any Cordis package survives, the vendored `Service`, `Context` and loader are its dependency.
 - `dsh-python-runtime-closure` is the reverse checklist. Its workspace dependencies are the set the Python wheel ships, so a package absent from it needs a different justification than one present.
 - Exit: no manifest declares `@redspark/cordis`, and build, typecheck, unit tests and keyless snapshot replay all pass.
 
 ### What the neighbouring notes still own
 
-This route sits among three proposals rather than replacing them, so each keeps its own subject:
+This route sits among four proposals rather than replacing them, so each keeps its own subject:
 
 - [Legacy runtime retirement](2026-11-06-legacy-runtime-retirement.md) owns which profile shapes reach legacy and what becomes unreachable when they stop; phase A consumes its findings instead of restating them.
 - [What still depends on Cordis](2026-11-10-what-still-depends-on-cordis.md) owns the per-package inventory and the capability gaps behind the unplayable scenarios; phases B, D and E read it as the running classification rather than holding a second copy.
 - [Native runtime and optional Cordis](2026-09-22-rsh-native-runtime-and-optional-cordis.md) owns the P0–P6 construction route that built the Native runtime; phases A–E start after P5 and answer the deletion question that route left open.
+- [Cordis cleanup keeps the legacy writers and three packages](2026-11-15-cordis-cleanup-keeps-legacy-writers.md) owns the 2026-11-15 execution hold: Desktop and Web stay, the three zero-consumer packages stay, and phase C does not start while those writers remain.
 
 ### Hard dependencies between phases
 
 - A precedes B, B precedes C, C precedes D, D precedes E. Each phase's exit is the next phase's usable input, and inverting a pair means maintaining two compositions at once.
-- Within E, E1 is independent, E6 is first-or-last, and E5 breaks its edges explicitly instead of waiting for a cascade to reach them.
+- Within E, E1 is not an independent deletion, E6 is first-or-last, and E5 breaks its edges explicitly instead of waiting for a cascade to reach them.
 - Only B's snapshot batches and C's class batches can run in parallel; both land as separate PRs off freshly fetched `origin/main`.
 
 ## Alternatives considered
