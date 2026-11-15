@@ -7,7 +7,68 @@ import type { NativeExternalSubagentApprovalRequest, NativeSubagentOptions, Nati
 import type { NativeToolExecution, NativeValueToolContribution } from '@redspark/rsh-native-tools'
 import type {} from '@redspark/rsh-native-tool-jobs'
 
-interface Config { readonly toolName: string; readonly options: NativeSubagentOptions; readonly backgroundMode: 'one-shot' | 'continuable' }
+interface AllowedModelRoute { readonly provider: string; readonly model: string }
+interface Config {
+  readonly toolName: string
+  readonly options: NativeSubagentOptions
+  readonly backgroundMode: 'one-shot' | 'continuable'
+  readonly allowedModels?: readonly AllowedModelRoute[]
+}
+
+function nonemptyRouteField(value: unknown, field: string): string {
+  if (typeof value !== 'string' || value.length === 0) throw new Error(`native tool-subagent: ${field} must be a nonempty string`)
+  return value
+}
+
+function allowedModels(value: unknown): readonly AllowedModelRoute[] | undefined {
+  if (value === undefined) return undefined
+  if (!Array.isArray(value) || value.length === 0) throw new Error('native tool-subagent: allowedModels must list at least one route')
+  const seen = new Set<string>()
+  return value.map((entry) => {
+    if (typeof entry !== 'object' || entry === null || Array.isArray(entry)) {
+      throw new Error('native tool-subagent: allowedModels entries must be provider/model objects')
+    }
+    const fields = entry as Record<string, unknown>
+    if (Object.keys(fields).some(key => key !== 'provider' && key !== 'model')) {
+      throw new Error('native tool-subagent: allowedModels entries accept only provider and model')
+    }
+    const route = { provider: nonemptyRouteField(fields.provider, 'allowedModels.provider'), model: nonemptyRouteField(fields.model, 'allowedModels.model') }
+    const key = `${route.provider}\0${route.model}`
+    if (seen.has(key)) throw new Error(`native tool-subagent: allowedModels repeats route "${route.provider}/${route.model}"`)
+    seen.add(key)
+    return route
+  })
+}
+
+function selectedOptions(
+  config: Config,
+  args: { readonly provider?: string; readonly model?: string; readonly reasoning_effort?: string },
+): NativeSubagentOptions {
+  const requested = args.provider !== undefined || args.model !== undefined || args.reasoning_effort !== undefined
+  if (!requested) return config.options
+  if (config.allowedModels === undefined) throw new Error('native tool-subagent: child route fields require allowedModels')
+  if (args.provider !== undefined) nonemptyRouteField(args.provider, 'provider')
+  if (args.model !== undefined) nonemptyRouteField(args.model, 'model')
+  if (args.reasoning_effort !== undefined) nonemptyRouteField(args.reasoning_effort, 'reasoning_effort')
+  if ((args.provider === undefined) !== (args.model === undefined)) {
+    throw new Error('native tool-subagent: provider and model must be supplied together')
+  }
+  const provider = args.provider ?? config.options.provider
+  const model = args.model ?? config.options.model
+  if (provider === undefined || model === undefined) {
+    throw new Error('native tool-subagent: provider and model must be supplied together')
+  }
+  if (!config.allowedModels.some(route => route.provider === provider && route.model === model)) {
+    throw new Error(`native tool-subagent: child route "${provider}/${model}" is not allowed`)
+  }
+  const routeChanged = args.provider !== undefined && (args.provider !== config.options.provider || args.model !== config.options.model)
+  const { reasoningEffort: _configuredEffort, ...withoutEffort } = config.options
+  return {
+    ...(routeChanged && args.reasoning_effort === undefined ? withoutEffort : config.options),
+    ...args.provider === undefined ? {} : { provider: args.provider, model },
+    ...args.reasoning_effort === undefined ? {} : { reasoningEffort: ReasoningEffortId(args.reasoning_effort) },
+  }
+}
 
 function responsesGeneration(call: NativeToolExecution): NativeToolExecution['responsesGeneration'] {
   for (let current: NativeToolExecution | undefined = call; current !== undefined; current = current.parent) {
@@ -34,7 +95,7 @@ function stopReasonHeadline(reason: NativeSubagentStopReason): string {
 function resolveConfig(input: unknown): Config {
   if (typeof input !== 'object' || input === null || Array.isArray(input)) throw new Error('native tool-subagent: configuration must be an object')
   const fields = input as Record<string, unknown>
-  const permitted = ['toolName', 'maxDepth', 'maxSteps', 'provider', 'model', 'reasoningEffort', 'maxTokens', 'persona', 'toolFilter', 'backgroundMode', 'inheritCompletedTurns']
+  const permitted = ['toolName', 'maxDepth', 'maxSteps', 'provider', 'model', 'reasoningEffort', 'maxTokens', 'persona', 'toolFilter', 'backgroundMode', 'inheritCompletedTurns', 'allowedModels']
   for (const key of Object.keys(fields)) if (!permitted.includes(key)) throw new Error(`native tool-subagent: unsupported configuration field ${key}`)
   for (const key of ['toolName', 'provider', 'model', 'reasoningEffort', 'persona']) {
     if ((key === 'toolName' || fields[key] !== undefined) && (typeof fields[key] !== 'string' || fields[key].length === 0)) {
@@ -71,7 +132,8 @@ function resolveConfig(input: unknown): Config {
     toolFilter = { ...values.allow === undefined ? {} : { allow: [...values.allow as string[]] },
       ...values.deny === undefined ? {} : { deny: [...values.deny as string[]] } }
   }
-  return { toolName: fields.toolName as string, backgroundMode, options: {
+  const routes = allowedModels(fields.allowedModels)
+  const options: NativeSubagentOptions = {
     maxDepth: fields.maxDepth as number,
     ...fields.maxSteps === undefined ? {} : { maxSteps: fields.maxSteps as number },
     ...fields.maxTokens === undefined ? {} : { maxTokens: fields.maxTokens as number },
@@ -81,7 +143,18 @@ function resolveConfig(input: unknown): Config {
     ...fields.persona === undefined ? {} : { persona: fields.persona as string },
     ...toolFilter === undefined ? {} : { toolFilter },
     ...fields.inheritCompletedTurns === true ? { inheritCompletedTurns: true } : {},
-  } }
+  }
+  if (routes !== undefined) {
+    if ((options.provider === undefined) !== (options.model === undefined)
+      || options.reasoningEffort !== undefined && options.provider === undefined) {
+      throw new Error('native tool-subagent: allowedModels requires configured provider and model together')
+    }
+    if (options.provider !== undefined && options.model !== undefined
+      && !routes.some(route => route.provider === options.provider && route.model === options.model)) {
+      throw new Error(`native tool-subagent: configured route "${options.provider}/${options.model}" is not allowed`)
+    }
+  }
+  return { toolName: fields.toolName as string, backgroundMode, options, ...routes === undefined ? {} : { allowedModels: routes } }
 }
 
 /** Native delegation with explicit one-shot or continuable deployment. */
@@ -112,9 +185,11 @@ export const plugin: NativePlugin = {
         throw new Error('native tool-subagent: continuable mode requires controls bound to the same Provider and tool registry')
       }
       const inherit = config.options.inheritCompletedTurns === true
+      const routeSelection = config.allowedModels === undefined ? ''
+        : ' Supply provider and model together to select an allowed child route, and reasoning_effort for that route. Configured maxTokens remains the ceiling.'
       const background = !inherit && (external ? controls !== undefined : continuation || controls !== undefined)
       const contribution: NativeValueToolContribution = {
-        schema: { name: config.toolName, description: inherit
+        schema: { name: config.toolName, description: (inherit
           ? 'Delegate a task to a subagent that inherits this conversation: a child agent seeded with all '
             + 'completed turns so far (it does not see the current in-flight turn). Use this when the subtask '
             + 'builds on this conversation\'s context — a follow-up analysis, '
@@ -123,10 +198,15 @@ export const plugin: NativePlugin = {
           : 'Delegate one task to a fresh child without your conversation. '
             + (continuation ? 'By default start a durable continuable child and return after its initial input is accepted. Use send_message for follow-ups and interrupt_agent to stop current work; run_in_background:false waits for a one-shot result.'
               : background ? 'By default wait for its final result and cleanup. run_in_background returns after child readiness; use job_output/job_kill to observe or cancel the Agent-owned job.'
-                : 'This call waits for its final result and cleanup.'),
+                : 'This call waits for its final result and cleanup.')) + routeSelection,
         parameters: { type: 'object', additionalProperties: false, required: ['description', 'prompt'], properties: {
           description: { type: 'string' },
           prompt: { type: 'string', ...inherit ? { description: 'The task for the subagent. It already sees this conversation\'s completed turns, so build on them freely and state only what is new.' } : {} },
+          ...config.allowedModels === undefined ? {} : {
+            provider: { type: 'string' as const, description: 'Child LLM provider. Supply together with model.' },
+            model: { type: 'string' as const, description: 'Child model id. Supply together with provider.' },
+            reasoning_effort: { type: 'string' as const, description: 'Reasoning effort for the selected child route.' },
+          },
           ...background ? { run_in_background: { type: 'boolean' as const } } : {},
         } } },
         output: {
@@ -181,8 +261,16 @@ export const plugin: NativePlugin = {
           },
         },
         async execute(call) {
-          const args = call.arguments as { description: string; prompt: string; run_in_background?: boolean }
+          const args = call.arguments as {
+            description: string
+            prompt: string
+            run_in_background?: boolean
+            provider?: string
+            model?: string
+            reasoning_effort?: string
+          }
           if (args.description.length === 0 || args.prompt.length === 0) throw new Error('subagent: description and prompt must be nonempty')
+          const options = selectedOptions(config, args)
           const approvalAuthority = call.approvalAuthority
           const approvalRequester = approvalAuthority === undefined ? undefined : async (
             approval: NativeExternalSubagentApprovalRequest,
@@ -196,7 +284,7 @@ export const plugin: NativePlugin = {
           })
           const generation = responsesGeneration(call)
           const request = subagents.resolve({ agent: call.agent, session: call.session, label: args.description,
-            prompt: [{ type: 'text', text: args.prompt }], options: config.options,
+            prompt: [{ type: 'text', text: args.prompt }], options,
             ...call.delegationContext === undefined ? {} : { delegationContext: call.delegationContext },
             ...generation === undefined ? {} : { responsesGeneration: generation },
             ...approvalRequester === undefined ? {} : { approvalRequester } })
