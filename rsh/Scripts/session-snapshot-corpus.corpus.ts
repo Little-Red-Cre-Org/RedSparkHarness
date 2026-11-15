@@ -157,6 +157,8 @@ const snapshotAdapters = [
   'snapshots/native-sdk/legacy-dsh-sdk-diagnostic.snapshot.ts',
   'snapshots/native-sdk/legacy-dynamic-route.snapshot.ts',
   'snapshots/native-sdk/legacy-list-agents.snapshot.ts',
+  'snapshots/native-sdk/legacy-continuable.snapshot.ts',
+  'snapshots/native-sdk/legacy-send-message.snapshot.ts',
   'snapshots/native-sdk/staged-files.snapshot.ts',
   'snapshots/native-sdk/external-operation.snapshot.ts',
   'snapshots/native-sdk/inbox-moved.snapshot.ts',

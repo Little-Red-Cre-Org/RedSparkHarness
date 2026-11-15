@@ -12,7 +12,7 @@ Status: implemented
 
 ## Decision
 
-该包发布 `./native`，提供 Native 模型执行提供方所消费的 `model` 服务。`ReplayModel` 实现与 Cordis 入口相同的按会话定位回放，并复用既有的 `loadSessionScripts` 与 `resolveScriptedEntry` 引擎，因此一段录制会话、它的 override 边车与子日志在两个运行时上含义一致。
+该包发布 `./native`，提供 Native 模型执行提供方所消费的 `model` 服务。`ReplayModel` 实现与 Cordis 入口相同的按会话定位回放，并复用 `loadSessionScripts` 与 `resolveReplayEntry`，因此一段录制会话、它的 override 边车、子日志与 `{{session:N}}` token 在两个运行时上含义一致。`resolveReplayEntry` 把 `{{session:N}}` 替换为该已记录角色的 live id。当前请求中的 `started subagent <id>` 叶子会在 child 发起模型调用之前，把该 id 绑定到下一个尚未绑定的 child 角色。在这两种绑定发生之前使用该 token 会明确报错。
 
 配置与 Cordis 的 `Config` 对齐：`file`、`overrideFile`、`childFiles`、`providers` 与 `paceMs`，各自默认取相同的 `RSH_SNAPSHOT_*` 环境变量，并保留对 `paceMs` 与 fixtures 路径同样的即时报错校验。
 
@@ -34,4 +34,4 @@ Native 组合现在能回放录制会话，这是迁移 `snapshots/session/` 中
 
 重复的表面是回放记账——脚本游标、未录制会话失败与 chunk 发射现在各存在两份，每个运行时一份。共享的部分（fixture 解析、条目解析、override 应用）没有重复。当 Cordis 入口最终退役时，Native 这一份是继任者，无需再次移植。
 
-验证：`rsh/Tests/test-support/llm-replay/tests/native.spec.ts` 回放已提交的 `fs-read` fixture，断言恰好一个终结 `finish`，跨会话各步骤推进游标，并同时拒绝未录制会话与用尽的脚本。既有 558 条 Cordis 入口测试保持不变且仍然通过。
+验证：`rsh/Tests/test-support/llm-replay/tests/native.spec.ts` 回放已提交的 `fs-read` fixture，断言恰好一个终结 `finish`，跨会话各步骤推进游标，并同时拒绝未录制会话与用尽的脚本。它还把 `snapshots/sdk/subagent-continuable/session.v3.jsonl` 中的 `{{session:2}}` 替换为 `started subagent <id>` 里的 id，在绑定前拒绝该 token，并接受一次省略 `sessionId` 的调用。Cordis 入口调用同一个 `resolveReplayEntry` 辅助函数。

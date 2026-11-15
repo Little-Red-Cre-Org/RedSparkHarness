@@ -69,7 +69,7 @@ The fixture is a projection of one selected persisted Session generation produce
 
 ### Nested agents
 
-A scenario where a parent agent delegates to in-process subagents records one role per Session: parent `session[.vN].jsonl`, then contiguous children `session.<ordinal>[.vN].jsonl`. The snapshot harness supplies only the highest generation of each role. Live Session ids are freshly random each run, so replay binds each live Session to a recorded script by first-call order: the first live Session to make a model call claims the parent script, the next new Session the next child script, and so on, with each Session advancing its own cursor. More distinct live Sessions than recorded scripts fails loud.
+A scenario where a parent agent delegates to in-process subagents records one role per Session: parent `session[.vN].jsonl`, then contiguous children `session.<ordinal>[.vN].jsonl`. The snapshot harness supplies only the highest generation of each role. Live Session ids are freshly random each run, so replay binds each live Session to a recorded script by first-call order: the first live Session to make a model call claims the parent script, the next new Session the next child script, and so on, with each Session advancing its own cursor. More distinct live Sessions than recorded scripts fails loud. A scripted `{{session:N}}` token becomes the live id bound to that recorded role. Replay also binds the next unbound child role from a `started subagent <id>` leaf in the current request, so a parent can address a background child before that child calls the model. Using the token before either binding fails loud.
 
 ### Failure modes and overrides
 
