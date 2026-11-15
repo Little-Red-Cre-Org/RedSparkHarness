@@ -40,7 +40,7 @@
     "@redspark/rsh-subagent-protocol": "workspace:^",
     "@redspark/rsh-native-jobs": "workspace:^",
     "@redspark/rsh-native-model-execution": "workspace:^",
-    "@redspark/rsh-sandbox": "workspace:^"
+    "@redspark/rsh-native-sandbox-policy": "workspace:^"
   },
   "dsh": {
     "native": {

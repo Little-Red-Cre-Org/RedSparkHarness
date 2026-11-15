@@ -39,7 +39,7 @@
       "path": "../../core/native-jobs"
     },
     {
-      "path": "../../../Modules/Official/sandbox/sandbox"
+      "path": "../../../Modules/Official/sandbox/native-sandbox-policy"
     }
   ]
 }

@@ -1,6 +1,6 @@
 /** Durable policy seeded onto a Native child at delegation. */
-import { SessionSeq, type Session } from '@redspark/rsh-session/native'
-import type { SandboxMode } from '@redspark/rsh-sandbox/native-types'
+import type { Session } from '@redspark/rsh-session/native'
+import { explicitSandboxMode, type SandboxMode } from '@redspark/rsh-native-sandbox-policy'
 
 /** Explicit parent overrides captured before the child's first await. */
 export interface DelegatedPolicySeed {
@@ -19,7 +19,7 @@ export interface DelegatedPolicyAppend {
 /**
  * Capture the parent's explicit sandbox override and the approval pin.
  *
- * The sandbox value is the last `sandbox/mode` event, not the deployment default.
+ * The sandbox value is the last logged `sandbox/mode`, not the deployment default.
  * Approval is pinned to `never` only when that parent turn recorded an approval authority.
  * @param session - the delegating parent Session.
  * @param approvalRequired - whether the parent turn's authority includes approval.
@@ -41,13 +41,4 @@ export function captureDelegatedPolicy(session: Session, approvalRequired: boole
 export function appendDelegatedPolicy(append: DelegatedPolicyAppend, seed: DelegatedPolicySeed): void {
   if (seed.sandboxMode !== undefined) append('sandbox/mode', { mode: seed.sandboxMode, source: 'delegation' })
   if (seed.approvalPolicy !== undefined) append('approval/policy', { policy: 'never', source: 'delegation' })
-}
-
-/** Last explicit sandbox mode on a Session, ignoring the deployment default. */
-function explicitSandboxMode(session: Session): SandboxMode | undefined {
-  for (let seq = session.seq - 1; seq >= 0; seq -= 1) {
-    const event = session.eventAt(SessionSeq(seq))
-    if (event?.type === 'sandbox/mode') return event.data.mode
-  }
-  return undefined
 }

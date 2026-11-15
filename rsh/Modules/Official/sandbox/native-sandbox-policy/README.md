@@ -21,7 +21,7 @@ English | [中文](README.zh.md)
 <a id="configuration"></a>
 ## Configuration
 
-`mode` and `workspaceRoot` are required. `workspaceRoot` must be absolute and unknown fields reject profile activation. The native service provides `sandboxPolicy`; sandboxing filesystem Providers require it before activation.
+`mode` and `workspaceRoot` are required. `workspaceRoot` must be absolute and unknown fields reject profile activation. The native service provides `sandboxPolicy`; sandboxing filesystem Providers require it before activation. `explicitSandboxMode(session)` returns the latest logged `sandbox/mode`, or nothing when that Session never recorded one. It does not substitute the deployment mode.
 
 <a id="model-experience"></a>
 ## Model Experience
@@ -36,7 +36,7 @@ No request content is added or reordered by this package.
 
 <a id="known-limitations-and-deferred-work"></a>
 
-- The policy has one profile-wide mode and does not project Session override events.
+- The deployment mode is profile-wide. A Session `sandbox/mode` event replaces it for later reads, and this package does not write that event.
 - It confines filesystem bridge decisions only; it is not an operating-system isolation mechanism.
 
 No invariant companion is published because policy resolution has one owning Provider and no independent durable observation.

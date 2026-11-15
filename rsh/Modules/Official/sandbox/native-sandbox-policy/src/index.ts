@@ -1,8 +1,11 @@
 /** Native filesystem policy resolved for the calling Session. */
 import { isAbsolute, resolve } from 'node:path'
 import type { SandboxExecutionPolicy, SandboxMode } from '@redspark/rsh-sandbox/native-types'
+
 import type { Session } from '@redspark/rsh-session/native'
 import { SessionSeq } from '@redspark/rsh-session/native'
+
+export type { SandboxMode }
 
 const sessionModes = new WeakMap<Session, { nextSeq: number; mode: SandboxMode | undefined }>()
 
@@ -41,6 +44,16 @@ export function resolveConfig(input: unknown): Config {
     throw new Error('native-sandbox-policy: workspaceRoot must be an absolute path')
   }
   return Object.freeze({ mode: fields.mode, workspaceRoot: resolve(fields.workspaceRoot) })
+}
+
+/**
+ * Latest `sandbox/mode` recorded on a Session.
+ * This is not the deployment default.
+ * @param session - the Session whose logged mode is requested.
+ * @returns that mode, or `undefined` when the Session never recorded one.
+ */
+export function explicitSandboxMode(session: Session): SandboxMode | undefined {
+  return sessionMode(session)
 }
 
 /** Per-session policy result used by native and adapted filesystem Providers. */

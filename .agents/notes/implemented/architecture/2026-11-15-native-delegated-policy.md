@@ -10,7 +10,7 @@ Cordis pins a delegated child's approval to `never` whenever approval is compose
 
 ## Decision
 
-`captureDelegatedPolicy` reads the parent Session before the child's first await. The sandbox value is the last `sandbox/mode` event, and it is omitted when the parent never logged one. Approval is `approval/policy` `never` with `source: 'delegation'` only when that turn's `delegationAuthority.approvalRequired` is true. Native headless sets that flag when the approval service is installed.
+`captureDelegatedPolicy` reads the parent before the child's first await. The sandbox value comes from `explicitSandboxMode`, the latest logged `sandbox/mode` kept by native sandbox policy. It is omitted when the parent never logged one. Approval is `approval/policy` `never` with `source: 'delegation'` only when that turn's `delegationAuthority.approvalRequired` is true. Native headless sets that flag when the approval service is installed.
 
 One-shot children write both events from `initialize`, after the descriptor. Continuable children write them during maintenance, after the descriptor and before the inbox message. Native headless renders the runtime-context approval sentence from the latest `approval/policy` event on that Session, then from the installed approval policy. A child pin therefore tells the model that prompts are disabled even when the deployment policy is `ask`.
 

@@ -2,7 +2,7 @@
 import { resolve } from 'node:path'
 import { expect, it } from 'vitest'
 import { Session, SessionId, SESSION_FORMAT_VERSION } from '@redspark/rsh-session'
-import { NativeSandboxPolicy, resolveConfig } from '../src/index.ts'
+import { explicitSandboxMode, NativeSandboxPolicy, resolveConfig } from '../src/index.ts'
 
 it('rejects missing, relative and unsupported policy choices', () => {
   expect(() => resolveConfig(undefined)).toThrow('must be an object')
@@ -22,4 +22,15 @@ it('uses the Session workspace and explicit deployment fallback', () => {
   expect(policy.defaultMode).toBe('workspace-write')
   expect(policy.resolve()).toMatchObject({ mode: 'workspace-write', workspaceRoot: fallback })
   expect(policy.resolve({ session })).toMatchObject({ mode: 'workspace-write', workspaceRoot: workspace })
+})
+
+it('returns only a logged sandbox mode', () => {
+  const id = SessionId('logged-sandbox-mode')
+  const session = Session.create(id, undefined, {
+    version: SESSION_FORMAT_VERSION, id, createdAt: 1, cwd: resolve('workspace'), isSeeded: false, delegationDepth: 0,
+  })
+  expect(explicitSandboxMode(session)).toBeUndefined()
+  session.append('sandbox/mode', { mode: 'read-only' })
+  session.append('sandbox/mode', { mode: 'danger-full-access' })
+  expect(explicitSandboxMode(session)).toBe('danger-full-access')
 })

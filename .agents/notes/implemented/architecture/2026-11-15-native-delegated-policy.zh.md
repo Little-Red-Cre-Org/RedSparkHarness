@@ -10,7 +10,7 @@ Status: implemented
 
 ## 决定
 
-`captureDelegatedPolicy` 在子任务第一次等待之前读取父 Session。沙箱值是最后一条 `sandbox/mode` 事件；父级从未记录时则省略。只有该回合的 `delegationAuthority.approvalRequired` 为真时，才写入 `source` 为 `delegation` 的 `approval/policy` `never`。安装审批服务时，Native headless 会设置这个标志。
+`captureDelegatedPolicy` 在子任务第一次等待之前读取父级。沙箱值来自 `explicitSandboxMode`，也就是原生沙箱策略保存的最新 `sandbox/mode`。父级从未记录时则省略。只有该回合的 `delegationAuthority.approvalRequired` 为真时，才写入 `source` 为 `delegation` 的 `approval/policy` `never`。安装审批服务时，Native headless 会设置这个标志。
 
 一次性子任务在描述符之后、从 `initialize` 写入这两条事件。可持续子任务在维护阶段写入，位于描述符之后、收件箱消息之前。Native headless 渲染运行时上下文的审批句时，先读该 Session 最新的 `approval/policy` 事件，否则用已安装的审批策略。因此即使部署策略是 `ask`，子任务钉定也会告诉模型审批提示已关闭。
 

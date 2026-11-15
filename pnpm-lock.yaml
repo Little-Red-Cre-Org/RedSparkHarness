@@ -4573,15 +4573,15 @@ importers:
       '@redspark/rsh-native-runtime':
         specifier: workspace:^
         version: link:../../../Core/runtime-diagnostics/native-runtime
+      '@redspark/rsh-native-sandbox-policy':
+        specifier: workspace:^
+        version: link:../../../Modules/Official/sandbox/native-sandbox-policy
       '@redspark/rsh-native-session-execution':
         specifier: workspace:^
         version: link:../../core/native-session-execution
       '@redspark/rsh-native-tools':
         specifier: workspace:^
         version: link:../../core/native-tools
-      '@redspark/rsh-sandbox':
-        specifier: workspace:^
-        version: link:../../../Modules/Official/sandbox/sandbox
       '@redspark/rsh-session':
         specifier: workspace:^
         version: link:../../core/session

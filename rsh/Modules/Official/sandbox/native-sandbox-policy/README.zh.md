@@ -21,7 +21,7 @@ kind: "package-reference"
 <a id="configuration"></a>
 ## 配置
 
-`mode` 和 `workspaceRoot` 均为必填。`workspaceRoot` 必须为绝对路径，未知字段会拒绝 profile 激活。原生服务提供 `sandboxPolicy`；sandboxing 文件系统 Provider 会在激活前要求它。
+`mode` 和 `workspaceRoot` 均为必填。`workspaceRoot` 必须为绝对路径，未知字段会拒绝 profile 激活。原生服务提供 `sandboxPolicy`；sandboxing 文件系统 Provider 会在激活前要求它。`explicitSandboxMode(session)` 返回最新记录的 `sandbox/mode`；该 Session 从未记录时不返回值，也不用部署模式代替。
 
 <a id="model-experience"></a>
 ## 模型体验
@@ -36,7 +36,7 @@ kind: "package-reference"
 
 <a id="known-limitations-and-deferred-work"></a>
 
-- 策略只有一个 profile 级 mode，不投影 Session 覆盖事件。
+- 部署模式是 profile 级的。Session 的 `sandbox/mode` 事件会替换之后的读取结果，本包不写入该事件。
 - 它只限制文件系统 bridge 决策，不是操作系统隔离机制。
 
 不发布 invariant companion，因为策略解析只有一个所属 Provider，且没有独立持久化观测。
