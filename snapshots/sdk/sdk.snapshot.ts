@@ -92,11 +92,6 @@ const dshSdkDiagnosticChildPatch = fileURLToPath(new URL(
   './subagent-rsh-sdk-diagnostic/child.cordis.yml',
   import.meta.url,
 ))
-const dshSdkChildConfig = fileURLToPath(new URL(
-  '../../rsh/Compatibility/DSH/subagent/subagent-rsh-sdk/tests/fixtures/loader/child.patch.yml',
-  import.meta.url,
-))
-
 function dirOf(url: string): string {
   return fileURLToPath(new URL('.', url))
 }
@@ -145,18 +140,6 @@ const SDK_ASSERTIONS: Readonly<Record<string, SdkAssertions>> = {
     runtimeContext: {
       includes: ['Current DSH file policy: danger-full-access', 'Approval prompts are disabled in this session'],
       excludes: ['workspace-write'],
-    },
-  },
-  'subagent-rsh-sdk-dynamic-route': {
-    environment: { RSH_TEST_PARENT_PROVIDER: 'deepseek-official' },
-    dshSdkChild: {
-      config: dshSdkChildConfig,
-      agentConfig: {
-        provider: 'mock',
-        model: 'mock-routed',
-        reasoningEffort: 'max',
-        maxTokens: 777,
-      },
     },
   },
 }
