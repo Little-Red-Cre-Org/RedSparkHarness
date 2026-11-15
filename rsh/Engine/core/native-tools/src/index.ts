@@ -477,7 +477,7 @@ export class NativeToolRegistry {
   /**
    * Filter inherited capabilities in a descendant scope; restrictions intersect along the ancestry.
    * @param filter - allow names must already be inherited; deny names also hide a tool an ancestor registers later.
-   * Empty allow hides every inherited tool.
+   * Empty allow hides every inherited tool. A name registered later on that scope is hidden the same way.
    * @param scope - descendant installation scope; a Provider-wide restriction is forbidden.
    * @returns an exact idempotent disposer for context.effect().
    */
@@ -497,6 +497,21 @@ export class NativeToolRegistry {
     }, scope)
   }
 
+  /**
+   * Report whether this scope's allow and deny lists leave one model-facing name visible.
+   * Unregistered builtin names use this, so an allow list that names only bash hides read_file and run_code.
+   * The inherited `run_code` Registry transport is not decided here.
+   * @param name - tool name a model request might publish.
+   * @param scope - consuming Agent scope, defaulting to the Provider scope.
+   * @returns false when a visible restriction omits or denies the name.
+   */
+  allowsModelName(name: string, scope: NativeScope = this.scope): boolean {
+    if (this.disposal !== undefined) throw new Error('native-tools: registry is disposed')
+    const filters = [...this.restrictions.visible(scope).values()]
+    return filters.every(filter =>
+      (filter.allow === undefined || filter.allow.has(name)) && filter.deny?.has(name) !== true)
+  }
+
   private visible(scope = this.scope): Map<string, ToolRegistration> {
     const all = this.tools.visible(scope)
     if (scope === this.scope) return all
@@ -509,7 +524,12 @@ export class NativeToolRegistry {
         visible.set(name, entry)
       }
     }
-    for (const [name, entry] of all) if (entry !== inherited.get(name)) visible.set(name, entry)
+    for (const [name, entry] of all) {
+      if (entry === inherited.get(name)) continue
+      if (!filters.every(filter =>
+        (filter.allow === undefined || filter.allow.has(name)) && filter.deny?.has(name) !== true)) continue
+      visible.set(name, entry)
+    }
     return visible
   }
 

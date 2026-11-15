@@ -1190,7 +1190,8 @@ export class NativeHeadlessApplication implements NativeApplication {
         const registryNames = new Set((this.tools?.modelSchemas(agent.scope) ?? []).map(schema => schema.name))
         const builtinSchemas = config.builtinTools
           ? [...TOOL_SCHEMAS, ...(this.codeRuntime === undefined ? [] : [CODE_TOOL_SCHEMA])]
-            .filter(schema => allowed(schema.name) && !registryNames.has(schema.name)
+            .filter(schema => allowed(schema.name) && (this.tools?.allowsModelName(schema.name, agent.scope) ?? true)
+            && !registryNames.has(schema.name)
             && (request.delegationContext === undefined || request.delegationContext.builtinToolNames.includes(schema.name)))
           : []
         const modelTools = (this.tools?.modelSchemas(agent.scope) ?? []).filter(schema => allowed(schema.name)).map(schema => schema.name)

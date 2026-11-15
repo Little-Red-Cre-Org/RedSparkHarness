@@ -23,7 +23,7 @@ kind: "package-reference"
 
 `./native` 入口接受 `mode: native | ptc | both`（默认 `both`）。Native 模式对模型调用隐藏 `run_code`；PTC 模式只暴露该传输，并要求存在可见的已注册 `run_code`；both 模式暴露所有可见工具。子作用域用 `presentAs(mode, scope)` 遮蔽该选择；最近的声明生效，同一作用域的第二次声明失败。各模式的程序绑定保留同一组按作用域可见的能力。未知配置字段会使激活失败。
 
-Value 贡献声明输出 schema；注册表捕获它，校验分离的 JSON，再呈现规范结果。作用域限制和 guard 在审批前及 executor 进入前检查。移除贡献会关闭准入、取消已捕获调用，并排空实际工作后才完成 disposer。结果 policy 必须恰好委托一次；finalizer 在应用记录结果前完成。只有应用接受该记录后调用 `acceptResult()` 才通知结果观察者。带来源的额外上下文与规范 JSON 分开保留。
+Value 贡献声明输出 schema；注册表捕获它，校验分离的 JSON，再呈现规范结果。作用域限制和 guard 在审批前及 executor 进入前检查。允许列表未点名的内置工具，以及之后注册到该作用域的工具，同样隐藏。移除贡献会关闭准入、取消已捕获调用，并排空实际工作后才完成 disposer。结果 policy 必须恰好委托一次；finalizer 在应用记录结果前完成。只有应用接受该记录后调用 `acceptResult()` 才通知结果观察者。带来源的额外上下文与规范 JSON 分开保留。
 
 操作所有者只有在身份对应实际生效 cwd 与执行所用精确解析目标时，才可向普通 `authorize` 传入 `sessionContext: { cwdKey, targetKey }`。注册表绑定冻结且已验证的参数，应用负责匹配与持久化。缺失或不完整的上下文不能宣告可记住的审批。`requestApproval` 始终丢弃可复用上下文，仅用于一次沙箱升级；委派调用不会获得可复用候选。
 

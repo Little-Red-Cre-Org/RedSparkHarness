@@ -177,6 +177,6 @@ describe('minimal agent preset', () => {
       'system-prompt.expected.md',
       'tool-schemas.expected.json',
       'ui.expected.md',
-    ])
+    ], 'native-web')
   })
 })
