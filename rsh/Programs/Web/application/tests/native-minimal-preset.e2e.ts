@@ -12,6 +12,7 @@ import { WORKSPACE_MANIFEST_GLOBS } from '../../../../../rsh/Scripts/workspace-m
 import { loadReplayScript, type ReplayEntry } from '@redspark/rsh-llm-replay'
 import { sessionFixtureName } from '@redspark/rsh-session-snapshot'
 import { SESSION_FORMAT_VERSION } from '@redspark/rsh-session/native'
+import { ToolCallId } from '@redspark/rsh-llm/native'
 
 const root = fileURLToPath(new URL('../../../../../', import.meta.url))
 const fixture = join(root, 'snapshots/web/minimal-preset/session.v3.jsonl')
@@ -22,13 +23,14 @@ interface SessionRow { type: string; data?: Record<string, unknown>; agentPreset
 
 /** One replayed bash call with the same chunk fields the fixture derives. */
 function bashCall(id: string, command: string): ReplayEntry {
+  const callId = ToolCallId(id)
   const args = JSON.stringify({ command })
   return {
     kind: 'chunks',
     chunks: [
       { type: 'block-start', index: 0, blockType: 'tool-call' },
-      { type: 'tool-call-delta', index: 0, id, name: 'bash', argumentsDelta: args },
-      { type: 'block-end', index: 0, block: { type: 'tool-call', id, name: 'bash', arguments: args } },
+      { type: 'tool-call-delta', index: 0, id: callId, name: 'bash', argumentsDelta: args },
+      { type: 'block-end', index: 0, block: { type: 'tool-call', id: callId, name: 'bash', arguments: args } },
       { type: 'usage', usage: { inputTokens: 10, outputTokens: 4 } },
       { type: 'finish', reason: { kind: 'tool-calls' } },
     ],
