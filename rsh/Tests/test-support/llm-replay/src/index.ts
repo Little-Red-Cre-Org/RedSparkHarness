@@ -598,6 +598,26 @@ function substituteValue(value: unknown, corpus: string): unknown {
 }
 
 /**
+ * Bind recorded session roles from the live request, then resolve scripted placeholders.
+ *
+ * `{{session:N}}` becomes the live id of recorded role N. A `started subagent <id>`
+ * leaf binds that id to the next unbound child role before the child calls the model.
+ * `{{fromRequest:<regex>}}` then resolves against the same request.
+ * @param entry - the scripted entry about to replay.
+ * @param messages - the live request messages.
+ * @param liveSessionIds - recorded-role slots; a learned background child id is written here.
+ * @returns the entry with session tokens and request placeholders replaced.
+ */
+export function resolveReplayEntry(
+  entry: ReplayEntry,
+  messages: GenerateOptions['messages'],
+  liveSessionIds: (string | undefined)[],
+): ReplayEntry {
+  inferStartedSubagents(messages, liveSessionIds)
+  return resolveScriptedEntry(materializeSessionTokens(entry, liveSessionIds), messages)
+}
+
+/**
  * Resolve every `{{fromRequest:<regex>}}` placeholder in one scripted entry
  * against the live request. The corpus is every string leaf of the request
  * messages joined by newlines; the pattern's LAST corpus match wins and its
@@ -1083,8 +1103,7 @@ export function installLlmReplay(ctx: Context, config: ReplayConfig): ReplayHand
           + `but its script has only ${boundState.entries.length}; re-record the scenario`,
         )
       }
-      inferStartedSubagents(options.messages, liveSessionIds)
-      const resolved = resolveScriptedEntry(materializeSessionTokens(entry, liveSessionIds), options.messages)
+      const resolved = resolveReplayEntry(entry, options.messages, liveSessionIds)
       if (options.provider === 'deepseek-official' && providerAccepted(resolved)) {
         const extensions = ctx.get('deepseekLlmApiExtensions')
         if (extensions !== undefined) {

@@ -12,7 +12,7 @@ That was the single largest blocker for moving those scenarios to a Native profi
 
 ## Decision
 
-The package publishes `./native`, providing the `model` service the Native model-execution Provider consumes. `ReplayModel` implements the same per-session positional replay as the Cordis entry and reuses the existing `loadSessionScripts` and `resolveScriptedEntry` engine, so a recorded session, its override sidecar, and its child logs mean the same thing on both runtimes.
+The package publishes `./native`, providing the `model` service the Native model-execution Provider consumes. `ReplayModel` implements the same per-session positional replay as the Cordis entry and reuses `loadSessionScripts` and `resolveReplayEntry`, so a recorded session, its override sidecar, its child logs, and its `{{session:N}}` tokens mean the same thing on both runtimes. `resolveReplayEntry` replaces `{{session:N}}` with the live id of that recorded role. A `started subagent <id>` leaf in the current request binds that id to the next unbound child role before the child calls the model. A token used before either binding fails loud.
 
 Configuration mirrors the Cordis `Config`: `file`, `overrideFile`, `childFiles`, `providers`, and `paceMs`, each defaulting to the same `RSH_SNAPSHOT_*` environment variable, plus the same eager validation of `paceMs` and a fixture path.
 
@@ -34,4 +34,4 @@ A Native composition can now replay a recorded session, which is a precondition 
 
 The duplicated surface is the replay bookkeeping — the script cursor, the unrecorded-session failure, and the chunk emitter now exist twice, once per runtime. The shared parts (fixture parsing, entry resolution, override application) are not duplicated. When the Cordis entry is eventually retired, the Native one is the successor and needs no further porting.
 
-Verification: `rsh/Tests/test-support/llm-replay/tests/native.spec.ts` replays a committed `fs-read` fixture, asserts one terminal `finish`, advances the cursor across a session's steps, and rejects both an unrecorded session and an exhausted script. The existing 558 Cordis-entry tests are unchanged and still pass.
+Verification: `rsh/Tests/test-support/llm-replay/tests/native.spec.ts` replays a committed `fs-read` fixture, asserts one terminal `finish`, advances the cursor across a session's steps, and rejects both an unrecorded session and an exhausted script. It also replaces `{{session:2}}` in `snapshots/sdk/subagent-continuable/session.v3.jsonl` with the id from `started subagent <id>`, rejects that token before the binding, and accepts one call that omits `sessionId`. The Cordis entry calls the same `resolveReplayEntry` helper.

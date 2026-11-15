@@ -13,7 +13,7 @@ import { type GenerateOptions, type LlmImageRequestPricing, type LlmResolvedMode
   type PreparedAdapterCall, type StreamChunk, resolveRetryPolicy, type ResolvedRetryPolicy } from '@redspark/rsh-llm/native'
 import type { NativePlugin } from '@redspark/rsh-native-runtime'
 import type { NativeModel } from '@redspark/rsh-native-model-execution'
-import { loadSessionScripts, resolveScriptedEntry, type ReplayConfig, type ReplayEntry, type ReplayProviderConfig } from './index.ts'
+import { loadSessionScripts, resolveReplayEntry, type ReplayConfig, type ReplayEntry, type ReplayProviderConfig } from './index.ts'
 
 declare module '@redspark/rsh-native-runtime' {
   interface NativeServices { model: NativeModel }
@@ -56,6 +56,7 @@ function resolveConfig(input: unknown): ReplayConfig {
 /** Per-session positional replay over the recorded scripts. */
 class ReplayModel implements NativeModel {
   private readonly bound = new Map<string, { entries: ReplayEntry[]; cursor: number }>()
+  private readonly liveSessionIds: (string | undefined)[]
   private nextScript = 0
   private readonly paceMs: number
   private readonly scripts: readonly { entries: ReplayEntry[] }[]
@@ -67,6 +68,7 @@ class ReplayModel implements NativeModel {
       throw new Error(`llm-replay: paceMs must be a non-negative integer, got ${String(config.paceMs)}`)
     }
     this.scripts = loadSessionScripts(config)
+    this.liveSessionIds = Array.from({ length: this.scripts.length })
     this.providers = new Map((config.providers ?? []).map(provider => [provider.id, provider]))
   }
 
@@ -75,11 +77,13 @@ class ReplayModel implements NativeModel {
     const key = sessionId ?? '\0anon\0'
     const existing = this.bound.get(key)
     if (existing !== undefined) return { ...existing, unrecorded: false }
-    const script = this.scripts[this.nextScript]
+    const scriptIndex = this.nextScript
+    const script = this.scripts[scriptIndex]
     if (script === undefined) return { entries: [], cursor: 0, unrecorded: true }
     this.nextScript += 1
     const state = { entries: script.entries, cursor: 0 }
     this.bound.set(key, state)
+    if (sessionId !== undefined) this.liveSessionIds[scriptIndex] = sessionId
     return { ...state, unrecorded: false }
   }
 
@@ -131,7 +135,7 @@ class ReplayModel implements NativeModel {
     }
   }
 
-  /** Stream the next scripted entry for the requesting session. */
+  /** Stream the next scripted entry, with recorded session tokens bound to live ids. */
   async *stream(options: GenerateOptions): AsyncIterable<StreamChunk> {
     const { entries, cursor, unrecorded } = this.stateFor(options.sessionId)
     if (unrecorded) {
@@ -144,7 +148,7 @@ class ReplayModel implements NativeModel {
     // Advance synchronously at invocation time so concurrent callers keep their order.
     const state = this.bound.get(options.sessionId ?? '\0anon\0')
     if (state !== undefined) state.cursor = cursor + 1
-    yield* this.emit(resolveScriptedEntry(raw, options.messages), options.signal)
+    yield* this.emit(resolveReplayEntry(raw, options.messages, this.liveSessionIds), options.signal)
   }
 
   private async *emit(entry: ReplayEntry, signal: AbortSignal | undefined): AsyncIterable<StreamChunk> {

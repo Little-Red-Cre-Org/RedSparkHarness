@@ -69,7 +69,7 @@ fixture 是运行一次真实 agent 所产生的一份选定持久化 Session ge
 
 ### 嵌套 agent
 
-parent agent 委托给进程内 subagent 的场景会为每个 Session 记录一个角色：parent 为 `session[.vN].jsonl`，随后是连续 child `session.<ordinal>[.vN].jsonl`。snapshot harness 只提供每个角色的最高 generation。live Session id 每次运行都会重新随机生成，因此 replay 按首次调用顺序把每个 live Session 绑定到已记录脚本：第一个发起模型调用的 live Session 取得 parent 脚本，下一个新 Session 取得下一条 child 脚本，依此类推，每个 Session 分别推进自己的 cursor。不同 live Session 数量超过已记录脚本数时会明确报错。
+parent agent 委托给进程内 subagent 的场景会为每个 Session 记录一个角色：parent 为 `session[.vN].jsonl`，随后是连续 child `session.<ordinal>[.vN].jsonl`。snapshot harness 只提供每个角色的最高 generation。live Session id 每次运行都会重新随机生成，因此 replay 按首次调用顺序把每个 live Session 绑定到已记录脚本：第一个发起模型调用的 live Session 取得 parent 脚本，下一个新 Session 取得下一条 child 脚本，依此类推，每个 Session 分别推进自己的 cursor。不同 live Session 数量超过已记录脚本数时会明确报错。 脚本中的 `{{session:N}}` 会替换为绑定到该已记录角色的 live id。当前请求中的 `started subagent <id>` 叶子也会把该 id 绑定到下一个尚未绑定的 child 角色，因此 parent 可以在该 child 发起模型调用之前寻址这个后台 child。在这两种绑定发生之前使用该 token 会明确报错。
 
 ### 失败模式与覆盖
 

@@ -1,6 +1,6 @@
 
 import { describe, expect, it } from 'vitest'
-import type { GenerateOptions, StreamChunk } from '@redspark/rsh-llm/native'
+import { createUserMessage, type GenerateOptions, type StreamChunk } from '@redspark/rsh-llm/native'
 import type { SessionId } from '@redspark/rsh-session/native'
 import { brandString } from '@redspark/rsh-brand'
 import type { NativeModel } from '@redspark/rsh-native-model-execution'
@@ -71,5 +71,39 @@ describe('native replay provider', () => {
 
   it('rejects a negative pace', () => {
     expect(() => install({ file: realFixture, paceMs: -1 })).toThrow(/paceMs/)
+  })
+
+  it('replays a call that carries no session id as the anonymous primary session', async () => {
+    const chunks = await collect(install({ file: realFixture }).stream({
+      provider: 'deepseek-official', model: 'deepseek-v4-flash', messages: [],
+    }))
+    expect(chunks.at(-1)?.type).toBe('finish')
+  })
+
+  it('replaces a recorded child token with the id named by started subagent', async () => {
+    const model = install({
+      file: 'snapshots/sdk/subagent-continuable/session.v3.jsonl',
+      childFiles: ['snapshots/sdk/subagent-continuable/session.1.v3.jsonl'],
+    })
+    await collect(model.stream(options('live-parent')))
+    const steered = await collect(model.stream({
+      ...options('live-parent'),
+      messages: [createUserMessage({
+        content: [{ type: 'text', text: 'started subagent live-child' }],
+        source: { kind: 'user' },
+      })],
+    }))
+    const rendered = JSON.stringify(steered)
+    expect(rendered).toContain('live-child')
+    expect(rendered).not.toContain('{{session:2}}')
+  })
+
+  it('rejects a recorded child token before that child is bound', async () => {
+    const model = install({
+      file: 'snapshots/sdk/subagent-continuable/session.v3.jsonl',
+      childFiles: ['snapshots/sdk/subagent-continuable/session.1.v3.jsonl'],
+    })
+    await collect(model.stream(options('live-parent')))
+    await expect(collect(model.stream(options('live-parent')))).rejects.toThrow(/used before.*bound/)
   })
 })
