@@ -260,7 +260,9 @@ export class NativeSubagentContinuations {
       const terminal = { stopReason,
         ...output === undefined ? {} : { output } }
       const residentParent = this.children.get(session.id)
-      const wake = residentParent?.handle.agent === parent && !residentParent.handle.isClosing
+      const wake = residentParent === undefined
+        ? true
+        : residentParent.handle.agent === parent && !residentParent.handle.isClosing
       await operations.deliver(session.id, createSettlementMessage(id, terminal), 'next-turn', wake, this.context.signal)
     }
   }
