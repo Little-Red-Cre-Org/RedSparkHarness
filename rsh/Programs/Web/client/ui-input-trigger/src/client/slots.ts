@@ -1,5 +1,4 @@
 /** Slash-menu props for the Conversation-owned input overlay. */
-import type {} from '@redspark/rsh-client-ui-conversation/client'
 import type { InputTriggerCrumb, PickAction } from '../types.ts'
 import type { SnapshotStore } from '@redspark/rsh-client-store'
 import type { MenuState } from '../core/contract.ts'

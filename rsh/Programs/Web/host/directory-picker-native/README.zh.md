@@ -29,6 +29,8 @@ Native Host 集成可从 `@redspark/rsh-host-directory-picker-native/native-pick
 
 当操作者工作在宿主屏幕前，且原生选择器是合适的交互时，组合此后端。打开目录选择器的工作区流程每个打开请求调用一次 `pick(signal)`；返回的 Promise 解析为所选绝对路径，操作者取消时解析为 `null`。
 
+仅 Host 的 `./native` 入口提供 kind 为 `native` 的 `directoryPicker`，并调用 `pickNativeDirectory`。它不接受任何 profile 字段。
+
 ### 何时选择
 
 为 macOS、Windows 或桌面 Linux 上的工作站本地操作者选择此后端。当客户端无法触达 OS 选择器时——远程浏览器、SSH 转发会话或无人值守宿主——请选择[浏览后端](../directory-picker-browse/README.zh.md)。具体情况不固定时，[自适应选择器](../directory-picker-auto/README.zh.md)会在启动时判定。

@@ -31,6 +31,8 @@ kind: "package-reference"
 
 当组合已经使用 E2B 沙箱且希望文件操作在其中运行时，选择本包。当文件应留在宿主上时，选择本地文件系统包。这里没有需要调优的配置。
 
+Host-only 的 `./native` 入口要求 `e2b`、提供 `fs`、不接受配置，并且不导入 Cordis。
+
 ### 挂载
 
 先加载沙箱所有者，再加载本包；之后文件功能就会作用于沙箱：
@@ -74,7 +76,9 @@ agent 可以创建文件、覆盖文件，或通过替换一段字面量文本�
 
 | 文件 | 职责 |
 |---|---|
-| [`src/index.ts`](src/index.ts) | 插件入口：`E2BFileSystem` 提供方、规范化、读取、原子写入、错误映射 |
+| [`src/backend.ts`](src/backend.ts) | 两个安装器共享的远程文件系统操作 |
+| [`src/index.ts`](src/index.ts) | Cordis `E2BFileSystem` 适配器 |
+| [`src/native.ts`](src/native.ts) | Native Host 安装器；要求 `e2b` 并提供 `fs` |
 | — | 不发布运行时不变式配套项；每个操作都直接返回 E2B 控制器的已提交结果，没有可用于交叉核验的独立事件或缓存。 |
 
 ### 规范化路径与传输分帧

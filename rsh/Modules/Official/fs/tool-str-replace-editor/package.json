@@ -16,6 +16,22 @@
       "apiVersion": 1,
       "role": "consumer",
       "capability": "filesystem"
+    },
+    "native": {
+      "apiVersion": 1,
+      "entry": "./native",
+      "targets": [
+        "host"
+      ],
+      "requires": [
+        "fs",
+        "fsObservationPolicy",
+        "tools"
+      ],
+      "optional": [
+        "sandboxPolicy"
+      ],
+      "provides": []
     }
   },
   "main": "lib/index.js",
@@ -25,10 +41,15 @@
       "types": "./lib/types/index.d.ts",
       "default": "./lib/index.js"
     },
-    "./package.json": "./package.json"
+    "./package.json": "./package.json",
+    "./native": {
+      "types": "./lib/types/native.d.ts",
+      "default": "./lib/native.js"
+    }
   },
   "files": [
     "lib/index.js",
+    "lib/native.js",
     "lib/types/**/*.d.ts"
   ],
   "license": "MIT",
@@ -37,7 +58,10 @@
     "@redspark/rsh-sandbox": "workspace:^",
     "@redspark/rsh-sandbox-policy": "workspace:^",
     "@redspark/rsh-tools": "workspace:^",
-    "@redspark/cordis": "workspace:^"
+    "@redspark/cordis": "workspace:^",
+    "@redspark/rsh-native-runtime": "workspace:^",
+    "@redspark/rsh-native-tools": "workspace:^",
+    "@redspark/rsh-native-sandbox-policy": "workspace:^"
   },
   "dependencies": {
     "@redspark/schemastery": "workspace:^"
@@ -56,6 +80,36 @@
     "@redspark/rsh-system-prompt": "workspace:^",
     "@redspark/rsh-tools": "workspace:^",
     "@redspark/cordis": "workspace:^",
-    "@redspark/rsh-session-projection": "workspace:^"
+    "@redspark/rsh-session-projection": "workspace:^",
+    "@redspark/rsh-native-runtime": "workspace:^",
+    "@redspark/rsh-native-tools": "workspace:^",
+    "@redspark/rsh-native-sandbox-policy": "workspace:^",
+    "@redspark/rsh-native-agent": "workspace:^"
+  },
+  "peerDependenciesMeta": {
+    "@redspark/rsh-fs": {
+      "optional": true
+    },
+    "@redspark/rsh-sandbox": {
+      "optional": true
+    },
+    "@redspark/rsh-sandbox-policy": {
+      "optional": true
+    },
+    "@redspark/rsh-tools": {
+      "optional": true
+    },
+    "@redspark/cordis": {
+      "optional": true
+    },
+    "@redspark/rsh-native-runtime": {
+      "optional": true
+    },
+    "@redspark/rsh-native-tools": {
+      "optional": true
+    },
+    "@redspark/rsh-native-sandbox-policy": {
+      "optional": true
+    }
   }
 }

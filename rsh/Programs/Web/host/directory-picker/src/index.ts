@@ -12,6 +12,7 @@
  */
 
 import { Context, Service } from '@redspark/cordis'
+import { DirectoryPickerError } from './error.ts'
 import type { DirectoryListing } from './types.ts'
 
 export type { DirectoryEntry, DirectoryListing } from './types.ts'
@@ -71,21 +72,8 @@ export interface DirectoryPickerCapabilities {
 /** Union of interaction shapes a backend can provide, derived from the merge-extensible {@link DirectoryPickerCapabilities} map. */
 export type DirectoryPickerCapability = DirectoryPickerCapabilities[keyof DirectoryPickerCapabilities]
 
-/** Closed failure vocabulary of the browse primitives (mirrored onto the wire by consumers). */
-export type DirectoryPickerErrorCode = 'directory-unreadable' | 'directory-exists' | 'directory-create-failed'
-
-/** Typed failure thrown by browse primitives so consumers can map business codes without string matching. */
-export class DirectoryPickerError extends Error {
-  /**
-   * @param code - closed business code of the failure.
-   * @param path - the absolute path the failure is about.
-   * @param message - operator-facing description.
-   */
-  constructor(readonly code: DirectoryPickerErrorCode, readonly path: string, message: string) {
-    super(message)
-    this.name = 'DirectoryPickerError'
-  }
-}
+export type { DirectoryPickerErrorCode } from './error.ts'
+export { DirectoryPickerError }
 
 declare module '@redspark/cordis' {
   interface Context {

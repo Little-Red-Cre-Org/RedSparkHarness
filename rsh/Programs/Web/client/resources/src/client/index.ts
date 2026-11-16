@@ -7,6 +7,14 @@ import type { Context as ClientContext } from '@redspark/cordis'
 import type {} from '@redspark/rsh-client-ui-renderer/client'
 import type { RootStandardSourceContribution } from '@redspark/rsh-client-ui-slots'
 import { ResourceRegistry, type ResourceEffectHost } from './resources.ts'
+import type { Resources } from './contract.ts'
+
+declare module '@redspark/cordis' {
+  interface Context {
+    /** Resource model: protocol providers, pins, and per-address live sources. */
+    resources: Resources
+  }
+}
 
 export type {
   ResourceOpenContext,

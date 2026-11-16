@@ -27,20 +27,26 @@
       "default": "./lib/native-picker.js"
     },
     "./src/*": "./src/*",
-    "./package.json": "./package.json"
+    "./package.json": "./package.json",
+    "./native": {
+      "types": "./lib/types/native.d.ts",
+      "default": "./lib/native.js"
+    }
   },
   "files": [
     "lib/index.js",
     "lib/worker.cjs",
     "lib/native-picker.js",
     "lib/native-picker-*.js",
-    "lib/types/**/*.d.ts"
+    "lib/types/**/*.d.ts",
+    "lib/native.js"
   ],
   "license": "MIT",
   "dependencies": {
     "@redspark/rsh-host-directory-picker": "workspace:^",
     "@redspark/rsh-native-command": "workspace:^",
-    "koffi": "3.1.1"
+    "koffi": "3.1.1",
+    "@redspark/rsh-native-runtime": "workspace:^"
   },
   "peerDependencies": {
     "@redspark/cordis": "workspace:^"
@@ -52,6 +58,21 @@
   },
   "devDependencies": {
     "@redspark/cordis": "workspace:^",
-    "tsx": "^4.19.2"
+    "tsx": "^4.19.2",
+    "@redspark/rsh-native-runtime": "workspace:^"
+  },
+  "dsh": {
+    "native": {
+      "apiVersion": 1,
+      "entry": "./native",
+      "targets": [
+        "host"
+      ],
+      "requires": [],
+      "optional": [],
+      "provides": [
+        "directoryPicker"
+      ]
+    }
   }
 }

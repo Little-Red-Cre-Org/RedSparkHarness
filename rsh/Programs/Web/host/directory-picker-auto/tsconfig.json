@@ -25,6 +25,21 @@
     },
     {
       "path": "../../../../Core/util/launch-environment"
+    },
+    {
+      "path": "../../../../Core/runtime-diagnostics/native-runtime"
+    },
+    {
+      "path": "../directory-picker"
+    },
+    {
+      "path": "../directory-picker-browse"
+    },
+    {
+      "path": "../directory-picker-native"
+    },
+    {
+      "path": "../native-web-host"
     }
   ]
 }

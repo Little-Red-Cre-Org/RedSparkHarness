@@ -12,7 +12,8 @@ import { Config, SqliteStorageBackend, STORAGE_SQLITE_SCHEMA_VERSION } from '../
 
 /** Mirror the loader: resolve schemastery defaults before construction. */
 function backendAt(path: string): SqliteStorageBackend {
-  return new SqliteStorageBackend(new Config({ path }))
+  const resolved = new Config({ path })
+  return new SqliteStorageBackend({ path: resolved.path, journalMode: resolved.journalMode ?? 'wal' })
 }
 
 const dirs: string[] = []

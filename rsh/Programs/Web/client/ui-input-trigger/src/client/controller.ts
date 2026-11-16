@@ -7,11 +7,10 @@
  * only the source roster. One controller per session scope; the service
  * disposes it with the scope fiber.
  */
-import type { Context as ClientContext } from '@redspark/cordis'
 import { createSnapshotStore, type SnapshotStore } from '@redspark/rsh-client-store'
 import type {
   ArbitrateKey, ArbitrateOutcome, PickOutcome, ReferenceInsert,
-} from '@redspark/rsh-client-ui-conversation/client'
+} from '@redspark/rsh-client-ui-conversation/native-types'
 import type { SessionId } from '@redspark/rsh-session/types'
 import { detectTrigger } from '../core/detect.ts'
 import { MENU_CLOSED, menuReduce, seedGroups } from '../core/menu.ts'
@@ -20,6 +19,21 @@ import type {
   ClientSessionContext, InputTriggerCandidate, InputTriggerCrumb, InputTriggerSource, PickAction,
   SubmitEnvelope, TriggerChar, TriggerGuard,
 } from '../types.ts'
+
+/**
+ * The one dispatch contact this controller has.
+ * Cordis answers through `Context.bail`; a Native host supplies the same call.
+ */
+export interface InputTriggerDispatch {
+  /**
+   * Deliver one scoped input event and stop at the first answer.
+   * @param subject - dispatch subject; the controller passes this same object.
+   * @param event - scoped input event name.
+   * @param payload - event request.
+   * @returns the listener answer, or undefined when nobody claimed it.
+   */
+  bail(subject: InputTriggerDispatch, event: string, payload: Record<string, unknown>): unknown
+}
 
 /** Roster access the controller borrows from the root service (registration order preserved). */
 export interface SourceRoster {
@@ -30,7 +44,7 @@ export interface SourceRoster {
 /** Construction hooks for one controller. */
 export interface InputTriggerControllerDeps {
   /** The owning session scope (event dispatch + teardown registration site). */
-  actx: ClientContext
+  actx: InputTriggerDispatch
   /** The session's stable host identity (the projection handed to sources). */
   sessionId: SessionId
   /** Root-service roster view. */

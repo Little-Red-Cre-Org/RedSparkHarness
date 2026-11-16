@@ -30,7 +30,7 @@ import {
 } from '@redspark/rsh-client-ui-primitives'
 import {
   formatScheduleFrequency, formatScheduleLocalTime, formatScheduleRelative,
-} from './client/ScheduleCatalogAction.tsx'
+} from './client/schedule-format.ts'
 import css from './client/ScheduleCatalogAction.module.css'
 import { NS, en, zh, type ScheduleCatalogKey } from './client/locales.ts'
 

@@ -17,8 +17,6 @@
 import type { ReactNode } from 'react'
 import { Button } from '@redspark/rsh-client-ui-primitives'
 import type { TranslateNS } from '@redspark/rsh-client-ui-slots'
-// Type-only: pulls this package's LocaleNamespaceMap merge (the 'settings' seat).
-import type {} from './client/index.ts'
 import sectionCss from './client/GeneralSection.module.css'
 import actionCss from './client/SettingsDocumentAction.module.css'
 

@@ -35,6 +35,8 @@ kind: "package-reference"
 
 唯一设置是包检查运行中命令状态的频率；默认值适合大多数部署，调大它可以减少远程请求，代价是退出检测略慢。
 
+Host-only 的 `./native` 入口要求 `e2b`、只提供 `subprocess`、把 `pollMs` 默认为 20，并且不导入 Cordis。
+
 | 字段 | 默认值 | 含义 |
 |---|---|---|
 | `pollMs` | `20` | 包检查运行中命令状态的频率（毫秒） |
@@ -79,7 +81,9 @@ agent 可以在沙箱中打开交互式终端、发送输入、读取输出，�
 
 | 文件 | 职责 |
 |---|---|
-| [`src/index.ts`](src/index.ts) | 插件入口：`E2BSubprocessRuntime`、`Config`、spawn 与 spawnTerminal、资源释放 |
+| [`src/backend.ts`](src/backend.ts) | 两个安装器共享的子进程操作与拆除 |
+| [`src/index.ts`](src/index.ts) | Cordis `E2BSubprocessRuntime` 适配器与 `pollMs` schema |
+| [`src/native.ts`](src/native.ts) | Native Host 安装器；要求 `e2b` 且只提供 `subprocess` |
 | [`src/process.ts`](src/process.ts) | `E2BSubprocessHandle`：远程包装层、发布、终止、输出投影 |
 | [`src/terminal.ts`](src/terminal.ts) | `E2BTerminalHandle`：PTY 分配、会话拆除 |
 | [`src/environment.ts`](src/environment.ts) | 远程环境探测、清理、序列化 |

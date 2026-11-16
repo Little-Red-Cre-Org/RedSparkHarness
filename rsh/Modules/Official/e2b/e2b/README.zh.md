@@ -35,6 +35,8 @@ kind: "package-reference"
 
 三个设置很重要：API 密钥（或 `E2B_API_KEY` 环境变量）、绝对远程工作目录与沙箱生命周期。密钥错误、相对工作目录或无效生命周期都会在任何远程工作开始前拒绝启动。
 
+Host-only 的 `./native` 入口校验可选的 `apiKey`、`cwd` 与 `timeoutMs`，提供 `e2b` 服务，并且不导入 Cordis。`./owner` 把同一个沙箱所有者暴露给文件系统与子进程适配器。
+
 ```yaml
 - name: '@redspark/rsh-e2b'
   config:
@@ -82,7 +84,9 @@ kind: "package-reference"
 
 | 文件 | 职责 |
 |---|---|
-| [`src/index.ts`](src/index.ts) | 插件入口：`E2BRuntime` 服务、`Config` schema、校验、沙箱创建与拆除 |
+| [`src/owner.ts`](src/owner.ts) | 沙箱所有者：校验、创建、`getSandbox` 与拆除 |
+| [`src/index.ts`](src/index.ts) | Cordis `E2BRuntime` 适配器、`Config` schema 与 SDK 再导出 |
+| [`src/native.ts`](src/native.ts) | Native Host 安装器；提供 `e2b` 且不导入 Cordis |
 | — | 不发布运行时不变式伴生入口；沙箱创建与拆除只有一个 SDK promise，没有可交叉核对的独立事件或可变数据关系。 |
 
 ### 生命周期

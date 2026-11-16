@@ -37,6 +37,10 @@ kind: "package-reference"
 - name: '@redspark/rsh-tool-str-replace-editor'
 ```
 
+### Native 组合
+
+`./native` 入口注册同一个 `str_replace_editor` 工具。它要求已选中的 `fs`、`fsObservationPolicy` 和 `tools` 服务，并在所挂载文件系统实施限制时选择 `sandboxPolicy`。配置使用相同的 `maxOutputChars` 与 `description` 限制，并在工具运行前完成解析。结果文本与 Cordis 工具一致。
+
 ### 配置
 
 | 键 | 默认值 | 含义 |
@@ -70,11 +74,13 @@ kind: "package-reference"
 
 | 文件 | 职责 |
 |---|---|
-| [`src/index.ts`](src/index.ts) | 整个工具：schema、命令分派、查看渲染、修改策略 |
+| [`src/editor-core.ts`](src/editor-core.ts) | 共享的查看、创建、替换与插入操作 |
+| [`src/index.ts`](src/index.ts) | Cordis schema、展示与注册 |
+| [`src/native.ts`](src/native.ts) | 在选定文件系统上注册 Native 工具 |
 
 ### 各命令如何运行
 
-每个命令都先解析绝对路径；修改操作随后遵循同一条共享流程——策略防护、提供方强制执行、成功后记录 `fs/observed`——而 `view` 只执行 stat 并渲染。整个工具——schema、命令分派与查看渲染——都位于 `src/index.ts`。
+每个命令都在 [`src/editor-core.ts`](src/editor-core.ts) 中先解析绝对路径。修改操作随后遵循同一条共享流程——策略防护、提供方强制执行、成功后记录 `fs/observed`——而 `view` 只执行 stat 并渲染。[`src/index.ts`](src/index.ts) 注册 Cordis 工具及其调用卡片；[`src/native.ts`](src/native.ts) 在 Native 工具注册表上注册相同命令。
 
 </details>
 

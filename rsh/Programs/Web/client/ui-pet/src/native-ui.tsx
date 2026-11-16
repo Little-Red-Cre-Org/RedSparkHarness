@@ -29,10 +29,10 @@ import type {} from '@redspark/rsh-client-ui-session/native'
 import { ChatMascotHero } from '@redspark/rsh-client-ui-primitives'
 import type { SessionId } from '@redspark/rsh-session/types'
 import { en, zh, type PetKey } from './client/locales.ts'
-import type { PetActivity } from './client/runtime.ts'
+import type { PetActivity } from './client/activity.ts'
 
 export { en, zh, type PetKey } from './client/locales.ts'
-export type { PetActivity } from './client/runtime.ts'
+export type { PetActivity } from './client/activity.ts'
 
 /** Dictionary namespace owned by this plugin, shared with the browser build. */
 const NS = 'pet'

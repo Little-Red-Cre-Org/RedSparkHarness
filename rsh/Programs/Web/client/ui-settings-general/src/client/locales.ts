@@ -36,3 +36,10 @@ export const en = {
   'connection.reconnect': 'Disconnected, reconnect now',
   'connection.restart': 'Reconnecting automatically, reconnect now',
 } satisfies Record<SettingsKey, string>
+
+declare module '@redspark/rsh-client-ui-slots' {
+  interface LocaleNamespaceMap {
+    /** Shell chrome + shell-owned General section copy. */
+    settings: SettingsKey
+  }
+}

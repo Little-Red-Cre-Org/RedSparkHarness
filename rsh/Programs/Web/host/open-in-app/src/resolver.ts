@@ -19,7 +19,7 @@ import { dirname, isAbsolute, join } from 'node:path'
 import {
   canOpenNativePath, openNativePath, runNativeCommand, type NativeCommandRunner,
 } from '@redspark/rsh-native-command'
-import { scrubbedParentEnv } from '@redspark/rsh-subprocess'
+import { scrubbedParentEnv } from '@redspark/rsh-subprocess/native'
 import {
   OPEN_IN_APP_CATALOG, PATH_TOKEN,
   type OpenInAppApp, type OpenInAppLaunch, type OpenInAppLocator, type OpenInAppPlatformSpec,

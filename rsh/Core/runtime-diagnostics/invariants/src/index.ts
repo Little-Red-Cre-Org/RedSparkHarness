@@ -10,6 +10,11 @@ import { Context, Service } from '@redspark/cordis'
 import type { Inject } from '@redspark/cordis'
 import z from '@redspark/schemastery'
 import type Schema from '@redspark/schemastery'
+import { InvariantError, type InvariantFailure } from './error.ts'
+import { assertInvariantPackageName, compileInvariantSelection, invariantPackageSelected } from './selection.ts'
+
+export { InvariantError }
+export type { InvariantFailure }
 
 /** Runtime invariant selection configured on the service plugin. */
 export interface Config {
@@ -20,13 +25,6 @@ export interface Config {
   /** Case-sensitive JavaScript regex sources that exclude package names after allowlist matching. */
   readonly package_blocklist?: string[]
 }
-
-/**
- * Throw a package-attributed invariant failure.
- * @param message - violated package contract without the standard prefix.
- * @returns never because reporting a violation throws.
- */
-export type InvariantFailure = (message: string) => never
 
 /** Install one package's checks into the registration's child context. */
 export interface InvariantInstaller {
@@ -46,48 +44,10 @@ interface PendingInvariantRegistration extends PromiseLike<() => void> {
   (): void | Promise<void>
 }
 
-/** Thrown when a package-owned runtime invariant is violated. */
-export class InvariantError extends Error {
-  /** Stable machine-readable invariant failure code. */
-  readonly code = 'INVARIANT' as const
-  /** Full npm package name that owns the violated invariant. */
-  readonly packageName: string
-
-  /**
-   * Construct a package-attributed invariant failure.
-   * @param packageName - full npm package name that registered the check.
-   * @param message - violated contract, without the standard error prefix.
-   */
-  constructor(packageName: string, message: string) {
-    super(`invariant violated by "${packageName}": ${message}`)
-    this.name = 'InvariantError'
-    this.packageName = packageName
-  }
-}
-
 declare module '@redspark/cordis' {
   interface Context {
     invariants: InvariantRegistry
   }
-}
-
-/** Compile and validate one package-filter list. */
-function compilePatterns(field: 'package_allowlist' | 'package_blocklist', values: readonly string[]): RegExp[] {
-  const seen = new Set<string>()
-  return values.map((value) => {
-    if (value.length === 0 || value.trim() !== value) {
-      throw new Error(`invariants: ${field} entries must be non-blank and have no surrounding whitespace`)
-    }
-    if (seen.has(value)) {
-      throw new Error(`invariants: ${field} contains duplicate regex ${JSON.stringify(value)}`)
-    }
-    seen.add(value)
-    try {
-      return new RegExp(value)
-    } catch (cause) {
-      throw new Error(`invariants: ${field} contains invalid regex ${JSON.stringify(value)}`, { cause })
-    }
-  })
 }
 
 /** Package-owned invariant registry with global and regex-based selection. */
@@ -98,10 +58,8 @@ export class InvariantRegistry extends Service {
     package_blocklist: z.array(z.string()).default([]),
   })
 
-  private readonly enabled: boolean
   private readonly ownerCtx: Context
-  private readonly packageAllowlist: readonly RegExp[]
-  private readonly packageBlocklist: readonly RegExp[]
+  private readonly selection: ReturnType<typeof compileInvariantSelection>
   private readonly registrations = new Set<string>()
 
   /**
@@ -112,17 +70,12 @@ export class InvariantRegistry extends Service {
   constructor(ctx: Context, config: Config = {}) {
     super(ctx, 'invariants')
     this.ownerCtx = ctx
-    this.enabled = config.enabled ?? true
-    this.packageAllowlist = compilePatterns('package_allowlist', config.package_allowlist ?? [])
-    this.packageBlocklist = compilePatterns('package_blocklist', config.package_blocklist ?? [])
+    this.selection = compileInvariantSelection(config)
   }
 
   /** Return whether one full package name passes the configured filters. */
   private selected(packageName: string): boolean {
-    if (!this.enabled) return false
-    if (this.packageAllowlist.length > 0
-      && !this.packageAllowlist.some(pattern => pattern.test(packageName))) return false
-    return !this.packageBlocklist.some(pattern => pattern.test(packageName))
+    return invariantPackageSelected(this.selection, packageName)
   }
 
   /**
@@ -134,9 +87,7 @@ export class InvariantRegistry extends Service {
    * @returns an effect-scoped disposer for the registration.
    */
   register(packageName: string, installer: InvariantInstaller): () => void {
-    if (packageName.length === 0 || packageName.trim() !== packageName || /\s/.test(packageName)) {
-      throw new Error('invariants: packageName must be non-blank and contain no whitespace')
-    }
+    assertInvariantPackageName(packageName)
     if (this.registrations.has(packageName)) {
       throw new Error(`invariants: package "${packageName}" is already registered`)
     }

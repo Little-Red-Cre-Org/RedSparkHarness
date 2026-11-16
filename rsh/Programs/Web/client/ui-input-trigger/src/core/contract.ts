@@ -4,7 +4,7 @@
  * live in sibling modules annotated with these
  * aliases; the service shell wires them to ctx.
  */
-import type { TokenSpan } from '@redspark/rsh-client-ui-conversation/client'
+import type { TokenSpan } from '@redspark/rsh-client-ui-conversation/native-types'
 import type { InputTriggerCandidate, TriggerChar, TriggerGuard, TriggerPosition } from '../types.ts'
 
 /** A detected trigger token under the caret. */

@@ -10,6 +10,8 @@ import type { Context as ClientContext } from '@redspark/cordis'
 import type {} from '@redspark/rsh-api-session-controller/client'
 import type {} from '@redspark/rsh-client-ui-renderer/client'
 import type {} from '@redspark/rsh-client-ui-session/client'
+// Type-only: pulls the conversation.input.overlay SlotMap entry.
+import type {} from '@redspark/rsh-client-ui-conversation/client'
 import { InputTriggerService } from './service.ts'
 import type { MenuViewInjected } from './slots.ts'
 import { MenuView } from './MenuView.tsx'

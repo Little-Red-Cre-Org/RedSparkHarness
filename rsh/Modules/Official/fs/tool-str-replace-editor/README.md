@@ -37,6 +37,10 @@ A backend, optionally the policy plugin, then the tool; the editor composes with
 - name: '@redspark/rsh-tool-str-replace-editor'
 ```
 
+### Native composition
+
+The `./native` entry registers the same `str_replace_editor` tool. It requires selected `fs`, `fsObservationPolicy`, and `tools` services, and selects `sandboxPolicy` when the mounted filesystem confines. Configuration uses the same `maxOutputChars` and `description` limits, resolved before the tool runs. Result text matches the Cordis tool.
+
 ### Configuration
 
 | Key | Default | Meaning |
@@ -70,11 +74,13 @@ The tool is one schema with four commands over `ctx.fs`. Mutations never touch t
 
 | File | Role |
 |---|---|
-| [`src/index.ts`](src/index.ts) | The whole tool: schema, command dispatch, view rendering, mutation policy |
+| [`src/editor-core.ts`](src/editor-core.ts) | Shared view, create, replace, and insert operations |
+| [`src/index.ts`](src/index.ts) | Cordis schema, presentation, and registration |
+| [`src/native.ts`](src/native.ts) | Native tool registration over the selected filesystem |
 
 ### How each command runs
 
-Every command resolves the absolute path first; mutations then follow one shared flow — policy guard, provider enforcement, then an `fs/observed` record on success — while `view` only stats and renders. The entire tool — schema, command dispatch, and view rendering — lives in `src/index.ts`.
+Every command resolves the absolute path in [`src/editor-core.ts`](src/editor-core.ts). Mutations then follow one shared flow — policy guard, provider enforcement, then an `fs/observed` record on success — while `view` only stats and renders. [`src/index.ts`](src/index.ts) registers the Cordis tool and its call cards; [`src/native.ts`](src/native.ts) registers the same commands on the native tool registry.
 
 </details>
 

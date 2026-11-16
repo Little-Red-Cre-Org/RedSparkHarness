@@ -9,10 +9,9 @@
  */
 
 import type {
-  HostObservable, InjectFace, PropsLocale, PropsRuntime,
+  HostObservable, InjectFace, PropsLocale,
 } from '@redspark/rsh-client-ui-slots'
-import type {} from '@redspark/rsh-client-ui-conversation/client'
-import type { MessageId } from '@redspark/rsh-api-remotes/client'
+import type { MessageId } from '@redspark/rsh-llm/brand'
 import type { MessageFeedbackItem, MessageFeedbackRating } from '@redspark/rsh-message-feedback/types'
 // Type-only: pulls this package's LocaleNamespaceMap merge (the 'feedback' seat).
 import type {} from './locales.ts'
@@ -50,9 +49,12 @@ export interface MessageFeedbackInjected {
 
 /** Full props of one assistant-message feedback entry. */
 export type MessageFeedbackActionProps =
-  PropsRuntime<'conversation.chat.assistant-actions'>
-  & InjectFace<MessageFeedbackInjected>
+  InjectFace<MessageFeedbackInjected>
   & PropsLocale<'feedback'>
+  & {
+    /** Assistant message these controls address. */
+    readonly messageId: MessageId
+  }
 
 /** Injected business face of the Session's feedback dialog entry. */
 export interface FeedbackDialogInjected {

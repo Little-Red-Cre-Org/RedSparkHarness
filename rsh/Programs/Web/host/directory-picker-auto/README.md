@@ -27,6 +27,8 @@ English | [中文](README.zh.md)
 
 Compose this plugin instead of a concrete backend when the same composition must serve hosts that differ: local workstation sessions where a native chooser works, and remote or headless sessions where only the in-app browser works. The chooser inspects the host once at boot and mounts the matching interaction.
 
+The Host-only `./native` entry provides `directoryPicker` from that same decision, using the bound `nativeWebHost` interface and the native launch-environment snapshot. It does not mount Loader entries or a client surface; the client installation plan selects the matching UI package.
+
 ### How the choice is made
 
 `native` requires every signal that the operator can see the host display and the native backend can serve it: a loopback-only bind (read from the injected `webServer`; an all-interfaces bind admits remote browsers no OS chooser can reach), no SSH launch (the shared [launch-environment](../../../../Core/util/launch-environment/README.md) predicate ignores project/user `.env` values and checks only inherited non-empty `SSH_CONNECTION`/`SSH_TTY`), and a servable display session — assumed on darwin and win32; on linux, `DISPLAY`/`WAYLAND_DISPLAY` plus a zenity or kdialog binary on `PATH`; never on any other platform. Anything ambiguous resolves to `browse`, which works everywhere.

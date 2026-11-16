@@ -567,7 +567,7 @@ export interface Config {
 }
 ```
 
-来源：[`rsh/Modules/Official/e2b/e2b/src/index.ts:45`](../Modules/Official/e2b/e2b/src/index.ts)
+来源：[`rsh/Modules/Official/e2b/e2b/src/owner.ts:34`](../Modules/Official/e2b/e2b/src/owner.ts)
 
 <a id="redsparkrsh-experimental-agent-team"></a>
 
@@ -914,7 +914,7 @@ export interface Config {
 }
 ```
 
-来源：[`rsh/Programs/Web/host/directory-picker-browse/src/index.ts:181`](../Programs/Web/host/directory-picker-browse/src/index.ts)
+来源：[`rsh/Programs/Web/host/directory-picker-browse/src/index.ts:22`](../Programs/Web/host/directory-picker-browse/src/index.ts)
 
 <a id="redsparkrsh-host-frontend-static"></a>
 
@@ -991,7 +991,7 @@ export interface Config {
 }
 ```
 
-来源：[`rsh/Core/runtime-diagnostics/invariants/src/index.ts:15`](../Core/runtime-diagnostics/invariants/src/index.ts)
+来源：[`rsh/Core/runtime-diagnostics/invariants/src/index.ts:20`](../Core/runtime-diagnostics/invariants/src/index.ts)
 
 <a id="redsparkrsh-jobs-local"></a>
 
@@ -2585,7 +2585,7 @@ export interface Config {
 }
 ```
 
-来源：[`rsh/Modules/Official/e2b/subprocess-e2b/src/index.ts:26`](../Modules/Official/e2b/subprocess-e2b/src/index.ts)
+来源：[`rsh/Modules/Official/e2b/subprocess-e2b/src/index.ts:20`](../Modules/Official/e2b/subprocess-e2b/src/index.ts)
 
 <a id="redsparkrsh-system-prompt"></a>
 
@@ -3006,7 +3006,7 @@ export interface Config {
 }
 ```
 
-来源：[`rsh/Modules/Official/fs/tool-str-replace-editor/src/index.ts:505`](../Modules/Official/fs/tool-str-replace-editor/src/index.ts)
+来源：[`rsh/Modules/Official/fs/tool-str-replace-editor/src/index.ts:172`](../Modules/Official/fs/tool-str-replace-editor/src/index.ts)
 
 <a id="redsparkrsh-tool-subagent"></a>
 

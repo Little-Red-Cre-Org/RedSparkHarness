@@ -928,8 +928,8 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
   },
   {
     key: 'e2b',
-    summary: 'Creates one lazily consumable E2B SDK handle and deletes the sandbox at timeout or disposal.',
-    description: 'Creates one lazily consumable E2B SDK handle and deletes the sandbox at timeout or disposal. Creation begins at plugin construction; adapters await getSandbox before their first operation.',
+    summary: 'Cordis registration of the shared E2B sandbox owner.',
+    description: 'Cordis registration of the shared E2B sandbox owner. Adapters await getSandbox; disposal deletes the sandbox.',
     methods: [
       {
         signature: 'readonly cwd: string',
@@ -942,7 +942,7 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
         parameters: [],
       },
       {
-        signature: 'async getSandbox(): Promise<Sandbox>',
+        signature: 'getSandbox(): Promise<Sandbox>',
         description: 'Return the shared live SDK handle.',
         parameters: [],
         returns: 'the created sandbox after the configured cwd exists.',

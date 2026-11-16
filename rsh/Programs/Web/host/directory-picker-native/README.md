@@ -29,6 +29,8 @@ Native Host integrations can import `pickNativeDirectory(signal)` from `@redspar
 
 Compose this backend when the operator works at the host's display and a native chooser is the right interaction. A workspace flow that opens a directory picker calls `pick(signal)` once per open request; the returned promise resolves with the chosen absolute path, or `null` when the operator cancels.
 
+The Host-only `./native` entry provides `directoryPicker` with kind `native` and calls `pickNativeDirectory`. It accepts no profile fields.
+
 ### When to choose it
 
 Choose this backend for a workstation-local operator on macOS, Windows, or desktop Linux. Choose the [browse backend](../directory-picker-browse/README.md) when clients cannot reach an OS chooser — remote browsers, SSH-forwarded sessions, or unattended hosts. When the situation varies, the [adaptive chooser](../directory-picker-auto/README.md) resolves it at boot.

@@ -18,22 +18,54 @@
       "types": "./lib/types/index.d.ts",
       "default": "./lib/index.js"
     },
+    "./native": {
+      "types": "./lib/types/native.d.ts",
+      "default": "./lib/native.js"
+    },
     "./src/*": "./src/*",
-    "./package.json": "./package.json"
+    "./package.json": "./package.json",
+    "./browse": {
+      "types": "./lib/types/browse.d.ts",
+      "default": "./lib/browse.js"
+    }
   },
   "files": [
     "lib/index.js",
+    "lib/native.js",
+    "lib/browse.js",
     "lib/types/**/*.d.ts"
   ],
   "license": "MIT",
   "dependencies": {
     "@redspark/rsh-host-directory-picker": "workspace:^",
-    "@redspark/schemastery": "workspace:^"
+    "@redspark/rsh-native-runtime": "workspace:^",
+    "@redspark/schemastery": "workspace:^",
+    "zod": "^4.4.3"
   },
   "peerDependencies": {
     "@redspark/cordis": "workspace:^"
   },
+  "peerDependenciesMeta": {
+    "@redspark/cordis": {
+      "optional": true
+    }
+  },
   "devDependencies": {
     "@redspark/cordis": "workspace:^"
+  },
+  "dsh": {
+    "native": {
+      "apiVersion": 1,
+      "entry": "./native",
+      "targets": [
+        "host"
+      ],
+      "requires": [],
+      "optional": [],
+      "provides": [
+        "directoryBrowse",
+        "directoryPicker"
+      ]
+    }
   }
 }

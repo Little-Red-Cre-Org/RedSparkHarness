@@ -10,7 +10,7 @@
 import type { ComponentType } from 'react'
 import type {
   PickOutcome, ReferenceInsert, TokenSpan,
-} from '@redspark/rsh-client-ui-conversation/client'
+} from '@redspark/rsh-client-ui-conversation/native-types'
 import type { IconProps } from '@redspark/rsh-client-ui-primitives'
 import type { SessionId } from '@redspark/rsh-session/types'
 
@@ -18,7 +18,7 @@ export type {
   ArbitrateKey, ArbitrateOutcome, BeginCommandRequest, CommandClaim, ConsumeTokenRequest,
   InsertReferenceRequest, InsertTextRequest, PickOutcome, ReferenceInsert, SubmitAttachment,
   SubmitOutcome, TokenSpan,
-} from '@redspark/rsh-client-ui-conversation/client'
+} from '@redspark/rsh-client-ui-conversation/native-types'
 
 /**
  * The provider-facing projection of one client session. It carries stable

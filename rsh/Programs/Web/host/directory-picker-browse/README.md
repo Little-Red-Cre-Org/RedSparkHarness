@@ -47,6 +47,10 @@ Both primitives refuse a path that is not fully qualified — relative forms, an
 
 The generated [configuration catalog](../../../../Docs/config-catalog.md#redsparkrsh-host-directory-picker-browse) is the exhaustive source for every accepted field and its JSDoc.
 
+### Native entry
+
+`./native` is a Host plugin that provides `directoryBrowse` and requires no other Native service. `list(path, signal)` and `createDirectory(path, name)` call the same filesystem functions as the Cordis service, including the refusal of a path that is not fully qualified. Config is a strict object whose only field is `maxEntries` (default 1,000). It has no working-directory field: an unknown field fails validation instead of resolving under the process working directory. The entry does not import Cordis.
+
 -----
 
 <a id="understand-the-implementation"></a>
@@ -71,7 +75,9 @@ Every filesystem await races the caller's signal (`raceAbort`), so a stalled net
 
 | File | Role |
 |---|---|
-| [`src/index.ts`](src/index.ts) | `BrowseDirectoryPicker` service: listing, creation, bounded window, error mapping |
+| [`src/browse.ts`](src/browse.ts) | Shared filesystem listing and creation: fully qualified paths, bounded window, abort racing |
+| [`src/index.ts`](src/index.ts) | Cordis `BrowseDirectoryPicker`; calls the shared listing and creation functions |
+| [`src/native.ts`](src/native.ts) | Native plugin: strict `maxEntries` config and the `directoryBrowse` service |
 | — | No runtime invariant companion is published; each list/create is one stateless filesystem round trip; the filesystem itself is the authoritative state. |
 
 </details>

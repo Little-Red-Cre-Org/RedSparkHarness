@@ -11,6 +11,8 @@ kind: "package-reference"
 
 `dsh-invariants` 在 RedSpark Harness 组合中运行包自有的运行时检查——不变量：任何包都可以发布一个 `./invariant` 配套入口，在组合运行期间验证其自身的持久关系（权威事件流与可变快照）。检查自动运行，失败的检查会报告归因到拥有被违反关系的包的 `InvariantError`。需要带全局开关与包名过滤器的自检诊断时选择它；标准 agent（智能体）组合已挂载它及四个核心配套入口，而单独加载服务不会安装任何检查。
 
+仅 Host 的 `./native` 入口在原生 profile 上提供 `invariants`。它使用同一套 `enabled`、`package_allowlist` 和 `package_blocklist` 规则，错误的模式会在 profile 解析时失败。原生 installer 拿到的是注册期结束时一并释放订阅和资源的 host，而不是 Cordis 子 context。
+
 ## 目录
 
 - [使用本包](#use-this-package)
@@ -110,7 +112,10 @@ ctx.plugin(SessionInvariant)
 
 | 文件 | 职责 |
 |---|---|
-| [`src/index.ts`](src/index.ts) | 插件入口：`Config` schema、`InvariantRegistry` 服务、选择、注册、`InvariantError` |
+| [`src/index.ts`](src/index.ts) | Cordis 插件：`Config` schema 与 `InvariantRegistry` 子 fiber |
+| [`src/selection.ts`](src/selection.ts) | 共享的包名准入 |
+| [`src/error.ts`](src/error.ts) | `InvariantError` |
+| [`src/native.ts`](src/native.ts) | 原生 `invariants` 提供者 |
 | — | 不发布运行时不变量配套入口；注册归属与子级生命周期本身就是服务的变更边界；由同一注册表观察它们只会重复其实现。 |
 
 ### 选择与注册生命周期

@@ -8,9 +8,9 @@ import { randomUUID } from '@redspark/rsh-util-crypto'
 import {
   DEFAULT_PET_ID, DEFAULT_PET_VARIANT, MAX_CUSTOM_PETS, type PetSettings,
 } from '../pet-settings.ts'
+import type { PetActivity } from './activity.ts'
 
-/** Semantic states a pet presentation may visualize. */
-export type PetActivity = 'idle' | 'thinking' | 'waiting' | 'error' | 'complete' | 'coding' | 'working' | 'sleeping' | 'planning' | 'compacting' | 'focused'
+export type { PetActivity } from './activity.ts'
 
 /** One visual variant supplied by a pet definition. */
 export interface PetVariantDefinition {
