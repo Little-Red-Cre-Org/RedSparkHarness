@@ -27,9 +27,9 @@
   },
   "files": [
     "lib/index.js",
-    "lib/types/**/*.d.ts",
     "lib/native.js",
-    "lib/shared-*.js"
+    "lib/shared-*.js",
+    "lib/types/**/*.d.ts"
   ],
   "license": "MIT",
   "peerDependencies": {

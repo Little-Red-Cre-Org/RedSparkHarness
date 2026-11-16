@@ -68,6 +68,7 @@
     "@redspark/rsh-api-remotes": "workspace:^",
     "@redspark/rsh-client-connection": "workspace:^",
     "@redspark/rsh-client-locale": "workspace:^",
+    "@redspark/rsh-llm": "workspace:^",
     "@redspark/rsh-client-test-runtime": "workspace:^",
     "@redspark/rsh-client-ui-conversation": "workspace:^",
     "@redspark/rsh-client-ui-primitives": "workspace:^",

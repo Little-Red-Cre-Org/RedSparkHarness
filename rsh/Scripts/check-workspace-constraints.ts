@@ -286,6 +286,13 @@ const packageFileExtras: Readonly<Record<string, readonly string[]>> = {
   '@redspark/rsh-fs-local': [
     'lib/backend.js', 'lib/shared-*.js',
   ],
+  // Cordis and Native entries share one implementation, published as a chunk beside both bundles.
+  // E2B also publishes the sandbox owner imported by the filesystem and subprocess packages.
+  '@redspark/rsh-storage-sqlite': ['lib/shared-*.js'],
+  '@redspark/rsh-invariants': ['lib/shared-*.js'],
+  '@redspark/rsh-e2b': ['lib/owner.js', 'lib/shared-*.js'],
+  '@redspark/rsh-fs-e2b': ['lib/shared-*.js'],
+  '@redspark/rsh-subprocess-e2b': ['lib/shared-*.js'],
   '@redspark/rsh-fs-sandbox': ['lib/shared-*.js', 'lib/types-*.js'],
   '@redspark/rsh-sandbox': ['lib/native-types.js', 'lib/roots.js', 'lib/shared-*.js'],
   '@redspark/rsh-sandbox-local': ['lib/shared-*.js'],
@@ -313,6 +320,10 @@ const packageFileExtras: Readonly<Record<string, readonly string[]>> = {
     'lib/shared-*.js', 'lib/workspaces-*.js',
   ],
   '@redspark/rsh-host-directory-picker-native': ['lib/native-picker.js', 'lib/native-picker-*.js'],
+  // Browse is its own export. Each row bundles it, so no shared chunk is published.
+  '@redspark/rsh-host-directory-picker-browse': ['lib/browse.js'],
+  // The adaptive chooser and its Native entry share the boot-time decision.
+  '@redspark/rsh-host-directory-picker-auto': ['lib/shared-*.js'],
   // The Cordis row and the Native row are separate entries over one shared route
   // module, so tsdown publishes the chunk they share beside both bundles.
   '@redspark/rsh-host-open-in-app': ['lib/shared-*.js'],

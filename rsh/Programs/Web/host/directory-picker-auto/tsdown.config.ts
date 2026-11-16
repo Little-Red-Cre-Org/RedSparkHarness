@@ -2,7 +2,7 @@ import { defineConfig } from 'tsdown'
 
 export default defineConfig({
   tsconfig: 'tsconfig.json',
-  entry: ['lib/types/native.js'],
+  entry: ['lib/types/{index,native}.js'],
   outDir: 'lib',
   format: ['esm'],
   platform: 'node',
