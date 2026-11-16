@@ -8,8 +8,8 @@ import { E2BFileSystemBackend } from '../src/backend.ts'
 import { plugin, resolveNativeE2BFilesystemConfig } from '../src/native.ts'
 
 it('rejects every non-empty native configuration row', () => {
-  expect(resolveNativeE2BFilesystemConfig(undefined)).toBeUndefined()
-  expect(resolveNativeE2BFilesystemConfig({})).toBeUndefined()
+  expect(() => { resolveNativeE2BFilesystemConfig(undefined) }).not.toThrow()
+  expect(() => { resolveNativeE2BFilesystemConfig({}) }).not.toThrow()
   expect(plugin.resolve(undefined)).toEqual(expect.any(Function))
   expect(plugin.resolve({})).toEqual(expect.any(Function))
   for (const input of [null, [], 'path', 1, { cwd: '/workspace' }]) {

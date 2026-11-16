@@ -68,11 +68,10 @@ export const plugin: NativePlugin = {
   resolve(input) {
     const config = resolveDirectoryBrowseConfig(input)
     return (context) => {
-      const service: DirectoryBrowseService = {
-        list: (path, signal) => listDirectory(path, signal, config.maxEntries),
-        createDirectory: (path, name) => createChildDirectory(path, name),
-      }
-      const capability = { kind: 'browse' as const, list: service.list, createDirectory: service.createDirectory }
+      const list = (path?: string, signal?: AbortSignal) => listDirectory(path, signal, config.maxEntries)
+      const createDirectory = (path: string, name: string) => createChildDirectory(path, name)
+      const service: DirectoryBrowseService = { list, createDirectory }
+      const capability = { kind: 'browse' as const, list, createDirectory }
       const picker: NativeDirectoryPicker = { capability: () => capability }
       context.provide('directoryBrowse', service)
       context.provide('directoryPicker', picker)

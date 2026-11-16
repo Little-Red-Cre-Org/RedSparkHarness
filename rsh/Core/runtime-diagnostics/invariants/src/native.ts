@@ -96,6 +96,8 @@ export class NativeInvariantRegistryController implements NativeInvariantRegistr
           throw new InvariantError(packageName, message)
         })
       }
+      // close() can abort this registration while the installer is awaited.
+      // oxlint-disable-next-line typescript/no-unnecessary-condition -- Awaiting the installer yields to registry close.
       if (this.closed || resources.controller.signal.aborted) {
         throw new Error('invariants: registry is closed')
       }
