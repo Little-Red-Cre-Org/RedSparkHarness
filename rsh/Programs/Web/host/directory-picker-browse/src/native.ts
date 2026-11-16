@@ -31,14 +31,14 @@ export interface DirectoryBrowseService {
    * @param signal - caller lifetime; abort stops the scan and rejects with the abort reason.
    * @returns the level's listing with ancestry.
    */
-  list(path?: string, signal?: AbortSignal): Promise<DirectoryListing>
+  readonly list: (path?: string, signal?: AbortSignal) => Promise<DirectoryListing>
   /**
    * Create one child directory under an existing parent.
    * @param path - absolute existing parent directory.
    * @param name - single non-blank path segment.
    * @returns the created directory's absolute path.
    */
-  createDirectory(path: string, name: string): Promise<string>
+  readonly createDirectory: (path: string, name: string) => Promise<string>
 }
 
 declare module '@redspark/rsh-native-runtime' {

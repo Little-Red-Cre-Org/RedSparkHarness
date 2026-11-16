@@ -7,7 +7,7 @@ import { nativeDirectoryPicker, plugin, resolveNativeDirectoryPickerConfig } fro
 it('rejects configuration and provides a stable native capability', async () => {
   resolveNativeDirectoryPickerConfig(undefined)
   resolveNativeDirectoryPickerConfig({})
-  expect(() => resolveNativeDirectoryPickerConfig({ cwd: '/tmp' })).toThrow(/accepts no configuration/)
+  expect(() => { resolveNativeDirectoryPickerConfig({ cwd: '/tmp' }) }).toThrow(/accepts no configuration/)
   expect(() => plugin.resolve({ cwd: '/tmp' })).toThrow(/accepts no configuration/)
   const direct = nativeDirectoryPicker()
   expect(direct.capability()).toBe(direct.capability())

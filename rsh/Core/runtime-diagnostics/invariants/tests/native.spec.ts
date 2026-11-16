@@ -22,7 +22,7 @@ declare module '@redspark/rsh-native-runtime' {
   }
 }
 
-async function boot(config: unknown = undefined): Promise<{
+async function boot(config?: unknown): Promise<{
   host: NativeHost
   scope: NativeScope
   registry: NativeInvariantRegistry
@@ -145,6 +145,6 @@ it('stops live registrations when the host stops', async () => {
   })
   await expect(state.registry.register('@redspark/rsh-hidden', () => { ran = true })).resolves.toBeTypeOf('function')
   await state.host.stop()
-  expect(() => state.host.events.emit(state.scope, 'invariants-native/ping')).toThrow(/closed/)
+  expect(() => { state.host.events.emit(state.scope, 'invariants-native/ping') }).toThrow(/closed/)
   expect(ran).toBe(false)
 })
