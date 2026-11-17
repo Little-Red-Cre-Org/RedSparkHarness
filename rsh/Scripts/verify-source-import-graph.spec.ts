@@ -126,7 +126,8 @@ describe('verify-source-import-graph', () => {
       paths: { '@redspark/cordis': ['packages/target/src/index.ts'] },
     })
     f.options.paths = { '@redspark/cordis': [join(f.target.directory, 'src/index.ts')] }
-    const strict = new Set([f.importer.directory.replaceAll('\\', '/').toLowerCase()])
+    const normalized = resolve(f.importer.directory).split('\\').join('/')
+    const strict = new Set([ts.sys.useCaseSensitiveFileNames ? normalized : normalized.toLowerCase()])
     const problems = sourceImportViolations(f.source, f.importer, f.owners, f.options, 'host', strict)
     expect(problems.some(problem => problem.includes('native source owner @test/importer imports Cordis'))).toBe(true)
     expect(problems.some(problem => problem.includes('type edge'))).toBe(true)
