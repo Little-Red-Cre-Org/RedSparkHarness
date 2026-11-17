@@ -42,26 +42,13 @@
     "lib/index.js",
     "lib/native.js",
     "lib/native-*.js",
-    "lib/types-*.js",
     "lib/types/**/*.d.ts"
   ],
   "license": "MIT",
-  "peerDependencies": {
-    "@redspark/cordis": "workspace:^"
-  },
-  "devDependencies": {
-    "@redspark/cordis": "workspace:^"
-  },
   "dependencies": {
-    "@redspark/rsh-cordis-bridge": "workspace:^",
     "@redspark/rsh-native-prompt": "workspace:^",
     "@redspark/rsh-native-runtime": "workspace:^",
     "@redspark/rsh-persona": "workspace:^",
-    "@redspark/rsh-system-prompt": "workspace:^"
-  },
-  "peerDependenciesMeta": {
-    "@redspark/cordis": {
-      "optional": true
-    }
+    "zod": "^4.4.3"
   }
 }

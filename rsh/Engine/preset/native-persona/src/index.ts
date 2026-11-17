@@ -1,8 +1,8 @@
 /**
- * Native row for the shipped Cordis `persona` plugin.
+ * Native row for preset persona text.
  *
- * The row exists so a Native preset can set an agent's identity without a Native re-implementation
- * of the persona logic: the shipped plugin runs unmodified through the Cordis bridge.
+ * The row registers the persona prefix and suffix sections on the preset scope's Native prompt
+ * registry through the same section owner the Cordis `persona` plugin uses.
  *
  * @module @redspark/rsh-native-persona
  */

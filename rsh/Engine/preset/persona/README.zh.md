@@ -62,7 +62,7 @@ kind: "package-reference"
 
 ### 本行如何注册
 
-本行使用注册表共享的名称与具名顺序来注册带作用域的人设前缀与后缀段落。两者分别遮蔽对应的部署默认值，而不是出现在其旁边；排序、插值与完整提示词执行归注册表所有。`includeRuntimeContext: false` 会调用 `ctx.systemPrompt.suppressRuntimeContext()`。
+本行使用注册表共享的名称与具名顺序来注册带作用域的人设前缀与后缀段落。两者分别遮蔽对应的部署默认值，而不是出现在其旁边；排序、插值与完整提示词执行归注册表所有。`includeRuntimeContext: false` 会调用 `ctx.systemPrompt.suppressRuntimeContext()`。注册策略位于 `./native`，Native 的 `dsh-native-persona` installer 无需 Cordis 运行时即可使用。
 
 ### 本行为何仅限 scope 内使用
 
@@ -73,6 +73,7 @@ kind: "package-reference"
 | 文件 | 职责 |
 |---|---|
 | [`src/index.ts`](src/index.ts) | 插件入口：`Config` schema、人设段落注册、runtime-context 抑制 |
+| [`src/native.ts`](src/native.ts) | Cordis 插件与 Native installer 共用的段落注册 owner |
 | — | 不发布运行时不变式伴生入口；本行不拥有事件流或可变运行时数据，而是注册提示词段落；身份、完整提示词强制执行、遮蔽与资源释放均归提示词注册表。 |
 
 </details>

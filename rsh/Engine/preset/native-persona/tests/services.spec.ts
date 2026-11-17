@@ -1,13 +1,13 @@
-/** Bridged services: a Cordis plugin reading a Native registry through the translation. */
+/** Native persona registration against the prompt registry. */
 import { describe, expect, it } from 'vitest'
-import { Context } from '@redspark/cordis'
 import type { NativeContext } from '@redspark/rsh-native-runtime'
 import type { NativePromptRegistry } from '@redspark/rsh-native-prompt'
-import { apply as applyPersona } from '@redspark/rsh-persona'
-import { bridgedSystemPrompt, personaServices, PERSONA_PREFIX_SECTION, PERSONA_SUFFIX_SECTION } from '../src/services.ts'
+import { applyPersonaSections } from '@redspark/rsh-persona/native'
+import { plugin, resolveNativePersonaConfig } from '../src/native.ts'
+import { nativePromptSections, PERSONA_PREFIX_SECTION, PERSONA_SUFFIX_SECTION } from '../src/services.ts'
 
 /**
- * A Native prompt registry recording the sections a bridged row registers.
+ * A Native prompt registry recording the sections a persona row registers.
  * @returns the registry and the rows it currently holds.
  */
 function promptRegistry(): {
@@ -34,58 +34,100 @@ function promptRegistry(): {
   return { registry, rows, scopes, suppressed }
 }
 
-describe('bridgedSystemPrompt', () => {
+describe('nativePromptSections', () => {
   it('forwards a section to the native registry and returns its exact disposer', () => {
     const { registry, rows } = promptRegistry()
-    const bridged = bridgedSystemPrompt(registry)
+    const sections = nativePromptSections(registry)
 
-    const dispose = bridged.section({ name: 'probe', order: 5, text: 'hello' })
+    const dispose = sections.section({ name: 'probe', order: 5, text: 'hello' })
     expect(rows.get('probe')).toEqual({ order: 5, text: 'hello' })
 
     dispose()
     expect(rows.has('probe')).toBe(false)
   })
 
-  it('reports the persona orders the Cordis registry states', () => {
+  it('reports the persona orders the registry states', () => {
     const { registry } = promptRegistry()
-    const bridged = bridgedSystemPrompt(registry)
+    const sections = nativePromptSections(registry)
 
-    expect(bridged.getSectionOrder('DEPLOYMENT_PERSONA_PREFIX')).toBeLessThan(
-      bridged.getSectionOrder('DEPLOYMENT_PERSONA_SUFFIX'))
+    expect(sections.prefixOrder).toBe(0)
+    expect(sections.prefixOrder).toBeLessThan(sections.suffixOrder)
   })
 
-  it('forwards a complete section and records runtime-context suppression on the installation scope', () => {
-    const { registry, rows, suppressed } = promptRegistry()
+  it('records runtime-context suppression on the installation scope', () => {
+    const { registry, suppressed } = promptRegistry()
     const scope = { id: 'minimal' }
-    const effects: (() => void)[] = []
-    const bridged = bridgedSystemPrompt(registry, scope as never, { effect: (dispose) => { effects.push(dispose); return () => {} } })
-    bridged.section({ name: 'deployment:persona-prefix', order: 1, text: 'fixed', complete: true })
-    bridged.suppressRuntimeContext()
-    expect(rows.get('deployment:persona-prefix')).toMatchObject({ text: 'fixed', complete: true })
+    const sections = nativePromptSections(registry, scope as never)
+
+    const dispose = sections.suppressRuntimeContext()
     expect(suppressed).toEqual([scope])
-    expect(effects).toHaveLength(1)
+
+    dispose()
+    expect(suppressed).toEqual([])
   })
 })
 
-describe('persona through the bridge', () => {
-  it('hosts the shipped persona row unmodified against a native prompt registry', async () => {
+describe('native persona row', () => {
+  it('registers both persona sections on the preset scope', async () => {
     const { registry, rows, scopes } = promptRegistry()
     const scope = { id: 'standard' }
+    const effects: (() => void)[] = []
     const context = {
       scope,
-      require: (name: string) => (name === 'promptSections' ? registry : undefined),
+      require: (name: string) => {
+        expect(name).toBe('promptSections')
+        return registry
+      },
+      effect: (dispose: () => void) => { effects.push(dispose); return () => {} },
     } as unknown as NativeContext
 
-    const ctx = new Context()
-    for (const [name, service] of Object.entries(personaServices(context))) ctx.provide(name as never, service as never)
-    await ctx.plugin({ name: 'persona', apply: applyPersona } as never, { prefix: 'You are bridged.', suffix: 'Done.' } as never)
+    await plugin.resolve({ prefix: 'You are native.', suffix: 'Done.' })(context)
 
-    expect(rows.get(PERSONA_PREFIX_SECTION)?.text).toBe('You are bridged.')
+    expect(rows.get(PERSONA_PREFIX_SECTION)?.text).toBe('You are native.')
     expect(rows.get(PERSONA_SUFFIX_SECTION)?.text).toBe('Done.')
     expect(scopes.get(PERSONA_PREFIX_SECTION)).toBe(scope)
     expect(scopes.get(PERSONA_SUFFIX_SECTION)).toBe(scope)
 
-    await ctx.fiber.dispose()
+    for (const dispose of effects) dispose()
+    expect(rows.size).toBe(0)
+  })
+
+  it('binds a complete prompt and runtime-context suppression to the row', async () => {
+    const { registry, rows, suppressed } = promptRegistry()
+    const scope = { id: 'minimal' }
+    const effects: (() => void)[] = []
+    const context = {
+      scope,
+      require: () => registry,
+      effect: (dispose: () => void) => { effects.push(dispose); return () => {} },
+    } as unknown as NativeContext
+
+    await plugin.resolve({ prefix: 'fixed', complete: true, includeRuntimeContext: false })(context)
+
+    expect(rows.get(PERSONA_PREFIX_SECTION)).toMatchObject({ text: 'fixed', complete: true })
+    expect(suppressed).toEqual([scope])
+    expect(effects).toHaveLength(3)
+  })
+
+  it('rejects unknown configuration fields', () => {
+    expect(() => resolveNativePersonaConfig({ prefix: 'x', unknown: true }))
+      .toThrow()
+  })
+})
+
+describe('shared persona owner', () => {
+  it('owns registration through the caller effect', () => {
+    const { registry, rows } = promptRegistry()
+    const effects: (() => void)[] = []
+
+    applyPersonaSections(
+      nativePromptSections(registry),
+      { prefix: 'shared', suffix: '' },
+      (register) => { effects.push(register()) },
+    )
+
+    expect(rows.get(PERSONA_PREFIX_SECTION)?.text).toBe('shared')
+    for (const dispose of effects) dispose()
     expect(rows.size).toBe(0)
   })
 })

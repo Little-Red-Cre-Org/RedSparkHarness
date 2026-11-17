@@ -187,7 +187,7 @@ const packageFileExtras: Readonly<Record<string, readonly string[]>> = {
   '@redspark/rsh-session-log-deepseek': ['lib/shared-*.js'],
   '@redspark/rsh-session-telemetry': ['lib/records.js'],
   '@redspark/rsh-cordis-bridge': ['lib/types-*.js'],
-  '@redspark/rsh-native-persona': ['lib/native-*.js', 'lib/types-*.js'],
+  '@redspark/rsh-native-persona': ['lib/native-*.js'],
   '@redspark/rsh-session-telemetry-otel': ['lib/shared-*.js'],
   '@redspark/rsh-skill': ['lib/shared.js'],
   '@redspark/rsh-skill-filesystem': ['lib/shared-*.js'],

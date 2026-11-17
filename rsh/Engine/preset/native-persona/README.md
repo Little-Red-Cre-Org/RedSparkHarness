@@ -1,5 +1,5 @@
 ---
-description: "The Native standard preset can run the shipped Cordis persona plugin through the Cordis bridge."
+description: "The Native persona row registers preset prompt sections without a Cordis runtime."
 kind: "package-reference"
 ---
 
@@ -9,7 +9,7 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-`dsh-native-persona` is the Native row for the shipped Cordis persona plugin. It runs that plugin through `dsh-cordis-bridge` and publishes the translation that presents the Native prompt registry as the Cordis `systemPrompt` service.
+`dsh-native-persona` is the Native row for preset persona text. It registers the prefix and suffix sections directly on the preset scope's prompt registry, using the same owner as the Cordis `dsh-persona` row.
 
 ## Table of Contents
 
@@ -21,9 +21,9 @@ English | [中文](README.zh.md)
 <a id="configuration"></a>
 ## Configuration
 
-The row accepts the Cordis persona configuration: a required `prefix`, an optional `suffix`, and the optional `complete` and `includeRuntimeContext` flags. It must be installed in a preset scope that can read `promptSections`. The Native web and TUI templates install it on the `standard` and `minimal` scopes.
+The row accepts the shared persona configuration: a required `prefix`, an optional `suffix`, and the optional `complete` and `includeRuntimeContext` flags. It must be installed in a preset scope that can read `promptSections`. The Native web and TUI templates install it on the `standard` and `minimal` scopes.
 
-`personaServices` translates the Native prompt registry into the Cordis service surface the persona plugin reads, and registers the persona sections on the installation scope rather than the registry root.
+`nativePromptSections` presents the Native prompt registry through the shared `PersonaPromptSections` contract and registers sections on the installation scope rather than the registry root. The row imports no Cordis package.
 
 <a id="model-experience"></a>
 ## Model Experience
@@ -46,4 +46,4 @@ No invariant companion is published. Prompt ownership remains with the consuming
 <a id="dev-note"></a>
 ### Dev Note
 
-None.
+`@redspark/rsh-persona/native` owns the two persona sections, complete-prompt policy, and runtime-context suppression. Section names come from `@redspark/rsh-system-prompt/sections`; this row supplies the Native registry's orders. The Cordis entry and this Native installer differ in their registry adapter and how they bind the returned disposers: `ctx.effect` for Cordis and `NativeContext.effect` here.

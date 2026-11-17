@@ -62,7 +62,7 @@ Use this row when a preset must change an agent's identity and not only its tool
 
 ### How the row registers
 
-The row registers scoped persona prefix and suffix sections using the registry's shared names and named orders. Each shadows its deployment default instead of appearing beside it; the registry owns ordering, interpolation, and complete-prompt enforcement. `includeRuntimeContext: false` calls `ctx.systemPrompt.suppressRuntimeContext()`.
+The row registers scoped persona prefix and suffix sections using the registry's shared names and named orders. Each shadows its deployment default instead of appearing beside it; the registry owns ordering, interpolation, and complete-prompt enforcement. `includeRuntimeContext: false` calls `ctx.systemPrompt.suppressRuntimeContext()`. The registration policy lives in `./native`, which the Native `dsh-native-persona` installer uses without a Cordis runtime.
 
 ### Why the row is scope-only
 
@@ -73,6 +73,7 @@ The row registers scoped persona prefix and suffix sections using the registry's
 | File | Role |
 |---|---|
 | [`src/index.ts`](src/index.ts) | Plugin entry: `Config` schema, persona section registration, runtime-context suppression |
+| [`src/native.ts`](src/native.ts) | Shared section-registration owner used by both the Cordis plugin and the Native installer |
 | — | No runtime invariant companion is published; this row owns no event stream or mutable runtime data — it registers prompt sections and the prompt registry owns identity, complete-prompt enforcement, shadowing, and disposal. |
 
 </details>
