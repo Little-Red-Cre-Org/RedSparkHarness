@@ -165,16 +165,9 @@ const CONTEXT_ORDERS = {
 /** Name of a centrally allocated runtime-context position. */
 export type PromptContextOrderName = keyof typeof CONTEXT_ORDERS
 
-/**
- * The deployment persona prefix's section name. Exported because a
- * composition can replace this slot — an agent preset shadows the
- * deployment's persona with its own — and both sides naming the same section
- * is what makes the replacement work rather than duplicate.
- */
-export const PERSONA_PREFIX_SECTION = 'deployment:persona-prefix'
+import { PERSONA_PREFIX_SECTION, PERSONA_SUFFIX_SECTION } from './sections.ts'
 
-/** Deployment persona suffix section name shared by global and scoped contributions. */
-export const PERSONA_SUFFIX_SECTION = 'deployment:persona-suffix'
+export { PERSONA_PREFIX_SECTION, PERSONA_SUFFIX_SECTION }
 
 /** Valid variable names: how they are written between the braces. */
 const VARIABLE_NAME = /^[a-z][a-z0-9_]*$/

@@ -1,5 +1,5 @@
 ---
-description: "Native 的 standard 预设可以通过 Cordis 桥接运行随包发布的 Cordis persona 插件。"
+description: "Native persona 行不依赖 Cordis 运行时，直接注册预设的提示词段落。"
 kind: "package-reference"
 ---
 
@@ -9,7 +9,7 @@ kind: "package-reference"
 
 ## 概述
 
-`dsh-native-persona` 是随包发布的 Cordis persona 插件的 Native 行。它通过 `dsh-cordis-bridge` 运行该插件，并发布把 Native 提示词注册表呈现为 Cordis `systemPrompt` 服务的翻译。
+`dsh-native-persona` 是预设 persona 文本的 Native 行。它直接在该预设作用域的提示词注册表上登记前缀和后缀段落，与 Cordis 的 `dsh-persona` 行共用同一个 owner。
 
 ## 目录
 
@@ -21,9 +21,9 @@ kind: "package-reference"
 <a id="configuration"></a>
 ## 配置
 
-该行接受 Cordis persona 配置：必需的 `prefix`、可选的 `suffix`，以及可选的 `complete` 和 `includeRuntimeContext`。它必须安装在能够读取 `promptSections` 的预设作用域里。Native 的 web 和 TUI 模板把它安装在 `standard` 和 `minimal` 作用域上。
+该行接受共享的 persona 配置：必需的 `prefix`、可选的 `suffix`，以及可选的 `complete` 和 `includeRuntimeContext`。它必须安装在能够读取 `promptSections` 的预设作用域里。Native 的 web 和 TUI 模板把它安装在 `standard` 和 `minimal` 作用域上。
 
-`personaServices` 把 Native 提示词注册表翻译成 persona 插件所读的 Cordis 服务界面，并把 persona 段落登记在安装作用域上，而不是注册表根上。
+`nativePromptSections` 通过共享的 `PersonaPromptSections` 协议呈现 Native 提示词注册表，并把 persona 段落登记在安装作用域上，而不是注册表根上。该行不导入任何 Cordis 包。
 
 <a id="model-experience"></a>
 ## 模型体验
@@ -46,4 +46,4 @@ kind: "package-reference"
 <a id="dev-note"></a>
 ### 开发备注
 
-无。
+`@redspark/rsh-persona/native` 拥有两个 persona 段落、完整提示词策略和运行时上下文抑制。段落名称来自 `@redspark/rsh-system-prompt/sections`；本行提供 Native 注册表的顺序。Cordis 入口与这个 Native installer 在注册表适配对象和绑定返回 disposer 的方式上不同：Cordis 用 `ctx.effect`，这里用 `NativeContext.effect`。

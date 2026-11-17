@@ -16,9 +16,10 @@
 import type { Context } from '@redspark/cordis'
 import z from '@redspark/schemastery'
 import type {} from '@redspark/rsh-system-prompt'
-import { PERSONA_PREFIX_SECTION, PERSONA_SUFFIX_SECTION } from '@redspark/rsh-system-prompt'
+import { applyPersonaSections } from './native.ts'
 
-export { PERSONA_PREFIX_SECTION, PERSONA_SUFFIX_SECTION }
+export { PERSONA_PREFIX_SECTION, PERSONA_SUFFIX_SECTION } from '@redspark/rsh-system-prompt'
+export type { PersonaConfig } from './native.ts'
 
 /** Cordis plugin name. */
 export const name = 'persona'
@@ -60,16 +61,10 @@ export const Config: z<Config> = z.object({
  * @param config - the prefix, suffix, and complete-prompt policy.
  */
 export function apply(ctx: Context, config: Config): void {
-  ctx.effect(() => ctx.systemPrompt.section({
-    name: PERSONA_PREFIX_SECTION,
-    order: ctx.systemPrompt.getSectionOrder('DEPLOYMENT_PERSONA_PREFIX'),
-    text: config.prefix,
-    ...(config.complete ? { complete: true } : {}),
-  }), 'persona.section()')
-  ctx.effect(() => ctx.systemPrompt.section({
-    name: PERSONA_SUFFIX_SECTION,
-    order: ctx.systemPrompt.getSectionOrder('DEPLOYMENT_PERSONA_SUFFIX'),
-    text: config.suffix ?? '',
-  }), 'persona.suffix()')
-  if (!(config.includeRuntimeContext ?? true)) ctx.systemPrompt.suppressRuntimeContext()
+  applyPersonaSections({
+    section: section => ctx.systemPrompt.section(section),
+    prefixOrder: ctx.systemPrompt.getSectionOrder('DEPLOYMENT_PERSONA_PREFIX'),
+    suffixOrder: ctx.systemPrompt.getSectionOrder('DEPLOYMENT_PERSONA_SUFFIX'),
+    suppressRuntimeContext: () => ctx.systemPrompt.suppressRuntimeContext(),
+  }, config, dispose => ctx.effect(dispose, 'persona.sections()'))
 }

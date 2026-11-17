@@ -22,12 +22,17 @@
       "types": "./lib/types/invariant.d.ts",
       "default": "./lib/invariant.js"
     },
+    "./sections": {
+      "types": "./lib/types/sections.d.ts",
+      "default": "./lib/types/sections.js"
+    },
     "./src/*": "./src/*",
     "./package.json": "./package.json"
   },
   "files": [
     "lib/index.js",
     "lib/invariant.js",
+    "lib/types/**/*.js",
     "lib/types/**/*.d.ts"
   ],
   "license": "MIT",
@@ -36,6 +41,11 @@
     "@redspark/rsh-llm": "workspace:^",
     "@redspark/rsh-scope": "workspace:^",
     "@redspark/cordis": "workspace:^"
+  },
+  "peerDependenciesMeta": {
+    "@redspark/cordis": {
+      "optional": true
+    }
   },
   "dependencies": {
     "@redspark/schemastery": "workspace:^"

@@ -18,17 +18,27 @@
       "types": "./lib/types/index.d.ts",
       "default": "./lib/index.js"
     },
+    "./native": {
+      "types": "./lib/types/native.d.ts",
+      "default": "./lib/native.js"
+    },
     "./src/*": "./src/*",
     "./package.json": "./package.json"
   },
   "files": [
     "lib/index.js",
+    "lib/native.js",
     "lib/types/**/*.d.ts"
   ],
   "license": "MIT",
   "peerDependencies": {
     "@redspark/rsh-system-prompt": "workspace:^",
     "@redspark/cordis": "workspace:^"
+  },
+  "peerDependenciesMeta": {
+    "@redspark/cordis": {
+      "optional": true
+    }
   },
   "dependencies": {
     "@redspark/schemastery": "workspace:^"

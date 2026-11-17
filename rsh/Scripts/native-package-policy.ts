@@ -61,6 +61,7 @@ export const nativePackageDirectories: ReadonlySet<string> = new Set([
   'rsh/Engine/core/native-prompt',
   'rsh/Engine/core/native-tools',
   'rsh/Engine/preset/agent-preset-standing',
+  'rsh/Engine/preset/native-persona',
   'rsh/Engine/subagent/subagent-protocol',
   'rsh/Engine/subagent/sdk-protocol',
   'rsh/Engine/subagent/sdk-runtime',
@@ -113,6 +114,7 @@ export const nativePackageTargets: ReadonlyMap<string, readonly ('host' | 'clien
   ['rsh/Programs/TUI/native-tui', ['host']],
   ['rsh/Programs/TUI/terminal-ui', ['host']],
   ['rsh/Engine/preset/agent-preset-standing', ['host']],
+  ['rsh/Engine/preset/native-persona', ['host']],
   ['rsh/Core/identity/anonymous-user-id', ['host']],
   ['rsh/Modules/Official/shell/shell-process-local', ['host']],
   ['rsh/Modules/Official/shell/shell-sandbox-core', ['host']],
@@ -270,7 +272,6 @@ export const mixedNativeEntryDirectories: ReadonlyMap<string, string> = new Map(
   ['rsh/Modules/Official/fs/fs-sandbox', 'Cordis and native filesystem Providers share per-call sandbox enforcement'],
   ['rsh/Engine/session/session-title-first-prompt-llm', 'Native title generation delegates through the selected title and model capabilities while its legacy adapter remains optional'],
   ['rsh/Core/runtime-diagnostics/cordis-bridge', 'Native and Cordis entries share the Cordis context owner and the Native plugin wrapper'],
-  ['rsh/Engine/preset/native-persona', 'Native and Cordis persona entries share the persona section names and the bridged system-prompt service'],
   ['rsh/Modules/Official/lsp/lsp', 'Cordis and Native LSP registries share extension routing and conflict checks'],
   ['rsh/Modules/Official/lsp/lsp-stdio', 'Cordis and Native stdio providers share executable resolution, isolation, and teardown'],
   ['rsh/Modules/Official/lsp/tool-lsp', 'Cordis and Native lsp tools share argument checks, caps, and result rendering'],
@@ -312,9 +313,6 @@ export const mixedNativeLibraryDirectories: ReadonlyMap<string, readonly ('host'
 /** Native entries whose source may reference Cordis to host a Cordis plugin. */
 export const cordisHostingNativeReferences: ReadonlyMap<string, readonly string[]> = new Map([
   ['rsh/Core/runtime-diagnostics/cordis-bridge', ['@redspark/cordis']],
-  ['rsh/Engine/preset/native-persona', [
-    '@redspark/cordis', '@redspark/rsh-persona', '@redspark/rsh-system-prompt',
-  ]],
 ])
 
 export const nativeCompatibilityOnlyPeers: ReadonlyMap<string, readonly string[]> = new Map([
@@ -487,6 +485,8 @@ export const nativeSafeSourceSubpaths: ReadonlyMap<string, readonly string[]> = 
   ['rsh/Programs/Web/client/ui-theme', ['./theme-contract']],
   ['rsh/Programs/Web/host/plugin-inventory', ['./types']],
   ['rsh/Engine/session/session-persistence', ['./deletion']],
+  ['rsh/Engine/preset/persona', ['./native']],
+  ['rsh/Engine/core/system-prompt', ['./sections']],
   ['rsh/Engine/preset/agent-presets', ['./native-definition', './selection']],
   ['rsh/Modules/Official/workspace/workspace', ['./workspace-types']],
   ['rsh/Modules/Official/subagent/codex-app-server', ['./wire']],
@@ -494,6 +494,8 @@ export const nativeSafeSourceSubpaths: ReadonlyMap<string, readonly string[]> = 
 
 /** Compiler faces that load each additional Cordis-free source export. */
 export const nativeSafeSourceEntryTargets: ReadonlyMap<string, readonly ('host' | 'client')[]> = new Map([
+  ['rsh/Engine/preset/persona/native', ['host']],
+  ['rsh/Engine/core/system-prompt/sections', ['host']],
   ['rsh/Modules/Official/skill/skill/shared', ['host']],
   ['rsh/Modules/Official/skill/skill/types', ['host']],
   ['rsh/Modules/Official/hooks/hook-protocol/native', ['host']],

@@ -1662,7 +1662,7 @@ export interface Config {
 }
 ```
 
-Source: [`rsh/Engine/preset/persona/src/index.ts:30`](../Engine/preset/persona/src/index.ts)
+Source: [`rsh/Engine/preset/persona/src/index.ts:31`](../Engine/preset/persona/src/index.ts)
 
 <a id="redsparkrsh-plan-mode"></a>
 
@@ -2615,7 +2615,7 @@ export interface Config {
 }
 ```
 
-Source: [`rsh/Engine/core/system-prompt/src/index.ts:242`](../Engine/core/system-prompt/src/index.ts)
+Source: [`rsh/Engine/core/system-prompt/src/index.ts:235`](../Engine/core/system-prompt/src/index.ts)
 
 <a id="redsparkrsh-task-scheduler"></a>
 

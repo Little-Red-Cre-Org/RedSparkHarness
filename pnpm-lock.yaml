@@ -3640,9 +3640,6 @@ importers:
 
   rsh/Engine/preset/native-persona:
     dependencies:
-      '@redspark/rsh-cordis-bridge':
-        specifier: workspace:^
-        version: link:../../../Core/runtime-diagnostics/cordis-bridge
       '@redspark/rsh-native-prompt':
         specifier: workspace:^
         version: link:../../core/native-prompt
@@ -3652,13 +3649,9 @@ importers:
       '@redspark/rsh-persona':
         specifier: workspace:^
         version: link:../persona
-      '@redspark/rsh-system-prompt':
-        specifier: workspace:^
-        version: link:../../core/system-prompt
-    devDependencies:
-      '@redspark/cordis':
-        specifier: workspace:^
-        version: link:../../../Core/vendor/cordis
+      zod:
+        specifier: ^4.4.3
+        version: 4.4.3
 
   rsh/Engine/preset/persona:
     dependencies:

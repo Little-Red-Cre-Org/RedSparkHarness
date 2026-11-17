@@ -1,17 +1,39 @@
-/** Native Host row hosting the shipped Cordis persona plugin. */
+/** Native Host row registering the persona prompt sections without a Cordis runtime. */
+import { z } from 'zod'
 import type { NativePlugin } from '@redspark/rsh-native-runtime'
-import { apply as applyPersona } from '@redspark/rsh-persona'
-import { nativePluginForCordis } from '@redspark/rsh-cordis-bridge/native'
-import { personaServices } from './services.ts'
+import { applyPersonaSections } from '@redspark/rsh-persona/native'
+import type { PersonaConfig } from '@redspark/rsh-persona/native'
+import { nativePromptSections } from './services.ts'
 
 /**
- * Provide one persona row by running the shipped Cordis plugin through the bridge.
- *
- * The row declares `promptSections` because the bridged plugin reads it; without that the
- * installation would plan against a Native service the preset may not mount.
+ * Validate a Native persona row.
+ * @param input - untrusted profile fields.
+ * @returns copied persona text and prompt behavior.
  */
-export const plugin: NativePlugin = nativePluginForCordis('@redspark/rsh-native-persona', (context, config) => ({
-  plugin: { name: 'persona', apply: applyPersona },
-  config,
-  services: personaServices(context),
-}), ['promptSections'])
+export function resolveNativePersonaConfig(input: unknown): PersonaConfig {
+  return z.object({
+    prefix: z.string(),
+    suffix: z.string().optional(),
+    complete: z.boolean().optional(),
+    includeRuntimeContext: z.boolean().optional(),
+  }).strict().parse(input)
+}
+
+/** Host installer. The row requires the preset scope's prompt registry. */
+export const plugin: NativePlugin = {
+  apiVersion: 1,
+  name: '@redspark/rsh-native-persona',
+  targets: ['host'],
+  requires: ['promptSections'],
+  provides: [],
+  resolve(input) {
+    const config = resolveNativePersonaConfig(input)
+    return (context) => {
+      applyPersonaSections(
+        nativePromptSections(context.require('promptSections'), context.scope),
+        config,
+        register => context.effect(register()),
+      )
+    }
+  },
+}
