@@ -1989,7 +1989,7 @@
     {
       "doc": "rsh/Docs/subsystems/invariants.md",
       "symbol": "InvariantFailure",
-      "source": "rsh/Core/runtime-diagnostics/invariants/src/index.ts"
+      "source": "rsh/Core/runtime-diagnostics/invariants/src/error.ts"
     },
     {
       "doc": "rsh/Docs/subsystems/invariants.md",

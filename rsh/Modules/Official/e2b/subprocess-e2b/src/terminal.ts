@@ -6,20 +6,18 @@ import { PassThrough } from 'node:stream'
 import { posix } from 'node:path'
 import {
   CommandExitError,
-  e2bControlEnvs,
   FileNotFoundError,
   SandboxNotFoundError,
-  quoteE2BShellArg,
-} from '@redspark/rsh-e2b'
-import type { CommandHandle, CommandResult, Sandbox } from '@redspark/rsh-e2b'
+} from 'e2b'
+import type { CommandHandle, CommandResult, Sandbox } from 'e2b'
 import type {
   SubprocessOutcome,
   SubprocessTerminalForeground,
   SubprocessTerminalHandle,
   SubprocessTerminalSignal,
   SubprocessTerminalSpawnSpec,
-} from '@redspark/rsh-subprocess'
-import type E2BRuntime from '@redspark/rsh-e2b'
+} from '@redspark/rsh-subprocess/native'
+import { e2bControlEnvs, quoteE2BShellArg, type E2BSandboxAccess } from '@redspark/rsh-e2b/owner'
 import {
   bootstrapEnvironment,
   readRemoteEnvironment,
@@ -456,7 +454,7 @@ export class E2BTerminalHandle implements SubprocessTerminalHandle {
  * @returns The live subprocess terminal handle.
  */
 export async function spawnE2BTerminal(
-  runtime: E2BRuntime,
+  runtime: E2BSandboxAccess,
   spec: SubprocessTerminalSpawnSpec,
   stateDir: string,
   pollMs: number,

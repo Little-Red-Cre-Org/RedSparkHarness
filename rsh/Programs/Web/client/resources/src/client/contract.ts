@@ -14,7 +14,6 @@
  * consumer names the protocol as a type argument and receives the owner's value
  * type without importing the owner's runtime.
  */
-import type { RemoteFailure, RemoteResult } from '@redspark/rsh-typert-protocol'
 import type { ObservableSnapshot } from '@redspark/rsh-client-store'
 import type { ResourceProtocolMap } from '@redspark/rsh-client-ui-slots'
 
@@ -25,11 +24,18 @@ declare module '@redspark/rsh-client-ui-slots' {
   }
 }
 
-declare module '@redspark/cordis' {
-  interface Context {
-    /** Resource model: protocol providers, pins, and per-address live sources. */
-    resources: Resources
-  }
+/**
+ * One provider frame. Structurally a Typert `RemoteResult`: `ok` carries the
+ * value, and a failure carries the error the snapshot keeps while `failed`.
+ */
+export type ResourceFrame<T> =
+  | { readonly ok: true; readonly value: T }
+  | { readonly ok: false; readonly error: ResourceFrameFailure }
+
+/** Failure carried by one provider frame. */
+export interface ResourceFrameFailure {
+  readonly code: string
+  readonly message: string
 }
 
 /** Every protocol some client package has declared. */
@@ -49,7 +55,7 @@ export interface ResourceSnapshot<Value> {
   /** The latest `ok` frame's value; kept through a later failure frame, absent before the first. */
   readonly value: Value | undefined
   /** The latest frame's failure; present only while `status` is `failed`. */
-  readonly failure: RemoteFailure | undefined
+  readonly failure: ResourceFrameFailure | undefined
 }
 
 /**
@@ -81,7 +87,7 @@ export interface ResourceProvider<P extends ResourceProtocol> {
    * @param ctx - the stream's abort signal.
    * @returns the frame stream; it must stop once `ctx.signal` aborts.
    */
-  open(address: string, ctx: ResourceOpenContext): AsyncIterable<RemoteResult<ResourceProtocolMap[P]>>
+  open(address: string, ctx: ResourceOpenContext): AsyncIterable<ResourceFrame<ResourceProtocolMap[P]>>
 }
 
 /**

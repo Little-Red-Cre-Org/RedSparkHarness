@@ -19,3 +19,8 @@ export type {
   ConvViewProps, MessageImageLoader, MessageImageSource, MessageImagesOwnerProps, RenderMessageImages,
 } from './client/contract/native-types.ts'
 export type { RunningToolCall, ToolCallBlock, ToolResultNode } from './tool-records.ts'
+export type {
+  ArbitrateKey, ArbitrateOutcome, BeginCommandRequest, CommandClaim, ConsumeTokenRequest,
+  InputTriggerHit, InsertReferenceRequest, InsertTextRequest, PickOutcome, ReferenceInsert,
+  SubmitAttachment, SubmitOutcome, TokenSpan,
+} from './client/contract/trigger-currency.ts'

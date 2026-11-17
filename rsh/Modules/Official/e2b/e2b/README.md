@@ -35,6 +35,8 @@ Choose the E2B family when work should be isolated from the host machine — for
 
 Three settings matter: an API key (or the `E2B_API_KEY` environment variable), an absolute remote working directory, and the sandbox lifetime. A bad key, a relative working directory, or an invalid lifetime rejects startup before any remote work happens.
 
+The Host-only `./native` entry validates optional `apiKey`, `cwd`, and `timeoutMs`, provides the `e2b` service, and does not import Cordis. `./owner` exposes the same sandbox owner to filesystem and subprocess adapters.
+
 ```yaml
 - name: '@redspark/rsh-e2b'
   config:
@@ -82,7 +84,9 @@ This section explains the design decisions behind the owner and points at the co
 
 | File | Role |
 |---|---|
-| [`src/index.ts`](src/index.ts) | Plugin entry: `E2BRuntime` service, `Config` schema, validation, sandbox open and teardown |
+| [`src/owner.ts`](src/owner.ts) | Sandbox owner: validation, open, `getSandbox`, and teardown |
+| [`src/index.ts`](src/index.ts) | Cordis `E2BRuntime` adapter, `Config` schema, and SDK re-exports |
+| [`src/native.ts`](src/native.ts) | Native Host installer; provides `e2b` without importing Cordis |
 | — | No runtime invariant companion is published; sandbox creation and teardown have one SDK promise and no independent event or mutable-data relationship to cross-check. |
 
 ### Lifecycle

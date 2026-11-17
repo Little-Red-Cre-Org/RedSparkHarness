@@ -8,4 +8,4 @@ export type {
   NativePetConversation, NativePetDefinition, NativePetOverlayProps, NativePetService,
   NativePetSnapshot, NativePetVariant,
 } from './native-ui.tsx'
-export type { PetActivity } from './client/runtime.ts'
+export type { PetActivity } from './client/activity.ts'

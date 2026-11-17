@@ -226,7 +226,9 @@ it('defines a native-web Host composition and Client profile without Cordis rows
   } finally {
     await rm(home, { recursive: true, force: true })
   }
-}, 10_000)
+// The composition resolves every pi-ai route and writes a profile tree; a saturated
+// full-suite worker pool can stretch that work well past the default bound.
+}, 30_000)
 
 it('keeps the child SDK sandbox opt-in and confines its selected file provider', () => {
   const child = new Map(shippedNativeProfileComposition('C:/rsh-child', 'native-sdk-dsh-child', 'win32').installations.map(row => [row.id, row]))

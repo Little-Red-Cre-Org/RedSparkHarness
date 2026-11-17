@@ -8,8 +8,8 @@
  */
 
 import type { DatabaseSync, StatementSync } from 'node:sqlite'
-import { StorageError } from '@redspark/rsh-storage'
-import type { KvUnit, KvUnitDescriptor } from '@redspark/rsh-storage'
+import { StorageError } from '@redspark/rsh-storage/backend'
+import type { KvUnit, KvUnitDescriptor } from '@redspark/rsh-storage/backend'
 import { recordTableName } from './schema.ts'
 
 /** Prepared statements for one declared table. */

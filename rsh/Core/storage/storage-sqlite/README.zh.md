@@ -35,6 +35,8 @@ kind: "package-reference"
 
 两个字段：数据库路径与 journal mode。`:memory:` 打开一个进程内数据库，其内容随进程消失。
 
+Host-only 的 `./native` 入口校验必填 `path`，并把省略的 `journalMode` 解析为 `wal`。它把同一个 `SqliteStorageBackend` 以 `sqlite` 注册到选中的 Native hub，并发布 `storageBackendsReady`。Native 激活不导入 Cordis；缺少路径会在 profile 解析时失败。
+
 ```yaml
 - name: '@redspark/rsh-storage'
 - name: '@redspark/rsh-storage-sqlite'

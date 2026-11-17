@@ -35,6 +35,8 @@ Choose it when a composition already uses the E2B sandbox and you want commands 
 
 The only setting is how often the package checks a running command's status; the default suits most deployments, and raising it reduces remote requests at the cost of slightly slower exit detection.
 
+The Host-only `./native` entry requires `e2b`, provides only `subprocess`, defaults `pollMs` to 20, and does not import Cordis.
+
 | Field | Default | Meaning |
 |---|---|---|
 | `pollMs` | `20` | How often the package checks a running command's status, in milliseconds |
@@ -79,7 +81,9 @@ This section explains the design decisions behind the provider and points at the
 
 | File | Role |
 |---|---|
-| [`src/index.ts`](src/index.ts) | Plugin entry: `E2BSubprocessRuntime`, `Config`, spawn and spawnTerminal, disposal |
+| [`src/backend.ts`](src/backend.ts) | Subprocess operations and teardown shared by both installers |
+| [`src/index.ts`](src/index.ts) | Cordis `E2BSubprocessRuntime` adapter and `pollMs` schema |
+| [`src/native.ts`](src/native.ts) | Native Host installer; requires `e2b` and provides only `subprocess` |
 | [`src/process.ts`](src/process.ts) | `E2BSubprocessHandle`: remote wrapper, publication, termination, output projection |
 | [`src/terminal.ts`](src/terminal.ts) | `E2BTerminalHandle`: PTY allocation, session teardown |
 | [`src/environment.ts`](src/environment.ts) | Remote environment probe, scrubbing, serialization |

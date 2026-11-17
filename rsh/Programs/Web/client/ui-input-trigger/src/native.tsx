@@ -33,7 +33,7 @@ import { en, zh } from './client/locales.ts'
 // and the Native service already answers that face.
 import { MenuView } from './client/MenuView.tsx'
 import type { MenuViewInjected } from './client/slots.ts'
-import { InputTriggerController } from './client/controller.ts'
+import { InputTriggerController, type InputTriggerDispatch } from './client/controller.ts'
 import type { MenuState, TriggerHit } from './core/contract.ts'
 import type {
   InputTriggerCrumb, InputTriggerSource, PickAction, TriggerGuard,
@@ -133,7 +133,7 @@ const unclaimed: InputDispatch = () => false
  * @param dispatch - the Native input machine's sender.
  * @returns the `actx` stand-in to pass as `deps.actx`.
  */
-export function nativeActx(dispatch: InputDispatch): never {
+export function nativeActx(dispatch: InputDispatch): InputTriggerDispatch {
   return {
     bail: (_subject: unknown, event: string, payload: Record<string, unknown>): boolean => {
       const kind = event === 'slash/input-begin-command' ? 'begin-command'
@@ -146,7 +146,7 @@ export function nativeActx(dispatch: InputDispatch): never {
       if (kind === undefined) return false
       return dispatch({ kind, request: payload })
     },
-  } as never
+  }
 }
 
 /** Wrap an existing controller in the read face a Native menu surface consumes. */

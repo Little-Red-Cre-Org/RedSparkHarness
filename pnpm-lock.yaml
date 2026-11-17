@@ -1643,9 +1643,15 @@ importers:
 
   rsh/Core/runtime-diagnostics/invariants:
     dependencies:
+      '@redspark/rsh-native-runtime':
+        specifier: workspace:^
+        version: link:../native-runtime
       '@redspark/schemastery':
         specifier: link:../../vendor/schemastery
         version: link:../../vendor/schemastery
+      zod:
+        specifier: ^4.4.3
+        version: 4.4.3
     devDependencies:
       '@redspark/cordis':
         specifier: workspace:^
@@ -1725,9 +1731,15 @@ importers:
 
   rsh/Core/storage/storage-sqlite:
     dependencies:
+      '@redspark/rsh-native-runtime':
+        specifier: workspace:^
+        version: link:../../runtime-diagnostics/native-runtime
       '@redspark/schemastery':
         specifier: link:../../vendor/schemastery
         version: link:../../vendor/schemastery
+      zod:
+        specifier: ^4.4.3
+        version: 4.4.3
     devDependencies:
       '@redspark/cordis':
         specifier: workspace:^
@@ -6059,12 +6071,18 @@ importers:
 
   rsh/Modules/Official/e2b/e2b:
     dependencies:
+      '@redspark/rsh-native-runtime':
+        specifier: workspace:^
+        version: link:../../../../Core/runtime-diagnostics/native-runtime
       '@redspark/schemastery':
         specifier: link:../../../../Core/vendor/schemastery
         version: link:../../../../Core/vendor/schemastery
       e2b:
         specifier: 2.29.1
         version: 2.29.1
+      zod:
+        specifier: ^4.4.3
+        version: 4.4.3
     devDependencies:
       '@redspark/cordis':
         specifier: workspace:^
@@ -6119,6 +6137,13 @@ importers:
         version: link:../../terminal/terminal-bash
 
   rsh/Modules/Official/e2b/fs-e2b:
+    dependencies:
+      '@redspark/rsh-native-runtime':
+        specifier: workspace:^
+        version: link:../../../../Core/runtime-diagnostics/native-runtime
+      e2b:
+        specifier: 2.29.1
+        version: 2.29.1
     devDependencies:
       '@redspark/cordis':
         specifier: workspace:^
@@ -6132,9 +6157,18 @@ importers:
 
   rsh/Modules/Official/e2b/subprocess-e2b:
     dependencies:
+      '@redspark/rsh-native-runtime':
+        specifier: workspace:^
+        version: link:../../../../Core/runtime-diagnostics/native-runtime
       '@redspark/schemastery':
         specifier: link:../../../../Core/vendor/schemastery
         version: link:../../../../Core/vendor/schemastery
+      e2b:
+        specifier: 2.29.1
+        version: 2.29.1
+      zod:
+        specifier: ^4.4.3
+        version: 4.4.3
     devDependencies:
       '@redspark/cordis':
         specifier: workspace:^
@@ -6760,6 +6794,18 @@ importers:
       '@redspark/rsh-llm':
         specifier: workspace:^
         version: link:../../../../Engine/llm/llm
+      '@redspark/rsh-native-agent':
+        specifier: workspace:^
+        version: link:../../../../Engine/core/native-agent
+      '@redspark/rsh-native-runtime':
+        specifier: workspace:^
+        version: link:../../../../Core/runtime-diagnostics/native-runtime
+      '@redspark/rsh-native-sandbox-policy':
+        specifier: workspace:^
+        version: link:../../sandbox/native-sandbox-policy
+      '@redspark/rsh-native-tools':
+        specifier: workspace:^
+        version: link:../../../../Engine/core/native-tools
       '@redspark/rsh-sandbox':
         specifier: workspace:^
         version: link:../../sandbox/sandbox
@@ -13126,6 +13172,9 @@ importers:
       '@redspark/rsh-command-feedback':
         specifier: workspace:^
         version: link:../../../../Modules/Official/feedback/command-feedback
+      '@redspark/rsh-llm':
+        specifier: workspace:^
+        version: link:../../../../Engine/llm/llm
       '@redspark/rsh-message-feedback':
         specifier: workspace:^
         version: link:../../../../Modules/Official/feedback/message-feedback
@@ -14833,6 +14882,10 @@ importers:
         version: 6.0.3
 
   rsh/Programs/Web/host/directory-picker:
+    dependencies:
+      '@redspark/rsh-native-runtime':
+        specifier: workspace:^
+        version: link:../../../../Core/runtime-diagnostics/native-runtime
     devDependencies:
       '@redspark/cordis':
         specifier: workspace:^
@@ -14840,9 +14893,18 @@ importers:
 
   rsh/Programs/Web/host/directory-picker-auto:
     dependencies:
+      '@redspark/rsh-host-directory-picker':
+        specifier: workspace:^
+        version: link:../directory-picker
       '@redspark/rsh-launch-environment':
         specifier: workspace:^
         version: link:../../../../Core/util/launch-environment
+      '@redspark/rsh-native-runtime':
+        specifier: workspace:^
+        version: link:../../../../Core/runtime-diagnostics/native-runtime
+      zod:
+        specifier: ^4.4.3
+        version: 4.4.3
     devDependencies:
       '@redspark/cordis':
         specifier: workspace:^
@@ -14859,9 +14921,6 @@ importers:
       '@redspark/rsh-client-ui-directory-picker-native':
         specifier: workspace:^
         version: link:../../client/ui-directory-picker-native
-      '@redspark/rsh-host-directory-picker':
-        specifier: workspace:^
-        version: link:../directory-picker
       '@redspark/rsh-host-directory-picker-browse':
         specifier: workspace:^
         version: link:../directory-picker-browse
@@ -14883,9 +14942,15 @@ importers:
       '@redspark/rsh-host-directory-picker':
         specifier: workspace:^
         version: link:../directory-picker
+      '@redspark/rsh-native-runtime':
+        specifier: workspace:^
+        version: link:../../../../Core/runtime-diagnostics/native-runtime
       '@redspark/schemastery':
         specifier: link:../../../../Core/vendor/schemastery
         version: link:../../../../Core/vendor/schemastery
+      zod:
+        specifier: ^4.4.3
+        version: 4.4.3
     devDependencies:
       '@redspark/cordis':
         specifier: workspace:^
@@ -14899,6 +14964,9 @@ importers:
       '@redspark/rsh-native-command':
         specifier: workspace:^
         version: link:../../../../Core/util/native-command
+      '@redspark/rsh-native-runtime':
+        specifier: workspace:^
+        version: link:../../../../Core/runtime-diagnostics/native-runtime
       koffi:
         specifier: 3.1.1
         version: 3.1.1

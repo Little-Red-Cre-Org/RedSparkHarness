@@ -22,8 +22,16 @@
       "types": "./lib/types/types.d.ts",
       "default": "./lib/types/types.js"
     },
+    "./error": {
+      "types": "./lib/types/error.d.ts",
+      "default": "./lib/types/error.js"
+    },
     "./src/*": "./src/*",
-    "./package.json": "./package.json"
+    "./package.json": "./package.json",
+    "./native-capability": {
+      "types": "./lib/types/native-capability.d.ts",
+      "default": "./lib/types/native-capability.js"
+    }
   },
   "files": [
     "lib/index.js",
@@ -40,6 +48,10 @@
     }
   },
   "devDependencies": {
-    "@redspark/cordis": "workspace:^"
+    "@redspark/cordis": "workspace:^",
+    "@redspark/rsh-native-runtime": "workspace:^"
+  },
+  "dependencies": {
+    "@redspark/rsh-native-runtime": "workspace:^"
   }
 }

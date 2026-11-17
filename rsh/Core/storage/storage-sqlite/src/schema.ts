@@ -9,7 +9,7 @@
 import { DatabaseSync } from 'node:sqlite'
 import { mkdir, open } from 'node:fs/promises'
 import { dirname, resolve } from 'node:path'
-import { StorageError } from '@redspark/rsh-storage'
+import { StorageError } from '@redspark/rsh-storage/backend'
 
 /**
  * The on-disk physical layout version, stored in `PRAGMA user_version`.

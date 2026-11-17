@@ -15,7 +15,7 @@ Status: proposed
 ### 留下的部分
 
 - 新建的桌面 profile 和未修改的 legacy 起始 profile 通过 `createNativeDesktopProfile` 写入 `runtime: 'native'`。显式的 `runtime: 'legacy'` profile 和自定义 Cordis profile 在兼容宿主存在时仍可启动。`profile: web` 的快照，以及继承 `TypertRemoteService` 的生产类，都留到单独的界面迁移。那次迁移必须先替换远程方法注册，阶段 C 才能结束。
-- 这三个包留下。没有别的 manifest 依赖它们。`@redspark/rsh-experimental-agent-team-web-profile` 在 `dsh` 发布族里（`rsh/Scripts/release/families.spec.ts`）。`@redspark/rsh-experimental-inspector` 被排除在该发布族之外，但仍有自己的测试。`@redspark/rsh-storage-sqlite` 仍是一个可选的存储后端。[还有什么依赖 Cordis](2026-11-10-what-still-depends-on-cordis.zh.md) 已经把这种情况和「没有任何东西可以选用的包」分开。
+- 这三个包留下。没有别的 manifest 依赖它们。`@redspark/rsh-experimental-agent-team-web-profile` 在 `dsh` 发布族里（`rsh/Scripts/release/families.spec.ts`）。`@redspark/rsh-experimental-inspector` 被排除在该发布族之外，但仍有自己的测试。`@redspark/rsh-storage-sqlite` 仍是一个可选的存储后端。它的 Native 安装器记录在 [Native 能力 owner](../../implemented/architecture/2026-11-16-native-capability-gaps.zh.md)，与该后端共用实现，并且不删除这个包。[还有什么依赖 Cordis](2026-11-10-what-still-depends-on-cordis.zh.md) 已经把这种情况和「没有任何东西可以选用的包」分开。
 - `initProfile`（`rsh/Compatibility/DSH/boot/app-boot/src/profile.ts`）仍写入 `dsh.profile.bundles` 和 `patchReload`。bundle 列表选择 legacy 执行。自定义名字仍通过 `--from-default-profile` 初始化，已有的 legacy 目录仍能启动。已发布的名字仍以 Native 启动。`sdk-minimal` 继续被拒绝。[legacy Cordis 运行时还留着什么](2026-11-06-legacy-runtime-retirement.zh.md) 仍然禁止在活动 home 把 `web` 或 `desktop` 解析为 legacy 时修改 `initProfile`。
 
 ### 重新测量的数字

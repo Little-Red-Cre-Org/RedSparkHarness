@@ -27,7 +27,7 @@ web GUI 让操作者通过 OS 选择器或应用内浏览器选择工作区目�
 
 挂载且只挂载一个目录选择后端，然后让工作区流程驱动它：seam 本身只是服务约定，因此没有后端的组合就无从选择目录。
 
-包根出口定义 Cordis 服务，加载时需要宿主提供 Cordis。Cordis peer 为可选，因为独立的 `./types` 出口没有运行时依赖。
+包根出口定义 Cordis 服务，加载时需要宿主提供 Cordis。Cordis peer 为可选，因为 `./types` 与 `./error` 都没有运行时依赖。`./error` 导出 `DirectoryPickerError` 与 `DirectoryPickerErrorCode`，供不能加载 Cordis 服务的调用方使用。
 
 ### 选择后端
 
@@ -61,11 +61,12 @@ web GUI 让操作者通过 OS 选择器或应用内浏览器选择工作区目�
 
 | 文件 | 职责 |
 |---|---|
-| [`src/index.ts`](src/index.ts) | Service Definition：抽象 `DirectoryPicker`、能力词汇、类型化错误、Context 合并 |
+| [`src/index.ts`](src/index.ts) | Service Definition：抽象 `DirectoryPicker`、能力词汇、Context 合并；重新导出 `DirectoryPickerError` |
+| [`src/error.ts`](src/error.ts) | 不导入 Cordis 的 `DirectoryPickerError` 与 `DirectoryPickerErrorCode` |
 
 ### 失败词汇
 
-`DirectoryPickerError` 携带封闭的 `DirectoryPickerErrorCode` 加出错对象的绝对路径，消费方无需字符串匹配即可映射业务错误码。设计依据、与 `ctx.fs` 的切分与策略裁决见 seam Agent Note。
+`DirectoryPickerError` 携带封闭的 `DirectoryPickerErrorCode` 加出错对象的绝对路径，消费方无需字符串匹配即可映射业务错误码。类与错误码联合类型声明在 [`src/error.ts`](src/error.ts)，包根出口重新导出二者。设计依据、与 `ctx.fs` 的切分与策略裁决见 seam Agent Note。
 
 </details>
 

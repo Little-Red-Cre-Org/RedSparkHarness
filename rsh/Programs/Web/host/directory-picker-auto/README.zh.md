@@ -27,6 +27,8 @@ kind: "package-reference"
 
 当同一份组合必须服务处境不同的宿主时，用本插件代替具体的后端：本地工作站会话里原生选择器可用，远程或无头会话里只有应用内浏览器可用。选择器在启动时检查一次宿主，并挂载匹配的交互。
 
+仅 Host 的 `./native` 入口用同一次判定提供 `directoryPicker`，读取已绑定的 `nativeWebHost` 接口和原生启动环境快照。它不挂载 Loader 条目，也不选择客户端界面；客户端安装计划自己选择匹配的 UI 包。
+
 ### 选择是如何作出的
 
 `native` 要求「操作者看得到宿主屏幕、且原生后端能服务它」的全部信号：仅回环的绑定（从注入的 `webServer` 读取；全网卡绑定会接入任何 OS 选择器都触及不到的远程浏览器）；非 SSH 启动（共用的 [launch-environment](../../../../Core/util/launch-environment/README.zh.md) 判断忽略项目与用户 `.env` 中的值，只检查继承的非空 `SSH_CONNECTION`／`SSH_TTY`）；以及可服务的显示会话——darwin 与 win32 上视为存在；linux 上要求 `DISPLAY`／`WAYLAND_DISPLAY`，外加 `PATH` 上有 zenity 或 kdialog 二进制；其余任何平台上都不成立。任何含糊情形都判定为处处可用的 `browse`。

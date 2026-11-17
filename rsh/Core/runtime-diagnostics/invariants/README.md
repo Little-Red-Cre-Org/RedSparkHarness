@@ -31,6 +31,8 @@ Mount the registry when a composition should verify its own runtime contracts, t
 
 Use the registry for compositions that want live diagnostics. [`dsh-sdk-minimal`](../../../Compatibility/DSH/bundle/sdk-minimal/README.md) mounts it with the four core stateful companions — `dsh-session`, `dsh-agent`, `dsh-scope`, and `dsh-agent-loop`; `dsh-base` deliberately omits runtime diagnostics. Custom compositions mount the registry and add companions for any other loaded package whose contracts they want checked. Loading the registry alone installs no checks: it ships no product checks of its own, so a composition that never mounts a companion observes no diagnostic behavior.
 
+The Host-only `./native` entry provides `invariants` on a native profile. It uses the same `enabled`, `package_allowlist`, and `package_blocklist` rules, and a bad pattern fails profile resolution. A native installer receives a host whose subscriptions and owned resources end with that registration; it does not receive a Cordis child context.
+
 ### Enabling checks and selecting packages
 
 The registry is enabled by default and checks every registered package unless filters say otherwise. Use `enabled` as a global switch, `package_allowlist` to admit only named packages, and `package_blocklist` to exclude packages after allowlist matching — a blocklist match overrides an allowlist match. Patterns are case-sensitive JavaScript regular-expression sources (unanchored unless they supply `^` and `$`), and an invalid, blank, or duplicate entry fails service startup instead of being skipped.
@@ -110,7 +112,10 @@ This section explains the design behind the registry; the observable behavior is
 
 | File | Role |
 |---|---|
-| [`src/index.ts`](src/index.ts) | Plugin entry: `Config` schema, `InvariantRegistry` service, selection, registration, `InvariantError` |
+| [`src/index.ts`](src/index.ts) | Cordis plugin: `Config` schema and `InvariantRegistry` child fibers |
+| [`src/selection.ts`](src/selection.ts) | Shared package-name admission |
+| [`src/error.ts`](src/error.ts) | `InvariantError` |
+| [`src/native.ts`](src/native.ts) | Native `invariants` provider |
 | — | No runtime invariant companion is published; registration ownership and child lifecycle are the service's mutation boundary itself; observing them from the same registry would only duplicate its implementation. |
 
 ### Selection and registration lifecycle

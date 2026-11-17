@@ -8,9 +8,9 @@
  * across React's render-then-subscribe window and a StrictMode remount, where a
  * recreated record would make every render resubscribe and restart the stream.
  */
-import type { RemoteResult } from '@redspark/rsh-typert-protocol'
 import { createSnapshotStore, type ObservableSnapshot, type SnapshotStore } from '@redspark/rsh-client-store'
 import type {
+  ResourceFrame,
   ResourceOpenContext,
   ResourceProtocol,
   ResourceProvider,
@@ -21,7 +21,7 @@ import type {
 /** A provider with its value type erased, so one map holds every protocol. */
 interface RuntimeProvider {
   readonly protocol: string
-  open(address: string, ctx: ResourceOpenContext): AsyncIterable<RemoteResult<unknown>>
+  open(address: string, ctx: ResourceOpenContext): AsyncIterable<ResourceFrame<unknown>>
 }
 
 /** One address: its state, its holders, and the running stream. */

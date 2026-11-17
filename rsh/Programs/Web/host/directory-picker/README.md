@@ -27,7 +27,7 @@ The web GUI lets an operator choose a workspace directory with either an OS choo
 
 Mount exactly one directory-picker backend and let the workspace flow drive it: the seam itself is only the service contract, so a composition without a backend has no way to pick a directory.
 
-The package root defines a Cordis service and requires Cordis when loaded. Cordis is an optional peer because the separate `./types` export has no runtime dependency on it.
+The package root defines a Cordis service and requires Cordis when loaded. Cordis is an optional peer because `./types` and `./error` have no runtime dependency on it. `./error` exports `DirectoryPickerError` and `DirectoryPickerErrorCode` for callers that must not load the Cordis service.
 
 ### Choosing a backend
 
@@ -61,11 +61,12 @@ The seam is built on one separation: the interaction shape a backend provides is
 
 | File | Role |
 |---|---|
-| [`src/index.ts`](src/index.ts) | Service Definition: abstract `DirectoryPicker`, capability vocabulary, typed error, Context merge |
+| [`src/index.ts`](src/index.ts) | Service Definition: abstract `DirectoryPicker`, capability vocabulary, Context merge; re-exports `DirectoryPickerError` |
+| [`src/error.ts`](src/error.ts) | `DirectoryPickerError` and `DirectoryPickerErrorCode`, with no Cordis import |
 
 ### Failure vocabulary
 
-`DirectoryPickerError` carries a closed `DirectoryPickerErrorCode` plus the absolute subject path, so consumers map business codes without string matching. The seam Agent Note records the design rationale, the separation from `ctx.fs`, and the policy decisions.
+`DirectoryPickerError` carries a closed `DirectoryPickerErrorCode` plus the absolute subject path, so consumers map business codes without string matching. The class and code union are declared in [`src/error.ts`](src/error.ts), and the package root re-exports both. The seam Agent Note records the design rationale, the separation from `ctx.fs`, and the policy decisions.
 
 </details>
 

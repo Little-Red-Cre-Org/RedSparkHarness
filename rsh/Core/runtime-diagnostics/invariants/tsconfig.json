@@ -16,6 +16,9 @@
     },
     {
       "path": "../../../Core/vendor/schemastery"
+    },
+    {
+      "path": "../native-runtime"
     }
   ]
 }

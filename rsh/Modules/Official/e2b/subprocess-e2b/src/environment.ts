@@ -2,9 +2,9 @@
 
 import { Buffer } from 'node:buffer'
 import { posix } from 'node:path'
-import { e2bControlEnvs } from '@redspark/rsh-e2b'
-import type { Sandbox } from '@redspark/rsh-e2b'
-import { SENSITIVE_ENV_PATTERN } from '@redspark/rsh-subprocess'
+import type { Sandbox } from 'e2b'
+import { e2bControlEnvs } from '@redspark/rsh-e2b/owner'
+import { SENSITIVE_ENV_PATTERN } from '@redspark/rsh-subprocess/native'
 
 const BASE64 = /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/
 

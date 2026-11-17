@@ -7,7 +7,7 @@
  */
 
 import { createSnapshotStore, type SnapshotStore } from '@redspark/rsh-client-store'
-import type { MessageId } from '@redspark/rsh-api-remotes/client'
+import type { MessageId } from '@redspark/rsh-llm/brand'
 import type { FeedbackCategory, FeedbackRecord } from '@redspark/rsh-command-feedback/types'
 import type { MessageFeedbackRating } from '@redspark/rsh-message-feedback/types'
 import type { MessageFeedbackActionResult } from './controller.ts'

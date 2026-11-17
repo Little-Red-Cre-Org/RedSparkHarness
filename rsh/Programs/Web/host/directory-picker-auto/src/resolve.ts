@@ -6,8 +6,6 @@
  * @module @redspark/rsh-host-directory-picker-auto/resolve
  */
 
-import type { HttpWebServerConfig as HttpServerConfig } from '@redspark/rsh-http-routes-cordis'
-
 /** Concrete interaction backend the resolver chooses between. */
 export type DirectoryPickerBackendKind = 'native' | 'browse'
 
@@ -16,10 +14,13 @@ export type DirectoryPickerEnv = Readonly<
   Partial<Record<'DISPLAY' | 'WAYLAND_DISPLAY', string>>
 >
 
+/** Loopback-only or all-interfaces bind. */
+export type DirectoryPickerBindHost = '127.0.0.1' | '0.0.0.0'
+
 /** Host facts the backend choice is a pure function of, sampled once at boot. */
 export interface DirectoryPickerHostFacts {
-  /** Effective webserver bind host (the schema's closed loopback/all-interfaces union). */
-  bindHost: HttpServerConfig['host']
+  /** Effective webserver bind host. */
+  bindHost: DirectoryPickerBindHost
   /** Host process platform. */
   platform: NodeJS.Platform
   /** SSH launch fact from the inherited process layer, independent of `.env` values. */

@@ -4,8 +4,9 @@
  * the ordinary-process and terminal teardown ladders.
  */
 
-import { CommandExitError, e2bControlEnvs, SandboxNotFoundError } from '@redspark/rsh-e2b'
-import type { Sandbox } from '@redspark/rsh-e2b'
+import { CommandExitError, SandboxNotFoundError } from 'e2b'
+import type { Sandbox } from 'e2b'
+import { e2bControlEnvs } from '@redspark/rsh-e2b/owner'
 
 /**
  * Normalize an unknown rejection into an Error.

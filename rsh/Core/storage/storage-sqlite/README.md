@@ -35,6 +35,8 @@ Choose it when writes are frequent and point-sized — each key maps to exactly 
 
 Two fields: the database path and the journal mode. `:memory:` opens an in-process database whose contents disappear with the process.
 
+The Host-only `./native` entry validates a required `path` and resolves an omitted `journalMode` to `wal`. It registers the same `SqliteStorageBackend` as `sqlite` on the selected native hub and publishes `storageBackendsReady`. Native activation does not import Cordis, and a missing path fails at profile resolution.
+
 ```yaml
 - name: '@redspark/rsh-storage'
 - name: '@redspark/rsh-storage-sqlite'

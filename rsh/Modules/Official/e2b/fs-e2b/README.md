@@ -31,6 +31,8 @@ Use this package when the agent's file work — reading, writing, editing, listi
 
 Choose it when a composition already uses the E2B sandbox and you want file operations to run there. Choose the local filesystem package when files should stay on the host. There is no configuration to tune.
 
+The Host-only `./native` entry requires `e2b`, provides `fs`, accepts no configuration, and does not import Cordis.
+
 ### Mounting it
 
 Load the sandbox owner first, then this package; after that, file features operate on the sandbox:
@@ -74,7 +76,9 @@ This section explains the design decisions behind the provider and points at the
 
 | File | Role |
 |---|---|
-| [`src/index.ts`](src/index.ts) | Plugin entry: `E2BFileSystem` provider, canonicalization, reads, atomic writes, error mapping |
+| [`src/backend.ts`](src/backend.ts) | Remote filesystem operations shared by both installers |
+| [`src/index.ts`](src/index.ts) | Cordis `E2BFileSystem` adapter |
+| [`src/native.ts`](src/native.ts) | Native Host installer; requires `e2b` and provides `fs` |
 | — | No runtime invariant companion is published; each operation returns the E2B controller's committed result directly, with no independent event or cache to cross-check. |
 
 ### Canonical paths and transport framing

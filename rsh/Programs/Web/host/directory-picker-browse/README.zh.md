@@ -47,6 +47,10 @@ kind: "package-reference"
 
 生成的[配置目录](../../../../Docs/config-catalog.zh.md#redsparkrsh-host-directory-picker-browse)是每个受支持字段及其 JSDoc 的穷尽式真源。
 
+### 原生入口
+
+`./native` 是提供 `directoryBrowse` 的 Host 插件，不依赖其他 Native 服务。`list(path, signal)` 与 `createDirectory(path, name)` 调用与 Cordis 服务相同的文件系统函数，包括拒绝非完全限定路径。配置是严格对象，唯一字段是 `maxEntries`（默认 1,000）。它没有工作目录字段：未知字段会使校验失败，而不是解析到进程工作目录之下。该入口不导入 Cordis。
+
 -----
 
 <a id="understand-the-implementation"></a>
@@ -71,7 +75,9 @@ kind: "package-reference"
 
 | 文件 | 职责 |
 |---|---|
-| [`src/index.ts`](src/index.ts) | `BrowseDirectoryPicker` 服务：列举、创建、有界窗口、错误映射 |
+| [`src/browse.ts`](src/browse.ts) | 共享的文件系统列举与创建：完全限定路径、有界窗口、中止竞争 |
+| [`src/index.ts`](src/index.ts) | Cordis `BrowseDirectoryPicker`；调用共享的列举与创建函数 |
+| [`src/native.ts`](src/native.ts) | Native 插件：严格的 `maxEntries` 配置与 `directoryBrowse` 服务 |
 | — | 不发布运行时不变式伴生入口；每次列举或创建都是一次无状态的文件系统往返；文件系统本身保存的状态具有权威性。 |
 
 </details>

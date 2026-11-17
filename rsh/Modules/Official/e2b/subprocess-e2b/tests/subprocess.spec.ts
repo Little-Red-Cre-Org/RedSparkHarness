@@ -108,7 +108,7 @@ class FakeSandbox {
   sdkKillStops = true
   alive = true
   zombieOnly = false
-  ambient = 'PATH=/ambient/bin\0KEEP=safe\0UNICODE=你好\0NPM_TOKEN=secret\0DSH_STALE=old\0BROKEN\0=bad\0'
+  ambient = 'PATH=/ambient/bin\0KEEP=safe\0UNICODE=你好\0NPM_TOKEN=secret\0RSH_STALE=old\0BROKEN\0=bad\0'
   environmentHome = '/home/user'
   environmentWire: string | undefined
   environmentRequest: ((signal: AbortSignal | undefined) => Promise<void>) | undefined
@@ -441,7 +441,7 @@ describe('E2BSubprocessHandle', () => {
       '/workspace/.dsh-e2b/processes/one/stderr.log',
     ])
     expect(fake.writtenFileData.get('/workspace/.dsh-e2b/processes/one/environment')).toBe(
-      'PATH=/bin\0UNICODE=你好\0HOME=/home/user\0FOO-BAR=hyphen-value\0--split-string=literal-value\0DEEPSEEK_API_KEY=explicit-secret\0DSH_MODE=test\0',
+      'PATH=/bin\0UNICODE=你好\0HOME=/home/user\0FOO-BAR=hyphen-value\0--split-string=literal-value\0DEEPSEEK_API_KEY=explicit-secret\0RSH_MODE=test\0',
     )
 
     let piped = ''
@@ -456,16 +456,25 @@ describe('E2BSubprocessHandle', () => {
     await expect(handle.waitForExit()).resolves.toBe(true)
   })
 
-  it('rejects an unrepresentable graceMs before any remote work', () => {
+  it('rejects an unrepresentable graceMs before any remote work', async () => {
     const ctx = new Context()
-    const service = Object.create(E2BSubprocessRuntime.prototype) as E2BSubprocessRuntime
-    Reflect.set(service, 'disposing', false)
-    Reflect.set(service, 'ctx', ctx)
-    for (const graceMs of [0, -1, Number.NaN, Number.POSITIVE_INFINITY]) {
-      expect(() => service.spawn(spec({ graceMs }))).toThrow('graceMs must be a positive finite number')
-      void expect(service.spawnTerminal({
-        argv: ['bash'], cwd: '/w', rows: 24, cols: 80, graceMs,
-      })).rejects.toThrow('graceMs must be a positive finite number')
+    const getSandbox = vi.fn(async () => { throw new Error('remote work') })
+    ctx.provide('e2b', {
+      cwd: '/workspace',
+      runtimeRoot: '/workspace/.dsh-e2b',
+      getSandbox,
+    } as unknown as E2BRuntime)
+    const fiber = await ctx.plugin(E2BSubprocessRuntime)
+    try {
+      for (const graceMs of [0, -1, Number.NaN, Number.POSITIVE_INFINITY]) {
+        expect(() => ctx.subprocess.spawn(spec({ graceMs }))).toThrow('graceMs must be a positive finite number')
+        await expect(ctx.subprocess.spawnTerminal({
+          argv: ['bash'], cwd: '/w', rows: 24, cols: 80, graceMs,
+        })).rejects.toThrow('graceMs must be a positive finite number')
+      }
+      expect(getSandbox).not.toHaveBeenCalled()
+    } finally {
+      await fiber.dispose()
     }
   })
 

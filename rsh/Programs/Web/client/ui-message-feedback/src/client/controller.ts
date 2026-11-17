@@ -7,9 +7,8 @@
  * @module @redspark/rsh-client-ui-message-feedback/client/controller
  */
 
-import type { Context as ClientContext } from '@redspark/cordis'
 import type { HostObservable } from '@redspark/rsh-client-ui-slots'
-import type { MessageId } from '@redspark/rsh-api-remotes/client'
+import type { MessageId } from '@redspark/rsh-llm/brand'
 import type { SessionId } from '@redspark/rsh-session/types'
 import type { FeedbackRecord } from '@redspark/rsh-command-feedback/types'
 import type {
@@ -106,13 +105,20 @@ export type MessageFeedbackCarried<T> =
   | { readonly ok: true; readonly value: T }
   | { readonly ok: false; readonly error: { readonly code: string; readonly message: string } }
 
+/** Browser context whose `messageFeedback` Remote namespace is already the transport. */
+interface MessageFeedbackContext {
+  readonly remote: {
+    readonly messageFeedback: MessageFeedbackTransport
+  }
+}
+
 /** Whether a value is an already-bound transport rather than a plugin context. */
-function isTransport(source: ClientContext | MessageFeedbackTransport): source is MessageFeedbackTransport {
+function isTransport(source: MessageFeedbackContext | MessageFeedbackTransport): source is MessageFeedbackTransport {
   return typeof (source as MessageFeedbackTransport).list === 'function'
 }
 
 /** Bind the browser plugin context's Remote namespace as a transport. */
-function remoteTransport(ctx: ClientContext): MessageFeedbackTransport {
+function remoteTransport(ctx: MessageFeedbackContext): MessageFeedbackTransport {
   const remote = ctx.remote.messageFeedback
   return {
     list: request => remote.list(request),
@@ -153,7 +159,7 @@ export class MessageFeedbackController implements HostObservable<MessageFeedback
    * @param sessionId - Session owning every addressed assistant message.
    */
   constructor(
-    source: ClientContext | MessageFeedbackTransport,
+    source: MessageFeedbackContext | MessageFeedbackTransport,
     private readonly sessionId: SessionId,
   ) {
     this.transport = isTransport(source) ? source : remoteTransport(source)

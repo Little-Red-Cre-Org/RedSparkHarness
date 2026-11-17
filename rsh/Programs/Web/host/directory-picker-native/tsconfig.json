@@ -16,6 +16,9 @@
     },
     {
       "path": "../../../../Core/util/native-command"
+    },
+    {
+      "path": "../../../../Core/runtime-diagnostics/native-runtime"
     }
   ]
 }

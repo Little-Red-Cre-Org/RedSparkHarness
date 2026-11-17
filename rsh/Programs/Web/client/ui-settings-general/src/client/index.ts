@@ -29,7 +29,7 @@ import { GeneralSection } from './GeneralSection.tsx'
 import { SettingsDocumentAction } from './SettingsDocumentAction.tsx'
 import type { SettingsDocumentActionInjected } from './SettingsDocumentAction.tsx'
 import { SettingsDocumentStore } from './settings-document-store.ts'
-import { en, zh, type SettingsKey } from './locales.ts'
+import { en, zh } from './locales.ts'
 
 export type {
   CloseLabelProps, HeaderContentProps, TriggerContentProps,
@@ -41,13 +41,6 @@ export type { SettingsDocumentActionInjected, SettingsDocumentActionProps } from
 export type { SettingsDocumentState } from './settings-document-store.ts'
 export { SettingsDocumentStore } from './settings-document-store.ts'
 export type { SettingsKey } from './locales.ts'
-
-declare module '@redspark/rsh-client-ui-slots' {
-  interface LocaleNamespaceMap {
-    /** Shell chrome + shell-owned General section copy. */
-    settings: SettingsKey
-  }
-}
 
 /** Dictionary namespace owned by this plugin (shell chrome + General copy). */
 const NS = 'settings'
