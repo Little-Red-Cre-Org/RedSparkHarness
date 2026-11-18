@@ -39,7 +39,7 @@ This table connects model-visible tool names to the plugin package and service s
 | `@redspark/rsh-tool-subagent` | `list_subagent_models`, `subagent` | `ctx.tools`, `ctx.subagents`, `ctx.systemPrompt`, `ctx.llm for model discovery and selected-route validation` | `tool/call`, `tool/result`, `child session events through the chosen provider` | `subagent`, `subagent_fork` | The registered delegation name is the load-time `toolName` config (default `subagent`); the default schema above has model selection off, while the discovery schema is shown as the fixed companion available in an enabled Session. Web presets sample the Plugins preference for each new top-level Session and preserve that decision for its child Sessions; `subagent_fork` remains fixed-route. Each instance independently controls whether it reads model-selection settings and its background behavior through `modelSelectionSettings`, `backgroundMode`, and `enableRunInBackground`. |
 | `@redspark/rsh-tool-subagent-control` | `interrupt_agent`, `list_agents`, `send_message` | `ctx.tools`, `ctx.subagents`, `ctx.agents and ctx.sessionProjections (list_agents only)` | `tool/call`, `tool/result`, `child session events through ctx.subagents` | - | The globally named control tools over continuable background subagents: provider-bound `tool-subagent` instances register distinct delegation tools, while this package registers `send_message` and `interrupt_agent` once, plus `list_agents` from its separately loaded `/list-agents` plugin (whose catalog rows use the sessionProjections and live Agent registries). |
 | `@redspark/rsh-tool-jobs` | `job_kill`, `job_list`, `job_output` | `ctx.tools`, `ctx.jobs`, `ctx.systemPrompt` | `tool/call`, `tool/result`, `user/message via agent.inject() for background completion notices` | - | The kind-agnostic background-job controller: background bash commands, PTY sends, and subagents are read, listed, and killed through the same three tools. Loading the plugin attaches the controller that arms producers' `ctx.jobs.start()`. |
-| `@redspark/rsh-experimental-tool-agent-team` | `interrupt_agent`, `list_agents`, `send_message`, `spawn_teammate`, `team_task_create`, `team_task_get`, `team_task_list`, `team_task_update`, `wait_agent` | `ctx.tools`, `ctx.systemPrompt`, `ctx.agentTeams`, `an exact live Team member Agent` | `tool/call`, `team/member`, `team/message/queued`, `team/message/delivered`, `team/task`, `tool/result` | - | All nine tools are scoped to implicit Team Leads and durable teammates. The shipped dsh-base bundle keeps the package disabled; the documented Agent Teams profile patch enables it while disabling the legacy continuable-child control names. |
+| `@redspark/rsh-experimental-tool-agent-team` | `interrupt_agent`, `list_agents`, `send_message`, `spawn_teammate`, `team_task_create`, `team_task_get`, `team_task_list`, `team_task_update`, `wait_agent` | `tools`, `agentTeams`, `agents`, `activeSessions`, `promptSections`, `an exact live Team member Agent` | `tool/call`, `team/member`, `team/message/queued`, `team/message/delivered`, `team/task`, `tool/result` | - | All nine tools are scoped to implicit Team Leads and durable teammates. The Native installer attaches them to each active member scope, so a profile selects the package only when Agent Teams is the chosen collaboration surface. |
 | `@redspark/rsh-tool-todo` | `todo_write` | `ctx.tools`, `owning Agent session` | `tool/call`, `todo/write`, `tool/result` | - | todo_write is session-owned state; UIs render the latest todo/write event as a checklist. `allowParallelInProgress` is required with no default, so the catalog states its choice: `true`, whose description invites several `in_progress` items. A deployment choosing `false` receives the same tool with a description asking for exactly one active task. |
 | `@redspark/rsh-tool-workflow` | `workflow` | `ctx.tools`, `ctx.workflowEngine`, `ctx.systemPrompt`, `a calling Agent (exec.agent parents the script children)` | `tool/call`, `tool/result` | - | - |
 | `@redspark/rsh-tool-web` | `web_fetch`, `web_search` | `ctx.tools`, `ctx.web`, `ctx.systemPrompt` | `tool/call`, `tool/result` | - | web_search and web_fetch keep provider selection behind ctx.web so model-visible schemas stay stable across backend swaps. |
@@ -1903,15 +1903,16 @@ Interrupt one teammate's current turn while preserving its pending inbox. Team L
 ```json
 {
   "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "target"
+  ],
   "properties": {
     "target": {
       "type": "string",
       "description": "Teammate name."
     }
-  },
-  "required": [
-    "target"
-  ]
+  }
 }
 ```
 
@@ -1924,6 +1925,7 @@ List the Lead and every durable teammate with current runtime status.
 ```json
 {
   "type": "object",
+  "additionalProperties": false,
   "properties": {}
 }
 ```
@@ -1937,6 +1939,11 @@ Send one durable message to another Team member. A running target receives it at
 ```json
 {
   "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "target",
+    "message"
+  ],
   "properties": {
     "target": {
       "type": "string",
@@ -1946,11 +1953,7 @@ Send one durable message to another Team member. A running target receives it at
       "type": "string",
       "description": "Self-contained message for the target."
     }
-  },
-  "required": [
-    "target",
-    "message"
-  ]
+  }
 }
 ```
 
@@ -1963,6 +1966,12 @@ Create one named, durable teammate. Only the Team Lead may call this tool.
 ```json
 {
   "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "name",
+    "description",
+    "prompt"
+  ],
   "properties": {
     "name": {
       "type": "string",
@@ -1978,18 +1987,13 @@ Create one named, durable teammate. Only the Team Lead may call this tool.
     },
     "context": {
       "type": "string",
-      "description": "fresh starts without Lead history; fork inherits completed Lead turns. Defaults to fresh.",
       "enum": [
         "fresh",
         "fork"
-      ]
+      ],
+      "description": "fresh starts without Lead history; fork inherits completed Lead turns. Defaults to fresh."
     }
-  },
-  "required": [
-    "name",
-    "description",
-    "prompt"
-  ]
+  }
 }
 ```
 
@@ -2002,6 +2006,11 @@ Create one unowned pending task on the shared Team task board.
 ```json
 {
   "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "subject",
+    "description"
+  ],
   "properties": {
     "subject": {
       "type": "string",
@@ -2013,23 +2022,19 @@ Create one unowned pending task on the shared Team task board.
     },
     "blocked_by": {
       "type": "array",
-      "description": "Task ids that must complete first.",
       "items": {
         "type": "string"
-      }
+      },
+      "description": "Task ids that must complete first."
     },
     "write_scopes": {
       "type": "array",
-      "description": "Advisory workspace-relative file or directory prefixes this task expects to modify.",
       "items": {
         "type": "string"
-      }
+      },
+      "description": "Advisory workspace-relative file or directory prefixes this task expects to modify."
     }
-  },
-  "required": [
-    "subject",
-    "description"
-  ]
+  }
 }
 ```
 
@@ -2042,15 +2047,16 @@ Read the complete latest value of one shared task before changing or executing i
 ```json
 {
   "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "task_id"
+  ],
   "properties": {
     "task_id": {
       "type": "string",
       "description": "Shared task id."
     }
-  },
-  "required": [
-    "task_id"
-  ]
+  }
 }
 ```
 
@@ -2063,15 +2069,16 @@ List shared tasks, including readiness, owner, revision, blockers, and write-sco
 ```json
 {
   "type": "object",
+  "additionalProperties": false,
   "properties": {
     "status": {
       "type": "string",
-      "description": "Optional exact status filter.",
       "enum": [
         "pending",
         "in_progress",
         "completed"
-      ]
+      ],
+      "description": "Optional exact status filter."
     },
     "owner": {
       "type": "string",
@@ -2102,6 +2109,12 @@ Compare-and-set a shared task action using the latest revision from team_task_ge
 ```json
 {
   "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "task_id",
+    "expected_revision",
+    "action"
+  ],
   "properties": {
     "task_id": {
       "type": "string",
@@ -2113,7 +2126,6 @@ Compare-and-set a shared task action using the latest revision from team_task_ge
     },
     "action": {
       "type": "string",
-      "description": "Task transition to apply.",
       "enum": [
         "claim",
         "release",
@@ -2123,7 +2135,8 @@ Compare-and-set a shared task action using the latest revision from team_task_ge
         "reopen",
         "reassign",
         "delete"
-      ]
+      ],
+      "description": "Task transition to apply."
     },
     "subject": {
       "type": "string",
@@ -2135,28 +2148,23 @@ Compare-and-set a shared task action using the latest revision from team_task_ge
     },
     "blocked_by": {
       "type": "array",
-      "description": "Complete blocker list for set_dependencies.",
       "items": {
         "type": "string"
-      }
+      },
+      "description": "Complete blocker list for set_dependencies."
     },
     "write_scopes": {
       "type": "array",
-      "description": "Replacement advisory write scopes for edit.",
       "items": {
         "type": "string"
-      }
+      },
+      "description": "Replacement advisory write scopes for edit."
     },
     "owner": {
       "type": "string",
       "description": "Member name for Lead-only reassign; omit to unassign."
     }
-  },
-  "required": [
-    "task_id",
-    "expected_revision",
-    "action"
-  ]
+  }
 }
 ```
 
@@ -2169,6 +2177,7 @@ Wait for the next teammate status, mailbox, or shared-task change after this cal
 ```json
 {
   "type": "object",
+  "additionalProperties": false,
   "properties": {
     "timeout_ms": {
       "type": "integer",
@@ -2180,7 +2189,7 @@ Wait for the next teammate status, mailbox, or shared-task change after this cal
 
 Source: [`rsh/Modules/Community/experimental/tool-agent-team/src/index.ts`](../Modules/Community/experimental/tool-agent-team/src/index.ts)
 
-All nine tools are scoped to implicit Team Leads and durable teammates. The shipped dsh-base bundle keeps the package disabled; the documented Agent Teams profile patch enables it while disabling the legacy continuable-child control names.
+All nine tools are scoped to implicit Team Leads and durable teammates. The Native installer attaches them to each active member scope, so a profile selects the package only when Agent Teams is the chosen collaboration surface.
 
 <a id="redsparkrsh-tool-todo"></a>
 

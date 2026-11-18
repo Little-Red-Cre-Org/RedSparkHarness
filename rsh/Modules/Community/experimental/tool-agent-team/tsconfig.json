@@ -18,6 +18,6 @@
     { "path": "../../../../Engine/core/native-prompt" },
     { "path": "../../../../Engine/core/native-tools/tsconfig.host.json" },
     { "path": "../../../../Core/runtime-diagnostics/native-runtime" },
-    { "path": "../agent-team/tsconfig.host.json" }
+    { "path": "../agent-team" }
   ]
 }

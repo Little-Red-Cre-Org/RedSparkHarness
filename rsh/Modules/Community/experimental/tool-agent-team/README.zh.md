@@ -1,5 +1,5 @@
 ---
-description: "九个让模型创建、发消息与协调 teammate 的工具，供挂载实验性 Team 插件的组合使用。"
+description: "九个让模型创建、发消息与协调 teammate 的工具，供挂载实验性 Team 包的 Native 组合使用。"
 kind: "package-reference"
 ---
 
@@ -36,11 +36,8 @@ kind: "package-reference"
 对现有组合的最小增量是 [agent-team README](../agent-team/README.zh.md#smallest-working-setup) 中的两包片段：持久会话存储、团队领域包与本包。插件本身只有两个可选设置：
 
 ```yaml
-- id: tool-agent-team
-  name: '@redspark/rsh-experimental-tool-agent-team'
-  config:
-    freshProvider: spawn
-    forkProvider: fork
+{ "id": "tool-agent-team", "plugin": "@redspark/rsh-experimental-tool-agent-team", "scope": "root",
+  "config": { "freshProvider": "spawn", "forkProvider": "fork" } }
 ```
 
 | 字段 | 默认值 | 含义 |
@@ -48,11 +45,11 @@ kind: "package-reference"
 | `freshProvider` | `spawn` | 启动 fresh teammate 的提供方 |
 | `forkProvider` | `fork` | 启动 fork teammate 的提供方 |
 
-生成的[配置目录](../../../../Docs/config-catalog.zh.md#redsparkrsh-experimental-tool-agent-team)是每个受支持字段及其 JSDoc 的穷尽式真源。
+[`src/index.ts`](src/index.ts) 中的 zod `Configuration` schema 是每个受支持字段的穷尽式真源；未知字段会在加载时失败。
 
 ### Native 运行时
 
-本包为无 Cordis 的 profile 在 `./native` 发布 Native 入口。它通过 `NativeToolRegistry` 注册相同的九个值工具，并通过 `NativePromptRegistry` 注册一段作用域内的协作指引，配置项 `freshProvider` 与 `forkProvider` 含义不变。Native 入口要求 `agentTeams`、`agents`、`activeSessions`、`tools` 与 `promptSections`，且不导入任何 Cordis 包。
+本包只提供 Native 实现。它通过 `NativeToolRegistry` 注册九个值工具，并通过 `NativePromptRegistry` 注册一段作用域内的协作指引，配置项 `freshProvider` 与 `forkProvider` 含义不变。`./native` 入口要求 `agentTeams`、`agents`、`activeSessions`、`tools` 与 `promptSections`。
 
 试试这样要求 Lead 模型：「创建一个名为 reviewer 的 teammate 检查 diff，再把变更摘要发给 reviewer」。模型会调用创建工具，然后调用消息工具。
 

@@ -15,7 +15,7 @@ Keep the five-phase order. Do not delete Cordis, `rsh/Core/vendor`, or the Core 
 ### What stays
 
 - Fresh Desktop profiles and unmodified legacy starters write `runtime: 'native'` through `createNativeDesktopProfile`. An explicit `runtime: 'legacy'` profile and a custom Cordis profile stay bootable when the compatibility host is present. Snapshots with `profile: web`, and production classes that extend `TypertRemoteService`, stay until a separate UI migration. That migration has to replace the remote-method registration before phase C can finish.
-- The three packages stay. No other manifest depends on them. `@redspark/rsh-experimental-agent-team-web-profile` is in the `dsh` release family (`rsh/Scripts/release/families.spec.ts`). `@redspark/rsh-experimental-inspector` is excluded from that family and still has its own tests. `@redspark/rsh-storage-sqlite` remains a selectable storage backend. Its Native installer, recorded in [Native capability owners](../../implemented/architecture/2026-11-16-native-capability-gaps.md), shares that backend and does not delete the package. [What still depends on Cordis](2026-11-10-what-still-depends-on-cordis.md) already separates this case from a package nothing can select.
+- Two of the three packages stay. `@redspark/rsh-experimental-inspector` is excluded from the `dsh` release family and still has its own tests. `@redspark/rsh-storage-sqlite` remains a selectable storage backend; its Native installer, recorded in [Native capability owners](../../implemented/architecture/2026-11-16-native-capability-gaps.md), shares that backend and does not delete the package. [What still depends on Cordis](2026-11-10-what-still-depends-on-cordis.md) already separates these cases from a package nothing can select. The Agent Teams web profile is no longer among them: [Agent Teams retires its Cordis surface](../../implemented/architecture/2026-11-18-agent-teams-retires-its-cordis-surface.md) deletes it with the two sibling composition packages once the Team service becomes Native-only.
 - `initProfile` (`rsh/Compatibility/DSH/boot/app-boot/src/profile.ts`) still writes `dsh.profile.bundles` and `patchReload`. A bundle list selects legacy execution. Custom names still initialize through `--from-default-profile`, and an existing legacy directory still boots. Shipped names still boot Native. `sdk-minimal` stays refused. [What the legacy Cordis runtime still holds](2026-11-06-legacy-runtime-retirement.md) still forbids changing `initProfile` while an active home resolves `web` or `desktop` as legacy.
 
 ### What was re-measured
@@ -55,7 +55,7 @@ Phase C and phase E do not start. `rsh/Core/vendor` stays while any package stil
 
 **Refuse every new custom legacy profile now.** Rejected. The snapshot runners and the CLI end-to-end tests create `legacy-headless`, `legacy-sdk`, and `legacy-acp` with `--from-default-profile` for each run. Refusing that class of name deletes the remaining Cordis evidence before the recorded blockers move.
 
-**Delete the three packages that no other manifest depends on.** Rejected. A missing manifest dependency is not the absence of a capability. The storage backend is selectable, the agent-team web profile is published, and the inspector package still has tests.
+**Delete the packages that no other manifest depends on.** Rejected. A missing manifest dependency is not the absence of a capability. The storage backend is selectable and the inspector package still has tests. The Agent Teams web profile is deleted later for a different reason: its runtime surface no longer exists, not because nothing depended on it.
 
 **Start phase C while an explicit legacy profile still boots.** Rejected. Those profiles boot the `Service` classes phase C would remove. Deleting the classes first leaves a Cordis Desktop profile that neither runtime can start.
 
@@ -65,7 +65,7 @@ Phase C and phase E do not start. `rsh/Core/vendor` stays while any package stil
 
 - [Retiring Cordis in five measured phases](2026-11-12-cordis-retirement-five-phases.md) no longer says the three packages can be deleted now, and its 84 / 169 / 10 grade table is marked as the 2026-11-12 measurement.
 - `initProfile` documents that a new manifest stores `dsh.profile.bundles` and does not set `runtime: 'native'`.
-- No package directory is removed. Fresh Desktop profiles still write `runtime: 'native'`, and an explicit legacy profile is not rewritten.
+- No package directory is removed by this decision. Fresh Desktop profiles still write `runtime: 'native'`, and an explicit legacy profile is not rewritten.
 - `@redspark/rsh-native-jobs-controller` does not declare `@redspark/cordis`. The other no-mention packages stay declared.
 
 ## Risks

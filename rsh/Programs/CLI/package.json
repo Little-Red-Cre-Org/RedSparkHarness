@@ -280,7 +280,6 @@
                             "@redspark/rsh-bash-local":  "workspace:^",
                             "@redspark/rsh-deepseek-llm-api-extensions":  "workspace:^",
                             "@redspark/rsh-experimental-agent-team":  "workspace:^",
-                            "@redspark/rsh-experimental-agent-team-profile":  "workspace:^",
                             "@redspark/rsh-experimental-code-runtime-python":  "workspace:^",
                             "@redspark/rsh-experimental-tool-agent-team":  "workspace:^",
                             "@redspark/rsh-fs-sandbox":  "workspace:^",

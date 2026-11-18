@@ -13,7 +13,7 @@ import { MessageId, type ContentBlock } from '@redspark/rsh-llm/native'
 import { JsonlSessionBackend } from '@redspark/rsh-session-persistence-jsonl/native'
 import { NativeSessionProjectionRegistry } from '@redspark/rsh-session-projection/native'
 import { Session, SessionId, SESSION_FORMAT_VERSION, type SessionEvent, type SessionHeader } from '@redspark/rsh-session/native'
-import { plugin, resolveNativeTeamConfig, NativeTeamService, TeamTaskId, TeamError } from '../src/native.ts'
+import { plugin, resolveNativeTeamConfig, NativeTeamService, TeamTaskId, TeamError } from '../src/index.ts'
 import { teamProjectionDefinition } from '../src/projection.ts'
 
 const signal = new AbortController().signal

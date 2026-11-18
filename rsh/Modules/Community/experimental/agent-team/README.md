@@ -54,15 +54,13 @@ With the tools installed, the model does the rest on request — for example, "c
 | `maxMessageBytes` | `65,536` | Maximum size of one sent message |
 | `disposalTimeoutMs` | `5,000` | Time allowed for shutdown cleanup |
 
-The generated [configuration catalog](../../../../Docs/config-catalog.md#redsparkrsh-experimental-agent-team) is the exhaustive source for every accepted field and its JSDoc.
+`resolveNativeTeamConfig` in [`src/index.ts`](src/index.ts) is the exhaustive source for every accepted field; an unknown field or an out-of-range value fails at load.
 
 ### Native runtime
 
-Both Team packages publish a Native entry at `./native`, so a Cordis-free profile mounts the same two package names and resolves their Native entries through the package manifests. The Native runtime needs the same durable storage plus rows for `@redspark/rsh-session-projection`, `@redspark/rsh-native-session-execution`, `@redspark/rsh-native-subagent`, and `@redspark/rsh-native-prompt`; those provide the projection registry, active Sessions, subagent providers, and prompt sections the Team service reads.
+The package is Native-only. Its `./native` entry declares `agentTeams` and requires `agents`, `activeSessions`, `sessionPersistence`, `sessionProjections`, and `subagents`; a profile mounts it beside durable storage and rows providing those capabilities. The configuration fields above are validated by `resolveNativeTeamConfig`.
 
-The Native face shares the durable journal, projection, roster, mailbox, and task board with the Cordis face. Only service registration and tool installation differ: the Native entry declares its capabilities in `rsh.profile.json`, while the Cordis entry registers them on `ctx`. The Native face publishes no Typert Remote methods and no `./client` or `./remote` surface.
-
-The Native face also publishes no `./invariant` companion. The Cordis companion observes `session/event` dispatch; the Native journal instead reads authoritative state through the strict Team projection before each mutation, so a corrupt stream is reported from that read.
+The durable journal, projection, roster, mailbox, and task board are the only implementation, so no second service registration exists to keep in sync. The package publishes no `./invariant`, `./client`, or `./remote` surface: the journal reads authoritative state through the strict Team projection before each mutation, so a corrupt stream is reported from that read.
 
 ### Teammates
 
@@ -121,17 +119,19 @@ The [Agent Teams Agent Note](../../../../../.agents/notes/implemented/feature/20
 
 | File | Role |
 |---|---|
-| [`src/index.ts`](src/index.ts) | Plugin entry: `Config` schema, service registration, recovery scheduling |
-| [`src/roster.ts`](src/roster.ts) | Team identity, membership resolution, provisioning, and roster teardown |
-| [`src/mailbox.ts`](src/mailbox.ts) | Durable queue, target-local dispatch, acknowledgement, and recovery |
+| [`src/index.ts`](src/index.ts) | Native plugin entry: `Config` schema, capability requirements, service registration, recovery scheduling |
+| [`src/native-roster.ts`](src/native-roster.ts) | Team identity, membership resolution, provisioning, and roster teardown |
+| [`src/native-mailbox.ts`](src/native-mailbox.ts) | Durable queue, target-local dispatch, acknowledgement, and recovery |
 | [`src/task-board.ts`](src/task-board.ts) | Task CAS commands, DAG validation, and derived views |
-| [`src/journal.ts`](src/journal.ts) | Serialized Lead-log transactions and commit notification |
+| [`src/native-journal.ts`](src/native-journal.ts) | Serialized Lead-log transactions and commit notification |
+| [`src/journal-port.ts`](src/journal-port.ts) | Journal operations the roster, mailbox, and task board consume |
 | [`src/projection.ts`](src/projection.ts) | Strict replay projection that decodes and validates Team events |
 | [`src/activity.ts`](src/activity.ts) | One-shot change waiters and disposal release |
 | [`src/lifecycle.ts`](src/lifecycle.ts) | Shared admission cutoff and bounded settlement |
-| [`src/invariant.ts`](src/invariant.ts) | Invariant companion that replays candidate events before append |
 
-`src/native.ts`, `src/native-journal.ts`, `src/native-roster.ts`, `src/native-mailbox.ts`, and `src/membership.ts` install the same domain over the Native runtime. `src/journal-port.ts` is the port that both journal implementations satisfy, so roster, mailbox, and task-board code do not depend on either runtime's services.
+`src/index.ts` installs the domain on the Native runtime, and `src/membership.ts` resolves the caller's role. `src/journal-port.ts` is the port the roster, mailbox, and task-board code consume instead of a persistence service.
+
+No invariant companion is published because the journal reads authoritative state through the strict Team projection before each mutation; there is no second view to compare.
 
 ### Team identity and roster
 

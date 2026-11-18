@@ -1,4 +1,4 @@
-/** Plain-Node smoke for the built Agent Teams service and Remote contribution. */
+/** Plain-Node smoke for the built Agent Teams Native installer. */
 
 import { execFile } from 'node:child_process'
 import { existsSync } from 'node:fs'
@@ -11,39 +11,31 @@ const root = resolve(packageDir, '../../../../..')
 const artifact = (path: string): string => join(root, path)
 const artifactUrl = (path: string): string => pathToFileURL(artifact(path)).href
 
-const requiredArtifacts = [
-  'rsh/Modules/Community/experimental/agent-team/lib/index.js',
-  'rsh/Modules/Community/experimental/agent-team/lib/typert.remote-client.js',
-].every(path => existsSync(artifact(path)))
+const requiredArtifacts = existsSync(artifact('rsh/Modules/Community/experimental/agent-team/lib/index.js'))
 
-describe.skipIf(!requiredArtifacts)('Agent Teams built LIB service', () => {
-  it('loads the Host service and its generated browser contribution under plain Node', async () => {
-    const urls = {
-      host: artifactUrl('rsh/Modules/Community/experimental/agent-team/lib/index.js'),
-      remote: artifactUrl('rsh/Modules/Community/experimental/agent-team/lib/typert.remote-client.js'),
-    }
+describe.skipIf(!requiredArtifacts)('Agent Teams built Native installer', () => {
+  it('loads the Native installer under plain Node', async () => {
+    const url = artifactUrl('rsh/Modules/Community/experimental/agent-team/lib/index.js')
     const script = `
-      const host = await import(${JSON.stringify(urls.host)})
-      const remote = await import(${JSON.stringify(urls.remote)})
+      const native = await import(${JSON.stringify(url)})
       console.log(JSON.stringify({
-        className: host.default.name,
-        methods: remote.default.descriptors.map(descriptor => descriptor.id),
+        name: native.plugin.name,
+        provides: native.plugin.provides,
+        requires: native.plugin.requires,
       }))
     `
 
     const result = await runPlainNode(script)
     expect(result.exitCode, `stderr:\n${result.stderr}`).toBe(0)
     const output = JSON.parse(result.stdout.trim().split('\n').at(-1) ?? '{}') as {
-      className: string
-      methods: string[]
+      name: string
+      provides: string[]
+      requires: string[]
     }
     expect(output).toEqual({
-      className: 'TeamService',
-      methods: [
-        '@redspark/rsh-experimental-agent-team#agentTeams/createTask',
-        '@redspark/rsh-experimental-agent-team#agentTeams/updateTask',
-        '@redspark/rsh-experimental-agent-team#agentTeams/view',
-      ],
+      name: '@redspark/rsh-experimental-agent-team',
+      provides: ['agentTeams'],
+      requires: ['agents', 'activeSessions', 'sessionPersistence', 'sessionProjections', 'subagents'],
     })
   })
 })

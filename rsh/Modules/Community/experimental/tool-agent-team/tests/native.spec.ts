@@ -2,7 +2,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import { NativeAgentId } from '@redspark/rsh-native-agent'
 import type { NativeToolExecution } from '@redspark/rsh-native-tools'
-import { plugin, resolveNativeTeamToolsConfig } from '../src/native.ts'
+import { plugin, resolveNativeTeamToolsConfig } from '../src/index.ts'
 
 const signal = new AbortController().signal
 

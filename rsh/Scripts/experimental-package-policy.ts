@@ -1,9 +1,6 @@
 /** Experimental packages that publish with the dsh release family without changing names. */
 export const PUBLIC_EXPERIMENTAL_PACKAGE_DIRECTORIES = [
   'rsh/Modules/Community/experimental/agent-team',
-  'rsh/Modules/Community/experimental/agent-team-profile',
-  'rsh/Modules/Community/experimental/agent-team-web-profile',
-  'rsh/Modules/Community/experimental/client-ui-agent-team',
   'rsh/Modules/Community/experimental/tool-agent-team',
 ] as const
 

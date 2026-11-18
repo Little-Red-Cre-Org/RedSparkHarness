@@ -1,4 +1,4 @@
-/** Cross-face Team journal seam over one Lead-owned Session log. */
+/** Team journal seam over one Lead-owned Session log. */
 
 import type { SessionEventMap, SessionId } from '@redspark/rsh-session/types'
 import type { TeamState } from './projection.ts'
@@ -15,7 +15,7 @@ export interface TeamRootRef {
   readonly id: SessionId
 }
 
-/** Journal operations shared by the Cordis and Native Team owners. */
+/** Journal operations the roster, mailbox, and task board consume. */
 export interface TeamJournalPort<R extends TeamRootRef = TeamRootRef> {
   /**
    * Read authoritative Team state for one root.

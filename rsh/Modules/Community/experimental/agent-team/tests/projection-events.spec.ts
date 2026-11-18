@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { SESSION_FORMAT_VERSION, SessionId, SessionSeq } from '@redspark/rsh-session'
-import type { SessionEvent, SessionEventMap, SessionEventType } from '@redspark/rsh-session'
+import { SESSION_FORMAT_VERSION, SessionId, SessionSeq } from '@redspark/rsh-session/native'
+import type { SessionEvent, SessionEventMap, SessionEventType } from '@redspark/rsh-session/native'
 import { teamProjectionDefinition } from '../src/projection.ts'
 import type { TeamProjectionState, TeamState } from '../src/projection.ts'
 import { TeamId, TeamMessageId, TeamTaskId } from '../src/types.ts'
