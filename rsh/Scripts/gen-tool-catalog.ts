@@ -9,7 +9,10 @@
 import { globSync, readFileSync, writeFileSync } from 'node:fs'
 import { basename, dirname, resolve } from 'node:path'
 import { Context } from '@redspark/cordis'
-import { NativeHost, NativeScope, resolveInstallation, type NativePlugin } from '@redspark/rsh-native-runtime'
+import {
+  NativeHost, NativeScope, resolveInstallation,
+  type InstallationRequest, type NativeContext, type NativePlugin,
+} from '@redspark/rsh-native-runtime'
 import { plugin as nativeAgentPlugin } from '@redspark/rsh-native-agent/native'
 import { plugin as nativeToolsPlugin } from '@redspark/rsh-native-tools/native'
 import type { NativeToolRegistry } from '@redspark/rsh-native-tools'
@@ -199,29 +202,53 @@ export type ToolPackage = ToolPackageFields & (
   | { harvest: () => Promise<ToolSchema[]>; mount?: never }
 )
 
-/** Boot the native run_code Consumer with the shipped worker and local filesystem Providers. */
-async function harvestNativeCodeTool(): Promise<ToolSchema[]> {
+/**
+ * Boot one Native installation set and read the schemas its registry publishes.
+ * @param install - requests built around the harvest's fresh scope.
+ * @param read - schema projection applied to the published registry.
+ * @returns detached schemas for the catalog.
+ */
+async function harvestNativeSchemas(
+  install: (scope: NativeScope) => InstallationRequest[],
+  read: (tools: NativeToolRegistry, scope: NativeScope) => ToolSchema[],
+): Promise<ToolSchema[]> {
   const scope = new NativeScope()
   let tools: NativeToolRegistry | undefined
   const observer: NativePlugin = {
     apiVersion: 1, name: 'tool-catalog-observer', targets: ['host'], requires: ['tools'], provides: [],
     resolve: () => (context) => { tools = context.require('tools') },
   }
-  const host = new NativeHost(resolveInstallation([
-    { plugin: nativeAgentPlugin, scope, config: undefined },
-    { plugin: nativeToolsPlugin, scope, config: { mode: 'both' } },
-    { plugin: nativeCodeRuntimePlugin, scope, config: undefined },
-    { plugin: localFilesystemPlugin, scope, config: { cwd: root } },
-    { plugin: nativeCodeToolPlugin, scope, config: { sdkPrompt: false } },
-    { plugin: observer, scope, config: undefined },
-  ], 'host'))
+  const host = new NativeHost(resolveInstallation([...install(scope), { plugin: observer, scope, config: undefined }], 'host'))
   try {
     await host.start()
     if (tools === undefined) throw new Error('gen-tool-catalog: native tool registry was not published')
-    return tools.schemas(scope)
+    return read(tools, scope)
   } finally {
     await host.stop()
   }
+}
+
+/** One seam stub a harvested consumer requires, with no runtime behavior behind it. */
+function stubSeam(
+  name: string,
+  provides: NativePlugin['provides'],
+  provide: (context: NativeContext) => void,
+): NativePlugin {
+  return { apiVersion: 1, name, targets: ['host'], requires: [], provides, resolve: () => provide }
+}
+
+/** Boot the native run_code Consumer with the shipped worker and local filesystem Providers. */
+function harvestNativeCodeTool(): Promise<ToolSchema[]> {
+  return harvestNativeSchemas(
+    scope => [
+      { plugin: nativeAgentPlugin, scope, config: undefined },
+      { plugin: nativeToolsPlugin, scope, config: { mode: 'both' } },
+      { plugin: nativeCodeRuntimePlugin, scope, config: undefined },
+      { plugin: localFilesystemPlugin, scope, config: { cwd: root } },
+      { plugin: nativeCodeToolPlugin, scope, config: { sdkPrompt: false } },
+    ],
+    (tools, scope) => tools.schemas(scope),
+  )
 }
 
 /**
@@ -229,69 +256,50 @@ async function harvestNativeCodeTool(): Promise<ToolSchema[]> {
  * registry. The tools attach to each active member scope, so the harvest
  * supplies one owner whose Agent is also the Team Lead.
  */
-async function harvestNativeTeamTools(): Promise<ToolSchema[]> {
-  const scope = new NativeScope()
-  let tools: NativeToolRegistry | undefined
-  const agent = { id: NativeAgentId('tool-catalog-team-lead'), scope } as unknown as NativeAgent
+function harvestNativeTeamTools(): Promise<ToolSchema[]> {
+  let agent: NativeAgent
   const membership = {
     get root() { return agent },
     id: SessionId('tool-catalog-team-lead'),
     role: 'lead' as const,
     name: 'lead',
   }
-  const observer: NativePlugin = {
-    apiVersion: 1, name: 'tool-catalog-observer', targets: ['host'], requires: ['tools'], provides: [],
-    resolve: () => (context) => { tools = context.require('tools') },
-  }
-  const agents: NativePlugin = {
-    apiVersion: 1, name: 'tool-catalog-agents', targets: ['host'], requires: [], provides: ['agents'],
-    resolve: () => (context) => {
-      context.provide('agents', {
-        get: (id: string) => id === agent.id ? agent : undefined,
-        onDispose: () => () => {},
-      } as unknown as NativeAgentRegistry)
+  return harvestNativeSchemas(
+    (scope) => {
+      const lead = { id: NativeAgentId('tool-catalog-team-lead'), scope } as unknown as NativeAgent
+      agent = lead
+      const agents = stubSeam('tool-catalog-agents', ['agents'], (context) => {
+        context.provide('agents', {
+          get: (id: string) => id === agent.id ? agent : undefined,
+          onDispose: () => () => {},
+        } as unknown as NativeAgentRegistry)
+      })
+      const activeSessions = stubSeam('tool-catalog-active-sessions', ['activeSessions'], (context) => {
+        context.provide('activeSessions', {
+          onAttached: () => () => {},
+          owners: () => [{ agent }],
+        } as unknown as NativeActiveSessionOperations)
+      })
+      const promptSections = stubSeam('tool-catalog-prompt-sections', ['promptSections'], (context) => {
+        context.provide('promptSections', { register: () => () => {} } as unknown as NativePromptRegistry)
+      })
+      const teams = stubSeam('tool-catalog-teams', ['agentTeams'], (context) => {
+        context.provide('agentTeams', {
+          tryMembership: (candidate: NativeAgent) => candidate === agent ? membership : undefined,
+          membership: () => membership,
+        } as unknown as NativeTeamService)
+      })
+      return [
+        { plugin: agents, scope, config: undefined },
+        { plugin: activeSessions, scope, config: undefined },
+        { plugin: promptSections, scope, config: undefined },
+        { plugin: teams, scope, config: undefined },
+        { plugin: nativeToolsPlugin, scope, config: { mode: 'native' } },
+        { plugin: nativeTeamToolsPlugin, scope, config: undefined },
+      ]
     },
-  }
-  const active: NativePlugin = {
-    apiVersion: 1, name: 'tool-catalog-active-sessions', targets: ['host'], requires: [], provides: ['activeSessions'],
-    resolve: () => (context) => {
-      context.provide('activeSessions', {
-        onAttached: () => () => {},
-        owners: () => [{ agent }],
-      } as unknown as NativeActiveSessionOperations)
-    },
-  }
-  const prompts: NativePlugin = {
-    apiVersion: 1, name: 'tool-catalog-prompt-sections', targets: ['host'], requires: [], provides: ['promptSections'],
-    resolve: () => (context) => {
-      context.provide('promptSections', { register: () => () => {} } as unknown as NativePromptRegistry)
-    },
-  }
-  const teams: NativePlugin = {
-    apiVersion: 1, name: 'tool-catalog-teams', targets: ['host'], requires: [], provides: ['agentTeams'],
-    resolve: () => (context) => {
-      context.provide('agentTeams', {
-        tryMembership: (candidate: NativeAgent) => candidate === agent ? membership : undefined,
-        membership: () => membership,
-      } as unknown as NativeTeamService)
-    },
-  }
-  const host = new NativeHost(resolveInstallation([
-    { plugin: agents, scope, config: undefined },
-    { plugin: active, scope, config: undefined },
-    { plugin: prompts, scope, config: undefined },
-    { plugin: teams, scope, config: undefined },
-    { plugin: nativeToolsPlugin, scope, config: { mode: 'native' } },
-    { plugin: nativeTeamToolsPlugin, scope, config: undefined },
-    { plugin: observer, scope, config: undefined },
-  ], 'host'))
-  try {
-    await host.start()
-    if (tools === undefined) throw new Error('gen-tool-catalog: native tool registry was not published')
-    return tools.modelSchemas(scope)
-  } finally {
-    await host.stop()
-  }
+    (tools, scope) => tools.modelSchemas(scope),
+  )
 }
 
 /**
