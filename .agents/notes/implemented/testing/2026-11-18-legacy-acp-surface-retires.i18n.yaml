@@ -1,0 +1,6 @@
+# Bilingual-pair consistency record (rsh/Docs/i18n/README.md): the git blob hash of each
+# side as of the last confirmed-consistent state. Both languages carry equal authority;
+# after editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write .agents/notes/implemented/testing/2026-11-18-legacy-acp-surface-retires.md
+2026-11-18-legacy-acp-surface-retires.md: e6ddd5c4bc63bb75d47d48d1f2824425b9132f05
+2026-11-18-legacy-acp-surface-retires.zh.md: 28eb8aa2ad6f8e4458ba0c2231ee4c3fc04e3282
