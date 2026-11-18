@@ -37,7 +37,7 @@ The experimental group contains prototype capabilities whose contracts can chang
 ## Related documentation
 
 - [Experimental package decision](../../../../.agents/notes/implemented/architecture/2026-08-18-experimental-agent-teams-packages.md) — private defaults, public Agent Teams exceptions, and dependency isolation.
-- [Agent Teams subsystem](../../../Docs/subsystems/agent-team.md) — durable Team types and the `ctx.agentTeams` service API.
+- [Agent Teams subsystem](../../../Docs/subsystems/agent-team.md) — durable Team types and the `agentTeams` service API.
 - [Experimental subtree rules](AGENTS.md) — what experimental status does and does not relax.
 
 -----
