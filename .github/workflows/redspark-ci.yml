@@ -114,7 +114,7 @@ jobs:
         run: >-
           pnpm exec vitest run --config vitest.e2e.config.ts --retry=0 --maxWorkers=1
           rsh/Modules/Official/sandbox/sandbox-local/tests/child-process-bwrap.e2e.ts
-          && pnpm exec vitest run --config vitest.snapshot.config.ts snapshots/sdk/sdk.snapshot.ts
+          && pnpm exec vitest run --config vitest.snapshot.config.ts snapshots/native-sdk/legacy-continuable.snapshot.ts
         env:
           RSH_REQUIRE_BWRAP_E2E: '1'
       - name: Windows SDK child operator path regression
@@ -197,5 +197,5 @@ jobs:
       - name: Windows SDK snapshot regressions
         if: runner.os == 'Windows'
         run: |
-          pnpm exec vitest run --config vitest.snapshot.config.ts snapshots/sdk/sdk.snapshot.ts
+          pnpm exec vitest run --config vitest.snapshot.config.ts snapshots/native-sdk/legacy-continuable.snapshot.ts
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
