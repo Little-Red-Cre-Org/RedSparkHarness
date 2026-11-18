@@ -56,6 +56,14 @@ With the tools installed, the model does the rest on request — for example, "c
 
 The generated [configuration catalog](../../../../Docs/config-catalog.md#redsparkrsh-experimental-agent-team) is the exhaustive source for every accepted field and its JSDoc.
 
+### Native runtime
+
+Both Team packages publish a Native entry at `./native`, so a Cordis-free profile mounts the same two package names and resolves their Native entries through the package manifests. The Native runtime needs the same durable storage plus rows for `@redspark/rsh-session-projection`, `@redspark/rsh-native-session-execution`, `@redspark/rsh-native-subagent`, and `@redspark/rsh-native-prompt`; those provide the projection registry, active Sessions, subagent providers, and prompt sections the Team service reads.
+
+The Native face shares the durable journal, projection, roster, mailbox, and task board with the Cordis face. Only service registration and tool installation differ: the Native entry declares its capabilities in `rsh.profile.json`, while the Cordis entry registers them on `ctx`. The Native face publishes no Typert Remote methods and no `./client` or `./remote` surface.
+
+The Native face also publishes no `./invariant` companion. The Cordis companion observes `session/event` dispatch; the Native journal instead reads authoritative state through the strict Team projection before each mutation, so a corrupt stream is reported from that read.
+
 ### Teammates
 
 Ask the Lead to create a teammate: give it a unique lowercase name such as `reviewer` and describe its job. A teammate starts fresh with no memory of the Lead's conversation, or as a fork that inherits the Lead's completed turns; the creation request chooses which. Teammate names are permanent — even a teammate whose creation failed keeps its name, and no name is ever reused.
@@ -122,6 +130,8 @@ The [Agent Teams Agent Note](../../../../../.agents/notes/implemented/feature/20
 | [`src/activity.ts`](src/activity.ts) | One-shot change waiters and disposal release |
 | [`src/lifecycle.ts`](src/lifecycle.ts) | Shared admission cutoff and bounded settlement |
 | [`src/invariant.ts`](src/invariant.ts) | Invariant companion that replays candidate events before append |
+
+`src/native.ts`, `src/native-journal.ts`, `src/native-roster.ts`, `src/native-mailbox.ts`, and `src/membership.ts` install the same domain over the Native runtime. `src/journal-port.ts` is the port that both journal implementations satisfy, so roster, mailbox, and task-board code do not depend on either runtime's services.
 
 ### Team identity and roster
 

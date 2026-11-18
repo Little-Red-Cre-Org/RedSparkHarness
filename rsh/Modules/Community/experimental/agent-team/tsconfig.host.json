@@ -1,0 +1,28 @@
+{
+  "extends": "../../../../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "lib/types",
+    "tsBuildInfoFile": "lib/host.tsbuildinfo"
+  },
+  "include": ["src"],
+  "references": [
+    { "path": "../../../../Core/vendor/cosmokit" },
+    { "path": "../../../../Core/vendor/schemastery" },
+    { "path": "../../../../Core/vendor/cordis" },
+    { "path": "../../../../Core/util/brand" },
+    { "path": "../../../../Engine/llm/llm" },
+    { "path": "../../../../Engine/core/session" },
+    { "path": "../../../../Engine/core/agent" },
+    { "path": "../../../../Core/typert/protocol" },
+    { "path": "../../../../Engine/subagent/subagent" },
+    { "path": "../../../../Engine/session/session-persistence/tsconfig.host.json" },
+    { "path": "../../../../Engine/session/session-projection" },
+    { "path": "../../../../Engine/core/native-agent/tsconfig.host.json" },
+    { "path": "../../../../Engine/core/native-session-execution/tsconfig.host.json" },
+    { "path": "../../../../Engine/subagent/native-subagent" },
+    { "path": "../../../../Engine/subagent/subagent-protocol" },
+    { "path": "../../../../Core/runtime-diagnostics/native-runtime" },
+    { "path": "../../../../Core/runtime-diagnostics/invariants" }
+  ]
+}

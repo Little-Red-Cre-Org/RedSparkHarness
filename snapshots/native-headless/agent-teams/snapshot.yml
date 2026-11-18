@@ -1,0 +1,10 @@
+version: 1
+scenario: agent-teams
+profile: native-headless
+composition: native-agent-teams
+recording: authored
+header:
+  class: native-agent-teams
+  pin: true
+workspace:
+  final: true

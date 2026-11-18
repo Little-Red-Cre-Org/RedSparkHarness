@@ -5307,6 +5307,33 @@ importers:
       '@redspark/rsh-brand':
         specifier: workspace:^
         version: link:../../../../Core/util/brand
+      '@redspark/rsh-llm':
+        specifier: workspace:^
+        version: link:../../../../Engine/llm/llm
+      '@redspark/rsh-native-agent':
+        specifier: workspace:^
+        version: link:../../../../Engine/core/native-agent
+      '@redspark/rsh-native-runtime':
+        specifier: workspace:^
+        version: link:../../../../Core/runtime-diagnostics/native-runtime
+      '@redspark/rsh-native-session-execution':
+        specifier: workspace:^
+        version: link:../../../../Engine/core/native-session-execution
+      '@redspark/rsh-native-subagent':
+        specifier: workspace:^
+        version: link:../../../../Engine/subagent/native-subagent
+      '@redspark/rsh-session':
+        specifier: workspace:^
+        version: link:../../../../Engine/core/session
+      '@redspark/rsh-session-persistence':
+        specifier: workspace:^
+        version: link:../../../../Engine/session/session-persistence
+      '@redspark/rsh-session-projection':
+        specifier: workspace:^
+        version: link:../../../../Engine/session/session-projection
+      '@redspark/rsh-subagent-protocol':
+        specifier: workspace:^
+        version: link:../../../../Engine/subagent/subagent-protocol
       '@redspark/schemastery':
         specifier: link:../../../../Core/vendor/schemastery
         version: link:../../../../Core/vendor/schemastery
@@ -5329,21 +5356,9 @@ importers:
       '@redspark/rsh-invariants':
         specifier: workspace:^
         version: link:../../../../Core/runtime-diagnostics/invariants
-      '@redspark/rsh-llm':
-        specifier: workspace:^
-        version: link:../../../../Engine/llm/llm
-      '@redspark/rsh-session':
-        specifier: workspace:^
-        version: link:../../../../Engine/core/session
-      '@redspark/rsh-session-persistence':
-        specifier: workspace:^
-        version: link:../../../../Engine/session/session-persistence
       '@redspark/rsh-session-persistence-jsonl':
         specifier: workspace:^
         version: link:../../../../Engine/session/session-persistence-jsonl
-      '@redspark/rsh-session-projection':
-        specifier: workspace:^
-        version: link:../../../../Engine/session/session-projection
       '@redspark/rsh-session-query':
         specifier: workspace:^
         version: link:../../../../Engine/session-query/session-query
@@ -5523,9 +5538,24 @@ importers:
 
   rsh/Modules/Community/experimental/tool-agent-team:
     dependencies:
+      '@redspark/rsh-native-agent':
+        specifier: workspace:^
+        version: link:../../../../Engine/core/native-agent
+      '@redspark/rsh-native-prompt':
+        specifier: workspace:^
+        version: link:../../../../Engine/core/native-prompt
+      '@redspark/rsh-native-runtime':
+        specifier: workspace:^
+        version: link:../../../../Core/runtime-diagnostics/native-runtime
+      '@redspark/rsh-native-tools':
+        specifier: workspace:^
+        version: link:../../../../Engine/core/native-tools
       '@redspark/schemastery':
         specifier: link:../../../../Core/vendor/schemastery
         version: link:../../../../Core/vendor/schemastery
+      zod:
+        specifier: ^4.4.3
+        version: 4.4.3
     devDependencies:
       '@redspark/cordis':
         specifier: workspace:^

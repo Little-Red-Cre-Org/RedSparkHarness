@@ -136,6 +136,7 @@ const snapshotAdapters = [
   'snapshots/native-headless/product-subagent-result-diagnostic-native.snapshot.ts',
   'snapshots/native-headless/subagent-acp-diagnostic-native.snapshot.ts',
   'snapshots/native-headless/agent-instructions-native.snapshot.ts',
+  'snapshots/native-headless/agent-teams-native.snapshot.ts',
   'snapshots/native-headless/lsp-definition-native.snapshot.ts',
   'snapshots/native-headless/missing-sandbox-runner-native.snapshot.ts',
   'snapshots/native-headless/partial-landlock-child-failure-native.snapshot.ts',

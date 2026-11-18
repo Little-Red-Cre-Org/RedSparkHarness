@@ -6,7 +6,7 @@ import { createRequire } from 'node:module'
 import ts from 'typescript'
 import { parseNativeEntryManifest } from '../Core/runtime-diagnostics/native-runtime/src/manifest.ts'
 import {
-  cordisHostingNativeReferences,
+  cordisOwnedNativeReferences,
   mixedNativeEntryDirectories,
   mixedNativeLibraryDirectories,
   nativePackageDirectories,
@@ -273,8 +273,8 @@ export function collectNativeDependencyViolations(root: string): string[] {
       options: ts.CompilerOptions,
     ): boolean => {
       if (specifier.startsWith('node:')) return true
-      const hostingReferences = cordisHostingNativeReferences.get(sourceOwner)
-      if (hostingReferences?.includes(specifier) === true) return true
+      const ownedReferences = cordisOwnedNativeReferences.get(sourceOwner)
+      if (ownedReferences?.includes(specifier) === true) return true
       if (specifier === '@redspark/cordis' || specifier.startsWith('@redspark/cordis/')) return false
       if (specifier.startsWith('@redspark/cordis-plugin-')) return false
       if (stylesheetReferenceAllowed(sourceOwner, sourceFile, specifier)) return true

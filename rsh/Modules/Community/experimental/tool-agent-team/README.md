@@ -50,6 +50,10 @@ The smallest addition to an existing composition is the two-package fragment fro
 
 The generated [configuration catalog](../../../../Docs/config-catalog.md#redsparkrsh-experimental-tool-agent-team) is the exhaustive source for every accepted field and its JSDoc.
 
+### Native runtime
+
+The package publishes a Native entry at `./native` for Cordis-free profiles. It registers the same nine value tools through `NativeToolRegistry` and one scoped collaboration section through `NativePromptRegistry`, with the same `freshProvider` and `forkProvider` settings. The Native entry requires `agentTeams`, `agents`, `activeSessions`, `tools`, and `promptSections`; it imports no Cordis package.
+
 Try it by asking the Lead model: "create a teammate named reviewer to check the diff, then send reviewer the change summary". The model calls the creation tool and then the messaging tool.
 
 ### What the model can do

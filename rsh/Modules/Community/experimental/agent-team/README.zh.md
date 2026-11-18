@@ -56,6 +56,14 @@ kind: "package-reference"
 
 生成的[配置目录](../../../../Docs/config-catalog.zh.md#redsparkrsh-experimental-agent-team)是每个受支持字段及其 JSDoc 的穷尽式真源。
 
+### Native 运行时
+
+两个 Team 包都在 `./native` 发布 Native 入口，因此无 Cordis 的 profile 仍挂载相同的两个包名，并通过包清单解析它们的 Native 入口。Native 运行时需要相同的持久存储，外加 `@redspark/rsh-session-projection`、`@redspark/rsh-native-session-execution`、`@redspark/rsh-native-subagent` 与 `@redspark/rsh-native-prompt` 的行；它们分别提供投影注册表、活动 Session、subagent provider 与提示词段落。
+
+Native 面与 Cordis 面共用持久 journal、投影、roster、mailbox 与任务板。区别只在服务注册和工具安装：Native 入口在 `rsh.profile.json` 中声明所需能力，Cordis 入口则在 `ctx` 上注册。Native 面不发布 Typert Remote 方法，也没有 `./client` 或 `./remote` 导出面。
+
+Native 面也不发布 `./invariant` 伴生插件。Cordis 伴生插件监听 `session/event` 派发；Native journal 在每次变更前通过严格的 Team 投影读取权威状态，因此损坏的事件流会从该读取中报错。
+
 ### Teammate
 
 请 Lead 创建 teammate：给它一个唯一的小写名字（例如 `reviewer`）并描述其职责。teammate 可以 fresh 启动（不携带 Lead 对话的任何记忆），也可以作为 fork 启动（继承 Lead 已完成的轮次）；创建请求决定用哪种。teammate 名字是永久的——即使创建失败的 teammate 也保留其名字，任何名字都不会被复用。
@@ -122,6 +130,8 @@ Lead 可以停止 teammate 的当前轮次，而不会删除其排队的消息�
 | [`src/activity.ts`](src/activity.ts) | 一次性变更等待者与 dispose（资源释放）时的等待解除 |
 | [`src/lifecycle.ts`](src/lifecycle.ts) | 共享准入截止与有界结算 |
 | [`src/invariant.ts`](src/invariant.ts) | 在 append 前回放候选事件的不变式伴生插件 |
+
+`src/native.ts`、`src/native-journal.ts`、`src/native-roster.ts`、`src/native-mailbox.ts` 与 `src/membership.ts` 在 Native 运行时上安装同一领域实现。`src/journal-port.ts` 是两种 journal 实现共同满足的端口，因此 roster、mailbox 与任务板代码不依赖任一运行时的服务。
 
 ### Team 身份与 roster
 

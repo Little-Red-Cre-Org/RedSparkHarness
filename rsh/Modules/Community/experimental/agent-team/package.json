@@ -11,6 +11,26 @@
     "directory": "rsh/Modules/Community/experimental/agent-team"
   },
   "type": "module",
+  "dsh": {
+    "native": {
+      "apiVersion": 1,
+      "entry": "./native",
+      "targets": [
+        "host"
+      ],
+      "requires": [
+        "agents",
+        "activeSessions",
+        "sessionPersistence",
+        "sessionProjections",
+        "subagents"
+      ],
+      "optional": [],
+      "provides": [
+        "agentTeams"
+      ]
+    }
+  },
   "main": "lib/index.js",
   "types": "lib/types/index.d.ts",
   "exports": {
@@ -30,6 +50,10 @@
       "types": "./lib/types/types.d.ts",
       "default": "./lib/types/types.js"
     },
+    "./native": {
+      "types": "./lib/types/native.d.ts",
+      "default": "./lib/native.js"
+    },
     "./typert": {
       "types": "./lib/typert.host.d.ts",
       "default": "./lib/typert.host.js"
@@ -44,6 +68,7 @@
   "files": [
     "lib/index.js",
     "lib/invariant.js",
+    "lib/native.js",
     "lib/types/**/*.js",
     "lib/types/**/*.d.ts",
     "lib/typert.host.js",
@@ -54,6 +79,15 @@
   "license": "MIT",
   "dependencies": {
     "@redspark/rsh-brand": "workspace:^",
+    "@redspark/rsh-llm": "workspace:^",
+    "@redspark/rsh-native-agent": "workspace:^",
+    "@redspark/rsh-native-runtime": "workspace:^",
+    "@redspark/rsh-native-session-execution": "workspace:^",
+    "@redspark/rsh-native-subagent": "workspace:^",
+    "@redspark/rsh-session": "workspace:^",
+    "@redspark/rsh-session-persistence": "workspace:^",
+    "@redspark/rsh-session-projection": "workspace:^",
+    "@redspark/rsh-subagent-protocol": "workspace:^",
     "@redspark/schemastery": "workspace:^",
     "zod": "^4.4.3"
   },
@@ -67,6 +101,11 @@
     "@redspark/rsh-session-projection": "workspace:^",
     "@redspark/rsh-subagent": "workspace:^",
     "@redspark/rsh-typert-protocol": "workspace:^"
+  },
+  "peerDependenciesMeta": {
+    "@redspark/cordis": {
+      "optional": true
+    }
   },
   "devDependencies": {
     "@redspark/cordis": "workspace:^",

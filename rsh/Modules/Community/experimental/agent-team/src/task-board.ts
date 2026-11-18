@@ -1,11 +1,10 @@
 /** Shared Team task DAG commands and runtime-enriched views. */
 
-import type { Agent } from '@redspark/rsh-agent'
-import type { TeamMembership } from './roster.ts'
 import { TeamError } from './error.ts'
-import type { TeamJournal } from './journal.ts'
+import type { TeamJournalPort, TeamRootRef } from './journal-port.ts'
+import type { TeamCallerRef, TeamCallerMembership } from './membership.ts'
+import { resolveActiveMember } from './membership.ts'
 import type { TeamState } from './projection.ts'
-import { resolveActiveMember } from './roster.ts'
 import { assertTaskGraphCandidate, TeamTaskGraphError } from './task-graph.ts'
 import type { TeamTaskGraphViolation } from './task-graph.ts'
 import { TeamId, TeamTaskId } from './types.ts'
@@ -29,13 +28,13 @@ const TASK_GRAPH_ERROR_CODES: Record<TeamTaskGraphViolation, string> = {
 }
 
 /** Owns Team task limits, authorization, transitions, and derived views. */
-export class TeamTaskBoard {
+export class TeamTaskBoard<R extends TeamRootRef> {
   /**
    * @param journal - authoritative Lead-log transaction owner.
    * @param maxTasks - maximum non-deleted tasks retained by one Team.
    */
   constructor(
-    private readonly journal: TeamJournal,
+    private readonly journal: TeamJournalPort<R>,
     private readonly maxTasks: number,
   ) {}
 
@@ -45,7 +44,7 @@ export class TeamTaskBoard {
    * @param request - task text, blockers, and advisory write scopes.
    * @returns the revision-one task view.
    */
-  async create(membership: TeamMembership, request: CreateTeamTaskRequest): Promise<TeamTaskView> {
+  async create(membership: TeamCallerMembership<R>, request: CreateTeamTaskRequest): Promise<TeamTaskView> {
     const { root } = membership
     return this.journal.transact(root.id, async () => {
       const state = this.journal.state(root)
@@ -78,7 +77,7 @@ export class TeamTaskBoard {
    * @param id - Team-local task identity.
    * @returns the latest task value and derived readiness diagnostics.
    */
-  get(membership: TeamMembership, id: TeamTaskId): TeamTaskView {
+  get(membership: TeamCallerMembership<R>, id: TeamTaskId): TeamTaskView {
     const { root } = membership
     const state = this.journal.state(root)
     const task = state.tasks.find(candidate => candidate.id === id)
@@ -91,7 +90,7 @@ export class TeamTaskBoard {
    * @param membership - exact caller membership resolved by the Team roster.
    * @returns detached current task views.
    */
-  list(membership: TeamMembership): TeamTaskView[] {
+  list(membership: TeamCallerMembership<R>): TeamTaskView[] {
     const { root } = membership
     const state = this.journal.state(root)
     return state.tasks
@@ -107,8 +106,8 @@ export class TeamTaskBoard {
    * @returns the committed next task revision.
    */
   async update(
-    caller: Agent,
-    membership: TeamMembership,
+    caller: TeamCallerRef,
+    membership: TeamCallerMembership<R>,
     request: UpdateTeamTaskRequest,
   ): Promise<TeamTaskView> {
     const root = membership.root
@@ -268,7 +267,7 @@ export class TeamTaskBoard {
    * new value explicitly; owner names, blocker readiness, and other task scopes
    * do not change when that snapshot is appended.
    */
-  private taskView(root: Agent, state: TeamState, task: TeamTaskSnapshot): TeamTaskView {
+  private taskView(root: TeamRootRef, state: TeamState, task: TeamTaskSnapshot): TeamTaskView {
     const ownerName = task.ownerId === undefined
       ? undefined
       : task.ownerId === root.id

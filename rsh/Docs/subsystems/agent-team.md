@@ -77,6 +77,8 @@ interface TeamTaskSnapshot {
 
 `foldTeam()` replays one root Session into the roster, task board, and queued-minus-delivered mailbox that every Team operation reads. It selects records by `TeamId`, so events inherited by an ordinary fork retain the ancestor id and never enter the new root's state. Session event `seq` and `time` remain the ordering and timing record; Team snapshots do not duplicate them. Roster and task reads reach callers as views; pending mail stays internal to delivery and recovery. The package [README](../../Modules/Community/experimental/agent-team/README.md) owns operation, authorization, recovery, and limit behavior.
 
+Two runtime faces read these durable forms. `@redspark/rsh-experimental-agent-team/native` provides `agentTeams` on `NativeContext` with the same operations, and `@redspark/rsh-experimental-tool-agent-team/native` installs the same nine tools. The shared roster, mailbox, and task-board owners depend on `TeamJournalPort` and injected owner lookups rather than either runtime's services. The Cordis face keeps its `TeamService` Remote methods until Typert retires.
+
 <!-- BEGIN GENERATED cordis-surface (gen-cordis-catalog.ts) — do not edit between markers -->
 
 <a id="cordis-surface"></a>

@@ -3,13 +3,14 @@
 import type { Agent } from '@redspark/rsh-agent'
 import type { Context } from '@redspark/cordis'
 import type { SessionEventMap, SessionId } from '@redspark/rsh-session'
+import type {} from './journal-port.ts'
+import type { TeamJournalPort, TeamMutableEventType } from './journal-port.ts'
 import type { TeamEventType, TeamState } from './projection.ts'
 
 type AppendTeamEvent = <T extends TeamEventType>(type: T, data: SessionEventMap[T]) => void
-type MutableTeamEventType = 'team/member' | 'team/task' | 'team/message/queued' | 'team/message/delivered'
 
 /** Owns per-Lead transaction order and committed Team event publication. */
-export class TeamJournal {
+export class TeamJournal implements TeamJournalPort<Agent> {
   private readonly tails = new Map<SessionId, Promise<void>>()
 
   /**
@@ -57,7 +58,7 @@ export class TeamJournal {
    * @param type - Team event discriminant.
    * @param data - payload correlated with the event type.
    */
-  async appendAndFlush<T extends MutableTeamEventType>(
+  async appendAndFlush<T extends TeamMutableEventType>(
     root: Agent,
     type: T,
     data: SessionEventMap[T],
