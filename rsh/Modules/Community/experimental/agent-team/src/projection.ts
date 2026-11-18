@@ -2,9 +2,9 @@
 
 import { z } from 'zod'
 import { brandString } from '@redspark/rsh-brand'
-import type { ContentBlock } from '@redspark/rsh-llm'
-import type { SessionEvent, SessionEventMap, SessionId } from '@redspark/rsh-session'
-import type { ProjectionDefinition } from '@redspark/rsh-session-projection'
+import type { ContentBlock } from '@redspark/rsh-llm/types'
+import type { SessionEvent, SessionEventMap, SessionId } from '@redspark/rsh-session/types'
+import type { ProjectionDefinition } from '@redspark/rsh-session-projection/definition'
 import type {
   TeamId,
   TeamMemberSnapshot,

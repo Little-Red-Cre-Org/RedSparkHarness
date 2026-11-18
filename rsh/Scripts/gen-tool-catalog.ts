@@ -9,7 +9,10 @@
 import { globSync, readFileSync, writeFileSync } from 'node:fs'
 import { basename, dirname, resolve } from 'node:path'
 import { Context } from '@redspark/cordis'
-import { NativeHost, NativeScope, resolveInstallation, type NativePlugin } from '@redspark/rsh-native-runtime'
+import {
+  NativeHost, NativeScope, resolveInstallation,
+  type InstallationRequest, type NativeContext, type NativePlugin,
+} from '@redspark/rsh-native-runtime'
 import { plugin as nativeAgentPlugin } from '@redspark/rsh-native-agent/native'
 import { plugin as nativeToolsPlugin } from '@redspark/rsh-native-tools/native'
 import type { NativeToolRegistry } from '@redspark/rsh-native-tools'
@@ -68,8 +71,12 @@ import * as ToolLsp from '@redspark/rsh-tool-lsp'
 import * as ToolSkill from '@redspark/rsh-tool-skill'
 import * as ToolSessionQuery from '@redspark/rsh-tool-session-query'
 import * as ToolTasks from '@redspark/rsh-tool-jobs'
-import type TeamService from '@redspark/rsh-experimental-agent-team'
-import * as ToolTeam from '@redspark/rsh-experimental-tool-agent-team'
+import { NativeAgentId } from '@redspark/rsh-native-agent'
+import type { NativeAgent, NativeAgentRegistry } from '@redspark/rsh-native-agent'
+import type { NativePromptRegistry } from '@redspark/rsh-native-prompt'
+import type { NativeActiveSessionOperations } from '@redspark/rsh-native-session-execution'
+import type { NativeTeamService } from '@redspark/rsh-experimental-agent-team/native'
+import { plugin as nativeTeamToolsPlugin } from '@redspark/rsh-experimental-tool-agent-team/native'
 import * as ToolTodo from '@redspark/rsh-tool-todo'
 import * as ToolSubagent from '@redspark/rsh-tool-subagent'
 import { registerListSubagentModels } from '../Engine/subagent/tool-subagent/src/list-models.ts'
@@ -195,29 +202,104 @@ export type ToolPackage = ToolPackageFields & (
   | { harvest: () => Promise<ToolSchema[]>; mount?: never }
 )
 
-/** Boot the native run_code Consumer with the shipped worker and local filesystem Providers. */
-async function harvestNativeCodeTool(): Promise<ToolSchema[]> {
+/**
+ * Boot one Native installation set and read the schemas its registry publishes.
+ * @param install - requests built around the harvest's fresh scope.
+ * @param read - schema projection applied to the published registry.
+ * @returns detached schemas for the catalog.
+ */
+async function harvestNativeSchemas(
+  install: (scope: NativeScope) => InstallationRequest[],
+  read: (tools: NativeToolRegistry, scope: NativeScope) => ToolSchema[],
+): Promise<ToolSchema[]> {
   const scope = new NativeScope()
   let tools: NativeToolRegistry | undefined
   const observer: NativePlugin = {
     apiVersion: 1, name: 'tool-catalog-observer', targets: ['host'], requires: ['tools'], provides: [],
     resolve: () => (context) => { tools = context.require('tools') },
   }
-  const host = new NativeHost(resolveInstallation([
-    { plugin: nativeAgentPlugin, scope, config: undefined },
-    { plugin: nativeToolsPlugin, scope, config: { mode: 'both' } },
-    { plugin: nativeCodeRuntimePlugin, scope, config: undefined },
-    { plugin: localFilesystemPlugin, scope, config: { cwd: root } },
-    { plugin: nativeCodeToolPlugin, scope, config: { sdkPrompt: false } },
-    { plugin: observer, scope, config: undefined },
-  ], 'host'))
+  const host = new NativeHost(resolveInstallation([...install(scope), { plugin: observer, scope, config: undefined }], 'host'))
   try {
     await host.start()
     if (tools === undefined) throw new Error('gen-tool-catalog: native tool registry was not published')
-    return tools.schemas(scope)
+    return read(tools, scope)
   } finally {
     await host.stop()
   }
+}
+
+/** One seam stub a harvested consumer requires, with no runtime behavior behind it. */
+function stubSeam(
+  name: string,
+  provides: NativePlugin['provides'],
+  provide: (context: NativeContext) => void,
+): NativePlugin {
+  return { apiVersion: 1, name, targets: ['host'], requires: [], provides, resolve: () => provide }
+}
+
+/** Boot the native run_code Consumer with the shipped worker and local filesystem Providers. */
+function harvestNativeCodeTool(): Promise<ToolSchema[]> {
+  return harvestNativeSchemas(
+    scope => [
+      { plugin: nativeAgentPlugin, scope, config: undefined },
+      { plugin: nativeToolsPlugin, scope, config: { mode: 'both' } },
+      { plugin: nativeCodeRuntimePlugin, scope, config: undefined },
+      { plugin: localFilesystemPlugin, scope, config: { cwd: root } },
+      { plugin: nativeCodeToolPlugin, scope, config: { sdkPrompt: false } },
+    ],
+    (tools, scope) => tools.schemas(scope),
+  )
+}
+
+/**
+ * Boot the native Team tools over stub Team/Agent seams and read the real
+ * registry. The tools attach to each active member scope, so the harvest
+ * supplies one owner whose Agent is also the Team Lead.
+ */
+function harvestNativeTeamTools(): Promise<ToolSchema[]> {
+  let agent: NativeAgent
+  const membership = {
+    get root() { return agent },
+    id: SessionId('tool-catalog-team-lead'),
+    role: 'lead' as const,
+    name: 'lead',
+  }
+  return harvestNativeSchemas(
+    (scope) => {
+      const lead = { id: NativeAgentId('tool-catalog-team-lead'), scope } as unknown as NativeAgent
+      agent = lead
+      const agents = stubSeam('tool-catalog-agents', ['agents'], (context) => {
+        context.provide('agents', {
+          get: (id: string) => id === agent.id ? agent : undefined,
+          onDispose: () => () => {},
+        } as unknown as NativeAgentRegistry)
+      })
+      const activeSessions = stubSeam('tool-catalog-active-sessions', ['activeSessions'], (context) => {
+        context.provide('activeSessions', {
+          onAttached: () => () => {},
+          owners: () => [{ agent }],
+        } as unknown as NativeActiveSessionOperations)
+      })
+      const promptSections = stubSeam('tool-catalog-prompt-sections', ['promptSections'], (context) => {
+        context.provide('promptSections', { register: () => () => {} } as unknown as NativePromptRegistry)
+      })
+      const teams = stubSeam('tool-catalog-teams', ['agentTeams'], (context) => {
+        context.provide('agentTeams', {
+          tryMembership: (candidate: NativeAgent) => candidate === agent ? membership : undefined,
+          membership: () => membership,
+        } as unknown as NativeTeamService)
+      })
+      return [
+        { plugin: agents, scope, config: undefined },
+        { plugin: activeSessions, scope, config: undefined },
+        { plugin: promptSections, scope, config: undefined },
+        { plugin: teams, scope, config: undefined },
+        { plugin: nativeToolsPlugin, scope, config: { mode: 'native' } },
+        { plugin: nativeTeamToolsPlugin, scope, config: undefined },
+      ]
+    },
+    (tools, scope) => tools.modelSchemas(scope),
+  )
 }
 
 /**
@@ -584,39 +666,11 @@ const TOOL_PACKAGES: ToolPackage[] = [
     pkg: '@redspark/rsh-experimental-tool-agent-team',
     dir: 'tool-agent-team',
     source: 'rsh/Modules/Community/experimental/tool-agent-team/src/index.ts',
-    requires: ['ctx.tools', 'ctx.systemPrompt', 'ctx.agentTeams', 'an exact live Team member Agent'],
+    requires: ['tools', 'agentTeams', 'agents', 'activeSessions', 'promptSections', 'an exact live Team member Agent'],
     writes: ['tool/call', 'team/member', 'team/message/queued', 'team/message/delivered', 'team/task', 'tool/result'],
-    async mount(ctx) {
-      await ctx.plugin(AgentRegistry)
-      await ctx.plugin(SessionStore)
-      const session = ctx.sessions.create(SessionId('tool-catalog-team-lead'))
-      let agent!: Agent
-      const membership = {
-        get root() { return agent },
-        id: session.id,
-        role: 'lead' as const,
-        name: 'lead',
-      }
-      ctx.provide('agentTeams', {
-        tryMembership: (candidate: Agent) => candidate === agent ? membership : undefined,
-        membership: () => membership,
-      } as unknown as TeamService)
-      await ctx.plugin(Object.assign((inner: Context) => {
-        agent = {
-          id: session.id,
-          session,
-          options: {},
-          status: 'idle',
-        } as unknown as Agent
-        Object.assign(agent, { ctx: createScope(inner, agent).ctx })
-        inner.agents.register(agent)
-      }, { inject: ['tools', 'systemPrompt', 'agents', 'agentTeams'] }))
-      await ctx.plugin(ToolTeam)
-      catalogChildScopes.set(ctx, agent)
-    },
-    scope: ctx => catalogChildScopes.get(ctx) as Agent,
+    harvest: harvestNativeTeamTools,
     note:
-      'All nine tools are scoped to implicit Team Leads and durable teammates. The shipped dsh-base bundle keeps the package disabled; the documented Agent Teams profile patch enables it while disabling the legacy continuable-child control names.',
+      'All nine tools are scoped to implicit Team Leads and durable teammates. The Native installer attaches them to each active member scope, so a profile selects the package only when Agent Teams is the chosen collaboration surface.',
   },
   {
     pkg: '@redspark/rsh-tool-todo',

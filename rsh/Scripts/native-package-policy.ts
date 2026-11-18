@@ -99,6 +99,8 @@ export const nativePackageDirectories: ReadonlySet<string> = new Set([
   'rsh/Core/util/time',
   'rsh/Programs/Web/client/ui-dockkit',
   'rsh/Programs/Web/client/web',
+  'rsh/Modules/Community/experimental/agent-team',
+  'rsh/Modules/Community/experimental/tool-agent-team',
 ])
 
 /** Native-profile Client packages that do not implement the Cordis module-table entry. */
@@ -220,8 +222,6 @@ export const mixedNativeEntryDirectories: ReadonlyMap<string, string> = new Map(
   ['rsh/Modules/Official/shell/tool-pwsh', 'Cordis and native Consumers share PowerShell tool presentation'],
   ['rsh/Modules/Official/shell/tool-pwsh-persistent', 'Cordis and native Consumers share persistent PowerShell extraction, owner reuse and reset'],
   ['rsh/Modules/Community/experimental/code-runtime-python', 'Cordis and native installers share the CPython subprocess runtime'],
-  ['rsh/Modules/Community/experimental/agent-team', 'Native and Cordis Teams share the durable roster, mailbox, and task projection while each face owns its runtime and Session writer'],
-  ['rsh/Modules/Community/experimental/tool-agent-team', 'Cordis and native Team tools share policy text, result schemas, and the exact Team service operations'],
   ['rsh/Modules/Official/terminal/terminal', 'Cordis and native Definitions share Agent-owned PTY lifecycle'],
   ['rsh/Modules/Official/terminal/terminal-bash', 'Cordis and native Providers share the subprocess terminal primitive'],
   ['rsh/Modules/Official/terminal/tool-terminal', 'Cordis and native Consumers share terminal lifecycle tools'],
@@ -317,11 +317,6 @@ export const mixedNativeLibraryDirectories: ReadonlyMap<string, readonly ('host'
  */
 export const cordisOwnedNativeReferences: ReadonlyMap<string, readonly string[]> = new Map([
   ['rsh/Core/runtime-diagnostics/cordis-bridge', ['@redspark/cordis']],
-  // Team event and projection Definitions are durable Session vocabulary shared
-  // by both faces; the Native installer never loads the Cordis service entries.
-  ['rsh/Modules/Community/experimental/agent-team', [
-    '@redspark/rsh-llm', '@redspark/rsh-session', '@redspark/rsh-session-projection',
-  ]],
 ])
 
 /** Optional peers whose imports are restricted to package compatibility entries. */

@@ -1,5 +1,5 @@
 ---
-description: "Nine tools that let the model create, message, and coordinate teammates, for compositions mounting the experimental Team plugins."
+description: "Nine tools that let the model create, message, and coordinate teammates, for Native compositions mounting the experimental Team packages."
 kind: "package-reference"
 ---
 
@@ -37,7 +37,8 @@ The smallest addition to an existing composition is the two-package fragment fro
 
 ```yaml
 - id: tool-agent-team
-  name: '@redspark/rsh-experimental-tool-agent-team'
+  plugin: '@redspark/rsh-experimental-tool-agent-team'
+  scope: root
   config:
     freshProvider: spawn
     forkProvider: fork
@@ -48,11 +49,11 @@ The smallest addition to an existing composition is the two-package fragment fro
 | `freshProvider` | `spawn` | Provider that starts fresh teammates |
 | `forkProvider` | `fork` | Provider that starts fork teammates |
 
-The generated [configuration catalog](../../../../Docs/config-catalog.md#redsparkrsh-experimental-tool-agent-team) is the exhaustive source for every accepted field and its JSDoc.
+The zod `Configuration` schema in [`src/index.ts`](src/index.ts) is the exhaustive source for every accepted field; unknown fields fail at load.
 
 ### Native runtime
 
-The package publishes a Native entry at `./native` for Cordis-free profiles. It registers the same nine value tools through `NativeToolRegistry` and one scoped collaboration section through `NativePromptRegistry`, with the same `freshProvider` and `forkProvider` settings. The Native entry requires `agentTeams`, `agents`, `activeSessions`, `tools`, and `promptSections`; it imports no Cordis package.
+The package is Native-only. It registers the nine value tools through `NativeToolRegistry` and one scoped collaboration section through `NativePromptRegistry`, with the same `freshProvider` and `forkProvider` settings. The `./native` entry requires `agentTeams`, `agents`, `activeSessions`, `tools`, and `promptSections`.
 
 Try it by asking the Lead model: "create a teammate named reviewer to check the diff, then send reviewer the change summary". The model calls the creation tool and then the messaging tool.
 

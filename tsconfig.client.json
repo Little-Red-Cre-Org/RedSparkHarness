@@ -142,7 +142,6 @@
     { "path": "./rsh/Programs/Web/client/ui-skill" },
     { "path": "./rsh/Programs/Web/client/ui-reference" },
     { "path": "./rsh/Programs/Web/client/ui-subagent" },
-    { "path": "./rsh/Modules/Community/experimental/client-ui-agent-team" },
     { "path": "./rsh/Programs/Web/client/ui-dockkit" },
     { "path": "./rsh/Programs/Web/client/ui-sidebar-right" },
     { "path": "./rsh/Programs/Web/client/ui-sidebar-documentpreview" },

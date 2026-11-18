@@ -567,30 +567,6 @@ export interface Config {
 
 Source: [`rsh/Modules/Official/e2b/e2b/src/owner.ts:34`](../Modules/Official/e2b/e2b/src/owner.ts)
 
-<a id="redsparkrsh-experimental-agent-team"></a>
-
-## `@redspark/rsh-experimental-agent-team`
-
-Requires: `agents` · `sessions` · `sessionPersistence` · `sessionProjections` · `subagents`
-
-```ts config-catalog
-/** Team-service deployment limits. */
-export interface Config {
-  /** Maximum immutable teammate names retained by one Team. */
-  readonly maxMembers?: number
-  /** Maximum non-deleted tasks retained by one Team. */
-  readonly maxTasks?: number
-  /** Maximum queued-minus-delivered messages for one target member. */
-  readonly maxPendingMessagesPerMember?: number
-  /** Maximum UTF-8 bytes in one complete sender-framed delivery. */
-  readonly maxMessageBytes?: number
-  /** Maximum milliseconds allowed for Team-owned runtime disposal. */
-  readonly disposalTimeoutMs?: number
-}
-```
-
-Source: [`rsh/Modules/Community/experimental/agent-team/src/types.ts:130`](../Modules/Community/experimental/agent-team/src/types.ts)
-
 <a id="redsparkrsh-experimental-code-runtime-python"></a>
 
 ## `@redspark/rsh-experimental-code-runtime-python`
@@ -725,24 +701,6 @@ export interface InspectorOptions {
 ```
 
 Source: [`rsh/Modules/Community/experimental/inspector/src/index.ts:66`](../Modules/Community/experimental/inspector/src/index.ts)
-
-<a id="redsparkrsh-experimental-tool-agent-team"></a>
-
-## `@redspark/rsh-experimental-tool-agent-team`
-
-Requires: `agents` · `agentTeams` · `tools` · `systemPrompt`
-
-```ts config-catalog
-/** Tool routing configuration. */
-export interface Config {
-  /** Continuable-subagent provider used for fresh teammates. */
-  readonly freshProvider?: string
-  /** Continuable-subagent provider used for completed-prefix fork teammates. */
-  readonly forkProvider?: string
-}
-```
-
-Source: [`rsh/Modules/Community/experimental/tool-agent-team/src/index.ts:17`](../Modules/Community/experimental/tool-agent-team/src/index.ts)
 
 <a id="redsparkrsh-file-reference-local"></a>
 
@@ -3496,7 +3454,6 @@ These load from a `cordis.yml` entry with no `config:` block; they declare no co
 - `@redspark/rsh-commands` ([`rsh/Modules/Official/interaction/commands/src/index.ts`](../Modules/Official/interaction/commands/src/index.ts))
 - `@redspark/rsh-cordis-client-runner` ([`rsh/Modules/Official/extensions/cordis-client-runner/src/index.ts`](../Modules/Official/extensions/cordis-client-runner/src/index.ts))
 - `@redspark/rsh-deepseek-llm-api-extensions` ([`rsh/Modules/Official/llm/deepseek-llm-api-extensions/src/index.ts`](../Modules/Official/llm/deepseek-llm-api-extensions/src/index.ts))
-- `@redspark/rsh-experimental-client-ui-agent-team` ([`rsh/Modules/Community/experimental/client-ui-agent-team/src/index.ts`](../Modules/Community/experimental/client-ui-agent-team/src/index.ts))
 - `@redspark/rsh-fs-e2b` — requires `e2b` ([`rsh/Modules/Official/e2b/fs-e2b/src/index.ts`](../Modules/Official/e2b/fs-e2b/src/index.ts))
 - `@redspark/rsh-fs-observation-policy` ([`rsh/Modules/Official/fs/fs-observation-policy/src/index.ts`](../Modules/Official/fs/fs-observation-policy/src/index.ts))
 - `@redspark/rsh-goal-round-driver` — requires `agents` · `goals` · `sessions` ([`rsh/Engine/goal/goal-round-driver/src/index.ts`](../Engine/goal/goal-round-driver/src/index.ts))
@@ -3587,8 +3544,8 @@ Imported as libraries by other packages; a `cordis.yml` cannot load them.
 - `@redspark/rsh-deque` ([`rsh/Core/util/deque/src/index.ts`](../Core/util/deque/src/index.ts))
 - `@redspark/rsh-desktop-host-compatibility` ([`rsh/Compatibility/DSH/boot/desktop-host-compatibility/src/index.ts`](../Compatibility/DSH/boot/desktop-host-compatibility/src/index.ts))
 - `@redspark/rsh-errors` ([`rsh/Core/util/errors/src/index.ts`](../Core/util/errors/src/index.ts))
-- `@redspark/rsh-experimental-agent-team-profile` ([`rsh/Modules/Community/experimental/agent-team-profile/src/index.ts`](../Modules/Community/experimental/agent-team-profile/src/index.ts))
-- `@redspark/rsh-experimental-agent-team-web-profile` ([`rsh/Modules/Community/experimental/agent-team-web-profile/src/index.ts`](../Modules/Community/experimental/agent-team-web-profile/src/index.ts))
+- `@redspark/rsh-experimental-agent-team` ([`rsh/Modules/Community/experimental/agent-team/src/index.ts`](../Modules/Community/experimental/agent-team/src/index.ts))
+- `@redspark/rsh-experimental-tool-agent-team` ([`rsh/Modules/Community/experimental/tool-agent-team/src/index.ts`](../Modules/Community/experimental/tool-agent-team/src/index.ts))
 - `@redspark/rsh-experimental-webworker-packer` ([`rsh/Modules/Community/experimental/webworker-packer/src/index.ts`](../Modules/Community/experimental/webworker-packer/src/index.ts))
 - `@redspark/rsh-experimental-webworker-runtime` ([`rsh/Modules/Community/experimental/webworker-runtime/src/index.ts`](../Modules/Community/experimental/webworker-runtime/src/index.ts))
 - `@redspark/rsh-home-paths` ([`rsh/Core/util/home-paths/src/index.ts`](../Core/util/home-paths/src/index.ts))

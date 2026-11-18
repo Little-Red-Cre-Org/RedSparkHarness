@@ -56,10 +56,7 @@ describe('release families', () => {
     expect(members
       .filter(member => member.directory.startsWith('rsh/Modules/Community/experimental/'))
       .map(member => member.name)).toEqual([
-      '@redspark/rsh-experimental-agent-team-profile',
-      '@redspark/rsh-experimental-agent-team-web-profile',
       '@redspark/rsh-experimental-agent-team',
-      '@redspark/rsh-experimental-client-ui-agent-team',
       '@redspark/rsh-experimental-tool-agent-team',
     ])
     expect(members.map(member => member.name)).not.toContain('@redspark/rsh-experimental-inspector')

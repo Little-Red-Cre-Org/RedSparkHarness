@@ -15,7 +15,7 @@ Status: proposed
 ### 留下的部分
 
 - 新建的桌面 profile 和未修改的 legacy 起始 profile 通过 `createNativeDesktopProfile` 写入 `runtime: 'native'`。显式的 `runtime: 'legacy'` profile 和自定义 Cordis profile 在兼容宿主存在时仍可启动。`profile: web` 的快照，以及继承 `TypertRemoteService` 的生产类，都留到单独的界面迁移。那次迁移必须先替换远程方法注册，阶段 C 才能结束。
-- 这三个包留下。没有别的 manifest 依赖它们。`@redspark/rsh-experimental-agent-team-web-profile` 在 `dsh` 发布族里（`rsh/Scripts/release/families.spec.ts`）。`@redspark/rsh-experimental-inspector` 被排除在该发布族之外，但仍有自己的测试。`@redspark/rsh-storage-sqlite` 仍是一个可选的存储后端。它的 Native 安装器记录在 [Native 能力 owner](../../implemented/architecture/2026-11-16-native-capability-gaps.zh.md)，与该后端共用实现，并且不删除这个包。[还有什么依赖 Cordis](2026-11-10-what-still-depends-on-cordis.zh.md) 已经把这种情况和「没有任何东西可以选用的包」分开。
+- 三个包里留下两个。`@redspark/rsh-experimental-inspector` 被排除在 `dsh` 发布族之外，但仍有自己的测试。`@redspark/rsh-storage-sqlite` 仍是一个可选的存储后端；它的 Native 安装器记录在 [Native 能力 owner](../../implemented/architecture/2026-11-16-native-capability-gaps.zh.md)，与该后端共用实现，并且不删除这个包。[还有什么依赖 Cordis](2026-11-10-what-still-depends-on-cordis.zh.md) 已经把这种情况和「没有任何东西可以选用的包」分开。Agent Teams Web profile 不再属于这一类：[Agent Teams 退役其 Cordis 面](../../implemented/architecture/2026-11-18-agent-teams-retires-its-cordis-surface.zh.md) 在 Team 服务只提供 Native 实现后，把它与另外两个组合包一起删除。
 - `initProfile`（`rsh/Compatibility/DSH/boot/app-boot/src/profile.ts`）仍写入 `dsh.profile.bundles` 和 `patchReload`。bundle 列表选择 legacy 执行。自定义名字仍通过 `--from-default-profile` 初始化，已有的 legacy 目录仍能启动。已发布的名字仍以 Native 启动。`sdk-minimal` 继续被拒绝。[legacy Cordis 运行时还留着什么](2026-11-06-legacy-runtime-retirement.zh.md) 仍然禁止在活动 home 把 `web` 或 `desktop` 解析为 legacy 时修改 `initProfile`。
 
 ### 重新测量的数字
@@ -55,7 +55,7 @@ Status: proposed
 
 **现在就拒绝每一个新建的自定义 legacy profile。** 否决。快照运行器和 CLI 端到端测试每次运行都会用 `--from-default-profile` 创建 `legacy-headless`、`legacy-sdk` 和 `legacy-acp`。拒绝这一类名字会在已记录的阻塞移走之前删掉剩下的 Cordis 证据。
 
-**删掉没有别的 manifest 依赖的三个包。** 否决。缺少 manifest 依赖不等于没有这项能力。存储后端可以被选用，agent-team 的 Web profile 会发布，inspector 包仍有测试。
+**删掉没有别的 manifest 依赖的包。** 否决。缺少 manifest 依赖不等于没有这项能力。存储后端可以被选用，inspector 包仍有测试。Agent Teams Web profile 后来被删除是因为另一条理由：它的运行时面已不存在，而不是因为没有依赖。
 
 **在显式 legacy profile 仍可启动时开始阶段 C。** 否决。那些 profile 启动的就是阶段 C 要删的 `Service` 类。先删这些类会让仍选择 Cordis 的桌面 profile 无法启动。
 
@@ -65,7 +65,7 @@ Status: proposed
 
 - [按实测基线的五个阶段退休 Cordis](2026-11-12-cordis-retirement-five-phases.zh.md) 不再说这三个包现在可以删，并且它的 84 / 169 / 10 分级表被标明是 2026-11-12 的测量。
 - `initProfile` 写明新 manifest 会保存 `dsh.profile.bundles`，并且不会设置 `runtime: 'native'`。
-- 不删除任何包目录。新建的桌面 profile 仍写出 `runtime: 'native'`，显式 legacy profile 不会被改写。
+- 本决策不删除任何包目录。新建的桌面 profile 仍写出 `runtime: 'native'`，显式 legacy profile 不会被改写。
 - `@redspark/rsh-native-jobs-controller` 不声明 `@redspark/cordis`。其余没有别处提到的包继续声明 Cordis。
 
 ## Risks

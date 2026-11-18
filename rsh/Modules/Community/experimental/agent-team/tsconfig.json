@@ -1,11 +1,21 @@
 {
-  "files": [],
+  "extends": "../../../../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "lib/types",
+    "tsBuildInfoFile": "lib/tsconfig.tsbuildinfo"
+  },
+  "include": ["src"],
   "references": [
-    {
-      "path": "./tsconfig.host.json"
-    },
-    {
-      "path": "./tsconfig.client.json"
-    }
+    { "path": "../../../../Core/util/brand" },
+    { "path": "../../../../Engine/llm/llm" },
+    { "path": "../../../../Engine/core/session" },
+    { "path": "../../../../Engine/session/session-persistence/tsconfig.host.json" },
+    { "path": "../../../../Engine/session/session-projection" },
+    { "path": "../../../../Engine/core/native-agent/tsconfig.host.json" },
+    { "path": "../../../../Engine/core/native-session-execution/tsconfig.host.json" },
+    { "path": "../../../../Engine/subagent/native-subagent" },
+    { "path": "../../../../Engine/subagent/subagent-protocol" },
+    { "path": "../../../../Core/runtime-diagnostics/native-runtime" }
   ]
 }

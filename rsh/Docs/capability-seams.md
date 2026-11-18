@@ -186,10 +186,6 @@ flowchart LR
   pkg_subagent_rsh_sdk["subagent-rsh-sdk"]
   pkg_tool_subagent_control["tool-subagent-control"]
   pkg_tool_ralph["tool-ralph"]
-  pkg_experimental_agent_team["experimental-agent-team"]
-  svc_agentTeams["ctx.agentTeams<br/>Agent Teams coordination domain"]
-  pkg_experimental_tool_agent_team["experimental-tool-agent-team"]
-  pkg_experimental_client_ui_agent_team["experimental-client-ui-agent-team"]
   pkg_inspector["inspector"]
   svc_inspector["ctx.inspector<br/>Cross-realm runtime inspection"]
   pkg_jobs["jobs"]
@@ -263,7 +259,6 @@ flowchart LR
   pkg_credentials_local --> svc_credentials
   pkg_deepseek_llm_api_extensions --> svc_deepseekLlmApiExtensions
   pkg_e2b --> svc_e2b
-  pkg_experimental_agent_team --> svc_agentTeams
   pkg_experimental_code_runtime_python --> svc_codeRuntime
   pkg_file_reference --> svc_fileReferences
   pkg_file_reference_local --> svc_fileReferences
@@ -355,8 +350,6 @@ flowchart LR
   svc_agentDefaultModel --> pkg_headless
   svc_agentLoop --> pkg_base
   svc_agentLoop --> pkg_sdk_minimal
-  svc_agentTeams --> pkg_experimental_client_ui_agent_team
-  svc_agentTeams --> pkg_experimental_tool_agent_team
   svc_agents --> pkg_acp
   svc_agents --> pkg_agent_loop
   svc_agents --> pkg_subagent_in_process_driver
@@ -544,7 +537,6 @@ flowchart LR
 | `ctx.fs` | `seam` | [`fs`](../Modules/Official/fs/fs) | [`fs-local`](../Modules/Official/fs/fs-local), [`fs-sandbox`](../Modules/Official/fs/fs-sandbox), [`fs-e2b`](../Modules/Official/e2b/fs-e2b) | [`tool-fs`](../Modules/Official/fs/tool-fs) | [`fs-observation-policy`](../Modules/Official/fs/fs-observation-policy) | tool-fs executes read/write/edit through ctx.fs; fs-sandbox fences mutations by the shared sandbox mode; fs-observation-policy contributes observed-state checks through the fs/* event gate. |
 | `ctx.compaction` | `seam` | [`compaction`](../Engine/compaction/compaction) | [`compaction-basic`](../Engine/compaction/compaction-basic) | [`compaction-basic`](../Engine/compaction/compaction-basic) | - | The basic backend consumes post-step pressure and request-error recovery events; there is no model-facing compact tool. |
 | `ctx.subagents` | `seam` | [`subagent`](../Engine/subagent/subagent) | [`subagent-spawn-in-process`](../Engine/subagent/subagent-spawn-in-process), [`subagent-fork-in-process`](../Engine/subagent/subagent-fork-in-process), [`subagent-acp`](../Compatibility/DSH/subagent/subagent-acp), [`subagent-codex`](../Compatibility/DSH/bridge/subagent-codex), [`subagent-claude-code`](../Modules/Official/subagent/subagent-claude-code), [`subagent-rsh-sdk`](../Compatibility/DSH/subagent/subagent-rsh-sdk) | [`tool-subagent`](../Engine/subagent/tool-subagent), [`tool-subagent-control`](../Engine/subagent/tool-subagent-control), [`tool-ralph`](../Engine/workflow/tool-ralph) | - | Providers implement transports; the service also owns optional Activation-based continuation orchestration, tool-subagent selects one-shot or continuable delegation, tool-subagent-control delivers follow-ups, and tool-ralph requires one fresh structured-output route. |
-| `ctx.agentTeams` | `core` | `experimental-agent-team` | - | `experimental-tool-agent-team`, `experimental-client-ui-agent-team` | - | Owns the implicit-root roster, durable peer mailbox, shared task DAG, continuable-child lifecycle, and generated Team Remote methods; tool-agent-team contributes model controls and client-ui-agent-team mounts the browser contribution. |
 | `ctx.inspector` | `core` | `inspector` | - | - | - | Owns the Worker-hosted CDP target and the transport-independent Host and Client observation and Cordis-tree query API. |
 | `ctx.jobs` | `seam` | [`jobs`](../Engine/jobs/jobs) | [`jobs-local`](../Engine/jobs/jobs-local) | [`tool-bash`](../Modules/Official/shell/tool-bash), [`tool-terminal`](../Modules/Official/terminal/tool-terminal), [`tool-subagent`](../Engine/subagent/tool-subagent), [`tool-jobs`](../Engine/jobs/tool-jobs) | - | Producers (background bash, PTY sends, and subagent delegations) register running work; tool-jobs is the model-facing controller that reads, lists, and kills it; jobs-local is the process-local registry. |
 | `ctx.web` | `seam` | [`web`](../Modules/Official/web/web) | [`web-search-exa`](../Modules/Official/web/web-search-exa), [`web-search-perplexity`](../Modules/Official/web/web-search-perplexity), [`web-search-deepseek`](../Modules/Official/web/web-search-deepseek), [`web-fetch-http`](../Modules/Official/web/web-fetch-http) | [`tool-web`](../Modules/Official/web/tool-web) | - | Search and fetch providers register into one ctx.web seam; tool-web owns the stable model-facing names. |

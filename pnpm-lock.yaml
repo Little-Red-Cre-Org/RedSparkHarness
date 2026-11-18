@@ -5334,136 +5334,13 @@ importers:
       '@redspark/rsh-subagent-protocol':
         specifier: workspace:^
         version: link:../../../../Engine/subagent/subagent-protocol
-      '@redspark/schemastery':
-        specifier: link:../../../../Core/vendor/schemastery
-        version: link:../../../../Core/vendor/schemastery
       zod:
         specifier: ^4.4.3
         version: 4.4.3
     devDependencies:
-      '@redspark/cordis':
-        specifier: workspace:^
-        version: link:../../../../Core/vendor/cordis
-      '@redspark/rsh-agent':
-        specifier: workspace:^
-        version: link:../../../../Engine/core/agent
-      '@redspark/rsh-agent-loop':
-        specifier: workspace:^
-        version: link:../../../../Engine/core/agent-loop
-      '@redspark/rsh-agent-loop-testkit':
-        specifier: workspace:^
-        version: link:../../../../Tests/test-support/agent-loop-testkit
-      '@redspark/rsh-invariants':
-        specifier: workspace:^
-        version: link:../../../../Core/runtime-diagnostics/invariants
       '@redspark/rsh-session-persistence-jsonl':
         specifier: workspace:^
         version: link:../../../../Engine/session/session-persistence-jsonl
-      '@redspark/rsh-session-query':
-        specifier: workspace:^
-        version: link:../../../../Engine/session-query/session-query
-      '@redspark/rsh-subagent':
-        specifier: workspace:^
-        version: link:../../../../Engine/subagent/subagent
-      '@redspark/rsh-subagent-fork-in-process':
-        specifier: workspace:^
-        version: link:../../../../Engine/subagent/subagent-fork-in-process
-      '@redspark/rsh-subagent-spawn-in-process':
-        specifier: workspace:^
-        version: link:../../../../Engine/subagent/subagent-spawn-in-process
-      '@redspark/rsh-typert-protocol':
-        specifier: workspace:^
-        version: link:../../../../Core/typert/protocol
-
-  rsh/Modules/Community/experimental/agent-team-profile:
-    dependencies:
-      '@redspark/rsh-experimental-agent-team':
-        specifier: workspace:^
-        version: link:../agent-team
-      '@redspark/rsh-experimental-tool-agent-team':
-        specifier: workspace:^
-        version: link:../tool-agent-team
-    devDependencies:
-      '@redspark/cordis':
-        specifier: workspace:^
-        version: link:../../../../Core/vendor/cordis
-      '@redspark/cordis-plugin-include':
-        specifier: workspace:^
-        version: link:../../../../Core/vendor/include
-      js-yaml:
-        specifier: ^4.3.2
-        version: 4.3.2
-
-  rsh/Modules/Community/experimental/agent-team-web-profile:
-    dependencies:
-      '@redspark/rsh-experimental-client-ui-agent-team':
-        specifier: workspace:^
-        version: link:../client-ui-agent-team
-    devDependencies:
-      '@redspark/cordis':
-        specifier: workspace:^
-        version: link:../../../../Core/vendor/cordis
-      '@redspark/cordis-plugin-include':
-        specifier: workspace:^
-        version: link:../../../../Core/vendor/include
-      js-yaml:
-        specifier: ^4.3.2
-        version: 4.3.2
-
-  rsh/Modules/Community/experimental/client-ui-agent-team:
-    dependencies:
-      react:
-        specifier: ^18.2.0
-        version: 18.3.1
-    devDependencies:
-      '@redspark/cordis':
-        specifier: workspace:^
-        version: link:../../../../Core/vendor/cordis
-      '@redspark/rsh-api-remotes':
-        specifier: workspace:^
-        version: link:../../../../Programs/Web/api/remotes
-      '@redspark/rsh-api-session-controller':
-        specifier: workspace:^
-        version: link:../../../../Programs/Web/api/session-controller
-      '@redspark/rsh-client-locale':
-        specifier: workspace:^
-        version: link:../../../../Programs/Web/client/locale
-      '@redspark/rsh-client-test-runtime':
-        specifier: workspace:^
-        version: link:../../../../Tests/test-support/client-runtime
-      '@redspark/rsh-client-ui-conversation':
-        specifier: workspace:^
-        version: link:../../../../Programs/Web/client/ui-conversation
-      '@redspark/rsh-client-ui-primitives':
-        specifier: workspace:^
-        version: link:../../../../Programs/Web/client/ui-primitives
-      '@redspark/rsh-client-ui-renderer':
-        specifier: workspace:^
-        version: link:../../../../Programs/Web/client/ui-renderer
-      '@redspark/rsh-client-ui-session':
-        specifier: workspace:^
-        version: link:../../../../Programs/Web/client/ui-session
-      '@redspark/rsh-client-ui-slots':
-        specifier: workspace:^
-        version: link:../../../../Programs/Web/client/ui-slots
-      '@redspark/rsh-experimental-agent-team':
-        specifier: workspace:^
-        version: link:../agent-team
-      '@redspark/rsh-session':
-        specifier: workspace:^
-        version: link:../../../../Engine/core/session
-      '@redspark/rsh-typert-protocol':
-        specifier: workspace:^
-        version: link:../../../../Core/typert/protocol
-      '@testing-library/react':
-        specifier: ^16.1.0
-        version: 16.3.2(@testing-library/dom@10.4.1)(@types/react-dom@18.3.7(@types/react@18.3.31))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
-      '@types/react':
-        specifier: ~18.3.1
-        version: 18.3.31
-      react-dom:
-        specifier: ^18.2.0
-        version: 18.3.1(react@18.3.1)
 
   rsh/Modules/Community/experimental/code-runtime-python:
     dependencies:
@@ -5538,6 +5415,9 @@ importers:
 
   rsh/Modules/Community/experimental/tool-agent-team:
     dependencies:
+      '@redspark/rsh-experimental-agent-team':
+        specifier: workspace:^
+        version: link:../agent-team
       '@redspark/rsh-native-agent':
         specifier: workspace:^
         version: link:../../../../Engine/core/native-agent
@@ -5550,61 +5430,9 @@ importers:
       '@redspark/rsh-native-tools':
         specifier: workspace:^
         version: link:../../../../Engine/core/native-tools
-      '@redspark/schemastery':
-        specifier: link:../../../../Core/vendor/schemastery
-        version: link:../../../../Core/vendor/schemastery
       zod:
         specifier: ^4.4.3
         version: 4.4.3
-    devDependencies:
-      '@redspark/cordis':
-        specifier: workspace:^
-        version: link:../../../../Core/vendor/cordis
-      '@redspark/rsh-agent':
-        specifier: workspace:^
-        version: link:../../../../Engine/core/agent
-      '@redspark/rsh-agent-loop':
-        specifier: workspace:^
-        version: link:../../../../Engine/core/agent-loop
-      '@redspark/rsh-agent-loop-testkit':
-        specifier: workspace:^
-        version: link:../../../../Tests/test-support/agent-loop-testkit
-      '@redspark/rsh-experimental-agent-team':
-        specifier: workspace:^
-        version: link:../agent-team
-      '@redspark/rsh-scope':
-        specifier: workspace:^
-        version: link:../../../../Engine/core/scope
-      '@redspark/rsh-session':
-        specifier: workspace:^
-        version: link:../../../../Engine/core/session
-      '@redspark/rsh-session-persistence-jsonl':
-        specifier: workspace:^
-        version: link:../../../../Engine/session/session-persistence-jsonl
-      '@redspark/rsh-session-projection':
-        specifier: workspace:^
-        version: link:../../../../Engine/session/session-projection
-      '@redspark/rsh-session-query':
-        specifier: workspace:^
-        version: link:../../../../Engine/session-query/session-query
-      '@redspark/rsh-subagent':
-        specifier: workspace:^
-        version: link:../../../../Engine/subagent/subagent
-      '@redspark/rsh-subagent-fork-in-process':
-        specifier: workspace:^
-        version: link:../../../../Engine/subagent/subagent-fork-in-process
-      '@redspark/rsh-subagent-spawn-in-process':
-        specifier: workspace:^
-        version: link:../../../../Engine/subagent/subagent-spawn-in-process
-      '@redspark/rsh-system-prompt':
-        specifier: workspace:^
-        version: link:../../../../Engine/core/system-prompt
-      '@redspark/rsh-tool-subagent-control':
-        specifier: workspace:^
-        version: link:../../../../Engine/subagent/tool-subagent-control
-      '@redspark/rsh-tools':
-        specifier: workspace:^
-        version: link:../../../../Engine/core/tools
 
   rsh/Modules/Community/experimental/webworker-packer:
     dependencies:
@@ -10237,9 +10065,6 @@ importers:
       '@redspark/rsh-experimental-agent-team':
         specifier: workspace:^
         version: link:../../Modules/Community/experimental/agent-team
-      '@redspark/rsh-experimental-agent-team-profile':
-        specifier: workspace:^
-        version: link:../../Modules/Community/experimental/agent-team-profile
       '@redspark/rsh-experimental-code-runtime-python':
         specifier: workspace:^
         version: link:../../Modules/Community/experimental/code-runtime-python

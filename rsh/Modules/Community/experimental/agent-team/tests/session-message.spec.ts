@@ -1,7 +1,7 @@
 /** Durable Session-message acceptance across committed history and pending inboxes. */
 import { expect, it } from 'vitest'
-import { createUserMessage } from '@redspark/rsh-llm'
-import { Session, SessionId } from '@redspark/rsh-session'
+import { createUserMessage } from '@redspark/rsh-llm/native'
+import { Session, SessionId } from '@redspark/rsh-session/native'
 import { messageAccepted } from '../src/session-message.ts'
 
 function message(text: string) {

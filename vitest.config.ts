@@ -305,7 +305,6 @@ export default defineConfig({
         'rsh/Programs/Web/api/remotes/src/client/index.ts',
         // The Team browser entry binds its source-covered mount lifecycle to
         // the generated Team Remote contribution, which likewise exists only in lib.
-        'rsh/Modules/Community/experimental/client-ui-agent-team/src/client/index.ts',
         // Slash/command/input round: per-file gaps deferred with the same
         // client-lane debt. TODO(gui): cover and remove with the lane above.
         'rsh/Programs/Web/client/connection/src/client/fixture.ts',

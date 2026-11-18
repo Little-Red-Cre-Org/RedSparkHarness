@@ -1,20 +1,21 @@
-/** Agent Teams service façade over roster, mailbox, task, and runtime lifecycle owners. */
+/** Native Agent Teams service over the selected Program's exact active Session writers. */
 
-import { Context } from '@redspark/cordis'
-import z from '@redspark/schemastery'
-import type { Agent } from '@redspark/rsh-agent'
-import type {} from '@redspark/rsh-session-persistence'
-import { Remote, TypertRemoteService } from '@redspark/rsh-typert-protocol'
+import { type NativeAgent, type NativeAgentRegistry } from '@redspark/rsh-native-agent'
+import type { NativePlugin } from '@redspark/rsh-native-runtime'
+import type { NativeActiveSessionOperations, NativeActiveSessionOwner } from '@redspark/rsh-native-session-execution'
+import type { NativeSessionPersistenceOperations } from '@redspark/rsh-session-persistence/native'
+import type { NativeSessionProjectionOperations } from '@redspark/rsh-session-projection/native'
+import { SessionId } from '@redspark/rsh-session/native'
+import type { NativeSubagentOperations } from '@redspark/rsh-native-subagent'
 import { TeamActivity } from './activity.ts'
 import { errorMessage, TeamError } from './error.ts'
-import { TeamJournal } from './journal.ts'
-import { TeamRuntimeLifecycle } from './lifecycle.ts'
-import { TeamMailbox } from './mailbox.ts'
 import { teamProjectionDefinition } from './projection.ts'
-import { TeamRoster } from './roster.ts'
-import type { TeamMembership } from './roster.ts'
+import { TeamRuntimeLifecycle } from './lifecycle.ts'
 import { TeamTaskBoard } from './task-board.ts'
-import { TeamId, TeamTaskId } from './types.ts'
+import { TeamId, type TeamTaskId } from './types.ts'
+import { NativeTeamJournal, type NativeTeamRoot } from './native-journal.ts'
+import { NativeTeamRoster } from './native-roster.ts'
+import { NativeTeamMailbox } from './native-mailbox.ts'
 import type {
   Config,
   CreateTeamTaskRequest,
@@ -25,19 +26,20 @@ import type {
   TeamMemberView,
   TeamTaskMutationResult,
   TeamTaskView,
-  TeamView,
   TeamWaitResult,
   UpdateTeamTaskRequest,
 } from './types.ts'
+import type { TeamCallerMembership } from './membership.ts'
 
 export type * from './types.ts'
-export type { TeamMembership } from './roster.ts'
+export type { TeamCallerMembership } from './membership.ts'
+export type { NativeTeamRoot } from './native-journal.ts'
 export { TeamId, TeamMessageId, TeamTaskId } from './types.ts'
 export { TeamError } from './error.ts'
 
-declare module '@redspark/cordis' {
-  interface Context {
-    agentTeams: TeamService
+declare module '@redspark/rsh-native-runtime' {
+  interface NativeServices {
+    agentTeams: NativeTeamService
   }
 }
 
@@ -46,84 +48,141 @@ const DEFAULT_MAX_TASKS = 256
 const DEFAULT_MAX_PENDING_MESSAGES = 64
 const DEFAULT_MAX_MESSAGE_BYTES = 65_536
 const DEFAULT_DISPOSAL_TIMEOUT_MS = 5_000
+const DEFAULT_MAX_DEPTH = 3
 
-/** Validate one positive safe-integer deployment limit. */
-function positiveLimit(name: string, value: number): number {
-  if (!Number.isSafeInteger(value) || value < 1) {
-    throw new TeamError(`${name} must be a positive safe integer`, 'TEAM_INVALID_CONFIG')
+/** Resolved Native Agent Teams deployment limits. */
+export type NativeTeamConfig = Required<Config> & { readonly maxDepth: number }
+
+/**
+ * Validate Native Agent Teams deployment configuration.
+ * @param input - profile JSON value.
+ * @returns every limit with its deployment default.
+ * @throws {TeamError} when a field is unknown or out of range.
+ */
+export function resolveNativeTeamConfig(input?: unknown): NativeTeamConfig {
+  if (input !== undefined && (typeof input !== 'object' || input === null || Array.isArray(input))) {
+    throw new TeamError('Agent Teams configuration must be an object', 'TEAM_INVALID_CONFIG')
   }
-  return value
+  const fields = (input ?? {}) as Record<string, unknown>
+  const permitted = [
+    'maxMembers', 'maxTasks', 'maxPendingMessagesPerMember',
+    'maxMessageBytes', 'disposalTimeoutMs', 'maxDepth',
+  ] as const
+  for (const key of Object.keys(fields)) {
+    if (!permitted.includes(key as typeof permitted[number])) {
+      throw new TeamError(`unknown Agent Teams configuration field ${key}`, 'TEAM_INVALID_CONFIG')
+    }
+  }
+  const limit = (name: typeof permitted[number], fallback: number): number => {
+    const value = fields[name] ?? fallback
+    if (typeof value !== 'number' || !Number.isSafeInteger(value) || value < 1) {
+      throw new TeamError(`${name} must be a positive safe integer`, 'TEAM_INVALID_CONFIG')
+    }
+    return value
+  }
+  return {
+    maxMembers: limit('maxMembers', DEFAULT_MAX_MEMBERS),
+    maxTasks: limit('maxTasks', DEFAULT_MAX_TASKS),
+    maxPendingMessagesPerMember: limit('maxPendingMessagesPerMember', DEFAULT_MAX_PENDING_MESSAGES),
+    maxMessageBytes: limit('maxMessageBytes', DEFAULT_MAX_MESSAGE_BYTES),
+    disposalTimeoutMs: limit('disposalTimeoutMs', DEFAULT_DISPOSAL_TIMEOUT_MS),
+    maxDepth: limit('maxDepth', DEFAULT_MAX_DEPTH),
+  }
 }
 
-/** Agent Teams service backed by the exact live Lead Session log. */
-export class TeamService extends TypertRemoteService {
-  static inject = ['agents', 'sessions', 'sessionPersistence', 'sessionProjections', 'subagents']
+/** Exact services a Native Team runtime reads. */
+export interface NativeTeamDeps {
+  readonly agents: NativeAgentRegistry
+  readonly active: NativeActiveSessionOperations
+  readonly projections: NativeSessionProjectionOperations
+  readonly persistence: NativeSessionPersistenceOperations
+  readonly subagents: NativeSubagentOperations
+}
 
-  static Config: z<Config> = z.object({
-    maxMembers: z.number().step(1).min(1).default(DEFAULT_MAX_MEMBERS),
-    maxTasks: z.number().step(1).min(1).default(DEFAULT_MAX_TASKS),
-    maxPendingMessagesPerMember: z.number().step(1).min(1).default(DEFAULT_MAX_PENDING_MESSAGES),
-    maxMessageBytes: z.number().step(1).min(1).default(DEFAULT_MAX_MESSAGE_BYTES),
-    disposalTimeoutMs: z.number().step(1).min(1).default(DEFAULT_DISPOSAL_TIMEOUT_MS),
-  })
-
-  /** Validated deployment limits used by every Team operation. */
-  private readonly config: Required<Config>
-
-  private readonly activity: TeamActivity
+/** Agent Teams service backed by the exact live Lead Session writers. */
+export class NativeTeamService {
+  private readonly owners = new Map<SessionId, NativeActiveSessionOwner>()
+  private readonly stops = new Map<SessionId, () => void>()
+  private readonly running = new Set<SessionId>()
+  private readonly activity = new TeamActivity()
   private readonly lifecycle: TeamRuntimeLifecycle
-  private readonly journal: TeamJournal
-  private readonly roster: TeamRoster
-  private readonly mailbox: TeamMailbox
-  private readonly tasks: TeamTaskBoard<Agent>
+  private readonly journal: NativeTeamJournal
+  private readonly roster: NativeTeamRoster
+  private readonly mailbox: NativeTeamMailbox
+  private readonly tasks: TeamTaskBoard<NativeTeamRoot>
+  private disposal: Promise<void> | undefined
 
-  constructor(ctx: Context, config: Config = {}) {
-    super(ctx, 'agentTeams')
-    this.config = {
-      maxMembers: positiveLimit('maxMembers', config.maxMembers ?? DEFAULT_MAX_MEMBERS),
-      maxTasks: positiveLimit('maxTasks', config.maxTasks ?? DEFAULT_MAX_TASKS),
-      maxPendingMessagesPerMember: positiveLimit(
-        'maxPendingMessagesPerMember',
-        config.maxPendingMessagesPerMember ?? DEFAULT_MAX_PENDING_MESSAGES,
-      ),
-      maxMessageBytes: positiveLimit('maxMessageBytes', config.maxMessageBytes ?? DEFAULT_MAX_MESSAGE_BYTES),
-      disposalTimeoutMs: positiveLimit(
-        'disposalTimeoutMs',
-        config.disposalTimeoutMs ?? DEFAULT_DISPOSAL_TIMEOUT_MS,
-      ),
-    }
-
-    this.activity = new TeamActivity()
-    this.lifecycle = new TeamRuntimeLifecycle(this.config.disposalTimeoutMs)
-    this.journal = new TeamJournal(ctx, (root) => { this.activity.notify(TeamId(root.id)) })
-    this.roster = new TeamRoster(ctx, this.journal, this.lifecycle, this.config.maxMembers)
-    this.mailbox = new TeamMailbox(
-      ctx,
-      this.journal,
-      this.roster,
-      this.lifecycle,
-      this.config.maxPendingMessagesPerMember,
-      this.config.maxMessageBytes,
-    )
-    this.tasks = new TeamTaskBoard(this.journal, this.config.maxTasks)
-
-    ctx.on('session/event', (session, event) => { this.mailbox.observeSessionEvent(session, event) })
-    ctx.on('agent/session-start', ({ agent }) => { this.scheduleRecovery(agent) })
-    ctx.on('agent/status', ({ agent }) => {
-      const membership = this.roster.tryMembership(agent)
-      if (membership !== undefined) this.activity.notify(membership.id)
+  /**
+   * @param deps - exact live Agent, owner, projection, persistence and subagent services.
+   * @param config - validated deployment limits.
+   */
+  constructor(
+    private readonly deps: NativeTeamDeps,
+    private readonly config: NativeTeamConfig,
+  ) {
+    this.lifecycle = new TeamRuntimeLifecycle(config.disposalTimeoutMs)
+    this.journal = new NativeTeamJournal(deps.active, deps.projections, (root) => {
+      this.activity.notify(TeamId(root.id))
     })
-    ctx.effect(() => {
-      const disposeProjection = ctx.root.sessionProjections.register(teamProjectionDefinition)
-      return async () => {
-        try {
-          await this.disposeRuntime()
-        } finally {
-          disposeProjection()
-        }
-      }
-    }, 'agentTeams.runtimeLifecycle()')
-    for (const agent of ctx.agents.list()) this.scheduleRecovery(agent)
+    this.roster = new NativeTeamRoster({
+      agents: deps.agents,
+      subagents: deps.subagents,
+      persistence: deps.persistence,
+      journal: this.journal,
+      lifecycle: this.lifecycle,
+      maxMembers: config.maxMembers,
+      maxDepth: config.maxDepth,
+      ownerOf: agent => this.ownerOf(agent),
+      rootOf: agent => this.rootOf(agent),
+      statusOf: owner => this.statusOf(owner),
+    })
+    this.mailbox = new NativeTeamMailbox({
+      subagents: deps.subagents,
+      persistence: deps.persistence,
+      journal: this.journal,
+      roster: this.roster,
+      lifecycle: this.lifecycle,
+      maxPendingMessagesPerMember: config.maxPendingMessagesPerMember,
+      maxMessageBytes: config.maxMessageBytes,
+      ownerOfSession: id => this.owners.get(id),
+      warn: (message) => { console.warn(message) },
+    })
+    this.tasks = new TeamTaskBoard(this.journal, config.maxTasks)
+  }
+
+  /**
+   * Read every limit resolved for this installation.
+   * @returns detached deployment configuration.
+   */
+  configuration(): NativeTeamConfig {
+    return { ...this.config }
+  }
+
+  /**
+   * Start observing one exact active Session owner.
+   * @param owner - newly attached owner.
+   */
+  attach(owner: NativeActiveSessionOwner): void {
+    if (this.lifecycle.disposed || this.owners.has(owner.session.id)) return
+    this.owners.set(owner.session.id, owner)
+    this.stops.set(owner.session.id, owner.onEvent((event) => {
+      if (event.type === 'turn/start') this.running.add(owner.session.id)
+      else if (event.type === 'turn/end') this.running.delete(owner.session.id)
+      this.mailbox.observeSessionEvent(owner, event)
+    }))
+    this.scheduleRecovery(owner.agent)
+  }
+
+  /**
+   * Stop observing one detached owner.
+   * @param owner - owner whose retention ended.
+   */
+  detach(owner: NativeActiveSessionOwner): void {
+    const stop = this.stops.get(owner.session.id)
+    this.stops.delete(owner.session.id)
+    this.owners.delete(owner.session.id)
+    this.running.delete(owner.session.id)
+    stop?.()
   }
 
   /**
@@ -131,7 +190,7 @@ export class TeamService extends TypertRemoteService {
    * @param agent - exact live Agent used as the authority credential.
    * @returns its root, Team identity, role, and model-facing name.
    */
-  membership(agent: Agent): TeamMembership {
+  membership(agent: NativeAgent): TeamCallerMembership<NativeTeamRoot> {
     return this.roster.membership(agent)
   }
 
@@ -140,7 +199,7 @@ export class TeamService extends TypertRemoteService {
    * @param agent - exact live Team member.
    * @returns Lead and teammate rows in creation order.
    */
-  listMembers(agent: Agent): TeamMemberView[] {
+  listMembers(agent: NativeAgent): TeamMemberView[] {
     return this.roster.list(this.roster.membership(agent))
   }
 
@@ -150,7 +209,7 @@ export class TeamService extends TypertRemoteService {
    * @param request - immutable name, description, prompt, context mode, provider, and cancellation.
    * @returns the active roster row.
    */
-  async spawnTeammate(caller: Agent, request: SpawnTeammateRequest): Promise<SpawnTeammateResult> {
+  async spawnTeammate(caller: NativeAgent, request: SpawnTeammateRequest): Promise<SpawnTeammateResult> {
     return await this.roster.spawn(caller, request)
   }
 
@@ -160,7 +219,7 @@ export class TeamService extends TypertRemoteService {
    * @param request - target name, content, and pre-queue cancellation.
    * @returns durable message identity and immediate-delivery observation.
    */
-  async sendMessage(caller: Agent, request: SendTeamMessageRequest): Promise<SendTeamMessageResult> {
+  async sendMessage(caller: NativeAgent, request: SendTeamMessageRequest): Promise<SendTeamMessageResult> {
     return await this.mailbox.send(caller, request)
   }
 
@@ -170,7 +229,7 @@ export class TeamService extends TypertRemoteService {
    * @param request - task text, blockers, and advisory write scopes.
    * @returns the revision-one task view.
    */
-  async createTask(caller: Agent, request: CreateTeamTaskRequest): Promise<TeamTaskView> {
+  async createTask(caller: NativeAgent, request: CreateTeamTaskRequest): Promise<TeamTaskView> {
     return await this.tasks.create(this.roster.membership(caller), request)
   }
 
@@ -180,7 +239,7 @@ export class TeamService extends TypertRemoteService {
    * @param id - Team-local task identity.
    * @returns the latest task value and derived readiness diagnostics.
    */
-  getTask(caller: Agent, id: TeamTaskId): TeamTaskView {
+  getTask(caller: NativeAgent, id: TeamTaskId): TeamTaskView {
     return this.tasks.get(this.roster.membership(caller), id)
   }
 
@@ -189,7 +248,7 @@ export class TeamService extends TypertRemoteService {
    * @param caller - exact live Team member reading the board.
    * @returns detached current task views.
    */
-  listTasks(caller: Agent): TeamTaskView[] {
+  listTasks(caller: NativeAgent): TeamTaskView[] {
     return this.tasks.list(this.roster.membership(caller))
   }
 
@@ -199,8 +258,8 @@ export class TeamService extends TypertRemoteService {
    * @param request - task identity, expected revision, action, and action fields.
    * @returns the committed next task revision.
    */
-  async updateTask(caller: Agent, request: UpdateTeamTaskRequest): Promise<TeamTaskView> {
-    return await this.tasks.update(caller, this.roster.membership(caller), request)
+  async updateTask(caller: NativeAgent, request: UpdateTeamTaskRequest): Promise<TeamTaskView> {
+    return await this.tasks.update({ id: SessionId(caller.id) }, this.roster.membership(caller), request)
   }
 
   /**
@@ -210,7 +269,7 @@ export class TeamService extends TypertRemoteService {
    * @param signal - caller cancellation for the wait only.
    * @returns one observed change or a timeout result.
    */
-  async waitForChange(caller: Agent, timeoutMs: number, signal: AbortSignal): Promise<TeamWaitResult> {
+  async waitForChange(caller: NativeAgent, timeoutMs: number, signal: AbortSignal): Promise<TeamWaitResult> {
     const membership = this.roster.membership(caller)
     return await this.activity.wait(membership.id, timeoutMs, signal)
   }
@@ -221,7 +280,7 @@ export class TeamService extends TypertRemoteService {
    * @param targetName - durable teammate name.
    * @returns the target status sampled before cancellation.
    */
-  interrupt(caller: Agent, targetName: string): { previousStatus: 'running' | 'idle' | 'inactive' } {
+  interrupt(caller: NativeAgent, targetName: string): { previousStatus: 'running' | 'idle' | 'inactive' } {
     return this.roster.interrupt(caller, targetName)
   }
 
@@ -230,46 +289,68 @@ export class TeamService extends TypertRemoteService {
    * @param agent - candidate exact live Agent.
    * @returns Team membership, or undefined for non-Team subagents and stale identities.
    */
-  tryMembership(agent: Agent): TeamMembership | undefined {
+  tryMembership(agent: NativeAgent): TeamCallerMembership<NativeTeamRoot> | undefined {
     return this.roster.tryMembership(agent)
   }
 
   /**
-   * Read the current roster and non-deleted task board through the generated Remote API.
-   * @param agent - exact live Team member used as the authority credential.
-   * @returns detached current roster and task views.
-   */
-  @Remote('view')
-  remoteView(agent: Agent): TeamView {
-    return {
-      members: this.listMembers(agent),
-      tasks: this.listTasks(agent),
-    }
-  }
-
-  /**
-   * Create one shared task through the generated Remote API.
-   * @param agent - exact live Team member creating the task.
+   * Create one shared task and preserve Team rejections as business results.
+   * @param caller - exact live Team member creating the task.
    * @param request - task text, blockers, and advisory write scopes.
    * @returns the revision-one task or a typed Team rejection.
    */
-  @Remote('createTask')
-  remoteCreateTask(agent: Agent, request: CreateTeamTaskRequest): Promise<TeamTaskMutationResult> {
-    return this.taskMutationResult(this.createTask(agent, request))
+  async createTaskResult(caller: NativeAgent, request: CreateTeamTaskRequest): Promise<TeamTaskMutationResult> {
+    return await this.taskMutationResult(this.createTask(caller, request))
   }
 
   /**
    * Apply one task mutation and preserve Team rejections as business results.
-   * @param agent - exact live Team member authorizing the mutation.
+   * @param caller - exact live Team member authorizing the mutation.
    * @param request - task identity, expected revision, action, and action fields.
    * @returns the committed task or a typed Team rejection.
    */
-  @Remote('updateTask')
-  remoteUpdateTask(agent: Agent, request: UpdateTeamTaskRequest): Promise<TeamTaskMutationResult> {
-    return this.taskMutationResult(this.updateTask(agent, request))
+  async updateTaskResult(caller: NativeAgent, request: UpdateTeamTaskRequest): Promise<TeamTaskMutationResult> {
+    return await this.taskMutationResult(this.updateTask(caller, request))
   }
 
-  /** Preserve Team task rejections while allowing unexpected failures to reject the Remote call. */
+  /**
+   * Read the current roster and non-deleted task board.
+   * @param caller - exact live Team member used as the authority credential.
+   * @returns detached current roster and task views.
+   */
+  view(caller: NativeAgent): { readonly members: TeamMemberView[]; readonly tasks: TeamTaskView[] } {
+    return { members: this.listMembers(caller), tasks: this.listTasks(caller) }
+  }
+
+  /**
+   * Release every Team-owned runtime resource.
+   * @returns completion after admitted creation and dispatch work settles.
+   */
+  dispose(): Promise<void> {
+    if (this.disposal !== undefined) return this.disposal
+    this.disposal = this.disposeRuntime()
+    return this.disposal
+  }
+
+  /** Resolve the retained owner of one exact live Agent. */
+  private ownerOf(agent: NativeAgent): NativeActiveSessionOwner | undefined {
+    const owner = this.owners.get(SessionId(agent.id))
+    if (owner === undefined || this.deps.agents.get(agent.id) !== agent) return undefined
+    return owner
+  }
+
+  /** Build the exact root identity for one live Agent. */
+  private rootOf(agent: NativeAgent): NativeTeamRoot | undefined {
+    const owner = this.ownerOf(agent)
+    return owner === undefined ? undefined : { id: owner.session.id, agent: owner.agent, session: owner.session }
+  }
+
+  /** Map one owner to its execution status inside this process. */
+  private statusOf(owner: NativeActiveSessionOwner): 'running' | 'idle' {
+    return this.running.has(owner.session.id) ? 'running' : 'idle'
+  }
+
+  /** Preserve Team task rejections while allowing unexpected failures to reject the call. */
   private async taskMutationResult(operation: Promise<TeamTaskView>): Promise<TeamTaskMutationResult> {
     try {
       return { ok: true, value: await operation }
@@ -286,27 +367,26 @@ export class TeamService extends TypertRemoteService {
   }
 
   /** Queue one contained recovery pass after publication has unwound. */
-  private scheduleRecovery(agent: Agent): void {
+  private scheduleRecovery(agent: NativeAgent): void {
     queueMicrotask(() => {
       if (this.lifecycle.disposed) return
       void this.recoverFor(agent).catch((error: unknown) => {
         if (this.lifecycle.disposed) return
-        this.ctx.logger.warn(`Agent Teams recovery for "${agent.id}" failed: ${errorMessage(error)}`)
+        console.warn(`Agent Teams recovery for "${agent.id}" failed: ${errorMessage(error)}`)
       })
     })
   }
 
   /** Reconcile roster provisioning before retrying that member's pending mailbox. */
-  private async recoverFor(agent: Agent): Promise<void> {
+  private async recoverFor(agent: NativeAgent): Promise<void> {
     await this.roster.recoverFor(agent, this.lifecycle.signal)
     await this.mailbox.recoverFor(agent, this.lifecycle.signal)
   }
 
-  /** Stop Team-owned live branches and release every waiter before service disposal completes. */
+  /** Stop Team-owned work and release every waiter before disposal completes. */
   private async disposeRuntime(): Promise<void> {
     this.lifecycle.close()
     this.activity.close()
-
     const failures: unknown[] = []
     await this.lifecycle.settle(this.roster.pendingCreations(), failures)
     await this.lifecycle.settle(this.mailbox.pendingDispatches(), failures)
@@ -317,8 +397,47 @@ export class TeamService extends TypertRemoteService {
         failures.push(error)
       }
     }
+    for (const stop of this.stops.values()) stop()
+    this.stops.clear()
+    this.owners.clear()
+    this.running.clear()
     if (failures.length > 0) throw new AggregateError(failures, 'Agent Teams runtime disposal failed')
   }
 }
 
-export default TeamService
+/** Selected Native Agent Teams Provider. */
+export const plugin: NativePlugin = {
+  apiVersion: 1,
+  name: '@redspark/rsh-experimental-agent-team',
+  targets: ['host'],
+  requires: ['agents', 'activeSessions', 'sessionPersistence', 'sessionProjections', 'subagents'],
+  optional: [],
+  provides: ['agentTeams'],
+  resolve(input) {
+    const config = resolveNativeTeamConfig(input)
+    return (context) => {
+      const deps: NativeTeamDeps = {
+        agents: context.require('agents'),
+        active: context.require('activeSessions'),
+        projections: context.require('sessionProjections'),
+        persistence: context.require('sessionPersistence'),
+        subagents: context.require('subagents'),
+      }
+      const service = new NativeTeamService(deps, config)
+      context.effect(deps.projections.register(teamProjectionDefinition))
+      context.effect(deps.active.onAttached((owner) => {
+        service.attach(owner)
+        return Promise.resolve()
+      }))
+      context.effect(deps.active.onDetached((owner) => {
+        service.detach(owner)
+        return Promise.resolve()
+      }))
+      for (const owner of deps.active.owners()) service.attach(owner)
+      context.provide('agentTeams', service)
+      context.own(() => service.dispose())
+    }
+  },
+}
+
+export default plugin

@@ -348,98 +348,6 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
     ],
   },
   {
-    key: 'agentTeams',
-    summary: 'Agent Teams service backed by the exact live Lead Session log.',
-    description: 'Agent Teams service backed by the exact live Lead Session log.',
-    inheritedTypes: ['TypertRemoteService'],
-    methods: [
-      {
-        signature: 'membership(agent: Agent): TeamMembership',
-        description: 'Resolve one exact live Agent\'s Team role.',
-        parameters: [{ name: 'agent', description: 'exact live Agent used as the authority credential.' }],
-        returns: 'its root, Team identity, role, and model-facing name.',
-      },
-      {
-        signature: 'listMembers(agent: Agent): TeamMemberView[]',
-        description: 'List the runtime-enriched roster visible to one Team member.',
-        parameters: [{ name: 'agent', description: 'exact live Team member.' }],
-        returns: 'Lead and teammate rows in creation order.',
-      },
-      {
-        signature: 'async spawnTeammate(caller: Agent, request: SpawnTeammateRequest): Promise<SpawnTeammateResult>',
-        description: 'Create one named, continuable direct child of the Team Lead.',
-        parameters: [{ name: 'caller', description: 'exact live Lead Agent.' }, { name: 'request', description: 'immutable name, description, prompt, context mode, provider, and cancellation.' }],
-        returns: 'the active roster row.',
-      },
-      {
-        signature: 'async sendMessage(caller: Agent, request: SendTeamMessageRequest): Promise<SendTeamMessageResult>',
-        description: 'Queue one durable peer message, then attempt immediate delivery.',
-        parameters: [{ name: 'caller', description: 'exact live sending Team member.' }, { name: 'request', description: 'target name, content, and pre-queue cancellation.' }],
-        returns: 'durable message identity and immediate-delivery observation.',
-      },
-      {
-        signature: 'async createTask(caller: Agent, request: CreateTeamTaskRequest): Promise<TeamTaskView>',
-        description: 'Create one unowned pending task in the Team Lead log.',
-        parameters: [{ name: 'caller', description: 'exact live Team member creating the task.' }, { name: 'request', description: 'task text, blockers, and advisory write scopes.' }],
-        returns: 'the revision-one task view.',
-      },
-      {
-        signature: 'getTask(caller: Agent, id: TeamTaskId): TeamTaskView',
-        description: 'Return one task, including a deleted tombstone.',
-        parameters: [{ name: 'caller', description: 'exact live Team member reading the task.' }, { name: 'id', description: 'Team-local task identity.' }],
-        returns: 'the latest task value and derived readiness diagnostics.',
-      },
-      {
-        signature: 'listTasks(caller: Agent): TeamTaskView[]',
-        description: 'List current non-deleted tasks in numeric creation order.',
-        parameters: [{ name: 'caller', description: 'exact live Team member reading the board.' }],
-        returns: 'detached current task views.',
-      },
-      {
-        signature: 'async updateTask(caller: Agent, request: UpdateTeamTaskRequest): Promise<TeamTaskView>',
-        description: 'Compare-and-set one authorized task transition.',
-        parameters: [{ name: 'caller', description: 'exact live Team member authorizing the mutation.' }, { name: 'request', description: 'task identity, expected revision, action, and action fields.' }],
-        returns: 'the committed next task revision.',
-      },
-      {
-        signature: 'async waitForChange(caller: Agent, timeoutMs: number, signal: AbortSignal): Promise<TeamWaitResult>',
-        description: 'Wait for the next Team-domain or member-status change.',
-        parameters: [{ name: 'caller', description: 'exact live Team member waiting for activity.' }, { name: 'timeoutMs', description: 'bounded wait duration from ten seconds through one hour.' }, { name: 'signal', description: 'caller cancellation for the wait only.' }],
-        returns: 'one observed change or a timeout result.',
-      },
-      {
-        signature: 'interrupt(caller: Agent, targetName: string): { previousStatus: \'running\' | \'idle\' | \'inactive\' }',
-        description: 'Interrupt one live teammate turn without clearing its pending inbox.',
-        parameters: [{ name: 'caller', description: 'exact live Lead Agent.' }, { name: 'targetName', description: 'durable teammate name.' }],
-        returns: 'the target status sampled before cancellation.',
-      },
-      {
-        signature: 'tryMembership(agent: Agent): TeamMembership | undefined',
-        description: 'Resolve a caller without throwing, used by scoped-tool installation and observers.',
-        parameters: [{ name: 'agent', description: 'candidate exact live Agent.' }],
-        returns: 'Team membership, or undefined for non-Team subagents and stale identities.',
-      },
-      {
-        signature: '@Remote(\'view\') remoteView(agent: Agent): TeamView',
-        description: 'Read the current roster and non-deleted task board through the generated Remote API.',
-        parameters: [{ name: 'agent', description: 'exact live Team member used as the authority credential.' }],
-        returns: 'detached current roster and task views.',
-      },
-      {
-        signature: '@Remote(\'createTask\') remoteCreateTask(agent: Agent, request: CreateTeamTaskRequest): Promise<TeamTaskMutationResult>',
-        description: 'Create one shared task through the generated Remote API.',
-        parameters: [{ name: 'agent', description: 'exact live Team member creating the task.' }, { name: 'request', description: 'task text, blockers, and advisory write scopes.' }],
-        returns: 'the revision-one task or a typed Team rejection.',
-      },
-      {
-        signature: '@Remote(\'updateTask\') remoteUpdateTask(agent: Agent, request: UpdateTeamTaskRequest): Promise<TeamTaskMutationResult>',
-        description: 'Apply one task mutation and preserve Team rejections as business results.',
-        parameters: [{ name: 'agent', description: 'exact live Team member authorizing the mutation.' }, { name: 'request', description: 'task identity, expected revision, action, and action fields.' }],
-        returns: 'the committed task or a typed Team rejection.',
-      },
-    ],
-  },
-  {
     key: 'approval',
     summary: 'Cordis implementation specialized to the exact scoped Agent owner.',
     description: 'Cordis implementation specialized to the exact scoped Agent owner.',
@@ -4232,10 +4140,6 @@ export const TYPE_API: readonly TypeApiEntry[] = [
     declaration: 'export interface CreateTaskRequest {\n    delaySeconds?: number | undefined;\n    delayFromAt?: boolean | undefined;\n    kind?: \'goal\' | \'scheduled\' | undefined;\n    completionCriteria?: string | undefined;\n    maxGoalRounds?: number | undefined;\n    title: string;\n    prompt: string;\n    at: string;\n    endAt?: string | undefined;\n    everySeconds?: number | undefined;\n}',
   },
   {
-    name: 'CreateTeamTaskRequest',
-    declaration: 'export interface CreateTeamTaskRequest {\n    readonly subject: string;\n    readonly description: string;\n    readonly blockedBy?: readonly TeamTaskId[];\n    readonly writeScopes?: readonly string[];\n}',
-  },
-  {
     name: 'CredentialKey',
     declaration: 'export type CredentialKey = Branded<\'CredentialKey\'>;',
   },
@@ -5288,14 +5192,6 @@ export const TYPE_API: readonly TypeApiEntry[] = [
     declaration: 'export type SearchResultView = SearchMatchesResultView | SearchPathsResultView;',
   },
   {
-    name: 'SendTeamMessageRequest',
-    declaration: 'export interface SendTeamMessageRequest {\n    readonly target: string;\n    readonly content: ContentBlock[];\n    readonly signal: AbortSignal;\n}',
-  },
-  {
-    name: 'SendTeamMessageResult',
-    declaration: 'export interface SendTeamMessageResult {\n    readonly messageId: TeamMessageId;\n    readonly status: \'accepted\' | \'queued\';\n}',
-  },
-  {
     name: 'Session',
     declaration: 'export class Session {\n    get surface(): SessionSurface;\n    readonly header: SessionHeader;\n    readonly inheritedEventCount: SessionLogOffset;\n    get id(): SessionId;\n    readonly firstLiveSeq: SessionLogOffset;\n    static create(id: SessionId, seed?: readonly SessionEvent[], header?: SessionHeader, inheritedEventCount?: SessionLogOffset, onConstructorEvent?: (event: SessionEvent) => void): Session;\n    static fromRestore(id: SessionId, seed: readonly SessionEvent[], header: SessionHeader, inheritedEventCount: SessionLogOffset, eventState: SessionSeedEventState, onConstructorEvent?: (event: SessionEvent) => void): Session;\n    eventAt(seq: SessionSeq): SessionEvent | undefined;\n    snapshotEvents(fromSeq: SessionLogOffset = SessionLogOffset(0), toSeqExclusive: SessionLogOffset = this.seq): readonly SessionEvent[];\n    ownEvents(): readonly SessionEvent[];\n    isOwnSeq(seq: SessionSeq): boolean;\n    get seq(): SessionLogOffset;\n    hasAcceptedEvent(event: SessionEvent): boolean;\n    onBeforeAppend(guard: (event: SessionEvent) => void): () => void;\n    onAppend(observer: (event: SessionEvent) => void): () => void;\n    append<T extends SessionEventType>(type: T, data: SessionEventMap[T], ...opts: T extends SurfaceEventType ? [\n        opts: SurfaceIntent<T>\n    ] : [\n    ]): SessionEvent<T>;\n    appendBatch(inputs: readonly SessionAppendInput[]): readonly SessionEvent[];\n    requestHeader(): EpochHeader | undefined;\n    requestContext(): RequestContext | undefined;\n    deriv /* …truncated — full shape in source */',
   },
@@ -5964,14 +5860,6 @@ export const TYPE_API: readonly TypeApiEntry[] = [
     declaration: 'export interface SkillViewOptions extends SkillLookupOptions {\n    readonly scope?: ScopeKey | undefined;\n}',
   },
   {
-    name: 'SpawnTeammateRequest',
-    declaration: 'export interface SpawnTeammateRequest {\n    readonly name: string;\n    readonly description: string;\n    readonly prompt: ContentBlock[];\n    readonly context: \'fresh\' | \'fork\';\n    readonly provider: string;\n    readonly signal: AbortSignal;\n}',
-  },
-  {
-    name: 'SpawnTeammateResult',
-    declaration: 'export interface SpawnTeammateResult {\n    readonly member: TeamMemberView;\n}',
-  },
-  {
     name: 'SpillLocator',
     declaration: 'export type SpillLocator = Branded<\'SpillLocator\'>;',
   },
@@ -6202,50 +6090,6 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   {
     name: 'TaskNotice',
     declaration: 'export interface TaskNotice {\n    taskId?: string;\n    occurrenceCount?: number;\n    directReminder?: boolean;\n    recurring?: boolean;\n    nextAt?: number | null;\n    endAt?: string;\n    planState?: Task[\'state\'];\n    id: string;\n    title: string;\n    body: string;\n    time: number;\n    phase: \'due\' | \'completed\' | \'failed\' | \'blocked\' | \'interrupted\';\n    sessionId: string | null;\n    read: boolean;\n    dismissed?: boolean;\n}',
-  },
-  {
-    name: 'TeamId',
-    declaration: 'export type TeamId = Branded<\'TeamId\'>;',
-  },
-  {
-    name: 'TeamMembership',
-    declaration: 'export interface TeamMembership {\n    readonly root: Agent;\n    readonly id: TeamId;\n    readonly role: \'lead\' | \'teammate\';\n    readonly name: string;\n}',
-  },
-  {
-    name: 'TeamMemberView',
-    declaration: 'export interface TeamMemberView {\n    readonly id: SessionId;\n    readonly name: string;\n    readonly role: \'lead\' | \'teammate\';\n    readonly status: \'running\' | \'idle\' | \'inactive\' | \'provisioning\' | \'failed\';\n    readonly description?: string;\n    readonly provider?: string;\n    readonly context?: \'fresh\' | \'fork\';\n    readonly model?: string;\n    readonly diagnostics: string[];\n}',
-  },
-  {
-    name: 'TeamMessageId',
-    declaration: 'export type TeamMessageId = Branded<\'TeamMessageId\'>;',
-  },
-  {
-    name: 'TeamTaskAction',
-    declaration: 'export type TeamTaskAction = \'claim\' | \'release\' | \'edit\' | \'set_dependencies\' | \'complete\' | \'reopen\' | \'reassign\' | \'delete\';',
-  },
-  {
-    name: 'TeamTaskId',
-    declaration: 'export type TeamTaskId = Branded<\'TeamTaskId\'>;',
-  },
-  {
-    name: 'TeamTaskMutationResult',
-    declaration: 'export type TeamTaskMutationResult = {\n    readonly ok: true;\n    readonly value: TeamTaskView;\n} | {\n    readonly ok: false;\n    readonly error: {\n        readonly code: \'team-task-conflict\' | \'team-rejected\';\n        readonly message: string;\n    };\n};',
-  },
-  {
-    name: 'TeamTaskStatus',
-    declaration: 'export type TeamTaskStatus = \'pending\' | \'in_progress\' | \'completed\' | \'deleted\';',
-  },
-  {
-    name: 'TeamTaskView',
-    declaration: 'export interface TeamTaskView {\n    readonly id: TeamTaskId;\n    readonly revision: number;\n    readonly subject: string;\n    readonly description: string;\n    readonly status: TeamTaskStatus;\n    readonly blockedBy: TeamTaskId[];\n    readonly writeScopes: string[];\n    readonly ownerName?: string;\n    readonly ready: boolean;\n    readonly writeScopeWarnings: string[];\n}',
-  },
-  {
-    name: 'TeamView',
-    declaration: 'export interface TeamView {\n    readonly members: TeamMemberView[];\n    readonly tasks: TeamTaskView[];\n}',
-  },
-  {
-    name: 'TeamWaitResult',
-    declaration: 'export interface TeamWaitResult {\n    readonly timedOut: boolean;\n}',
   },
   {
     name: 'TerminalBackend',
@@ -6558,10 +6402,6 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   {
     name: 'TypertTypeModel',
     declaration: 'export interface TypertTypeModel {\n    readonly name: string;\n    readonly declaration: string;\n}',
-  },
-  {
-    name: 'UpdateTeamTaskRequest',
-    declaration: 'export interface UpdateTeamTaskRequest {\n    readonly taskId: TeamTaskId;\n    readonly expectedRevision: number;\n    readonly action: TeamTaskAction;\n    readonly subject?: string;\n    readonly description?: string;\n    readonly blockedBy?: readonly TeamTaskId[];\n    readonly writeScopes?: readonly string[];\n    readonly owner?: string;\n}',
   },
   {
     name: 'UserMessage',

@@ -188,10 +188,6 @@ flowchart LR
   pkg_subagent_rsh_sdk["subagent-rsh-sdk"]
   pkg_tool_subagent_control["tool-subagent-control"]
   pkg_tool_ralph["tool-ralph"]
-  pkg_experimental_agent_team["experimental-agent-team"]
-  svc_agentTeams["ctx.agentTeams<br/>Agent Teams coordination domain"]
-  pkg_experimental_tool_agent_team["experimental-tool-agent-team"]
-  pkg_experimental_client_ui_agent_team["experimental-client-ui-agent-team"]
   pkg_inspector["inspector"]
   svc_inspector["ctx.inspector<br/>Cross-realm runtime inspection"]
   pkg_jobs["jobs"]
@@ -265,7 +261,6 @@ flowchart LR
   pkg_credentials_local --> svc_credentials
   pkg_deepseek_llm_api_extensions --> svc_deepseekLlmApiExtensions
   pkg_e2b --> svc_e2b
-  pkg_experimental_agent_team --> svc_agentTeams
   pkg_experimental_code_runtime_python --> svc_codeRuntime
   pkg_file_reference --> svc_fileReferences
   pkg_file_reference_local --> svc_fileReferences
@@ -357,8 +352,6 @@ flowchart LR
   svc_agentDefaultModel --> pkg_headless
   svc_agentLoop --> pkg_base
   svc_agentLoop --> pkg_sdk_minimal
-  svc_agentTeams --> pkg_experimental_client_ui_agent_team
-  svc_agentTeams --> pkg_experimental_tool_agent_team
   svc_agents --> pkg_acp
   svc_agents --> pkg_agent_loop
   svc_agents --> pkg_subagent_in_process_driver
@@ -546,7 +539,6 @@ flowchart LR
 | `ctx.fs` | `seam` | [`fs`](../Modules/Official/fs/fs) | [`fs-local`](../Modules/Official/fs/fs-local), [`fs-sandbox`](../Modules/Official/fs/fs-sandbox), [`fs-e2b`](../Modules/Official/e2b/fs-e2b) | [`tool-fs`](../Modules/Official/fs/tool-fs) | [`fs-observation-policy`](../Modules/Official/fs/fs-observation-policy) | tool-fs 通过 ctx.fs 执行读取／写入／编辑；fs-sandbox 按共享沙箱模式限制变更；fs-observation-policy 通过 fs/* 事件门禁贡献基于观测状态的检查。 |
 | `ctx.compaction` | `seam` | [`compaction`](../Engine/compaction/compaction) | [`compaction-basic`](../Engine/compaction/compaction-basic) | [`compaction-basic`](../Engine/compaction/compaction-basic) | - | 基础后端消费步骤后的压力事件和请求错误恢复事件；不存在面向模型的压缩工具。 |
 | `ctx.subagents` | `seam` | [`subagent`](../Engine/subagent/subagent) | [`subagent-spawn-in-process`](../Engine/subagent/subagent-spawn-in-process), [`subagent-fork-in-process`](../Engine/subagent/subagent-fork-in-process), [`subagent-acp`](../Compatibility/DSH/subagent/subagent-acp), [`subagent-codex`](../Compatibility/DSH/bridge/subagent-codex), [`subagent-claude-code`](../Modules/Official/subagent/subagent-claude-code), [`subagent-rsh-sdk`](../Compatibility/DSH/subagent/subagent-rsh-sdk) | [`tool-subagent`](../Engine/subagent/tool-subagent), [`tool-subagent-control`](../Engine/subagent/tool-subagent-control), [`tool-ralph`](../Engine/workflow/tool-ralph) | - | 提供方实现传输；该服务还负责可选的、基于 Activation 的延续编排，tool-subagent 选择一次性或可延续委派，tool-subagent-control 传递后续消息，而 tool-ralph 要求一条全新的结构化输出路由。 |
-| `ctx.agentTeams` | `core` | `experimental-agent-team` | - | `experimental-tool-agent-team`, `experimental-client-ui-agent-team` | - | 负责隐式 Root roster、持久 peer mailbox、共享任务 DAG、continuable child 生命周期与生成式 Team Remote method；tool-agent-team 提供模型控制工具，client-ui-agent-team 挂载浏览器 contribution。 |
 | `ctx.inspector` | `core` | `inspector` | - | - | - | 负责 Worker 托管的 CDP target，以及独立于传输的 Host 和 Client observation 与 Cordis tree query API。 |
 | `ctx.jobs` | `seam` | [`jobs`](../Engine/jobs/jobs) | [`jobs-local`](../Engine/jobs/jobs-local) | [`tool-bash`](../Modules/Official/shell/tool-bash), [`tool-terminal`](../Modules/Official/terminal/tool-terminal), [`tool-subagent`](../Engine/subagent/tool-subagent), [`tool-jobs`](../Engine/jobs/tool-jobs) | - | 生产方（后台 bash、PTY 发送和 subagent 委派）登记正在运行的工作；tool-jobs 是面向模型的控制器，用于读取、列出和终止这些工作；jobs-local 是进程本地注册表。 |
 | `ctx.web` | `seam` | [`web`](../Modules/Official/web/web) | [`web-search-exa`](../Modules/Official/web/web-search-exa), [`web-search-perplexity`](../Modules/Official/web/web-search-perplexity), [`web-search-deepseek`](../Modules/Official/web/web-search-deepseek), [`web-fetch-http`](../Modules/Official/web/web-fetch-http) | [`tool-web`](../Modules/Official/web/tool-web) | - | 搜索和抓取提供方注册到同一个 ctx.web seam；tool-web 负责稳定的面向模型名称。 |

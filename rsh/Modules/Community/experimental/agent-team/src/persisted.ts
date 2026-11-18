@@ -2,7 +2,7 @@
 
 import type { SessionEvent, SessionHeader, SessionId, SessionLogOffset } from '@redspark/rsh-session/native'
 
-/** Read-only stored-Session access shared by the Cordis and Native persistence services. */
+/** Read-only stored-Session access used by Team provisioning and mailbox recovery. */
 export interface PersistedSessionSource {
   /**
    * Open one stored Session without taking write ownership.

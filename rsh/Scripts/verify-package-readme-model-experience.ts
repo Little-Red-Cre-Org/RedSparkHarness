@@ -119,8 +119,6 @@ const SENTENCE_MODEL_EXPERIENCE: Readonly<Record<string, SentenceContract>> = {
   'rsh/Programs/Web/client/connection': { kind: 'none', reason: 'Browser-side UI plugin layer; registers nothing model-facing.' },
   'rsh/Programs/Web/client/file-upload': { kind: 'none', reason: 'Browser-side request-body transport; registers nothing model-facing.' },
   'rsh/Programs/Web/api/remotes': { kind: 'none', reason: 'The Remote BFF selects business methods and forwarded events; selected services own any model-visible effect.' },
-  'rsh/Modules/Community/experimental/agent-team-web-profile': { kind: 'indirect', reason: 'The Web layer delegates model composition to the Host-side Agent Teams profile.' },
-  'rsh/Modules/Community/experimental/client-ui-agent-team': { kind: 'none', reason: 'The browser projection and task controls register no model-facing input.' },
   'rsh/Programs/Web/client/ui-layout': { kind: 'none', reason: 'Browser-side UI plugin layer; registers nothing model-facing.' },
   'rsh/Programs/Web/client/ui-dockkit': { kind: 'none', reason: 'Browser-side docking layout engine and components; registers nothing model-facing.' },
   'rsh/Programs/Web/client/ui-sidebar-right': { kind: 'none', reason: 'Browser-side UI plugin layer; registers nothing model-facing.' },

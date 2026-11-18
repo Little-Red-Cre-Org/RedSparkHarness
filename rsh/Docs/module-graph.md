@@ -857,10 +857,15 @@ flowchart TD
   pkg_tool_present --> pkg_agent
   pkg_tool_present --> pkg_fs
   pkg_tool_present --> pkg_llm
+  pkg_tool_present --> pkg_native_runtime
+  pkg_tool_present --> pkg_native_tools
   pkg_tool_present --> pkg_session
   pkg_tool_present --> pkg_session_projection
   pkg_tool_present --> pkg_tools
   pkg_tool_str_replace_editor --> pkg_fs
+  pkg_tool_str_replace_editor --> pkg_native_runtime
+  pkg_tool_str_replace_editor --> pkg_native_sandbox_policy
+  pkg_tool_str_replace_editor --> pkg_native_tools
   pkg_tool_str_replace_editor --> pkg_sandbox
   pkg_tool_str_replace_editor --> pkg_sandbox_policy
   pkg_tool_str_replace_editor --> pkg_tools
@@ -1680,8 +1685,8 @@ flowchart TD
 | [`fs-sandbox`](../Modules/Official/fs/fs-sandbox) | `fs` | [`fs`](../Modules/Official/fs/fs), [`fs-local`](../Modules/Official/fs/fs-local), [`plugin-host`](../Compatibility/DSH/bridge/compat-plugin-host), [`sandbox`](../Modules/Official/sandbox/sandbox), [`sandbox-policy`](../Modules/Official/sandbox/sandbox-policy) |
 | [`tool-fs`](../Modules/Official/fs/tool-fs) | `fs` | [`attachment`](../Modules/Official/attachment/attachment), [`fs`](../Modules/Official/fs/fs), [`llm`](../Engine/llm/llm), [`native-approval`](../Modules/Official/interaction/native-approval), [`native-model-execution`](../Engine/core/native-model-execution), [`native-prompt`](../Engine/core/native-prompt), [`native-runtime`](../Core/runtime-diagnostics/native-runtime), [`native-sandbox-policy`](../Modules/Official/sandbox/native-sandbox-policy), [`native-tools`](../Engine/core/native-tools), [`plugin-host`](../Compatibility/DSH/bridge/compat-plugin-host), [`sandbox`](../Modules/Official/sandbox/sandbox), [`sandbox-policy`](../Modules/Official/sandbox/sandbox-policy), [`session`](../Engine/core/session), [`system-prompt`](../Engine/core/system-prompt), [`tools`](../Engine/core/tools), [`user-approval`](../Compatibility/DSH/bridge/compat-user-approval) |
 | [`tool-fs-search`](../Modules/Official/fs/tool-fs-search) | `fs` | [`errors`](../Core/util/errors), [`native-prompt`](../Engine/core/native-prompt), [`native-runtime`](../Core/runtime-diagnostics/native-runtime), [`native-tools`](../Engine/core/native-tools), [`session`](../Engine/core/session), [`spill`](../Modules/Official/spill/spill), [`subprocess`](../Core/subprocess/subprocess), [`system-prompt`](../Engine/core/system-prompt), [`tools`](../Engine/core/tools) |
-| [`tool-present`](../Modules/Official/fs/tool-present) | `fs` | [`agent`](../Engine/core/agent), [`fs`](../Modules/Official/fs/fs), [`llm`](../Engine/llm/llm), [`session`](../Engine/core/session), [`session-projection`](../Engine/session/session-projection), [`tools`](../Engine/core/tools) |
-| [`tool-str-replace-editor`](../Modules/Official/fs/tool-str-replace-editor) | `fs` | [`fs`](../Modules/Official/fs/fs), [`sandbox`](../Modules/Official/sandbox/sandbox), [`sandbox-policy`](../Modules/Official/sandbox/sandbox-policy), [`tools`](../Engine/core/tools) |
+| [`tool-present`](../Modules/Official/fs/tool-present) | `fs` | [`agent`](../Engine/core/agent), [`fs`](../Modules/Official/fs/fs), [`llm`](../Engine/llm/llm), [`native-runtime`](../Core/runtime-diagnostics/native-runtime), [`native-tools`](../Engine/core/native-tools), [`session`](../Engine/core/session), [`session-projection`](../Engine/session/session-projection), [`tools`](../Engine/core/tools) |
+| [`tool-str-replace-editor`](../Modules/Official/fs/tool-str-replace-editor) | `fs` | [`fs`](../Modules/Official/fs/fs), [`native-runtime`](../Core/runtime-diagnostics/native-runtime), [`native-sandbox-policy`](../Modules/Official/sandbox/native-sandbox-policy), [`native-tools`](../Engine/core/native-tools), [`sandbox`](../Modules/Official/sandbox/sandbox), [`sandbox-policy`](../Modules/Official/sandbox/sandbox-policy), [`tools`](../Engine/core/tools) |
 | [`tool-skill`](../Modules/Official/skill/tool-skill) | `skill` | [`agent`](../Engine/core/agent), [`llm`](../Engine/llm/llm), [`skill`](../Modules/Official/skill/skill), [`tools`](../Engine/core/tools) |
 | [`tool-web`](../Modules/Official/web/tool-web) | `web` | [`llm`](../Engine/llm/llm), [`native-prompt`](../Engine/core/native-prompt), [`native-runtime`](../Core/runtime-diagnostics/native-runtime), [`native-tools`](../Engine/core/native-tools), [`system-prompt`](../Engine/core/system-prompt), [`tools`](../Engine/core/tools), [`web`](../Modules/Official/web/web) |
 | [`spill-policy`](../Modules/Official/spill/spill-policy) | `spill` | [`llm`](../Engine/llm/llm), [`output-retention`](../Core/util/output-retention), [`session`](../Engine/core/session), [`spill`](../Modules/Official/spill/spill), [`tools`](../Engine/core/tools) |

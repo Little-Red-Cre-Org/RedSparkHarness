@@ -1,5 +1,5 @@
 ---
-description: "在一个会话中运行一个小型具名 agent（智能体）团队：成员之间的持久消息与共享任务板，用于组合实验性 Team 插件的部署。"
+description: "在一个会话中运行一个小型具名 agent（智能体）团队：成员之间的持久消息与共享任务板，用于组合实验性 Team 包的部署。"
 kind: "package-reference"
 ---
 
@@ -54,15 +54,13 @@ kind: "package-reference"
 | `maxMessageBytes` | `65,536` | 单条发送消息的最大尺寸 |
 | `disposalTimeoutMs` | `5,000` | 关闭清理允许的时间 |
 
-生成的[配置目录](../../../../Docs/config-catalog.zh.md#redsparkrsh-experimental-agent-team)是每个受支持字段及其 JSDoc 的穷尽式真源。
+[`src/index.ts`](src/index.ts) 中的 `resolveNativeTeamConfig` 是每个受支持字段的穷尽式真源；未知字段或越界值会在加载时失败。
 
 ### Native 运行时
 
-两个 Team 包都在 `./native` 发布 Native 入口，因此无 Cordis 的 profile 仍挂载相同的两个包名，并通过包清单解析它们的 Native 入口。Native 运行时需要相同的持久存储，外加 `@redspark/rsh-session-projection`、`@redspark/rsh-native-session-execution`、`@redspark/rsh-native-subagent` 与 `@redspark/rsh-native-prompt` 的行；它们分别提供投影注册表、活动 Session、subagent provider 与提示词段落。
+本包只提供 Native 实现。`./native` 入口声明提供 `agentTeams`，并要求 `agents`、`activeSessions`、`sessionPersistence`、`sessionProjections` 与 `subagents`；profile 需要一并挂载持久存储与提供这些能力的行。上表配置项由 `resolveNativeTeamConfig` 校验。
 
-Native 面与 Cordis 面共用持久 journal、投影、roster、mailbox 与任务板。区别只在服务注册和工具安装：Native 入口在 `rsh.profile.json` 中声明所需能力，Cordis 入口则在 `ctx` 上注册。Native 面不发布 Typert Remote 方法，也没有 `./client` 或 `./remote` 导出面。
-
-Native 面也不发布 `./invariant` 伴生插件。Cordis 伴生插件监听 `session/event` 派发；Native journal 在每次变更前通过严格的 Team 投影读取权威状态，因此损坏的事件流会从该读取中报错。
+持久 journal、投影、roster、mailbox 与任务板只有这一份实现，不存在需要同步的第二套服务注册。本包不发布 `./invariant`、`./client` 或 `./remote` 导出面：journal 在每次变更前通过严格的 Team 投影读取权威状态，因此损坏的事件流会从该读取中报错。
 
 ### Teammate
 
@@ -121,17 +119,19 @@ Lead 可以停止 teammate 的当前轮次，而不会删除其排队的消息�
 
 | 文件 | 职责 |
 |---|---|
-| [`src/index.ts`](src/index.ts) | 插件入口：`Config` schema、服务注册、恢复调度 |
-| [`src/roster.ts`](src/roster.ts) | Team 身份、成员关系解析、provisioning 与 roster 拆除 |
-| [`src/mailbox.ts`](src/mailbox.ts) | 持久队列、目标本地投递、确认与恢复 |
+| [`src/index.ts`](src/index.ts) | Native 插件入口：`Config` schema、能力要求、服务注册、恢复调度 |
+| [`src/native-roster.ts`](src/native-roster.ts) | Team 身份、成员关系解析、provisioning 与 roster 拆除 |
+| [`src/native-mailbox.ts`](src/native-mailbox.ts) | 持久队列、目标本地投递、确认与恢复 |
 | [`src/task-board.ts`](src/task-board.ts) | 任务 CAS 命令、DAG 校验与派生视图 |
-| [`src/journal.ts`](src/journal.ts) | 串行化的 Lead 日志事务与提交通知 |
+| [`src/native-journal.ts`](src/native-journal.ts) | 串行化的 Lead 日志事务与提交通知 |
+| [`src/journal-port.ts`](src/journal-port.ts) | roster、mailbox 与任务板消费的 journal 操作 |
 | [`src/projection.ts`](src/projection.ts) | 解码并校验 Team 事件的严格回放投影 |
 | [`src/activity.ts`](src/activity.ts) | 一次性变更等待者与 dispose（资源释放）时的等待解除 |
 | [`src/lifecycle.ts`](src/lifecycle.ts) | 共享准入截止与有界结算 |
-| [`src/invariant.ts`](src/invariant.ts) | 在 append 前回放候选事件的不变式伴生插件 |
 
-`src/native.ts`、`src/native-journal.ts`、`src/native-roster.ts`、`src/native-mailbox.ts` 与 `src/membership.ts` 在 Native 运行时上安装同一领域实现。`src/journal-port.ts` 是两种 journal 实现共同满足的端口，因此 roster、mailbox 与任务板代码不依赖任一运行时的服务。
+`src/index.ts` 在 Native 运行时上安装该领域，`src/membership.ts` 解析调用者角色。`src/journal-port.ts` 是 roster、mailbox 与任务板代码消费的端口，避免依赖某个持久化服务。
+
+本包不发布 invariant 伴生入口，因为 journal 在每次变更前通过严格的 Team 投影读取权威状态，不存在可供比对的第二份视图。
 
 ### Team 身份与 roster
 
