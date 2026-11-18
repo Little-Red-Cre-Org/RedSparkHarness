@@ -18,6 +18,8 @@ The Agent Teams capability itself stays. Its Web presentation retires with the C
 
 The tool catalog harvest follows the package. `gen-tool-catalog` no longer mounts a Cordis plugin for the Team tools; it boots the Native registry with stub `agentTeams`, `agents`, `activeSessions`, and `promptSections` seams, and reads the same nine schemas from the real registry. A future Team schema change therefore appears in the catalog without a second Cordis harness.
 
+Test coverage moved with the implementation. `native-roster`, `native-mailbox`, `native`, `projection-events`, and `session-message` carry the identity, provisioning, recovery, task, and stream cases the deleted Cordis suites held. The invariant companion's candidate-event replay is covered by the journal's strict projection read before each mutation.
+
 ## Alternatives considered
 
 **Keep the three packages as published artifacts.** Rejected: their entire content is patch rows for a service no longer registered on `ctx`, and a shipped profile that names them cannot start.

@@ -18,6 +18,8 @@ Agent Teams 能力本身保留。它的 Web 呈现随 Cordis 面退役：Native 
 
 工具目录的采集跟随该包。`gen-tool-catalog` 不再为 Team 工具挂载 Cordis 插件，而是用 stub 的 `agentTeams`、`agents`、`activeSessions` 与 `promptSections` 启动 Native 注册表，并从真实注册表读取相同的九个 schema。今后 Team schema 变化会直接出现在目录里，不需要第二套 Cordis 采集环境。
 
+测试覆盖随实现迁移。`native-roster`、`native-mailbox`、`native`、`projection-events` 与 `session-message` 承接了被删除 Cordis 测试里的身份、provisioning、恢复、任务与事件流用例。不变式伴生入口对候选事件回放的检查，由 journal 在每次变更前的严格投影读取覆盖。
+
 ## 考虑过的替代方案
 
 **保留三个包作为已发布产物。** 否决：它们的内容全部是 `ctx` 上已不存在服务的 patch 行，点名它们的已发布 profile 无法启动。
