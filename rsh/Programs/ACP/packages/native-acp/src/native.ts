@@ -546,6 +546,7 @@ export class NativeAcpApplication implements NativeApplication {
       .onRequest(methods.agent.session.new, ({ params, signal: requestSignal }) => this.track(this.newSession(params, requestSignal)))
       .onRequest(methods.agent.session.resume, ({ params, signal: requestSignal }) => this.track((async () => {
         this.ready()
+        this.assertAdditionalDirectories(params.additionalDirectories)
         const cwd = this.workspace(params.cwd)
         const servers = this.resolveServers(params.mcpServers ?? [], cwd)
         if (this.sessions.has(params.sessionId) || this.activating.has(params.sessionId)) throw RequestError.invalidParams(undefined, 'session is already active')
@@ -715,6 +716,18 @@ export class NativeAcpApplication implements NativeApplication {
     return resolve(cwd)
   }
 
+  /**
+   * Reject `session/new` requests that widen the session's filesystem scope.
+   * The native profile mounts one workspace root, so accepting the field would
+   * tell the client that paths outside `cwd` are writable when nothing resolves
+   * them.
+   * @param additionalDirectories - the requested extra workspace roots, if any.
+   */
+  private assertAdditionalDirectories(additionalDirectories: readonly string[] | undefined | null): void {
+    if (additionalDirectories === undefined || additionalDirectories === null) return
+    if (additionalDirectories.length > 0) throw RequestError.invalidParams(undefined, 'additionalDirectories is not supported')
+  }
+
   private resolveServers(servers: NewSessionRequest['mcpServers'], cwd: string): McpConfig[] {
     try {
       const configs = resolveAcpMcpConfigs(servers, cwd, input => resolveNativeMcpConfig({ ...input,
@@ -843,6 +856,7 @@ export class NativeAcpApplication implements NativeApplication {
   private async newSession(params: NewSessionRequest, signal: AbortSignal):
   Promise<{ sessionId: string; configOptions: SessionConfigOption[]; _meta?: Record<string, unknown> }> {
     this.ready()
+    this.assertAdditionalDirectories(params.additionalDirectories)
     const policy = effectivePolicy(readNativeAcpSubagentPolicy(params._meta), this.config, this.parentRelayAvailable())
     await this.assertOutputTokenLimit(policy?.maxTokens ?? this.config.maxTokens, signal)
     const cwd = this.workspace(params.cwd)

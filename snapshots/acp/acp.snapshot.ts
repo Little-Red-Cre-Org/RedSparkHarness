@@ -28,8 +28,6 @@ const controllerCases: readonly {
   readonly hasModelTurn: boolean
   readonly configPath?: string
 }[] = [
-  { name: 'reject-extra-dirs', hasModelTurn: false },
-  { name: 'cancel-tool-calls', hasModelTurn: true },
   { name: 'escalation-approved', hasModelTurn: true },
   { name: 'fs-escalation-approved', hasModelTurn: true },
   {

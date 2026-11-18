@@ -34,6 +34,8 @@ Two of the four describe behavior the Native ACP does not have, rather than a te
 
 Neither can be migrated by writing a test. Each needs a Native implementation or an explicit retirement, and the note records the gap rather than dropping the evidence.
 
+[Native ACP refuses extra workspace roots and covers tool cancellation](2026-11-18-native-acp-refuses-extra-workspace-roots.md) implements the `additionalDirectories` refusal and the in-flight cancellation test, so those two scenarios leave the corpus.
+
 ## Alternatives considered
 
 **Migrate the whole ACP suite to the Native profile at once.** Rejected: the suite applies Cordis YAML patches, so it needs a Native composition built first, and four scenarios would still be left without a behavior to assert.

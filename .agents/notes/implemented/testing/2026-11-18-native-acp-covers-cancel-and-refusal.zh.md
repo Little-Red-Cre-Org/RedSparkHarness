@@ -34,6 +34,8 @@ legacy 套件本身也不是可靠的预言机：在干净构建下，它在 `se
 
 这两者都无法靠写测试迁移，各自需要 Native 实现或显式退役；本笔记记录该缺口，而不是丢弃证据。
 
+[Native ACP 拒绝额外工作区根并覆盖工具取消](2026-11-18-native-acp-refuses-extra-workspace-roots.zh.md) 实现了 `additionalDirectories` 拒绝与执行中取消测试，因此这两个场景离开语料。
+
 ## 备选方案
 
 **把整个 ACP 套件一次性迁到 Native profile。** 否决：套件施加的是 Cordis YAML patch，需要先构建 Native 组合，而且仍有四个场景没有可断言的行为。
