@@ -40,6 +40,12 @@ it('replays the recorded ACP handshake on the shipped profile', async () => {
     expect(created.configOptions[0]).toMatchObject({
       id: 'model', currentValue: JSON.stringify(['deepseek-official', 'deepseek-v4-flash']),
     })
+    await expect(transport.request('session/new', {
+      cwd: workspace, mcpServers: [], additionalDirectories: ['/extra-dir'],
+    }, signal)).rejects.toThrow('additionalDirectories is not supported')
+    expect(await transport.request('session/new', {
+      cwd: workspace, mcpServers: [], additionalDirectories: [],
+    }, signal)).toMatchObject({ sessionId: expect.any(String) })
   } finally {
     child.stdin.end()
     const exited = await child
