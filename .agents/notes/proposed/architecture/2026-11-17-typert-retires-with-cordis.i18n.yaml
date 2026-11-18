@@ -1,0 +1,6 @@
+# Bilingual-pair consistency record (rsh/Docs/i18n/README.md): the git blob hash of each
+# side as of the last confirmed-consistent state. Both languages carry equal authority;
+# after editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write .agents/notes/proposed/architecture/2026-11-17-typert-retires-with-cordis.md
+2026-11-17-typert-retires-with-cordis.md: c7f759e340cad406ce2355e98eea1db2fa90b13a
+2026-11-17-typert-retires-with-cordis.zh.md: 8ab50edc9f7d6cc6ea953f0b8abed419c46eb98f

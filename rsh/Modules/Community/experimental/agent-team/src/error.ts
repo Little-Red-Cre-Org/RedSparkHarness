@@ -1,7 +1,7 @@
 /** Typed Agent Teams failures. */
 
 import { inspect } from 'node:util'
-import { HarnessError } from '@redspark/rsh-llm'
+import { HarnessError } from '@redspark/rsh-llm/native'
 
 /** Stable failure raised by the Team domain. */
 export class TeamError extends HarnessError {

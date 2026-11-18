@@ -11,6 +11,24 @@
     "directory": "rsh/Modules/Community/experimental/tool-agent-team"
   },
   "type": "module",
+  "dsh": {
+    "native": {
+      "apiVersion": 1,
+      "entry": "./native",
+      "targets": [
+        "host"
+      ],
+      "requires": [
+        "agentTeams",
+        "agents",
+        "activeSessions",
+        "tools",
+        "promptSections"
+      ],
+      "optional": [],
+      "provides": []
+    }
+  },
   "main": "lib/index.js",
   "types": "lib/types/index.d.ts",
   "exports": {
@@ -19,15 +37,25 @@
       "default": "./lib/index.js"
     },
     "./src/*": "./src/*",
+    "./native": {
+      "types": "./lib/types/native.d.ts",
+      "default": "./lib/native.js"
+    },
     "./package.json": "./package.json"
   },
   "files": [
     "lib/index.js",
+    "lib/native.js",
     "lib/types/**/*.d.ts"
   ],
   "license": "MIT",
   "dependencies": {
-    "@redspark/schemastery": "workspace:^"
+    "@redspark/schemastery": "workspace:^",
+    "@redspark/rsh-native-agent": "workspace:^",
+    "@redspark/rsh-native-prompt": "workspace:^",
+    "@redspark/rsh-native-runtime": "workspace:^",
+    "@redspark/rsh-native-tools": "workspace:^",
+    "zod": "^4.4.3"
   },
   "peerDependencies": {
     "@redspark/rsh-agent": "workspace:^",
@@ -54,5 +82,10 @@
     "@redspark/rsh-experimental-agent-team": "workspace:^",
     "@redspark/rsh-tools": "workspace:^",
     "@redspark/cordis": "workspace:^"
+  },
+  "peerDependenciesMeta": {
+    "@redspark/cordis": {
+      "optional": true
+    }
   }
 }

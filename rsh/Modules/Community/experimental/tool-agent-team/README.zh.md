@@ -50,6 +50,10 @@ kind: "package-reference"
 
 生成的[配置目录](../../../../Docs/config-catalog.zh.md#redsparkrsh-experimental-tool-agent-team)是每个受支持字段及其 JSDoc 的穷尽式真源。
 
+### Native 运行时
+
+本包为无 Cordis 的 profile 在 `./native` 发布 Native 入口。它通过 `NativeToolRegistry` 注册相同的九个值工具，并通过 `NativePromptRegistry` 注册一段作用域内的协作指引，配置项 `freshProvider` 与 `forkProvider` 含义不变。Native 入口要求 `agentTeams`、`agents`、`activeSessions`、`tools` 与 `promptSections`，且不导入任何 Cordis 包。
+
 试试这样要求 Lead 模型：「创建一个名为 reviewer 的 teammate 检查 diff，再把变更摘要发给 reviewer」。模型会调用创建工具，然后调用消息工具。
 
 ### 模型能做什么

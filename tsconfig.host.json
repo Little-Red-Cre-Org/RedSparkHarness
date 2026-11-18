@@ -422,7 +422,7 @@
     { "path": "./rsh/Engine/jobs/jobs-local" },
     { "path": "./rsh/Engine/jobs/native-tool-jobs" },
     { "path": "./rsh/Engine/jobs/tool-jobs" },
-    { "path": "./rsh/Modules/Community/experimental/agent-team" },
+    { "path": "./rsh/Modules/Community/experimental/agent-team/tsconfig.host.json" },
     { "path": "./rsh/Modules/Community/experimental/agent-team-profile" },
     { "path": "./rsh/Modules/Community/experimental/tool-agent-team" },
     { "path": "./rsh/Modules/Community/experimental/agent-team-web-profile" },

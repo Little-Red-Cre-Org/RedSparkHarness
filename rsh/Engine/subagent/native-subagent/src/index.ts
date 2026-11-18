@@ -63,6 +63,8 @@ export interface NativeSubagentOptions {
 export interface NativeSubagentRequest {
   readonly agent: NativeAgent
   readonly session: Session
+  /** Caller-selected durable child identity; a fresh id is generated when omitted. */
+  readonly id?: SessionId
   readonly label: string
   readonly prompt: readonly ContentBlock[]
   readonly config: NativeSessionConfiguration
@@ -1426,7 +1428,7 @@ export class NativeSpawnSubagents implements NativeSubagentOperations {
   }): Promise<NativeSubagentResult> {
     const authority = this.context.require('sessionExecution').delegationAuthority(request.agent, request.session)
     const delegatedPolicy = captureDelegatedPolicy(request.session, authority?.approvalRequired === true)
-    const id = background?.id ?? SessionId(randomUUID())
+    const id = background?.id ?? request.id ?? SessionId(randomUUID())
     const output = new AssistantOutputFold()
     let end: TurnEndReason | undefined
     const descriptor = snapshotSubagentDescriptor({ mode: 'one-shot', provider: this.providerName, label: request.label })

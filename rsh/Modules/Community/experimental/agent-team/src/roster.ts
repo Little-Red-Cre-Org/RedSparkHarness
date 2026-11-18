@@ -11,8 +11,8 @@ import type { ContinuableStart } from '@redspark/rsh-subagent'
 import { errorMessage, TeamError } from './error.ts'
 import type { TeamJournal } from './journal.ts'
 import type { TeamRuntimeLifecycle } from './lifecycle.ts'
+import { resolveActiveMember } from './membership.ts'
 import { readPersistedSession } from './persisted.ts'
-import type { TeamState } from './projection.ts'
 import { messageAccepted } from './session-message.ts'
 import { TeamId } from './types.ts'
 import type {
@@ -25,33 +25,12 @@ import { requiredText } from './validation.ts'
 
 const MEMBER_NAME = /^[a-z0-9]+(?:-[a-z0-9]+)*$/u
 
-/** Caller identity inside one implicit Team. */
+/** Caller identity inside one implicit Team on the Cordis face. */
 export interface TeamMembership {
   readonly root: Agent
   readonly id: TeamId
   readonly role: 'lead' | 'teammate'
   readonly name: string
-}
-
-/**
- * Resolve one active Team member by model-facing name, including the Lead pseudo-row.
- * @param root - exact live Team Lead.
- * @param state - current Team state.
- * @param rawName - candidate member name.
- * @returns resolved durable id and normalized name.
- */
-export function resolveActiveMember(
-  root: Agent,
-  state: TeamState,
-  rawName: string,
-): { id: SessionId; name: string } {
-  const name = rawName.trim()
-  if (name === 'lead') return { id: root.id, name }
-  const member = state.members.find(candidate => candidate.name === name)
-  if (member === undefined || member.phase !== 'active') {
-    throw new TeamError(`active teammate "${name}" not found`, 'TEAM_MEMBER_NOT_FOUND')
-  }
-  return { id: member.id, name }
 }
 
 /** Owns Team identities and the lifecycle of rostered continuable children. */

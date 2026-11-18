@@ -79,7 +79,7 @@ export class NativeSubagentContinuations {
     signal.throwIfAborted()
     const authority = this.context.require('sessionExecution').delegationAuthority(request.agent, request.session)
     const delegatedPolicy = captureDelegatedPolicy(request.session, authority?.approvalRequired === true)
-    const id = SessionId(randomUUID())
+    const id = request.id ?? SessionId(randomUUID())
     const descriptor = snapshotSubagentDescriptor({ mode: 'continuable', provider: this.provider, label: request.label,
       agentProvider: request.config.provider, agentModel: request.config.model,
       ...request.config.reasoningEffort === undefined ? {} : { agentReasoningEffort: request.config.reasoningEffort },

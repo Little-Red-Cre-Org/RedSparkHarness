@@ -14,7 +14,7 @@ import type { TeamJournal } from './journal.ts'
 import type { TeamRuntimeLifecycle } from './lifecycle.ts'
 import { readPersistedSession } from './persisted.ts'
 import type { TeamRoster } from './roster.ts'
-import { resolveActiveMember } from './roster.ts'
+import { resolveActiveMember } from './membership.ts'
 import { messageAccepted } from './session-message.ts'
 import { TeamId, TeamMessageId } from './types.ts'
 import type {

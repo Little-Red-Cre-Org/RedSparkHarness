@@ -1,26 +1,12 @@
 /** Durable Session-message acceptance checks shared by provisioning and mailbox recovery. */
 
-import type { UserMessage } from '@redspark/rsh-llm'
-import type { SessionEvent } from '@redspark/rsh-session'
-import type {} from '@redspark/rsh-agent/types'
-
-type InboxProjection = Record<'next-turn' | 'next-step', UserMessage[]>
+import type { UserMessage } from '@redspark/rsh-llm/native'
+import { foldNativeInboxEvent, type NativeInboxState } from '@redspark/rsh-native-agent/inbox'
+import type { SessionEvent } from '@redspark/rsh-session/native'
 
 /** Fold the durable inbox suffix into the messages still awaiting a claim. */
 function pendingInboxMessages(events: readonly SessionEvent[]): UserMessage[] {
-  const inbox: InboxProjection = { 'next-turn': [], 'next-step': [] }
-  for (const event of events) {
-    if (event.type === 'agent/inbox/moved') {
-      const index = inbox['next-turn'].findIndex(message => message.id === event.data.messageId)
-      if (index < 0) throw new Error(`agent-team: invalid persisted inbox move at seq ${event.seq}`)
-      const [message] = inbox['next-turn'].splice(index, 1)
-      if (message === undefined) throw new Error(`agent-team: moved inbox message disappeared at seq ${event.seq}`)
-      inbox['next-step'].push(message)
-    } else if (event.type === 'agent/inbox/spliced') {
-      const pending = inbox[event.data.target]
-      pending.splice(event.data.start, event.data.removedCount ?? 0, ...event.data.inserted)
-    }
-  }
+  const inbox = events.reduce<NativeInboxState>(foldNativeInboxEvent, { 'next-turn': [], 'next-step': [] })
   return [...inbox['next-turn'], ...inbox['next-step']]
 }
 

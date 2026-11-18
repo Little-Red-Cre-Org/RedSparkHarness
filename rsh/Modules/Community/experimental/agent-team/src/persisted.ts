@@ -1,7 +1,31 @@
 /** Short-lived read-handle access to persisted Team member Sessions. */
 
-import type { SessionEvent, SessionHeader, SessionId , SessionLogOffset } from '@redspark/rsh-session'
-import type { SessionPersistence } from '@redspark/rsh-session-persistence'
+import type { SessionEvent, SessionHeader, SessionId, SessionLogOffset } from '@redspark/rsh-session/native'
+
+/** Read-only stored-Session access shared by the Cordis and Native persistence services. */
+export interface PersistedSessionSource {
+  /**
+   * Open one stored Session without taking write ownership.
+   * @param id - stored Session identity.
+   * @param access - fixed read access.
+   * @param options - optional cancellation for open work.
+   * @returns an open read handle.
+   */
+  open(
+    id: SessionId,
+    access: 'read',
+    options?: { readonly signal?: AbortSignal },
+  ): Promise<{
+    readonly header: SessionHeader
+    readonly inheritedEventCount: SessionLogOffset
+    read(
+      offset?: number,
+      length?: number,
+      options?: { readonly signal?: AbortSignal },
+    ): Promise<{ readonly events: readonly SessionEvent[] }>
+    close(): Promise<void>
+  }>
+}
 
 /** One persisted Session's detached header and complete committed event log. */
 export interface PersistedSessionView {
@@ -20,7 +44,7 @@ export interface PersistedSessionView {
  * @returns the stored header and every committed event.
  */
 export async function readPersistedSession(
-  persistence: SessionPersistence,
+  persistence: PersistedSessionSource,
   id: SessionId,
   signal: AbortSignal,
 ): Promise<PersistedSessionView> {

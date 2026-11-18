@@ -75,7 +75,7 @@ export class TeamService extends TypertRemoteService {
   private readonly journal: TeamJournal
   private readonly roster: TeamRoster
   private readonly mailbox: TeamMailbox
-  private readonly tasks: TeamTaskBoard
+  private readonly tasks: TeamTaskBoard<Agent>
 
   constructor(ctx: Context, config: Config = {}) {
     super(ctx, 'agentTeams')

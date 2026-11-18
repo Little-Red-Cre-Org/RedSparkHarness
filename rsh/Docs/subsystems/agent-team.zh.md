@@ -77,6 +77,8 @@ interface TeamTaskSnapshot {
 
 `foldTeam()` 把一个 Root Session 回放成每个 Team 操作所读取的 roster、任务板与 queued-minus-delivered mailbox。它按 `TeamId` 选取记录，因此普通 fork 继承的 event 保留 ancestor id，绝不会进入新 Root 的状态。Session event 的 `seq` 与 `time` 继续负责顺序和时间记录，Team snapshot 不再重复保存它们。roster 与 task 读取以 view 形式到达调用方，而 pending 邮件仅供投递与恢复内部使用。包 [README](../../Modules/Community/experimental/agent-team/README.zh.md)负责 operation、authorization、recovery 和限制行为。
 
+两个运行时面读取这些持久形式。`@redspark/rsh-experimental-agent-team/native` 在 `NativeContext` 上提供 `agentTeams`，操作相同；`@redspark/rsh-experimental-tool-agent-team/native` 安装相同的九个工具。共享的 roster、mailbox 与任务板 owner 依赖 `TeamJournalPort` 和注入的 owner 查询，而不是任一运行时的服务。Cordis 面在 Typert 退役前保留其 `TeamService` Remote 方法。
+
 <!-- BEGIN GENERATED cordis-surface (gen-cordis-catalog.ts) — do not edit between markers -->
 
 <a id="cordis-surface"></a>
