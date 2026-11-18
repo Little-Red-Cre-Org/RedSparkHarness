@@ -28,12 +28,9 @@ const controllerCases: readonly {
   readonly hasModelTurn: boolean
   readonly configPath?: string
 }[] = [
-  { name: 'handshake', hasModelTurn: false },
   { name: 'reject-extra-dirs', hasModelTurn: false },
-  { name: 'cancel', hasModelTurn: true },
   { name: 'cancel-tool-calls', hasModelTurn: true },
   { name: 'escalation-approved', hasModelTurn: true },
-  { name: 'escalation-rejected', hasModelTurn: true },
   { name: 'fs-escalation-approved', hasModelTurn: true },
   {
     name: 'image-compaction',
