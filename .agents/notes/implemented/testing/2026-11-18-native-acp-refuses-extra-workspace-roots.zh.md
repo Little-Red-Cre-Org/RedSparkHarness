@@ -14,7 +14,7 @@
 
 ## 决定
 
-`NativeAcpApplication.newSession` 在任何 Session 工作开始之前，以 legacy 服务端的原文 `additionalDirectories is not supported` 拒绝非空的 `additionalDirectories`。字段缺失、为 `null` 或为空数组时仍然创建 Session：该字段是工作区范围请求，空列表不会扩大任何范围。
+`NativeAcpApplication.newSession` 与 `session/resume` 处理器在任何 Session 工作开始之前，以 legacy 服务端的原文 `additionalDirectories is not supported` 拒绝非空的 `additionalDirectories`。字段缺失、为 `null` 或为空数组时仍然创建 Session：该字段是工作区范围请求，空列表不会扩大任何范围。
 
 `snapshots/native-acp/tool-cancel.snapshot.ts` 通过 JSON-RPC 驱动随包发布的 `acp` profile，模型由本地 fixture 提供。fixture 在一条 assistant 消息里返回两个 `write_file` 调用。客户端挂起第一个 `session/request_permission` 的应答，发送 `session/cancel`，快照断言：
 

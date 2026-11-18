@@ -546,6 +546,7 @@ export class NativeAcpApplication implements NativeApplication {
       .onRequest(methods.agent.session.new, ({ params, signal: requestSignal }) => this.track(this.newSession(params, requestSignal)))
       .onRequest(methods.agent.session.resume, ({ params, signal: requestSignal }) => this.track((async () => {
         this.ready()
+        this.assertAdditionalDirectories(params.additionalDirectories)
         const cwd = this.workspace(params.cwd)
         const servers = this.resolveServers(params.mcpServers ?? [], cwd)
         if (this.sessions.has(params.sessionId) || this.activating.has(params.sessionId)) throw RequestError.invalidParams(undefined, 'session is already active')

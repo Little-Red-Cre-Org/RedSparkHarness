@@ -2,5 +2,5 @@
 # side as of the last confirmed-consistent state. Both languages carry equal authority;
 # after editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write .agents/notes/implemented/testing/2026-11-18-native-acp-refuses-extra-workspace-roots.md
-2026-11-18-native-acp-refuses-extra-workspace-roots.md: ff94109eaf66e8237040815487865d7138afc300
-2026-11-18-native-acp-refuses-extra-workspace-roots.zh.md: c63af9a2176fd2c57b66db5cf6a764a8a472e8f0
+2026-11-18-native-acp-refuses-extra-workspace-roots.md: 153f819500ec620ec198501139d16071e050075f
+2026-11-18-native-acp-refuses-extra-workspace-roots.zh.md: 16102a6523416f9eb47b0e4d781afb32ad50928e

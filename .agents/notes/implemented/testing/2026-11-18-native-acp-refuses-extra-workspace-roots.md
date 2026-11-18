@@ -14,7 +14,7 @@ Nothing covered cancellation while a tool call is in flight. The Native suite ca
 
 ## Decision
 
-`NativeAcpApplication.newSession` refuses a non-empty `additionalDirectories` with the legacy server's message, `additionalDirectories is not supported`, before any Session work starts. An absent, `null`, or empty list still creates a Session: the field is a workspace-scope request, and an empty one widens nothing.
+`NativeAcpApplication.newSession` and the `session/resume` handler refuse a non-empty `additionalDirectories` with the legacy server's message, `additionalDirectories is not supported`, before any Session work starts. An absent, `null`, or empty list still creates a Session: the field is a workspace-scope request, and an empty one widens nothing.
 
 `snapshots/native-acp/tool-cancel.snapshot.ts` drives the shipped `acp` profile over JSON-RPC against a local fixture model. The fixture returns two `write_file` calls in one assistant message. The client holds the first `session/request_permission` answer, sends `session/cancel`, and the snapshot asserts:
 

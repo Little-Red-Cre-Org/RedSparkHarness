@@ -43,9 +43,14 @@ it('replays the recorded ACP handshake on the shipped profile', async () => {
     await expect(transport.request('session/new', {
       cwd: workspace, mcpServers: [], additionalDirectories: ['/extra-dir'],
     }, signal)).rejects.toThrow('additionalDirectories is not supported')
-    expect(await transport.request('session/new', {
+    const reverified = await transport.request('session/new', {
       cwd: workspace, mcpServers: [], additionalDirectories: [],
-    }, signal)).toMatchObject({ sessionId: expect.any(String) })
+    }, signal) as { sessionId: string }
+    expect(reverified.sessionId).toEqual(expect.any(String))
+    await transport.request('session/close', { sessionId: reverified.sessionId }, signal)
+    await expect(transport.request('session/resume', {
+      sessionId: reverified.sessionId, cwd: workspace, mcpServers: [], additionalDirectories: ['/extra-dir'],
+    }, signal)).rejects.toThrow('additionalDirectories is not supported')
   } finally {
     child.stdin.end()
     const exited = await child
