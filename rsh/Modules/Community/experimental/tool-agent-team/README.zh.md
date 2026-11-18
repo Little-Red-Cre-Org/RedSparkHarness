@@ -36,8 +36,12 @@ kind: "package-reference"
 对现有组合的最小增量是 [agent-team README](../agent-team/README.zh.md#smallest-working-setup) 中的两包片段：持久会话存储、团队领域包与本包。插件本身只有两个可选设置：
 
 ```yaml
-{ "id": "tool-agent-team", "plugin": "@redspark/rsh-experimental-tool-agent-team", "scope": "root",
-  "config": { "freshProvider": "spawn", "forkProvider": "fork" } }
+- id: tool-agent-team
+  plugin: '@redspark/rsh-experimental-tool-agent-team'
+  scope: root
+  config:
+    freshProvider: spawn
+    forkProvider: fork
 ```
 
 | 字段 | 默认值 | 含义 |

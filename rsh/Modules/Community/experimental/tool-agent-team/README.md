@@ -36,8 +36,12 @@ Choose it when the model should create and coordinate teammates by itself rather
 The smallest addition to an existing composition is the two-package fragment from the [agent-team README](../agent-team/README.md#smallest-working-setup): durable session storage, the team domain package, and this package. The plugin itself takes two optional settings:
 
 ```yaml
-{ "id": "tool-agent-team", "plugin": "@redspark/rsh-experimental-tool-agent-team", "scope": "root",
-  "config": { "freshProvider": "spawn", "forkProvider": "fork" } }
+- id: tool-agent-team
+  plugin: '@redspark/rsh-experimental-tool-agent-team'
+  scope: root
+  config:
+    freshProvider: spawn
+    forkProvider: fork
 ```
 
 | Field | Default | Meaning |
