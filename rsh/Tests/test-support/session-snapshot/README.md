@@ -41,7 +41,7 @@ The closed profile manifest accepts the public `headless`, `sdk`, and `acp` prof
 
 `materializeProfilePatch` keeps relative plugin paths anchored to the authored patch. Its optional `packageResolutionAnchor` selects the file from which bare plugin dependencies resolve; omission uses the authored patch. Repository Headless and SDK snapshot suites select the CLI package manifest so test-only dependencies remain available when temporary profiles run built artifacts.
 
-A consuming `*.snapshot.ts` is the scenario table plus one factory call. `AgentUnderTest` supplies absolute `binScript`, optional `libBinScript`, `configPath`, and `tsconfigPath` paths because the subprocess cwd sits outside the repository.
+A consuming `*.snapshot.ts` is the scenario table plus one factory call. `AgentUnderTest` supplies absolute `binScript`, optional `libBinScript`, and `tsconfigPath` paths because the subprocess cwd sits outside the repository. `configPath` is optional: a shipped profile with no overlay needs none, and omitting it for a `--config` launch fails loudly.
 
 ```ts
 import { dirname, join } from 'node:path'
