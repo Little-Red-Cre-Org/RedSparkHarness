@@ -12,7 +12,7 @@ Both Cordis snapshot runners had stopped executing their own members.
 
 `snapshots/sdk/sdk.snapshot.ts` collected one case, `subagent-continuable`. `snapshots/native-sdk/legacy-continuable.snapshot.ts` already replays that same directory through `dsh --profile sdk`.
 
-No pull-request CI job runs `test:snapshot`; the corpus is verified by the local and master lanes. A red runner therefore stayed invisible while it exercised nothing.
+Pull-request CI runs snapshot files named one by one in `.github/workflows/redspark-ci.yml`, and that list never named this runner; the whole corpus runs only in the local and master lanes. A red runner therefore stayed invisible while it exercised nothing.
 
 ## Decision
 
@@ -38,7 +38,7 @@ What happened to each member:
 
 The three deleted directories carried the only recorded evidence of `cordis_define`, `cordis_undefine` and `cordis_inspect_query`. That capability retires with `@redspark/rsh-tool-cordis`, so the evidence leaves one phase earlier than the package does.
 
-The corpus still has no pull-request CI job, so the next drift inside a snapshot runner will again surface only in the local and master lanes.
+The whole corpus still has no pull-request CI job, so a runner outside the workflow list will again drift unseen.
 
 ## Alternatives considered
 

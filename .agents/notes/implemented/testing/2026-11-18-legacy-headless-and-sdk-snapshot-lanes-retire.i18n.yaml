@@ -2,5 +2,5 @@
 # side as of the last confirmed-consistent state. Both languages carry equal authority;
 # after editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write .agents/notes/implemented/testing/2026-11-18-legacy-headless-and-sdk-snapshot-lanes-retire.md
-2026-11-18-legacy-headless-and-sdk-snapshot-lanes-retire.md: 3f40ab47ecf4b2030fe3bf6c31f37d58286bc9f0
-2026-11-18-legacy-headless-and-sdk-snapshot-lanes-retire.zh.md: 3d9294060cd4c728bc4e5dda738136c4d19affff
+2026-11-18-legacy-headless-and-sdk-snapshot-lanes-retire.md: fe07ced9cf7ab0a20621dbf2c568af15ccf98f4b
+2026-11-18-legacy-headless-and-sdk-snapshot-lanes-retire.zh.md: c1e90cfbbe9c637d2c89b1ca709c50c12a88ddd6

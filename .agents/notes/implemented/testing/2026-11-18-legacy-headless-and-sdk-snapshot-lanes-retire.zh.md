@@ -12,7 +12,7 @@ Status: implemented
 
 `snapshots/sdk/sdk.snapshot.ts` 只收集一个用例 `subagent-continuable`。`snapshots/native-sdk/legacy-continuable.snapshot.ts` 已经用 `dsh --profile sdk` 重放同一个目录。
 
-没有任何 PR CI 任务运行 `test:snapshot`；语料由本地与 master 车道验证。因此一条什么都不执行的红色运行器可以一直不被发现。
+PR CI 只运行 `.github/workflows/redspark-ci.yml` 中逐个点名的快照文件，而这份清单从未包含该运行器；整条语料只在本地与 master 车道执行。因此一条什么都不执行的红色运行器可以一直不被发现。
 
 ## 决定
 
@@ -38,7 +38,7 @@ Status: implemented
 
 被删除的三个目录曾持有 `cordis_define`、`cordis_undefine` 与 `cordis_inspect_query` 唯一的录制证据。该能力随 `@redspark/rsh-tool-cordis` 退役，因此证据比包早一个阶段离开。
 
-语料仍然没有 PR CI 任务，因此下一次快照运行器内部漂移仍只会在本地与 master 车道暴露。
+整条语料仍然没有 PR CI 任务，因此清单之外的运行器再次漂移时仍不会被发现。
 
 ## 备选方案
 
