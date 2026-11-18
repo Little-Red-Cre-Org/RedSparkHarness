@@ -1,6 +1,6 @@
 version: 1
 scenario: subagent-continuable
-profile: legacy-sdk
+profile: sdk
 composition: subagent-durability-failure
 recording: authored
 header:

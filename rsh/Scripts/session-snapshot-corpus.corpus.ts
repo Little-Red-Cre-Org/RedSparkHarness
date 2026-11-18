@@ -27,7 +27,7 @@ const expectedProfilesByDirectory: Partial<Record<typeof profiles[number], reado
   'native-acp': ['native-acp', 'acp'],
   'native-sdk': ['native-sdk', 'sdk'],
   sdk: ['sdk', 'legacy-sdk'],
-  session: ['headless', 'legacy-headless'],
+  session: ['headless'],
   web: ['web', 'native-web'],
 }
 const snapshotAdapters = [
@@ -175,8 +175,6 @@ const snapshotAdapters = [
   'snapshots/native-tui/preset-controls.snapshot.ts',
   'snapshots/native-tui/commands-presets.snapshot.ts',
   'snapshots/native-tui/human-interaction.snapshot.ts',
-  'snapshots/sdk/sdk.snapshot.ts',
-  'snapshots/session/headless.snapshot.ts',
 ] as const
 
 interface Scenario {
