@@ -20,6 +20,8 @@ Status: implemented
 
 `rsh/Compatibility/DSH/subagent/subagent-acp` 的 ACP e2e 改为不带 overlay 启动 `--profile acp`。随附组合已经选择 `deepseek-official` 与录制的 DeepSeek 路由，所以被删除的 `cordis.yml` overlay 没有替代文件。
 
+`snapshots/native-acp/external-child/` 已重新录制。它十月录制时还没有 `request-context` 运行时消息与 `subagent.run_in_background` 参数，因此父、子请求都不再匹配随附组合。此次刷新只加入这些输入与工具描述变化。
+
 ## Native 未重放的部分
 
 `image-compaction` 通过 DeepSeek 路由为六张图片计价，`retainTokens` 为 `100`。无 key 的 `pi-ai` 重放 provider 不提供图片计价，而 `@redspark/rsh-llm-deepseek` 需要凭据，因此没有无 key 的 Native 重放能断言这些数值。该组合随本注释记录的数值一起删除。

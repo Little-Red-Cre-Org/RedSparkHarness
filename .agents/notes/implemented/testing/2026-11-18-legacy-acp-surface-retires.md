@@ -20,6 +20,8 @@ Delete `rsh/Programs/CLI/tests/profiles/acp/` and `snapshots/acp/` entirely.
 
 The ACP e2e in `rsh/Compatibility/DSH/subagent/subagent-acp` launches `--profile acp` with no overlay. The shipped composition already selects `deepseek-official` and the recorded DeepSeek route, so the deleted `cordis.yml` overlay is not replaced.
 
+`snapshots/native-acp/external-child/` is re-recorded. Its October recording predated the `request-context` runtime message and the `subagent.run_in_background` parameter, so the parent and child requests no longer matched the shipped profile. The refresh adds only those inputs and the tool description change.
+
 ## Not replayed on Native
 
 `image-compaction` priced six images through the DeepSeek route with `retainTokens: 100`. The keyless `pi-ai` replay provider does not price images, and `@redspark/rsh-llm-deepseek` requires credentials, so no keyless Native replay can assert those numbers. The composition is deleted with its numbers recorded only in this note.
