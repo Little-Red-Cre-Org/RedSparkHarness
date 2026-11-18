@@ -2,5 +2,5 @@
 # side as of the last confirmed-consistent state. Both languages carry equal authority;
 # after editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write .agents/notes/implemented/testing/2026-11-18-native-acp-covers-cancel-and-refusal.md
-2026-11-18-native-acp-covers-cancel-and-refusal.md: aa80bbcfcc90e9e4a134c9c218a845a239f41b4f
-2026-11-18-native-acp-covers-cancel-and-refusal.zh.md: f0ad4d7a01ff574d18d9d2bc188c34169efcdd0b
+2026-11-18-native-acp-covers-cancel-and-refusal.md: ede0cb5496f10e299fd741f0d19101ca68ab5d0d
+2026-11-18-native-acp-covers-cancel-and-refusal.zh.md: f1b7e1d0b8e25d267ff714963febecb7c18069ff

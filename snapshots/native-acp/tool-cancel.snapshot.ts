@@ -86,8 +86,11 @@ it('cancels an in-flight tool call and skips the call behind it', async () => {
       { sessionUpdate: 'tool_call_update', status: 'failed' },
     ])
     expect(output.filter(update => update.toolCallId === 'skipped-call')).toMatchObject([
-      { sessionUpdate: 'tool_call' },
-      { sessionUpdate: 'tool_call_update', status: 'failed' },
+      {
+        sessionUpdate: 'tool_call_update',
+        status: 'failed',
+        content: [{ type: 'content', content: { type: 'text', text: expect.stringContaining('interrupted before') } }],
+      },
     ])
     expect(existsSync(join(workspace, 'started.txt'))).toBe(false)
     expect(existsSync(join(workspace, 'skipped.txt'))).toBe(false)

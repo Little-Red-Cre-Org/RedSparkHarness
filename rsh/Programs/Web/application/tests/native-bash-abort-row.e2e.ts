@@ -14,7 +14,7 @@ import { JsonlSessionBackend } from '@redspark/rsh-session-persistence-jsonl'
 import { SESSION_FORMAT_VERSION, SessionId, type SessionHeader } from '@redspark/rsh-session/native'
 
 const root = fileURLToPath(new URL('../../../../../', import.meta.url))
-const fixture = join(root, 'snapshots/acp/cancel-tool-calls/session.v3.jsonl')
+const fixture = join(root, 'snapshots/web/bash-abort-row/session.v3.jsonl')
 const seedId = 'bash-abort-row-web-e2e'
 const systemPrompt = 'Answer the user.'
 
