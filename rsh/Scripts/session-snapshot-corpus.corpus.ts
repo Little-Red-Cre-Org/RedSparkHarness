@@ -42,6 +42,7 @@ const snapshotAdapters = [
   'snapshots/native-acp/external-child.snapshot.ts',
   'snapshots/native-acp/text-turn.snapshot.ts',
   'snapshots/native-acp/legacy-handshake.snapshot.ts',
+  'snapshots/native-acp/cancel.snapshot.ts',
   'snapshots/native-headless/goal-continuation.snapshot.ts',
   'snapshots/native-headless/human-question.snapshot.ts',
   'snapshots/native-headless/fs-read-native.snapshot.ts',

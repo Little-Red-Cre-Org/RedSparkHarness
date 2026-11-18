@@ -98,6 +98,13 @@ jobs:
           rsh/Programs/CLI/tests/profiles/native-sdk/native-sdk-dsh-child.e2e.ts
           rsh/Programs/CLI/tests/profiles/native-deepseek/native-deepseek-contributions.e2e.ts
           rsh/Programs/ACP/packages/native-acp/tests/lifecycle.e2e.ts
+      - name: Native ACP protocol snapshots
+        if: runner.os == 'Linux'
+        run: >-
+          pnpm exec vitest run --config vitest.snapshot.config.ts --maxWorkers=1
+          snapshots/native-acp/legacy-handshake.snapshot.ts
+          snapshots/native-acp/text-turn.snapshot.ts
+          snapshots/native-acp/cancel.snapshot.ts
       # native-sdk installs the platform shell, so its recorded tool schemas carry
       # bash or pwsh by design; the fixtures are recorded on POSIX.
       - name: Native SDK workspace instructions snapshots
