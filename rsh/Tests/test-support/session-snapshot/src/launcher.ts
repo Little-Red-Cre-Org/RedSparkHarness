@@ -55,8 +55,8 @@ export interface AgentUnderTest {
   binScript: string
   /** Explicit built-mode entry for fixtures whose source path is not under `src/`. */
   libBinScript?: string | undefined
-  /** Base config or profile patch loaded by the bin. */
-  configPath: string
+  /** Base config or profile patch loaded by the bin; omitted for a shipped profile with no overlay. */
+  configPath?: string | undefined
   /** Package owner used to resolve bare plugins when patches live outside its workspace. */
   packageResolutionAnchor?: string
   /** Named dsh profile; omitted only for test-only fake bins with their own config grammar. */
@@ -74,7 +74,7 @@ export interface AcpTestLaunchOptions {
   /** Process cwd and default session-home root. */
   cwd: string
   /** Alternate leaf config for this launch. */
-  configPath?: string
+  configPath?: string | undefined
   /** Extra environment values layered over the parent environment. */
   env?: NodeJS.ProcessEnv
   /** Permission handler; omitted requests fail closed as `cancelled`. */
@@ -127,7 +127,7 @@ export function launchAcpTestAgent(options: AcpTestLaunchOptions): LaunchedAcpTe
     srcBin: agent.binScript,
     libBin: agent.libBinScript,
     configArgs: agent.profile === undefined
-      ? ['--config', selectedConfig]
+      ? ['--config', requireConfigPath(selectedConfig)]
       : profileArgs(
         agent.profile,
         agent.configPath,
@@ -352,23 +352,35 @@ export function launchAcpTestAgent(options: AcpTestLaunchOptions): LaunchedAcpTe
   }
 }
 
+/** Reject a config-less invocation that has no profile grammar to fall back to. */
+function requireConfigPath(configPath: string | undefined): string {
+  if (configPath === undefined) throw new Error('ACP test agent needs configPath unless it selects a profile')
+  return configPath
+}
+
 /** Build one profile invocation from its shipped template and scenario patches. */
 function profileArgs(
   profile: string,
-  basePatch: string,
-  selectedPatch: string,
+  basePatch: string | undefined,
+  selectedPatch: string | undefined,
   snapshotMode: string | undefined,
   cwd: string,
   packageResolutionAnchor?: string,
   fromDefaultProfile?: string,
 ): string[] {
-  const base = resolve(cwd, basePatch)
-  const selected = resolve(cwd, selectedPatch)
+  if (basePatch === undefined && selectedPatch === undefined) {
+    return [
+      '--profile', profile,
+      ...fromDefaultProfile === undefined ? [] : ['--from-default-profile', fromDefaultProfile],
+    ]
+  }
+  const base = basePatch === undefined ? undefined : resolve(cwd, basePatch)
+  const selected = selectedPatch === undefined ? undefined : resolve(cwd, selectedPatch)
   // Replay siblings already contain the selected scenario's complete delta
   // over the base patch; live scenario patches are not also applied.
-  const patches = snapshotMode === 'replay'
+  const patches = snapshotMode === 'replay' && base !== undefined && selected !== undefined
     ? [base, replayPatchPath(selected)]
-    : [...new Set([base, selected])]
+    : [...new Set([base, selected].filter((value): value is string => value !== undefined))]
   const materializedRoot = join(cwd, '.dsh-profile-patches')
   mkdirSync(materializedRoot, { recursive: true })
   const materializedDir = mkdtempSync(join(materializedRoot, 'launch-'))

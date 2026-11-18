@@ -106,6 +106,7 @@ jobs:
           snapshots/native-acp/text-turn.snapshot.ts
           snapshots/native-acp/cancel.snapshot.ts
           snapshots/native-acp/tool-cancel.snapshot.ts
+          snapshots/native-acp/fs-escalation.snapshot.ts
       # native-sdk installs the platform shell, so its recorded tool schemas carry
       # bash or pwsh by design; the fixtures are recorded on POSIX.
       - name: Native SDK workspace instructions snapshots

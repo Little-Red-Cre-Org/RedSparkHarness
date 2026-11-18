@@ -207,7 +207,7 @@ export interface RunOptions {
    * {@link AgentUnderTest.configPath} for this run. Its basename still ends
    * in `cordis.yml` so the launcher can select the replay sibling.
    */
-  configPath?: string
+  configPath?: string | undefined
 }
 
 /**

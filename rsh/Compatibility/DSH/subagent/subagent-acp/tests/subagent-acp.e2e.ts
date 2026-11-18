@@ -17,9 +17,8 @@ import * as acp from '../src/index.ts'
  * spawn coverage and self-skips without `DEEPSEEK_API_KEY`.
  */
 
-// The real ACP profile: dsh plus the example's live DeepSeek patch.
+// The real ACP profile: the shipped Native acp composition.
 const binScript = fileURLToPath(new URL('../../../../../Programs/CLI/src/bin.ts', import.meta.url))
-const exampleConfig = fileURLToPath(new URL('../../../../../../snapshots/acp/escalation-approved/cordis.yml', import.meta.url))
 const repoTsconfig = fileURLToPath(new URL('../../../../../../tsconfig.json', import.meta.url))
 
 // How to launch the child ACP profile (src via tsx / lib via plain node, per RSH_EXAMPLE_MODE).
@@ -29,7 +28,7 @@ function resolveChildLaunch(rshHome: string) {
   return resolveExampleLaunch({
     srcBin: binScript,
     sourceImport: 'tsx/esm',
-    configArgs: ['--profile', 'acp', '--patch', exampleConfig],
+    configArgs: ['--profile', 'acp'],
     tsconfigPath: repoTsconfig,
     env: {
       ...process.env.DEEPSEEK_API_KEY !== undefined ? { DEEPSEEK_API_KEY: process.env.DEEPSEEK_API_KEY } : {},

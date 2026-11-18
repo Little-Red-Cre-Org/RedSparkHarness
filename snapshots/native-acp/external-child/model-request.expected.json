@@ -11,6 +11,10 @@
       {
         "role": "user",
         "content": "Delegate one approved file write to the Native ACP child and report completion."
+      },
+      {
+        "role": "user",
+        "content": "Current runtime context. This snapshot supersedes earlier runtime-context snapshots.\n\nCurrent DSH file policy: workspace-write. Any available operation enforced by the DSH file sandbox may modify files under the session workspace: \"{{cwd}}\". Some platform temporary areas may also be writable.\n\nApproval policy: ask. Operations that require approval may ask through the configured answerers; without an available answerer, the request fails closed."
       }
     ],
     "tools": [
@@ -60,7 +64,7 @@
         "type": "function",
         "function": {
           "name": "subagent",
-          "description": "Delegate one task to a fresh child without your conversation. This call waits for its final result and cleanup.",
+          "description": "Delegate one task to a fresh child without your conversation. By default wait for its final result and cleanup. run_in_background returns after child readiness; use job_output/job_kill to observe or cancel the Agent-owned job.",
           "parameters": {
             "type": "object",
             "additionalProperties": false,
@@ -74,6 +78,9 @@
               },
               "prompt": {
                 "type": "string"
+              },
+              "run_in_background": {
+                "type": "boolean"
               }
             }
           }
@@ -93,6 +100,10 @@
       {
         "role": "user",
         "content": "Write approved.txt with the exact workspace oracle contents, then report completion."
+      },
+      {
+        "role": "user",
+        "content": "Current runtime context. This snapshot supersedes earlier runtime-context snapshots.\n\nCurrent DSH file policy: workspace-write. Any available operation enforced by the DSH file sandbox may modify files under the session workspace: \"{{cwd}}\". Some platform temporary areas may also be writable.\n\nApproval policy: ask. Operations that require approval may ask through the configured answerers; without an available answerer, the request fails closed."
       }
     ],
     "tools": [
@@ -133,6 +144,10 @@
       {
         "role": "user",
         "content": "Write approved.txt with the exact workspace oracle contents, then report completion."
+      },
+      {
+        "role": "user",
+        "content": "Current runtime context. This snapshot supersedes earlier runtime-context snapshots.\n\nCurrent DSH file policy: workspace-write. Any available operation enforced by the DSH file sandbox may modify files under the session workspace: \"{{cwd}}\". Some platform temporary areas may also be writable.\n\nApproval policy: ask. Operations that require approval may ask through the configured answerers; without an available answerer, the request fails closed."
       },
       {
         "role": "assistant",
@@ -192,6 +207,10 @@
       {
         "role": "user",
         "content": "Delegate one approved file write to the Native ACP child and report completion."
+      },
+      {
+        "role": "user",
+        "content": "Current runtime context. This snapshot supersedes earlier runtime-context snapshots.\n\nCurrent DSH file policy: workspace-write. Any available operation enforced by the DSH file sandbox may modify files under the session workspace: \"{{cwd}}\". Some platform temporary areas may also be writable.\n\nApproval policy: ask. Operations that require approval may ask through the configured answerers; without an available answerer, the request fails closed."
       },
       {
         "role": "assistant",
@@ -260,7 +279,7 @@
         "type": "function",
         "function": {
           "name": "subagent",
-          "description": "Delegate one task to a fresh child without your conversation. This call waits for its final result and cleanup.",
+          "description": "Delegate one task to a fresh child without your conversation. By default wait for its final result and cleanup. run_in_background returns after child readiness; use job_output/job_kill to observe or cancel the Agent-owned job.",
           "parameters": {
             "type": "object",
             "additionalProperties": false,
@@ -274,6 +293,9 @@
               },
               "prompt": {
                 "type": "string"
+              },
+              "run_in_background": {
+                "type": "boolean"
               }
             }
           }

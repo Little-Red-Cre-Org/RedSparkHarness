@@ -38,7 +38,7 @@
     },
     {
       "name": "subagent",
-      "description": "Delegate one task to a fresh child without your conversation. This call waits for its final result and cleanup.",
+      "description": "Delegate one task to a fresh child without your conversation. By default wait for its final result and cleanup. run_in_background returns after child readiness; use job_output/job_kill to observe or cancel the Agent-owned job.",
       "parameters": {
         "type": "object",
         "additionalProperties": false,
@@ -52,6 +52,9 @@
           },
           "prompt": {
             "type": "string"
+          },
+          "run_in_background": {
+            "type": "boolean"
           }
         }
       }

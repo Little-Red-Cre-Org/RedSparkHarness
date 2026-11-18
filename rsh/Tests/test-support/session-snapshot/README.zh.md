@@ -37,11 +37,11 @@ manifest 的 `profile` 是公开 `dsh` profile 的准确名称；兼容场景使
 
 ### 编写快照套件
 
-封闭的 profile manifest 接受 `legacy-headless`、`legacy-sdk` 与 `legacy-acp`，用于以自定义 profile 名称保留 Cordis profile template 的场景。原生场景使用对应的公开 `headless`、`sdk` 或 `acp` profile 名称；显式 `native-*` 别名也有效。
+封闭的 profile manifest 接受公开的 `headless`、`sdk` 与 `acp` profile 名称，以及显式 `native-*` 别名。
 
 `materializeProfilePatch` 始终相对于原始补丁解析相对插件路径。可选参数 `packageResolutionAnchor` 指定解析裸插件依赖所依据的文件；省略时使用原始补丁。仓库的 Headless 与 SDK 快照套件选择 CLI 包的 manifest，确保临时 profile 运行构建产物时仍可加载测试专用依赖。
 
-消费方 `*.snapshot.ts` 就是场景表加一次工厂调用。`AgentUnderTest` 提供绝对 `binScript`、可选 `libBinScript`、`configPath` 与 `tsconfigPath` 路径，因为子进程 cwd 位于仓库之外。legacy profile 将 `profile` 设为自定义名称，并将 `fromDefaultProfile` 设为复制的随附 template：
+消费方 `*.snapshot.ts` 就是场景表加一次工厂调用。`AgentUnderTest` 提供绝对 `binScript`、可选 `libBinScript` 与 `tsconfigPath` 路径，因为子进程 cwd 位于仓库之外。`configPath` 是可选的：没有 overlay 的随附 profile 不需要它；对 `--config` 启动省略它会明确失败。
 
 ```ts
 import { dirname, join } from 'node:path'
@@ -70,9 +70,7 @@ const SCENARIOS: Scenario[] = [
 defineAcpSnapshotSuite({
   agent: { // absolute paths, resolved from the suite's own location
     binScript: fileURLToPath(new URL('../../../Programs/CLI/src/bin.ts', import.meta.url)),
-    configPath: fileURLToPath(new URL('../cordis.yml', import.meta.url)),
-    profile: 'legacy-acp',
-    fromDefaultProfile: 'acp',
+    profile: 'acp',
     tsconfigPath: fileURLToPath(new URL('../../../../tsconfig.json', import.meta.url)),
   },
   snapshotsDir: join(dirname(fileURLToPath(import.meta.url)), 'snapshots'),

@@ -28,4 +28,4 @@ Web minimal 与独立 `sdk-minimal` bundle 各自负责工具选择，不依赖 
 
 ## Verification
 
-[SDK 进程测试](../../../../rsh/Programs/CLI/tests/profiles/sdk/keyless-smoke.e2e.ts) 捕获默认文件工具、显式插入编辑器与独立极简工具清单的实际模型请求。[headless 进程测试](../../../../rsh/Programs/CLI/tests/profiles/headless/tests/keyless-smoke.e2e.ts) 通过所属应用检查共享默认值。[headless](../../../../snapshots/native-headless/)、[SDK](../../../../snapshots/native-sdk/) 与 [ACP](../../../../snapshots/acp/acp.snapshot.ts) 录制会话固定组装后模型可见的输出，包括显式插入编辑器的 SDK fixture。
+[SDK 进程测试](../../../../rsh/Programs/CLI/tests/profiles/sdk/keyless-smoke.e2e.ts) 捕获默认文件工具、显式插入编辑器与独立极简工具清单的实际模型请求。[headless 进程测试](../../../../rsh/Programs/CLI/tests/profiles/headless/tests/keyless-smoke.e2e.ts) 通过所属应用检查共享默认值。[headless](../../../../snapshots/native-headless/)、[SDK](../../../../snapshots/native-sdk/) 与 [ACP](../../../../snapshots/native-acp/text-turn.snapshot.ts) 录制会话固定组装后模型可见的输出，包括显式插入编辑器的 SDK fixture。

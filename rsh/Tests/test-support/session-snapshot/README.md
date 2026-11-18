@@ -37,11 +37,11 @@ This package turns a `dsh` profile scenario into a keyless snapshot suite: write
 
 ### Writing a snapshot suite
 
-The closed profile manifest accepts `legacy-headless`, `legacy-sdk`, and `legacy-acp` for scenarios that retain the Cordis profile templates under custom profile names. Native scenarios use the corresponding public `headless`, `sdk`, or `acp` profile names; explicit `native-*` aliases are also valid.
+The closed profile manifest accepts the public `headless`, `sdk`, and `acp` profile names plus explicit `native-*` aliases.
 
 `materializeProfilePatch` keeps relative plugin paths anchored to the authored patch. Its optional `packageResolutionAnchor` selects the file from which bare plugin dependencies resolve; omission uses the authored patch. Repository Headless and SDK snapshot suites select the CLI package manifest so test-only dependencies remain available when temporary profiles run built artifacts.
 
-A consuming `*.snapshot.ts` is the scenario table plus one factory call. `AgentUnderTest` supplies absolute `binScript`, optional `libBinScript`, `configPath`, and `tsconfigPath` paths because the subprocess cwd sits outside the repository. Legacy profiles set `profile` to their custom name and `fromDefaultProfile` to the shipped template they copy:
+A consuming `*.snapshot.ts` is the scenario table plus one factory call. `AgentUnderTest` supplies absolute `binScript`, optional `libBinScript`, and `tsconfigPath` paths because the subprocess cwd sits outside the repository. `configPath` is optional: a shipped profile with no overlay needs none, and omitting it for a `--config` launch fails loudly.
 
 ```ts
 import { dirname, join } from 'node:path'
@@ -70,9 +70,7 @@ const SCENARIOS: Scenario[] = [
 defineAcpSnapshotSuite({
   agent: { // absolute paths, resolved from the suite's own location
     binScript: fileURLToPath(new URL('../../../Programs/CLI/src/bin.ts', import.meta.url)),
-    configPath: fileURLToPath(new URL('../cordis.yml', import.meta.url)),
-    profile: 'legacy-acp',
-    fromDefaultProfile: 'acp',
+    profile: 'acp',
     tsconfigPath: fileURLToPath(new URL('../../../../tsconfig.json', import.meta.url)),
   },
   snapshotsDir: join(dirname(fileURLToPath(import.meta.url)), 'snapshots'),
