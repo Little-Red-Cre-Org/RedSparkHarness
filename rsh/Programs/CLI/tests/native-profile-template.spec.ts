@@ -136,7 +136,9 @@ it('creates a custom Native profile from an explicit native template', async () 
   } finally {
     await rm(home, { recursive: true, force: true })
   }
-})
+// Loading the copied composition resolves the whole Native plugin tree, which exceeds the
+// default bound on a cold Windows runner.
+}, 30_000)
 
 it('creates a Native profile from a standard template alias', async () => {
   const home = await mkdtemp(join(tmpdir(), 'rsh-native-alias-create-'))
