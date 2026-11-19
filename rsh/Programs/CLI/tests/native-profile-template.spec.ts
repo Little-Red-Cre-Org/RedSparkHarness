@@ -9,7 +9,10 @@ import { PiAiAdapter } from '@redspark/rsh-llm-pi-ai/src/adapter.ts'
 import { resolveProfiles } from '@redspark/rsh-llm-pi-ai/src/config.ts'
 import type { PiAiAuthInjection } from '@redspark/rsh-llm-pi-ai/src/adapter.ts'
 import type { PiAiProviderProfile } from '@redspark/rsh-llm-pi-ai/src/config.ts'
-import { SHIPPED_NATIVE_PROFILES, ensureShippedNativeProfile, shippedNativeProfileComposition } from '../src/native-profile-template.ts'
+import {
+  SHIPPED_NATIVE_PROFILES, createNativeProfileFromTemplate, ensureShippedNativeProfile,
+  shippedNativeProfileComposition,
+} from '../src/native-profile-template.ts'
 import { nativeProfileReloadMode, profileRuntime } from '../src/native-profile-config.ts'
 import { loadNativeProfile } from '../src/native-profile-loader.ts'
 
@@ -98,6 +101,62 @@ it('maps standard profile names to native compositions and leaves an existing ma
     expect(existsSync(join(existingDir, 'rsh.profile.json'))).toBe(false)
   } finally {
     await Promise.all([rm(home, { recursive: true, force: true }), rm(legacyHome, { recursive: true, force: true })])
+  }
+})
+
+it('creates a custom Native profile from an explicit native template', async () => {
+  const home = await mkdtemp(join(tmpdir(), 'rsh-native-profile-create-'))
+  try {
+    createNativeProfileFromTemplate('rescue', 'native-headless', home)
+    const directory = join(home, 'profiles', 'rescue')
+    expect(profileRuntime('rescue', home)).toBe('native')
+    expect(nativeProfileReloadMode('rescue', home)).toBe('startup')
+    const manifest = JSON.parse(await readFile(join(directory, 'package.json'), 'utf8')) as {
+      name: string
+      dsh: { profile: { runtime: string; config: string } }
+    }
+    expect(manifest).toMatchObject({
+      name: 'dsh-profile-rescue',
+      dsh: { profile: { runtime: 'native', config: 'rsh.profile.json' } },
+    })
+    const composition = JSON.parse(await readFile(join(directory, 'rsh.profile.json'), 'utf8')) as {
+      installations: Array<{ id: string; plugin: string }>
+    }
+    expect(composition.installations.find(row => row.id === 'app'))
+      .toMatchObject({ plugin: '@redspark/rsh-native-headless' })
+    expect(existsSync(join(directory, 'rsh.client.json'))).toBe(false)
+    await loadNativeProfile({ profile: 'rescue', patchFiles: [], target: 'host', home,
+      installAnchor: fileURLToPath(new URL('../package.json', import.meta.url)) })
+
+    expect(() => { createNativeProfileFromTemplate('rescue', 'native-headless', home) }).toThrow('is not empty')
+    expect(() => { createNativeProfileFromTemplate('native-web', 'native-headless', home) }).toThrow('shipped profile name')
+    expect(() => { createNativeProfileFromTemplate('another', 'web', home) }).toThrow('unknown native profile template')
+    expect(() => { createNativeProfileFromTemplate('another', 'native-missing', home) })
+      .toThrow('unknown native profile template')
+  } finally {
+    await rm(home, { recursive: true, force: true })
+  }
+})
+
+it('writes the Client profile and reload mode for a custom native-web template', async () => {
+  const home = await mkdtemp(join(tmpdir(), 'rsh-native-web-create-'))
+  try {
+    createNativeProfileFromTemplate('preview', 'native-web', home)
+    const directory = join(home, 'profiles', 'preview')
+    expect(nativeProfileReloadMode('preview', home)).toBe('live')
+    const composition = JSON.parse(await readFile(join(directory, 'rsh.profile.json'), 'utf8')) as {
+      installations: Array<{ id: string; config?: Record<string, unknown> }>
+    }
+    expect(composition.installations.find(row => row.id === 'app')?.config)
+      .toMatchObject({ projectDir: directory })
+    expect(composition.installations.find(row => row.id === 'task-scheduler')?.config)
+      .toEqual({ path: join(directory, 'task-scheduler.sqlite') })
+    const client = JSON.parse(await readFile(join(directory, 'rsh.client.json'), 'utf8')) as {
+      installations: Array<{ id: string }>
+    }
+    expect(client.installations.map(row => row.id)).toContain('application')
+  } finally {
+    await rm(home, { recursive: true, force: true })
   }
 })
 

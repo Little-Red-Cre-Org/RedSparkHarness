@@ -10,6 +10,8 @@ New profiles named `headless`, `web`, `sdk`, `acp`, or `rsh` initialize as `nati
 
 The Native CLI checks configuration for installed, enabled plugins in `rsh.profile.json` and the Client profile selected by an installed `@redspark/rsh-native-web-host` `config.projectDir`. Without that Host installation, the profile has no Client surface. It checks a settings key only when its owning plugin is installed. A profile without the settings-file Provider has no `settings.yaml` checks. Profile templates and the legacy app-boot initializer write explicit runtime markers when they initialize a profile.
 
+`--from-default-profile native-<name>` copies one explicit Native template into a new custom profile directory. The target must be a non-shipped name, and its directory must be absent or empty. The launcher writes `rsh.profile.json`, the runtime marker, and, for `native-web`, `rsh.client.json`; it writes no Cordis bundle list, `cordis.patch.yml`, or pnpm workspace. Standard template names keep creating legacy profiles until the Cordis boot retires.
+
 ## Plugin-set differences
 
 An existing directory is not converted by renaming it. `dsh.profile.bundles` or `runtime: "legacy"` keeps Cordis execution. `desktop` is neither a `dsh.nativeProfileTemplates` name nor a `PROFILE_TEMPLATES` name (`rsh/Compatibility/DSH/boot/app-boot/src/profile.ts:105`). A new `headless`, `web`, `sdk`, `acp`, or `rsh` directory writes the installation list from `shippedNativeProfileComposition` (`rsh/Programs/CLI/src/native-profile-template.ts:235`). That list is not the Cordis bundle tuple in `PROFILE_TEMPLATES`.
@@ -66,6 +68,8 @@ The Native CLI checks the inherited process layer for process-only variables bel
 | `RSH_TELEMETRY_OTLP_URL` | `@redspark/rsh-session-telemetry-otel` | Error: set installation `config.exporter.url` in `rsh.profile.json`. |
 | `CORDIS_SHARED` | Every Native CLI launch | Error: Native does not use the Cordis Loader; remove this variable. |
 Native CLI startup refuses a nonempty `$RSH_HOME/profiles/<name>/cordis.yml` and nonempty Cordis patch files. Native `--patch` accepts only `{formatVersion:1, installations:[…]}` JSON. `--dump-config` does not run the settings migration.
+
+Native `--patch` rows also insert installations. A row carrying `plugin` and `scope` appends a new installation, must use an unused id, and must target a declared scope; a row without `plugin` updates the existing installation named by `id`. One patch names each installation once.
 
 ## Global proxy
 

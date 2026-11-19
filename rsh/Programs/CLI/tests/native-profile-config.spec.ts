@@ -42,6 +42,37 @@ it('rejects overlays that cannot target one complete existing installation', () 
   ]) expect(() => applyNativeProfilePatches(profile, [overlay])).toThrow()
 })
 
+it('inserts new installations into declared scopes and later overlays can update them', () => {
+  const profile = parseNativeProfileConfig(base)
+  const patched = applyNativeProfilePatches(profile, [
+    { formatVersion: 1, installations: [
+      { id: 'mcp', plugin: '@redspark/rsh-mcp-client', scope: 'agent', config: { transport: 'stdio' } },
+      { id: 'extra-shell', plugin: '@redspark/rsh-tool-bash', scope: 'root', disabled: true },
+    ] },
+    { formatVersion: 1, installations: [{ id: 'mcp', config: { transport: 'http' } }] },
+  ])
+  expect(patched.installations.find(row => row.id === 'mcp'))
+    .toEqual({ id: 'mcp', plugin: '@redspark/rsh-mcp-client', scope: 'agent', config: { transport: 'http' } })
+  expect(patched.installations.find(row => row.id === 'extra-shell'))
+    .toEqual({ id: 'extra-shell', plugin: '@redspark/rsh-tool-bash', scope: 'root', disabled: true })
+  expect(profile.installations.map(row => row.id)).toEqual(['storage'])
+})
+
+it('rejects insertions that collide, omit a scope, or name an undeclared one', () => {
+  const profile = parseNativeProfileConfig(base)
+  for (const overlay of [
+    { formatVersion: 1, installations: [{ id: 'storage', plugin: '@redspark/rsh-tool-bash', scope: 'root' }] },
+    { formatVersion: 1, installations: [{ id: 'fresh', plugin: '@redspark/rsh-tool-bash' }] },
+    { formatVersion: 1, installations: [{ id: 'fresh', plugin: '@redspark/rsh-tool-bash', scope: 'absent' }] },
+    { formatVersion: 1, installations: [{ id: 'fresh', scope: 'root' }] },
+    { formatVersion: 1, installations: [{ id: 'fresh', plugin: './code.mjs', scope: 'root' }] },
+    { formatVersion: 1, installations: [
+      { id: 'fresh', plugin: '@redspark/rsh-tool-bash', scope: 'root' },
+      { id: 'fresh', disabled: true },
+    ] },
+  ]) expect(() => applyNativeProfilePatches(profile, [overlay])).toThrow()
+})
+
 it('selects native only with an explicit marker and keeps a Cordis manifest on legacy', async () => {
   const home = await mkdtemp(join(tmpdir(), 'rsh-native-profile-kind-'))
   const directory = join(home, 'profiles', 'probe')

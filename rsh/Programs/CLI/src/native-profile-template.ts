@@ -1,5 +1,5 @@
 /** First-use compositions for the explicitly selected native profiles. */
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { resolveRshHome } from '@redspark/rsh-home-paths'
@@ -244,6 +244,26 @@ function cliNativeProfileTemplates(): unknown {
 
 function isShippedNativeProfile(name: string): boolean {
   return SHIPPED_NATIVE_PROFILES().includes(name)
+}
+
+/**
+ * Report whether a shipped template name composes Native plugins.
+ * @param name - candidate template name.
+ * @returns true for the explicit `native-*` templates.
+ */
+export function isNativeProfileTemplate(name: string): boolean {
+  return name.startsWith('native-') && isShippedNativeProfile(name)
+}
+
+/**
+ * Report whether a `--from-default-profile` value selects the Native template family.
+ * @param name - template name from the command line.
+ * @returns true for any `native-*` name, including one no template declares.
+ * @remarks Unknown `native-*` names route here so profile creation names the declared Native templates
+ * rather than the legacy standard-profile names.
+ */
+export function requestsNativeTemplate(name: string): boolean {
+  return name.startsWith('native-')
 }
 
 function isHeadlessProfile(profile: string): boolean {
@@ -561,6 +581,25 @@ export function shippedNativeProfileComposition(
   }
 }
 
+/** Write a profile's composition, runtime marker, and optional Client installations. */
+function writeNativeProfileFiles(
+  directory: string,
+  name: string,
+  profile: string,
+  composition: NativeProfileConfig,
+): void {
+  writeFileSync(join(directory, 'rsh.profile.json'), `${JSON.stringify(composition, null, 2)}\n`, { flag: 'wx' })
+  writeFileSync(join(directory, 'package.json'), `${JSON.stringify({
+    name: `dsh-profile-${name}`, private: true,
+    dsh: { profile: { runtime: 'native', config: 'rsh.profile.json', configReload: profile === 'native-web' ? 'live' : 'startup' } },
+  }, null, 2)}\n`, { flag: 'wx' })
+  if (profile === 'native-web') {
+    writeFileSync(join(directory, 'rsh.client.json'), `${JSON.stringify({
+      formatVersion: 1, installations: NATIVE_WEB_CLIENT_INSTALLATIONS,
+    }, null, 2)}\n`, { flag: 'wx' })
+  }
+}
+
 /**
  * Create the shipped native profile once without replacing an existing user directory.
  * @param name - requested profile name.
@@ -574,14 +613,34 @@ export function ensureShippedNativeProfile(name: string, home: string = resolveR
   mkdirSync(profiles, { recursive: true })
   mkdirSync(directory, { recursive: true })
   const profile = STANDARD_PROFILE_COMPOSITIONS[name] ?? name
-  writeFileSync(join(directory, 'rsh.profile.json'), `${JSON.stringify(shippedNativeProfileComposition(home, name), null, 2)}\n`, { flag: 'wx' })
-  writeFileSync(join(directory, 'package.json'), `${JSON.stringify({
-    name: `dsh-profile-${name}`, private: true,
-    dsh: { profile: { runtime: 'native', config: 'rsh.profile.json', configReload: profile === 'native-web' ? 'live' : 'startup' } },
-  }, null, 2)}\n`, { flag: 'wx' })
-  if (profile === 'native-web') {
-    writeFileSync(join(directory, 'rsh.client.json'), `${JSON.stringify({
-      formatVersion: 1, installations: NATIVE_WEB_CLIENT_INSTALLATIONS,
-    }, null, 2)}\n`, { flag: 'wx' })
+  writeNativeProfileFiles(directory, name, profile, shippedNativeProfileComposition(home, name))
+}
+
+/**
+ * Create one custom Native profile by copying a shipped template.
+ * @param name - new profile name; an existing directory or a shipped name is refused.
+ * @param template - explicit `native-*` template to copy.
+ * @param home - Harness home containing the profile and Session store.
+ */
+export function createNativeProfileFromTemplate(
+  name: string,
+  template: string,
+  home: string = resolveRshHome(),
+): void {
+  if (!isNativeProfileTemplate(template)) {
+    throw new Error(`dsh: unknown native profile template ${JSON.stringify(template)}; expected one of ${shippedNativeProfiles().filter(isNativeProfileTemplate).join(', ')}`)
   }
+  if (isShippedNativeProfile(name)) {
+    throw new Error(`dsh: --from-default-profile target ${JSON.stringify(name)} is a shipped profile name; choose a custom name`)
+  }
+  const profiles = join(home, 'profiles')
+  const directory = join(profiles, name)
+  if (existsSync(directory) && readdirSync(directory).length > 0) {
+    throw new Error(`dsh: profile directory ${directory} is not empty; choose another profile name`)
+  }
+  mkdirSync(profiles, { recursive: true })
+  mkdirSync(directory, { recursive: true })
+  const profile = STANDARD_PROFILE_COMPOSITIONS[template] ?? template
+  writeNativeProfileFiles(directory, name, profile,
+    shippedNativeProfileComposition(home, template, process.platform, { profileDirectory: directory }))
 }
