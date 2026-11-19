@@ -2,6 +2,7 @@
 import { randomUUID } from 'node:crypto'
 import type { Context } from '@redspark/cordis'
 import { brandString } from '@redspark/rsh-brand'
+import type { AgentHandle } from '@redspark/rsh-agent'
 import { createUserMessage } from '@redspark/rsh-llm'
 import type {} from '@redspark/rsh-session-persistence'
 import { SessionId } from '@redspark/rsh-session'
@@ -53,10 +54,20 @@ export function startReminderJournal(ctx: Context, store: TaskStore): () => Prom
       if (existing && existing.status !== 'idle') continue
       const preset = await ctx.agentPresets.resolve(task.agentPreset)
       const setup = async (scope: Context) => { await ctx.agentPresets.mount(scope, preset.id) }
-      const handle = existing ? undefined : (task.journalSessionId || previous)
-        ? await ctx.agents.resume({ resumeSessionId: id, setup, agentOptions: { provider: task.provider, model: task.model } })
-        : await ctx.agents.create({ sessionId: id, setup, meta: { cwd: task.workspace, agentPreset: preset.id },
-          agentOptions: { provider: task.provider, model: task.model } })
+      let handle: AgentHandle | undefined
+      try {
+        handle = existing ? undefined : (task.journalSessionId || previous)
+          ? await ctx.agents.resume({ resumeSessionId: id, setup, agentOptions: { provider: task.provider, model: task.model } })
+          : await ctx.agents.create({ sessionId: id, setup, meta: { cwd: task.workspace, agentPreset: preset.id },
+            agentOptions: { provider: task.provider, model: task.model } })
+      } catch (error: unknown) {
+        // A caller opened this conversation between the liveness check and the
+        // open. That owner will flush it; retry on the next journal tick. The
+        // error class is matched by name because this entry does not depend on
+        // the persistence package at runtime.
+        if (error instanceof Error && error.name === 'SessionAlreadyOwnedError') continue
+        throw error
+      }
       const agent = existing ?? handle?.agent
       if (!agent) throw new Error('Reminder session unavailable')
       try {
@@ -65,9 +76,11 @@ export function startReminderJournal(ctx: Context, store: TaskStore): () => Prom
         ctx.sessionTitle.rename(agent.session, `[Scheduled] ${task.title}`)
         appendReminderRecords(agent.session, task, runs)
         await ctx.sessions.flush(agent.session)
-        store.bindReminderSession(task.id, id)
-        synced.set(task.id, signature)
       } finally { await handle?.dispose() }
+      // Publish the identity only after its writer closes: a caller that
+      // observes the bound Session can resume it immediately.
+      store.bindReminderSession(task.id, id)
+      synced.set(task.id, signature)
     }
   }
   const tick = () => {
@@ -115,7 +128,8 @@ export async function removeReminderRecord(ctx: Context, store: TaskStore, task:
     await ctx.sessions.flush(handle.agent.session)
     const workspace = await ctx.workspaceRegistry.create(task.workspace)
     await workspace.attachSession(id)
-    store.bindReminderSession(task.id, id)
-    await ctx.workspaceRegistry.archiveSession(oldId)
   } finally { await source.close(); await handle.dispose() }
+  // The replacement becomes observable only after its writer closes.
+  store.bindReminderSession(task.id, id)
+  await ctx.workspaceRegistry.archiveSession(oldId)
 }

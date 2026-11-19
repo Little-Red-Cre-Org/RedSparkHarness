@@ -1,8 +1,9 @@
-import { expect, it } from 'vitest'
+import { expect, it, vi } from 'vitest'
 import { Context } from '@redspark/cordis'
 import SessionStore, { SessionId } from '@redspark/rsh-session'
 import { brandString } from '@redspark/rsh-brand'
-import { appendReminderRecords } from '../src/reminder-journal.ts'
+import { appendReminderRecords, startReminderJournal } from '../src/reminder-journal.ts'
+import type { TaskStore } from '../src/store.ts'
 import type { Task, Run } from '../src/types.ts'
 
 it('keeps all occurrences in a single conversation and does not duplicate them after replay', async () => {
@@ -27,4 +28,30 @@ it('keeps all occurrences in a single conversation and does not duplicate them a
     ])
     expect(session.snapshotEvents().some(event => event.type === 'assistant/message')).toBe(false)
   } finally { await ctx.fiber.dispose() }
+})
+
+it('publishes the journal identity only after its writer closes', async () => {
+  const order: string[] = []
+  const task = { id: brandString<Task['id']>('water'), ownerSessionId: 'owner', title: '喝水',
+    prompt: '每五分钟提醒我喝水', workspace: '/tmp', agentPreset: 'test', provider: 'mock', model: 'mock',
+    at: new Date(0).toISOString(), state: 'active' as const, everySeconds: 300, nextAt: null } as Task
+  const run = { id: brandString<Run['id']>('run'), taskId: task.id, scheduledAt: 0, startedAt: 0, deadline: 1,
+    finishedAt: 1, state: 'completed' as const, sessionId: null, detail: 'Reminder dispatched' }
+  const session = { deriveMessages: () => [], append: () => {} }
+  const fake = {
+    workspaceRegistry: { archivedSessionIds: [], create: async () => ({ attachSession: async () => {} }) },
+    agents: { get: () => undefined, create: async () => ({ agent: { session },
+      dispose: async () => { order.push('dispose') } }) },
+    agentPresets: { resolve: async () => ({ id: 'test' }), mount: async () => {} },
+    sessionTitle: { rename: () => {} },
+    sessions: { flush: async () => { order.push('flush') } },
+    logger: { error: () => {} },
+  } as unknown as Context
+  const store = { tasks: () => [task], runs: () => [run],
+    bindReminderSession: () => { order.push('bind') } } as unknown as TaskStore
+  const stop = startReminderJournal(fake, store)
+  try {
+    await vi.waitFor(() => { expect(order).toContain('bind') })
+  } finally { await stop() }
+  expect(order).toEqual(['flush', 'dispose', 'bind'])
 })

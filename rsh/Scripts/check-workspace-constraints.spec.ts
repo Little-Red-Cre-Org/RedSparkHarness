@@ -434,7 +434,9 @@ describe('package payload constraints', () => {
     ['@redspark/rsh-settings', ['lib/shared-*.js']],
     ['@redspark/rsh-launch-environment', ['lib/layers.js', 'lib/shared-*.js']],
     ['@redspark/rsh-tool-subagent', ['lib/model-selection-settings.js', 'lib/compat-settings.js', 'lib/shared-*.js']],
-    ['@redspark/rsh-client-native-application', ['lib/controller.js', 'lib/controller-*.js', 'lib/native-*.js', 'lib/*.css']],
+    ['@redspark/rsh-client-native-application', [
+      'lib/controller.js', 'lib/controller-*.js', 'lib/native-*.js', 'lib/*.css', 'lib/client/*.css',
+    ]],
     ['@redspark/rsh-webhook', ['lib/definition.js', 'lib/shared-*.js']],
     ['@redspark/rsh-permission-presets', ['lib/native-definition.js', 'lib/shared-*.js']],
     ['@redspark/rsh-codex-app-server', ['lib/wire.js', 'lib/shared-*.js']],

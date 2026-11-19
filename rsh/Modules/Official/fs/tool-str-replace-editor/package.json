@@ -87,12 +87,6 @@
     "@redspark/rsh-native-agent": "workspace:^"
   },
   "peerDependenciesMeta": {
-    "@redspark/rsh-fs": {
-      "optional": true
-    },
-    "@redspark/rsh-sandbox": {
-      "optional": true
-    },
     "@redspark/rsh-sandbox-policy": {
       "optional": true
     },

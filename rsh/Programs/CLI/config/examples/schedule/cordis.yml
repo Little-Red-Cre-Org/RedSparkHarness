@@ -1,10 +1,8 @@
 # Opt-in Schedule patch over the shipped Web composition. The owner observes
-# only roots published after this overlay loads.
+# only roots published after this overlay loads. The composition already mounts
+# a request time context, so this overlay adds only Schedule and its UI.
 
 - insert:
-    - id: time-context
-      name: '@redspark/rsh-time-context'
-
     - id: schedule
       name: '@redspark/rsh-schedule'
 

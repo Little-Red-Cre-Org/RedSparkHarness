@@ -194,6 +194,9 @@ const packageFileExtras: Readonly<Record<string, readonly string[]>> = {
   '@redspark/rsh-message-feedback': ['lib/shared-*.js'],
   '@redspark/rsh-archify': ['lib/shared-*.js'],
   '@redspark/rsh-request-context': ['lib/shared-*.js'],
+  '@redspark/rsh-hook-protocol': ['lib/shared-*.js'],
+  '@redspark/rsh-hooks-claude-code': ['lib/shared-*.js'],
+  '@redspark/rsh-hooks-codex': ['lib/shared-*.js'],
   // The Native leaf reuses the browser menu component, so it imports that
   // component's stylesheet: a file the entry/output derivation cannot see.
   '@redspark/rsh-client-ui-input-trigger': ['lib/client/MenuView.module.css'],
@@ -327,7 +330,9 @@ const packageFileExtras: Readonly<Record<string, readonly string[]>> = {
   // The Cordis row and the Native row are separate entries over one shared route
   // module, so tsdown publishes the chunk they share beside both bundles.
   '@redspark/rsh-host-open-in-app': ['lib/shared-*.js'],
-  '@redspark/rsh-client-native-application': ['lib/controller.js', 'lib/controller-*.js', 'lib/native-*.js', 'lib/*.css'],
+  '@redspark/rsh-client-native-application': [
+    'lib/controller.js', 'lib/controller-*.js', 'lib/native-*.js', 'lib/*.css', 'lib/client/*.css',
+  ],
   '@redspark/rsh-native-acp': ['lib/shared-*.js'],
   // Workflow's native Definition, typed source leaves, and worker/Consumer
   // bundles are published alongside the existing Cordis package entry.
@@ -345,7 +350,7 @@ const packageFileExtras: Readonly<Record<string, readonly string[]>> = {
     'lib/host-core-*.js', 'lib/rpc-*.js', 'lib/recovery-config-*.js',
   ],
   '@redspark/rsh-agent-instructions': ['lib/shared-*.js'],
-  '@redspark/rsh-native-headless': ['lib/shared-*.js'],
+  '@redspark/rsh-native-headless': ['lib/lifecycle-events.js', 'lib/shared-*.js'],
   '@redspark/rsh-native-session-execution': ['lib/root-route.js', 'lib/read-history.js', 'lib/shared-*.js'],
   '@redspark/rsh-native-agent': ['lib/inbox.js', 'lib/consumed-work.js', 'lib/turn-boundary.js'],
   '@redspark/rsh-session-query-sqlite': ['lib/core.js', 'lib/shared-*.js'],

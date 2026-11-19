@@ -970,6 +970,9 @@ importers:
       '@redspark/rsh-terminal-ui':
         specifier: workspace:^
         version: link:../../../../Programs/TUI/terminal-ui
+      '@redspark/rsh-tool-subagent':
+        specifier: workspace:^
+        version: link:../../../../Engine/subagent/tool-subagent
       ink:
         specifier: ^5.2.1
         version: 5.2.1(@types/react@18.3.31)(react@18.3.1)

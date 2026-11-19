@@ -1,4 +1,4 @@
-import type { GenerateOptions, LlmModelReasoningInfo, LlmResolvedModelInfo, StreamChunk, SystemPromptUpdate } from '@redspark/rsh-llm'
+import type { GenerateOptions, LlmModelReasoningInfo, LlmResolvedModelInfo, PreparedAdapterCall, StreamChunk, SystemPromptUpdate } from '@redspark/rsh-llm'
 import { ToolCallId, LlmAdapter } from '@redspark/rsh-llm'
 
 /** Helpers to write scripted responses tersely. */
@@ -85,6 +85,7 @@ export class MockAdapter extends LlmAdapter {
   override resolveModel(
     provider: string,
     model: string,
+    _signal?: AbortSignal,
   ): Promise<LlmResolvedModelInfo> {
     return Promise.resolve({
       provider,
@@ -94,6 +95,22 @@ export class MockAdapter extends LlmAdapter {
       ...this.defaultMaxTokens === undefined ? {} : { defaultMaxTokens: this.defaultMaxTokens },
       ...this.systemPromptUpdate === undefined ? {} : { systemPromptUpdate: this.systemPromptUpdate },
     })
+  }
+
+  /**
+   * Bind the scripted stream to the resolved model generation.
+   *
+   * The script is fixed, so the mock honors a ceiling only up to the
+   * `defaultMaxTokens` it declares; a wider explicit request would be widened
+   * by a real transport and is refused the same way.
+   */
+  override async prepareCall(provider: string, model: string, signal?: AbortSignal): Promise<PreparedAdapterCall> {
+    return {
+      model: await this.resolveModel(provider, model, signal),
+      supportsOutputTokenLimit: async maxTokens =>
+        this.defaultMaxTokens !== undefined && maxTokens <= this.defaultMaxTokens,
+      stream: options => this.stream(options),
+    }
   }
 
   async * stream(options: GenerateOptions): AsyncIterable<StreamChunk> {
