@@ -1,0 +1,6 @@
+# Bilingual-pair consistency record (rsh/Docs/i18n/README.md): the git blob hash of each
+# side as of the last confirmed-consistent state. Both languages carry equal authority;
+# after editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write .agents/notes/implemented/architecture/2026-11-19-cli-package-graph-drops-cordis.md
+2026-11-19-cli-package-graph-drops-cordis.md: f9dec9e2ce34684e6d8923649454b0c4b7563753
+2026-11-19-cli-package-graph-drops-cordis.zh.md: d89cc33612f3fa58d18a5fafc6ba1f48507fd2e1

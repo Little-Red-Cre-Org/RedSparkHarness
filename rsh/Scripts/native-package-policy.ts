@@ -285,6 +285,18 @@ export const mixedNativeEntryDirectories: ReadonlyMap<string, string> = new Map(
   ['rsh/Programs/Web/host/directory-picker-browse', 'Cordis and Native browse Providers share one-level listing, child creation, and fully qualified path refusal'],
   ['rsh/Programs/Web/host/directory-picker-native', 'Cordis and Native OS choosers share the platform dialog runner'],
   ['rsh/Programs/Web/host/directory-picker-auto', 'Cordis and Native choosers share the boot-time native-or-browse decision'],
+  ['rsh/Programs/Web/client/resources', 'Cordis host row and Native client entry share the browser resource registry and root keyed hook'],
+  ['rsh/Programs/Web/client/ui-brand-official', 'Cordis host row and Native client entry share the official brand mark and name components'],
+  ['rsh/Programs/Web/client/ui-input-trigger', 'Cordis host row and Native client entry share slash and at detection, the candidate menu and hit state'],
+  ['rsh/Programs/Web/client/ui-message-feedback', 'Cordis host row and Native client entry share the feedback controllers and entry components'],
+  ['rsh/Programs/Web/client/ui-model-selection', 'Cordis host row and Native client entry share the model selection components and locale dictionaries'],
+  ['rsh/Programs/Web/client/ui-open-in-app', 'Cordis host row and Native client entry share the Open In split button and its catalog rows'],
+  ['rsh/Programs/Web/client/ui-permission-presets', 'Cordis host row and Native client entry share the permission surfaces and locale dictionaries'],
+  ['rsh/Programs/Web/client/ui-pet', 'Cordis settings row and Native client entry share the durable pet preferences and overlay components'],
+  ['rsh/Programs/Web/client/ui-plan', 'Cordis host row and Native client entry share the plan status chip and its state projection'],
+  ['rsh/Programs/Web/client/ui-reference', 'Cordis host row and Native client entry share the reference source and row projection'],
+  ['rsh/Programs/Web/client/ui-schedule', 'Cordis host row and Native client entry share the read-only Schedule catalog and components'],
+  ['rsh/Programs/Web/host/open-in-app', 'Cordis and Native host rows share the catalog, PATH resolver, launch routes and Connection trust fence'],
 ])
 
 /** Mixed library exports that have native values or types but no installer manifest. */
@@ -380,6 +392,7 @@ export const nativeCompatibilityOnlyPeers: ReadonlyMap<string, readonly string[]
   ['rsh/Modules/Official/automation/task-scheduler', ['@redspark/rsh-tools', '@redspark/rsh-typert-protocol']],
   ['rsh/Modules/Official/fs/tool-fs-search', ['@redspark/rsh-tools', '@redspark/rsh-system-prompt']],
   ['rsh/Modules/Official/fs/tool-str-replace-editor', ['@redspark/rsh-tools']],
+  ['rsh/Modules/Official/skill/tool-skill', ['@redspark/rsh-agent', '@redspark/rsh-tools']],
   ['rsh/Modules/Official/web/web', ['@redspark/cordis']],
   ['rsh/Modules/Official/web/web-fetch-http', ['@redspark/cordis']],
   ['rsh/Modules/Official/web/web-search-deepseek', ['@redspark/cordis', '@redspark/rsh-agent', '@redspark/rsh-compat-settings-definition', '@redspark/rsh-session']],
@@ -418,10 +431,11 @@ export const nativeCompatibilityOnlyPeers: ReadonlyMap<string, readonly string[]
 /** Cordis-free source subpaths exposed beside compatibility package exports. */
 export const nativeSafeSourceSubpaths: ReadonlyMap<string, readonly string[]> = new Map([
   ['rsh/Programs/Web/api/session-controller', ['./client-event-types']],
-  ['rsh/Engine/context/file-reference', ['./native', './prompt', './search']],
-  // The URI codec is the one part of this package a browser build needs: the
-  // package root imports the Cordis service, so a Native leaf imports `./uri`.
-  ['rsh/Engine/context/session-reference', ['./uri']],
+  ['rsh/Engine/context/file-reference', ['./native', './prompt', './search', './grammar', './types']],
+  // The URI codec and the shared reference types are the parts a Native leaf
+  // needs: the package root imports the Cordis service.
+  ['rsh/Engine/context/session-reference', ['./uri', './types']],
+  ['rsh/Programs/Web/host/open-in-app', ['./shared']],
   ['rsh/Modules/Official/webhook/webhook', ['./definition', './types']],
   ['rsh/Modules/Official/interaction/permission-presets', ['./native-definition']],
   ['rsh/Engine/session/session-projection', ['./types', './definition']],
@@ -487,7 +501,7 @@ export const nativeSafeSourceSubpaths: ReadonlyMap<string, readonly string[]> = 
   ['rsh/Modules/Official/e2b/e2b', ['./owner']],
   ['rsh/Modules/Official/sandbox/sandbox', ['./native-types', './roots']],
   ['rsh/Engine/core/session', ['./types', './surface', './event-validation']],
-  ['rsh/Engine/schedule/schedule', ['./domain']],
+  ['rsh/Engine/schedule/schedule', ['./domain', './client']],
   ['rsh/Engine/session/session-projection', ['./types', './definition']],
   ['rsh/Engine/session/session-title', ['./types', './normalize']],
   ['rsh/Engine/session/session-title-llm', ['./native']],

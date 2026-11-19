@@ -49,6 +49,8 @@
     "@redspark/cordis": "workspace:^"
   },
   "peerDependenciesMeta": {
+    "@redspark/rsh-agent": { "optional": true },
+    "@redspark/rsh-tools": { "optional": true },
     "@redspark/cordis": { "optional": true }
   },
   "dependencies": {
