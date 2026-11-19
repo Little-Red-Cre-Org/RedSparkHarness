@@ -1,0 +1,6 @@
+# Bilingual-pair consistency record (rsh/Docs/i18n/README.md): the git blob hash of each
+# side as of the last confirmed-consistent state. Both languages carry equal authority;
+# after editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write .agents/notes/implemented/architecture/2026-11-19-native-patches-insert-and-templates-create.md
+2026-11-19-native-patches-insert-and-templates-create.md: 898d0996d3bd0a5aa397521fb937ab48feb3b92e
+2026-11-19-native-patches-insert-and-templates-create.zh.md: 4c6c9d99bd01f1e2a9f54d9f12167c66d8b627e6

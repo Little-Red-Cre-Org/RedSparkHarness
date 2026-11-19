@@ -2,5 +2,5 @@
 # side as of the last confirmed-consistent state. Both languages carry equal authority;
 # after editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write rsh/Docs/native-config-migration.md
-native-config-migration.md: 26576886069b23af46868709d3a2090163e66a60
-native-config-migration.zh.md: dce4392ec8a90b2781a711a359dbeacbc47f5f73
+native-config-migration.md: ef197a402f5908e5d1490106c8aaee6591f3c96e
+native-config-migration.zh.md: ce061149b181ae0c4ee2d3b5572e5efb7d9b0720

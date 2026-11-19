@@ -22,6 +22,8 @@ Native profile runtime markers and the CLI's settings/environment migration rule
 
 An existing profile rejects `--from-default-profile` without changing or booting it; omit the option to use it. A residual target directory is also preserved and requires a different profile name. An unknown template or a shipped target name fails before creating the target. Unknown-template diagnostics name the valid templates. Initialization is committed before bundle resolution and application boot, so a later failure leaves the new profile on disk and the retry omits the creation option. `--dump-config` and `--dump-default-config` accept the option, initialize the target, print the requested tree, and do not boot it.
 
+An explicit `native-*` template creates the custom profile as Native instead: the launcher writes `rsh.profile.json`, the Native runtime marker, and, for `native-web`, `rsh.client.json`. It never writes `cordis.patch.yml` or a pnpm workspace. The target rules are the same, and a nonempty target directory is still refused. Standard template names keep creating legacy profiles until the Cordis boot retires.
+
 ```sh
 dsh --profile rescue --from-default-profile web
 dsh --profile rescue

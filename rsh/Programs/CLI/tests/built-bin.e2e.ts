@@ -1593,6 +1593,53 @@ describe.skipIf(process.env.RSH_EXAMPLE_MODE !== 'lib' && !existsSync(rshBin))('
     }
   }, SPAWN_TIMEOUT_MS + 30_000)
 
+  it('creates a custom Native profile from an explicit native template', async () => {
+    const home = mkdtempSync(join(tmpdir(), 'dsh-native-from-default-profile-'))
+    try {
+      const created = await runBuiltBin(
+        ['--profile', 'rescue', '--from-default-profile', 'native-headless', '--dump-config'],
+        { RSH_HOME: home },
+      )
+      expect(created.code).toBe(0)
+      expect(created.stderr).toBe('')
+      const dumped = JSON.parse(created.stdout) as {
+        formatVersion: number
+        installations: Array<{ id: string; plugin: string }>
+      }
+      expect(dumped.formatVersion).toBe(1)
+      expect(dumped.installations.find(row => row.id === 'app')?.plugin).toBe('@redspark/rsh-native-headless')
+      const directory = join(home, 'profiles', 'rescue')
+      expect(JSON.parse(readFileSync(join(directory, 'package.json'), 'utf8'))).toMatchObject({
+        dsh: { profile: { runtime: 'native', config: 'rsh.profile.json' } },
+      })
+      expect(existsSync(join(directory, 'cordis.patch.yml'))).toBe(false)
+
+      const repeated = await runBuiltBin(
+        ['--profile', 'rescue', '--from-default-profile', 'native-headless', '--dump-config'],
+        { RSH_HOME: home },
+      )
+      expect(repeated.code).toBe(1)
+      expect(repeated.stderr).toContain('is not empty')
+
+      const shipped = await runBuiltBin(
+        ['--profile', 'web', '--from-default-profile', 'native-headless', '--dump-config'],
+        { RSH_HOME: home },
+      )
+      expect(shipped.code).toBe(1)
+      expect(shipped.stderr).toContain('shipped profile name')
+
+      const unknown = await runBuiltBin(
+        ['--profile', 'other', '--from-default-profile', 'native-missing', '--dump-config'],
+        { RSH_HOME: home },
+      )
+      expect(unknown.code).toBe(1)
+      expect(unknown.stderr).toContain('unknown native profile template')
+      expect(unknown.stderr).toContain('native-headless')
+    } finally {
+      rmSync(home, { recursive: true, force: true })
+    }
+  }, SPAWN_TIMEOUT_MS + 30_000)
+
   it('creates a custom profile from the shipped web template before booting it', async () => {
     const home = mkdtempSync(join(tmpdir(), 'dsh-from-default-profile-'))
     try {

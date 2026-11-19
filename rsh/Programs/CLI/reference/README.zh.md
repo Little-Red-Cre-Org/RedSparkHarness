@@ -24,6 +24,8 @@
 
 profile 已经存在时，`--from-default-profile` 会被拒绝，且不会修改或启动它；去掉该选项即可使用它。残留的目标目录同样会被原样保留，此时必须改用另一个 profile 名称。未知模板或随附目标名称会在创建目标之前失败；未知模板的诊断会列出有效模板。初始化在组合包解析和应用启动之前提交，因此后续失败仍会把新 profile 留在磁盘上，重试时需要去掉创建选项。`--dump-config` 和 `--dump-default-config` 接受该选项：它们初始化目标并打印所请求的配置树，但不启动应用。
 
+显式的 `native-*` 模板会把自定义 profile 创建为 Native：launcher 写入 `rsh.profile.json`、Native runtime 标记，并在 `native-web` 时写入 `rsh.client.json`。它绝不写入 `cordis.patch.yml` 或 pnpm workspace。目标规则相同，非空目标目录仍会被拒绝。标准模板名称在 Cordis 启动退役之前仍创建 legacy profile。
+
 ```sh
 dsh --profile rescue --from-default-profile web
 dsh --profile rescue

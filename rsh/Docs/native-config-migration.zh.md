@@ -10,6 +10,8 @@
 
 Native CLI 检查 `rsh.profile.json` 中已安装且启用的插件，以及由已安装的 `@redspark/rsh-native-web-host` `config.projectDir` 选择的 Client profile。没有安装该 Host 时，profile 不包含 Client surface。只有安装了该键所属插件时才检查 settings。没有 settings-file Provider 的 profile 不读取或检查 `settings.yaml`。Native profile 模板与 legacy app-boot 初始化器会在初始化 profile 时写入显式 runtime 标记。
 
+`--from-default-profile native-<name>` 会把一个显式 Native 模板复制到新的自定义 profile 目录。目标必须是非随附名称，其目录必须不存在或为空。launcher 写入 `rsh.profile.json`、runtime 标记，并在 `native-web` 时写入 `rsh.client.json`；它不写入 Cordis 组合包列表、`cordis.patch.yml` 或 pnpm workspace。标准模板名称在 Cordis 启动退役之前仍创建 legacy profile。
+
 ## 插件集合差异
 
 已有目录不会因为改名而转换。`dsh.profile.bundles` 或 `runtime: "legacy"` 仍走 Cordis。`desktop` 既不是 `dsh.nativeProfileTemplates` 的名字，也不在 `PROFILE_TEMPLATES` 里（`rsh/Compatibility/DSH/boot/app-boot/src/profile.ts:105`）。新建的 `headless`、`web`、`sdk`、`acp` 或 `rsh` 目录写入 `shippedNativeProfileComposition` 的安装列表（`rsh/Programs/CLI/src/native-profile-template.ts:235`）。该列表不是 `PROFILE_TEMPLATES` 里的 Cordis bundle 元组。
@@ -66,6 +68,8 @@ Native CLI 检查下表仅限进程层的变量是否来自继承环境。`.env`
 | `RSH_TELEMETRY_OTLP_URL` | `@redspark/rsh-session-telemetry-otel` | 报错：在 `rsh.profile.json` 中设置安装项 `config.exporter.url`。 |
 | `CORDIS_SHARED` | 每次 Native CLI 启动 | 报错：Native 不使用 Cordis Loader；请移除该变量。 |
 Native CLI 会拒绝非空的 `$RSH_HOME/profiles/<name>/cordis.yml` 与 Cordis patch 文件。Native `--patch` 只接受 `{formatVersion:1, installations:[…]}` JSON。`--dump-config` 不执行 settings 迁移。
+
+Native `--patch` 行也可插入安装项。携带 `plugin` 与 `scope` 的行会追加一个新安装项，必须使用未占用的 id，并指向已声明的 scope；不含 `plugin` 的行按 `id` 更新已有安装项。同一个 patch 中每个安装项只能出现一次。
 
 ## 全局代理
 

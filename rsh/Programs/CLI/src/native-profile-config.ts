@@ -29,6 +29,9 @@ export interface NativeProfileConfig {
 /** One JSON overlay row; a present config replaces the complete prior value. */
 export interface NativeProfilePatch {
   readonly id: string
+  /** Package to add as a new installation; the row then also requires `scope`. */
+  readonly plugin?: string
+  readonly scope?: string
   readonly config?: unknown
   readonly disabled?: boolean
 }
@@ -109,6 +112,9 @@ export function parseNativeProfileConfig(value: unknown): NativeProfileConfig {
 
 /**
  * Apply JSON patch rows in order without mutating the profile or prior overlays.
+ *
+ * A row carrying `plugin` adds a new installation and must name an existing
+ * scope; a row without it replaces fields on an existing installation.
  * @param profile - validated base composition.
  * @param values - JSON-decoded overlays in CLI argument order.
  * @returns validated composition with complete config replacements.
@@ -119,27 +125,43 @@ export function applyNativeProfilePatches(profile: NativeProfileConfig, values: 
     const patch = record(value, 'native patch', ['formatVersion', 'installations'])
     if (patch.formatVersion !== 1) throw new Error('native patch has unsupported formatVersion')
     const changes = rows(patch.installations, 'native patch installations').map((value): NativeProfilePatch => {
-      const row = record(value, 'native patch row', ['id', 'config', 'disabled'])
+      const row = record(value, 'native patch row', ['id', 'plugin', 'scope', 'config', 'disabled'])
       const id = nonempty(row.id, 'native patch id')
-      if (!Object.hasOwn(row, 'config') && !Object.hasOwn(row, 'disabled')) {
+      const plugin = row.plugin === undefined ? undefined : nonempty(row.plugin, `native patch ${id} plugin`)
+      const scope = row.scope === undefined ? undefined : nonempty(row.scope, `native patch ${id} scope`)
+      if (plugin === undefined && scope !== undefined) throw new Error(`native patch ${id} declares scope without plugin`)
+      if (plugin === undefined && !Object.hasOwn(row, 'config') && !Object.hasOwn(row, 'disabled')) {
         throw new Error(`native patch ${id} changes no fields`)
       }
       if (row.disabled !== undefined && typeof row.disabled !== 'boolean') {
         throw new Error(`native patch ${id} disabled must be boolean`)
       }
-      return { id, ...Object.hasOwn(row, 'config') ? { config: row.config } : {},
+      return { id, ...plugin === undefined ? {} : { plugin, ...scope === undefined ? {} : { scope } },
+        ...Object.hasOwn(row, 'config') ? { config: row.config } : {},
         ...row.disabled === undefined ? {} : { disabled: row.disabled } }
     })
     unique(changes, 'native patch installations')
     for (const change of changes) {
       const index = installations.findIndex(row => row.id === change.id)
+      if (change.plugin !== undefined) {
+        if (index !== -1) throw new Error(`native patch inserts existing installation ${change.id}`)
+        if (change.scope === undefined) throw new Error(`native patch insertion ${change.id} needs scope`)
+        if (!profile.scopes.some(scope => scope.id === change.scope)) {
+          throw new Error(`native patch insertion ${change.id} has missing scope ${change.scope}`)
+        }
+        if (!packageName.test(change.plugin)) throw new Error(`native patch insertion ${change.id} plugin must be a package name`)
+        installations.push({ id: change.id, plugin: change.plugin, scope: change.scope,
+          ...Object.hasOwn(change, 'config') ? { config: change.config } : {},
+          ...change.disabled === undefined ? {} : { disabled: change.disabled } })
+        continue
+      }
       if (index === -1) throw new Error(`native patch targets unknown installation ${change.id}`)
       const prior = installations[index]
       if (prior === undefined) throw new Error(`native patch lost installation ${change.id}`)
       installations[index] = { ...prior, ...change }
     }
   }
-  return { ...profile, installations }
+  return parseNativeProfileConfig({ ...profile, installations })
 }
 
 /**

@@ -9,7 +9,7 @@
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { parseRshArgs } from './args.ts'
-import { ensureShippedNativeProfile } from './native-profile-template.ts'
+import { createNativeProfileFromTemplate, ensureShippedNativeProfile, requestsNativeTemplate } from './native-profile-template.ts'
 import { requireCompatibilityRuntime } from './compatibility-runtime.ts'
 
 // Both the source tree (rsh/Programs/CLI/src) and the bundled bin (rsh/Programs/CLI/lib) sit
@@ -28,6 +28,10 @@ function readVersion(): string {
  */
 export async function runCli(): Promise<void> {
   const invocation = parseRshArgs(process.argv.slice(2), readVersion())
+  if (invocation.mode !== 'plugin' && invocation.fromDefaultProfile !== undefined
+    && requestsNativeTemplate(invocation.fromDefaultProfile)) {
+    createNativeProfileFromTemplate(invocation.profile, invocation.fromDefaultProfile)
+  }
   if (invocation.mode === 'profile' || invocation.mode === 'dump-config') {
     ensureShippedNativeProfile(invocation.profile)
   }
@@ -41,7 +45,6 @@ export async function runCli(): Promise<void> {
       ensureShippedNativeProfile(invocation.profile)
       const { profileRuntime } = await import('./native-profile-config.ts')
       if (profileRuntime(invocation.profile) === 'native') {
-        if (invocation.fromDefaultProfile !== undefined) throw new Error('native profile cannot use --from-default-profile')
         const { runNativeProfile } = await import('./native-profile-boot.ts')
         await runNativeProfile({ profile: invocation.profile, patchFiles: invocation.patches, args: invocation.args })
         break
@@ -75,7 +78,6 @@ export async function runCli(): Promise<void> {
       const { profileRuntime } = await import('./native-profile-config.ts')
       if (profileRuntime(invocation.profile) === 'native') {
         if (invocation.defaultOnly) throw new Error('native profile has no bundle default to dump')
-        if (invocation.fromDefaultProfile !== undefined) throw new Error('native profile cannot use --from-default-profile')
         const { readNativeProfile } = await import('./native-profile-loader.ts')
         process.stdout.write(`${JSON.stringify(readNativeProfile({ profile: invocation.profile, patchFiles: invocation.patches }), null, 2)}\n`)
         break
