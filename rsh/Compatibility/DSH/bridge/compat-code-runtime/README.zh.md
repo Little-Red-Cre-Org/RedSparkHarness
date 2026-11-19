@@ -41,7 +41,7 @@ const result = await ctx.codeRuntime.run({
 
 ### 选择后端
 
-后端声明两个你可以依赖的描述符：`language`——程序必须使用的源语言，已知值为 `'typescript'` 与 `'python'`——以及 `isolation`——执行基底（`'worker-thread'`、`'process'`、`'container'`），仅供部署与诊断使用，不构成安全声明。[`dsh-code-runtime-worker-thread`](../../../../Modules/Official/code-runtime/code-runtime-worker-thread/README.zh.md) 在全新的 Node Worker 线程中执行 TypeScript；私有的 [`dsh-experimental-code-runtime-python`](../../../../Modules/Community/experimental/code-runtime-python/README.zh.md) 包在全新的 CPython 子进程中执行 Python，供选择性组合使用。
+后端声明两个你可以依赖的描述符：`language`——程序必须使用的源语言，已知值为 `'typescript'` 与 `'python'`——以及 `isolation`——执行基底（`'worker-thread'`、`'process'`、`'container'`），仅供部署与诊断使用，不构成安全声明。[`dsh-native-code-runtime`](../../../../Modules/Official/code-runtime/native-code-runtime/README.zh.md) 提供 TypeScript worker 运行时；私有的 [`dsh-experimental-code-runtime-python`](../../../../Modules/Community/experimental/code-runtime-python/README.zh.md) 包在全新的 CPython 子进程中执行 Python，供选择性组合使用。
 
 ### 可移植地命名绑定
 
@@ -97,7 +97,7 @@ binding-global 与 error-class 名称是语言可移植的：必须匹配标识�
 当包级约定不够用时阅读以下内容。它们从 PTC mode 消费方进入后端与能力 seam 模型。
 
 - [PTC mode Agent Note](../../../../../.agents/notes/implemented/feature/2026-06-15-ptc.zh.md)——工具注册表如何消费 `ctx.codeRuntime` 并把 `run_code` 呈现给模型。
-- [Worker 线程后端](../../../../Modules/Official/code-runtime/code-runtime-worker-thread/README.zh.md)——已发布的 TypeScript 执行后端。
+- [Native worker 运行时](../../../../Modules/Official/code-runtime/native-code-runtime/README.zh.md)——已发布的 TypeScript 执行后端。
 - [实验性 Python 后端](../../../../Modules/Community/experimental/code-runtime-python/README.zh.md)——私有的 CPython 子进程提供方及其 fd-3 协议。
 - [代码运行时子系统参考](../../../../Docs/subsystems/code-runtime.zh.md)——请求／结果词汇、绑定与 `ctx.codeRuntime` 的 cordis 接口面。
 - [能力 seam](../../../../../.agents/notes/implemented/architecture/2026-06-13-capability-seams.zh.md)——Service Definition / Service Provider / Consumer 拆分。

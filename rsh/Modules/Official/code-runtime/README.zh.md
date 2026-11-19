@@ -9,7 +9,7 @@ kind: "package-group"
 
 ## 概述
 
-此能力家族分离可移植运行契约、Cordis 适配器与执行后端。需要在全新 Node Worker 中执行时选择 worker-thread TypeScript 后端；需要明确使用原生受限进程时选择 process-sandbox；需要 CPython 时选择私有实验性 Python 后端。每次运行均不继承此前程序的状态，失败会作为结果返回。
+此能力家族分离可移植运行契约、Cordis 适配器与执行后端。需要 TypeScript 执行时选择 Native worker 运行时；需要明确使用原生受限进程时选择 process-sandbox；需要 CPython 时选择私有实验性 Python 后端。每次运行均不继承此前程序的状态，失败会作为结果返回。
 
 ## 目录
 
@@ -29,7 +29,6 @@ Definition、Compatibility 适配器与运行时 Provider 分别拥有可移植�
 | [`code-runtime-definition`](../../../Engine/core/code-runtime-definition/README.zh.md) | 定义与框架无关的代码运行请求和 Provider 操作 | — |
 | [`compat-code-runtime/`](../../../Compatibility/DSH/bridge/compat-code-runtime/README.zh.md) | 实现 Cordis `ctx.codeRuntime` 服务契约 | `ctx.codeRuntime` |
 | [`native-code-runtime/`](native-code-runtime/README.zh.md) | 提供执行 Provider 共用的原生 Worker 运行时 | — |
-| [`code-runtime-worker-thread/`](code-runtime-worker-thread/README.zh.md) | 在全新的 Node Worker 线程中执行 TypeScript 程序 | 注册 `ctx.codeRuntime` |
 | [`code-runtime-process-sandbox/`](code-runtime-process-sandbox/README.zh.md) | 为明确选择原生运行时的 profile 提供受沙箱限制的进程执行 | — |
 | [`experimental/code-runtime-python/`](../../Community/experimental/code-runtime-python/README.zh.md) | 实验性 Python 后端：负责 Node 宿主与 CPython 子进程之间的 fd-3 协议 | — |
 

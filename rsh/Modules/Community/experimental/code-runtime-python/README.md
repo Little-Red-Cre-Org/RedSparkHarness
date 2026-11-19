@@ -94,7 +94,7 @@ Read these when the runtime contract is not enough. They move from the seam defi
 - [fd-3 protocol Agent Note](../../../../../.agents/notes/implemented/architecture/2026-07-31-code-runtime-python-fd3-protocol.md) — design rationale and wire contract.
 - [Native Python code runtime](../../../../../.agents/notes/implemented/architecture/2026-11-13-native-python-code-runtime.md) — the shared runtime and the Cordis and Native installers.
 - [Settlement-fixes Agent Note](../../../../../.agents/notes/archived/bug-fix/2026-07-31-code-runtime-python-settlement-fixes.md) — settlement, metering, and containment fixes and their regression cases.
-- [Worker-thread backend](../../../Official/code-runtime/code-runtime-worker-thread/README.md) — the released TypeScript sibling.
+- [Native worker runtime](../../../Official/code-runtime/native-code-runtime/README.md) — the released TypeScript sibling.
 - [Code runtime subsystem reference](../../../../Docs/subsystems/code-runtime.md) — request/result vocabulary, bindings, and failure taxonomy.
 
 -----
@@ -119,7 +119,7 @@ These limits define what the package does and does not cover; they are current p
 - **A descendant that escapes the child's process group with `setsid()` is not reaped by the group teardown** — `kill(-pid)` cannot reach it; the run still settles on the value the done frame decided, and the close-deadline backstop forces settlement if the orphan holds the pipes open, but the orphan itself outlives the fiber until it exits on its own.
 - **A `log` frame that arrives after settlement is dropped** — once the run has settled, host-side capture is closed; a late fd-3 `log` frame (from a thread that outlived the done frame) is discarded rather than appended to `logs`.
 - **A binding REPLY value has no seam-level byte or depth cap** — `maxValueBytes` meters only the done frame's completion value; a wide binding reply is rebuilt host-side (`snapshotJsonValue` traversal) and encoded whole, bounded on both sides only by process memory (like a binding argument, which has no child-side budget either).
-- **No shipped profile mounts this provider** — `./native` publishes `codeRuntime` and is not mounted; a release package must not name this experimental package. The keyless `ptc-python-turn` snapshot still replaces the headless PTC runtime through the Cordis loader; released profiles continue to use the worker-thread backend.
+- **No shipped profile mounts this provider** — `./native` publishes `codeRuntime` and is not mounted; a release package must not name this experimental package. The keyless `ptc-python-turn` snapshot still replaces the headless PTC runtime through the Cordis loader; released profiles continue to use `@redspark/rsh-native-code-runtime`.
 - **Cross-channel log interleaving is backend-dependent** — Python stdout, stderr, and fd-3 log frames travel independently; each channel preserves its own order, while their total order in `result.logs` may differ.
 - **CPython 3.10 or newer is required** — the configured executable is resolved and version-probed at load; unsupported interpreters fail before `ctx.codeRuntime` is registered.
 - **The truncation-marker text and the tempdir prefix keep the pre-rename short names** — the marker `[dsh-code-runtime-python] log capture truncated at <N> bytes` and the `dsh-code-runtime-python-` tempdir prefix are byte-anchored by tests and are independent of the npm package name; promotion (dropping the `experimental-` prefix) does not rename them.

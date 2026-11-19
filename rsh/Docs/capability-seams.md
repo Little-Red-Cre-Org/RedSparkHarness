@@ -106,7 +106,6 @@ flowchart LR
   pkg_tool_web["tool-web"]
   svc_tools["ctx.tools<br/>Tool registry and guarded execution pipeline"]
   pkg_tool_ask_user["tool-ask-user"]
-  pkg_tool_cordis["tool-cordis"]
   pkg_tool_skill["tool-skill"]
   pkg_tool_todo["tool-todo"]
   pkg_user_questions["user-questions"]
@@ -170,7 +169,7 @@ flowchart LR
   svc_permissionPresets["ctx.permissionPresets<br/>Permission presets"]
   pkg_code_runtime["code-runtime"]
   svc_codeRuntime["ctx.codeRuntime<br/>Code-execution seam"]
-  pkg_code_runtime_worker_thread["code-runtime-worker-thread"]
+  pkg_native_code_runtime["native-code-runtime"]
   pkg_experimental_code_runtime_python["experimental-code-runtime-python"]
   pkg_plugin_host["plugin-host"]
   svc_pluginHost["ctx.pluginHost<br/>RSH plugin-role registry"]
@@ -222,9 +221,6 @@ flowchart LR
   pkg_lsp["lsp"]
   svc_lsp["ctx.lsp<br/>Language-server navigation seam"]
   pkg_tool_lsp["tool-lsp"]
-  pkg_cordis_host_runner["cordis-host-runner"]
-  svc_dynamicCordisRunner["ctx.dynamicCordisRunner<br/>Dynamic Cordis package host runner"]
-  svc_cordisInspect["ctx.cordisInspect<br/>Dynamic Cordis inspect registry"]
   pkg_agent --> svc_agents
   pkg_agent_default_model --> svc_agentDefaultModel
   pkg_agent_loop --> svc_agentLoop
@@ -247,14 +243,11 @@ flowchart LR
   pkg_client_file_upload --> svc_fileUploads
   pkg_client_modules --> svc_clientModules
   pkg_code_runtime --> svc_codeRuntime
-  pkg_code_runtime_worker_thread --> svc_codeRuntime
   pkg_command_feedback --> svc_sessionFeedback
   pkg_commands --> svc_commands
   pkg_compaction --> svc_compaction
   pkg_compaction_basic --> svc_compaction
   pkg_compaction_tool_result_pruner --> svc_toolResultPruner
-  pkg_cordis_host_runner --> svc_cordisInspect
-  pkg_cordis_host_runner --> svc_dynamicCordisRunner
   pkg_credentials --> svc_credentials
   pkg_credentials_local --> svc_credentials
   pkg_deepseek_llm_api_extensions --> svc_deepseekLlmApiExtensions
@@ -282,6 +275,7 @@ flowchart LR
   pkg_lsp --> svc_lsp
   pkg_lsp_stdio --> svc_lsp
   pkg_message_feedback --> svc_messageFeedback
+  pkg_native_code_runtime --> svc_codeRuntime
   pkg_permission_presets --> svc_permissionPresets
   pkg_plan_mode --> svc_planMode
   pkg_plugin_host --> svc_pluginHost
@@ -364,13 +358,11 @@ flowchart LR
   svc_clientModules --> pkg_client_hmr
   svc_codeRuntime --> pkg_tools
   svc_compaction --> pkg_compaction_basic
-  svc_cordisInspect --> pkg_tool_cordis
   svc_credentials --> pkg_api_settings_controller
   svc_credentials --> pkg_llm_deepseek
   svc_credentials --> pkg_llm_pi_ai
   svc_deepseekLlmApiExtensions --> pkg_llm_deepseek
   svc_directoryPicker --> pkg_api_workspace_controller
-  svc_dynamicCordisRunner --> pkg_tool_cordis
   svc_e2b --> pkg_fs_e2b
   svc_e2b --> pkg_subprocess_e2b
   svc_fileReferences --> pkg_api_session_controller
@@ -451,7 +443,6 @@ flowchart LR
   svc_tools --> pkg_agent_loop
   svc_tools --> pkg_tool_ask_user
   svc_tools --> pkg_tool_bash
-  svc_tools --> pkg_tool_cordis
   svc_tools --> pkg_tool_fs
   svc_tools --> pkg_tool_skill
   svc_tools --> pkg_tool_subagent
@@ -511,7 +502,7 @@ flowchart LR
 | `ctx.sessionReferenceResolver` | `core` | [`session-reference`](../Engine/context/session-reference) | - | - | - | Projects bounded current-surface conversation snapshots into durable untrusted message context; host adapters own mention syntax. |
 | `ctx.sessionTitle` | `seam` | [`session-title`](../Engine/session/session-title) | [`session-title-first-prompt-llm`](../Engine/session/session-title-first-prompt-llm), [`session-title-all-prompts-llm`](../Engine/session/session-title-all-prompts-llm) | - | - | Owns the deterministic fallback, latest-title fold, and sole optional asynchronous provider registration. |
 | `ctx.systemPrompt` | `core` | [`system-prompt`](../Engine/core/system-prompt) | - | [`agent-loop`](../Engine/core/agent-loop), [`tools`](../Engine/core/tools), [`tool-fs`](../Modules/Official/fs/tool-fs), [`tool-terminal`](../Modules/Official/terminal/tool-terminal), [`tool-web`](../Modules/Official/web/tool-web) | - | Collects prompt sections and model-facing tool schemas for each step. |
-| `ctx.tools` | `core` | [`tools`](../Engine/core/tools) | - | [`agent-loop`](../Engine/core/agent-loop), [`tool-ask-user`](../Modules/Official/interaction/tool-ask-user), [`tool-bash`](../Modules/Official/shell/tool-bash), [`tool-cordis`](../Modules/Official/extensions/tool-cordis), [`tool-fs`](../Modules/Official/fs/tool-fs), [`tool-terminal`](../Modules/Official/terminal/tool-terminal), [`tool-skill`](../Modules/Official/skill/tool-skill), [`tool-subagent`](../Engine/subagent/tool-subagent), [`tool-todo`](../Modules/Official/todo/tool-todo), [`tool-web`](../Modules/Official/web/tool-web) | - | Registers capabilities, owns PTC mode transport, and routes calls through pre-policy, monotonic guards, around dispatch, post-policy, and final-result observation. |
+| `ctx.tools` | `core` | [`tools`](../Engine/core/tools) | - | [`agent-loop`](../Engine/core/agent-loop), [`tool-ask-user`](../Modules/Official/interaction/tool-ask-user), [`tool-bash`](../Modules/Official/shell/tool-bash), [`tool-fs`](../Modules/Official/fs/tool-fs), [`tool-terminal`](../Modules/Official/terminal/tool-terminal), [`tool-skill`](../Modules/Official/skill/tool-skill), [`tool-subagent`](../Engine/subagent/tool-subagent), [`tool-todo`](../Modules/Official/todo/tool-todo), [`tool-web`](../Modules/Official/web/tool-web) | - | Registers capabilities, owns PTC mode transport, and routes calls through pre-policy, monotonic guards, around dispatch, post-policy, and final-result observation. |
 | `ctx.userQuestions` | `seam` | [`user-questions`](../Modules/Official/interaction/user-questions) | - | [`tool-ask-user`](../Modules/Official/interaction/tool-ask-user) | - | UI front ends provide the active human-answer provider; tool-ask-user pauses a tool call on the provider-neutral ask() promise. |
 | `ctx.planMode` | `core` | [`plan-mode`](../Modules/Official/plan/plan-mode) | - | - | - | Folds logged plan/mode state, flushes user selections at turn boundaries, renders deployment-owned guidance, registers /plan, and keeps the plan-exit schema stable across transitions. |
 | `ctx.agentPresets` | `core` | [`agent-presets`](../Engine/preset/agent-presets) | - | - | - | Discovers preset directories over trusted and user-authored roots and mounts one preset cordis.yml under an agent scope during creation, rejecting a row that never activates or that publishes into the root service realm. |
@@ -532,7 +523,7 @@ flowchart LR
 | `ctx.sandboxPolicy` | `core` | [`sandbox-policy`](../Modules/Official/sandbox/sandbox-policy) | - | [`bash-sandbox`](../Modules/Official/shell/bash-sandbox), [`fs-sandbox`](../Modules/Official/fs/fs-sandbox), [`terminal-bash`](../Modules/Official/terminal/terminal-bash) | - | The one home for the deployment default mode + workspace root; only the sandboxed executor and provider read the service (the tool layers use the pure `sandbox/mode` fold it also exports). Both enforcing families read it so bash and fs cannot confine to different roots. |
 | `ctx.approval` | `seam` | [`user-approval`](../Compatibility/DSH/bridge/compat-user-approval) | - | [`tools`](../Engine/core/tools), [`tool-bash`](../Modules/Official/shell/tool-bash), [`acp`](../Programs/ACP/packages/acp) | - | One-shot permission decisions dispatched over the `approval/request` waterfall; answerers are listeners (the ACP bridge for its own agents), absence fails closed to `unavailable`. |
 | `ctx.permissionPresets` | `core` | [`permission-presets`](../Modules/Official/interaction/permission-presets) | - | - | - | User-facing preset table (`workspace-write`/`danger-full-access`) bundling the sandbox-mode and approval-policy knobs; a switch writes one `permission/preset` event through to both knob events. |
-| `ctx.codeRuntime` | `seam` | [`code-runtime`](../Compatibility/DSH/bridge/compat-code-runtime) | [`code-runtime-worker-thread`](../Modules/Official/code-runtime/code-runtime-worker-thread), `experimental-code-runtime-python` | [`tools`](../Engine/core/tools) | - | Runs one model-written program against host-provided async bindings; backends differ by substrate and language (the tool registry consumes it for PTC mode). |
+| `ctx.codeRuntime` | `seam` | [`code-runtime`](../Compatibility/DSH/bridge/compat-code-runtime) | [`native-code-runtime`](../Modules/Official/code-runtime/native-code-runtime), `experimental-code-runtime-python` | [`tools`](../Engine/core/tools) | - | Runs one model-written program against host-provided async bindings; backends differ by substrate and language (the tool registry consumes it for PTC mode). |
 | `ctx.pluginHost` | `core` | [`plugin-host`](../Compatibility/DSH/bridge/compat-plugin-host) | - | - | - | The optional DSH compatibility bridge records adapter roles and mounts allowlisted Cordis entries through their existing Fiber lifecycle; it does not replace the Cordis Loader or service container. |
 | `ctx.fs` | `seam` | [`fs`](../Modules/Official/fs/fs) | [`fs-local`](../Modules/Official/fs/fs-local), [`fs-sandbox`](../Modules/Official/fs/fs-sandbox), [`fs-e2b`](../Modules/Official/e2b/fs-e2b) | [`tool-fs`](../Modules/Official/fs/tool-fs) | [`fs-observation-policy`](../Modules/Official/fs/fs-observation-policy) | tool-fs executes read/write/edit through ctx.fs; fs-sandbox fences mutations by the shared sandbox mode; fs-observation-policy contributes observed-state checks through the fs/* event gate. |
 | `ctx.compaction` | `seam` | [`compaction`](../Engine/compaction/compaction) | [`compaction-basic`](../Engine/compaction/compaction-basic) | [`compaction-basic`](../Engine/compaction/compaction-basic) | - | The basic backend consumes post-step pressure and request-error recovery events; there is no model-facing compact tool. |
@@ -547,7 +538,5 @@ flowchart LR
 | `ctx.workflowEngine` | `seam` | [`workflow`](../Engine/workflow/workflow) | [`workflow-worker-thread`](../Engine/workflow/workflow-worker-thread) | [`tool-workflow`](../Engine/workflow/tool-workflow), [`tool-ralph`](../Engine/workflow/tool-ralph) | - | One engine per context, as in bash, with no named-provider registry; the general workflow and fixed Ralph consumers start runs whose agent() calls fan out through ctx.subagents. |
 | `ctx.webhookRuntime` | `core` | [`webhook`](../Modules/Official/webhook/webhook) | - | [`webhook-github`](../Modules/Official/webhook/webhook-github) | - | Provider adapters dispatch authenticated deliveries; trusted plugins register independent process-local rules, and the runtime turns non-null results into ordinary Workspace-backed Sessions without delivery or completion state. |
 | `ctx.lsp` | `seam` | [`lsp`](../Modules/Official/lsp/lsp) | [`lsp-stdio`](../Modules/Official/lsp/lsp-stdio) | [`tool-lsp`](../Modules/Official/lsp/tool-lsp) | - | Provider registration and selection plus normalized query execution over exactly four operations; the seam offers no protocol escape hatch, so a backend translates into the normalized request and result. |
-| `ctx.dynamicCordisRunner` | `core` | [`cordis-host-runner`](../Modules/Official/extensions/cordis-host-runner) | - | [`tool-cordis`](../Modules/Official/extensions/tool-cordis) | - | Owns the in-memory definition registry, the vm sandbox for host halves, and the request-run round trip; browser pages reach the same service over the wire through its remote namespace. |
-| `ctx.cordisInspect` | `core` | [`cordis-host-runner`](../Modules/Official/extensions/cordis-host-runner) | - | [`tool-cordis`](../Modules/Official/extensions/tool-cordis) | - | Registers host inspect providers, mirrors the client provider manifest, and routes client queries through the dynamic Cordis transport. |
 
 Maintenance mode: hybrid: services are discovered from Cordis declarations; interface/implementation/consumer roles are classified in `rsh/Scripts/gen-doc-graphs.ts` with a completeness guard.

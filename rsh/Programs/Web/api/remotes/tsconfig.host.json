@@ -36,9 +36,6 @@
       "path": "../../../../Engine/preset/agent-presets/tsconfig.host.json"
     },
     {
-      "path": "../../../../Modules/Official/extensions/cordis-host-runner"
-    },
-    {
       "path": "../../../../Modules/Official/settings/settings"
     },
     {

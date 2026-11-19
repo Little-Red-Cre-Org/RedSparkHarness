@@ -1,17 +1,7 @@
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
-import { createInterface } from 'node:readline'
-import { Readable, Writable } from 'node:stream'
 import { fileURLToPath, pathToFileURL } from 'node:url'
-import {
-  client as createAcpClientApp,
-  methods,
-  ndJsonStream,
-  PROTOCOL_VERSION,
-  type SessionNotification,
-} from '@agentclientprotocol/sdk'
-import { initProfile, PROFILE_TEMPLATES } from '@redspark/rsh-app-boot'
 import { startMockLlmServer } from '@redspark/rsh-llm-mock-server'
 import { execa } from 'execa'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
@@ -29,7 +19,6 @@ const SPAWN_TIMEOUT_MS = 60_000
 // prints what this manifest carries, so no test may pin it to a literal.
 const cliVersion = (JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8')) as { version: string }).version
 const rshBin = join(repoRoot, 'rsh/Programs/CLI/lib/bin.js')
-const invalidProvider = fileURLToPath(new URL('./fixtures/invalid-provider.native.json', import.meta.url))
 
 async function runBuiltBin(
   args: readonly string[] = [],
@@ -124,92 +113,6 @@ async function waitForNativeClaudeHome(
   throw new Error('Native Claude did not create its workspace-bound home while the profile was running')
 }
 
-interface ProfileLifecycleFixture {
-  home: string
-  ready: string
-  settled: string
-  disposed: string
-  interrupt: string
-}
-
-/**
- * A minimal custom profile: one lifecycle-marker plugin bundle listed in
- * dsh.profile.bundles, no dsh-base — proving out-of-box composition machinery without
- * booting the entire product tree.
- */
-function createProfileLifecycleFixture(): ProfileLifecycleFixture {
-  const home = mkdtempSync(join(tmpdir(), 'dsh-profile-lifecycle-'))
-  const ready = join(home, 'ready')
-  const settled = join(home, 'settled')
-  const disposed = join(home, 'disposed')
-  const interrupt = join(home, 'interrupt')
-  const bundleDir = join(home, 'lifecycle-bundle')
-  mkdirSync(bundleDir, { recursive: true })
-  writeFileSync(join(bundleDir, 'plugin.mjs'), [
-    "import { existsSync, writeFileSync } from 'node:fs'",
-    "import { join } from 'node:path'",
-    "export const name = 'profile-lifecycle-fixture'",
-    'export function apply(ctx, config = {}) {',
-    '  let active = true',
-    '  // Keep the event loop alive so process lifetime is signal-owned, like a real surface.',
-    '  // Windows has no deliverable SIGTERM; the marker emits the same process event there.',
-    '  let interrupted = false',
-    '  const heartbeat = setInterval(() => {',
-    '    if (interrupted || !existsSync(process.env.RAW_INTERRUPT_FILE)) return',
-    '    interrupted = true',
-    "    process.emit('SIGTERM')",
-    '  }, 20)',
-    '  // Echo the mounted generation so the hot-reload e2e can assert both an',
-    '  // applied override and its removal reverting to this bundle default.',
-    "  writeFileSync(join(process.env.RSH_HOME, 'config-echo'), String(config.generation ?? 'bundle-default'))",
-    "  writeFileSync(process.env.RAW_READY_FILE, 'ready')",
-    '  void ctx.loader.await().then(() => {',
-    "    if (active) writeFileSync(process.env.RAW_SETTLED_FILE, 'settled')",
-    '  })',
-    '  ctx.effect(() => () => {',
-    '    active = false',
-    '    clearInterval(heartbeat)',
-    "    writeFileSync(process.env.RAW_DISPOSED_FILE, 'disposed')",
-    '  })',
-    '}',
-    '',
-  ].join('\n'))
-  writeFileSync(join(bundleDir, 'cordis.patch.yml'), [
-    '- insert:',
-    '    - id: profile-lifecycle-fixture',
-    `      name: ${pathToFileURL(join(bundleDir, 'plugin.mjs')).href}`,
-    '',
-  ].join('\n'))
-  writeFileSync(join(bundleDir, 'package.json'), JSON.stringify({
-    name: 'dsh-lifecycle-bundle',
-    version: '0.0.0',
-    type: 'module',
-    dsh: { bundle: { patch: './cordis.patch.yml' } },
-  }, undefined, 2))
-  const profileDir = join(home, 'profiles', 'lifecycle')
-  mkdirSync(join(profileDir, 'node_modules'), { recursive: true })
-  writeFileSync(join(profileDir, 'package.json'), JSON.stringify({
-    name: 'dsh-profile-lifecycle',
-    private: true,
-    dependencies: {},
-    dsh: { profile: { bundles: ['dsh-lifecycle-bundle'] } },
-  }, undefined, 2))
-  // Hand-place the "installed" bundle where profile resolution finds it.
-  writeFileSync(join(profileDir, 'cordis.patch.yml'), '[]\n')
-  const linkTarget = join(profileDir, 'node_modules', 'dsh-lifecycle-bundle')
-  mkdirSync(join(profileDir, 'node_modules'), { recursive: true })
-  try {
-    rmSync(linkTarget, { recursive: true, force: true })
-  } catch { /* fresh dir */ }
-  // Copy-free: a package.json redirecting via a relative main is enough for require.resolve.
-  mkdirSync(linkTarget, { recursive: true })
-  for (const file of ['package.json', 'cordis.patch.yml', 'plugin.mjs']) {
-    writeFileSync(join(linkTarget, file), readFileSync(join(bundleDir, file)))
-  }
-  return { home, ready, settled, disposed, interrupt }
-}
-
-/** Native package fixture for the built CLI's Cordis-free launch path. */
 function createNativeCliFixture(): { home: string; marker: string } {
   const home = mkdtempSync(join(tmpdir(), 'dsh-native-cli-'))
   const profile = join(home, 'profiles', 'native-smoke')
@@ -479,186 +382,6 @@ function startNativeProfileReload(fixture: ReturnType<typeof createNativeProfile
   })
 }
 
-function startProfileLifecycle(fixture: ProfileLifecycleFixture, args: readonly string[] = []) {
-  return execa(process.execPath, [rshBin, '--profile', 'lifecycle', ...args], {
-    cwd: fixture.home,
-    input: '',
-    timeout: SPAWN_TIMEOUT_MS,
-    killSignal: 'SIGKILL',
-    reject: false,
-    env: {
-      RSH_HOME: fixture.home,
-      RAW_READY_FILE: fixture.ready,
-      RAW_SETTLED_FILE: fixture.settled,
-      RAW_DISPOSED_FILE: fixture.disposed,
-      RAW_INTERRUPT_FILE: fixture.interrupt,
-    },
-  })
-}
-
-function requestProfileShutdown(
-  child: Pick<ReturnType<typeof startProfileLifecycle>, 'kill'>,
-  fixture: Pick<ProfileLifecycleFixture, 'interrupt'>,
-): void {
-  if (process.platform === 'win32') {
-    writeFileSync(fixture.interrupt, 'interrupt')
-    return
-  }
-  child.kill('SIGTERM')
-}
-
-function createEnvironmentProbeProfile(home: string, project: string): void {
-  const pluginFile = join(project, 'environment-probe.mjs')
-  writeFileSync(pluginFile, [
-    "export const name = 'environment-probe'",
-    "export const inject = ['llm']",
-    'export function apply(ctx) {',
-    '  void ctx.loader.await().then(async () => {',
-    "    let text = ''",
-    '    for await (const chunk of ctx.llm.stream({',
-    "      provider: 'deepseek-official',",
-    "      model: 'deepseek-v4-flash',",
-    '      messages: [],',
-    '      maxTokens: 32,',
-    '    })) {',
-    "      if (chunk.type === 'text-delta') text += chunk.text",
-    '    }',
-    '    process.stdout.write(`${text}\\n`)',
-    "    if (process.platform === 'win32') process.emit('SIGTERM')",
-    "    else process.kill(process.pid, 'SIGTERM')",
-    '  })',
-    '}',
-    '',
-  ].join('\n'))
-  const profileDir = join(home, 'profiles', 'environment-probe')
-  mkdirSync(profileDir, { recursive: true })
-  writeFileSync(join(profileDir, 'package.json'), JSON.stringify({
-    name: 'dsh-profile-environment-probe',
-    private: true,
-    dependencies: {},
-    dsh: { profile: { bundles: ['@redspark/rsh-base'] } },
-  }, undefined, 2))
-  writeFileSync(join(profileDir, 'cordis.patch.yml'), [
-    '- insert:',
-    '    - id: environment-probe',
-    `      name: ${pathToFileURL(pluginFile).href}`,
-    '',
-  ].join('\n'))
-}
-
-interface StartupFixture {
-  home: string
-  ready: string
-  echo: string
-  interrupt: string
-  /** An always-running row's echo, used to observe that a user patch reload landed. */
-  witness: string
-}
-
-/**
- * A custom profile whose ordinary provider plugin injects `cmdlineArgs`, plus
- * a row that reads its app-owned service through a `!!js` config expression.
- * Both plugin modules resolve
- * `@redspark/rsh-cmdline` and `commander` through the profile module
- * fallback, exactly as an installed out-of-tree bundle does.
- */
-function createStartupFixture(): StartupFixture {
-  const home = mkdtempSync(join(tmpdir(), 'dsh-profile-startup-'))
-  const profileDir = join(home, 'profiles', 'startup')
-  // Written straight into the installed location: a row module resolves its
-  // own imports from where it is installed, and only inside the profile does
-  // Node's parent walk reach the installation fallback these plugins need.
-  const bundleDir = join(profileDir, 'node_modules', 'dsh-startup-bundle')
-  mkdirSync(bundleDir, { recursive: true })
-  writeFileSync(join(bundleDir, 'startup.mjs'), [
-    "import { Command } from 'commander'",
-    "import { parseCmdline } from '@redspark/rsh-cmdline'",
-    "export const name = 'fixture-startup'",
-    "export const inject = ['cmdlineArgs']",
-    'export function apply(ctx) {',
-    "  const program = new Command().name('fixture').option('--generation <value>', 'echoed generation')",
-    "  program.action(() => ctx.provide('fixtureStartup', { generation: program.opts().generation }))",
-    '  parseCmdline(ctx, program)',
-    '}',
-    '',
-  ].join('\n'))
-  writeFileSync(join(bundleDir, 'waiting.mjs'), [
-    "import { existsSync, writeFileSync } from 'node:fs'",
-    "import { join } from 'node:path'",
-    "export const name = 'startup-fixture'",
-    'export function apply(ctx, config = {}) {',
-    '  let interrupted = false',
-    '  const heartbeat = setInterval(() => {',
-    '    if (interrupted || !existsSync(process.env.RAW_INTERRUPT_FILE)) return',
-    '    interrupted = true',
-    "    process.emit('SIGTERM')",
-    '  }, 20)',
-    "  writeFileSync(join(process.env.RSH_HOME, 'config-echo'), String(config.generation ?? 'bundle-default'))",
-    "  writeFileSync(process.env.RAW_READY_FILE, 'ready')",
-    '  ctx.effect(() => () => { clearInterval(heartbeat) })',
-    '}',
-    '',
-  ].join('\n'))
-  writeFileSync(join(bundleDir, 'witness.mjs'), [
-    "import { writeFileSync } from 'node:fs'",
-    "import { join } from 'node:path'",
-    "export const name = 'reload-witness'",
-    'export function apply(ctx, config = {}) {',
-    "  writeFileSync(join(process.env.RSH_HOME, 'witness'), String(config.generation ?? 'bundle-default'))",
-    '}',
-    '',
-  ].join('\n'))
-  writeFileSync(join(bundleDir, 'cordis.patch.yml'), [
-    '- insert:',
-    '    - id: startup-fixture',
-    `      name: ${pathToFileURL(join(bundleDir, 'waiting.mjs')).href}`,
-    '      inject: [fixtureStartup]',
-    '      config:',
-    // Lazy interpolation runs only after the provider's service is injected.
-    "        generation: !!js ctx.fixtureStartup.generation ?? 'bundle-default'",
-    '    - id: fixture-startup',
-    `      name: ${pathToFileURL(join(bundleDir, 'startup.mjs')).href}`,
-    '    - id: reload-witness',
-    `      name: ${pathToFileURL(join(bundleDir, 'witness.mjs')).href}`,
-    '',
-  ].join('\n'))
-  writeFileSync(join(bundleDir, 'package.json'), JSON.stringify({
-    name: 'dsh-startup-bundle',
-    version: '0.0.0',
-    type: 'module',
-    dsh: { bundle: { patch: './cordis.patch.yml' } },
-  }, undefined, 2))
-  writeFileSync(join(profileDir, 'package.json'), JSON.stringify({
-    name: 'dsh-profile-startup',
-    private: true,
-    dependencies: {},
-    dsh: { profile: { bundles: ['dsh-startup-bundle'] } },
-  }, undefined, 2))
-  writeFileSync(join(profileDir, 'cordis.patch.yml'), '[]\n')
-  return {
-    home,
-    ready: join(home, 'ready'),
-    echo: join(home, 'config-echo'),
-    interrupt: join(home, 'interrupt'),
-    witness: join(home, 'witness'),
-  }
-}
-
-function startStartupProfile(fixture: StartupFixture, args: readonly string[]) {
-  return execa(process.execPath, [rshBin, '--profile', 'startup', ...args], {
-    cwd: fixture.home,
-    input: '',
-    reject: false,
-    timeout: SPAWN_TIMEOUT_MS,
-    killSignal: 'SIGKILL',
-    env: {
-      RSH_HOME: fixture.home,
-      RAW_READY_FILE: fixture.ready,
-      RAW_INTERRUPT_FILE: fixture.interrupt,
-    },
-  })
-}
-
 describe.skipIf(process.env.RSH_EXAMPLE_MODE !== 'lib' && !existsSync(rshBin))('dsh BUILT bin (node lib/bin.js, no tsx)', () => {
   it('resolves the shipped native-headless profile through the public loader', async () => {
     const home = mkdtempSync(join(tmpdir(), 'rsh-native-headless-profile-'))
@@ -679,7 +402,8 @@ describe.skipIf(process.env.RSH_EXAMPLE_MODE !== 'lib' && !existsSync(rshBin))('
     const help = await runBuiltBin(['--help'])
     expect(help.code).toBe(0)
     expect(help.stdout).toContain('dsh --profile web')
-    expect(help.stdout).toContain('dsh plugin --profile')
+    expect(help.stdout).toContain('--from-default-profile')
+    expect(help.stdout).not.toContain('dsh plugin')
     expect(help.stdout).not.toMatch(/^\s+(?:tui|meta|upgrade)\b/mu)
     for (const removed of [['tui'], ['--config', 'x.yml'], ['-p', 'task'], ['run', 'task']]) {
       const result = await runBuiltBin(removed)
@@ -1221,240 +945,9 @@ describe.skipIf(process.env.RSH_EXAMPLE_MODE !== 'lib' && !existsSync(rshBin))('
     }
   }, SPAWN_TIMEOUT_MS + 30_000)
 
-  it('routes help and usage errors without activating startup-dependent rows', async () => {
-    const home = mkdtempSync(join(tmpdir(), 'dsh-app-help-'))
-    try {
-      const web = await runBuiltBin(['--profile', 'legacy-web', '--from-default-profile', 'web', '--help'], {
-        RSH_HOME: home,
-        RSH_TELEMETRY_DISABLED: '1',
-      })
-      expect(web.code).toBe(0)
-      expect(web.stderr).toBe('')
-      expect(web.stdout).toContain('Usage: dsh --profile web')
-      expect(web.stdout).toContain('--port <port>')
-      expect(web.stdout).not.toContain('dsh web: http://')
 
-      const wildcardHost = await runBuiltBin(['--profile', 'legacy-web', '--host', '0.0.0.0'], {
-        RSH_HOME: home,
-        RSH_TELEMETRY_DISABLED: '1',
-      })
-      expect(wildcardHost.code).toBe(1)
-      expect(wildcardHost.stdout).toBe('')
-      expect(wildcardHost.stderr).toContain('--host 0.0.0.0 is intentionally not supported yet for safety: it would expose remote code execution to the network; use 127.0.0.1 instead')
-      expect(wildcardHost.stderr).not.toContain('dsh web: http://')
 
-      const headlessHelp = await runBuiltBin(['--profile', 'legacy-headless', '--from-default-profile', 'headless', '--help'], {
-        RSH_HOME: home,
-        RSH_TELEMETRY_DISABLED: '1',
-      })
-      expect(headlessHelp.code).toBe(0)
-      expect(headlessHelp.stderr).toBe('')
-      expect(headlessHelp.stdout).toContain('Usage: dsh --profile headless')
 
-      const sdkHelp = await runBuiltBin(['--profile', 'legacy-sdk', '--from-default-profile', 'sdk', '--help'], {
-        RSH_HOME: home,
-        RSH_TELEMETRY_DISABLED: '1',
-      })
-      expect(sdkHelp.code).toBe(0)
-      expect(sdkHelp.stderr).toBe('')
-      expect(sdkHelp.stdout).toContain('Usage: dsh --profile sdk')
-
-      const acpHelp = await runBuiltBin(['--profile', 'legacy-acp', '--from-default-profile', 'acp', '--help'], {
-        RSH_HOME: home,
-        RSH_TELEMETRY_DISABLED: '1',
-      })
-      expect(acpHelp.code).toBe(0)
-      expect(acpHelp.stderr).toBe('')
-      expect(acpHelp.stdout).toContain('Usage: dsh --profile acp')
-
-      const missingTask = await runBuiltBin(['--profile', 'legacy-headless'], {
-        RSH_HOME: home,
-        RSH_TELEMETRY_DISABLED: '1',
-      })
-      expect(missingTask.code).toBe(1)
-      expect(missingTask.stderr).toContain('a task is required')
-    } finally {
-      rmSync(home, { recursive: true, force: true })
-    }
-  }, SPAWN_TIMEOUT_MS * 3 + 30_000)
-
-  it('reports SDK startup failure when stdin reaches EOF first', async () => {
-    const home = mkdtempSync(join(tmpdir(), 'dsh-built-sdk-startup-failure-'))
-    const patch = join(home, 'broken-sdk.cordis.yml')
-    writeFileSync(patch, [
-      '- insert:',
-      '    - id: missing-sdk-startup-plugin',
-      '      name: "@redspark/rsh-missing-sdk-startup-plugin"',
-      '',
-    ].join('\n'))
-    try {
-      const result = await runBuiltBin(['--profile', 'legacy-sdk', '--from-default-profile', 'sdk', '--patch', patch], {
-        RSH_HOME: home,
-        RSH_TELEMETRY_DISABLED: '1',
-        DEEPSEEK_API_KEY: 'built-sdk-startup-failure-no-call',
-      }, home)
-      expect(result.code).toBe(1)
-      expect(result.stdout).toBe('')
-      expect(result.stderr).toContain('plugin tree failed to load')
-      expect(result.stderr).toContain('@redspark/rsh-missing-sdk-startup-plugin')
-    } finally {
-      rmSync(home, { recursive: true, force: true })
-    }
-  }, SPAWN_TIMEOUT_MS + 30_000)
-
-  it('serves the SDK protocol with an absolute-path overlay plugin and exits after shutdown', async () => {
-    const home = mkdtempSync(join(tmpdir(), 'dsh-built-sdk-'))
-    const pluginPath = join(home, 'plugin #100%.mjs')
-    const marker = join(home, 'plugin-loaded')
-    writeFileSync(pluginPath, [
-      "import { writeFileSync } from 'node:fs'",
-      'export function apply(ctx, config) { writeFileSync(config.marker, "loaded") }',
-      '',
-    ].join('\n'))
-    const patch = join(home, 'absolute.patch.yml')
-    writeFileSync(patch, JSON.stringify([{ insert: [
-      { id: 'absolute-plugin', name: pluginPath, config: { marker } },
-    ] }]))
-    const child = execa(process.execPath, [rshBin, '--profile', 'legacy-sdk', '--from-default-profile', 'sdk', '--patch', patch], {
-      cwd: home,
-      reject: false,
-      timeout: SPAWN_TIMEOUT_MS,
-      killSignal: 'SIGKILL',
-      env: {
-        ...process.env,
-        RSH_HOME: home,
-        RSH_TELEMETRY_DISABLED: '1',
-        DEEPSEEK_API_KEY: 'built-sdk-profile-no-call',
-      },
-      extendEnv: false,
-    })
-    const stdoutLines = createInterface({ input: child.stdout, crlfDelay: Infinity })[Symbol.asyncIterator]()
-    let stderr = ''
-    child.stderr.on('data', (chunk: Buffer) => { stderr += chunk.toString('utf8') })
-    const response = async (id: number): Promise<Record<string, unknown>> => {
-      for (;;) {
-        const line = await stdoutLines.next()
-        if (line.done) throw new Error(`SDK profile stdout closed before response ${String(id)}; stderr=${stderr}`)
-        let value: Record<string, unknown>
-        try {
-          value = JSON.parse(line.value) as Record<string, unknown>
-        } catch {
-          throw new Error(`SDK profile wrote non-JSON stdout: ${line.value}`)
-        }
-        if (value.id === id) return value
-      }
-    }
-    try {
-      child.stdin.write(`${JSON.stringify({
-        jsonrpc: '2.0',
-        id: 1,
-        method: 'initialize',
-        params: { cwd: home, provider: 'deepseek-official', model: 'deepseek-v4-flash' },
-      })}\n`)
-      const initialized = await response(1)
-      expect(initialized, `${JSON.stringify(initialized)}\n${stderr}`).toMatchObject({
-        jsonrpc: '2.0',
-        id: 1,
-        result: { serverInfo: { name: 'redspark-harness-sdk-runtime' } },
-      })
-      child.stdin.write(`${JSON.stringify({ jsonrpc: '2.0', id: 2, method: 'shutdown' })}\n`)
-      expect(await response(2)).toEqual({ jsonrpc: '2.0', id: 2, result: {} })
-      const result = await child
-      expect(result.timedOut, stderr).toBe(false)
-      expect(result.signal, stderr).toBeUndefined()
-      expect(result.exitCode, stderr).toBe(0)
-      expect(stderr).toBe('')
-      expect(readFileSync(marker, 'utf8')).toBe('loaded')
-    } finally {
-      child.kill('SIGKILL')
-      await child
-      rmSync(home, { recursive: true, force: true })
-    }
-  }, SPAWN_TIMEOUT_MS + 30_000)
-
-  it('runs a mock-backed ACP turn through the acp profile and exits on disconnect', async () => {
-    const apiKey = 'built-acp-profile-key'
-    const server = await startMockLlmServer({
-      sequence: ['success'],
-      apiKey,
-      successText: 'ACP BUILT PROFILE OK',
-    })
-    const home = mkdtempSync(join(tmpdir(), 'dsh-built-acp-'))
-    const child = execa(process.execPath, [rshBin, '--profile', 'legacy-acp', '--from-default-profile', 'acp'], {
-      cwd: home,
-      reject: false,
-      timeout: SPAWN_TIMEOUT_MS,
-      killSignal: 'SIGKILL',
-      env: {
-        ...process.env,
-        RSH_HOME: home,
-        RSH_TELEMETRY_DISABLED: '1',
-        DEEPSEEK_API_KEY: apiKey,
-        DEEPSEEK_BASE_URL: server.baseURL,
-        RSH_PERMISSION_MODE: 'danger-full-access',
-      },
-      extendEnv: false,
-    })
-    const rawOut: string[] = []
-    const passthrough = new Readable({ read() {} })
-    child.stdout.on('data', (chunk: Buffer) => {
-      rawOut.push(chunk.toString('utf8'))
-      passthrough.push(chunk)
-    })
-    child.stdout.on('end', () => { passthrough.push(null) })
-    const stream = ndJsonStream(
-      Writable.toWeb(child.stdin) as WritableStream<Uint8Array>,
-      Readable.toWeb(passthrough) as ReadableStream<Uint8Array>,
-    )
-    const updates: SessionNotification['update'][] = []
-    const clientApp = createAcpClientApp({ name: 'dsh-built-acp-profile' })
-      .onNotification(methods.client.session.update, ({ params }) => {
-        updates.push(params.update)
-        return Promise.resolve()
-      })
-      .onRequest(methods.client.session.requestPermission, () => {
-        return Promise.resolve({ outcome: { outcome: 'cancelled' } })
-      })
-    const client = clientApp.connect(stream).agent
-    try {
-      const initialized = await client.request(methods.agent.initialize, {
-        protocolVersion: PROTOCOL_VERSION,
-        clientCapabilities: {},
-      })
-      expect(initialized.agentInfo).toMatchObject({ name: 'redspark-harness-acp' })
-      expect(initialized.agentCapabilities).toEqual({
-        mcpCapabilities: { http: true },
-        promptCapabilities: { image: false, audio: false, embeddedContext: false },
-        sessionCapabilities: { close: {}, list: {}, resume: {} },
-      })
-      expect('_meta' in initialized).toBe(false)
-      const session = await client.request(methods.agent.session.new, { cwd: home, mcpServers: [] })
-      expect(session.sessionId).toBeTruthy()
-      expect(await client.request(methods.agent.session.prompt, {
-        sessionId: session.sessionId,
-        prompt: [{ type: 'text', text: 'reply from the built ACP profile' }],
-      })).toEqual({ stopReason: 'end_turn' })
-      expect(updates).toContainEqual(expect.objectContaining({
-        sessionUpdate: 'agent_message_chunk',
-        content: { type: 'text', text: 'ACP BUILT PROFILE OK' },
-      }))
-      const message = updates.find(update => update.sessionUpdate === 'agent_message_chunk')
-      expect(message !== undefined && 'messageId' in message && typeof message.messageId === 'string').toBe(true)
-      expect(server.requests).toHaveLength(1)
-      child.stdin.end()
-      const result = await child
-      expect(result.exitCode, `signal=${String(result.signal)}; stderr=${result.stderr}`).toBe(0)
-      expect(result.stderr).toBe('')
-      for (const line of rawOut.join('').split('\n').filter(value => value.trim() !== '')) {
-        expect(() => JSON.parse(line) as unknown).not.toThrow()
-      }
-    } finally {
-      child.kill('SIGKILL')
-      await child
-      await server.close()
-      rmSync(home, { recursive: true, force: true })
-    }
-  }, SPAWN_TIMEOUT_MS + 30_000)
 
   it('runs the headless profile through its app-owned task positional', async () => {
     const apiKey = 'built-dsh-headless-key'
@@ -1581,13 +1074,14 @@ describe.skipIf(process.env.RSH_EXAMPLE_MODE !== 'lib' && !existsSync(rshBin))('
     }
   })
 
-  it('fails loud on a nonexistent profile with the plugin-command hint', async () => {
+  it('fails loud on a nonexistent profile with the template-creation hint', async () => {
     const home = mkdtempSync(join(tmpdir(), 'dsh-missing-profile-'))
     try {
       const result = await runBuiltBin(['--profile', 'nope'], { RSH_HOME: home })
       expect(result.code).toBe(1)
       expect(result.stderr).toContain('profile "nope" does not exist')
-      expect(result.stderr).toContain('dsh plugin --profile nope add')
+      expect(result.stderr).toContain('--from-default-profile <template>')
+      expect(result.stderr).toContain('rsh/Docs/native-config-migration.md')
     } finally {
       rmSync(home, { recursive: true, force: true })
     }
@@ -1633,449 +1127,87 @@ describe.skipIf(process.env.RSH_EXAMPLE_MODE !== 'lib' && !existsSync(rshBin))('
         { RSH_HOME: home },
       )
       expect(unknown.code).toBe(1)
-      expect(unknown.stderr).toContain('unknown native profile template')
+      expect(unknown.stderr).toContain('unknown profile template')
       expect(unknown.stderr).toContain('native-headless')
     } finally {
       rmSync(home, { recursive: true, force: true })
     }
   }, SPAWN_TIMEOUT_MS + 30_000)
 
-  it('creates a custom profile from the shipped web template before booting it', async () => {
+  it('creates a custom Native profile from a standard template alias before dumping it', async () => {
     const home = mkdtempSync(join(tmpdir(), 'dsh-from-default-profile-'))
     try {
       const created = await runBuiltBin(
-        ['--profile', 'rescue', '--from-default-profile', 'web', '--help'],
-        { RSH_HOME: home, RSH_TELEMETRY_DISABLED: '1' },
+        ['--profile', 'rescue', '--from-default-profile', 'web', '--dump-config'],
+        { RSH_HOME: home },
       )
       expect(created.code).toBe(0)
       expect(created.stderr).toBe('')
-      expect(created.stdout).toContain('Usage: dsh --profile web')
+      const dumped = JSON.parse(created.stdout) as {
+        formatVersion: number
+        installations: Array<{ id: string; plugin: string }>
+      }
+      expect(dumped.formatVersion).toBe(1)
+      expect(dumped.installations.find(row => row.id === 'app')?.plugin).toBe('@redspark/rsh-native-web-host')
 
       const dir = join(home, 'profiles', 'rescue')
       const manifest = JSON.parse(readFileSync(join(dir, 'package.json'), 'utf8')) as {
-        dependencies: Record<string, string>
-        dsh: { profile: { runtime: 'legacy'; bundles: string[]; patchReload: string } }
+        dependencies?: Record<string, string>
+        dsh: { profile: { runtime: string; config: string; configReload: string } }
       }
-      expect(manifest.dependencies).toEqual({})
-      expect(manifest.dsh.profile).toEqual({
-        runtime: 'legacy',
-        bundles: ['@redspark/rsh-base', '@redspark/rsh-web-app'],
-        patchReload: 'live',
-      })
-      expect(readFileSync(join(dir, 'cordis.patch.yml'), 'utf8')).toContain('[]')
-      expect(readFileSync(join(dir, 'pnpm-workspace.yaml'), 'utf8')).toContain('nodeLinker: hoisted')
+      expect(manifest.dependencies).toBeUndefined()
+      expect(manifest.dsh.profile).toEqual({ runtime: 'native', config: 'rsh.profile.json', configReload: 'live' })
+      expect(existsSync(join(dir, 'cordis.patch.yml'))).toBe(false)
+      expect(existsSync(join(dir, 'rsh.client.json'))).toBe(true)
 
       const repeated = await runBuiltBin(
-        ['--profile', 'rescue', '--from-default-profile', 'web', '--help'],
-        { RSH_HOME: home, RSH_TELEMETRY_DISABLED: '1' },
+        ['--profile', 'rescue', '--from-default-profile', 'web', '--dump-config'],
+        { RSH_HOME: home },
       )
       expect(repeated.code).toBe(1)
-      expect(repeated.stdout).toBe('')
-      expect(repeated.stderr).toContain('profile "rescue" already exists')
-      expect(repeated.stderr).toContain('omit --from-default-profile to use it')
+      expect(repeated.stderr).toContain('is not empty')
 
-      const reopened = await runBuiltBin(
-        ['--profile', 'rescue', '--help'],
-        { RSH_HOME: home, RSH_TELEMETRY_DISABLED: '1' },
-      )
+      const reopened = await runBuiltBin(['--profile', 'rescue', '--dump-config'], { RSH_HOME: home })
       expect(reopened.code).toBe(0)
       expect(reopened.stderr).toBe('')
-      expect(reopened.stdout).toContain('Usage: dsh --profile web')
-    } finally {
-      rmSync(home, { recursive: true, force: true })
-    }
-  }, SPAWN_TIMEOUT_MS * 3 + 30_000)
-
-  it('keeps a newly created profile when application boot rejects its arguments', async () => {
-    const home = mkdtempSync(join(tmpdir(), 'dsh-from-default-profile-failed-boot-'))
-    try {
-      const failed = await runBuiltBin(
-        ['--profile', 'rescue', '--from-default-profile', 'web', '--port', 'not-a-number'],
-        { RSH_HOME: home, RSH_TELEMETRY_DISABLED: '1' },
-      )
-      expect(failed.code).toBe(1)
-      expect(failed.stderr).toContain('--port must be a number')
-      expect(existsSync(join(home, 'profiles', 'rescue', 'package.json'))).toBe(true)
-
-      const retried = await runBuiltBin(
-        ['--profile', 'rescue', '--help'],
-        { RSH_HOME: home, RSH_TELEMETRY_DISABLED: '1' },
-      )
-      expect(retried.code).toBe(0)
-      expect(retried.stderr).toBe('')
-      expect(retried.stdout).toContain('Usage: dsh --profile web')
+      expect(JSON.parse(reopened.stdout)).toMatchObject({ formatVersion: 1 })
     } finally {
       rmSync(home, { recursive: true, force: true })
     }
   }, SPAWN_TIMEOUT_MS * 2 + 30_000)
 
-  it('uses the launching endpoint and managed credential through the published entry', async () => {
-    const apiKey = 'built-home-layer-key'
-    const server = await startMockLlmServer({
-      sequence: ['success'],
-      apiKey,
-      successText: 'launching endpoint reached the mock',
-    })
-    const home = mkdtempSync(join(tmpdir(), 'dsh-home-environment-'))
-    const project = mkdtempSync(join(tmpdir(), 'dsh-home-project-'))
-    writeFileSync(join(home, '.credentials.yaml'), `version: 1\nrefs:\n  DEEPSEEK_API_KEY: ${apiKey}\n`, { mode: 0o600 })
-    createEnvironmentProbeProfile(home, project)
-    try {
-      const result = await runBuiltBin(
-        ['--profile', 'environment-probe'],
-        {
-          RSH_HOME: home,
-          RSH_TELEMETRY_DISABLED: '1',
-          DEEPSEEK_API_KEY: undefined,
-          DEEPSEEK_BASE_URL: server.baseURL,
-        },
-        project,
-      )
-      expect(
-        result.code,
-        `${result.stderr}\nstdout:\n${result.stdout}\nmock requests: ${String(server.requests.length)}`,
-      ).toBe(0)
-      expect(result.stdout).toBe('launching endpoint reached the mock')
-      expect(result.stdout).not.toContain(apiKey)
-      expect(result.stderr).not.toContain(apiKey)
-      expect(server.requests).toHaveLength(1)
-      expect(server.requests[0]?.path).toBe('/chat/completions')
-      expect(server.requests[0]?.headers.authorization).toBe(`Bearer ${apiKey}`)
-      expect(JSON.stringify(server.requests[0]?.body)).not.toContain(apiKey)
-    } finally {
-      await server.close()
-      rmSync(home, { recursive: true, force: true })
-      rmSync(project, { recursive: true, force: true })
-    }
-  }, SPAWN_TIMEOUT_MS + 30_000)
-
-  it('reports a patch-overlay boot failure without hanging', async () => {
-    // The HMR main watcher's initial scan once refreshed the include
-    // mid-initial-apply, deadlocking the failing apply's rollback against the
-    // refresh drain: dsh exited 13 with no diagnostic instead of settling
-    // ([rsh/Core/vendor/README.md](../../../Core/vendor/README.md)).
-    const home = mkdtempSync(join(tmpdir(), 'dsh-invalid-patch-'))
-    try {
-      const result = await runBuiltBin(['--profile', 'web', '--patch', invalidProvider], {
-        RSH_HOME: home,
-        DEEPSEEK_API_KEY: 'keyless-invalid-config',
-        RSH_TELEMETRY_DISABLED: '1',
-      })
-      expect(result.code).toBe(1)
-      expect(result.stdout).toBe('')
-      expect(result.stderr).toContain('llm-pi-ai')
-    } finally {
-      rmSync(home, { recursive: true, force: true })
-    }
-  }, SPAWN_TIMEOUT_MS + 30_000)
-
-  it('lets a profile without a parser ignore app arguments and dispose on a startup-time signal', async () => {
-    const fixture = createProfileLifecycleFixture()
-    const child = startProfileLifecycle(fixture, ['--unclaimed'])
-    try {
-      await waitForFile(fixture.ready)
-      requestProfileShutdown(child, fixture)
-      const result = await child
-      expect(result.exitCode, `${result.stderr}\nstdout:\n${result.stdout}\nsignal: ${String(result.signal)}`).toBe(0)
-      expect(result.signal).toBeUndefined()
-      expect(existsSync(fixture.disposed)).toBe(true)
-    } finally {
-      child.kill('SIGKILL')
-      rmSync(fixture.home, { recursive: true, force: true })
-    }
-  }, SPAWN_TIMEOUT_MS + 30_000)
-
-  it('fully settles a custom profile, hot-reloads its patch layer with removal reverting, and disposes on a signal', async () => {
-    const fixture = createProfileLifecycleFixture()
-    const child = startProfileLifecycle(fixture)
-    const profilePatch = join(fixture.home, 'profiles', 'lifecycle', 'cordis.patch.yml')
-    const configFile = join(fixture.home, 'config-echo')
-    try {
-      await waitForFile(fixture.settled)
-      // The live profile layer: even without an hmr row in the composition,
-      // the launcher mounts a config-only watcher, so an edited
-      // cordis.patch.yml lands in the running tree (the reload disposes the
-      // patched row's old fiber — observable as the disposed marker — and
-      // mounts the new config, which echoes its generation and re-writes the
-      // ready marker).
-      rmSync(fixture.ready)
-      writeFileSync(profilePatch, [
-        '- id: profile-lifecycle-fixture',
-        '  config:',
-        '    generation: 2',
-        '',
-      ].join('\n'))
-      await waitForFile(fixture.ready)
-      expect(readFileSync(configFile, 'utf8')).toBe('2')
-      // Unlink exercises layer removal without racing Chokidar's change-event
-      // suppression window after the preceding edit. The bundle default must return.
-      rmSync(fixture.ready)
-      rmSync(profilePatch)
-      await waitForFile(fixture.ready)
-      expect(existsSync(profilePatch)).toBe(false)
-      expect(readFileSync(configFile, 'utf8')).toBe('bundle-default')
-      // The home-level user layer ($RSH_HOME/cordis.patch.yml) is live too
-      // and outranks the per-profile layer.
-      rmSync(fixture.ready)
-      writeFileSync(join(fixture.home, 'cordis.patch.yml'), [
-        '- id: profile-lifecycle-fixture',
-        '  config:',
-        '    generation: home',
-        '',
-      ].join('\n'))
-      await waitForFile(fixture.ready)
-      expect(readFileSync(configFile, 'utf8')).toBe('home')
-      requestProfileShutdown(child, fixture)
-      const result = await child
-      expect(result.exitCode, `${result.stderr}\nstdout:\n${result.stdout}\nsignal: ${String(result.signal)}`).toBe(0)
-      expect(result.signal).toBeUndefined()
-      expect(existsSync(fixture.disposed)).toBe(true)
-    } finally {
-      child.kill('SIGKILL')
-      await child
-      rmSync(fixture.home, { recursive: true, force: true })
-    }
-  }, SPAWN_TIMEOUT_MS + 30_000)
-
-  it('hands the app arguments to the profile, which applies them before its rows start', async () => {
-    const fixture = createStartupFixture()
-    const child = startStartupProfile(fixture, ['--generation', 'flagged'])
-    try {
-      await waitForFile(fixture.ready)
-      // The consumer started once, already carrying the flag value: the
-      // launcher never saw --generation, and the app provider resolved it first.
-      expect(readFileSync(fixture.echo, 'utf8')).toBe('flagged')
-      requestProfileShutdown(child, fixture)
-      expect((await child).exitCode).toBe(0)
-    } finally {
-      child.kill('SIGKILL')
-      rmSync(fixture.home, { recursive: true, force: true })
-    }
-  }, SPAWN_TIMEOUT_MS + 30_000)
-
-  it('starts a consumer on its composed value when the invocation carries no app arguments', async () => {
-    const fixture = createStartupFixture()
-    const child = startStartupProfile(fixture, [])
-    try {
-      await waitForFile(fixture.ready)
-      expect(readFileSync(fixture.echo, 'utf8')).toBe('bundle-default')
-      requestProfileShutdown(child, fixture)
-      expect((await child).exitCode).toBe(0)
-    } finally {
-      child.kill('SIGKILL')
-      rmSync(fixture.home, { recursive: true, force: true })
-    }
-  }, SPAWN_TIMEOUT_MS + 30_000)
-
-  it('keeps the app arguments across a user patch reload', async () => {
-    // A live edit recomposes every row while the provider service remains
-    // active, so each config expression reads the same invocation value (a
-    // served port does not move back to its composed fallback).
-    const fixture = createStartupFixture()
-    const profilePatch = join(fixture.home, 'profiles', 'startup', 'cordis.patch.yml')
-    const child = startStartupProfile(fixture, ['--generation', 'flagged'])
-    try {
-      // Both rows: the waiting one carries the flag value, and the witness is
-      // what a reload will re-mount. They start independently, so neither
-      // marker implies the other.
-      await waitForFile(fixture.ready)
-      await waitForFile(fixture.witness)
-      expect(readFileSync(fixture.echo, 'utf8')).toBe('flagged')
-      // An edit to an unrelated row: the witness re-mounts, which is how this
-      // test knows the whole tree was recomposed.
-      rmSync(fixture.witness)
-      writeFileSync(profilePatch, [
-        '- id: reload-witness',
-        '  config:',
-        '    generation: reloaded',
-        '',
-      ].join('\n'))
-      await waitForFile(fixture.witness)
-      expect(readFileSync(fixture.witness, 'utf8')).toBe('reloaded')
-      expect(readFileSync(fixture.echo, 'utf8')).toBe('flagged')
-      requestProfileShutdown(child, fixture)
-      expect((await child).exitCode).toBe(0)
-    } finally {
-      child.kill('SIGKILL')
-      rmSync(fixture.home, { recursive: true, force: true })
-    }
-  }, SPAWN_TIMEOUT_MS + 30_000)
-
-  it("prints the app's own help, starts none of its rows, and exits", async () => {
-    const fixture = createStartupFixture()
-    try {
-      const result = await startStartupProfile(fixture, ['--help'])
-      expect(result.exitCode).toBe(0)
-      expect(result.stdout).toContain('Usage: fixture')
-      expect(result.stdout).toContain('--generation')
-      expect(existsSync(fixture.ready)).toBe(false)
-    } finally {
-      rmSync(fixture.home, { recursive: true, force: true })
-    }
-  }, SPAWN_TIMEOUT_MS + 30_000)
-
-  it('anchors a relative add spec to the invoking directory, not the profile', async () => {
-    // `dsh plugin --profile x add .` from a plugin checkout must install THAT
-    // checkout — pnpm's cwd is the profile directory, so an un-anchored `.`
-    // would self-link the profile.
-    const home = mkdtempSync(join(tmpdir(), 'dsh-plugin-anchor-'))
-    const checkout = mkdtempSync(join(tmpdir(), 'dsh-plugin-checkout-'))
-    try {
-      writeFileSync(join(checkout, 'package.json'), JSON.stringify({
-        name: 'anchored-bundle',
-        version: '1.0.0',
-        dsh: { bundle: { patch: './cordis.patch.yml' } },
-      }))
-      writeFileSync(join(checkout, 'cordis.patch.yml'), '[]\n')
-      const result = await execa(process.execPath, [rshBin, 'plugin', '--profile', 'anchor', 'add', '.'], {
-        cwd: checkout,
-        input: '',
-        timeout: SPAWN_TIMEOUT_MS,
-        killSignal: 'SIGKILL',
-        reject: false,
-        env: { RSH_HOME: home },
-      })
-      expect(result.exitCode).toBe(0)
-      const manifest = JSON.parse(readFileSync(join(home, 'profiles', 'anchor', 'package.json'), 'utf8')) as {
-        dependencies: Record<string, string>
-        dsh: { profile: { bundles: string[] } }
-      }
-      expect(Object.keys(manifest.dependencies)).toEqual(['anchored-bundle'])
-      expect(manifest.dsh.profile.bundles).toContain('anchored-bundle')
-
-      const removed = await runBuiltBin(
-        ['plugin', '--profile', 'anchor', 'remove', 'anchored-bundle'],
-        { RSH_HOME: home },
-        checkout,
-      )
-      expect(removed.code).toBe(0)
-      const afterRemove = JSON.parse(
-        readFileSync(join(home, 'profiles', 'anchor', 'package.json'), 'utf8'),
-      ) as {
-        dependencies?: Record<string, string>
-        dsh: { profile: { bundles: string[] } }
-      }
-      expect(Object.keys(afterRemove.dependencies ?? {})).toEqual([])
-      expect(afterRemove.dsh.profile.bundles).not.toContain('anchored-bundle')
-    } finally {
-      rmSync(home, { recursive: true, force: true })
-      rmSync(checkout, { recursive: true, force: true })
-    }
-  }, SPAWN_TIMEOUT_MS * 2 + 30_000)
-
-  it('activates a dependency that gained dsh.bundle in a later update', async () => {
-    // Reconcile runs against the INSTALLED state on every successful pnpm
-    // run, so `update` (not only `add`) activates a package whose newer
-    // version declares dsh.bundle. Simulated without a registry: hand-place
-    // the installed package, flip its manifest, and run a benign pnpm verb.
-    const home = mkdtempSync(join(tmpdir(), 'dsh-plugin-update-'))
-    try {
-      const profileDir = join(home, 'profiles', 'up')
-      const installed = join(profileDir, 'node_modules', 'late-bundle')
-      mkdirSync(installed, { recursive: true })
-      writeFileSync(join(profileDir, 'package.json'), JSON.stringify({
-        name: 'dsh-profile-up',
-        private: true,
-        dependencies: { 'late-bundle': 'file:./late-bundle' },
-        dsh: { profile: { bundles: ['@redspark/rsh-base'] } },
-      }))
-      writeFileSync(join(profileDir, 'cordis.patch.yml'), '[]\n')
-      // v1: no dsh manifest — a plain dependency.
-      writeFileSync(join(installed, 'package.json'), JSON.stringify({ name: 'late-bundle', version: '1.0.0' }))
-      const first = await runBuiltBin(['plugin', '--profile', 'up', 'root'], { RSH_HOME: home })
-      expect(first.code).toBe(0)
-      let manifest = JSON.parse(readFileSync(join(profileDir, 'package.json'), 'utf8')) as { dsh: { profile: { bundles: string[] } } }
-      expect(manifest.dsh.profile.bundles).toEqual(['@redspark/rsh-base'])
-      // v2: the installed package now declares dsh.bundle (an update landed).
-      writeFileSync(join(installed, 'package.json'), JSON.stringify({
-        name: 'late-bundle', version: '2.0.0', dsh: { bundle: { patch: './cordis.patch.yml' } },
-      }))
-      writeFileSync(join(installed, 'cordis.patch.yml'), '[]\n')
-      const second = await runBuiltBin(['plugin', '--profile', 'up', 'root'], { RSH_HOME: home })
-      expect(second.code).toBe(0)
-      manifest = JSON.parse(readFileSync(join(profileDir, 'package.json'), 'utf8')) as { dsh: { profile: { bundles: string[] } } }
-      expect(manifest.dsh.profile.bundles).toEqual(['@redspark/rsh-base', 'late-bundle'])
-    } finally {
-      rmSync(home, { recursive: true, force: true })
-    }
-  }, SPAWN_TIMEOUT_MS * 2 + 30_000)
-
-  describe('config dump', () => {
+  describe('native config dump', () => {
     let home: string
     beforeEach(() => { home = mkdtempSync(join(tmpdir(), 'dsh-dump-bin-')) })
     afterEach(() => { rmSync(home, { recursive: true, force: true }) })
 
-    it('rejects bundle-default dumps for a native standard profile', async () => {
-      const { stdout, code, stderr } = await runBuiltBin(['--profile', 'web', '--dump-default-config'], { RSH_HOME: home })
-      expect(code).toBe(1)
-      expect(stdout).toBe('')
-      expect(stderr).toContain('native profile has no bundle default to dump')
+    it('installs a shipped standard profile as Native and dumps its composition', async () => {
+      const { stdout, code, stderr } = await runBuiltBin(['--profile', 'web', '--dump-config'], { RSH_HOME: home })
+      expect(code).toBe(0)
+      expect(stderr).toBe('')
+      const dump = JSON.parse(stdout) as { formatVersion: number; installations: Array<{ id: string; plugin: string }> }
+      expect(dump.formatVersion).toBe(1)
+      expect(dump.installations.find(row => row.id === 'app')?.plugin).toBe('@redspark/rsh-native-web-host')
       expect(JSON.parse(readFileSync(join(home, 'profiles', 'web', 'package.json'), 'utf8')))
         .toMatchObject({ dsh: { profile: { runtime: 'native', config: 'rsh.profile.json' } } })
+      expect(existsSync(join(home, 'profiles', 'web', 'cordis.patch.yml'))).toBe(false)
       expect(existsSync(join(home, 'profiles', 'node_modules'))).toBe(false)
-      const noCordisHook = pathToFileURL(fileURLToPath(new URL('./fixtures/deny-cordis-import.mjs', import.meta.url))).href
-      const plugin = await runBuiltBin(['plugin', '--profile', 'web', 'add', 'unused'], {
-        RSH_HOME: home, NODE_OPTIONS: `--import=${noCordisHook}`,
-      })
-      expect(plugin.code).toBe(1)
-      expect(plugin.stderr).toContain('dsh plugin does not manage native profile web')
-      expect(plugin.stderr).toContain('edit its rsh.profile.json installations instead')
-      expect(plugin.stderr).toContain('rsh/Docs/native-config-migration.md')
     }, SPAWN_TIMEOUT_MS + 30_000)
 
-    it('prints bundle defaults for an existing legacy standard profile', async () => {
-      const profileDir = join(home, 'profiles', 'web')
-      mkdirSync(profileDir, { recursive: true })
-      const template = PROFILE_TEMPLATES.web!
-      initProfile(profileDir, template.bundles, template.patchReload)
-
-      const { stdout, code, stderr } = await runBuiltBin(['--profile', 'web', '--dump-default-config'], { RSH_HOME: home })
-      expect(code).toBe(0)
-      expect(stderr).toBe('')
-      expect(stdout).toContain('# == @redspark/rsh-web-app')
-    }, SPAWN_TIMEOUT_MS + 30_000)
-
-    it('creates a custom profile from a shipped template before printing it', async () => {
+    it('rejects an unknown template before creating the target profile', async () => {
       const { stdout, code, stderr } = await runBuiltBin(
-        ['--profile', 'rescue', '--from-default-profile', 'web', '--dump-default-config'],
-        { RSH_HOME: home },
-      )
-      expect(code).toBe(0)
-      expect(stderr).toBe('')
-      expect(stdout).toContain('# == @redspark/rsh-web-app')
-      expect(existsSync(join(home, 'profiles', 'rescue', 'package.json'))).toBe(true)
-    }, SPAWN_TIMEOUT_MS + 30_000)
-
-    it('rejects an unknown source before creating the target profile', async () => {
-      const { stdout, code, stderr } = await runBuiltBin(
-        ['--profile', 'rescue', '--from-default-profile', 'unknown', '--dump-default-config'],
+        ['--profile', 'rescue', '--from-default-profile', 'unknown', '--dump-config'],
         { RSH_HOME: home },
       )
       expect(code).toBe(1)
       expect(stdout).toBe('')
-      expect(stderr).toContain('unknown default profile "unknown"')
-      expect(stderr).toContain('"web"')
+      expect(stderr).toContain('unknown profile template "unknown"')
+      expect(stderr).toContain('expected one of headless, web,')
       expect(existsSync(join(home, 'profiles', 'rescue'))).toBe(false)
     }, SPAWN_TIMEOUT_MS + 30_000)
 
-    it('prints the headless profile without Host or browser layers', async () => {
-      const { stdout, code, stderr } = await runBuiltBin(
-        ['--profile', 'legacy-headless', '--from-default-profile', 'headless', '--dump-default-config'],
-        { RSH_HOME: home },
-      )
-      expect(code).toBe(0)
-      expect(stderr).toBe('')
-      expect(stdout).toContain("name: '@redspark/rsh-headless'")
-      expect(stdout).not.toMatch(/name: '@redspark\/dsh-host-/)
-      expect(stdout).not.toContain("name: '@redspark/rsh-web-app'")
-      expect(stdout).not.toMatch(/name: '@redspark\/dsh-client-/)
-    }, SPAWN_TIMEOUT_MS + 30_000)
-
     it('refuses the retired sdk-minimal profile instead of printing a tree', async () => {
-      const { stdout, code, stderr } = await runBuiltBin(
-        ['--profile', 'sdk-minimal', '--dump-default-config'],
-        { RSH_HOME: home },
-      )
+      const { stdout, code, stderr } = await runBuiltBin(['--profile', 'sdk-minimal', '--dump-config'], { RSH_HOME: home })
       expect(code).toBe(1)
       expect(stdout).toBe('')
       expect(stderr).toContain('profile "sdk-minimal" no longer boots')
@@ -2083,43 +1215,37 @@ describe.skipIf(process.env.RSH_EXAMPLE_MODE !== 'lib' && !existsSync(rshBin))('
       expect(existsSync(join(home, 'profiles', 'sdk-minimal'))).toBe(false)
     }, SPAWN_TIMEOUT_MS + 30_000)
 
-    it('composes the profile user layer and a --patch overlay in order', async () => {
-      // Create a legacy custom profile first, then write its user layer.
-      const init = await runBuiltBin(['--profile', 'legacy-web', '--from-default-profile', 'web', '--dump-default-config'], { RSH_HOME: home })
-      expect(init.code).toBe(0)
-      const profilePatch = join(home, 'profiles', 'legacy-web', 'cordis.patch.yml')
-      writeFileSync(profilePatch, [
-        '- id: agent-loop',
-        '  config:',
-        '    agents:',
-        '      - id: personal',
-        '        provider: personal-provider',
-        '        model: personal-model',
-        '- id: absent-row',
-        '  config:',
-        '    x: 1',
-        '',
-      ].join('\n'))
-      const overlay = join(home, 'overlay.cordis.yml')
-      writeFileSync(overlay, [
-        '- id: agent-loop',
-        '  config:',
-        '    agents:',
-        '      - id: configured',
-        '        provider: configured-provider',
-        '        model: configured-model',
-        '',
-      ].join('\n'))
+    it('applies ordered patch overlays over the profile composition', async () => {
+      const first = join(home, 'first.json')
+      writeFileSync(first, JSON.stringify({ formatVersion: 1, installations: [
+        { id: 'app', config: { port: 1 } },
+        { id: 'extra-tool', plugin: '@redspark/rsh-tool-bash', scope: 'root' },
+      ] }))
+      const second = join(home, 'second.json')
+      writeFileSync(second, JSON.stringify({ formatVersion: 1, installations: [
+        { id: 'app', config: { port: 2 } },
+      ] }))
       const { stdout, code, stderr } = await runBuiltBin(
-        ['--profile', 'legacy-web', '--patch', overlay, '--dump-config'],
+        ['--profile', 'web', '--patch', first, '--patch', second, '--dump-config'],
         { RSH_HOME: home },
       )
       expect(code).toBe(0)
-      expect(stdout).toContain('provider: configured-provider')
-      expect(stdout).not.toContain('personal-provider')
-      // Both layers patched the row; the comment lists them in application order.
-      expect(stdout).toContain(`patched by ${profilePatch}, ${overlay}`)
-      expect(stderr).toContain('patch: entry "absent-row" not found')
-    }, SPAWN_TIMEOUT_MS * 2 + 30_000)
+      expect(stderr).toBe('')
+      const dump = JSON.parse(stdout) as { installations: Array<{ id: string; plugin?: string; config?: unknown }> }
+      expect(dump.installations.find(row => row.id === 'app')?.config).toEqual({ port: 2 })
+      expect(dump.installations.find(row => row.id === 'extra-tool')?.plugin).toBe('@redspark/rsh-tool-bash')
+    }, SPAWN_TIMEOUT_MS + 30_000)
+
+    it('rejects a patch that targets an absent installation', async () => {
+      const patch = join(home, 'absent.json')
+      writeFileSync(patch, JSON.stringify({ formatVersion: 1, installations: [{ id: 'absent-row', config: { x: 1 } }] }))
+      const { stdout, code, stderr } = await runBuiltBin(
+        ['--profile', 'web', '--patch', patch, '--dump-config'],
+        { RSH_HOME: home },
+      )
+      expect(code).toBe(1)
+      expect(stdout).toBe('')
+      expect(stderr).toContain('unknown installation absent-row')
+    }, SPAWN_TIMEOUT_MS + 30_000)
   })
 })

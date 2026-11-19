@@ -41,7 +41,6 @@
   "dependencies": {
     "@redspark/rsh-brand": "workspace:^",
     "@redspark/rsh-cmdline": "workspace:^",
-    "@redspark/rsh-code-runtime-worker-thread": "workspace:^",
     "@redspark/rsh-util-values": "workspace:^",
     "@redspark/schemastery": "workspace:^",
     "commander": "^15.0.0"

@@ -48,7 +48,7 @@ dsh --profile web --dump-config
 
 Vendored CLI、仅用于构建和测试的可执行文件、进程内直接挂载插件以及私有浏览器 WebWorker 预览都不属于 Harness 应用启动器。[`verify-application-entrypoints`](../Scripts/verify-application-entrypoints.ts)将每个包 bin、可执行源码与根 demo 归入显式类别，并拒绝任何绕过 `dsh` 的 Node 应用路径。
 
-Python SDK 遵循相同的应用架构。其运行时 wheel 把普通 `dsh` CLI 打包为 `redspark-harness-sdk-runtime-<platform>-<arch>`，客户端默认以显式 Harness home 启动 `dsh --profile sdk`。极简示例同样选择 `sdk`。Python 暴露 profile 选择与有序 patch 文件，而不是完整 Cordis 树；持久外部插件通过 `dsh plugin` 安装。已删除的私有直读配置载体没有兼容 bin 或回退 parser。
+Python SDK 遵循相同的应用架构。其运行时 wheel 把普通 `dsh` CLI 打包为 `redspark-harness-sdk-runtime-<platform>-<arch>`，客户端默认以显式 Harness home 启动 `dsh --profile sdk`。极简示例同样选择 `sdk`。Python 暴露 profile 选择与有序 patch 文件，而不是完整 Cordis 树；持久外部插件通过包管理器安装到 profile 中。已删除的私有直读配置载体没有兼容 bin 或回退 parser。
 
 ## 桌面应用
 

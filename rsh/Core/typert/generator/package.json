@@ -42,7 +42,6 @@
     "@redspark/cordis": "workspace:^",
     "@redspark/rsh-agent-loop-testkit": "workspace:^",
     "@redspark/rsh-session": "workspace:^",
-    "@redspark/rsh-tool-cordis": "workspace:^",
     "@redspark/rsh-typert-registry": "workspace:^",
     "zod": "^4.4.3"
   }

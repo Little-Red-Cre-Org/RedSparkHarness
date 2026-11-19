@@ -522,7 +522,9 @@ export function readNativeProfile(options: {
   const profileDir = options.profileDir ?? join(home, 'profiles', options.profile)
   const runtime = options.profileDir === undefined ? profileRuntime(options.profile, home) : profileDirectoryRuntime(profileDir)
   if (runtime !== 'native') {
-    throw new Error(`dsh: profile ${options.profile} does not select native execution`)
+    throw new Error(`dsh: profile ${JSON.stringify(options.profile)} does not exist or does not select Native execution; `
+      + 'create it with --profile <name> --from-default-profile <template>, or declare "runtime": "native" with "config": "rsh.profile.json" '
+      + '(see rsh/Docs/native-config-migration.md)')
   }
   refuseLegacyPatch(join(profileDir, 'cordis.patch.yml'))
   if (options.profileDir === undefined) refuseLegacyPatch(join(home, 'cordis.patch.yml'))

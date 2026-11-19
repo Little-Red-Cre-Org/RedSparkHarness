@@ -32,6 +32,7 @@
   "license": "MIT",
   "dependencies": {
     "@redspark/cordis-plugin-include": "workspace:^",
+        "@redspark/rsh-app-boot": "workspace:^",
     "@redspark/rsh-experimental-webworker-runtime": "workspace:^",
     "@redspark/rsh-home-paths": "workspace:^",
     "js-yaml": "^4.3.2",

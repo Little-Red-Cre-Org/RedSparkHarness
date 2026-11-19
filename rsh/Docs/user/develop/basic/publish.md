@@ -1,33 +1,19 @@
-# Package and install a plugin
+# Package and install a Native plugin
 
 English | [中文](publish.zh.md)
 
-The previous tutorials loaded a local plugin through a `--patch` overlay. This tutorial packages it as an installable **bundle**, installs it into a **profile** with `dsh plugin add`, and explains the layer order that determines the composed configuration. It assumes the `dsh` CLI is installed. Complete [plugin configuration](./config.md) first.
+The previous tutorials mounted a local plugin through a profile composition. This tutorial packages that plugin as an npm package with a Native entry, installs it into a profile, and explains how the profile JSON names it. It assumes the `dsh` CLI is installed. Complete [plugin configuration](./config.md) first.
 
-To use a fresh source checkout instead, complete the [run-from-source section](../../../../../README.md#run-from-source), keep this tutorial's `hello-plugin` directory at the repository root, and run the remaining `dsh ...` commands from there as `pnpm dsh ...`. See [source execution](../../../../Programs/CLI/reference/README.md#source-execution) for build and launcher behavior.
+To use a fresh source checkout instead, keep this tutorial's `hello-plugin` directory at the repository root and run the remaining commands from there as `pnpm ...`. See [source execution](../../../../Programs/CLI/reference/README.md#source-execution) for build and launcher behavior.
 
-## Two concepts, two manifests
+## The package manifest
 
-Installation is built on two concepts. Both are described by a `package.json`, but they carry different kinds of manifest under the `dsh` key, and they answer different questions:
-
-- A **bundle** is an npm package that ships a configuration layer. Its manifest declares `dsh.bundle`, answering "what does this package contribute?": a patch file that inserts or overrides plugin rows.
-- A **profile** is a directory under `$RSH_HOME/profiles/<name>` describing one runnable composition. Its manifest declares `dsh.profile`, answering "which bundles compose this setup, in what order?".
-
-A bundle is what you author and distribute; a profile is what a user boots with `dsh --profile <name>`. Nothing is both.
-
-### The bundle manifest
-
-Create the package directory:
-
-```sh
-mkdir -p hello-plugin
-```
+A Native plugin is an ordinary ESM package that publishes a named `plugin` export and declares its protocol metadata under `dsh.native`:
 
 ```
 hello-plugin/
-├── package.json       # declares dsh.bundle
-├── cordis.patch.yml   # the layer applied when a profile lists this bundle
-└── index.js           # plugin modules the patch rows reference
+├── package.json
+└── index.js
 ```
 
 Create `hello-plugin/package.json`:
@@ -37,147 +23,107 @@ Create `hello-plugin/package.json`:
   "name": "dsh-hello-plugin",
   "version": "0.1.0",
   "type": "module",
-  "main": "index.js",
-  "files": ["index.js", "cordis.patch.yml"],
-  "dsh": { "bundle": { "patch": "./cordis.patch.yml" } }
-}
-```
-
-Create `hello-plugin/index.js` with the plugin entry point:
-
-```js
-export const name = 'hello-plugin'
-
-export function apply() {
-  console.log('[hello-plugin] plugin loaded!')
-}
-```
-
-Create `hello-plugin/cordis.patch.yml`. The patch is a YAML array like the `--patch` overlays you wrote, except plugin rows reference the package by name instead of a relative source path so Node resolution finds the installed code:
-
-```yaml
-- insert:
-    - id: hello
-      name: dsh-hello-plugin
-```
-
-A package without the `dsh.bundle` declaration still installs, but only as a plain dependency: `dsh plugin` prints a warning and activates no layer. Use that package format for a library that plugin packages import rather than a plugin users enable.
-
-### The profile manifest
-
-A profile directory holds two files:
-
-- `package.json` — the profile's out-of-tree plugin dependencies (managed by pnpm) plus the `dsh.profile` manifest with its ordered `bundles` list.
-- `cordis.patch.yml` — the user's own patch layer, applied after every bundle layer.
-
-You never write a profile manifest by hand: `dsh --profile <name> --from-default-profile <template>` can create one from a shipped application template, while `dsh plugin` creates a base-backed profile and maintains its installed bundle list. The [CLI behavior reference](../../../../Programs/CLI/reference/README.md#profile-boot) owns the creation rules; the next section shows the plugin path.
-
-## Install into a profile
-
-`dsh plugin --profile <name> <args...>` forwards to pnpm in the profile directory, so every pnpm verb works. From the directory that contains `hello-plugin`, install the package checkout:
-
-```sh
-dsh plugin --profile demo add ./hello-plugin
-```
-
-The first use initializes the profile (with `@redspark/rsh-base` as its first bundle), pnpm links the checkout, and `dsh` appends the bundle to `dsh.profile.bundles` because the package declares `dsh.bundle`:
-
-```json
-{
-  "name": "dsh-profile-demo",
-  "private": true,
-  "dependencies": {
-    "dsh-hello-plugin": "link:/path/to/hello-plugin"
-  },
+  "exports": { ".": "./index.js" },
   "dsh": {
-    "profile": {
-      "bundles": [
-        "@redspark/rsh-base",
-        "dsh-hello-plugin"
-      ]
+    "native": {
+      "apiVersion": 1,
+      "entry": ".",
+      "targets": ["host"],
+      "requires": [],
+      "optional": [],
+      "provides": []
     }
   }
 }
 ```
 
-Verify the layer without booting, then boot:
+`entry` must name a published `exports` subpath. `targets` selects `host`, `client`, or both. `requires` lists the services that must already have a Provider, `optional` lists services the plugin uses when present, and `provides` lists the service keys it registers. The launcher validates this metadata before importing the entry.
+
+## The plugin entry
+
+Create `hello-plugin/index.js`:
+
+```js
+export const plugin = {
+  apiVersion: 1,
+  name: 'hello-plugin',
+  targets: ['host'],
+  requires: [],
+  provides: [],
+  resolve(config) {
+    return (ctx) => {
+      console.log('[hello-plugin] plugin loaded!', config)
+    }
+  },
+}
+```
+
+`resolve(config)` validates the installation's configuration and returns the activation function; it must not activate resources itself. The runtime calls the activation with the installation's scope context, whose `signal` aborts on shutdown and whose `own(disposer)` registers teardown. Every exported field must agree with `dsh.native`; a mismatch fails before activation.
+
+A plugin that registers a service declares the same key in `provides` and calls `ctx.provide(key, value)` from its activation.
+
+## Install into a profile
+
+A profile is a directory under `$RSH_HOME/profiles/<name>` with a `package.json` runtime marker and an `rsh.profile.json` composition. Install the package into that directory with pnpm:
 
 ```sh
-dsh --profile demo --dump-config   # shows a "# == dsh-hello-plugin" layer
+cd "$RSH_HOME/profiles/demo"
+pnpm add /path/to/hello-plugin
+```
+
+Then add one installation row to `rsh.profile.json`:
+
+```json
+{
+  "formatVersion": 1,
+  "scopes": [{ "id": "root" }],
+  "installations": [
+    { "id": "hello", "plugin": "dsh-hello-plugin", "scope": "root" }
+  ]
+}
+```
+
+The row's `id` is local to the profile; `plugin` must equal the installed package name; `scope` must name a declared scope. The package's manifest supplies the version and the Native entry. A missing package, a version-less manifest, an invalid `dsh.native` declaration, or a service requirement without a Provider fails before the application starts.
+
+Keep the rest of the shipped composition when adding the row: the profile boots exactly the installations in this file. `--dump-config` prints the resolved composition without starting the application:
+
+```sh
+dsh --profile demo --dump-config
 dsh --profile demo
 ```
 
-`dsh plugin --profile demo remove dsh-hello-plugin` removes both the dependency and the layer.
+## Overlays
 
-## The loading order
+`--patch <file.json>` applies a versioned JSON overlay after the profile's own file, in argv order. A row without `plugin` replaces fields on an existing installation, and a present `config` replaces the complete prior value rather than merging keys. A row with `plugin` inserts a new installation into an existing scope. Use an overlay to try a configuration change without editing the profile:
 
-The effective configuration composes over an empty root by applying, in order:
-
-1. Each bundle patch named in the profile's `dsh.profile.bundles` list, in list order — `@redspark/rsh-base` first, then each installed bundle in the order it was added.
-2. The profile's own `cordis.patch.yml`.
-3. The home-level `$RSH_HOME/cordis.patch.yml` — machine-local preferences shared by every profile.
-4. Each `--patch <path>` overlay, in argv order.
-
-App arguments are not another patch layer. A surface bundle can resolve them through an ordinary app-owned service, described below.
-
-Later layers win per row, and a patch replaces a row's entire `config` value rather than deep-merging keys. Two consequences for bundle authors:
-
-- Your patch can override rows from earlier layers by `id` — the same way [the `dsh-web-app` bundle](../../../../Compatibility/DSH/bundle/web-app/cordis.patch.yml) overrides `dsh-base` rows — but must restate every key the row needs, not just the changed one.
-- Users can override your rows in their profile's `cordis.patch.yml` without touching your package, so prefer configuration defaults users are likely to keep and let the schema carry the rest.
-
-In-box bundle names always resolve from the dsh installation itself; pnpm manages only out-of-tree packages, so your bundle can rely on `@redspark/rsh-base` being present and current.
-
-## Give a surface bundle its own command line
-
-A bundle that defines a runnable app mounts an ordinary provider plugin:
-
-```yaml
-- id: hello-startup
-  name: 'dsh-hello-plugin/startup'
+```json
+{
+  "formatVersion": 1,
+  "installations": [
+    { "id": "hello", "config": { "greeting": "hi" } }
+  ]
+}
 ```
-
-The plugin exports `inject = ['cmdlineArgs']`, calls `parseCmdline` from [`@redspark/rsh-cmdline`](../../../../Compatibility/DSH/boot/cmdline/README.md) with its own commander program, and provides its app-owned service from the program's action. The launcher hands every plugin the same immutable arguments after launcher flags, so app-specific flags need no launcher change and multiple plugins may parse the snapshot. The Loader row needs no launcher marker or special kind.
-
-Rows configured by those arguments inject the provider's service and read it from their own `!!js` options, with the deployment value beside it as the fallback:
-
-```yaml
-- id: my-app
-  name: '@example/my-app'
-  inject: [myAppStartup]
-  config:
-    port: !!js ctx.myAppStartup.port ?? 8080
-```
-
-On `--help`, the provider publishes no service, so those rows never activate. Loader mounts the composition once, waits for each row's ordinary injections, and only then evaluates that row's `!!js` config against its injected context.
-
-## Installing from GitHub: the build-script catch
-
-Publishing to a registry is not required — users can install straight from a git host:
 
 ```sh
-dsh plugin --profile demo add github:you/hello-plugin
+dsh --profile demo --patch ./hello-overlay.json
 ```
 
-But a git install fetches **sources, not built artifacts**: nothing runs your `build` script, so a TypeScript package arrives without its `lib/` output and fails to load. Two things must happen, one on each side:
+Unknown targets, duplicate ids, and unknown scopes are rejected. `native-web` reads explicit JSON overlays through the same rule on live reload.
 
-- **The author** ships a `prepare` script — pnpm runs it after a git install — that builds the published entry points from source, self-contained: it must not assume dev-only context such as a sibling monorepo checkout. [turtle-ui](https://github.com/redspark-harness/turtle-ui) is a working example: its `prepare` runs a dedicated tsdown config that transpiles `src/` without project references or type checking.
-- **The user** allowlists the build. pnpm ≥10 refuses to run a git dependency's `prepare` script until it is explicitly allowed, so the first `add` fails; `dsh` points at the fix — copy the exact package key pnpm printed into the profile's `pnpm-workspace.yaml`:
+## Installing from GitHub
 
-  ```yaml
-  allowBuilds:
-    dsh-hello-plugin: true
-  ```
+Publishing to a registry is not required — `pnpm add github:you/hello-plugin` works from the profile directory. A git install fetches sources, not built artifacts, so a TypeScript package needs a `prepare` script that builds its published entry points without assuming a sibling monorepo checkout. pnpm ≥10 refuses to run that script until the profile allows it:
 
-  and re-run the `add`.
+```yaml
+# $RSH_HOME/profiles/demo/pnpm-workspace.yaml
+allowBuilds:
+  dsh-hello-plugin: true
+```
 
-Treat that allowance as **permission to execute the package's code on your machine at install time**, outside any sandbox the agent runs under. Only allow packages whose source you trust, and pin a commit (`github:you/hello-plugin#<sha>`) so a later push cannot silently change what runs.
-
-If you would rather not ask users for the allowance, distribute built artifacts instead — neither form needs any build permission:
-
-- **Publish to npm** with `lib/` built at `pnpm publish` time; `dsh plugin add your-package` then installs prebuilt code.
-- **Ship a tarball** from `pnpm pack`; users run `dsh plugin add ./hello-plugin-0.1.0.tgz`.
+Treat that allowance as permission to execute the package's code on your machine at install time, outside any sandbox the agent runs under. Pin a commit (`github:you/hello-plugin#<sha>`) so a later push cannot silently change what runs. Publishing built artifacts to npm or shipping a tarball avoids the build permission entirely.
 
 ## Next steps
 
-- [Plugins and lifecycle](../framework/index.md) — the full plugin lifecycle
-- [CLI behavior reference](../../../../Programs/CLI/reference/README.md) — exact layer precedence, flags, and profile mechanics
+- [Plugins and lifecycle](../framework/index.md) — the Native plugin lifecycle
+- [CLI behavior reference](../../../../Programs/CLI/reference/README.md) — profile composition, patches, and dumps

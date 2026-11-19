@@ -34,8 +34,8 @@ Mount this provider when a delegation should run as a real Codex session in the 
 Install the package into the target Profile, then restart that Profile. The installation brings the official wrapper and one compatible native platform payload into the Profile; the declared patch layer registers only the dormant provider and starts no Codex process.
 
 ```sh
-dsh plugin --profile <name> add @redspark/rsh-subagent-codex
-dsh plugin --profile <name> remove @redspark/rsh-subagent-codex
+cd "$RSH_HOME/profiles/<name>"
+pnpm add @redspark/rsh-subagent-codex
 dsh --profile <name>
 ```
 

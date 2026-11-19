@@ -4,7 +4,6 @@ import Loader from '@redspark/cordis-plugin-loader'
 import z from '@redspark/schemastery'
 import InvariantRegistry from '@redspark/rsh-invariants'
 import type { InvariantInstaller } from '@redspark/rsh-invariants'
-import { FiberState } from '../Modules/Official/extensions/tool-cordis/src/fiber-state.ts'
 import { packageInvariantOwners } from './package-invariants.ts'
 import {
   TEST_INVARIANT_READY_SERVICE,
@@ -13,6 +12,11 @@ import {
   type TestInvariantCompanion,
   usesManualInvariantTree,
 } from './test-invariants.ts'
+
+/** Runtime mirror of the vendor `const enum`, which has no importable value. */
+const FiberState = {
+  PENDING: 0, LOADING: 1, ACTIVE: 2, FAILED: 3, DISPOSED: 4, UNLOADING: 5,
+} as const
 
 declare module '@redspark/cordis' {
   interface Context {

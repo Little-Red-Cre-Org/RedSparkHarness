@@ -31,7 +31,7 @@ Your app reads the invocation's inner arguments at startup, and any number of it
 
 The launcher makes three things available to your app:
 
-- `ctx.cmdlineArgs` — the inner arguments of your invocation. Reading them returns an immutable snapshot and never consumes or changes them: `dsh --profile tui --resume abc` gives your app `['--resume', 'abc']`.
+- `ctx.cmdlineArgs` — the inner arguments of your invocation. Reading them returns an immutable snapshot and never consumes or changes them: `dsh --profile rsh --resume abc` gives your app `['--resume', 'abc']`.
 - `ctx.appExit` — a way to ask the process to exit once the tree has shut down, wired to the launcher's shutdown controller.
 - `ctx.appReady` — the successful-startup signal, committed only after the Loader tree and launcher-owned setup succeed.
 

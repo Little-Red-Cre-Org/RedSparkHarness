@@ -29,9 +29,9 @@ wheel 包会安装 `dsh` 控制台命令和 `redspark_harness_runtime` Python �
 
 ## 打包后的 profile 解析
 
-`dsh` 在显式指定的主目录下初始化随附 profile、组合其 bundle patch，并从可执行程序的虚拟文件系统加载内置插件。操作系统符号链接无法进入该文件系统，因此打包运行会在 `$RSH_HOME/profiles/node_modules` 下维护小型真实 ESM 代理包。每个代理复现运行时的显式导出项、记录原包身份，并重新导出虚拟模块 URL。因此，内置配置项与外部插件 peer 会共享同一个 Cordis／模块实例。原生共享库与 Windows ConPTY addon 会同其他原生 addon 一起打包；ripgrep 与 macOS PTY helper 仍是可执行伴随程序。
+`dsh` 在显式指定的主目录下初始化随附 profile，并从可执行程序的虚拟文件系统加载其 Native 插件入口。操作系统符号链接无法进入该文件系统，因此打包运行会在 `$RSH_HOME/profiles/node_modules` 下维护小型真实 ESM 代理包。每个代理复现运行时的显式导出项、记录原包身份，并重新导出虚拟模块 URL。因此，内置配置项与外部插件 peer 会共享同一个模块实例。原生共享库与 Windows ConPTY addon 会同其他原生 addon 一起打包；ripgrep 与 macOS PTY helper 仍是可执行伴随程序。
 
-外部 profile 管理使用 `dsh plugin --profile <name> ...`。该命令要求 `PATH` 中存在 `pnpm`；普通 SDK／profile 运行不需要它。
+外部 profile 管理用 `pnpm` 把包安装进 profile 目录，并编辑该 profile 的 `rsh.profile.json`。只有该管理路径要求 `PATH` 中存在 `pnpm`；普通 SDK／profile 运行不需要它。
 
 ## 构建与分发
 

@@ -16,10 +16,6 @@
     mode: !!js process.env.RSH_TOOLS_MODE
 
 - insert:
-    # PTC mode is a core execution capability, not a Web component.
-    - id: code-runtime
-      name: '@redspark/rsh-code-runtime-worker-thread'
-
     - id: headless-startup
       name: '@redspark/rsh-headless/startup'
 

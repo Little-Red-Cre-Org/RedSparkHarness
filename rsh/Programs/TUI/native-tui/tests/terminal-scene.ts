@@ -203,6 +203,8 @@ export async function terminalScene(scenario: string, options: TerminalSceneOpti
     }
     await resumed.submit(tasks[2]!)
     await resumed.waitFor('Terminal answer 3.')
+    await vi.waitFor(() => { expect(resumed.output().lastIndexOf('Ready'))
+      .toBeGreaterThan(resumed.output().lastIndexOf('Working')) }, { timeout: 30000 })
     await resumed.submit('/exit')
     expect((await resumed.done).exitCode, resumed.output()).toBe(0)
     if (taskScheduler) {

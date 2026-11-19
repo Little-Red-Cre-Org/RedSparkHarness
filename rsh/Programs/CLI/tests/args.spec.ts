@@ -64,37 +64,20 @@ describe('parseRshArgs', () => {
       .toEqual({ mode: 'profile', profile: 'web', patches: [], args: ['--from-default-profile', 'web'] })
   })
 
-  it('routes the plugin pnpm forwarder', () => {
-    expect(parse(['plugin', '--profile', 'tui', 'add', 'turtle-ui']))
-      .toEqual({ mode: 'plugin', profile: 'tui', args: ['add', 'turtle-ui'] })
-    expect(parse(['plugin', '--profile', 'tui', 'remove', 'turtle-ui']))
-      .toEqual({ mode: 'plugin', profile: 'tui', args: ['remove', 'turtle-ui'] })
-    expect(parse(['plugin', '--profile', 'tui', 'why', '@redspark/cordis']))
-      .toEqual({ mode: 'plugin', profile: 'tui', args: ['why', '@redspark/cordis'] })
-    // Unknown pnpm flags forward verbatim.
-    expect(parse(['plugin', '--profile', 'tui', 'add', '--save-dev', 'x']))
-      .toEqual({ mode: 'plugin', profile: 'tui', args: ['add', '--save-dev', 'x'] })
-  })
-
   it('routes profile and web config dumps', () => {
     expect(parse(['--profile', 'web', '--dump-config']))
-      .toEqual({ mode: 'dump-config', profile: 'web', defaultOnly: false, patches: [] })
-    expect(parse(['--profile', 'web', '--dump-default-config']))
-      .toEqual({ mode: 'dump-config', profile: 'web', defaultOnly: true, patches: [] })
+      .toEqual({ mode: 'dump-config', profile: 'web', patches: [] })
     expect(parse(['--profile', 'rescue', '--from-default-profile', 'web', '--dump-config']))
       .toEqual({
         mode: 'dump-config',
         profile: 'rescue',
         fromDefaultProfile: 'web',
-        defaultOnly: false,
         patches: [],
       })
     expect(parse(['--profile', 'tui', '--dump-config', '--patch', 'x.yml']))
-      .toEqual({ mode: 'dump-config', profile: 'tui', defaultOnly: false, patches: ['x.yml'] })
+      .toEqual({ mode: 'dump-config', profile: 'tui', patches: ['x.yml'] })
     expect(parse(['web', '--dump-config']))
-      .toEqual({ mode: 'dump-config', profile: 'web', defaultOnly: false, patches: [] })
-    expect(parse(['web', '--dump-default-config']))
-      .toEqual({ mode: 'dump-config', profile: 'web', defaultOnly: true, patches: [] })
+      .toEqual({ mode: 'dump-config', profile: 'web', patches: [] })
   })
 
   it('rejects missing profile, removed flags, and contradictory inputs', () => {
@@ -108,39 +91,36 @@ describe('parseRshArgs', () => {
     expect(exitCode(['--profile', 'x', '--from-default-profile'])).toBe(1)
     expect(exitCode(['--profile', 'x', '--patch='])).toBe(1)
     expect(exitCode(['--dump-config'])).toBe(1)
-    expect(exitCode(['--profile', 'x', '--dump-config', '--dump-default-config'])).toBe(1)
-    expect(exitCode(['--profile', 'x', '--dump-default-config', '--patch', 'p.yml'])).toBe(1)
+    // Removed with the Cordis exit: the launcher no longer owns this flag, so it
+    // reaches the booted app as an ordinary argument.
+    expect(parse(['--profile', 'x', '--dump-default-config']))
+      .toEqual({ mode: 'profile', profile: 'x', patches: [], args: ['--dump-default-config'] })
     expect(exitCode(['--profile', 'x', '--dump-config', 'task'])).toBe(1)
     expect(exitCode(['--bogus'])).toBe(1)
     expect(exitCode(['--profile', 'x', 'web'])).toBe(1)
-    expect(exitCode(['web', '--dump-config', '--dump-default-config'])).toBe(1)
-    expect(exitCode(['web', '--dump-default-config', '--patch', 'w.yml'])).toBe(1)
+    expect(parse(['web', '--dump-default-config']))
+      .toEqual({ mode: 'profile', profile: 'web', patches: [], args: ['--dump-default-config'] })
     expect(exitCode(['web', '--patch='])).toBe(1)
     // A dump never runs app command-line providers, so it cannot show what
     // those flags would decide; printing a tree that differs from the same
     // invocation's boot would mislead.
     expect(exitCode(['web', '--dump-config', '--port', '8080'])).toBe(1)
     expect(exitCode(['--profile', 'web', '--dump-config', '-h'])).toBe(1)
-    expect(exitCode(['plugin', 'add', 'x'])).toBe(1) // --profile required
-    expect(exitCode(['plugin', '--profile', 'tui'])).toBe(1) // nothing to forward
-    expect(exitCode(['plugin', '--profile', ''])).toBe(1)
     expect(exitCode(['--profile', 'desktop'])).toBe(1)
     expect(exitCode(['--profile', 'Desktop'])).toBe(1)
     expect(exitCode(['--profile', 'DESKTOP'])).toBe(1)
     expect(exitCode(['--profile', 'desktop', '--dump-config'])).toBe(1)
-    expect(exitCode(['plugin', '--profile', 'desktop', 'add', 'x'])).toBe(1)
-    expect(exitCode(['plugin', '--profile', 'Desktop', 'add', 'x'])).toBe(1)
     expect(exitCode(['--profile', 'sdk-minimal'])).toBe(1)
     expect(exitCode(['--profile', 'sdk-minimal', '--dump-config'])).toBe(1)
-    expect(exitCode(['--profile', 'sdk-minimal', '--dump-default-config'])).toBe(1)
-    expect(exitCode(['plugin', '--profile', 'sdk-minimal', 'add', 'x'])).toBe(1)
     expect(exitCode(['--profile', 'rescue', '--from-default-profile', 'sdk-minimal'])).toBe(1)
-    expect(exitCode(['--profile', 'x', 'plugin', 'add', 'y'])).toBe(1)
+    // `plugin` is no longer a launcher subcommand; it reaches the app verbatim.
+    expect(parse(['--profile', 'x', 'plugin', 'add', 'y']))
+      .toEqual({ mode: 'profile', profile: 'x', patches: [], args: ['plugin', 'add', 'y'] })
     expect(exitCode(['--from-default-profile', 'web', 'plugin', '--profile', 'x', 'add', 'y'])).toBe(1)
   })
 
   it('points a refused sdk-minimal invocation at the sdk profile and the migration reference', () => {
-    const boot = exitResult(['--profile', 'sdk-minimal', '--dump-default-config'])
+    const boot = exitResult(['--profile', 'sdk-minimal'])
     expect(boot.code).toBe(1)
     expect(boot.stderr).toContain('profile "sdk-minimal" no longer boots')
     expect(boot.stderr).toContain('use --profile sdk')

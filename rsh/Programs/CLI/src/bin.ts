@@ -9,8 +9,7 @@
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { parseRshArgs } from './args.ts'
-import { createNativeProfileFromTemplate, ensureShippedNativeProfile, requestsNativeTemplate } from './native-profile-template.ts'
-import { requireCompatibilityRuntime } from './compatibility-runtime.ts'
+import { createNativeProfileFromTemplate, ensureShippedNativeProfile } from './native-profile-template.ts'
 
 // Both the source tree (rsh/Programs/CLI/src) and the bundled bin (rsh/Programs/CLI/lib) sit
 // one directory under rsh/Programs/CLI, so the checked-in manifest resolves with the
@@ -28,74 +27,17 @@ function readVersion(): string {
  */
 export async function runCli(): Promise<void> {
   const invocation = parseRshArgs(process.argv.slice(2), readVersion())
-  if (invocation.mode !== 'plugin' && invocation.fromDefaultProfile !== undefined
-    && requestsNativeTemplate(invocation.fromDefaultProfile)) {
+  if (invocation.fromDefaultProfile !== undefined) {
     createNativeProfileFromTemplate(invocation.profile, invocation.fromDefaultProfile)
   }
-  if (invocation.mode === 'profile' || invocation.mode === 'dump-config') {
-    ensureShippedNativeProfile(invocation.profile)
+  ensureShippedNativeProfile(invocation.profile)
+  if (invocation.mode === 'dump-config') {
+    const { readNativeProfile } = await import('./native-profile-loader.ts')
+    process.stdout.write(`${JSON.stringify(readNativeProfile({ profile: invocation.profile, patchFiles: invocation.patches }), null, 2)}\n`)
+    return
   }
-
-  switch (invocation.mode) {
-    case 'profile': {
-      const { ensureShippedNativeProfile, SHIPPED_NATIVE_PROFILES } = await import('./native-profile-template.ts')
-      if (invocation.fromDefaultProfile !== undefined && SHIPPED_NATIVE_PROFILES().includes(invocation.profile)) {
-        throw new Error('native profile cannot use --from-default-profile')
-      }
-      ensureShippedNativeProfile(invocation.profile)
-      const { profileRuntime } = await import('./native-profile-config.ts')
-      if (profileRuntime(invocation.profile) === 'native') {
-        const { runNativeProfile } = await import('./native-profile-boot.ts')
-        await runNativeProfile({ profile: invocation.profile, patchFiles: invocation.patches, args: invocation.args })
-        break
-      }
-      requireCompatibilityRuntime()
-      const { runProfile } = await import('./profile-boot.ts')
-      const { loadLayeredEnv } = await import('@redspark/rsh-launch-environment/layers')
-      await runProfile({
-        environment: loadLayeredEnv('dsh'),
-        profile: invocation.profile,
-        fromDefaultProfile: invocation.fromDefaultProfile,
-        patchFiles: invocation.patches,
-        args: invocation.args,
-      })
-      break
-    }
-    case 'plugin': {
-      ensureShippedNativeProfile(invocation.profile)
-      const { profileRuntime } = await import('./native-profile-config.ts')
-      if (profileRuntime(invocation.profile) === 'native') {
-        throw new Error(`dsh: dsh plugin does not manage native profile ${invocation.profile}; edit its rsh.profile.json installations instead (see rsh/Docs/native-config-migration.md)`)
-      }
-      requireCompatibilityRuntime()
-      const { runPlugin } = await import('./plugin.ts')
-      process.exit(runPlugin(invocation.profile, invocation.args))
-      break
-    }
-    case 'dump-config': {
-      const { ensureShippedNativeProfile } = await import('./native-profile-template.ts')
-      ensureShippedNativeProfile(invocation.profile)
-      const { profileRuntime } = await import('./native-profile-config.ts')
-      if (profileRuntime(invocation.profile) === 'native') {
-        if (invocation.defaultOnly) throw new Error('native profile has no bundle default to dump')
-        const { readNativeProfile } = await import('./native-profile-loader.ts')
-        process.stdout.write(`${JSON.stringify(readNativeProfile({ profile: invocation.profile, patchFiles: invocation.patches }), null, 2)}\n`)
-        break
-      }
-      requireCompatibilityRuntime()
-      const { runDumpConfig } = await import('./dump-config.ts')
-      runDumpConfig(
-        invocation.profile,
-        invocation.defaultOnly,
-        invocation.patches,
-        invocation.fromDefaultProfile,
-      )
-      break
-    }
-    default:
-      invocation satisfies never
-      throw new Error(`dsh: unhandled invocation mode ${JSON.stringify(invocation)}`)
-  }
+  const { runNativeProfile } = await import('./native-profile-boot.ts')
+  await runNativeProfile({ profile: invocation.profile, patchFiles: invocation.patches, args: invocation.args })
 }
 
 if (import.meta.main) {

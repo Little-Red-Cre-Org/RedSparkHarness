@@ -36,7 +36,7 @@ uv run --project rsh/Programs/SDK/python/sdk python rsh/Scripts/smoke-python-run
 
 已安装的 `sdk-native` 场景还会通过 `session.upload_file`、prompt 与 steer 回执消费、`read_file` 以及冷启动运行时进程，重放共享的 staged-files Session。它会把模型可见路径与规范 Session 对照，并核对返回的文件内容。这个 keyless 场景使用确定性 fixture model；provider 实际行为由独立的 `sdk-live` 场景覆盖。
 
-两个场景会比对 `rsh/Scripts/snapshots/python-sdk-single-exe/` 下已提交的期望输出。`advanced/` 跨所有目标固定一个复杂进程的 SDK 结果及父／子会话日志。`restart/` 针对同一持久化根目录启动两个完整 SDK 运行时进程，并跨所有目标固定其彼此隔离的模型历史、高层结果与独立持久日志。`sdk-minimal` 与 `sdk-minimal-in-history` 不再比对快照：它们断言打包可执行文件在 `--profile sdk-minimal --dump-default-config` 与 `--from-default-profile sdk-minimal` 上拒绝该退役 profile 名称，且不创建 profile 目录。重新运行 `sdk-snapshot` 或 `sdk-restart` 时加上 `--update-snapshots`，并在提交前审阅该差异。
+两个场景会比对 `rsh/Scripts/snapshots/python-sdk-single-exe/` 下已提交的期望输出。`advanced/` 跨所有目标固定一个复杂进程的 SDK 结果及父／子会话日志。`restart/` 针对同一持久化根目录启动两个完整 SDK 运行时进程，并跨所有目标固定其彼此隔离的模型历史、高层结果与独立持久日志。`sdk-minimal` 与 `sdk-minimal-in-history` 不再比对快照：它们断言打包可执行文件在 `--profile sdk-minimal --dump-config` 与 `--from-default-profile sdk-minimal` 上拒绝该退役 profile 名称，且不创建 profile 目录。重新运行 `sdk-snapshot` 或 `sdk-restart` 时加上 `--update-snapshots`，并在提交前审阅该差异。
 
 可信拉取请求与 master 推送还会在各自选定的原生目标上运行 `--scenario sdk-live --installed-wheel`。该场景面向 `https://api.deepseek.com` 执行两个使用工具的轮次：立即检查已创建文件，将其内容替换为仅宿主知道的随机挑战值，并要求第二轮将变更后的内容复制到全新的回执文件，且不修改源文件。两个轮次都必须完成、返回精确的哨兵答案并由模型请求调用工具；文件通过外部逐字节比较验证。仓库密钥缺失时失败，而不是自行 skip。Fork 与 Dependabot 拉取请求会运行完整的 keyless 安装后 wheel 路径，但不会获得密钥。
 

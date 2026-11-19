@@ -2,7 +2,7 @@
 import { mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { expect, it, vi } from 'vitest'
+import { expect, it } from 'vitest'
 import { applyNativeProfilePatches, nativeProfileReloadMode, parseNativeProfileConfig, profileRuntime } from '../src/native-profile-config.ts'
 
 const base = {
@@ -84,13 +84,10 @@ it('selects native only with an explicit marker and keeps a Cordis manifest on l
     expect(() => nativeProfileReloadMode('probe', home)).toThrow('does not select native')
     await mkdir(directory, { recursive: true })
     const writeManifest = (profile: unknown) => writeFile(join(directory, 'package.json'), JSON.stringify({ name: 'probe', dsh: { profile } }))
-    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
     await writeManifest({ bundles: [] })
     expect(profileRuntime('probe', home)).toBe('legacy')
-    expect(warn).toHaveBeenCalledWith(expect.stringContaining('still selects Cordis execution'))
     await writeManifest({ runtime: 'legacy', bundles: [] })
     expect(profileRuntime('probe', home)).toBe('legacy')
-    warn.mockRestore()
     await writeManifest({ runtime: 'native', config: 'rsh.profile.json' })
     expect(profileRuntime('probe', home)).toBe('native')
     expect(nativeProfileReloadMode('probe', home)).toBe('startup')

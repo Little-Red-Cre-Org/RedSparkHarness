@@ -30,7 +30,7 @@ kind: "package-group"
 | [`sdk-app`](sdk-app/README.zh.md) | 基于 base 的 SDK JSON-RPC stdio 应用 | 挂载 SDK 服务器 |
 | [`sdk-minimal`](sdk-minimal/README.zh.md) | 不使用 base 或 Web 的独立极简 SDK 应用 | —（完整 patch 树） |
 
-内置组合包从 dsh 安装目录解析；树外（out-of-tree）组合包通过 `dsh plugin --profile <name> add <package>` 安装进 profile。
+内置组合包从 dsh 安装目录解析；树外（out-of-tree）组合包通过 `pnpm` 安装进 profile 目录，并在其 `cordis.patch.yml` 中添加一行组合包记录。
 
 <a id="related-documentation"></a>
 ## 相关文档

@@ -43,7 +43,7 @@ kind: "package-reference"
 
 ### PTC 模式需要什么
 
-选择 `ptc` 或 `both` 需要已组合的代码运行时（`ctx.codeRuntime`），且其语言有已注册的 SDK 渲染器——TypeScript 运行时经 [`dsh-code-runtime-worker-thread`](../../../Modules/Official/code-runtime/code-runtime-worker-thread/README.zh.md) 交付，TypeScript 与 Python 的 SDK 渲染器都内置在 `dsh-tools` 中。针对未组装此类运行时的部署选择 PTC 模式的 preset 会拒绝挂载并点名这一行，使失败落在操作者可以行动的地方，而不是落在会话的第一次请求上。
+选择 `ptc` 或 `both` 需要已组合的代码运行时（`ctx.codeRuntime`），且其语言有已注册的 SDK 渲染器——TypeScript 运行时经 [`dsh-native-code-runtime`](../../../Modules/Official/code-runtime/native-code-runtime/README.zh.md) 交付，TypeScript 与 Python 的 SDK 渲染器都内置在 `dsh-tools` 中。针对未组装此类运行时的部署选择 PTC 模式的 preset 会拒绝挂载并点名这一行，使失败落在操作者可以行动的地方，而不是落在会话的第一次请求上。
 
 ### 每个 agent 只声明一次呈现方式
 
@@ -85,7 +85,7 @@ kind: "package-reference"
 
 - [tools 包](../tools/README.zh.md)——工具呈现模式与 `presentAs` API。
 - [agent-presets 包](../../preset/agent-presets/README.zh.md)——preset 如何组合 agent 及其常驻挂载。
-- [code-runtime worker-thread 包](../../../Modules/Official/code-runtime/code-runtime-worker-thread/README.zh.md)——PTC 模式所需的 TypeScript 运行时。
+- [Native worker 运行时](../../../Modules/Official/code-runtime/native-code-runtime/README.zh.md)——PTC 模式所需的 TypeScript 运行时。
 - [PTC mode 执行器塌缩 note](../../../../.agents/notes/implemented/bug-fix/2026-08-07-ptc-executor-collapse.zh.md)——通告面与可调用面为何保持一致。
 - [core 分组地图](../README.zh.md)——core 各包如何组合。
 

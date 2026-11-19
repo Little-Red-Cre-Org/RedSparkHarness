@@ -6,11 +6,11 @@
 
 ## Profile runtime 标记
 
-新建的 `headless`、`web`、`sdk`、`acp` 或 `rsh` profile 分别初始化为 `native-headless`、`native-web`、`native-sdk`、`native-acp` 或 `native-tui`，但保留请求中的 profile 目录名称。八个 `native-*` 名称仍可显式选择。启动器在启动、导出配置、插件管理和 `--from-default-profile` 上拒绝 profile 名 `sdk-minimal`；请改用 `--profile sdk`。已有目录不会被改写。其他 profile 保留其 legacy 初始化行为。对于任意已有 `package.json`，runtime resolver 都会遵循其 profile 标记和组合包列表，且不会改写 profile：`runtime: "legacy"` 或不含原生字段的 `dsh.profile.bundles` 数组会选择 legacy；原生标记会选择 Native。既没有有效 native 标记也没有 legacy bundle 数组的 manifest 会报错，并要求声明 `runtime: "native"` 与 `config: "rsh.profile.json"`，或声明 `bundles: [...]`。无 runtime 标记的 bundle 数组若同时声明 `config` 或 `configReload` 也会报错。legacy 标记不能包含 `config` 或 `configReload`；native 标记必须使用 `config: "rsh.profile.json"`，且不能包含 Cordis `bundles` 或 `patchReload`。
+新建的 `headless`、`web`、`sdk`、`acp` 或 `rsh` profile 分别初始化为 `native-headless`、`native-web`、`native-sdk`、`native-acp` 或 `native-tui`，但保留请求中的 profile 目录名称。八个 `native-*` 名称仍可显式选择。启动器在启动、导出配置和 `--from-default-profile` 上拒绝 profile 名 `sdk-minimal`；请改用 `--profile sdk`。已有目录不会被改写。其他缺失名称不会被创建；启动器会报告该 profile 未选择 Native 执行。对于已有 `package.json`，runtime resolver 会遵循其 profile 标记且不改写 profile：原生标记选择 Native。`runtime: "legacy"` 或 `dsh.profile.bundles` 数组会报告 legacy，并由启动器拒绝。既没有有效 native 标记也没有 legacy bundle 数组的 manifest 会报错，并要求声明 `runtime: "native"` 与 `config: "rsh.profile.json"`。无 runtime 标记的 bundle 数组若同时声明 `config` 或 `configReload` 也会报错。legacy 标记不能包含 `config` 或 `configReload`；native 标记必须使用 `config: "rsh.profile.json"`，且不能包含 Cordis `bundles` 或 `patchReload`。
 
 Native CLI 检查 `rsh.profile.json` 中已安装且启用的插件，以及由已安装的 `@redspark/rsh-native-web-host` `config.projectDir` 选择的 Client profile。没有安装该 Host 时，profile 不包含 Client surface。只有安装了该键所属插件时才检查 settings。没有 settings-file Provider 的 profile 不读取或检查 `settings.yaml`。Native profile 模板与 legacy app-boot 初始化器会在初始化 profile 时写入显式 runtime 标记。
 
-`--from-default-profile native-<name>` 会把一个显式 Native 模板复制到新的自定义 profile 目录。目标必须是非随附名称，其目录必须不存在或为空。launcher 写入 `rsh.profile.json`、runtime 标记，并在 `native-web` 时写入 `rsh.client.json`；它不写入 Cordis 组合包列表、`cordis.patch.yml` 或 pnpm workspace。标准模板名称在 Cordis 启动退役之前仍创建 legacy profile。
+`--from-default-profile <template>` 会把一个随附 Native 模板复制到新的自定义 profile 目录；模板可以是标准别名或显式 `native-*` 名称。目标必须是非随附名称，其目录必须不存在或为空。launcher 写入 `rsh.profile.json`、runtime 标记，并在 `native-web` 时写入 `rsh.client.json`；它不写入 Cordis 组合包列表、`cordis.patch.yml` 或 pnpm workspace。每个随附模板名称现在都创建 Native profile。
 
 ## 插件集合差异
 

@@ -89,7 +89,7 @@ it('maps standard profile names to native compositions and leaves an existing ma
     }
 
     // An existing Cordis manifest is never rewritten. The resolver keeps it on
-    // legacy execution and warns; the operator migrates it in place.
+    // legacy execution; the operator migrates it in place.
     const existingDir = join(legacyHome, 'profiles', 'web')
     await mkdir(existingDir, { recursive: true })
     const existingManifest = `${JSON.stringify({ name: 'dsh-profile-web', private: true,
@@ -130,9 +130,30 @@ it('creates a custom Native profile from an explicit native template', async () 
 
     expect(() => { createNativeProfileFromTemplate('rescue', 'native-headless', home) }).toThrow('is not empty')
     expect(() => { createNativeProfileFromTemplate('native-web', 'native-headless', home) }).toThrow('shipped profile name')
-    expect(() => { createNativeProfileFromTemplate('another', 'web', home) }).toThrow('unknown native profile template')
+    expect(() => { createNativeProfileFromTemplate('another', 'missing', home) }).toThrow('unknown profile template')
     expect(() => { createNativeProfileFromTemplate('another', 'native-missing', home) })
-      .toThrow('unknown native profile template')
+      .toThrow('unknown profile template')
+  } finally {
+    await rm(home, { recursive: true, force: true })
+  }
+// Loading the copied composition resolves the whole Native plugin tree, which exceeds the
+// default bound on a cold Windows runner.
+}, 30_000)
+
+it('creates a Native profile from a standard template alias', async () => {
+  const home = await mkdtemp(join(tmpdir(), 'rsh-native-alias-create-'))
+  try {
+    createNativeProfileFromTemplate('rescue', 'web', home)
+    const directory = join(home, 'profiles', 'rescue')
+    expect(profileRuntime('rescue', home)).toBe('native')
+    expect(nativeProfileReloadMode('rescue', home)).toBe('live')
+    const composition = JSON.parse(await readFile(join(directory, 'rsh.profile.json'), 'utf8')) as {
+      installations: Array<{ id: string; plugin: string }>
+    }
+    expect(composition.installations.find(row => row.id === 'app'))
+      .toMatchObject({ plugin: '@redspark/rsh-native-web-host' })
+    expect(existsSync(join(directory, 'rsh.client.json'))).toBe(true)
+    expect(existsSync(join(directory, 'cordis.patch.yml'))).toBe(false)
   } finally {
     await rm(home, { recursive: true, force: true })
   }

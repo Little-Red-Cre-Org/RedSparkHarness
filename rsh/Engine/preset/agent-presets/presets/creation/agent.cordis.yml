@@ -251,11 +251,6 @@
 
 # ── self-modification ───────────────────────────────────────────────────────
 
-# Read the live runtime, mount a temporary plugin, unmount it. The toolset is a
-# trust boundary, not a sandbox — see this file's header.
-- id: tool-cordis
-  name: '@redspark/rsh-tool-cordis'
-
 # The composition-authoring skill travels with this preset rather than living
 # in the user's skill root: it documents THIS deployment's two planes, and a
 # preset is the unit that gets copied and edited. `baseUrl` is the preset's

@@ -107,7 +107,7 @@ The SDK starts the bundled `dsh --profile sdk` process lazily and reuses it unti
 
 ## Install plugins
 
-The supported SDK profile is `sdk`. The launcher refuses `sdk-minimal` on boot, dump, plugin management, and `--from-default-profile`. Existing directories are not rewritten. Do not initialize it with `--dump-default-config`, and do not apply a Cordis insert to it. See [native configuration migration](../../native-config-migration.md).
+The supported SDK profile is `sdk`. The launcher refuses `sdk-minimal` on boot, dump, and `--from-default-profile`. Existing directories are not rewritten. Do not apply a Cordis insert to it. See [native configuration migration](../../native-config-migration.md).
 
 Another `profile` is valid when its composition includes a JSON-RPC server. Missing server rows, unresolved plugins, and invalid patches fail during startup instead of falling back to another composition.
 

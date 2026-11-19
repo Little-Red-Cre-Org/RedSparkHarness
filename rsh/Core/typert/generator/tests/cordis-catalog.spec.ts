@@ -58,7 +58,7 @@ describe('Typert-backed Cordis catalog', () => {
   })
 
   it('reproduces every committed catalog artifact byte for byte', { timeout: 480_000 }, () => {
-    const { projector, model } = projection()
+    const { model } = projection()
     const expected = (path: string): string => readFileSync(join(workspaceRoot, path), 'utf8')
 
     expect(renderInheritedPage(CORDIS_CATALOG_POLICY)).toBe(expected('rsh/Docs/cordis-api/inherited.md'))
@@ -80,9 +80,6 @@ describe('Typert-backed Cordis catalog', () => {
         )
       }
     }
-    expect(projector.renderRuntimeApi(model)).toBe(
-      expected('rsh/Modules/Official/extensions/tool-cordis/src/api-catalog.ts'),
-    )
   })
 
   it('resolves each key to the declaration a caller meets, and drops keys no plugin provides', { timeout: 480_000 }, () => {
@@ -112,13 +109,8 @@ describe('Typert-backed Cordis catalog', () => {
       expect.stringContaining('replace'),
       expect.stringContaining('mutate'),
     ]))
-    expect(projection().projector.renderRuntimeApi(projection().model)).toContain('SettingsDescriptor')
     const webServer = byKey.get('webServer')
     expect(webServer?.methods.map(method => method.signature)).toContain('register(route: HttpRoute): () => Promise<void>')
     expect(webServer?.inheritedTypes).toContain('HttpRouteListener')
-    const runtimeApi = projection().projector.renderRuntimeApi(projection().model)
-    for (const type of ['HttpRouteListener', 'HttpRoute', 'HttpUpgradeRoute', 'IndexInjection', 'IndexInjectionPlacement']) {
-      expect(runtimeApi).toContain("name: '" + type + "'")
-    }
   })
 })

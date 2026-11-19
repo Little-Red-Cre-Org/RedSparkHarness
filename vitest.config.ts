@@ -218,7 +218,6 @@ export default defineConfig({
         'rsh/Programs/TUI/terminal-ui/src/{copy,index}.ts',
         // Dynamic Host/Client composition is covered by its focused lifecycle
         // tests and assembled application checks rather than per-file coverage.
-        'rsh/Modules/Official/extensions/*/src/**/*.{ts,tsx}',
         // A killed executable lint-contract test can leave a non-product source probe behind.
         ...PACKAGE_MANIFEST_GLOBS.map(pattern => pattern.replace('/package.json', '/src/oxlint-contract-*.ts')),
         // Client/web UI files whose remaining branches need a browser-grade

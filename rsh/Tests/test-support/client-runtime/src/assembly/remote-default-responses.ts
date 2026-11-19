@@ -24,10 +24,6 @@ export const remoteDefaultResponses: RemoteTable = {
     }),
     // ui-agent-preset hero chip and header label on first mount.
     'agentPresets/list': ok({ presets: [], authorable: false }),
-    // cordis-client-runner `ClientCordisInspectRegistry.sync` at apply and on `connection/reset`.
-    'dynamicCordisRunner/syncInspectManifest': ok(null),
-    // ui-cordis inventory at apply and on `connection/reset`.
-    'dynamicCordisRunner/inventory': ok([]),
     // ui-settings-plugins web-search card `readCredential()` when the settings mirror first publishes.
     'credentials/describe': ok({}),
     // task-scheduler application-scoped inbox polling, including while Settings is closed.
