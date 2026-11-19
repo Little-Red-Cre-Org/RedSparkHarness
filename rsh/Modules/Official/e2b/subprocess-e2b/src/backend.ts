@@ -57,7 +57,7 @@ function validateNoNullByte(subject: string, value: string): void {
   throw error
 }
 
-/** Cordis-free E2B command manager for one shared sandbox. */
+/** E2B command manager for one shared sandbox. */
 export class E2BSubprocessBackend implements SubprocessOperations {
   /** Handles still owned by teardown. */
   readonly live = new Set<E2BSubprocessHandle>()

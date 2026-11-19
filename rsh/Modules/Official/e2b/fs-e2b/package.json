@@ -43,7 +43,6 @@
       "types": "./lib/types/native.d.ts",
       "default": "./lib/native.js"
     },
-    "./src/*": "./src/*",
     "./package.json": "./package.json"
   },
   "files": [
@@ -55,19 +54,12 @@
   "license": "MIT",
   "peerDependencies": {
     "@redspark/rsh-e2b": "workspace:^",
-    "@redspark/rsh-fs": "workspace:^",
-    "@redspark/cordis": "workspace:^"
+    "@redspark/rsh-fs": "workspace:^"
   },
   "devDependencies": {
     "@redspark/rsh-e2b": "workspace:^",
     "@redspark/rsh-fs": "workspace:^",
-    "@redspark/cordis": "workspace:^",
     "@redspark/rsh-native-runtime": "workspace:^"
-  },
-  "peerDependenciesMeta": {
-    "@redspark/cordis": {
-      "optional": true
-    }
   },
   "dependencies": {
     "@redspark/rsh-native-runtime": "workspace:^",

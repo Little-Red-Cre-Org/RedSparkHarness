@@ -286,7 +286,7 @@ const packageFileExtras: Readonly<Record<string, readonly string[]>> = {
   '@redspark/rsh-fs-local': [
     'lib/backend.js', 'lib/shared-*.js',
   ],
-  // Cordis and Native entries share one implementation, published as a chunk beside both bundles.
+  // Multiple entries share implementation modules published as chunks beside them.
   // E2B also publishes the sandbox owner imported by the filesystem and subprocess packages.
   '@redspark/rsh-storage-sqlite': ['lib/shared-*.js'],
   '@redspark/rsh-invariants': ['lib/shared-*.js'],

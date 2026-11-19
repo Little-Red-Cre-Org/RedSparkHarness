@@ -1,13 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Mock } from 'vitest'
-import { Context } from '@redspark/cordis'
+import { FileType, SandboxNotFoundError } from 'e2b'
 import type { Sandbox as SandboxType } from 'e2b'
-import E2BRuntime, {
+import {
+  E2BSandboxOwner,
   e2bControlEnvs,
-  FileType,
-  SandboxNotFoundError,
   quoteE2BShellArg,
-} from '@redspark/rsh-e2b'
+} from '../src/owner.ts'
 
 const sdk = vi.hoisted(() => ({
   create: vi.fn(),
@@ -57,7 +56,7 @@ beforeEach(() => {
   vi.unstubAllEnvs()
 })
 
-describe('E2BRuntime', () => {
+describe('E2BSandboxOwner', () => {
   it('gives each SDK login shell a fresh non-overridable control home', () => {
     const first = e2bControlEnvs({ HOME: '/hostile', NPM_TOKEN: '' })
     const second = e2bControlEnvs()
@@ -70,13 +69,11 @@ describe('E2BRuntime', () => {
   it('creates one protected shared sandbox and kills it on default disposal', async () => {
     const fixture = fakeSandbox()
     sdk.create.mockResolvedValue(fixture.sandbox)
-    const ctx = new Context()
-    const fiber = await ctx.plugin(E2BRuntime, { apiKey: 'test-key' })
+    const owner = new E2BSandboxOwner({ apiKey: 'test-key' })
 
-    const service = ctx.e2b
-    await expect(service.getSandbox()).resolves.toBe(fixture.sandbox)
-    expect(service.cwd).toBe('/home/user/workspace')
-    expect(service.runtimeRoot).toBe('/home/user/workspace/.dsh-e2b')
+    await expect(owner.getSandbox()).resolves.toBe(fixture.sandbox)
+    expect(owner.cwd).toBe('/home/user/workspace')
+    expect(owner.runtimeRoot).toBe('/home/user/workspace/.dsh-e2b')
     expect(sdk.create).toHaveBeenCalledWith({
       apiKey: 'test-key',
       timeoutMs: 300_000,
@@ -93,20 +90,19 @@ describe('E2BRuntime', () => {
       { envs: { HOME: runOptions?.envs?.HOME } },
     )
 
-    await fiber.dispose()
+    await owner.dispose()
     expect(fixture.kill).toHaveBeenCalledOnce()
-    await expect(service.getSandbox()).rejects.toThrow(/disposing/)
+    await expect(owner.getSandbox()).rejects.toThrow(/disposing/)
   })
 
   it('rejects handle acquisition when disposal starts during setup', async () => {
     const fixture = fakeSandbox()
     const opening = Promise.withResolvers<SandboxType>()
     sdk.create.mockReturnValue(opening.promise)
-    const ctx = new Context()
-    const fiber = await ctx.plugin(E2BRuntime, { apiKey: 'test-key' })
+    const owner = new E2BSandboxOwner({ apiKey: 'test-key' })
 
-    const acquisition = ctx.e2b.getSandbox()
-    const disposing = fiber.dispose()
+    const acquisition = owner.getSandbox()
+    const disposing = owner.dispose()
     opening.resolve(fixture.sandbox)
 
     await expect(acquisition).rejects.toThrow(/disposing/)
@@ -118,12 +114,11 @@ describe('E2BRuntime', () => {
     vi.stubEnv('E2B_API_KEY', 'environment-key')
     const fixture = fakeSandbox('configured-sandbox')
     sdk.create.mockResolvedValue(fixture.sandbox)
-    const ctx = new Context()
-    const fiber = await ctx.plugin(E2BRuntime, {
+    const owner = new E2BSandboxOwner({
       cwd: '/workspace/project',
       timeoutMs: 60_000,
     })
-    await ctx.e2b.getSandbox()
+    await owner.getSandbox()
 
     expect(sdk.create).toHaveBeenCalledWith({
       apiKey: 'environment-key',
@@ -131,8 +126,8 @@ describe('E2BRuntime', () => {
       secure: true,
       lifecycle: { onTimeout: 'kill' },
     })
-    expect(ctx.e2b.cwd).toBe('/workspace/project')
-    await fiber.dispose()
+    expect(owner.cwd).toBe('/workspace/project')
+    await owner.dispose()
     expect(fixture.kill).toHaveBeenCalledOnce()
   })
 
@@ -140,15 +135,11 @@ describe('E2BRuntime', () => {
     const fixture = fakeSandbox()
     fixture.kill.mockRejectedValue(new SandboxNotFoundError('already deleted'))
     sdk.create.mockResolvedValue(fixture.sandbox)
-    const ctx = new Context()
-    const errors: unknown[] = []
-    ctx.logger.error = ((error: unknown) => { errors.push(error) }) as typeof ctx.logger.error
-    const fiber = await ctx.plugin(E2BRuntime, { apiKey: 'test-key' })
-    await ctx.e2b.getSandbox()
+    const owner = new E2BSandboxOwner({ apiKey: 'test-key' })
+    await owner.getSandbox()
 
-    await fiber.dispose()
+    await expect(owner.dispose()).resolves.toBeUndefined()
     expect(fixture.kill).toHaveBeenCalledOnce()
-    expect(errors).toEqual([])
   })
 
   it('does not classify other disposal failures as an already-gone sandbox', async () => {
@@ -156,26 +147,21 @@ describe('E2BRuntime', () => {
     const failure = new Error('disposition unknown')
     fixture.kill.mockRejectedValue(failure)
     sdk.create.mockResolvedValue(fixture.sandbox)
-    const ctx = new Context()
-    const errors: unknown[] = []
-    ctx.logger.error = ((error: unknown) => { errors.push(error) }) as typeof ctx.logger.error
-    const fiber = await ctx.plugin(E2BRuntime, { apiKey: 'test-key' })
-    await ctx.e2b.getSandbox()
-    await expect(fiber.dispose()).resolves.toBeUndefined()
+    const owner = new E2BSandboxOwner({ apiKey: 'test-key' })
+    await owner.getSandbox()
+    await expect(owner.dispose()).rejects.toBe(failure)
     expect(fixture.kill).toHaveBeenCalledOnce()
-    expect(errors).toContain(failure)
   })
 
   it('kills a newly created sandbox when remote directory setup fails', async () => {
     const fixture = fakeSandbox()
     fixture.makeDir.mockRejectedValueOnce(new Error('setup failed'))
     sdk.create.mockResolvedValue(fixture.sandbox)
-    const ctx = new Context()
-    const fiber = await ctx.plugin(E2BRuntime, { apiKey: 'test-key' })
+    const owner = new E2BSandboxOwner({ apiKey: 'test-key' })
 
-    await expect(ctx.e2b.getSandbox()).rejects.toThrow('setup failed')
+    await expect(owner.getSandbox()).rejects.toThrow('setup failed')
     expect(fixture.kill).toHaveBeenCalledOnce()
-    await fiber.dispose()
+    await owner.dispose()
   })
 
   it('preserves the setup failure after its one rollback attempt fails', async () => {
@@ -183,12 +169,11 @@ describe('E2BRuntime', () => {
     fixture.run.mockRejectedValueOnce(new Error('chmod failed'))
     fixture.kill.mockRejectedValueOnce(new Error('cleanup failed'))
     sdk.create.mockResolvedValue(fixture.sandbox)
-    const ctx = new Context()
-    const fiber = await ctx.plugin(E2BRuntime, { apiKey: 'test-key' })
-    await expect(ctx.e2b.getSandbox()).rejects.toThrow('chmod failed')
+    const owner = new E2BSandboxOwner({ apiKey: 'test-key' })
+    await expect(owner.getSandbox()).rejects.toThrow('chmod failed')
     expect(fixture.kill).toHaveBeenCalledOnce()
 
-    await fiber.dispose()
+    await owner.dispose()
     expect(fixture.kill).toHaveBeenCalledOnce()
   })
 
@@ -199,10 +184,9 @@ describe('E2BRuntime', () => {
     const fixture = fakeSandbox()
     fixture.getInfo.mockResolvedValueOnce(info)
     sdk.create.mockResolvedValue(fixture.sandbox)
-    const ctx = new Context()
-    await ctx.plugin(E2BRuntime, { apiKey: 'test-key' })
+    const owner = new E2BSandboxOwner({ apiKey: 'test-key' })
 
-    await expect(ctx.e2b.getSandbox()).rejects.toThrow('runtime root must be a real directory')
+    await expect(owner.getSandbox()).rejects.toThrow('runtime root must be a real directory')
     expect(fixture.run).not.toHaveBeenCalled()
     expect(fixture.kill).toHaveBeenCalledOnce()
   })
@@ -213,8 +197,7 @@ describe('E2BRuntime', () => {
     [{ apiKey: 'x', timeoutMs: 0 }, /positive finite/],
   ] as const)('fails self-contained configuration before opening E2B: %j', async (config, message) => {
     vi.stubEnv('E2B_API_KEY', '')
-    const ctx = new Context()
-    await expect(ctx.plugin(E2BRuntime, config)).rejects.toThrow(message)
+    expect(() => new E2BSandboxOwner(config)).toThrow(message)
     expect(sdk.create).not.toHaveBeenCalled()
   })
 
@@ -222,8 +205,7 @@ describe('E2BRuntime', () => {
     const original = process.env.E2B_API_KEY
     delete process.env.E2B_API_KEY
     try {
-      const ctx = new Context()
-      await expect(ctx.plugin(E2BRuntime, {})).rejects.toThrow(/configure apiKey/)
+      expect(() => new E2BSandboxOwner({})).toThrow(/configure apiKey/)
     } finally {
       if (original === undefined) delete process.env.E2B_API_KEY
       else process.env.E2B_API_KEY = original

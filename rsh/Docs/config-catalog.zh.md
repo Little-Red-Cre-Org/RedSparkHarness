@@ -498,24 +498,6 @@ export interface Config {
 
 来源：[`rsh/Modules/Official/credentials/credentials-local/src/document.ts:12`](../Modules/Official/credentials/credentials-local/src/document.ts)
 
-<a id="redsparkrsh-e2b"></a>
-
-## `@redspark/rsh-e2b`
-
-```ts config-catalog
-/** Configuration for the shared E2B sandbox owner. */
-export interface Config {
-  /** API key; omission reads `E2B_API_KEY`. It is never forwarded into the sandbox. */
-  apiKey?: string
-  /** Shared remote working directory, created before adapters receive the sandbox. */
-  cwd?: string
-  /** E2B sandbox lifetime in milliseconds; expiry always deletes the sandbox. */
-  timeoutMs?: number
-}
-```
-
-来源：[`rsh/Modules/Official/e2b/e2b/src/owner.ts:34`](../Modules/Official/e2b/e2b/src/owner.ts)
-
 <a id="redsparkrsh-experimental-code-runtime-python"></a>
 
 ## `@redspark/rsh-experimental-code-runtime-python`
@@ -2476,22 +2458,6 @@ export interface Config {
 
 来源：[`rsh/Engine/subagent/subagent-spawn-in-process/src/index.ts:25`](../Engine/subagent/subagent-spawn-in-process/src/index.ts)
 
-<a id="redsparkrsh-subprocess-e2b"></a>
-
-## `@redspark/rsh-subprocess-e2b`
-
-需要：`e2b`
-
-```ts config-catalog
-/** Configuration for the E2B subprocess adapter. */
-export interface Config {
-  /** Remote status/liveness poll cadence in milliseconds; each tick is one control-plane request. */
-  pollMs?: number
-}
-```
-
-来源：[`rsh/Modules/Official/e2b/subprocess-e2b/src/index.ts:20`](../Modules/Official/e2b/subprocess-e2b/src/index.ts)
-
 <a id="redsparkrsh-system-prompt"></a>
 
 ## `@redspark/rsh-system-prompt`
@@ -3401,7 +3367,6 @@ export interface Config {
 - `@redspark/rsh-command-goal` — 需要 `commands` · `goals`（[`rsh/Engine/goal/command-goal/src/index.ts`](../Engine/goal/command-goal/src/index.ts)）
 - `@redspark/rsh-commands`（[`rsh/Modules/Official/interaction/commands/src/index.ts`](../Modules/Official/interaction/commands/src/index.ts)）
 - `@redspark/rsh-deepseek-llm-api-extensions`（[`rsh/Modules/Official/llm/deepseek-llm-api-extensions/src/index.ts`](../Modules/Official/llm/deepseek-llm-api-extensions/src/index.ts)）
-- `@redspark/rsh-fs-e2b` — 需要 `e2b`（[`rsh/Modules/Official/e2b/fs-e2b/src/index.ts`](../Modules/Official/e2b/fs-e2b/src/index.ts)）
 - `@redspark/rsh-fs-observation-policy`（[`rsh/Modules/Official/fs/fs-observation-policy/src/index.ts`](../Modules/Official/fs/fs-observation-policy/src/index.ts)）
 - `@redspark/rsh-goal-round-driver` — 需要 `agents` · `goals` · `sessions`（[`rsh/Engine/goal/goal-round-driver/src/index.ts`](../Engine/goal/goal-round-driver/src/index.ts)）
 - `@redspark/rsh-host-directory-picker-auto` — 需要 `webServer` · `loader`（[`rsh/Programs/Web/host/directory-picker-auto/src/index.ts`](../Programs/Web/host/directory-picker-auto/src/index.ts)）
@@ -3488,11 +3453,13 @@ export interface Config {
 - `@redspark/rsh-deepseek-account`（[`rsh/Modules/Official/credentials/deepseek-account/src/index.ts`](../Modules/Official/credentials/deepseek-account/src/index.ts)）
 - `@redspark/rsh-deque`（[`rsh/Core/util/deque/src/index.ts`](../Core/util/deque/src/index.ts)）
 - `@redspark/rsh-desktop-host-compatibility`（[`rsh/Compatibility/DSH/boot/desktop-host-compatibility/src/index.ts`](../Compatibility/DSH/boot/desktop-host-compatibility/src/index.ts)）
+- `@redspark/rsh-e2b` ([`rsh/Modules/Official/e2b/e2b/src/index.ts`](../Modules/Official/e2b/e2b/src/index.ts))
 - `@redspark/rsh-errors`（[`rsh/Core/util/errors/src/index.ts`](../Core/util/errors/src/index.ts)）
 - `@redspark/rsh-experimental-agent-team`（[`rsh/Modules/Community/experimental/agent-team/src/index.ts`](../Modules/Community/experimental/agent-team/src/index.ts)）
 - `@redspark/rsh-experimental-tool-agent-team`（[`rsh/Modules/Community/experimental/tool-agent-team/src/index.ts`](../Modules/Community/experimental/tool-agent-team/src/index.ts)）
 - `@redspark/rsh-experimental-webworker-packer`（[`rsh/Modules/Community/experimental/webworker-packer/src/index.ts`](../Modules/Community/experimental/webworker-packer/src/index.ts)）
 - `@redspark/rsh-experimental-webworker-runtime`（[`rsh/Modules/Community/experimental/webworker-runtime/src/index.ts`](../Modules/Community/experimental/webworker-runtime/src/index.ts)）
+- `@redspark/rsh-fs-e2b` ([`rsh/Modules/Official/e2b/fs-e2b/src/index.ts`](../Modules/Official/e2b/fs-e2b/src/index.ts))
 - `@redspark/rsh-home-paths`（[`rsh/Core/util/home-paths/src/index.ts`](../Core/util/home-paths/src/index.ts)）
 - `@redspark/rsh-hook-protocol`（[`rsh/Modules/Official/hooks/hook-protocol/src/index.ts`](../Modules/Official/hooks/hook-protocol/src/index.ts)）
 - `@redspark/rsh-http-proxy`（[`rsh/Core/util/http-proxy/src/index.ts`](../Core/util/http-proxy/src/index.ts)）
@@ -3557,6 +3524,7 @@ export interface Config {
 - `@redspark/rsh-shell-sandbox-core`（[`rsh/Modules/Official/shell/shell-sandbox-core/src/index.ts`](../Modules/Official/shell/shell-sandbox-core/src/index.ts)）
 - `@redspark/rsh-subagent-in-process-driver`（[`rsh/Engine/subagent/subagent-in-process-driver/src/index.ts`](../Engine/subagent/subagent-in-process-driver/src/index.ts)）
 - `@redspark/rsh-subagent-protocol` ([`rsh/Engine/subagent/subagent-protocol/src/index.ts`](../Engine/subagent/subagent-protocol/src/index.ts))
+- `@redspark/rsh-subprocess-e2b` ([`rsh/Modules/Official/e2b/subprocess-e2b/src/index.ts`](../Modules/Official/e2b/subprocess-e2b/src/index.ts))
 - `@redspark/rsh-terminal-ui` ([`rsh/Programs/TUI/terminal-ui/src/index.ts`](../Programs/TUI/terminal-ui/src/index.ts))
 - `@redspark/rsh-timeout`（[`rsh/Core/util/timeout/src/index.ts`](../Core/util/timeout/src/index.ts)）
 - `@redspark/rsh-tmux-context-definition`（[`rsh/Engine/context/tmux-context-definition/src/index.ts`](../Engine/context/tmux-context-definition/src/index.ts)）

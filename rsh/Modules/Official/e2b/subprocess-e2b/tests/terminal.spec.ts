@@ -1,6 +1,5 @@
 import { Buffer } from 'node:buffer'
 import { once } from 'node:events'
-import { Context } from '@redspark/cordis'
 import { describe, expect, it, vi } from 'vitest'
 import {
   CommandExitError,
@@ -9,10 +8,10 @@ import {
   type CommandHandle,
   type CommandResult,
   type Sandbox,
-} from '@redspark/rsh-e2b'
-import type E2BRuntime from '@redspark/rsh-e2b'
+} from 'e2b'
+import type { E2BSandboxAccess } from '@redspark/rsh-e2b/owner'
 import type { SubprocessTerminalSpawnSpec } from '@redspark/rsh-subprocess'
-import E2BSubprocessRuntime from '@redspark/rsh-subprocess-e2b'
+import { E2BSubprocessBackend } from '../src/backend.ts'
 import { spawnE2BTerminal } from '../src/terminal.ts'
 
 function commandError(exitCode: number): CommandExitError {
@@ -226,12 +225,12 @@ class FakeTerminalSandbox {
   } as unknown as Sandbox
 }
 
-function runtime(fake: FakeTerminalSandbox): E2BRuntime {
+function runtime(fake: FakeTerminalSandbox): E2BSandboxAccess {
   return {
     cwd: '/workspace',
     runtimeRoot: '/workspace/.dsh-e2b',
     getSandbox: async () => fake.sandbox,
-  } as unknown as E2BRuntime
+  }
 }
 
 function spec(overrides: Partial<SubprocessTerminalSpawnSpec> = {}): SubprocessTerminalSpawnSpec {
@@ -775,73 +774,66 @@ describe('E2B terminal lifecycle', () => {
 
 describe('E2B subprocess terminal service', () => {
   async function service(fake = new FakeTerminalSandbox()): Promise<{
-    ctx: Context
-    fiber: Awaited<ReturnType<Context['plugin']>>
+    backend: E2BSubprocessBackend
     fake: FakeTerminalSandbox
   }> {
-    const ctx = new Context()
-    ctx.provide('e2b', runtime(fake))
-    const fiber = await ctx.plugin(E2BSubprocessRuntime)
-    return { ctx, fiber, fake }
+    return { backend: new E2BSubprocessBackend(runtime(fake), 20), fake }
   }
 
   it('resolves remote executables', async () => {
-    const { ctx, fake } = await service()
-    await expect(ctx.subprocess.resolveExecutable('/bin/bash')).resolves.toBe('/bin/bash')
-    await expect(ctx.subprocess.resolveExecutable('node', { PATH: '/custom/bin' }, new AbortController().signal))
+    const { backend, fake } = await service()
+    await expect(backend.resolveExecutable('/bin/bash')).resolves.toBe('/bin/bash')
+    await expect(backend.resolveExecutable('node', { PATH: '/custom/bin' }, new AbortController().signal))
       .resolves.toBe('/usr/bin/node')
     fake.resolvedExecutable = 'tools/bin/node\n'
-    await expect(ctx.subprocess.resolveExecutable('node', { PATH: 'tools/bin' }))
+    await expect(backend.resolveExecutable('node', { PATH: 'tools/bin' }))
       .resolves.toBe('/workspace/tools/bin/node')
     const commandOptions = fake.commandOptions.at(-1)
     expect(commandOptions).toMatchObject({ cwd: '/workspace' })
     expect(commandOptions?.envs?.HOME).toMatch(/^\/\.dsh-e2b-control-/)
     expect(commandOptions?.envs).toEqual({ HOME: commandOptions?.envs?.HOME })
-    expect((ctx.e2b)).toBeDefined()
   })
 
   it('rejects invalid executable lookup inputs and results', async () => {
-    const { ctx, fake } = await service()
-    await expect(ctx.subprocess.resolveExecutable('')).rejects.toThrow('non-empty')
-    await expect(ctx.subprocess.resolveExecutable('./bin/server')).rejects.toThrow('is a relative path')
-    await expect(ctx.subprocess.resolveExecutable('node_modules/.bin/server')).rejects.toThrow('is a relative path')
-    await expect(ctx.subprocess.resolveExecutable('node', undefined, AbortSignal.abort(new Error('stop'))))
+    const { backend, fake } = await service()
+    await expect(backend.resolveExecutable('')).rejects.toThrow('non-empty')
+    await expect(backend.resolveExecutable('./bin/server')).rejects.toThrow('is a relative path')
+    await expect(backend.resolveExecutable('node_modules/.bin/server')).rejects.toThrow('is a relative path')
+    await expect(backend.resolveExecutable('node', undefined, AbortSignal.abort(new Error('stop'))))
       .rejects.toThrow('stop')
     fake.resolvedExecutable = 'node\n'
-    await expect(ctx.subprocess.resolveExecutable('node')).rejects.toThrow('did not resolve')
+    await expect(backend.resolveExecutable('node')).rejects.toThrow('did not resolve')
     fake.resolvedExecutable = '/one\n/two\n'
-    await expect(ctx.subprocess.resolveExecutable('node')).rejects.toThrow('did not resolve')
+    await expect(backend.resolveExecutable('node')).rejects.toThrow('did not resolve')
   })
 
   it('rejects a non-positive poll cadence at load', async () => {
-    const ctx = new Context()
-    ctx.provide('e2b', runtime(new FakeTerminalSandbox()))
-    await expect(ctx.plugin(E2BSubprocessRuntime, { pollMs: 0 }))
-      .rejects.toThrow('pollMs must be a positive safe integer')
-    const explicit = await ctx.plugin(E2BSubprocessRuntime, { pollMs: 5 })
+    expect(() => new E2BSubprocessBackend(runtime(new FakeTerminalSandbox()), 0))
+      .toThrow('pollMs must be a positive safe integer')
+    const explicit = new E2BSubprocessBackend(runtime(new FakeTerminalSandbox()), 5)
     await explicit.dispose()
   })
 
   it('owns live terminals through service disposal', async () => {
-    const { ctx, fiber, fake } = await service()
-    const terminal = await ctx.subprocess.spawnTerminal(spec({ signal: new AbortController().signal }))
-    await fiber.dispose()
+    const { backend, fake } = await service()
+    const terminal = await backend.spawnTerminal(spec({ signal: new AbortController().signal }))
+    await backend.dispose()
     await expect(terminal.done).resolves.toEqual({ exitCode: null, signal: 'SIGTERM' })
     expect(fake.handle.disconnects).toBe(1)
   })
 
   it('joins and rejects terminal setup that completes during service disposal', async () => {
     const fake = new FakeTerminalSandbox()
-    const { ctx, fiber } = await service(fake)
+    const { backend } = await service(fake)
     let disposing: Promise<void> | undefined
     fake.afterSessionLookup = () => {
       fake.afterSessionLookup = undefined
       queueMicrotask(() => {
-        queueMicrotask(() => { disposing = fiber.dispose() })
+        queueMicrotask(() => { disposing = backend.dispose() })
       })
     }
-    const subprocess = ctx.subprocess
-    const spawning = ctx.subprocess.spawnTerminal(spec())
+    const subprocess = backend
+    const spawning = backend.spawnTerminal(spec())
     const rejected = expect(spawning).rejects.toThrow('service disposed during terminal setup')
     await vi.waitFor(() => { expect(disposing).toBeDefined() })
     await expect(subprocess.spawnTerminal(spec())).rejects.toThrow('service is disposing')
@@ -856,12 +848,12 @@ describe('E2B subprocess terminal service', () => {
   it('aborts and rolls back terminal setup that cannot publish its output boundary during disposal', async () => {
     const fake = new FakeTerminalSandbox()
     fake.emitOutputMarker = false
-    const { ctx, fiber } = await service(fake)
-    const spawning = ctx.subprocess.spawnTerminal(spec())
+    const { backend } = await service(fake)
+    const spawning = backend.spawnTerminal(spec())
     const rejected = expect(spawning).rejects.toThrow('service disposed during terminal setup')
     await vi.waitFor(() => { expect(fake.inputs).toHaveLength(1) })
 
-    await fiber.dispose()
+    await backend.dispose()
     await rejected
     expect(fake.groups).toEqual([])
     expect(fake.handle.disconnects).toBe(1)
@@ -879,55 +871,55 @@ describe('E2B subprocess terminal service', () => {
         if (signal?.aborted === true) onAbort()
       })
     }
-    const { ctx, fiber } = await service(fake)
-    const spawning = ctx.subprocess.spawnTerminal(spec())
+    const { backend } = await service(fake)
+    const spawning = backend.spawnTerminal(spec())
     const rejected = expect(spawning).rejects.toThrow('service disposed during terminal setup')
     await vi.waitFor(() => { expect(fake.directories.some(path => path.includes('/terminals/'))).toBe(true) })
 
-    await fiber.dispose()
+    await backend.dispose()
     await rejected
     expect(fake.removed.some(path => path.includes('/terminals/'))).toBe(true)
     expect(fake.createOptions).toBeUndefined()
   })
 
   it('releases naturally settled terminals and validates terminal requests', async () => {
-    const { ctx, fiber, fake } = await service()
+    const { backend, fake } = await service()
     for (const request of [
       spec({ argv: [] }),
       spec({ signal: AbortSignal.abort(new Error('cancelled')) }),
     ]) {
-      await expect(ctx.subprocess.spawnTerminal(request)).rejects.toThrow()
+      await expect(backend.spawnTerminal(request)).rejects.toThrow()
     }
 
     fake.groups = []
-    const terminal = await ctx.subprocess.spawnTerminal(spec())
+    const terminal = await backend.spawnTerminal(spec())
     fake.handle.succeed(0)
     await terminal.done
     await terminal.terminate()
     const signals = fake.commands.filter(command => command.startsWith('kill -')).length
-    await fiber.dispose()
+    await backend.dispose()
     expect(fake.commands.filter(command => command.startsWith('kill -'))).toHaveLength(signals)
   })
 
   it('contains a failed automatic terminal release until service disposal retries it', async () => {
-    const { fiber, fake } = await service()
+    const { backend, fake } = await service()
     fake.clearOnTerm = false
     fake.clearOnKill = false
-    const terminal = await (fiber.ctx).subprocess.spawnTerminal(spec({ graceMs: 1 }))
+    const terminal = await backend.spawnTerminal(spec({ graceMs: 1 }))
     fake.handle.succeed(0)
     await terminal.done
     await new Promise(resolve => setTimeout(resolve, 10))
     expect(fake.commands).toContain('kill -KILL -- -123')
 
     fake.groups = []
-    await fiber.dispose()
+    await backend.dispose()
     await expect(terminal.terminate()).resolves.toBeUndefined()
   })
 
   it('contains an immediate automatic terminal release rejection before disposal retries it', async () => {
-    const { fiber, fake } = await service()
+    const { backend, fake } = await service()
     fake.groups = []
-    const terminal = await (fiber.ctx).subprocess.spawnTerminal(spec())
+    const terminal = await backend.spawnTerminal(spec())
     const terminate = vi.spyOn(terminal, 'terminate')
       .mockRejectedValueOnce(new Error('automatic release failed'))
     fake.handle.succeed(0)
@@ -935,7 +927,7 @@ describe('E2B subprocess terminal service', () => {
     await vi.waitFor(() => { expect(terminate).toHaveBeenCalledTimes(1) })
     await new Promise(resolve => setTimeout(resolve, 0))
 
-    await fiber.dispose()
+    await backend.dispose()
     expect(terminate).toHaveBeenCalledTimes(2)
     expect(fake.handle.disconnects).toBe(1)
   })

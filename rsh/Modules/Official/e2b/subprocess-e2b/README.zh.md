@@ -41,7 +41,7 @@ Host-only 的 `./native` 入口要求 `e2b`、只提供 `subprocess`、把 `poll
 |---|---|---|
 | `pollMs` | `20` | 包检查运行中命令状态的频率（毫秒） |
 
-生成的[配置目录](../../../../Docs/config-catalog.zh.md#redsparkrsh-subprocess-e2b)是每个受支持字段及其 JSDoc 的穷尽式真源。
+`src/native.ts` 中的 `resolveNativeE2BSubprocessConfig` 校验器是受支持字段及其默认值的穷尽式真源。本包是库而不是 Cordis 插件，因此生成的配置目录不会列出它。
 
 ### 运行命令
 
@@ -81,8 +81,8 @@ agent 可以在沙箱中打开交互式终端、发送输入、读取输出，�
 
 | 文件 | 职责 |
 |---|---|
-| [`src/backend.ts`](src/backend.ts) | 两个安装器共享的子进程操作与拆除 |
-| [`src/index.ts`](src/index.ts) | Cordis `E2BSubprocessRuntime` 适配器与 `pollMs` schema |
+| [`src/backend.ts`](src/backend.ts) | 子进程操作与拆除 |
+| [`src/index.ts`](src/index.ts) | 子进程后端的不依赖 Cordis 导出 |
 | [`src/native.ts`](src/native.ts) | Native Host 安装器；要求 `e2b` 且只提供 `subprocess` |
 | [`src/process.ts`](src/process.ts) | `E2BSubprocessHandle`：远程包装层、发布、终止、输出投影 |
 | [`src/terminal.ts`](src/terminal.ts) | `E2BTerminalHandle`：PTY 分配、会话拆除 |
@@ -93,7 +93,7 @@ agent 可以在沙箱中打开交互式终端、发送输入、读取输出，�
 
 ### 远程包装层
 
-引导脚本会从沙箱 PATH 解析自身所需的工具，拒绝任何缺失或不可执行的路径，通过 `env -i` 与 `setsid --wait` 执行 exec，把进程组 ID 与退出码发布到 `ctx.e2b.runtimeRoot/processes` 下的私有文件，并把 stdout 与 stderr 重定向到带保留完成帧的 base64 编码器；`tee` 与 `head -c` 约束可选 spill 文件的大小。
+引导脚本会从沙箱 PATH 解析自身所需的工具，拒绝任何缺失或不可执行的路径，通过 `env -i` 与 `setsid --wait` 执行 exec，把进程组 ID 与退出码发布到所有者 `runtimeRoot/processes` 下的私有文件，并把 stdout 与 stderr 重定向到带保留完成帧的 base64 编码器；`tee` 与 `head -c` 约束可选 spill 文件的大小。
 
 ### 私有进程身份与发布
 
@@ -121,11 +121,10 @@ agent 可以在沙箱中打开交互式终端、发送输入、读取输出，�
 当包级约定不够用时阅读以下页面。它们从家族组合逐步进入子进程 seam 表面，以及渲染它的消费方。
 
 - [E2B 提供方家族地图](../README.zh.md)——沙箱所有者与三包组合。
-- [子进程子系统](../../../../Docs/subsystems/subprocess.zh.md)——子进程 seam 约定与生成的 Cordis 表面。
+- [子进程子系统](../../../../Docs/subsystems/subprocess.zh.md)——子进程 seam 约定。
 - [子进程 seam 包](../../../../Core/subprocess/subprocess/README.zh.md)——本提供方实现的抽象约定。
 - [Bash 执行器](../../shell/bash-local/README.zh.md)——向模型渲染所启动命令的消费方。
 - [PTY 终端后端](../../terminal/terminal-bash/README.zh.md)——渲染终端会话的消费方。
-- [生成配置目录](../../../../Docs/config-catalog.zh.md#redsparkrsh-subprocess-e2b)——每个受支持配置字段及其源声明。
 
 -----
 

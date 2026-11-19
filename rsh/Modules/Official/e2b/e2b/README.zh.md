@@ -35,7 +35,7 @@ kind: "package-reference"
 
 三个设置很重要：API 密钥（或 `E2B_API_KEY` 环境变量）、绝对远程工作目录与沙箱生命周期。密钥错误、相对工作目录或无效生命周期都会在任何远程工作开始前拒绝启动。
 
-Host-only 的 `./native` 入口校验可选的 `apiKey`、`cwd` 与 `timeoutMs`，提供 `e2b` 服务，并且不导入 Cordis。`./owner` 把同一个沙箱所有者暴露给文件系统与子进程适配器。
+Host-only 的 `./native` 入口校验可选的 `apiKey`、`cwd` 与 `timeoutMs`，提供 `e2b` 服务，并且不导入 Cordis。包根入口与 `./owner` 把同一个不依赖 Cordis 的沙箱所有者暴露给文件系统与子进程适配器。
 
 ```yaml
 - name: '@redspark/rsh-e2b'
@@ -54,7 +54,7 @@ Host-only 的 `./native` 入口校验可选的 `apiKey`、`cwd` 与 `timeoutMs`�
 | `cwd` | `/home/user/workspace` | 家族共享的远程工作目录；必须是绝对 POSIX 路径 |
 | `timeoutMs` | `300,000` | 沙箱生命周期（毫秒）；到期后沙箱被删除 |
 
-生成的[配置目录](../../../../Docs/config-catalog.zh.md#redsparkrsh-e2b)完整列出了每个受支持字段及其 JSDoc，是这些信息的真源。
+`src/native.ts` 中的 `resolveNativeE2BConfig` 校验器是受支持字段及其默认值的穷尽式真源。本包是库而不是 Cordis 插件，因此生成的配置目录不会列出它。
 
 ### 你能得到什么
 
@@ -85,7 +85,7 @@ Host-only 的 `./native` 入口校验可选的 `apiKey`、`cwd` 与 `timeoutMs`�
 | 文件 | 职责 |
 |---|---|
 | [`src/owner.ts`](src/owner.ts) | 沙箱所有者：校验、创建、`getSandbox` 与拆除 |
-| [`src/index.ts`](src/index.ts) | Cordis `E2BRuntime` 适配器、`Config` schema 与 SDK 再导出 |
+| [`src/index.ts`](src/index.ts) | 所有者及其辅助函数的不依赖 Cordis 导出 |
 | [`src/native.ts`](src/native.ts) | Native Host 安装器；提供 `e2b` 且不导入 Cordis |
 | — | 不发布运行时不变式伴生入口；沙箱创建与拆除只有一个 SDK promise，没有可交叉核对的独立事件或可变数据关系。 |
 
@@ -107,9 +107,8 @@ Host-only 的 `./native` 入口校验可选的 `apiKey`、`cwd` 与 `timeoutMs`�
 当包级约定不够用时阅读以下页面。它们从家族组合逐步进入子进程 seam 表面，以及远程执行世界背后的决策证据。
 
 - [E2B 提供方家族地图](../README.zh.md)——三个包与可选组合。
-- [子进程子系统](../../../../Docs/subsystems/subprocess.zh.md)——子进程 seam 约定与生成的 Cordis 表面，包括 `ctx.e2b`。
+- [子进程子系统](../../../../Docs/subsystems/subprocess.zh.md)——子进程 seam 约定。
 - [可移植执行世界决策](../../../../../.agents/notes/implemented/architecture/2026-07-28-portable-execution-world-consumers.zh.md)——消费方为何委托给 `ctx.fs` 与 `ctx.subprocess`，以及留在宿主中的内容。
-- [生成配置目录](../../../../Docs/config-catalog.zh.md#redsparkrsh-e2b)——每个受支持配置字段及其源声明。
 
 -----
 
@@ -129,7 +128,7 @@ Host-only 的 `./native` 入口校验可选的 `apiKey`、`cwd` 与 `timeoutMs`�
 
 这些限制说明 E2B 家族何时不合适，或何时需要特别的运维注意。它们是当前包约束，不是任务积压。
 
-- **不是完整的 harness 运行时**：Cordis 服务、agent／会话状态、会话日志、LLM（大语言模型）请求、skill（技能）和 SDK 侧缓冲仍留在宿主进程中。
+- **不是完整的 harness 运行时**：harness 服务、agent／会话状态、会话日志、LLM（大语言模型）请求、skill（技能）和 SDK 侧缓冲仍留在宿主进程中。
 - **沙箱状态是短暂的**：dispose 与超时都会删除沙箱；重新连接、pause/leave 保留、模板、卷和快照均不在本 POC 范围内。
 - **没有配置部署平台**：网络策略、宿主工作区同步与沙箱发现均不在本 POC 范围内。
 - **`cwd` 是解析约定，而不是包含边界**：适配器与命令可以访问沙箱中的其他路径；E2B 网络访问也继续采用基础镜像的策略。

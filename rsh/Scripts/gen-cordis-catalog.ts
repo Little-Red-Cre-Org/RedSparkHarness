@@ -74,7 +74,6 @@ export const SERVICE_PAGE: Record<string, string> = {
   authorizationController: 'settings.md',
   directoryPicker: 'workspace.md',
   deepseekLlmApiExtensions: 'llm-streaming.md',
-  e2b: 'subprocess.md',
   fileUploads: 'attachment.md',
   fileReferences: 'session-reference.md',
   fs: 'filesystem.md',

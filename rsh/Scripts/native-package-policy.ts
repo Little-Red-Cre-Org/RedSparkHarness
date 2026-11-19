@@ -76,6 +76,9 @@ export const nativePackageDirectories: ReadonlySet<string> = new Set([
   'rsh/Modules/Official/subagent/acp-protocol',
   'rsh/Modules/Official/sandbox/native-sandbox-policy',
   'rsh/Modules/Official/fs/native-file-reference-local',
+  'rsh/Modules/Official/e2b/e2b',
+  'rsh/Modules/Official/e2b/fs-e2b',
+  'rsh/Modules/Official/e2b/subprocess-e2b',
   'rsh/Modules/Official/credentials/deepseek-account',
   'rsh/Modules/Official/sandbox/sandbox-windows-acl',
   'rsh/Programs/Web/api/native-web-session-controller',
@@ -156,6 +159,9 @@ export const nativePackageTargets: ReadonlyMap<string, readonly ('host' | 'clien
   ['rsh/Programs/Web/host/native-web-assets', ['host']],
   ['rsh/Modules/Official/ide/ide-code-oss', ['host']],
   ['rsh/Programs/Web/host/native-ide', ['host']],
+  ['rsh/Modules/Official/e2b/e2b', ['host']],
+  ['rsh/Modules/Official/e2b/fs-e2b', ['host']],
+  ['rsh/Modules/Official/e2b/subprocess-e2b', ['host']],
 ])
 
 /** Mixed legacy packages whose Cordis entry and native installer share a package. */
@@ -240,9 +246,6 @@ export const mixedNativeEntryDirectories: ReadonlyMap<string, string> = new Map(
   ['rsh/Modules/Official/skill/tool-skill', 'Cordis and Native skill Consumers share catalog rendering and invocation validation'],
   ['rsh/Modules/Official/skill/archify', 'Cordis and Native Archify Providers share one hidden Skill definition, managed shell environment, and automatic-request matcher'],
   ['rsh/Core/subprocess/subprocess-local', 'Cordis and native Providers share managed process and terminal ownership'],
-  ['rsh/Modules/Official/e2b/e2b', 'Cordis and native E2B owners share one sandbox lifetime and remote working directory'],
-  ['rsh/Modules/Official/e2b/fs-e2b', 'Cordis and native filesystem Providers share the remote sandbox backend'],
-  ['rsh/Modules/Official/e2b/subprocess-e2b', 'Cordis and native subprocess Providers share the remote sandbox process owner'],
   ['rsh/Programs/Web/client/ui-renderer', 'Cordis and native Client entries share slot rendering'],
   ['rsh/Programs/Web/client/connection', 'Cordis and native Client entries share authenticated transport'],
   ['rsh/Programs/Web/client/locale', 'Native and compatibility Clients share dictionary values while each owns its locale installer'],

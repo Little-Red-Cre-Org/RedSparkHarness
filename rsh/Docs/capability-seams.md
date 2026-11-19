@@ -135,13 +135,10 @@ flowchart LR
   pkg_sdk_minimal["sdk-minimal"]
   pkg_goal["goal"]
   svc_goals["ctx.goals<br/>Same-session goal domain"]
-  pkg_e2b["e2b"]
-  svc_e2b["ctx.e2b<br/>E2B sandbox lifecycle owner"]
-  pkg_fs_e2b["fs-e2b"]
-  pkg_subprocess_e2b["subprocess-e2b"]
   pkg_subprocess["subprocess"]
   svc_subprocess["ctx.subprocess<br/>Subprocess seam"]
   pkg_subprocess_local["subprocess-local"]
+  pkg_subprocess_e2b["subprocess-e2b"]
   pkg_bash_local["bash-local"]
   pkg_bash_sandbox["bash-sandbox"]
   pkg_terminal_bash["terminal-bash"]
@@ -176,6 +173,7 @@ flowchart LR
   pkg_fs["fs"]
   svc_fs["ctx.fs<br/>Filesystem provider seam"]
   pkg_fs_local["fs-local"]
+  pkg_fs_e2b["fs-e2b"]
   pkg_fs_observation_policy["fs-observation-policy"]
   pkg_compaction["compaction"]
   svc_compaction["ctx.compaction<br/>Compaction seam"]
@@ -251,7 +249,6 @@ flowchart LR
   pkg_credentials --> svc_credentials
   pkg_credentials_local --> svc_credentials
   pkg_deepseek_llm_api_extensions --> svc_deepseekLlmApiExtensions
-  pkg_e2b --> svc_e2b
   pkg_experimental_code_runtime_python --> svc_codeRuntime
   pkg_file_reference --> svc_fileReferences
   pkg_file_reference_local --> svc_fileReferences
@@ -363,8 +360,6 @@ flowchart LR
   svc_credentials --> pkg_llm_pi_ai
   svc_deepseekLlmApiExtensions --> pkg_llm_deepseek
   svc_directoryPicker --> pkg_api_workspace_controller
-  svc_e2b --> pkg_fs_e2b
-  svc_e2b --> pkg_subprocess_e2b
   svc_fileReferences --> pkg_api_session_controller
   svc_fileUploads --> pkg_api_session_controller
   svc_fs --> pkg_tool_fs
@@ -514,7 +509,6 @@ flowchart LR
 | `ctx.agentDefaultModel` | `core` | [`agent-default-model`](../Engine/core/agent-default-model) | - | [`api-session-controller`](../Programs/Web/api/session-controller), [`headless`](../Compatibility/DSH/bundle/headless) | - | Layers the default ModelSelection through settings so direct and Host-backed Agent entry points share one state owner. |
 | `ctx.agentLoop` | `bundle` | [`agent-loop`](../Engine/core/agent-loop) | - | [`base`](../Compatibility/DSH/bundle/base), [`sdk-minimal`](../Compatibility/DSH/bundle/sdk-minimal) | - | The one concrete loop plugin; extension packages depend on dsh-agent events and services, not on this package. |
 | `ctx.goals` | `core` | [`goal`](../Engine/goal/goal) | - | - | - | Folds revisioned objective state from the session log and keeps live continuation activation process-local. |
-| `ctx.e2b` | `core` | [`e2b`](../Modules/Official/e2b/e2b) | - | [`fs-e2b`](../Modules/Official/e2b/fs-e2b), [`subprocess-e2b`](../Modules/Official/e2b/subprocess-e2b) | - | Owns one shared E2B SDK handle, remote working directory, and final sandbox disposition so both fundamental E2B providers inhabit the same Linux runtime. |
 | `ctx.subprocess` | `seam` | [`subprocess`](../Core/subprocess/subprocess) | [`subprocess-local`](../Core/subprocess/subprocess-local), [`subprocess-e2b`](../Modules/Official/e2b/subprocess-e2b) | [`bash-local`](../Modules/Official/shell/bash-local), [`bash-sandbox`](../Modules/Official/shell/bash-sandbox), [`terminal-bash`](../Modules/Official/terminal/terminal-bash), [`lsp-stdio`](../Modules/Official/lsp/lsp-stdio), [`subagent-acp`](../Compatibility/DSH/subagent/subagent-acp), [`subagent-codex`](../Compatibility/DSH/bridge/subagent-codex), [`subagent-claude-code`](../Modules/Official/subagent/subagent-claude-code) | - | The bash executors, the PTY shell backend, the LSP host, and the out-of-process ACP, Codex, and Claude Code subagent backends spawn through ctx.subprocess; the service owns process coordinates, tree/session lifetime, stdio dispositions, terminal mechanics, and kill escalation. |
 | `ctx.shell` | `seam` | [`shell`](../Modules/Official/shell/shell) | [`bash-local`](../Modules/Official/shell/bash-local), [`bash-sandbox`](../Modules/Official/shell/bash-sandbox), [`pwsh-local`](../Modules/Official/shell/pwsh-local) | [`tool-bash`](../Modules/Official/shell/tool-bash), [`tool-pwsh`](../Modules/Official/shell/tool-pwsh), [`hooks-claude-code`](../Modules/Official/hooks/hooks-claude-code), [`hooks-codex`](../Modules/Official/hooks/hooks-codex) | - | The model-facing shell tools and hook bridges consume this seam; sandboxed, remote, or PowerShell executors replace bash-local without touching them. |
 | `ctx.shellEnv` | `core` | [`shell-env`](../Modules/Official/shell/shell-env) | - | [`tool-bash`](../Modules/Official/shell/tool-bash), [`tool-pwsh`](../Modules/Official/shell/tool-pwsh) | - | Plugins declare effect-scoped RSH_* facts; each shell tool collects one trusted snapshot per execution and its executor rebuilds the namespace. |
