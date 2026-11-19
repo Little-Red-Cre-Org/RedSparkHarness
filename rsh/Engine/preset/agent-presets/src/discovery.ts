@@ -53,11 +53,9 @@ export const USER_PRESET_DIR = '.agent-presets'
 /**
  * The shipped presets, bundled inside this package: the roster's built-in
  * compositions travel with the machinery that mounts them, the way each
- * preset's own skills travel inside its directory. Resolved relative to this
- * module so both launch layouts work — `src/` under tsx and the bundled
- * `lib/` sit one level below the package root.
+ * preset's own skills travel inside its directory.
  */
-export const SHIPPED_PRESET_ROOT = fileURLToPath(new URL('../presets/', import.meta.url))
+export { SHIPPED_PRESET_ROOT } from './shipped-root.ts'
 
 /**
  * Why `rows` cannot be an entry list, or undefined when it can.

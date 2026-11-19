@@ -58,6 +58,7 @@
     "lib/controller-*.js",
     "lib/native-*.js",
     "lib/*.css",
+    "lib/client/*.css",
     "lib/types/**/*.d.ts"
   ],
   "license": "MIT",

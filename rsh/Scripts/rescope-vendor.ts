@@ -108,6 +108,10 @@ const GENERIC_SKIPS: readonly GenericSkip[] = [
   { file: 'rsh/Docs/subsystems/extensions.md', upstream: ['cordis'] },
   { file: 'rsh/Docs/subsystems/extensions.zh.md', upstream: ['cordis'] },
   { file: 'rsh/Programs/Web/api/remotes/src/remote-events.ts', upstream: ['cordis'] },
+  // The tarball's decompressed content and a `node_modules/<scope>/<name>` path
+  // segment are both the bare name, not an import specifier.
+  { file: 'rsh/Programs/Desktop/tests/core-package-set.spec.ts', upstream: ['cordis'] },
+  { file: 'rsh/Programs/Desktop/tests/project-manager.spec.ts', upstream: ['cordis'] },
   // `cordis/tree` is an Inspector observation topic, not a package subpath.
   { file: 'rsh/Modules/Community/experimental/inspector/src/shared/bridge/messages/cordis.ts', upstream: ['cordis'] },
   { file: 'rsh/Modules/Community/experimental/inspector/tests/cordis-query.host.spec.ts', upstream: ['cordis'] },

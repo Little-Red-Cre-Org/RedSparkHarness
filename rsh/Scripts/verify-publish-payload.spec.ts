@@ -186,6 +186,20 @@ describe('payloadViolations relative specifiers', () => {
     })
     expect(payloadViolations(subject)).toEqual([])
   })
+
+  it('exempts exactly the declared source-mode runner URLs', () => {
+    const name = '@redspark/rsh-subprocess-local'
+    const exempt = payload(
+      { 'lib/native.js': 'new URL("../../../../../tsconfig.base.json", import.meta.url)\n' },
+      { name },
+    )
+    expect(payloadViolations(exempt)).toEqual([])
+    const other = payload(
+      { 'lib/native.js': 'new URL("../../other.json", import.meta.url)\n' },
+      { name },
+    )
+    expect(reported(other)).toEqual(['lib/native.js:1 ../../other.json'])
+  })
 })
 
 describe('payloadViolations bare specifiers', () => {
@@ -203,6 +217,22 @@ describe('payloadViolations bare specifiers', () => {
     const subject = payload({ 'lib/native.js': 'import clsx from "clsx"\n' })
     expect(payloadViolations(subject)[0]?.reason)
       .toBe('clsx is declared in no installing dependency section')
+  })
+
+  it('lets a Client-only entry leave browser build inputs in devDependencies', () => {
+    const subject = payload(
+      { 'lib/native.js': 'import clsx from "clsx"\n' },
+      { dsh: { native: { targets: ['client'] } }, devDependencies: { clsx: '^2.0.0' } },
+    )
+    expect(payloadViolations(subject)).toEqual([])
+  })
+
+  it('keeps the installation rule for a Host-target entry', () => {
+    const subject = payload(
+      { 'lib/native.js': 'import clsx from "clsx"\n' },
+      { dsh: { native: { targets: ['host'] } }, devDependencies: { clsx: '^2.0.0' } },
+    )
+    expect(reported(subject)).toEqual(['lib/native.js:1 clsx'])
   })
 
   it.each(['dependencies', 'peerDependencies', 'optionalDependencies'])(

@@ -2,8 +2,8 @@
 import { readFileSync, readdirSync } from 'node:fs'
 import { chmod, cp, mkdir, readFile, readdir, rm, stat, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
-import { fileURLToPath } from 'node:url'
 import { z } from 'zod'
+import { SHIPPED_PRESET_ROOT } from './shipped-root.ts'
 import { parsePresetMetadata, renderPresetMetadata, METADATA_FILE, type PresetMetadata } from './metadata.ts'
 import { PRESET_ID, type PresetRoot } from './preset.ts'
 
@@ -125,7 +125,7 @@ function nativeInstallations(directory: string): Pick<NativePresetFolder, 'statu
  */
 export function nativePresetRoots(home: string): readonly PresetRoot[] {
   return [
-    { path: fileURLToPath(new URL('../presets/', import.meta.url)), trust: 'system' },
+    { path: SHIPPED_PRESET_ROOT, trust: 'system' },
     { path: join(home, '.agent-presets'), trust: 'user' },
   ]
 }

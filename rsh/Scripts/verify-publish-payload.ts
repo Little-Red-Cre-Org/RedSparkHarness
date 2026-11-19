@@ -21,6 +21,11 @@
  * `exports["./native"]`. That export is what a Native composition resolves, so
  * a defect there reaches the Desktop runtime, not a test.
  *
+ * Bare-specifier installation rules apply only to Host-target entries. A
+ * Client-only Native entry is a statically linked browser library whose bare
+ * imports the Web shell build resolves; its browser inputs stay in
+ * `devDependencies` by policy.
+ *
  * ## Which bare specifiers are legal outside the installing sections
  *
  * The base rule is that a bare specifier must appear in the package's
@@ -42,6 +47,8 @@
  *   exact module-table request whose supplier is the dynamic row or a static
  *   table key (`rsh/Programs/Web/client/AGENTS.md`, "Shared modules and the
  *   module graph"), so it likewise installs nothing of its own.
+ * - {@link SOURCE_MODE_ONLY_SPECIFIERS} — URLs the package reads only on its
+ *   TypeScript source-launch branch, which an installed consumer never takes.
  *
  * Everything else is reported. `node:` builtins and same-package subpaths are
  * not package relationships at all and are excluded before the rule applies.
@@ -275,6 +282,43 @@ export function moduleTableExemption(
 }
 
 /**
+ * Relative URLs a payload carries only inside a source-launch branch.
+ *
+ * Each package selects its `.ts` entry only while the loading module is
+ * TypeScript, so an installed consumer never reads those paths. The literals
+ * stay in the bundle because tsdown cannot fold the `import.meta.url`
+ * extension check.
+ */
+const SOURCE_MODE_ONLY_SPECIFIERS: ReadonlyMap<string, readonly string[]> = new Map([
+  ['@redspark/rsh-subprocess-local', ['../../../../../tsconfig.base.json', './bin.ts']],
+  ['@redspark/rsh-host-directory-picker-native', ['./win32-dialog-worker.ts']],
+])
+
+/**
+ * Whether a relative specifier is a declared source-mode-only URL.
+ * @param packageName - packed package name.
+ * @param specifier - relative specifier found in the payload.
+ * @returns True only for the exact package and literal.
+ */
+function isSourceModeOnlySpecifier(packageName: string, specifier: string): boolean {
+  return SOURCE_MODE_ONLY_SPECIFIERS.get(packageName)?.includes(specifier) === true
+}
+
+/**
+ * Native targets a packed manifest declares.
+ * @param manifest - packed manifest.
+ * @returns Declared target names, or an empty list when the field is absent.
+ */
+function nativeTargets(manifest: Readonly<Record<string, unknown>>): readonly string[] {
+  const dsh = manifest.dsh
+  if (dsh === null || typeof dsh !== 'object' || Array.isArray(dsh)) return []
+  const native = (dsh as Record<string, unknown>).native
+  if (native === null || typeof native !== 'object' || Array.isArray(native)) return []
+  const targets = (native as Record<string, unknown>).targets
+  return Array.isArray(targets) ? targets.filter((target): target is string => typeof target === 'string') : []
+}
+
+/**
  * Every specifier one packed payload cannot resolve.
  *
  * The payload is the authority, not the working tree: `files` is the member
@@ -289,6 +333,12 @@ export function payloadViolations(
 ): PayloadViolation[] {
   const name = typeof payload.manifest.name === 'string' ? payload.manifest.name : '(unnamed)'
   const violations: PayloadViolation[] = []
+  const targets = nativeTargets(payload.manifest)
+  // A Client-only Native entry is a statically linked browser library. The
+  // Web shell build resolves its bare specifiers, and its browser build inputs
+  // stay in devDependencies (rsh/Programs/Web/client/AGENTS.md, "Dependency
+  // declaration" rules 5-6), so installation sections do not describe them.
+  const clientOnly = targets.length > 0 && !targets.includes('host')
 
   const exported = payload.manifest.exports
   const nativeEntry = exported !== null && typeof exported === 'object' && !Array.isArray(exported)
@@ -324,6 +374,7 @@ export function payloadViolations(
       // relationship, so neither rule applies to it.
       if (specifier.startsWith('node:')) continue
       if (!isBareSpecifier(specifier)) {
+        if (isSourceModeOnlySpecifier(name, specifier)) continue
         if (!relativeSpecifierResolves(payload.files, file, specifier)) {
           violations.push({
             package: name,
@@ -334,6 +385,7 @@ export function payloadViolations(
         }
         continue
       }
+      if (clientOnly) continue
       if (packageNameOf(specifier) === name) continue
       if (moduleTableExemption(specifier, payload.manifest, platformModules) !== undefined) continue
       if (INSTALLING_SECTIONS.some(section => sectionDeclares(payload.manifest, section, packageNameOf(specifier)))) continue

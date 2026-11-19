@@ -379,6 +379,7 @@ export const nativeCompatibilityOnlyPeers: ReadonlyMap<string, readonly string[]
   ['rsh/Engine/session/session-title-all-prompts-llm', ['@redspark/cordis', '@redspark/rsh-llm', '@redspark/rsh-session', '@redspark/rsh-session-title']],
   ['rsh/Modules/Official/automation/task-scheduler', ['@redspark/rsh-tools', '@redspark/rsh-typert-protocol']],
   ['rsh/Modules/Official/fs/tool-fs-search', ['@redspark/rsh-tools', '@redspark/rsh-system-prompt']],
+  ['rsh/Modules/Official/fs/tool-str-replace-editor', ['@redspark/rsh-tools']],
   ['rsh/Modules/Official/web/web', ['@redspark/cordis']],
   ['rsh/Modules/Official/web/web-fetch-http', ['@redspark/cordis']],
   ['rsh/Modules/Official/web/web-search-deepseek', ['@redspark/cordis', '@redspark/rsh-agent', '@redspark/rsh-compat-settings-definition', '@redspark/rsh-session']],
