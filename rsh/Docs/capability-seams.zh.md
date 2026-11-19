@@ -108,7 +108,6 @@ flowchart LR
   pkg_tool_web["tool-web"]
   svc_tools["ctx.tools<br/>Tool registry and guarded execution pipeline"]
   pkg_tool_ask_user["tool-ask-user"]
-  pkg_tool_cordis["tool-cordis"]
   pkg_tool_skill["tool-skill"]
   pkg_tool_todo["tool-todo"]
   pkg_user_questions["user-questions"]
@@ -172,7 +171,7 @@ flowchart LR
   svc_permissionPresets["ctx.permissionPresets<br/>Permission presets"]
   pkg_code_runtime["code-runtime"]
   svc_codeRuntime["ctx.codeRuntime<br/>Code-execution seam"]
-  pkg_code_runtime_worker_thread["code-runtime-worker-thread"]
+  pkg_native_code_runtime["native-code-runtime"]
   pkg_experimental_code_runtime_python["experimental-code-runtime-python"]
   pkg_plugin_host["plugin-host"]
   svc_pluginHost["ctx.pluginHost<br/>RSH plugin-role registry"]
@@ -224,9 +223,6 @@ flowchart LR
   pkg_lsp["lsp"]
   svc_lsp["ctx.lsp<br/>Language-server navigation seam"]
   pkg_tool_lsp["tool-lsp"]
-  pkg_cordis_host_runner["cordis-host-runner"]
-  svc_dynamicCordisRunner["ctx.dynamicCordisRunner<br/>Dynamic Cordis package host runner"]
-  svc_cordisInspect["ctx.cordisInspect<br/>Dynamic Cordis inspect registry"]
   pkg_agent --> svc_agents
   pkg_agent_default_model --> svc_agentDefaultModel
   pkg_agent_loop --> svc_agentLoop
@@ -249,14 +245,11 @@ flowchart LR
   pkg_client_file_upload --> svc_fileUploads
   pkg_client_modules --> svc_clientModules
   pkg_code_runtime --> svc_codeRuntime
-  pkg_code_runtime_worker_thread --> svc_codeRuntime
   pkg_command_feedback --> svc_sessionFeedback
   pkg_commands --> svc_commands
   pkg_compaction --> svc_compaction
   pkg_compaction_basic --> svc_compaction
   pkg_compaction_tool_result_pruner --> svc_toolResultPruner
-  pkg_cordis_host_runner --> svc_cordisInspect
-  pkg_cordis_host_runner --> svc_dynamicCordisRunner
   pkg_credentials --> svc_credentials
   pkg_credentials_local --> svc_credentials
   pkg_deepseek_llm_api_extensions --> svc_deepseekLlmApiExtensions
@@ -284,6 +277,7 @@ flowchart LR
   pkg_lsp --> svc_lsp
   pkg_lsp_stdio --> svc_lsp
   pkg_message_feedback --> svc_messageFeedback
+  pkg_native_code_runtime --> svc_codeRuntime
   pkg_permission_presets --> svc_permissionPresets
   pkg_plan_mode --> svc_planMode
   pkg_plugin_host --> svc_pluginHost
@@ -366,13 +360,11 @@ flowchart LR
   svc_clientModules --> pkg_client_hmr
   svc_codeRuntime --> pkg_tools
   svc_compaction --> pkg_compaction_basic
-  svc_cordisInspect --> pkg_tool_cordis
   svc_credentials --> pkg_api_settings_controller
   svc_credentials --> pkg_llm_deepseek
   svc_credentials --> pkg_llm_pi_ai
   svc_deepseekLlmApiExtensions --> pkg_llm_deepseek
   svc_directoryPicker --> pkg_api_workspace_controller
-  svc_dynamicCordisRunner --> pkg_tool_cordis
   svc_e2b --> pkg_fs_e2b
   svc_e2b --> pkg_subprocess_e2b
   svc_fileReferences --> pkg_api_session_controller
@@ -453,7 +445,6 @@ flowchart LR
   svc_tools --> pkg_agent_loop
   svc_tools --> pkg_tool_ask_user
   svc_tools --> pkg_tool_bash
-  svc_tools --> pkg_tool_cordis
   svc_tools --> pkg_tool_fs
   svc_tools --> pkg_tool_skill
   svc_tools --> pkg_tool_subagent
@@ -513,7 +504,7 @@ flowchart LR
 | `ctx.sessionReferenceResolver` | `core` | [`session-reference`](../Engine/context/session-reference) | - | - | - | 将当前表层中有界的对话快照投影为持久但不可信的消息上下文；Host 适配器负责提及语法。 |
 | `ctx.sessionTitle` | `seam` | [`session-title`](../Engine/session/session-title) | [`session-title-first-prompt-llm`](../Engine/session/session-title-first-prompt-llm), [`session-title-all-prompts-llm`](../Engine/session/session-title-all-prompts-llm) | - | - | 负责确定性回退、最新标题折叠区，以及唯一的可选异步提供方注册。 |
 | `ctx.systemPrompt` | `core` | [`system-prompt`](../Engine/core/system-prompt) | - | [`agent-loop`](../Engine/core/agent-loop), [`tools`](../Engine/core/tools), [`tool-fs`](../Modules/Official/fs/tool-fs), [`tool-terminal`](../Modules/Official/terminal/tool-terminal), [`tool-web`](../Modules/Official/web/tool-web) | - | 为每个步骤收集提示词各部分和面向模型的工具 schema。 |
-| `ctx.tools` | `core` | [`tools`](../Engine/core/tools) | - | [`agent-loop`](../Engine/core/agent-loop), [`tool-ask-user`](../Modules/Official/interaction/tool-ask-user), [`tool-bash`](../Modules/Official/shell/tool-bash), [`tool-cordis`](../Modules/Official/extensions/tool-cordis), [`tool-fs`](../Modules/Official/fs/tool-fs), [`tool-terminal`](../Modules/Official/terminal/tool-terminal), [`tool-skill`](../Modules/Official/skill/tool-skill), [`tool-subagent`](../Engine/subagent/tool-subagent), [`tool-todo`](../Modules/Official/todo/tool-todo), [`tool-web`](../Modules/Official/web/tool-web) | - | 注册能力，负责 PTC mode 传输，并让调用依次经过策略前处理、单调守卫、环绕分派、策略后处理和最终结果观测。 |
+| `ctx.tools` | `core` | [`tools`](../Engine/core/tools) | - | [`agent-loop`](../Engine/core/agent-loop), [`tool-ask-user`](../Modules/Official/interaction/tool-ask-user), [`tool-bash`](../Modules/Official/shell/tool-bash), [`tool-fs`](../Modules/Official/fs/tool-fs), [`tool-terminal`](../Modules/Official/terminal/tool-terminal), [`tool-skill`](../Modules/Official/skill/tool-skill), [`tool-subagent`](../Engine/subagent/tool-subagent), [`tool-todo`](../Modules/Official/todo/tool-todo), [`tool-web`](../Modules/Official/web/tool-web) | - | 注册能力，负责 PTC mode 传输，并让调用依次经过策略前处理、单调守卫、环绕分派、策略后处理和最终结果观测。 |
 | `ctx.userQuestions` | `seam` | [`user-questions`](../Modules/Official/interaction/user-questions) | - | [`tool-ask-user`](../Modules/Official/interaction/tool-ask-user) | - | UI 前端提供当前生效的人工回答提供方；tool-ask-user 在提供方无关的 ask() promise 上暂停工具调用。 |
 | `ctx.planMode` | `core` | [`plan-mode`](../Modules/Official/plan/plan-mode) | - | - | - | 折叠已记录的计划／模式状态，在轮次边界刷新用户选择，渲染由部署方拥有的指导信息，注册 /plan，并在状态转换期间保持计划退出 schema 稳定。 |
 | `ctx.agentPresets` | `core` | [`agent-presets`](../Engine/preset/agent-presets) | - | - | - | 在受信任根目录与用户创作根目录上发现 preset 目录，并在创建期把一份 preset cordis.yml 挂载到 agent 作用域之下，拒绝始终未激活或向根服务 realm 发布服务的行。 |
@@ -534,7 +525,7 @@ flowchart LR
 | `ctx.sandboxPolicy` | `core` | [`sandbox-policy`](../Modules/Official/sandbox/sandbox-policy) | - | [`bash-sandbox`](../Modules/Official/shell/bash-sandbox), [`fs-sandbox`](../Modules/Official/fs/fs-sandbox), [`terminal-bash`](../Modules/Official/terminal/terminal-bash) | - | 统一保存部署默认模式和工作区根目录；只有沙箱执行器和提供方读取该服务（工具层使用它同时导出的纯 `sandbox/mode` 折叠区）。两类强制执行组件都读取该服务，因此 bash 与 fs 不会限制到不同的根目录。 |
 | `ctx.approval` | `seam` | [`user-approval`](../Compatibility/DSH/bridge/compat-user-approval) | - | [`tools`](../Engine/core/tools), [`tool-bash`](../Modules/Official/shell/tool-bash), [`acp`](../Programs/ACP/packages/acp) | - | 一次性权限决策通过 `approval/request` waterfall（瀑布式事件）分派；回答方是监听器（即 ACP 为自身 agent 提供的桥接），没有回答方时以 `unavailable` 关闭失败。 |
 | `ctx.permissionPresets` | `core` | [`permission-presets`](../Modules/Official/interaction/permission-presets) | - | - | - | 面向用户的预设表（`workspace-write`／`danger-full-access`），将沙箱模式与审批策略选项组合在一起；一次切换会写入一个 `permission/preset` 事件，并贯通到两个选项事件。 |
-| `ctx.codeRuntime` | `seam` | [`code-runtime`](../Compatibility/DSH/bridge/compat-code-runtime) | [`code-runtime-worker-thread`](../Modules/Official/code-runtime/code-runtime-worker-thread), `experimental-code-runtime-python` | [`tools`](../Engine/core/tools) | - | 使用 Host 提供的异步绑定运行一段由模型编写的程序；各后端采用不同的基础环境和语言（工具注册表在 PTC mode 下消费该服务）。 |
+| `ctx.codeRuntime` | `seam` | [`code-runtime`](../Compatibility/DSH/bridge/compat-code-runtime) | [`native-code-runtime`](../Modules/Official/code-runtime/native-code-runtime), `experimental-code-runtime-python` | [`tools`](../Engine/core/tools) | - | 使用 Host 提供的异步绑定运行一段由模型编写的程序；各后端采用不同的基础环境和语言（工具注册表在 PTC mode 下消费该服务）。 |
 | `ctx.pluginHost` | `core` | [`plugin-host`](../Compatibility/DSH/bridge/compat-plugin-host) | - | - | - | 可选 DSH 兼容桥记录 adapter 角色，并通过既有 Fiber 生命周期挂载 allowlist 中的 Cordis 入口；它不替换 Cordis Loader 或服务容器。 |
 | `ctx.fs` | `seam` | [`fs`](../Modules/Official/fs/fs) | [`fs-local`](../Modules/Official/fs/fs-local), [`fs-sandbox`](../Modules/Official/fs/fs-sandbox), [`fs-e2b`](../Modules/Official/e2b/fs-e2b) | [`tool-fs`](../Modules/Official/fs/tool-fs) | [`fs-observation-policy`](../Modules/Official/fs/fs-observation-policy) | tool-fs 通过 ctx.fs 执行读取／写入／编辑；fs-sandbox 按共享沙箱模式限制变更；fs-observation-policy 通过 fs/* 事件门禁贡献基于观测状态的检查。 |
 | `ctx.compaction` | `seam` | [`compaction`](../Engine/compaction/compaction) | [`compaction-basic`](../Engine/compaction/compaction-basic) | [`compaction-basic`](../Engine/compaction/compaction-basic) | - | 基础后端消费步骤后的压力事件和请求错误恢复事件；不存在面向模型的压缩工具。 |
@@ -549,7 +540,5 @@ flowchart LR
 | `ctx.workflowEngine` | `seam` | [`workflow`](../Engine/workflow/workflow) | [`workflow-worker-thread`](../Engine/workflow/workflow-worker-thread) | [`tool-workflow`](../Engine/workflow/tool-workflow), [`tool-ralph`](../Engine/workflow/tool-ralph) | - | 每个上下文使用一个引擎，与 bash 相同，且没有具名提供方注册表；通用工作流与固定 Ralph 消费方启动运行，其中的 agent() 调用通过 ctx.subagents 扇出。 |
 | `ctx.webhookRuntime` | `core` | [`webhook`](../Modules/Official/webhook/webhook) | - | [`webhook-github`](../Modules/Official/webhook/webhook-github) | - | 提供方适配器分派已认证交付；可信插件注册独立的进程本地规则，runtime 把非 null 结果转换为普通的 Workspace-backed Session，不保留交付或完成状态。 |
 | `ctx.lsp` | `seam` | [`lsp`](../Modules/Official/lsp/lsp) | [`lsp-stdio`](../Modules/Official/lsp/lsp-stdio) | [`tool-lsp`](../Modules/Official/lsp/tool-lsp) | - | 提供方注册与选择，加上恰好四种操作的标准化查询执行；该 seam 不提供协议逃生口，后端必须转换为标准化请求和结果。 |
-| `ctx.dynamicCordisRunner` | `core` | [`cordis-host-runner`](../Modules/Official/extensions/cordis-host-runner) | - | [`tool-cordis`](../Modules/Official/extensions/tool-cordis) | - | 拥有内存定义注册表、Host 半的 vm 沙箱和 request-run 往返流程；浏览器页面通过其 Remote 命名空间在线访问同一服务。 |
-| `ctx.cordisInspect` | `core` | [`cordis-host-runner`](../Modules/Official/extensions/cordis-host-runner) | - | [`tool-cordis`](../Modules/Official/extensions/tool-cordis) | - | 注册 Host inspect 提供方、镜像 Client 提供方 manifest，并通过动态 Cordis 传输路由 Client 查询。 |
 
 维护模式：混合模式。服务从 Cordis 声明中发现；接口、实现和消费方角色在 `rsh/Scripts/gen-doc-graphs.ts` 中分类，并设有完整性守卫。

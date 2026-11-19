@@ -62,11 +62,7 @@ describe('tool-call-model', () => {
     expect(titleOf('cordis_run').summary).toBe('dyn-1')
   })
 
-  it('leaves cordis_define to its own keyed toolview', () => {
-    // ui-cordis registers a keyed `tool.call.toolview` entry for cordis_define,
-    // and a keyed hit replaces the generic row (this model is only reached
-    // through the dispatch fallback). A mapping here would be unreachable, and a
-    // title here would be a second answer to what the card already renders.
+  it('renders cordis_define as a generic call', () => {
     const model = toolRowModel('cordis_define', running({ name: 'cordis_define', argsRaw: '{"name":"clock"}' }))
     expect(model.variant).toBe('others')
     expect(t(model.titleKey)).toBe('工具调用')

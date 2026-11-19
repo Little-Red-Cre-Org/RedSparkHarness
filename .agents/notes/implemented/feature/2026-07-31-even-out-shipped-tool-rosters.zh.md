@@ -22,7 +22,7 @@ Status: implemented
 
 有两项能力基于其自身包所记录的证据保持在外,列在这里是为了让「我们忘了」和「我们决定不要」保持可区分。
 
-**`dsh-tool-cordis`** 让模型写一段 JavaScript 并挂成临时插件。它的 README 写明了这个界限:「The sandbox is containment for honest code, not a security boundary — host-realm helpers on the sandbox global are reachable, so mount code can reach Node」([Known limitations](../../../../rsh/Modules/Official/extensions/tool-cordis/README.zh.md))。`node:vm` 的 realm 就在 harness 进程内,而 `dsh-sandbox-local` 只约束它 spawn 出去的 argv,因此在 Web surface 上,沙箱与批准接缝是被绕过而非被执行。
+**`dsh-tool-cordis`** 让模型写一段 JavaScript 并挂成临时插件。它的 README 写明了这个界限:「The sandbox is containment for honest code, not a security boundary — host-realm helpers on the sandbox global are reachable, so mount code can reach Node」（其「Known limitations」一节）。`node:vm` 的 realm 就在 harness 进程内,而 `dsh-sandbox-local` 只约束它 spawn 出去的 argv,因此在 Web surface 上,沙箱与批准接缝是被绕过而非被执行。
 
 **LSP 三件套**留在外面是运维原因而非安全原因:`command` 在插件加载时从 `PATH` 解析,因此缺少语言服务器会让整次启动失败,而不只是失去一个工具。等到「缺失」退化为「跳过注册」之后,它就可以挂了。
 

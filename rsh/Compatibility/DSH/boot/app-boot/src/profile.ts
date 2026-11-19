@@ -890,7 +890,7 @@ export function loadProfileDirectory(
  * @param installAnchor - absolute path of the dsh app's package.json (first resolution anchor).
  * @param home - the Harness home; defaults to {@link resolveRshHome}.
  * @param options - `userLayer: false` skips reading `cordis.patch.yml`, so a
- * bundles-only consumer (`--dump-default-config`, a recovery diagnostic)
+ * bundles-only consumer (`--dump-config`, a recovery diagnostic)
  * cannot fail on a broken user layer.
  * @returns the loaded profile (empty `patches` when the user layer is skipped).
  */

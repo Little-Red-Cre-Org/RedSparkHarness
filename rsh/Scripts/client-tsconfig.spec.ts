@@ -11,7 +11,6 @@ const root = fileURLToPath(new URL('../..', import.meta.url))
 function clientCssDeclarations(): string[] {
   return globSync([
     'rsh/Programs/Web/client/*/src/css-modules.d.ts',
-    'rsh/Modules/Official/extensions/ui-cordis/src/css-modules.d.ts',
   ], { cwd: root })
     .map(file => resolve(root, file).replaceAll(sep, '/'))
     .sort()

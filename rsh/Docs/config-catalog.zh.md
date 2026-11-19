@@ -412,43 +412,6 @@ export interface Config {
 
 来源：[`rsh/Programs/Web/client/hmr/src/index.ts:31`](../Programs/Web/client/hmr/src/index.ts)
 
-<a id="redsparkrsh-code-runtime-worker-thread"></a>
-
-## `@redspark/rsh-code-runtime-worker-thread`
-
-```ts config-catalog
-/** Plugin config: every execution cap, changeable from `cordis.yml` (no hardcoded tunables). */
-export interface Config {
-  /**
-   * Busy-time budget in milliseconds: the run fails with kind `'timeout'`
-   * once the worker's MEASURED event-loop active time
-   * (`worker.performance.eventLoopUtilization()`) exceeds this. Metering
-   * measured busy time — not wall time, not host-side pending-call
-   * bookkeeping — is what makes the budget both fair (a program awaiting a
-   * slow tool accrues nothing) and ungameable (a hot loop accrues whether
-   * or not a decoy dispatch is in flight).
-   */
-  computeMs?: number
-  /**
-   * Wall-clock ceiling in milliseconds; never pauses for anything. The
-   * backstop for what busy-time cannot see (a program awaiting a promise
-   * nobody will resolve). At most `2_147_483_647` (Node's maximum
-   * `setTimeout` delay, about 24.9 days): a longer value is rejected at load
-   * because `setTimeout` would clamp it to 1 ms.
-   */
-  maxWallMs?: number
-  /**
-   * Hard cap for serialized log-array, completion-value, and failure-message payloads;
-   * fixed result-envelope syntax is excluded.
-   */
-  maxOutputBytes?: number
-  /** The worker's max old-generation heap in MiB (`resourceLimits`); overflow kills the worker, surfacing as kind `'worker-exit'`. */
-  maxOldGenerationSizeMb?: number
-}
-```
-
-来源：[`rsh/Modules/Official/code-runtime/code-runtime-worker-thread/src/index.ts:25`](../Modules/Official/code-runtime/code-runtime-worker-thread/src/index.ts)
-
 <a id="redsparkrsh-compaction-basic"></a>
 
 ## `@redspark/rsh-compaction-basic`
@@ -514,22 +477,6 @@ export interface ToolResultPruneConfig {
 ```
 
 来源：[`rsh/Engine/compaction/compaction-tool-result-pruner/src/types.ts:5`](../Engine/compaction/compaction-tool-result-pruner/src/types.ts)
-
-<a id="redsparkrsh-cordis-host-runner"></a>
-
-## `@redspark/rsh-cordis-host-runner`
-
-需要：`tools`
-
-```ts config-catalog
-/** Runner configuration. */
-export interface Config {
-  /** Maximum synchronous VM evaluation time in milliseconds. */
-  vmTimeoutMs?: number
-}
-```
-
-来源：[`rsh/Modules/Official/extensions/cordis-host-runner/src/index.ts:88`](../Modules/Official/extensions/cordis-host-runner/src/index.ts)
 
 <a id="redsparkrsh-credentials-local"></a>
 
@@ -3415,7 +3362,6 @@ export interface Config {
 - `@redspark/rsh-client-ui-chat`（[`rsh/Programs/Web/client/ui-chat/src/index.ts`](../Programs/Web/client/ui-chat/src/index.ts)）
 - `@redspark/rsh-client-ui-commands`（[`rsh/Programs/Web/client/ui-commands/src/index.ts`](../Programs/Web/client/ui-commands/src/index.ts)）
 - `@redspark/rsh-client-ui-conversation`（[`rsh/Programs/Web/client/ui-conversation/src/index.ts`](../Programs/Web/client/ui-conversation/src/index.ts)）
-- `@redspark/rsh-client-ui-cordis`（[`rsh/Modules/Official/extensions/ui-cordis/src/index.ts`](../Modules/Official/extensions/ui-cordis/src/index.ts)）
 - `@redspark/rsh-client-ui-deliverables` — 需要 `systemPrompt` · `connection` · `sessionQuery` · `sessionController` · `workspaceFiles` · `fs` · `sandboxPolicy`（[`rsh/Programs/Web/client/ui-deliverables/src/index.ts`](../Programs/Web/client/ui-deliverables/src/index.ts)）
 - `@redspark/rsh-client-ui-directory-picker-browse`（[`rsh/Programs/Web/client/ui-directory-picker-browse/src/index.ts`](../Programs/Web/client/ui-directory-picker-browse/src/index.ts)）
 - `@redspark/rsh-client-ui-directory-picker-native`（[`rsh/Programs/Web/client/ui-directory-picker-native/src/index.ts`](../Programs/Web/client/ui-directory-picker-native/src/index.ts)）
@@ -3454,7 +3400,6 @@ export interface Config {
 - `@redspark/rsh-command-feedback` — 需要 `commands`（[`rsh/Modules/Official/feedback/command-feedback/src/index.ts`](../Modules/Official/feedback/command-feedback/src/index.ts)）
 - `@redspark/rsh-command-goal` — 需要 `commands` · `goals`（[`rsh/Engine/goal/command-goal/src/index.ts`](../Engine/goal/command-goal/src/index.ts)）
 - `@redspark/rsh-commands`（[`rsh/Modules/Official/interaction/commands/src/index.ts`](../Modules/Official/interaction/commands/src/index.ts)）
-- `@redspark/rsh-cordis-client-runner`（[`rsh/Modules/Official/extensions/cordis-client-runner/src/index.ts`](../Modules/Official/extensions/cordis-client-runner/src/index.ts)）
 - `@redspark/rsh-deepseek-llm-api-extensions`（[`rsh/Modules/Official/llm/deepseek-llm-api-extensions/src/index.ts`](../Modules/Official/llm/deepseek-llm-api-extensions/src/index.ts)）
 - `@redspark/rsh-fs-e2b` — 需要 `e2b`（[`rsh/Modules/Official/e2b/fs-e2b/src/index.ts`](../Modules/Official/e2b/fs-e2b/src/index.ts)）
 - `@redspark/rsh-fs-observation-policy`（[`rsh/Modules/Official/fs/fs-observation-policy/src/index.ts`](../Modules/Official/fs/fs-observation-policy/src/index.ts)）
@@ -3479,7 +3424,6 @@ export interface Config {
 - `@redspark/rsh-terminal`（[`rsh/Modules/Official/terminal/terminal/src/index.ts`](../Modules/Official/terminal/terminal/src/index.ts)）
 - `@redspark/rsh-tool-ask-user` — 需要 `tools` · `userInteraction`（[`rsh/Modules/Official/interaction/tool-ask-user/src/index.ts`](../Modules/Official/interaction/tool-ask-user/src/index.ts)）
 - `@redspark/rsh-tool-call-timeout-policy` — 需要 `tools`（[`rsh/Modules/Official/guard/timeout-policy/src/index.ts`](../Modules/Official/guard/timeout-policy/src/index.ts)）
-- `@redspark/rsh-tool-cordis` — 需要 `tools` · `systemPrompt` · `dynamicCordisRunner` · `cordisInspect`（[`rsh/Modules/Official/extensions/tool-cordis/src/index.ts`](../Modules/Official/extensions/tool-cordis/src/index.ts)）
 - `@redspark/rsh-tool-subagent-control` — 需要 `tools` · `subagents`（[`rsh/Engine/subagent/tool-subagent-control/src/index.ts`](../Engine/subagent/tool-subagent-control/src/index.ts)）
 - `@redspark/rsh-user-questions`（[`rsh/Modules/Official/interaction/user-questions/src/index.ts`](../Modules/Official/interaction/user-questions/src/index.ts)）
 - `@redspark/rsh-webhook` — 需要 `agents` · `agentDefaultModel` · `agentPresets` · `permissionPresets` · `sessionTitle` · `workspaceRegistry`（[`rsh/Modules/Official/webhook/webhook/src/index.ts`](../Modules/Official/webhook/webhook/src/index.ts)）

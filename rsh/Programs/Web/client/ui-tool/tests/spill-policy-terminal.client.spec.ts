@@ -2,8 +2,9 @@
 import { Context } from '@redspark/cordis'
 import type { Agent } from '@redspark/rsh-agent'
 import type { ToolResultNode } from '@redspark/rsh-client-ui-chat/client'
-import { WorkerThreadCodeRuntime } from '@redspark/rsh-code-runtime-worker-thread'
+import { CodeRuntime, type CodeRunRequest } from '@redspark/rsh-code-runtime'
 import { ToolCallId } from '@redspark/rsh-llm'
+import { NativeWorkerThreadCodeRuntime, resolveNativeWorkerThreadConfig } from '@redspark/rsh-native-code-runtime'
 import { Session, SessionId } from '@redspark/rsh-session'
 import { SpillLocator, SpillStore, type SaveTextSpill, type SpillRef } from '@redspark/rsh-spill'
 import * as SpillPolicy from '@redspark/rsh-spill-policy'
@@ -31,6 +32,17 @@ class MemorySpillStore extends SpillStore {
   }
 }
 
+/** Mounts the Native worker-thread provider as the Cordis `codeRuntime` this Client spec drives. */
+class WorkerThreadCodeRuntime extends CodeRuntime {
+  readonly language = 'typescript'
+  readonly isolation = 'worker-thread'
+  private readonly runtime = new NativeWorkerThreadCodeRuntime(resolveNativeWorkerThreadConfig({}))
+
+  run(request: CodeRunRequest) {
+    return this.runtime.run({ ...request, session: Session.create(SessionId('spill-terminal-runtime')) })
+  }
+}
+
 const shellArgs = { command: 'fixture-output', description: 'Return shell output fixture' }
 
 async function executeShell(text: string, nested: boolean, name = 'bash', maxInlineBytes = 256) {
@@ -40,7 +52,7 @@ async function executeShell(text: string, nested: boolean, name = 'bash', maxInl
     await ctx.plugin(ToolRuntime, { mode: 'both' })
     await ctx.plugin(MemorySpillStore)
     await ctx.plugin(SpillPolicy, { maxInlineBytes })
-    if (nested) await ctx.plugin(WorkerThreadCodeRuntime, {})
+    if (nested) await ctx.plugin(WorkerThreadCodeRuntime)
     ctx.effect(() => ctx.tools.register(defineContentToolFixture({
       name,
       description: 'Return deterministic shell text without spawning a process.',

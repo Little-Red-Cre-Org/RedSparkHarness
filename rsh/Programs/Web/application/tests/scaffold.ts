@@ -350,12 +350,6 @@ export interface LaunchOptions {
    */
   toolsMode?: 'native' | 'ptc' | 'both'
   /**
-   * Insert the opt-in model-facing Cordis tool provider into the shipped tree.
-   * Record and replay use the same tool surface, so captured request headers
-   * remain reconstructable without making the tools a product default.
-   */
-  cordisTools?: boolean
-  /**
    * Keep the shipped DeepSeek adapter mounted while masking the process
    * environment's DEEPSEEK_API_KEY for this scaffold lifetime. This is the
    * keyless first-run configuration lane; the default disables the adapter.
@@ -617,13 +611,6 @@ export async function launchWebScaffold(options: LaunchOptions = {}): Promise<We
       // be able to change a golden, whatever roots a scenario asks for.
       : [{ id: 'agent-presets', config: { ...options.agentPresets, includeUserRoot: false } }],
     ...options.toolsMode === undefined ? [] : [{ id: 'tools', config: { mode: options.toolsMode } }],
-    // The shipped Web bundle already owns both runners and the Cordis UI. This
-    // scenario adds only the model-facing tools that exercise those services.
-    ...options.cordisTools === true
-      ? [{ insert: [
-        { id: 'tool-cordis', name: '@redspark/rsh-tool-cordis' },
-      ] }]
-      : [],
     ...options.deepSeekSearch === undefined
       ? []
       : [{

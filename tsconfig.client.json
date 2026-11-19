@@ -70,7 +70,6 @@
     "rsh/Tests/test-support/*/tests/**/*.client.tsx",
     "rsh/Tests/test-support/*/tests/**/*.client.ts",
     // Client package outside rsh/Programs/Web/client with a local CSS module face.
-    "rsh/Modules/Official/extensions/ui-cordis/src/css-modules.d.ts",
     "rsh/Programs/Web/client/tsdown.client.ts",
     "rsh/Scripts/client-build-environment.ts",
     "rsh/Scripts/*.client.spec.ts",
@@ -95,9 +94,10 @@
     { "path": "./rsh/Engine/preset/agent-presets/tsconfig.client.json" },
     { "path": "./rsh/Modules/Official/workspace/workspace/tsconfig.client.json" },
     { "path": "./rsh/Engine/core/native-tools/tsconfig.client.json" },
-    {"path":"./rsh/Modules/Official/automation/task-scheduler/tsconfig.client.json"},
     // Producer-to-UI spill tests execute the real nested dispatch worker.
-    { "path": "./rsh/Modules/Official/code-runtime/code-runtime-worker-thread" },
+    { "path": "./rsh/Modules/Official/code-runtime/native-code-runtime" },
+    { "path": "./rsh/Compatibility/DSH/bridge/compat-code-runtime" },
+    {"path":"./rsh/Modules/Official/automation/task-scheduler/tsconfig.client.json"},
     // Shared leaf: web e2e boots the real host webserver (fixture + real-host
     // smoke policy). webserver has zero workspace deps and no cordis merge,
     // so it cannot drag host-side Context augmentation into this program.
@@ -122,8 +122,6 @@
     { "path": "./rsh/Programs/Web/api/workspace-controller/tsconfig.client.json" },
     { "path": "./rsh/Programs/Web/api/remotes/tsconfig.client.json" },
     { "path": "./rsh/Core/settings/settings-definition/tsconfig.client.json" },
-    { "path": "./rsh/Modules/Official/extensions/cordis-client-runner" },
-    { "path": "./rsh/Modules/Official/extensions/ui-cordis" },
     { "path": "./rsh/Tests/test-support/client-runtime" },
     { "path": "./rsh/Tests/test-support/remote-mock" },
     { "path": "./rsh/Programs/Web/client/ui-layout" },

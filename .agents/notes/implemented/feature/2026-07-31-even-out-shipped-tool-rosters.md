@@ -22,7 +22,7 @@ Two rows stay surface-specific. `tmux-context` is TUI-only because a browser sur
 
 Two capabilities stay out on the evidence their own packages record, and are listed here so "we forgot" and "we decided against" stay distinguishable.
 
-**`dsh-tool-cordis`** lets the model write JavaScript and mount it as a temporary plugin. Its README states the limit: "The sandbox is containment for honest code, not a security boundary — host-realm helpers on the sandbox global are reachable, so mount code can reach Node" ([Known limitations](../../../../rsh/Modules/Official/extensions/tool-cordis/README.md)). The `node:vm` realm lives inside the harness process while `dsh-sandbox-local` confines only the argv it spawns, so on the Web surface both the sandbox and the approval seam are bypassed rather than enforced.
+**`dsh-tool-cordis`** lets the model write JavaScript and mount it as a temporary plugin. Its README stated the limit: "The sandbox is containment for honest code, not a security boundary — host-realm helpers on the sandbox global are reachable, so mount code can reach Node" (its "Known limitations" section). The `node:vm` realm lives inside the harness process while `dsh-sandbox-local` confines only the argv it spawns, so on the Web surface both the sandbox and the approval seam are bypassed rather than enforced.
 
 **The LSP trio** stays out for an operational reason rather than a security one: `command` resolves from `PATH` at plugin load, so a missing language server fails the whole boot rather than one tool. It becomes mountable once absence degrades to a skipped registration.
 

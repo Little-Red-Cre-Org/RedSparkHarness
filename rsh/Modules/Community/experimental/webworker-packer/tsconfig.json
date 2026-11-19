@@ -19,6 +19,9 @@
     },
     {
       "path": "../../../../Core/util/home-paths"
+    },
+    {
+      "path": "../../../../Compatibility/DSH/boot/app-boot"
     }
   ]
 }

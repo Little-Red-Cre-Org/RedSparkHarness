@@ -27,17 +27,17 @@ Install this Profile Bundle for the retained Cordis compatibility entry, or comp
 
 Mount this provider when a delegation should run as a real Claude Code session in the parent's workspace. The common path is explicit: install the Bundle into a Profile, optionally configure the provider row, and expose it to the model through a delegation tool row.
 
-### Installing the Bundle
+### Installing the provider
 
-Install the package into the target Profile, then restart that Profile. The installation brings the pinned Agent SDK and one compatible platform CLI payload into the Profile; the declared patch layer registers only the dormant provider and starts no Claude process.
+Install the package into the target Profile directory with pnpm, add an installation row that names the package to `rsh.profile.json`, then restart that Profile. The installation brings the pinned Agent SDK and one compatible platform CLI payload into the Profile; the row registers only the dormant Native provider and starts no Claude process.
 
 ```sh
-dsh plugin --profile <name> add @redspark/rsh-subagent-claude-code
-dsh plugin --profile <name> remove @redspark/rsh-subagent-claude-code
+cd "$RSH_HOME/profiles/<name>"
+pnpm add @redspark/rsh-subagent-claude-code
 dsh --profile <name>
 ```
 
-Removing the package withdraws the provider and its private runtime closure on the next Profile start. Installation controls Host availability, not model permission: the model can only reach the provider through a delegation tool row you compose.
+Removing the row and the package withdraws the provider and its private runtime closure on the next Profile start. Installation controls Host availability, not model permission: the model can only reach the provider through a delegation tool row you compose.
 
 ### Configuration
 

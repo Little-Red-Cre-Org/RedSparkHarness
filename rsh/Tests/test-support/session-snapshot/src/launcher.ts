@@ -416,7 +416,7 @@ function packageDirFromPatch(source: string, packageName: string): string | unde
 
 /**
  * Install an authored patch's resolvable bare package into the temporary
- * profile fallback. This mirrors `dsh plugin` while retaining the bare entry
+ * profile fallback. This mirrors a profile `pnpm install` while retaining the bare entry
  * name and package provenance used by request metadata.
  */
 function linkProfilePackage(source: string, cwd: string, packageName: string): void {

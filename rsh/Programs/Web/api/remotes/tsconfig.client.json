@@ -33,9 +33,6 @@
       "path": "../../../../Engine/context/session-reference"
     },
     {
-      "path": "../../../../Modules/Official/extensions/cordis-host-runner"
-    },
-    {
       "path": "../../../../Engine/goal/goal/tsconfig.client.json"
     },
     {

@@ -23,13 +23,14 @@ Set `DEEPSEEK_BASE_URL` for a compatible proxy, `RSH_MODEL` for the script's def
 
 ## Add plugins
 
-Use the runtime wheel's `dsh` command against the same explicit home for persistent profile changes:
+Install the package into the same explicit home's `sdk` profile directory with pnpm, then add an installation row that names it to that profile's `rsh.profile.json`:
 
 ```sh
 export RSH_HOME=/absolute/path/to/example-dsh-home
-dsh plugin --profile sdk add file:/absolute/path/to/my-plugin-bundle
+cd "$RSH_HOME/profiles/sdk"
+pnpm add file:/absolute/path/to/my-plugin-bundle
 ```
 
-The selected profile must retain a JSON-RPC server row. The example accepts no complete configuration file or arbitrary process argv. The same runtime wheel packages the `web` profile and its frontend assets for direct CLI use: `dsh web` starts that separate application. A Python SDK client cannot select `web` because it has no JSON-RPC server row.
+The plugin must publish a Native entry and declare it under `dsh.native`; see [package and install a Native plugin](../../../../../Docs/user/develop/basic/publish.md). The selected profile must retain a JSON-RPC server row. The example accepts no complete configuration file or arbitrary process argv. The same runtime wheel packages the `web` profile and its frontend assets for direct CLI use: `dsh web` starts that separate application. A Python SDK client cannot select `web` because it has no JSON-RPC server row.
 
 See the [Python SDK tutorial](../../../../../Docs/user/guide/python-sdk.md) and [SDK reference](../README.md).

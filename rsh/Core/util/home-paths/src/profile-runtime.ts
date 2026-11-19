@@ -20,15 +20,6 @@ function record(value: unknown, label: string, allowed: readonly string[]): Reco
   return fields
 }
 
-const warnedCordisProfiles = new Set<string>()
-
-/** Cordis profiles still boot. Say so once per directory, and do not rewrite the manifest. */
-function warnCordisProfile(profileDir: string): void {
-  if (warnedCordisProfiles.has(profileDir)) return
-  warnedCordisProfiles.add(profileDir)
-  console.warn(`profile ${profileDir} still selects Cordis execution; declare "runtime": "native" with "config": "rsh.profile.json" to leave it; see rsh/Docs/native-config-migration.md`)
-}
-
 /**
  * Read the runtime marker from one profile package manifest.
  * @param profileDir - directory containing the profile's package.json.
@@ -53,10 +44,7 @@ export function resolveRshProfileDirectoryExecution(profileDir: string): DshProf
     if (profile.config !== undefined || profile.configReload !== undefined) {
       throw new Error(`profile ${profileDir} must declare "runtime": "native" with "config": "rsh.profile.json"; see rsh/Docs/native-config-migration.md`)
     }
-    // Cordis callers such as legacy-sdk still ship this shape. Warn, and keep
-    // the path runnable until those callers move.
     if (Array.isArray(profile.bundles)) {
-      warnCordisProfile(profileDir)
       return { runtime: 'legacy', reload: 'startup' }
     }
     throw new Error(`profile ${profileDir} must declare "runtime": "native" with "config": "rsh.profile.json"; see rsh/Docs/native-config-migration.md`)
@@ -65,7 +53,6 @@ export function resolveRshProfileDirectoryExecution(profileDir: string): DshProf
     if (profile.config !== undefined || profile.configReload !== undefined) {
       throw new Error('dsh.profile.runtime legacy cannot declare config or configReload; see rsh/Docs/native-config-migration.md')
     }
-    warnCordisProfile(profileDir)
     return { runtime: 'legacy', reload: 'startup' }
   }
   if (profile.runtime !== 'native' || profile.config !== 'rsh.profile.json') {

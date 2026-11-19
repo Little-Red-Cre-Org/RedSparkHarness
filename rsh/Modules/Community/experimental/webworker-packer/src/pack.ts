@@ -76,7 +76,7 @@ export interface ConfigTree extends ImageTree {
 
 /** Everything the packer needs that it cannot know by itself. */
 export interface PackOptions {
-  /** Composed profile, `!!js` intact, as the CLI's `--dump-default-config` produced it. */
+  /** Composed profile, `!!js` intact, as the CLI's `--dump-config` produced it. */
   readonly config: string
   /** Profile name, recorded in the manifest. */
   readonly profile: string

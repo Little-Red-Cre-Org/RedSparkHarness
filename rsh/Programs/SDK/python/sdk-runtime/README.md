@@ -29,9 +29,9 @@ Unsupported platforms and missing executables or sidecars raise `FileNotFoundErr
 
 ## Packaged profile resolution
 
-`dsh` initializes shipped profiles under the explicit home, composes their bundle patches, and loads bundled plugins from the executable's virtual filesystem. Because operating-system symlinks cannot enter that filesystem, packaged launches maintain small real ESM proxy packages under `$RSH_HOME/profiles/node_modules`. Each proxy mirrors explicit runtime exports, records the original package identity, and re-exports the virtual module URL. Built-in rows and external plugin peers therefore share one Cordis/module instance. Native shared libraries and Windows ConPTY addons are packaged with native addons, while ripgrep and the macOS PTY helper remain executable sidecars.
+`dsh` initializes shipped profiles under the explicit home and loads their Native plugin entries from the executable's virtual filesystem. Because operating-system symlinks cannot enter that filesystem, packaged launches maintain small real ESM proxy packages under `$RSH_HOME/profiles/node_modules`. Each proxy mirrors explicit runtime exports, records the original package identity, and re-exports the virtual module URL. Built-in rows and external plugin peers therefore share one module instance. Native shared libraries and Windows ConPTY addons are packaged with native addons, while ripgrep and the macOS PTY helper remain executable sidecars.
 
-External profile management uses `dsh plugin --profile <name> ...`. That command requires `pnpm` on `PATH`; ordinary SDK/profile execution does not.
+External profile management installs packages into the profile directory with `pnpm` and edits that profile's `rsh.profile.json`. Only that management path requires `pnpm` on `PATH`; ordinary SDK/profile execution does not.
 
 ## Build and distribution
 

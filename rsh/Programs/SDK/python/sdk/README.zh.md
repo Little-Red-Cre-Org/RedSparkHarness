@@ -50,15 +50,15 @@ Native profile（`native-sdk` 或新建的标准 `sdk` profile）中，`run` 还
 
 ## 自定义插件
 
-持久自定义属于 `dsh` profile。使用运行时 wheel 包提供的 `dsh` 命令显式创建 Cordis profile，并安装外部 bundle：
+持久自定义属于 `dsh` profile。用 pnpm 把包安装进 profile 目录，在 `rsh.profile.json` 中添加 installation 记录，然后启动该 profile：
 
 ```sh
 export RSH_HOME=/absolute/path/to/isolated-dsh-home
-dsh --profile legacy-sdk --from-default-profile sdk --help
-dsh plugin --profile legacy-sdk add file:/absolute/path/to/my-plugin-bundle
+cd "$RSH_HOME/profiles/sdk"
+pnpm add file:/absolute/path/to/my-plugin-bundle
 ```
 
-自定义 `legacy-sdk` 名称会明确保留 Cordis 应用。`file:` 形式会把本地 bundle 安装到 profile 包树中，使其 peer import 可以到达内置安装后备。profile manifest（元数据清单）会记录已安装依赖与有序 bundle 层；`$RSH_HOME/profiles/legacy-sdk/cordis.patch.yml` 是持久用户 patch。`dsh plugin` 会拒绝 Native profile；应编辑其 `rsh.profile.json` installations。只有管理外部包时，`dsh plugin` 才需要 `pnpm`。运行 SDK 不需要系统 Node.js。
+该插件必须发布 Native 入口并在 `dsh.native` 中声明它；参见[打包并安装 Native 插件](../../../../Docs/user/develop/basic/publish.zh.md)。`file:` 形式会把本地包安装到 profile 包树中。`rsh.profile.json` 记录该 installation；编辑其 config、scope 或 `disabled` 值即可改变运行中的组合。只有管理外部包时才需要 `pnpm`；运行 SDK 不需要系统 Node.js。
 
 对于单次调用的变更，可传入一个或多个 patch 文件。它们会转成绝对路径，并在 profile 层与 home patch 层之后按顺序传给 CLI：
 

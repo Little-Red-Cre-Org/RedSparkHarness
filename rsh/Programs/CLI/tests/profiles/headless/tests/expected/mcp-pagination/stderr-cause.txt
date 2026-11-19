@@ -1,1 +1,0 @@
-Error: mcp-client(pagination-cycle): server repeated a tools/list continuation cursor — invalid tool list

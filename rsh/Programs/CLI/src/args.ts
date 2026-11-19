@@ -7,11 +7,10 @@
  * their own flag families and print their own `--help` (see
  * `@redspark/rsh-cmdline`). Launcher flags therefore come first: the first
  * token this parser does not recognize starts the inner arguments, so
- * `dsh --profile tui --resume abc` boots the tui profile with `--resume abc`,
+ * `dsh --profile rsh --resume abc` boots the rsh profile with `--resume abc`,
  * and `dsh --profile web -h` prints the web app's help, not this one's.
  *
- * `web` is a hardcoded alias for `--profile web`; `plugin` manages a profile's
- * plugin dependencies by forwarding to pnpm.
+ * `web` is a hardcoded alias for `--profile web`.
  * @module @redspark/rsh/args
  */
 
@@ -29,33 +28,22 @@ interface ProfileInvocation {
   args: string[]
 }
 
-/** Print a composed profile tree and exit without booting. */
+/** Print a composed profile and exit without booting. */
 interface DumpConfigInvocation {
   mode: 'dump-config'
   profile: string
   /** Shipped template used once to initialize a missing profile. */
   fromDefaultProfile?: string | undefined
-  /** Omit the profile's user layer and --patch overlays; print bundle layers only. */
-  defaultOnly: boolean
   patches: string[]
 }
 
-/** Manage a profile's plugins: forward `args` to pnpm inside the profile directory. */
-interface PluginInvocation {
-  mode: 'plugin'
-  profile: string
-  /** Raw pnpm arguments, verbatim. */
-  args: string[]
-}
-
 /** The resolved `dsh` invocation. Help, version, and errors exit inside {@link parseRshArgs}. */
-export type DshInvocation = ProfileInvocation | DumpConfigInvocation | PluginInvocation
+export type DshInvocation = ProfileInvocation | DumpConfigInvocation
 
 /** Launcher flags shared by the default command and the `web` alias. */
 interface BootOptions {
   patch?: string[]
   dumpConfig?: boolean
-  dumpDefaultConfig?: boolean
   fromDefaultProfile?: string
 }
 
@@ -74,8 +62,8 @@ function rejectElectronProfile(program: Command, profile: string): void {
 const RETIRED_SDK_MINIMAL_PROFILE = 'sdk-minimal'
 
 /**
- * Refuse the retired sdk-minimal profile name on boot, dump, plugin
- * management, and template initialization. Existing directories stay on disk.
+ * Refuse the retired sdk-minimal profile name on boot, dump, and template
+ * initialization. Existing directories stay on disk.
  * --profile sdk is the supported replacement.
  */
 function rejectRetiredSdkMinimal(program: Command, profile: string, fromDefaultProfile?: string): void {
@@ -94,10 +82,10 @@ Examples:
   dsh --profile rescue --from-default-profile web
                                              create rescue from the shipped web template, then boot it
   dsh --profile headless "run the tests"     answer one task, print the result, and exit
-  dsh --profile tui --patch ./extra.yml      boot a custom profile with one extra overlay
-  dsh --profile tui --resume <session>       arguments after the launcher flags reach the app
+  dsh --profile rsh --patch ./extra.patch.json
+                                             boot the terminal profile with one extra overlay
+  dsh --profile rsh --resume <session>       arguments after the launcher flags reach the app
   dsh --profile web --help                   the web app's own flags and help
-  dsh plugin --profile tui add <package>     install a plugin into the tui profile
 `
 
 /**
@@ -113,23 +101,14 @@ function resolveBoot(program: Command, profile: string, options: BootOptions, ar
   const patches = options.patch ?? []
   if (patches.includes('')) program.error('error: --patch needs a path')
   if (options.fromDefaultProfile === '') program.error('error: --from-default-profile needs a name')
-  if (options.dumpConfig !== true && options.dumpDefaultConfig !== true) {
-    return { mode: 'profile', profile, fromDefaultProfile: options.fromDefaultProfile, patches, args }
-  }
-  if (options.dumpConfig === true && options.dumpDefaultConfig === true) {
-    program.error('error: --dump-config and --dump-default-config are mutually exclusive')
-  }
+  if (options.dumpConfig !== true) return { mode: 'profile', profile, fromDefaultProfile: options.fromDefaultProfile, patches, args }
   // The dump is boot-free: it never runs app command-line providers, so it
   // cannot show what those flags would decide, and printing a tree that differs
   // from the same invocation's boot would mislead.
   if (args.length > 0) {
     program.error(`error: config dumps take no app arguments, got ${args.map(argument => JSON.stringify(argument)).join(' ')}`)
   }
-  const defaultOnly = options.dumpDefaultConfig === true
-  if (defaultOnly && patches.length > 0) {
-    program.error('error: --dump-default-config prints the bundle layers and takes no --patch')
-  }
-  return { mode: 'dump-config', profile, fromDefaultProfile: options.fromDefaultProfile, defaultOnly, patches }
+  return { mode: 'dump-config', profile, fromDefaultProfile: options.fromDefaultProfile, patches }
 }
 
 /**
@@ -162,7 +141,6 @@ export function parseRshArgs(argv: readonly string[], version: string): DshInvoc
     .option('--from-default-profile <name>', 'initialize a new custom profile from a shipped profile template')
     .option('--patch <path>', 'extra patch-list overlay applied after the profile layer (repeatable)', collect)
     .option('--dump-config', 'print the composed profile tree and exit')
-    .option('--dump-default-config', 'print the profile tree without its user layer or --patch overlays and exit')
     .action((args: string[], options: BootOptions & { profile?: string }) => {
       // With the app owning -h, the launcher's own help is what a bare
       // `dsh -h` (no profile to hand it to) must print.
@@ -177,18 +155,6 @@ export function parseRshArgs(argv: readonly string[], version: string): DshInvoc
       resolved = resolveBoot(program, profile, options, args)
     })
 
-  /** Reject parent options supplied before a subcommand. */
-  const rejectParentOptions = (command: string): void => {
-    const parent = program.opts<BootOptions & { profile?: string }>()
-    if (parent.profile !== undefined || parent.patch !== undefined
-      || parent.dumpConfig !== undefined || parent.dumpDefaultConfig !== undefined
-      || parent.fromDefaultProfile !== undefined) {
-      program.error(
-        `error: ${command} takes none of parent --profile, --from-default-profile, --patch, --dump-config, or --dump-default-config`,
-      )
-    }
-  }
-
   const web = program.command('web').description('boot the web profile (alias of --profile web); the web app\'s own flags follow')
   web
     .helpOption(false)
@@ -198,24 +164,13 @@ export function parseRshArgs(argv: readonly string[], version: string): DshInvoc
     .argument('[args...]', 'arguments for the web app (see: dsh web --help)')
     .option('--patch <path>', 'extra patch-list overlay applied after the profile layer (repeatable)', collect)
     .option('--dump-config', 'print the composed web-profile tree (with the user layer and any --patch) and exit')
-    .option('--dump-default-config', 'print the web profile\'s bundle layers (legacy profiles only) and exit')
     .action((args: string[], options: BootOptions) => {
-      rejectParentOptions('web')
+      const parent = program.opts<BootOptions & { profile?: string }>()
+      if (parent.profile !== undefined || parent.patch !== undefined
+        || parent.dumpConfig !== undefined || parent.fromDefaultProfile !== undefined) {
+        program.error('error: web takes none of parent --profile, --from-default-profile, --patch, or --dump-config')
+      }
       resolved = resolveBoot(web, 'web', options, args)
-    })
-
-  const plugin = program.command('plugin').description('manage a profile\'s plugins by forwarding the remaining arguments to pnpm in the profile directory')
-  plugin
-    .requiredOption('--profile <name>', 'the profile whose plugins to manage (initialized on first use)')
-    .allowUnknownOption()
-    .argument('[args...]', 'pnpm arguments, forwarded verbatim (add <pkg>, remove <pkg>, why <pkg>, ...)')
-    .action((args: string[], options: { profile: string }) => {
-      rejectParentOptions('plugin')
-      if (options.profile === '') program.error('error: --profile needs a name')
-      rejectElectronProfile(plugin, options.profile)
-      rejectRetiredSdkMinimal(plugin, options.profile)
-      if (args.length === 0) program.error('error: plugin needs pnpm arguments to forward (e.g. add <package>)')
-      resolved = { mode: 'plugin', profile: options.profile, args }
     })
 
   try {

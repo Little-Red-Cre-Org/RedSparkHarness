@@ -169,7 +169,7 @@ describe('request stability across the loop', () => {
     const adapter = new MockAdapter([textResponse('one'), textResponse('two')])
     const ctx = await harness(adapter)
     const agent = await ctx.agentLoop.create(SessionId('a1'), { provider: 'mock', model: 'mock' })
-    // Context-appending wrapper in the tool-cordis / session-reference shape:
+    // Context-appending wrapper in the session-reference shape:
     // it rebuilds the downstream decision, so it must spread it to keep fields
     // it does not own — a bare `{ kind: 'enter', messages }` drops the series.
     ctx.on('agent/pre-step', async (_payload, next) => {

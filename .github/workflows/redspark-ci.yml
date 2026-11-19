@@ -143,8 +143,8 @@ jobs:
           RSH_NATIVE_SDK_PYTHON: ${{ steps.sdk-python.outputs.python }}
       - name: RSH terminal regressions
         run: pnpm --filter @redspark/rsh-rsh test
-      - name: RSH profile smoke
-        run: pnpm exec vitest run --config vitest.expected.config.ts rsh/Programs/CLI/tests/profiles/rsh/rsh.expected.e2e.ts
+      - name: Native terminal profile smoke
+        run: pnpm exec vitest run --config vitest.snapshot.config.ts snapshots/native-tui/native-tui.snapshot.ts
         env:
           RSH_EXAMPLE_MODE: lib
       - name: Client tests (no API credentials)

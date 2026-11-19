@@ -13,7 +13,7 @@ import { Context } from '@redspark/cordis'
 import Loader from '@redspark/cordis-plugin-loader'
 import { createUserMessage, ToolCallId } from '@redspark/rsh-llm'
 import type { ContentBlock } from '@redspark/rsh-llm'
-import { SessionId } from '@redspark/rsh-session'
+import { Session, SessionId } from '@redspark/rsh-session'
 import SystemPrompt from '@redspark/rsh-system-prompt'
 import ToolRuntime, { defineContentToolFixture } from '@redspark/rsh-tools'
 import type { ToolDefinition } from '@redspark/rsh-tools'
@@ -21,9 +21,26 @@ import type { PostToolDecision, ToolExecution, ToolExecutionToken } from '@redsp
 import { SpillLocator, SpillStore } from '@redspark/rsh-spill'
 import type { SaveTextSpill, SpillRef } from '@redspark/rsh-spill'
 import * as SpillPolicy from '@redspark/rsh-spill-policy'
-import { WorkerThreadCodeRuntime } from '@redspark/rsh-code-runtime-worker-thread'
+import { CodeRuntime, type CodeRunRequest } from '@redspark/rsh-code-runtime'
+import { NativeWorkerThreadCodeRuntime, resolveNativeWorkerThreadConfig } from '@redspark/rsh-native-code-runtime'
 
 const testToolSignal = new AbortController().signal
+
+/** Mounts the Native worker-thread provider as the Cordis `codeRuntime` these tests drive. */
+class WorkerThreadCodeRuntime extends CodeRuntime {
+  readonly language = 'typescript'
+  readonly isolation = 'worker-thread'
+  private readonly runtime: NativeWorkerThreadCodeRuntime
+
+  constructor(ctx: Context, config: { maxOutputBytes?: number } = {}) {
+    super(ctx)
+    this.runtime = new NativeWorkerThreadCodeRuntime(resolveNativeWorkerThreadConfig(config))
+  }
+
+  run(request: CodeRunRequest) {
+    return this.runtime.run({ ...request, session: Session.create(SessionId('spill-code-runtime')) })
+  }
+}
 
 /** A stub spill backend recording its saves; `fail` exercises the best-effort fallback. */
 class StubStore extends SpillStore {

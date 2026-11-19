@@ -54,8 +54,6 @@ import * as ToolBash from '@redspark/rsh-tool-bash'
 import * as ToolPwsh from '@redspark/rsh-tool-pwsh'
 import * as ToolBashPersistent from '@redspark/rsh-tool-bash-persistent'
 import * as ToolPwshPersistent from '@redspark/rsh-tool-pwsh-persistent'
-import CordisHostRunner from '@redspark/rsh-cordis-host-runner'
-import * as ToolCordis from '@redspark/rsh-tool-cordis'
 import * as ToolPresent from '@redspark/rsh-tool-present'
 import * as ToolFs from '@redspark/rsh-tool-fs'
 import * as ToolFsSearch from '@redspark/rsh-tool-fs-search'
@@ -400,19 +398,6 @@ const TOOL_PACKAGES: ToolPackage[] = [
     writes: ['tool/call', 'tool/ptc-dispatch-start', 'tool/ptc-dispatch', 'tool/result'],
     harvest: harvestNativeCodeTool,
     note: 'Native run_code is registered by the selected code-tool Consumer. This catalog harvest uses the TypeScript worker-thread Provider; selecting the Python Provider changes the code parameter description and SDK language.',
-  },
-  {
-    pkg: '@redspark/rsh-tool-cordis',
-    dir: 'tool-cordis',
-    source: 'rsh/Modules/Official/extensions/tool-cordis/src/index.ts',
-    requires: ['ctx.tools', 'ctx.dynamicCordisRunner'],
-    writes: ['tool/call', 'tool/result', 'process-local dynamic package lifecycle'],
-    async mount(ctx) {
-      await ctx.plugin(CordisHostRunner)
-      await ctx.plugin(ToolCordis)
-    },
-    note:
-      'Not in any shipped tree (a deliberate opt-in — dynamic package code reaches the real runtime, see .agents/notes/implemented/feature/2026-07-08-self-referential-cordis-toolset.md). The toolset injects `ctx.dynamicCordisRunner` from `@redspark/rsh-cordis-host-runner`, which owns the definition registry and the vm sandbox; a composition missing it never activates the tools. A running package may register ADDITIONAL model-visible tools until it is stopped, undefined, or DSH restarts; a full changed request header logs those tool-set changes.',
   },
   {
     pkg: '@redspark/rsh-tool-bash-persistent',

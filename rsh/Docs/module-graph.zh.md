@@ -241,7 +241,6 @@ flowchart TD
   end
   subgraph group_code_runtime["group: code-runtime"]
     pkg_code_runtime_process_sandbox["code-runtime-process-sandbox"]
-    pkg_code_runtime_worker_thread["code-runtime-worker-thread"]
     pkg_native_code_runtime["native-code-runtime"]
     pkg_tool_code_runtime["tool-code-runtime"]
   end
@@ -272,12 +271,6 @@ flowchart TD
     pkg_e2b["e2b"]
     pkg_fs_e2b["fs-e2b"]
     pkg_subprocess_e2b["subprocess-e2b"]
-  end
-  subgraph group_extensions["group: extensions"]
-    pkg_client_ui_cordis["client-ui-cordis"]
-    pkg_cordis_client_runner["cordis-client-runner"]
-    pkg_cordis_host_runner["cordis-host-runner"]
-    pkg_tool_cordis["tool-cordis"]
   end
   subgraph group_feedback["group: feedback"]
     pkg_command_feedback["command-feedback"]
@@ -562,9 +555,6 @@ flowchart TD
   pkg_desktop_host_compatibility --> pkg_http_routes_cordis
   pkg_desktop_host_compatibility --> pkg_launch_environment
   pkg_client_native_session --> pkg_session
-  pkg_code_runtime_worker_thread --> pkg_code_runtime
-  pkg_code_runtime_worker_thread --> pkg_session
-  pkg_code_runtime_worker_thread --> pkg_timeout
   pkg_deepseek_account --> pkg_authorization
   pkg_deepseek_account --> pkg_credentials
   pkg_deepseek_account --> pkg_native_runtime
@@ -947,13 +937,6 @@ flowchart TD
   pkg_file_reference_local --> pkg_file_reference
   pkg_file_reference_local --> pkg_system_prompt
   pkg_file_reference_local --> pkg_tools
-  pkg_cordis_host_runner --> pkg_agent
-  pkg_cordis_host_runner --> pkg_brand
-  pkg_cordis_host_runner --> pkg_llm
-  pkg_cordis_host_runner --> pkg_scope
-  pkg_cordis_host_runner --> pkg_session
-  pkg_cordis_host_runner --> pkg_tools
-  pkg_cordis_host_runner --> pkg_typert_protocol
   pkg_command_feedback --> pkg_anonymous_user_id
   pkg_command_feedback --> pkg_commands
   pkg_command_feedback --> pkg_native_runtime
@@ -1121,13 +1104,6 @@ flowchart TD
   pkg_client_ui_tool --> pkg_util_workspace_path
   pkg_command_compact --> pkg_commands
   pkg_command_compact --> pkg_compaction
-  pkg_tool_cordis --> pkg_agent
-  pkg_tool_cordis --> pkg_cordis_host_runner
-  pkg_tool_cordis --> pkg_llm
-  pkg_tool_cordis --> pkg_scope
-  pkg_tool_cordis --> pkg_session
-  pkg_tool_cordis --> pkg_system_prompt
-  pkg_tool_cordis --> pkg_tools
   pkg_message_feedback --> pkg_brand
   pkg_message_feedback --> pkg_command_feedback
   pkg_message_feedback --> pkg_llm
@@ -1535,8 +1511,6 @@ flowchart TD
 | [`request-context`](../Engine/context/request-context) | `context` | — |
 | [`request-context-definition`](../Engine/context/request-context-definition) | `context` | — |
 | [`tmux-context-definition`](../Engine/context/tmux-context-definition) | `context` | — |
-| [`client-ui-cordis`](../Modules/Official/extensions/ui-cordis) | `extensions` | — |
-| [`cordis-client-runner`](../Modules/Official/extensions/cordis-client-runner) | `extensions` | — |
 | [`host-directory-picker`](../Programs/Web/host/directory-picker) | `host` | — |
 | [`host-directory-picker-browse`](../Programs/Web/host/directory-picker-browse) | `host` | — |
 | [`host-directory-picker-native`](../Programs/Web/host/directory-picker-native) | `host` | — |
@@ -1626,7 +1600,6 @@ flowchart TD
 | [`app-boot`](../Compatibility/DSH/boot/app-boot) | `boot` | [`home-paths`](../Core/util/home-paths), [`launch-environment`](../Core/util/launch-environment), [`system-prompt`](../Engine/core/system-prompt) |
 | [`desktop-host-compatibility`](../Compatibility/DSH/boot/desktop-host-compatibility) | `boot` | [`api-gateway`](../Programs/Web/api/gateway), [`client-connection`](../Programs/Web/client/connection), [`client-modules`](../Programs/Web/client/modules), [`http-routes`](../Core/util/http-routes), [`http-routes-cordis`](../Compatibility/DSH/bridge/http-routes-cordis), [`launch-environment`](../Core/util/launch-environment) |
 | [`client-native-session`](../Programs/Web/client/native-session) | `client` | [`session`](../Engine/core/session) |
-| [`code-runtime-worker-thread`](../Modules/Official/code-runtime/code-runtime-worker-thread) | `code-runtime` | [`code-runtime`](../Compatibility/DSH/bridge/compat-code-runtime), [`session`](../Engine/core/session), [`timeout`](../Core/util/timeout) |
 | [`deepseek-account`](../Modules/Official/credentials/deepseek-account) | `credentials` | [`authorization`](../Modules/Official/credentials/authorization), [`credentials`](../Modules/Official/credentials/credentials), [`native-runtime`](../Core/runtime-diagnostics/native-runtime) |
 | [`host-directory-picker-auto`](../Programs/Web/host/directory-picker-auto) | `host` | [`client-ui-directory-picker-browse`](../Programs/Web/client/ui-directory-picker-browse), [`client-ui-directory-picker-native`](../Programs/Web/client/ui-directory-picker-native), [`host-directory-picker-browse`](../Programs/Web/host/directory-picker-browse), [`host-directory-picker-native`](../Programs/Web/host/directory-picker-native), [`http-routes`](../Core/util/http-routes), [`http-routes-cordis`](../Compatibility/DSH/bridge/http-routes-cordis) |
 | [`host-frontend-static`](../Programs/Web/host/frontend-static) | `host` | [`client-connection`](../Programs/Web/client/connection), [`http-routes`](../Core/util/http-routes), [`http-routes-cordis`](../Compatibility/DSH/bridge/http-routes-cordis) |
@@ -1702,7 +1675,6 @@ flowchart TD
 | [`compaction`](../Engine/compaction/compaction) | `compaction` | [`brand`](../Core/util/brand), [`commands`](../Modules/Official/interaction/commands), [`invariants`](../Core/runtime-diagnostics/invariants), [`llm`](../Engine/llm/llm), [`session`](../Engine/core/session) |
 | [`context-insight`](../Engine/context/context-insight) | `context` | [`commands`](../Modules/Official/interaction/commands), [`native-runtime`](../Core/runtime-diagnostics/native-runtime), [`session`](../Engine/core/session), [`session-projection`](../Engine/session/session-projection) |
 | [`file-reference-local`](../Engine/context/file-reference-local) | `context` | [`agent`](../Engine/core/agent), [`file-reference`](../Engine/context/file-reference), [`system-prompt`](../Engine/core/system-prompt), [`tools`](../Engine/core/tools) |
-| [`cordis-host-runner`](../Modules/Official/extensions/cordis-host-runner) | `extensions` | [`agent`](../Engine/core/agent), [`brand`](../Core/util/brand), [`llm`](../Engine/llm/llm), [`scope`](../Engine/core/scope), [`session`](../Engine/core/session), [`tools`](../Engine/core/tools), [`typert-protocol`](../Core/typert/protocol) |
 | [`command-feedback`](../Modules/Official/feedback/command-feedback) | `feedback` | [`anonymous-user-id`](../Core/identity/anonymous-user-id), [`commands`](../Modules/Official/interaction/commands), [`native-runtime`](../Core/runtime-diagnostics/native-runtime), [`native-session-execution`](../Engine/core/native-session-execution), [`session`](../Engine/core/session), [`session-persistence`](../Engine/session/session-persistence), [`typert-protocol`](../Core/typert/protocol) |
 | [`repeat-tool-reminder`](../Modules/Official/guard/repeat-tool-reminder) | `guard` | [`agent`](../Engine/core/agent), [`llm`](../Engine/llm/llm), [`native-agent`](../Engine/core/native-agent), [`native-runtime`](../Core/runtime-diagnostics/native-runtime), [`native-tools`](../Engine/core/native-tools), [`session`](../Engine/core/session), [`tools`](../Engine/core/tools) |
 | [`tool-call-timeout-policy`](../Modules/Official/guard/timeout-policy) | `guard` | [`llm`](../Engine/llm/llm), [`native-runtime`](../Core/runtime-diagnostics/native-runtime), [`native-tools`](../Engine/core/native-tools), [`timeout`](../Core/util/timeout), [`tools`](../Engine/core/tools) |
@@ -1732,7 +1704,6 @@ flowchart TD
 | [`web-app`](../Compatibility/DSH/bundle/web-app) | `bundle` | [`http-routes`](../Core/util/http-routes), [`http-routes-cordis`](../Compatibility/DSH/bridge/http-routes-cordis), [`shell-env`](../Modules/Official/shell/shell-env), [`system-prompt`](../Engine/core/system-prompt) |
 | [`client-ui-tool`](../Programs/Web/client/ui-tool) | `client` | [`client-locale`](../Programs/Web/client/locale), [`client-ui-conversation`](../Programs/Web/client/ui-conversation), [`client-ui-primitives`](../Programs/Web/client/ui-primitives), [`spill-policy`](../Modules/Official/spill/spill-policy), [`util-workspace-path`](../Core/util/workspace-path) |
 | [`command-compact`](../Engine/compaction/command-compact) | `compaction` | [`commands`](../Modules/Official/interaction/commands), [`compaction`](../Engine/compaction/compaction) |
-| [`tool-cordis`](../Modules/Official/extensions/tool-cordis) | `extensions` | [`agent`](../Engine/core/agent), [`cordis-host-runner`](../Modules/Official/extensions/cordis-host-runner), [`llm`](../Engine/llm/llm), [`scope`](../Engine/core/scope), [`session`](../Engine/core/session), [`system-prompt`](../Engine/core/system-prompt), [`tools`](../Engine/core/tools) |
 | [`message-feedback`](../Modules/Official/feedback/message-feedback) | `feedback` | [`brand`](../Core/util/brand), [`command-feedback`](../Modules/Official/feedback/command-feedback), [`llm`](../Engine/llm/llm), [`native-runtime`](../Core/runtime-diagnostics/native-runtime), [`native-session-execution`](../Engine/core/native-session-execution), [`session`](../Engine/core/session), [`session-persistence`](../Engine/session/session-persistence), [`typert-protocol`](../Core/typert/protocol) |
 | [`host-plugin-inventory`](../Programs/Web/host/plugin-inventory) | `host` | [`agent-presets`](../Engine/preset/agent-presets), [`brand`](../Core/util/brand), [`typert-protocol`](../Core/typert/protocol) |
 | [`session-title-all-prompts-llm`](../Engine/session/session-title-all-prompts-llm) | `session` | [`llm`](../Engine/llm/llm), [`native-runtime`](../Core/runtime-diagnostics/native-runtime), [`session`](../Engine/core/session), [`session-title`](../Engine/session/session-title), [`session-title-llm`](../Engine/session/session-title-llm) |

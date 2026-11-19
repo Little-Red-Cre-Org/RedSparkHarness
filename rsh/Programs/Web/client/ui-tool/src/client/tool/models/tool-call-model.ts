@@ -29,15 +29,7 @@ export const VARIANT_TITLE_KEYS = {
   others: 'tool.title.generic',
 } as const satisfies Record<ToolRowVariant, ToolTitleKey>
 
-/**
- * Known tool name -> variant.
- *
- * `cordis_define` is deliberately absent: ui-cordis registers a keyed
- * `tool.call.toolview` entry for it, and a keyed hit REPLACES the generic row
- * (this table is only reached through GenericToolCard, the dispatch fallback in
- * ToolCallTree). An entry here would be unreachable, and a second title for the
- * same call would be a second answer to a question the card already owns.
- */
+/** Known tool name -> variant. */
 const TOOL_VARIANTS: Record<string, ToolRowVariant> = {
   bash: 'bash',
   // The PowerShell twin is a shell tool: the bash row family (icon, colors)

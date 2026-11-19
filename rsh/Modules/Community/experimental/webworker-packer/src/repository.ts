@@ -7,11 +7,10 @@
  * assumptions about pnpm workspaces or the `dsh` CLI.
  * @module @redspark/rsh-experimental-webworker-packer/src/repository
  */
-import { execFileSync } from 'node:child_process'
-import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync } from 'node:fs'
+import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { join, relative } from 'node:path'
-import { RSH_HOME_ENV } from '@redspark/rsh-home-paths'
+import { join, relative, resolve } from 'node:path'
+import { loadOverlayPatches, PROFILE_TEMPLATES, renderConfigDump } from '@redspark/rsh-app-boot'
 import type { ConfigTree, ImageTree, PackResult } from './pack.ts'
 
 /**
@@ -37,11 +36,8 @@ const WORKSPACE_SCAN_ROOTS = [
   'rsh/Tests/test-support',
 ]
 
-/** Composition entry point package: the `dsh` CLI, run from source. */
+/** Composition entry point package: the `dsh` CLI, whose manifest declares config trees. */
 const CLI_PACKAGE = 'rsh/Programs/CLI'
-
-/** Composition entry point: the `dsh` CLI, run from source. */
-const CLI_ENTRY = `${CLI_PACKAGE}/src/bin.ts`
 
 /** Repository-owned deterministic filesystem content offered by the preview. */
 const PREVIEW_EXAMPLE_ROOT = 'rsh/Modules/Community/experimental/webworker-runtime/tests/fixtures/vfs-example'
@@ -98,28 +94,39 @@ export function indexWorkspacePackages(repoRoot: string): Map<string, string> {
 }
 
 /**
- * Compose one profile through the real CLI dump path, leaving `!!js`
- * unevaluated. The dump runs against a throwaway Harness home and default
- * layers only, so the image is the shipped profile: the machine's `$RSH_HOME`
- * — its profile manifest with locally installed bundles, and its patch files —
- * would otherwise leak this machine's plugins into the image and break the
- * same-tree-same-bytes guarantee.
+ * Compose one shipped profile from its bundle layers, leaving `!!js`
+ * unevaluated. Composition reads only the repository's own bundles, so the
+ * image is the shipped profile: the machine's `$RSH_HOME` — its profile
+ * manifest with locally installed bundles, and its patch files — cannot leak
+ * this machine's plugins into the image or break the same-tree-same-bytes
+ * guarantee.
  * @param repoRoot - Absolute repository root.
- * @param profile - Profile name to compose.
- * @param fromDefaultProfile - Optional shipped legacy template for a new profile.
- * @returns The composed YAML.
+ * @param profile - Profile name reported in the dump's provenance comment.
+ * @param fromDefaultProfile - Shipped template whose bundles compose the profile; defaults to `profile`.
+ * @returns The composed YAML entry list.
  */
 export function composeProfile(repoRoot: string, profile: string, fromDefaultProfile?: string): string {
-  const home = mkdtempSync(join(tmpdir(), 'dsh-pack-home-'))
+  const templateName = fromDefaultProfile ?? profile
+  const template = PROFILE_TEMPLATES[templateName]
+  if (template === undefined) throw new Error(`vfs image: unknown profile template ${JSON.stringify(templateName)}`)
+  const packages = indexWorkspacePackages(repoRoot)
+  const layers = template.bundles.map((name) => {
+    const directory = packages.get(name)
+    if (directory === undefined) throw new Error(`vfs image: bundle ${name} is not a workspace package`)
+    const manifest = JSON.parse(readFileSync(join(directory, 'package.json'), 'utf8')) as {
+      dsh?: { bundle?: { patch?: unknown } }
+    }
+    const patch = manifest.dsh?.bundle?.patch
+    if (typeof patch !== 'string' || patch === '') {
+      throw new Error(`vfs image: bundle ${name} declares no dsh.bundle.patch`)
+    }
+    return { label: name, patches: loadOverlayPatches('vfs image', resolve(directory, patch)) }
+  })
+  const home = mkdtempSync(join(tmpdir(), 'dsh-pack-root-'))
   try {
-    const args = ['--import', 'tsx/esm', join(repoRoot, CLI_ENTRY), '--profile', profile]
-    if (fromDefaultProfile !== undefined) args.push('--from-default-profile', fromDefaultProfile)
-    args.push('--dump-default-config')
-    return execFileSync(
-      process.execPath,
-      args,
-      { cwd: repoRoot, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024, env: { ...process.env, [RSH_HOME_ENV]: home } },
-    )
+    const rootConfig = join(home, 'cordis.yml')
+    writeFileSync(rootConfig, '[]\n')
+    return renderConfigDump('vfs image', rootConfig, layers)
   } finally {
     rmSync(home, { recursive: true, force: true })
   }

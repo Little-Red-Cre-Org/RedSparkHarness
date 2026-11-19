@@ -4,7 +4,6 @@ import { pnpmInvocation } from './pnpm-invocation.ts'
 
 const serialFiles = [
   'rsh/Programs/Web/application/tests/hmr-live.e2e.ts',
-  'rsh/Programs/Web/application/tests/cordis-tool-round.e2e.ts',
 ]
 const workerRaw = process.env.RSH_WEB_SNAPSHOT_WORKERS
 const workers = Number.parseInt(workerRaw ?? '', 10)

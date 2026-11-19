@@ -19,7 +19,6 @@ import { API_REMOTE_FORWARDED_EVENTS } from './remote-events.ts'
 // makes the shape assertion below judge real signatures rather than an empty
 // event vocabulary.
 import type {} from '@redspark/rsh-commands/types'
-import type {} from '@redspark/rsh-cordis-host-runner/types'
 import type {} from '@redspark/rsh-credentials/types'
 import type {} from '@redspark/rsh-goal/types'
 import type {} from '@redspark/rsh-llm/types'

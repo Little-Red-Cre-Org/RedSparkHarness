@@ -67,7 +67,6 @@
     "@redspark/rsh-api-workspace-controller": "workspace:^",
     "@redspark/rsh-commands": "workspace:^",
     "@redspark/rsh-compat-settings-definition": "workspace:^",
-    "@redspark/rsh-cordis-host-runner": "workspace:^",
     "@redspark/rsh-credentials": "workspace:^",
     "@redspark/rsh-file-reference": "workspace:^",
     "@redspark/rsh-goal": "workspace:^",

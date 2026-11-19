@@ -16,7 +16,7 @@
  * and the active loader are module-level slots. The "starts with nothing loaded"
  * case asserts the instance the spec holds is the one that did the work.
  */
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -93,41 +93,6 @@ describe('runtime export roots', () => {
     }
   })
 
-  const cordisClientBundle = join(repoRoot, 'rsh/Modules/Official/extensions/ui-cordis/lib/client.js')
-  it.skipIf(!existsSync(cordisClientBundle))('keeps the Cordis client module table as a page asset', () => {
-    const directory = mkdtempSync(join(tmpdir(), 'dsh-cordis-page-asset-'))
-    const name = '@redspark/rsh-client-ui-cordis'
-    const packageDirectory = join(directory, 'package')
-    const clientDirectory = join(packageDirectory, 'lib')
-    const original = readFileSync(cordisClientBundle, 'utf8')
-    mkdirSync(clientDirectory, { recursive: true })
-    writeFileSync(join(packageDirectory, 'package.json'), `${JSON.stringify({
-      name,
-      files: ['lib'],
-      exports: {
-        '.': { types: './lib/types/index.d.ts', default: './lib/index.js' },
-        './client': { types: './lib/types/client/index.d.ts', default: './lib/client.js' },
-      },
-    })}\n`)
-    writeFileSync(join(clientDirectory, 'index.js'), 'module.exports = {}\n')
-    writeFileSync(join(clientDirectory, 'client.js'), original)
-
-    try {
-      const result = packVfsImage({
-        config: `- id: cordis-ui\n  name: '${name}'\n`,
-        profile: 'cordis-page-asset-check',
-        workspaces: new Map([[name, packageDirectory]]),
-        resolveFrom: repoRoot,
-        entries: [],
-      })
-      const packed = new TextDecoder().decode(result.files[`node_modules/${name}/lib/client.js`])
-      expect(packed).toContain('window.__ModuleLoader__.load')
-      expect(packed.slice(0, packed.lastIndexOf('\n//# sourceURL=')))
-        .toBe(original.replace(/\n\/\/# sourceMappingURL=\S+\s*$/, '\n'))
-    } finally {
-      rmSync(directory, { recursive: true, force: true })
-    }
-  })
 })
 
 /** A leaf workspace package: real build output, no dependencies to drag in. */

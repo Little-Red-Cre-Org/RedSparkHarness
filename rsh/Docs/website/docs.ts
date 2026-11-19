@@ -248,14 +248,6 @@ const develop = pairedPages([
     section: { root: '实战', en: 'Practice' },
     order: 2,
   },
-  {
-    source: 'rsh/Docs/user/develop/practice/dynamic-cordis.md',
-    route: 'develop/practice/dynamic-cordis.md',
-    label: { root: '运行时 Cordis 工具', en: 'Runtime Cordis tools' },
-    sidebar: { root: 'zh-develop', en: 'en-develop' },
-    section: { root: '实战', en: 'Practice' },
-    order: 3,
-  },
 ])
 
 const cordisTutorial = pairedPages(([

@@ -9,7 +9,7 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-The family separates the portable run contract, the Cordis adapter, and execution backends. Choose the worker-thread TypeScript backend for a fresh Node worker, the process-sandbox backend for an explicitly native confined process, or the private experimental Python backend for CPython. Each run starts without state from earlier programs, and failures are returned as results.
+The family separates the portable run contract, the Cordis adapter, and execution backends. Choose the Native worker runtime for TypeScript, the process-sandbox backend for an explicitly native confined process, or the private experimental Python backend for CPython. Each run starts without state from earlier programs, and failures are returned as results.
 
 ## Table of Contents
 
@@ -29,7 +29,6 @@ The Definition, compatibility adapter, and runtime Providers divide the portable
 | [`code-runtime-definition`](../../../Engine/core/code-runtime-definition/README.md) | Defines portable code-run requests and provider operations without a framework dependency | — |
 | [`compat-code-runtime/`](../../../Compatibility/DSH/bridge/compat-code-runtime/README.md) | Implements the Cordis `ctx.codeRuntime` service contract | `ctx.codeRuntime` |
 | [`native-code-runtime/`](native-code-runtime/README.md) | Supplies the native worker runtime shared by execution Providers | — |
-| [`code-runtime-worker-thread/`](code-runtime-worker-thread/README.md) | Executes TypeScript programs, each in a fresh Node worker thread | registers `ctx.codeRuntime` |
 | [`code-runtime-process-sandbox/`](code-runtime-process-sandbox/README.md) | Provides sandboxed process execution for explicitly native profiles | — |
 | [`experimental/code-runtime-python/`](../../Community/experimental/code-runtime-python/README.md) | The experimental Python backend: owns the fd-3 wire protocol between a Node host and a CPython subprocess | — |
 

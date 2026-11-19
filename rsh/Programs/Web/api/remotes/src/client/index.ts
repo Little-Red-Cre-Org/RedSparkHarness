@@ -6,7 +6,6 @@ import commandsRemote from '@redspark/rsh-commands/remote'
 import settingsControllerRemote from '@redspark/rsh-api-settings-controller/remote'
 import goalsRemote from '@redspark/rsh-goal/remote'
 import llmRemote from '@redspark/rsh-llm/remote'
-import dynamicRemote from '@redspark/rsh-cordis-host-runner/remote'
 import pluginInventoryRemote from '@redspark/rsh-host-plugin-inventory/remote'
 import messageFeedbackRemote from '@redspark/rsh-message-feedback/remote'
 import sessionFeedbackRemote from '@redspark/rsh-command-feedback/remote'
@@ -46,7 +45,6 @@ export type { ApiRemoteForwardedEvent } from '../types.ts'
 // signatures `$on` hands to a listener, so a consumer reads the very
 // declaration the Host emits rather than a flattened restatement of it.
 export type {} from '@redspark/rsh-commands/types'
-export type {} from '@redspark/rsh-cordis-host-runner/types'
 export type {} from '@redspark/rsh-credentials/types'
 export type {} from '@redspark/rsh-llm/types'
 export type {} from '@redspark/rsh-agent-presets/types'
@@ -67,45 +65,7 @@ export type {
   StreamChunk,
 } from '@redspark/rsh-client-connection/client'
 export type {} from '@redspark/rsh-api-gateway/client'
-export type {} from '@redspark/rsh-cordis-host-runner/remote'
 
-// The payload vocabulary of the selected namespaces, re-exported so a Client
-// contribution can name what it sends and receives without importing a Host
-// package: this assembly is the one place both planes legitimately meet.
-export type {
-  ApprovalRequestId,
-  CordisHalfState,
-  CordisDynamicPackageId,
-  CordisDynamicPluginId,
-  CordisDynamicPluginRunId,
-  CordisDynamicRunMode,
-  CordisInspectMethodManifest,
-  CordisInspectPlatform,
-  CordisInspectProviderManifest,
-  CordisInspectProviderView,
-  CordisInspectQueryRequest,
-  CordisInspectQueryResolution,
-  CordisInspectQueryResolved,
-  CordisInspectRequestId,
-  CordisInspectResolveAck,
-  CordisRunDiagnostic,
-  CordisRunStatus,
-  DynamicCordisClientSource,
-  DynamicCordisHostHalfResult,
-  DynamicCordisInventoryRow,
-  DynamicCordisInvokeResult,
-  DynamicCordisPackage,
-  DynamicCordisRequestResolved,
-  DynamicCordisResolveAck,
-  DynamicCordisRetracted,
-  DynamicCordisRunRequest,
-  DynamicCordisRunResolution,
-  DynamicCordisRunAttempt,
-  DynamicCordisRunResponse,
-  DynamicCordisStopResponse,
-  DynamicCordisUndefineReceipt,
-  RequestRunOutcome,
-} from '@redspark/rsh-cordis-host-runner/types'
 // Credential state vocabulary for the credentials namespace (values never ride it).
 export type { CredentialInfo } from '@redspark/rsh-credentials/types'
 // Redacted namespace vocabulary for the settings namespace (secrets never ride
@@ -155,7 +115,7 @@ export async function apply(ctx: Context): Promise<() => Promise<void>> {
   const disposers: Array<() => Promise<void>> = []
   try {
     for (const contribution of [
-      agentPresetsRemote, commandsRemote, settingsControllerRemote, goalsRemote, llmRemote, dynamicRemote,
+      agentPresetsRemote, commandsRemote, settingsControllerRemote, goalsRemote, llmRemote,
       pluginInventoryRemote, messageFeedbackRemote, sessionFeedbackRemote, fileUploadsRemote, sessionReferencesRemote,
       subagentsRemote, sessionRemote, workspaceRemote, workspaceFilesRemote,
     ]) {

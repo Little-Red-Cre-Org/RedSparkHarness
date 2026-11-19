@@ -27,14 +27,11 @@ const DEPLOY_ROOT_PACKAGE = 'dsh-python-runtime-closure'
  */
 const CLI_PACKAGE = '@redspark/rsh'
 /**
- * Cordis packages the shipped `cordis` agent preset mounts on purpose: it is the preset that edits
- * the live composition, so its own toolset stays in the closure. Every other Cordis package is an
- * unreachable legacy edge and must not reach the packaged runtime.
+ * Cordis packages the executable still ships. The Cordis agent preset retired with the dynamic
+ * package toolset, so only the framework itself remains reachable.
  */
 const PRESET_REQUIRED_CORDIS = new Set([
   '@redspark/cordis',
-  '@redspark/rsh-cordis-host-runner',
-  '@redspark/rsh-tool-cordis',
 ])
 /** The sole executable entry inside the deployed closure. */
 const ENTRY_BIN = 'runtime-bootstrap.mjs'

@@ -1,3 +1,0 @@
-- insert:
-    - id: code-runtime
-      name: '@redspark/rsh-code-runtime-worker-thread'

@@ -771,12 +771,10 @@ function docSyncLeafGates(options: {
     pnpmScript('markdown-links', 'verify-md-links', { label: 'markdown links', quick: true }),
     pnpmScript('type-equivalence', 'verify-type-equiv', { label: 'type equivalence', quick: true }),
     pnpmScript('cordis-catalog', 'verify-cordis-catalog', { label: 'cordis catalog' }),
-    pnpmScript('cordis-inspect-catalog', 'verify-cordis-inspect-catalog', { label: 'Cordis inspect catalog' }),
     pnpmScript('mermaid', 'verify-mermaid'),
     pnpmScript('scoped-events', 'verify-scoped-events', { label: 'scoped events' }),
     pnpmScript('translation-pairing', 'verify-translation-pairing', { label: 'translation pairing', quick: true }),
     pnpmScript('markdown-wrap', 'verify-md-wrap', { label: 'markdown wrap', quick: true }),
-    pnpmScript('client-catalog', 'verify-client-catalog', { label: 'client catalog' }),
     pnpmScript('export-jsdoc', 'verify-export-jsdoc', { label: 'export jsdoc' }),
     pnpmScript('tool-catalog', 'verify-tool-catalog', { label: 'tool catalog' }),
     pnpmScript('config-catalog', 'verify-config-catalog', { label: 'config catalog' }),
@@ -829,7 +827,6 @@ function builtBinSmokeGate(needs: string[] = ['build']): Gate {
     'run',
     '--config',
     'vitest.e2e.config.ts',
-    'rsh/Programs/CLI/tests/profiles/headless/tests/keyless-smoke.e2e.ts',
     'rsh/Programs/CLI/tests/built-bin.e2e.ts',
     'rsh/Programs/CLI/tests/profiles/native-deepseek/native-deepseek-contributions.e2e.ts',
     'rsh/Programs/Web/host/directory-picker-native/tests/built-worker.e2e.ts',
@@ -844,7 +841,6 @@ function builtBinSmokeGate(needs: string[] = ['build']): Gate {
     // imports reach their lib/ entrypoints under plain Node. The e2e lane runs
     // unbuilt, so these files self-skip there.
     'rsh/Engine/workflow/workflow-worker-thread/tests/built-worker.e2e.ts',
-    'rsh/Modules/Official/code-runtime/code-runtime-worker-thread/tests/built-lib.e2e.ts',
     'rsh/Engine/session/session-persistence-jsonl/tests/built-migration-worker.e2e.ts',
     'rsh/Engine/core/native-headless/tests/built-native-imports.e2e.ts',
     'rsh/Programs/Web/client/web/tests/built-native-consumer.e2e.ts',

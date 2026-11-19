@@ -246,26 +246,6 @@ function isShippedNativeProfile(name: string): boolean {
   return SHIPPED_NATIVE_PROFILES().includes(name)
 }
 
-/**
- * Report whether a shipped template name composes Native plugins.
- * @param name - candidate template name.
- * @returns true for the explicit `native-*` templates.
- */
-export function isNativeProfileTemplate(name: string): boolean {
-  return name.startsWith('native-') && isShippedNativeProfile(name)
-}
-
-/**
- * Report whether a `--from-default-profile` value selects the Native template family.
- * @param name - template name from the command line.
- * @returns true for any `native-*` name, including one no template declares.
- * @remarks Unknown `native-*` names route here so profile creation names the declared Native templates
- * rather than the legacy standard-profile names.
- */
-export function requestsNativeTemplate(name: string): boolean {
-  return name.startsWith('native-')
-}
-
 function isHeadlessProfile(profile: string): boolean {
   return profile === 'native-headless' || profile === 'native-headless-query'
 }
@@ -619,7 +599,7 @@ export function ensureShippedNativeProfile(name: string, home: string = resolveR
 /**
  * Create one custom Native profile by copying a shipped template.
  * @param name - new profile name; an existing directory or a shipped name is refused.
- * @param template - explicit `native-*` template to copy.
+ * @param template - shipped template name to copy: a standard alias or an explicit `native-*` name.
  * @param home - Harness home containing the profile and Session store.
  */
 export function createNativeProfileFromTemplate(
@@ -627,8 +607,8 @@ export function createNativeProfileFromTemplate(
   template: string,
   home: string = resolveRshHome(),
 ): void {
-  if (!isNativeProfileTemplate(template)) {
-    throw new Error(`dsh: unknown native profile template ${JSON.stringify(template)}; expected one of ${shippedNativeProfiles().filter(isNativeProfileTemplate).join(', ')}`)
+  if (!isShippedNativeProfile(template)) {
+    throw new Error(`dsh: unknown profile template ${JSON.stringify(template)}; expected one of ${shippedNativeProfiles().join(', ')}`)
   }
   if (isShippedNativeProfile(name)) {
     throw new Error(`dsh: --from-default-profile target ${JSON.stringify(name)} is a shipped profile name; choose a custom name`)

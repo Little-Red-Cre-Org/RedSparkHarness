@@ -23,13 +23,14 @@ python rsh/Programs/SDK/python/sdk/examples/minimal.py \
 
 ## 添加插件
 
-对同一个显式 home 使用运行时 wheel 包提供的 `dsh` 命令，以进行持久 profile 变更：
+用 pnpm 把包安装进同一个显式 home 的 `sdk` profile 目录，再在该 profile 的 `rsh.profile.json` 中添加一条指明该包的 installation 记录：
 
 ```sh
 export RSH_HOME=/absolute/path/to/example-dsh-home
-dsh plugin --profile sdk add file:/absolute/path/to/my-plugin-bundle
+cd "$RSH_HOME/profiles/sdk"
+pnpm add file:/absolute/path/to/my-plugin-bundle
 ```
 
-所选 profile 必须保留 JSON-RPC server 配置项。该示例不接受完整配置文件或任意进程 argv。同一个运行时 wheel 包还打包了供直接 CLI（命令行界面）使用的 `web` profile 及其前端产物：`dsh web` 会启动这个独立应用。Python SDK 客户端不能选择 `web`，因为其中没有 JSON-RPC 服务器配置项。
+该插件必须发布 Native 入口并在 `dsh.native` 中声明它；参见[打包并安装 Native 插件](../../../../../Docs/user/develop/basic/publish.zh.md)。所选 profile 必须保留 JSON-RPC server 配置项。该示例不接受完整配置文件或任意进程 argv。同一个运行时 wheel 包还打包了供直接 CLI（命令行界面）使用的 `web` profile 及其前端产物：`dsh web` 会启动这个独立应用。Python SDK 客户端不能选择 `web`，因为其中没有 JSON-RPC 服务器配置项。
 
 另见 [Python SDK 教程](../../../../../Docs/user/guide/python-sdk.zh.md) 与 [SDK 参考](../README.zh.md)。

@@ -107,7 +107,7 @@ SDK 会延迟启动内置的 `dsh --profile sdk` 进程，并复用到上下文�
 
 ## 安装插件
 
-受支持的 SDK profile 是 `sdk`。启动器在启动、导出配置、插件管理和 `--from-default-profile` 上拒绝 `sdk-minimal`。已有目录不会被改写。不要用 `--dump-default-config` 初始化它，也不要对它应用 Cordis `insert`。见[原生配置迁移](../../native-config-migration.zh.md)。
+受支持的 SDK profile 是 `sdk`。启动器在启动、导出配置和 `--from-default-profile` 上拒绝 `sdk-minimal`。已有目录不会被改写。不要对它应用 Cordis `insert`。见[原生配置迁移](../../native-config-migration.zh.md)。
 
 另一个 `profile` 只有在其组合包含 JSON-RPC server 时才有效。缺失 server 配置项、无法解析的插件和非法 patch 会在启动时失败，不会回退到其他组合。
 

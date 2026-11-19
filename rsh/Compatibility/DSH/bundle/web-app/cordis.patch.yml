@@ -60,9 +60,6 @@
     - id: subagent-model-selection-settings-adapter
       name: '@redspark/rsh-compat-settings-adapters/tool-subagent'
 
-    - id: code-runtime
-      name: '@redspark/rsh-code-runtime-worker-thread'
-
     - id: message-feedback
       name: '@redspark/rsh-message-feedback'
       config:
@@ -137,9 +134,6 @@
     # Workspace commands and reconnect-safe projection over Typert Remote.
     - id: workspace-controller
       name: '@redspark/rsh-api-workspace-controller'
-
-    - id: cordis-host-runner
-      name: '@redspark/rsh-cordis-host-runner'
 
     # Ordinary provider for the parsed Web flags. Its plugin-level injection
     # waits for cmdlineArgs; no launcher metadata or special row kind is needed.
@@ -217,9 +211,6 @@
     - id: api-remotes
       name: '@redspark/rsh-api-remotes'
 
-    - id: cordis-client-runner
-      name: '@redspark/rsh-cordis-client-runner'
-
     - id: ui-theme
       name: '@redspark/rsh-client-ui-theme'
 
@@ -291,9 +282,6 @@
     # Tool call tree, generic fallback, and keyed business Tool views.
     - id: ui-tool
       name: '@redspark/rsh-client-ui-tool'
-
-    - id: ui-cordis
-      name: '@redspark/rsh-client-ui-cordis'
 
     # Durable workflow lifecycle as an independent Chat node after the
     # existing generic workflow tool row.

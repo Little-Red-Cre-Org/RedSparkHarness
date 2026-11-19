@@ -388,7 +388,7 @@ const SERVICE_ROLES: ServiceRole[] = [
     pkg: 'tools',
     title: 'Tool registry and guarded execution pipeline',
     mode: 'core',
-    consumers: ['agent-loop', 'tool-ask-user', 'tool-bash', 'tool-cordis', 'tool-fs', 'tool-terminal', 'tool-skill', 'tool-subagent', 'tool-todo', 'tool-web'],
+    consumers: ['agent-loop', 'tool-ask-user', 'tool-bash', 'tool-fs', 'tool-terminal', 'tool-skill', 'tool-subagent', 'tool-todo', 'tool-web'],
     note: 'Registers capabilities, owns PTC mode transport, and routes calls through pre-policy, monotonic guards, around dispatch, post-policy, and final-result observation.',
   },
   {
@@ -559,7 +559,7 @@ const SERVICE_ROLES: ServiceRole[] = [
     pkg: 'code-runtime',
     title: 'Code-execution seam',
     mode: 'seam',
-    implementations: ['code-runtime-worker-thread', 'experimental-code-runtime-python'],
+    implementations: ['native-code-runtime', 'experimental-code-runtime-python'],
     consumers: ['tools'],
     note: 'Runs one model-written program against host-provided async bindings; backends differ by substrate and language (the tool registry consumes it for PTC mode).',
   },
@@ -682,22 +682,6 @@ const SERVICE_ROLES: ServiceRole[] = [
     implementations: ['lsp-stdio'],
     consumers: ['tool-lsp'],
     note: 'Provider registration and selection plus normalized query execution over exactly four operations; the seam offers no protocol escape hatch, so a backend translates into the normalized request and result.',
-  },
-  {
-    key: 'dynamicCordisRunner',
-    pkg: 'cordis-host-runner',
-    title: 'Dynamic Cordis package host runner',
-    mode: 'core',
-    consumers: ['tool-cordis'],
-    note: 'Owns the in-memory definition registry, the vm sandbox for host halves, and the request-run round trip; browser pages reach the same service over the wire through its remote namespace.',
-  },
-  {
-    key: 'cordisInspect',
-    pkg: 'cordis-host-runner',
-    title: 'Dynamic Cordis inspect registry',
-    mode: 'core',
-    consumers: ['tool-cordis'],
-    note: 'Registers host inspect providers, mirrors the client provider manifest, and routes client queries through the dynamic Cordis transport.',
   },
 ]
 

@@ -44,7 +44,6 @@ import { PACKAGE_SOURCE_GLOBS } from './workspace-manifest-globs.ts'
 const root = resolve(import.meta.dirname, '..', '..')
 const SUBSYSTEMS_DIR = 'rsh/Docs/subsystems'
 const OUT_INHERITED = 'rsh/Docs/cordis-api/inherited.md'
-const OUT_RUNTIME_API = 'rsh/Modules/Official/extensions/tool-cordis/src/api-catalog.ts'
 
 export { REGION_BEGIN, REGION_END }
 
@@ -68,7 +67,6 @@ export const SERVICE_PAGE: Record<string, string> = {
   codeRuntime: 'code-runtime.md',
   commands: 'commands.md',
   compaction: 'compaction.md',
-  cordisInspect: 'extensions.md',
   authorization: 'credentials.md',
   credentials: 'credentials.md',
   credentialsController: 'credentials.md',
@@ -76,7 +74,6 @@ export const SERVICE_PAGE: Record<string, string> = {
   authorizationController: 'settings.md',
   directoryPicker: 'workspace.md',
   deepseekLlmApiExtensions: 'llm-streaming.md',
-  dynamicCordisRunner: 'extensions.md',
   e2b: 'subprocess.md',
   fileUploads: 'attachment.md',
   fileReferences: 'session-reference.md',
@@ -175,7 +172,6 @@ export const SERVICE_WALK_EXEMPTIONS: Record<string, string> = {
   remote: 'client-side interface-typed gateway accessor (ClientRemote) — rsh/Programs/Web/api/gateway/README.md owns the API',
   sessionLogDownload: 'client-side browser download controller — rsh/Engine/session-query/session-log-export/README.md owns the API',
   inputTriggers: 'client-side interface-typed browser service — rsh/Programs/Web/client/ui-input-trigger/README.md owns the API',
-  timer: 'client-side dynamic-package timer service — rsh/Modules/Official/extensions/cordis-client-runner/README.md owns the API',
   slots: 'client-side interface-typed browser service — rsh/Programs/Web/client/ui-renderer/README.md owns the API',
   theme: 'client-side interface-typed browser service — rsh/Programs/Web/client/ui-theme/README.md owns the API',
   pet: 'client-side desktop-pet registry and preference service — rsh/Programs/Web/client/ui-pet/README.md owns the API',
@@ -200,7 +196,6 @@ export const EVENT_SCOPE_PAGE: Record<string, string> = {
   'api-session': 'session.md',
   'approval': 'approval.md',
   'commands': 'commands.md',
-  'cordis': 'extensions.md',
   'authorization': 'credentials.md',
   'credentials': 'credentials.md',
   'domain': 'storage.md',
@@ -721,41 +716,7 @@ export const TYPE_LINK_EXEMPTIONS: Readonly<Record<string, string>> = {
   CompactionAgentContext: 'compaction service input is owned by rsh/Engine/compaction/compaction/src/index.ts',
   ManualCompactAgentContext: 'manual compaction service input is owned by rsh/Engine/compaction/compaction/src/index.ts',
   ClientResponse: 'wire response message is owned by rsh/Programs/Web/client/connection/src/rpc.ts',
-  ApprovalRequestId: 'dynamic Plugin approval identity is owned by rsh/Modules/Official/extensions/cordis-host-runner/src/types.ts',
-  CordisErrorDetails: 'Cordis runtime error payload is owned by rsh/Modules/Official/extensions/cordis-host-runner/src/types.ts',
-  CordisInspectPlatform: 'Cordis inspect platform identity is owned by rsh/Modules/Official/extensions/cordis-host-runner/src/types.ts',
-  CordisInspectProviderManifest: 'Cordis inspect provider manifest is owned by rsh/Modules/Official/extensions/cordis-host-runner/src/types.ts',
-  CordisInspectProviderView: 'Cordis inspect provider view is owned by rsh/Modules/Official/extensions/cordis-host-runner/src/types.ts',
-  CordisInspectQueryRequest: 'Cordis inspect transport payload is owned by rsh/Modules/Official/extensions/cordis-host-runner/src/types.ts',
-  CordisInspectQueryResolution: 'Cordis inspect query result is owned by rsh/Modules/Official/extensions/cordis-host-runner/src/types.ts',
-  CordisInspectQueryResolved: 'Cordis inspect transport payload is owned by rsh/Modules/Official/extensions/cordis-host-runner/src/types.ts',
-  CordisInspectRequestId: 'Cordis inspect request identity is owned by rsh/Modules/Official/extensions/cordis-host-runner/src/types.ts',
-  CordisInspectResolveAck: 'Cordis inspect resolution acknowledgement is owned by rsh/Modules/Official/extensions/cordis-host-runner/src/types.ts',
-  CordisDynamicPackageId: 'dynamic Package identity is owned by rsh/Modules/Official/extensions/cordis-host-runner/src/types.ts',
-  CordisDynamicPluginId: 'dynamic Plugin identity is owned by rsh/Modules/Official/extensions/cordis-host-runner/src/types.ts',
-  CordisDynamicPluginRunId: 'dynamic Plugin run identity is owned by rsh/Modules/Official/extensions/cordis-host-runner/src/types.ts',
-  CordisDynamicRunMode: 'dynamic Plugin activation mode is owned by rsh/Modules/Official/extensions/cordis-host-runner/src/types.ts',
-  DynamicCordisClientSource: 'dynamic-package payload contract is owned by rsh/Modules/Official/extensions/cordis-host-runner/src/types.ts',
-  DynamicCordisDefineReceipt: 'dynamic-package payload contract is owned by rsh/Modules/Official/extensions/cordis-host-runner/src/types.ts',
-  DynamicCordisDefineRequest: 'dynamic-package payload contract is owned by rsh/Modules/Official/extensions/cordis-host-runner/src/types.ts',
-  DynamicCordisHostHalfResult: 'dynamic-package payload contract is owned by rsh/Modules/Official/extensions/cordis-host-runner/src/types.ts',
-  DynamicCordisInventoryRow: 'dynamic-package payload contract is owned by rsh/Modules/Official/extensions/cordis-host-runner/src/types.ts',
-  DynamicCordisInvokeResult: 'dynamic-package payload contract is owned by rsh/Modules/Official/extensions/cordis-host-runner/src/types.ts',
-  DynamicCordisPackageInspection: 'dynamic Package source inspection is owned by rsh/Modules/Official/extensions/cordis-host-runner/src/registry.ts',
-  DynamicCordisPluginInspection: 'dynamic Plugin inspection is owned by rsh/Modules/Official/extensions/cordis-host-runner/src/registry.ts',
-  DynamicCordisRequestResolved: 'dynamic-package payload contract is owned by rsh/Modules/Official/extensions/cordis-host-runner/src/types.ts',
-  DynamicCordisRetracted: 'dynamic-package payload contract is owned by rsh/Modules/Official/extensions/cordis-host-runner/src/types.ts',
-  DynamicCordisRunRequest: 'dynamic-package payload contract is owned by rsh/Modules/Official/extensions/cordis-host-runner/src/types.ts',
-  DynamicCordisPackage: 'dynamic-package payload contract is owned by rsh/Modules/Official/extensions/cordis-host-runner/src/types.ts',
-  DynamicCordisReference: 'dynamic Plugin reference is owned by rsh/Modules/Official/extensions/cordis-host-runner/src/registry.ts',
-  DynamicCordisRenderFailure: 'dynamic-package payload contract is owned by rsh/Modules/Official/extensions/cordis-host-runner/src/types.ts',
-  DynamicCordisResolveAck: 'dynamic-package payload contract is owned by rsh/Modules/Official/extensions/cordis-host-runner/src/types.ts',
-  DynamicCordisRunResolution: 'dynamic-package payload contract is owned by rsh/Modules/Official/extensions/cordis-host-runner/src/types.ts',
-  DynamicCordisRunResponse: 'dynamic-package payload contract is owned by rsh/Modules/Official/extensions/cordis-host-runner/src/types.ts',
-  DynamicCordisSnapshotRow: 'dynamic-package payload contract is owned by rsh/Modules/Official/extensions/cordis-host-runner/src/types.ts',
-  DynamicCordisStopResponse: 'dynamic Plugin stop result is owned by rsh/Modules/Official/extensions/cordis-host-runner/src/types.ts',
-  DynamicCordisUndefineReceipt: 'dynamic-package payload contract is owned by rsh/Modules/Official/extensions/cordis-host-runner/src/types.ts',
-  HostCordisInspectProviderRegistration: 'Host inspect provider registration is owned by rsh/Modules/Official/extensions/cordis-host-runner/src/inspect-registry.ts',
+  ApprovalRequestId: 'legacy approval identity is owned by rsh/Engine/core/approval-definition/src/legacy.ts',
   DomainImpl: 'domain implementation contract is owned by rsh/Core/storage/storage-domain/README.md',
   CommandExecution: 'executor return contract is owned by rsh/Modules/Official/interaction/commands/src/index.ts',
   'z.core.JSONSchema.BaseSchema': 'zod projection output is owned by the zod v4 API',
@@ -773,7 +734,6 @@ export const TYPE_LINK_EXEMPTIONS: Readonly<Record<string, string>> = {
   KnobState: 'projection unit state fields are owned by rsh/Modules/Official/interaction/permission-presets/README.md',
   PermissionSelect: 'permissions projection payload is owned by rsh/Modules/Official/interaction/permission-presets/src/types.ts',
   PromptAssembly: 'assembly result is owned by rsh/Engine/core/system-prompt/README.md',
-  RequestRunId: 'dynamic-package payload contract is owned by rsh/Modules/Official/extensions/cordis-host-runner/src/types.ts',
   RpcReceipt: 'carrier-layer receipt is owned by rsh/Programs/Web/client/connection/src/rpc.ts',
   Sandbox: 'external E2B SDK handle is owned by rsh/Modules/Official/e2b/e2b/README.md',
   SessionForkSource: 'service-local fork input is owned by rsh/Engine/core/session/src/index.ts',
@@ -805,44 +765,6 @@ export const CORDIS_CATALOG_POLICY: CordisCatalogPolicy = {
     '@redspark/rsh-http-routes',
     '@redspark/rsh-http-routes-cordis',
   ],
-  // This empty runtime feature-detection marker is not the Node type used by HttpRoute.
-  runtimeTypeExclusions: new Set([
-    '@redspark/rsh-experimental-webworker-runtime#ServerResponse',
-  ]),
-  runtimeServiceExclusions: new Set(['cordisInspect', 'dynamicCordisRunner']),
-  runtimeServices: [{
-    key: 'timer',
-    type: 'TimerService',
-    abstract: false,
-    doc: 'Disposable timer helpers mixed into Cordis contexts.',
-    source: 'rsh/Core/vendor/timer/src/index.ts:12',
-    methods: [
-      {
-        signature: 'timeout(callback: () => void, delay: number): () => void',
-        jsDoc: '/** Run a callback once and return its disposer. */',
-      },
-      {
-        signature: 'timeout(delay: number): Promise<void>',
-        jsDoc: '/** Resolve after a delay; disposal rejects the pending promise. */',
-      },
-      {
-        signature: 'interval(callback: () => void, delay: number): () => void',
-        jsDoc: '/** Run a callback repeatedly and return its disposer. */',
-      },
-      {
-        signature: 'interval<R = any>(delay: number): AsyncIterableIterator<void, R, void>',
-        jsDoc: '/** Return an async iterator of timer ticks. */',
-      },
-      {
-        signature: 'throttle<F extends (...args: any[]) => void>(callback: F, delay: number, noTrailing?: boolean): F & { dispose: () => void }',
-        jsDoc: '/** Return a throttled function whose timer is disposed with the current fiber. */',
-      },
-      {
-        signature: 'debounce<F extends (...args: any[]) => void>(callback: F, delay: number): F & { dispose: () => void }',
-        jsDoc: '/** Return a debounced function whose timer is disposed with the current fiber. */',
-      },
-    ],
-  }],
   inheritedEvents: [
     { name: 'internal/plugin', summary: 'A plugin fiber was created.', source: 'rsh/Core/vendor/cordis/src/events.ts:328' },
     { name: 'internal/status', summary: 'A fiber changed lifecycle state.', source: 'rsh/Core/vendor/cordis/src/events.ts:330' },
@@ -1016,7 +938,7 @@ export function walkPartitionProblems(input: WalkPartitionInput, maps: WalkParti
  * @returns `[repo-relative path, exact content]` for every generated artifact.
  */
 export function computeOutputs(): [string, string][] {
-  const { projector, model } = projectCordisCatalog(root, CORDIS_CATALOG_POLICY)
+  const { model } = projectCordisCatalog(root, CORDIS_CATALOG_POLICY)
   const services = [...model.services]
   const events = [...model.events]
 
@@ -1047,7 +969,6 @@ export function computeOutputs(): [string, string][] {
   const pages = [...new Set([...Object.values(SERVICE_PAGE), ...Object.values(EVENT_SCOPE_PAGE)])].sort()
   const outputs: [string, string][] = [
     [OUT_INHERITED, renderInheritedPage(CORDIS_CATALOG_POLICY)],
-    [OUT_RUNTIME_API, projector.renderRuntimeApi(model)],
   ]
   for (const page of pages) {
     const region = renderPageRegion(

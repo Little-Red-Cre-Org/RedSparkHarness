@@ -50,15 +50,15 @@ Native session-tree subscriptions observe admitted roots and their delegated des
 
 ## Customize plugins
 
-Persistent customization belongs to a `dsh` profile. Create an explicit Cordis profile and install an external bundle with the runtime wheel's `dsh` command:
+Persistent customization belongs to a `dsh` profile. Install the package into the profile directory with pnpm, add an installation row to `rsh.profile.json`, then start that profile:
 
 ```sh
 export RSH_HOME=/absolute/path/to/isolated-dsh-home
-dsh --profile legacy-sdk --from-default-profile sdk --help
-dsh plugin --profile legacy-sdk add file:/absolute/path/to/my-plugin-bundle
+cd "$RSH_HOME/profiles/sdk"
+pnpm add file:/absolute/path/to/my-plugin-bundle
 ```
 
-The custom `legacy-sdk` name keeps the Cordis application explicit. The `file:` form installs the local bundle into the profile package tree, where its peer imports reach the bundled installation fallback. The profile manifest records installed dependencies and ordered bundle layers; its `$RSH_HOME/profiles/legacy-sdk/cordis.patch.yml` is the persistent user patch. `dsh plugin` refuses Native profiles; edit their `rsh.profile.json` installations instead. `dsh plugin` needs `pnpm` only when managing external packages. Running the SDK does not require system Node.js.
+The plugin must publish a Native entry and declare it under `dsh.native`; see [package and install a Native plugin](../../../../Docs/user/develop/basic/publish.md). The `file:` form installs the local package into the profile tree. `rsh.profile.json` records the installation; edit its config, scope, or `disabled` value to change the running composition. pnpm is needed only when managing external packages; running the SDK does not require system Node.js.
 
 For an invocation-specific change, pass one or more patch files. They become absolute and are forwarded in order after the profile and home patch layers:
 

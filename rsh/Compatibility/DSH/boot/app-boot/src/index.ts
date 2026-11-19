@@ -569,8 +569,7 @@ export function assertEntriesLoaded(ctx: Context, binName: string): void {
 
 /**
  * Value mirrors used because Cordis's const enum has no runtime object to import.
- * Keep aligned with `rsh/Modules/Official/extensions/tool-cordis/src/fiber-state.ts` and
- * `rsh/Compatibility/DSH/web/frontend/src/loader-status.ts`.
+ * Keep aligned with `rsh/Compatibility/DSH/web/frontend/src/loader-status.ts`.
  */
 const FIBER_PENDING = 0 as FiberState.PENDING
 const FIBER_ACTIVE = 2 as FiberState.ACTIVE
@@ -713,8 +712,8 @@ export const HARNESS_SOURCE_SECTION = 'harness:source'
 /**
  * Add a global prompt section naming the on-disk harness source checkout while
  * explicitly distinguishing it from the task workspace and current working
- * directory. The self-referential `dsh-tool-cordis` toolset reads and edits this
- * checkout. Call once on the settled boot context ({@link boot}); the section
+ * directory, so an agent can name the checkout it is running from. Call once on
+ * the settled boot context ({@link boot}); the section
  * uses the shared first-party placement after reusable instructions
  * and before the Web surface and persona suffix. A booted tree with no
  * `systemPrompt` service has no prompt to augment, so this is then a no-op
