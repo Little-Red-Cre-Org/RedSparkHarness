@@ -76,14 +76,14 @@ agent 可以创建文件、覆盖文件，或通过替换一段字面量文本�
 
 | 文件 | 职责 |
 |---|---|
-| [`src/backend.ts`](src/backend.ts) | 两个安装器共享的远程文件系统操作 |
-| [`src/index.ts`](src/index.ts) | Cordis `E2BFileSystem` 适配器 |
+| [`src/backend.ts`](src/backend.ts) | 远程文件系统操作 |
+| [`src/index.ts`](src/index.ts) | 远程文件系统后端的不依赖 Cordis 导出 |
 | [`src/native.ts`](src/native.ts) | Native Host 安装器；要求 `e2b` 并提供 `fs` |
 | — | 不发布运行时不变式配套项；每个操作都直接返回 E2B 控制器的已提交结果，没有可用于交叉核验的独立事件或缓存。 |
 
 ### 规范化路径与传输分帧
 
-相对路径以调用方 `cwd` 或 `ctx.e2b.cwd` 为基准，按照 POSIX 路径解析；GNU `realpath -mz` 提供规范化目标身份，且不要求最终文件存在；ASCII base64 加严格 NUL 分帧会在已解码的 SDK 传输中保留含换行符和多字节字符的路径。`stat`、不跟随链接的 `lstat` 与稳定的单层目录列表会把 E2B 元数据投影到 seam；规范化目标公开绝对 POSIX 进程路径、百分号编码的 `file:` URI，以及由提供方负责的包含关系检查。
+相对路径以调用方 `cwd` 或所有者 `cwd` 为基准，按照 POSIX 路径解析；GNU `realpath -mz` 提供规范化目标身份，且不要求最终文件存在；ASCII base64 加严格 NUL 分帧会在已解码的 SDK 传输中保留含换行符和多字节字符的路径。`stat`、不跟随链接的 `lstat` 与稳定的单层目录列表会把 E2B 元数据投影到 seam；规范化目标公开绝对 POSIX 进程路径、百分号编码的 `file:` URI，以及由提供方负责的包含关系检查。
 
 ### 写入路径
 
@@ -103,7 +103,7 @@ E2B 的未找到、权限、中止及其他控制器故障会映射到现有 `Fs
 当包级约定不够用时阅读以下页面。这些页面从家族组合讲起，逐步深入到文件系统 seam 接口及其渲染工具。
 
 - [E2B 提供方家族地图](../README.zh.md)——沙箱所有者与三包组合。
-- [文件系统子系统](../../../../Docs/subsystems/filesystem.zh.md)——文件系统 seam 约定与生成的 Cordis 接口。
+- [文件系统子系统](../../../../Docs/subsystems/filesystem.zh.md)——文件系统 seam 约定。
 - [文件系统提供方约定](../../fs/fs/README.zh.md)——本提供方实现的 `FileSystem` 接口。
 - [文件工具](../../fs/tool-fs/README.zh.md)——向模型渲染文件系统结果的工具。
 

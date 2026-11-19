@@ -22,7 +22,6 @@
       "types": "./lib/types/native.d.ts",
       "default": "./lib/native.js"
     },
-    "./src/*": "./src/*",
     "./package.json": "./package.json"
   },
   "files": [
@@ -35,11 +34,9 @@
   "peerDependencies": {
     "@redspark/rsh-e2b": "workspace:^",
     "@redspark/rsh-subprocess": "workspace:^",
-    "@redspark/rsh-timeout": "workspace:^",
-    "@redspark/cordis": "workspace:^"
+    "@redspark/rsh-timeout": "workspace:^"
   },
   "dependencies": {
-    "@redspark/schemastery": "workspace:^",
     "@redspark/rsh-native-runtime": "workspace:^",
     "zod": "^4.4.3",
     "e2b": "2.29.1"
@@ -48,7 +45,6 @@
     "@redspark/rsh-e2b": "workspace:^",
     "@redspark/rsh-subprocess": "workspace:^",
     "@redspark/rsh-timeout": "workspace:^",
-    "@redspark/cordis": "workspace:^",
     "@redspark/rsh-native-runtime": "workspace:^",
     "zod": "^4.4.3"
   },
@@ -66,11 +62,6 @@
       "provides": [
         "subprocess"
       ]
-    }
-  },
-  "peerDependenciesMeta": {
-    "@redspark/cordis": {
-      "optional": true
     }
   }
 }

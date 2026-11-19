@@ -41,7 +41,7 @@ The Host-only `./native` entry requires `e2b`, provides only `subprocess`, defau
 |---|---|---|
 | `pollMs` | `20` | How often the package checks a running command's status, in milliseconds |
 
-The generated [configuration catalog](../../../../Docs/config-catalog.md#redsparkrsh-subprocess-e2b) is the exhaustive source for every accepted field and its JSDoc.
+The `resolveNativeE2BSubprocessConfig` validator in `src/native.ts` is the exhaustive source for the accepted field and its default. This package is a library, not a Cordis plugin, so the generated configuration catalog does not list it.
 
 ### Running commands
 
@@ -81,8 +81,8 @@ This section explains the design decisions behind the provider and points at the
 
 | File | Role |
 |---|---|
-| [`src/backend.ts`](src/backend.ts) | Subprocess operations and teardown shared by both installers |
-| [`src/index.ts`](src/index.ts) | Cordis `E2BSubprocessRuntime` adapter and `pollMs` schema |
+| [`src/backend.ts`](src/backend.ts) | Subprocess operations and teardown |
+| [`src/index.ts`](src/index.ts) | Cordis-free export of the subprocess backend |
 | [`src/native.ts`](src/native.ts) | Native Host installer; requires `e2b` and provides only `subprocess` |
 | [`src/process.ts`](src/process.ts) | `E2BSubprocessHandle`: remote wrapper, publication, termination, output projection |
 | [`src/terminal.ts`](src/terminal.ts) | `E2BTerminalHandle`: PTY allocation, session teardown |
@@ -93,7 +93,7 @@ This section explains the design decisions behind the provider and points at the
 
 ### Remote wrapper
 
-The bootstrap resolves its own tools from the sandbox PATH, refuses any missing or non-executable path, execs through `env -i` and `setsid --wait`, publishes the process-group id and exit code to private files beneath `ctx.e2b.runtimeRoot/processes`, and redirects stdout and stderr through base64 encoders that emit a reserved completion frame; `tee` and `head -c` bound optional spill files.
+The bootstrap resolves its own tools from the sandbox PATH, refuses any missing or non-executable path, execs through `env -i` and `setsid --wait`, publishes the process-group id and exit code to private files beneath the owner's `runtimeRoot/processes`, and redirects stdout and stderr through base64 encoders that emit a reserved completion frame; `tee` and `head -c` bound optional spill files.
 
 ### Private process identity and publication
 
@@ -121,11 +121,10 @@ Termination and rollback share one tolerant signal path (`signalRemoteGroups`), 
 Read these pages when the package-level contract is not enough. They move from the family composition to the subprocess seam surface and the consumers that render it.
 
 - [E2B provider family map](../README.md) — the sandbox owner and the three-package composition.
-- [Subprocess subsystem](../../../../Docs/subsystems/subprocess.md) — the subprocess seam contract and the generated Cordis surface.
+- [Subprocess subsystem](../../../../Docs/subsystems/subprocess.md) — the subprocess seam contract.
 - [Subprocess seam package](../../../../Core/subprocess/subprocess/README.md) — the abstract contract this provider implements.
 - [Bash executor](../../shell/bash-local/README.md) — the consumer that renders spawned commands to the model.
 - [PTY terminal backend](../../terminal/terminal-bash/README.md) — the consumer that renders terminal sessions.
-- [Generated configuration catalog](../../../../Docs/config-catalog.md#redsparkrsh-subprocess-e2b) — every accepted config field and its source declaration.
 
 -----
 

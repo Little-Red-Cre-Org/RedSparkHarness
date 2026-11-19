@@ -5888,9 +5888,6 @@ importers:
       '@redspark/rsh-native-runtime':
         specifier: workspace:^
         version: link:../../../../Core/runtime-diagnostics/native-runtime
-      '@redspark/schemastery':
-        specifier: link:../../../../Core/vendor/schemastery
-        version: link:../../../../Core/vendor/schemastery
       e2b:
         specifier: 2.29.1
         version: 2.29.1
@@ -5898,57 +5895,12 @@ importers:
         specifier: ^4.4.3
         version: 4.4.3
     devDependencies:
-      '@redspark/cordis':
-        specifier: workspace:^
-        version: link:../../../../Core/vendor/cordis
-      '@redspark/rsh-agent':
-        specifier: workspace:^
-        version: link:../../../../Engine/core/agent
-      '@redspark/rsh-agent-loop-testkit':
-        specifier: workspace:^
-        version: link:../../../../Tests/test-support/agent-loop-testkit
-      '@redspark/rsh-app-boot':
-        specifier: workspace:^
-        version: link:../../../../Compatibility/DSH/boot/app-boot
-      '@redspark/rsh-bash-local':
-        specifier: workspace:^
-        version: link:../../shell/bash-local
-      '@redspark/rsh-fs-e2b':
-        specifier: workspace:^
-        version: link:../fs-e2b
       '@redspark/rsh-http-proxy':
         specifier: workspace:^
         version: link:../../../../Core/util/http-proxy
       '@redspark/rsh-launch-environment':
         specifier: workspace:^
         version: link:../../../../Core/util/launch-environment
-      '@redspark/rsh-loader-smoke':
-        specifier: workspace:^
-        version: link:../../../../Tests/test-support/loader-smoke
-      '@redspark/rsh-lsp':
-        specifier: workspace:^
-        version: link:../../lsp/lsp
-      '@redspark/rsh-lsp-stdio':
-        specifier: workspace:^
-        version: link:../../lsp/lsp-stdio
-      '@redspark/rsh-sandbox-policy':
-        specifier: workspace:^
-        version: link:../../sandbox/sandbox-policy
-      '@redspark/rsh-session':
-        specifier: workspace:^
-        version: link:../../../../Engine/core/session
-      '@redspark/rsh-session-projection':
-        specifier: workspace:^
-        version: link:../../../../Engine/session/session-projection
-      '@redspark/rsh-subprocess-e2b':
-        specifier: workspace:^
-        version: link:../subprocess-e2b
-      '@redspark/rsh-terminal':
-        specifier: workspace:^
-        version: link:../../terminal/terminal
-      '@redspark/rsh-terminal-bash':
-        specifier: workspace:^
-        version: link:../../terminal/terminal-bash
 
   rsh/Modules/Official/e2b/fs-e2b:
     dependencies:
@@ -5959,9 +5911,6 @@ importers:
         specifier: 2.29.1
         version: 2.29.1
     devDependencies:
-      '@redspark/cordis':
-        specifier: workspace:^
-        version: link:../../../../Core/vendor/cordis
       '@redspark/rsh-e2b':
         specifier: workspace:^
         version: link:../e2b
@@ -5974,9 +5923,6 @@ importers:
       '@redspark/rsh-native-runtime':
         specifier: workspace:^
         version: link:../../../../Core/runtime-diagnostics/native-runtime
-      '@redspark/schemastery':
-        specifier: link:../../../../Core/vendor/schemastery
-        version: link:../../../../Core/vendor/schemastery
       e2b:
         specifier: 2.29.1
         version: 2.29.1
@@ -5984,9 +5930,6 @@ importers:
         specifier: ^4.4.3
         version: 4.4.3
     devDependencies:
-      '@redspark/cordis':
-        specifier: workspace:^
-        version: link:../../../../Core/vendor/cordis
       '@redspark/rsh-e2b':
         specifier: workspace:^
         version: link:../e2b

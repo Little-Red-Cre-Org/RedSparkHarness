@@ -35,7 +35,7 @@ Choose the E2B family when work should be isolated from the host machine — for
 
 Three settings matter: an API key (or the `E2B_API_KEY` environment variable), an absolute remote working directory, and the sandbox lifetime. A bad key, a relative working directory, or an invalid lifetime rejects startup before any remote work happens.
 
-The Host-only `./native` entry validates optional `apiKey`, `cwd`, and `timeoutMs`, provides the `e2b` service, and does not import Cordis. `./owner` exposes the same sandbox owner to filesystem and subprocess adapters.
+The Host-only `./native` entry validates optional `apiKey`, `cwd`, and `timeoutMs`, provides the `e2b` service, and does not import Cordis. The package root and `./owner` export the same Cordis-free sandbox owner to filesystem and subprocess adapters.
 
 ```yaml
 - name: '@redspark/rsh-e2b'
@@ -54,7 +54,7 @@ The Host-only `./native` entry validates optional `apiKey`, `cwd`, and `timeoutM
 | `cwd` | `/home/user/workspace` | Remote working directory the family shares; absolute POSIX path |
 | `timeoutMs` | `300,000` | Sandbox lifetime in milliseconds; the sandbox is deleted when it expires |
 
-The generated [configuration catalog](../../../../Docs/config-catalog.md#redsparkrsh-e2b) is the exhaustive source for every accepted field and its JSDoc.
+The `resolveNativeE2BConfig` validator in `src/native.ts` is the exhaustive source for the accepted fields and their defaults. This package is a library, not a Cordis plugin, so the generated configuration catalog does not list it.
 
 ### What you get
 
@@ -85,7 +85,7 @@ This section explains the design decisions behind the owner and points at the co
 | File | Role |
 |---|---|
 | [`src/owner.ts`](src/owner.ts) | Sandbox owner: validation, open, `getSandbox`, and teardown |
-| [`src/index.ts`](src/index.ts) | Cordis `E2BRuntime` adapter, `Config` schema, and SDK re-exports |
+| [`src/index.ts`](src/index.ts) | Cordis-free exports of the owner and its helpers |
 | [`src/native.ts`](src/native.ts) | Native Host installer; provides `e2b` without importing Cordis |
 | — | No runtime invariant companion is published; sandbox creation and teardown have one SDK promise and no independent event or mutable-data relationship to cross-check. |
 
@@ -107,9 +107,8 @@ Any directory-setup failure makes one deletion attempt and preserves the origina
 Read these pages when the package-level contract is not enough. They move from the family composition to the subprocess seam surface and the decision evidence behind the remote execution world.
 
 - [E2B provider family map](../README.md) — the three packages and the opt-in composition.
-- [Subprocess subsystem](../../../../Docs/subsystems/subprocess.md) — the subprocess seam contract and the generated Cordis surface, including `ctx.e2b`.
+- [Subprocess subsystem](../../../../Docs/subsystems/subprocess.md) — the subprocess seam contract.
 - [Portable execution-world decision](../../../../../.agents/notes/implemented/architecture/2026-07-28-portable-execution-world-consumers.md) — why consumers delegate to `ctx.fs` and `ctx.subprocess`, and what stays in the host.
-- [Generated configuration catalog](../../../../Docs/config-catalog.md#redsparkrsh-e2b) — every accepted config field and its source declaration.
 
 -----
 
@@ -129,7 +128,7 @@ No direct invalidation: the owner contributes no request tokens and never mutate
 
 These limits define when the E2B family is a poor fit or needs special operational care. They are current package constraints, not a task backlog.
 
-- **Not a whole-harness runtime** — Cordis services, agent/session state, session logs, LLM requests, skills, and SDK-side buffers stay in the host process.
+- **Not a whole-harness runtime** — Harness services, agent/session state, session logs, LLM requests, skills, and SDK-side buffers stay in the host process.
 - **Sandbox state is ephemeral** — disposal and timeout delete the sandbox; reconnect, pause/leave retention, templates, volumes, and snapshots are outside this POC.
 - **No deployment platform is configured** — network policy, host-workspace synchronization, and sandbox discovery are outside this POC.
 - **`cwd` is a resolution convention, not containment** — adapters and commands can address other sandbox paths; E2B network access retains the base image's policy.

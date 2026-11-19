@@ -26,7 +26,6 @@
       "types": "./lib/types/native.d.ts",
       "default": "./lib/native.js"
     },
-    "./src/*": "./src/*",
     "./package.json": "./package.json"
   },
   "files": [
@@ -38,31 +37,14 @@
   ],
   "license": "MIT",
   "peerDependencies": {
-    "@redspark/cordis": "workspace:^",
     "@redspark/rsh-http-proxy": "workspace:^"
   },
   "dependencies": {
-    "@redspark/schemastery": "workspace:^",
     "e2b": "2.29.1",
     "@redspark/rsh-native-runtime": "workspace:^",
     "zod": "^4.4.3"
   },
   "devDependencies": {
-    "@redspark/cordis": "workspace:^",
-    "@redspark/rsh-agent": "workspace:^",
-    "@redspark/rsh-agent-loop-testkit": "workspace:^",
-    "@redspark/rsh-app-boot": "workspace:^",
-    "@redspark/rsh-bash-local": "workspace:^",
-    "@redspark/rsh-fs-e2b": "workspace:^",
-    "@redspark/rsh-loader-smoke": "workspace:^",
-    "@redspark/rsh-lsp": "workspace:^",
-    "@redspark/rsh-lsp-stdio": "workspace:^",
-    "@redspark/rsh-sandbox-policy": "workspace:^",
-    "@redspark/rsh-session": "workspace:^",
-    "@redspark/rsh-session-projection": "workspace:^",
-    "@redspark/rsh-subprocess-e2b": "workspace:^",
-    "@redspark/rsh-terminal": "workspace:^",
-    "@redspark/rsh-terminal-bash": "workspace:^",
     "@redspark/rsh-http-proxy": "workspace:^",
     "@redspark/rsh-launch-environment": "workspace:^",
     "@redspark/rsh-native-runtime": "workspace:^",
@@ -80,11 +62,6 @@
       "provides": [
         "e2b"
       ]
-    }
-  },
-  "peerDependenciesMeta": {
-    "@redspark/cordis": {
-      "optional": true
     }
   }
 }

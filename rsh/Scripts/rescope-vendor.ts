@@ -90,7 +90,6 @@ const GENERIC_SKIPS: readonly GenericSkip[] = [
   { file: 'rsh/Programs/Web/client/ui-agent-preset/tests/apply.client.spec.ts', upstream: ['cordis'] },
   { file: 'rsh/Programs/Web/client/ui-agent-preset/tests/locales.client.spec.ts', upstream: ['cordis'] },
   { file: 'rsh/Programs/Web/client/ui-agent-preset/tests/section.client.spec.tsx', upstream: ['cordis'] },
-  { file: 'rsh/Programs/CLI/tests/web-agent-presets.e2e.ts', upstream: ['cordis'] },
   { file: 'rsh/Programs/Web/application/tests/agent-preset-authoring.e2e.ts', upstream: ['cordis'] },
   { file: 'rsh/Engine/preset/agent-presets/tests/session.spec.ts', upstream: ['cordis'] },
   // The preset's own composition: its header comment and its system prompt name
@@ -284,13 +283,6 @@ const VENDORED_LIBRARY = /^@redspark\\/(cosmokit|schemastery)(\\/|$)/
     // The real package references in files whose other `cordis` strings are preset ids.
     id: 'agent-preset-spec-framework-import',
     file: 'rsh/Programs/Web/client/ui-agent-preset/tests/apply.client.spec.ts',
-    find: "import { Context } from 'cordis'",
-    replace: "import { Context } from '@redspark/cordis'",
-    expect: 1,
-  },
-  {
-    id: 'web-agent-presets-e2e-framework-import',
-    file: 'rsh/Programs/CLI/tests/web-agent-presets.e2e.ts',
     find: "import { Context } from 'cordis'",
     replace: "import { Context } from '@redspark/cordis'",
     expect: 1,

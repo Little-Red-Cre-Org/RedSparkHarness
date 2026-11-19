@@ -1,5 +1,4 @@
 import { once } from 'node:events'
-import { Context } from '@redspark/cordis'
 import {
   CommandExitError,
   FileNotFoundError,
@@ -7,10 +6,10 @@ import {
   type CommandHandle,
   type CommandResult,
   type Sandbox,
-} from '@redspark/rsh-e2b'
-import type E2BRuntime from '@redspark/rsh-e2b'
+} from 'e2b'
+import type { E2BSandboxAccess } from '@redspark/rsh-e2b/owner'
 import type { SubprocessSpawnSpec } from '@redspark/rsh-subprocess'
-import E2BSubprocessRuntime from '@redspark/rsh-subprocess-e2b'
+import { E2BSubprocessBackend } from '../src/backend.ts'
 import { E2BBase64Decoder, E2B_OUTPUT_COMPLETE_FRAME, E2BOutputReader } from '../src/output.ts'
 import { E2BSubprocessHandle } from '../src/process.ts'
 import { describe, expect, it, vi } from 'vitest'
@@ -310,12 +309,12 @@ function spec(overrides: Partial<SubprocessSpawnSpec> = {}): SubprocessSpawnSpec
   }
 }
 
-function runtime(fake: FakeSandbox, getSandbox: () => Promise<Sandbox> = async () => fake.sandbox): E2BRuntime {
+function runtime(fake: FakeSandbox, getSandbox: () => Promise<Sandbox> = async () => fake.sandbox): E2BSandboxAccess {
   return {
     cwd: '/workspace',
     runtimeRoot: '/workspace/.dsh-e2b',
     getSandbox,
-  } as unknown as E2BRuntime
+  }
 }
 
 async function flush(): Promise<void> {
@@ -457,24 +456,22 @@ describe('E2BSubprocessHandle', () => {
   })
 
   it('rejects an unrepresentable graceMs before any remote work', async () => {
-    const ctx = new Context()
     const getSandbox = vi.fn(async () => { throw new Error('remote work') })
-    ctx.provide('e2b', {
+    const backend = new E2BSubprocessBackend({
       cwd: '/workspace',
       runtimeRoot: '/workspace/.dsh-e2b',
       getSandbox,
-    } as unknown as E2BRuntime)
-    const fiber = await ctx.plugin(E2BSubprocessRuntime)
+    }, 20)
     try {
       for (const graceMs of [0, -1, Number.NaN, Number.POSITIVE_INFINITY]) {
-        expect(() => ctx.subprocess.spawn(spec({ graceMs }))).toThrow('graceMs must be a positive finite number')
-        await expect(ctx.subprocess.spawnTerminal({
+        expect(() => backend.spawn(spec({ graceMs }))).toThrow('graceMs must be a positive finite number')
+        await expect(backend.spawnTerminal({
           argv: ['bash'], cwd: '/w', rows: 24, cols: 80, graceMs,
         })).rejects.toThrow('graceMs must be a positive finite number')
       }
       expect(getSandbox).not.toHaveBeenCalled()
     } finally {
-      await fiber.dispose()
+      await backend.dispose()
     }
   })
 
@@ -1622,24 +1619,21 @@ describe('E2BSubprocessHandle', () => {
   })
 })
 
-describe('E2BSubprocessRuntime', () => {
+describe('E2BSubprocessBackend', () => {
   async function service(
     fake = new FakeSandbox(),
-    providedRuntime: E2BRuntime = runtime(fake),
-  ): Promise<{ ctx: Context; fiber: Awaited<ReturnType<Context['plugin']>> }> {
-    const ctx = new Context()
-    ctx.provide('e2b', providedRuntime)
-    const fiber = await ctx.plugin(E2BSubprocessRuntime)
-    return { ctx, fiber }
+    providedRuntime: E2BSandboxAccess = runtime(fake),
+  ): Promise<E2BSubprocessBackend> {
+    return new E2BSubprocessBackend(providedRuntime, 20)
   }
 
   it('registers handles and disposal terminates and joins live remote groups regardless of sandbox policy', async () => {
     const fake = new FakeSandbox()
     fake.trapsTerm = true
-    const { ctx, fiber } = await service(fake)
-    const handle = ctx.subprocess.spawn(spec({ graceMs: 1 }))
+    const backend = await service(fake)
+    const handle = backend.spawn(spec({ graceMs: 1 }))
     await flush()
-    await fiber.dispose()
+    await backend.dispose()
     await expect(handle.done).resolves.toEqual({ exitCode: null, signal: 'SIGKILL' })
     expect(fake.alive).toBe(false)
   })
@@ -1647,13 +1641,13 @@ describe('E2BSubprocessRuntime', () => {
   it('awaits SDK settlement after the remote process group becomes quiescent', async () => {
     const fake = new FakeSandbox()
     fake.trapsTerm = true
-    const { ctx, fiber } = await service(fake)
-    const handle = ctx.subprocess.spawn(spec())
+    const backend = await service(fake)
+    const handle = backend.spawn(spec())
     await flush()
     fake.alive = false
 
     let disposed = false
-    const disposing = fiber.dispose().then(() => { disposed = true })
+    const disposing = backend.dispose().then(() => { disposed = true })
     await flush()
     expect(disposed).toBe(false)
 
@@ -1666,11 +1660,11 @@ describe('E2BSubprocessRuntime', () => {
     const fake = new FakeSandbox()
     fake.signalErrors.push(new Error('TERM transport failed'), new Error('KILL transport failed'))
     fake.handle.killError = new Error('SDK kill failed')
-    const { ctx, fiber } = await service(fake)
-    const handle = ctx.subprocess.spawn(spec({ graceMs: 1 }))
+    const backend = await service(fake)
+    const handle = backend.spawn(spec({ graceMs: 1 }))
     await flush()
 
-    await expect(fiber.dispose()).resolves.toBeUndefined()
+    await expect(backend.dispose()).rejects.toThrow('remained live after force termination')
     await expect(handle.waitForExit()).rejects.toThrow('remained live after force termination')
 
     fake.handle.killError = undefined
@@ -1680,9 +1674,7 @@ describe('E2BSubprocessRuntime', () => {
   })
 
   it('aggregates sibling cleanup failures instead of reporting only the first', async () => {
-    const { ctx, fiber } = await service()
-    const disposalErrors: unknown[] = []
-    ctx.logger.error = ((error: unknown) => { disposalErrors.push(error) }) as typeof ctx.logger.error
+    const backend = await service()
     const first = {
       terminate: vi.fn(),
       waitForExit: vi.fn(async () => { throw new Error('first cleanup failed') }),
@@ -1693,12 +1685,12 @@ describe('E2BSubprocessRuntime', () => {
       waitForExit: vi.fn(async () => { throw new Error('second cleanup failed') }),
       done: Promise.resolve({ exitCode: 0, signal: null }),
     } as unknown as E2BSubprocessHandle
-    const live = (ctx.subprocess as unknown as { live: Set<E2BSubprocessHandle> }).live
+    const live = backend.live
     live.add(first)
     live.add(second)
 
-    await fiber.dispose()
-    const failure = disposalErrors[0]
+    let failure: unknown
+    try { await backend.dispose() } catch (error) { failure = error }
     expect(failure).toBeInstanceOf(AggregateError)
     if (!(failure instanceof AggregateError)) throw new Error('expected AggregateError')
     expect(failure.errors.map(error => (error as Error).message).sort()).toEqual([
@@ -1708,7 +1700,7 @@ describe('E2BSubprocessRuntime', () => {
   })
 
   it('waits for every owned cleanup before reporting a disposal failure', async () => {
-    const { ctx, fiber } = await service()
+    const backend = await service()
     const failed = {
       terminate: vi.fn(),
       waitForExit: vi.fn(async () => { throw new Error('cleanup failed') }),
@@ -1723,29 +1715,32 @@ describe('E2BSubprocessRuntime', () => {
       waitForExit: vi.fn(() => cleanup),
       done: Promise.resolve({ exitCode: 0, signal: null }),
     } as unknown as E2BSubprocessHandle
-    const live = (ctx.subprocess as unknown as { live: Set<E2BSubprocessHandle> }).live
+    const live = backend.live
     live.add(failed)
     live.add(draining)
 
     let disposed = false
-    const disposing = fiber.dispose().then(() => { disposed = true })
+    const disposing = backend.dispose().then(
+      () => { disposed = true },
+      (error: unknown) => { disposed = true; return error },
+    )
     await flush()
     expect(disposed).toBe(false)
     finishCleanup()
-    await disposing
+    await expect(disposing).resolves.toMatchObject({ message: 'cleanup failed' })
     expect(live).toEqual(new Set([failed]))
   })
 
   it('releases naturally settled handles before later service disposal', async () => {
     const fake = new FakeSandbox()
-    const { ctx, fiber } = await service(fake)
-    const handle = ctx.subprocess.spawn(spec())
+    const backend = await service(fake)
+    const handle = backend.spawn(spec())
     await flush()
     fake.finish()
     await handle.done
     await flush()
     const signalsBefore = fake.commandsSeen.filter(command => command.startsWith('kill -')).length
-    await fiber.dispose()
+    await backend.dispose()
     expect(fake.commandsSeen.filter(command => command.startsWith('kill -')).length).toBe(signalsBefore)
   })
 
@@ -1757,13 +1752,13 @@ describe('E2BSubprocessRuntime', () => {
       if (calls === 2) throw new Error('transient liveness failure')
       return fake.sandbox
     })
-    const { ctx, fiber } = await service(fake, reconnecting)
-    const handle = ctx.subprocess.spawn(spec())
+    const backend = await service(fake, reconnecting)
+    const handle = backend.spawn(spec())
     await flush()
     fake.finish()
     await handle.done
     await flush()
-    await fiber.dispose()
+    await backend.dispose()
     expect(calls).toBeGreaterThanOrEqual(3)
   })
 
@@ -1771,11 +1766,11 @@ describe('E2BSubprocessRuntime', () => {
     const fake = new FakeSandbox()
     fake.deferStart()
     fake.backgroundError = new Error('start failed during disposal')
-    const { ctx, fiber } = await service(fake)
-    const subprocess = ctx.subprocess
+    const backend = await service(fake)
+    const subprocess = backend
     const handle = subprocess.spawn(spec())
     await vi.waitFor(() => { expect(fake.startOptions).toBeDefined() })
-    const disposing = fiber.dispose()
+    const disposing = backend.dispose()
     await flush()
     expect(() => subprocess.spawn(spec())).toThrow('service is disposing')
     fake.releaseStart()
@@ -1786,15 +1781,15 @@ describe('E2BSubprocessRuntime', () => {
   it('validates synchronous spawn preconditions before handle or remote work', async () => {
     const fake = new FakeSandbox()
     const getSandbox = vi.fn(async () => fake.sandbox)
-    const { ctx } = await service(fake, runtime(fake, getSandbox))
-    const live = (ctx.subprocess as unknown as { live: Set<E2BSubprocessHandle> }).live
-    expect(() => ctx.subprocess.spawn(spec({ argv: [] }))).toThrow(/non-empty program/)
-    expect(() => ctx.subprocess.spawn(spec({ signal: AbortSignal.abort('stop') })))
+    const backend = await service(fake, runtime(fake, getSandbox))
+    const live = backend.live
+    expect(() => backend.spawn(spec({ argv: [] }))).toThrow(/non-empty program/)
+    expect(() => backend.spawn(spec({ signal: AbortSignal.abort('stop') })))
       .toThrow(new Error('aborted before spawn: stop'))
-    expect(() => ctx.subprocess.spawn(spec({ signal: AbortSignal.abort(null) })))
+    expect(() => backend.spawn(spec({ signal: AbortSignal.abort(null) })))
       .toThrow(new Error('aborted before spawn: aborted'))
     const throwingReason = { toString: () => { throw new Error('caller reason escaped') } }
-    expect(() => ctx.subprocess.spawn(spec({ signal: AbortSignal.abort(throwingReason) })))
+    expect(() => backend.spawn(spec({ signal: AbortSignal.abort(throwingReason) })))
       .toThrow(new Error('aborted before spawn: aborted'))
 
     for (const invalid of [
@@ -1806,7 +1801,7 @@ describe('E2BSubprocessRuntime', () => {
     ]) {
       let thrown: unknown
       try {
-        ctx.subprocess.spawn(invalid)
+        backend.spawn(invalid)
       } catch (error) {
         thrown = error
       }

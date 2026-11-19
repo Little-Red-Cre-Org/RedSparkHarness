@@ -22,11 +22,11 @@ E2B 家族让 agent（智能体）在一个远程 Linux 沙箱中读取和编辑
 <a id="packages"></a>
 ## 包
 
-| 包（package） | 职责 | ctx 键 |
+| 包（package） | 职责 | Native 服务 |
 |---|---|---|
-| [`e2b`](e2b/README.zh.md) | 承载文件操作与命令执行的共享远程 Linux 沙箱 | `ctx.e2b` |
-| [`fs-e2b`](fs-e2b/README.zh.md) | 远程沙箱内的文件读取、写入、编辑与列表 | `ctx.fs` |
-| [`subprocess-e2b`](subprocess-e2b/README.zh.md) | 远程沙箱内的 shell 命令与交互式终端 | `ctx.subprocess` |
+| [`e2b`](e2b/README.zh.md) | 承载文件操作与命令执行的共享远程 Linux 沙箱 | `e2b` |
+| [`fs-e2b`](fs-e2b/README.zh.md) | 远程沙箱内的文件读取、写入、编辑与列表 | `fs` |
+| [`subprocess-e2b`](subprocess-e2b/README.zh.md) | 远程沙箱内的 shell 命令与交互式终端 | `subprocess` |
 
 -----
 
@@ -34,8 +34,8 @@ E2B 家族让 agent（智能体）在一个远程 Linux 沙箱中读取和编辑
 ## 相关文档
 
 - [可移植执行世界决策](../../../../.agents/notes/implemented/architecture/2026-07-28-portable-execution-world-consumers.zh.md)——执行世界为何可以在不移动 harness 的情况下迁移，以及哪些内容留在本地。
-- [子进程子系统](../../../Docs/subsystems/subprocess.zh.md)——子进程 seam 约定与生成的 Cordis 接口，包括 `ctx.e2b`。
-- [文件系统子系统](../../../Docs/subsystems/filesystem.zh.md)——文件系统 seam 约定与生成的 Cordis 接口。
+- [子进程子系统](../../../Docs/subsystems/subprocess.zh.md)——子进程 seam 约定。
+- [文件系统子系统](../../../Docs/subsystems/filesystem.zh.md)——文件系统 seam 约定。
 
 -----
 

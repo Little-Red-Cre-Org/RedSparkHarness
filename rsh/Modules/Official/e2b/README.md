@@ -22,11 +22,11 @@ The E2B family lets agents read and edit files, run shell commands, and use term
 <a id="packages"></a>
 ## Packages
 
-| Package | Role | ctx key |
+| Package | Role | Native service |
 |---|---|---|
-| [`e2b`](e2b/README.md) | One shared remote Linux sandbox that file and command work runs in | `ctx.e2b` |
-| [`fs-e2b`](fs-e2b/README.md) | File reads, writes, edits, and listings inside the remote sandbox | `ctx.fs` |
-| [`subprocess-e2b`](subprocess-e2b/README.md) | Shell commands and interactive terminals inside the remote sandbox | `ctx.subprocess` |
+| [`e2b`](e2b/README.md) | One shared remote Linux sandbox that file and command work runs in | `e2b` |
+| [`fs-e2b`](fs-e2b/README.md) | File reads, writes, edits, and listings inside the remote sandbox | `fs` |
+| [`subprocess-e2b`](subprocess-e2b/README.md) | Shell commands and interactive terminals inside the remote sandbox | `subprocess` |
 
 -----
 
@@ -34,8 +34,8 @@ The E2B family lets agents read and edit files, run shell commands, and use term
 ## Related documentation
 
 - [Portable execution-world decision](../../../../.agents/notes/implemented/architecture/2026-07-28-portable-execution-world-consumers.md) — why the execution world can move without moving the harness, and what stays local.
-- [Subprocess subsystem](../../../Docs/subsystems/subprocess.md) — the subprocess seam contract and the generated Cordis surface, including `ctx.e2b`.
-- [Filesystem subsystem](../../../Docs/subsystems/filesystem.md) — the filesystem seam contract and the generated Cordis surface.
+- [Subprocess subsystem](../../../Docs/subsystems/subprocess.md) — the subprocess seam contract.
+- [Filesystem subsystem](../../../Docs/subsystems/filesystem.md) — the filesystem seam contract.
 
 -----
 

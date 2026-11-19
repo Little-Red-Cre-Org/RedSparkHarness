@@ -1,16 +1,15 @@
 import { Buffer } from 'node:buffer'
 import { dirname, posix } from 'node:path'
-import { Context } from '@redspark/cordis'
 import {
   CommandExitError,
   FileNotFoundError,
   FileType,
   type EntryInfo,
   type Sandbox,
-} from '@redspark/rsh-e2b'
-import type E2BRuntime from '@redspark/rsh-e2b'
+} from 'e2b'
+import type { E2BSandboxAccess } from '@redspark/rsh-e2b/owner'
 import { FsTargetKey, FsVersion } from '@redspark/rsh-fs'
-import E2BFileSystem from '@redspark/rsh-fs-e2b'
+import { E2BFileSystemBackend } from '../src/backend.ts'
 import { describe, expect, it, vi } from 'vitest'
 
 interface RemoteNode {
@@ -303,16 +302,13 @@ class FakeRemote {
   } as unknown as Sandbox
 }
 
-async function setup(remote = new FakeRemote()): Promise<{ ctx: Context; fs: E2BFileSystem; remote: FakeRemote }> {
-  const ctx = new Context()
-  const runtime = {
+async function setup(remote = new FakeRemote()): Promise<{ fs: E2BFileSystemBackend; remote: FakeRemote }> {
+  const owner: E2BSandboxAccess = {
     cwd: '/workspace',
     runtimeRoot: '/workspace/.dsh-e2b',
     getSandbox: async () => remote.sandbox,
-  } as unknown as E2BRuntime
-  ctx.provide('e2b', runtime)
-  await ctx.plugin(E2BFileSystem)
-  return { ctx, fs: ctx.fs as E2BFileSystem, remote }
+  }
+  return { fs: new E2BFileSystemBackend(owner), remote }
 }
 
 async function expectCode(promise: Promise<unknown>, code: string): Promise<void> {

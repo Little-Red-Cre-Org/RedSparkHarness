@@ -137,13 +137,10 @@ flowchart LR
   pkg_sdk_minimal["sdk-minimal"]
   pkg_goal["goal"]
   svc_goals["ctx.goals<br/>Same-session goal domain"]
-  pkg_e2b["e2b"]
-  svc_e2b["ctx.e2b<br/>E2B sandbox lifecycle owner"]
-  pkg_fs_e2b["fs-e2b"]
-  pkg_subprocess_e2b["subprocess-e2b"]
   pkg_subprocess["subprocess"]
   svc_subprocess["ctx.subprocess<br/>Subprocess seam"]
   pkg_subprocess_local["subprocess-local"]
+  pkg_subprocess_e2b["subprocess-e2b"]
   pkg_bash_local["bash-local"]
   pkg_bash_sandbox["bash-sandbox"]
   pkg_terminal_bash["terminal-bash"]
@@ -178,6 +175,7 @@ flowchart LR
   pkg_fs["fs"]
   svc_fs["ctx.fs<br/>Filesystem provider seam"]
   pkg_fs_local["fs-local"]
+  pkg_fs_e2b["fs-e2b"]
   pkg_fs_observation_policy["fs-observation-policy"]
   pkg_compaction["compaction"]
   svc_compaction["ctx.compaction<br/>Compaction seam"]
@@ -253,7 +251,6 @@ flowchart LR
   pkg_credentials --> svc_credentials
   pkg_credentials_local --> svc_credentials
   pkg_deepseek_llm_api_extensions --> svc_deepseekLlmApiExtensions
-  pkg_e2b --> svc_e2b
   pkg_experimental_code_runtime_python --> svc_codeRuntime
   pkg_file_reference --> svc_fileReferences
   pkg_file_reference_local --> svc_fileReferences
@@ -365,8 +362,6 @@ flowchart LR
   svc_credentials --> pkg_llm_pi_ai
   svc_deepseekLlmApiExtensions --> pkg_llm_deepseek
   svc_directoryPicker --> pkg_api_workspace_controller
-  svc_e2b --> pkg_fs_e2b
-  svc_e2b --> pkg_subprocess_e2b
   svc_fileReferences --> pkg_api_session_controller
   svc_fileUploads --> pkg_api_session_controller
   svc_fs --> pkg_tool_fs
@@ -516,7 +511,6 @@ flowchart LR
 | `ctx.agentDefaultModel` | `core` | [`agent-default-model`](../Engine/core/agent-default-model) | - | [`api-session-controller`](../Programs/Web/api/session-controller), [`headless`](../Compatibility/DSH/bundle/headless) | - | 通过 settings 分层默认 `ModelSelection`，让直接入口与 Host 支撑的 Agent 入口共享同一个状态所有者。 |
 | `ctx.agentLoop` | `bundle` | [`agent-loop`](../Engine/core/agent-loop) | - | [`base`](../Compatibility/DSH/bundle/base), [`sdk-minimal`](../Compatibility/DSH/bundle/sdk-minimal) | - | 唯一的具体循环插件；扩展包依赖 dsh-agent 的事件和服务，而不依赖此包。 |
 | `ctx.goals` | `core` | [`goal`](../Engine/goal/goal) | - | - | - | 从会话日志折叠带修订版本的目标状态，并将实时延续激活保留在进程本地。 |
-| `ctx.e2b` | `core` | [`e2b`](../Modules/Official/e2b/e2b) | - | [`fs-e2b`](../Modules/Official/e2b/fs-e2b), [`subprocess-e2b`](../Modules/Official/e2b/subprocess-e2b) | - | 拥有一个共享的 E2B SDK 句柄、远程工作目录和最终沙箱处置，使两个基础 E2B 提供方处于同一个 Linux 运行时中。 |
 | `ctx.subprocess` | `seam` | [`subprocess`](../Core/subprocess/subprocess) | [`subprocess-local`](../Core/subprocess/subprocess-local), [`subprocess-e2b`](../Modules/Official/e2b/subprocess-e2b) | [`bash-local`](../Modules/Official/shell/bash-local), [`bash-sandbox`](../Modules/Official/shell/bash-sandbox), [`terminal-bash`](../Modules/Official/terminal/terminal-bash), [`lsp-stdio`](../Modules/Official/lsp/lsp-stdio), [`subagent-acp`](../Compatibility/DSH/subagent/subagent-acp), [`subagent-codex`](../Compatibility/DSH/bridge/subagent-codex), [`subagent-claude-code`](../Modules/Official/subagent/subagent-claude-code) | - | Bash 执行器、PTY shell 后端、LSP Host，以及进程外 ACP、Codex 和 Claude Code subagent 后端都通过 ctx.subprocess 执行 spawn；该服务负责进程坐标、进程树／会话生命周期、stdio 处置、终端机制和 kill 升级。 |
 | `ctx.shell` | `seam` | [`shell`](../Modules/Official/shell/shell) | [`bash-local`](../Modules/Official/shell/bash-local), [`bash-sandbox`](../Modules/Official/shell/bash-sandbox), [`pwsh-local`](../Modules/Official/shell/pwsh-local) | [`tool-bash`](../Modules/Official/shell/tool-bash), [`tool-pwsh`](../Modules/Official/shell/tool-pwsh), [`hooks-claude-code`](../Modules/Official/hooks/hooks-claude-code), [`hooks-codex`](../Modules/Official/hooks/hooks-codex) | - | 面向模型的 shell 工具和钩子桥接消费此 seam；沙箱、远程或 PowerShell 执行器可以替换 bash-local，而无需改动这些消费方。 |
 | `ctx.shellEnv` | `core` | [`shell-env`](../Modules/Official/shell/shell-env) | - | [`tool-bash`](../Modules/Official/shell/tool-bash), [`tool-pwsh`](../Modules/Official/shell/tool-pwsh) | - | 插件声明限定于 effect 作用域的 RSH_* 事实；每个 shell 工具在每次执行时收集一份可信快照，其执行器据此重建命名空间。 |

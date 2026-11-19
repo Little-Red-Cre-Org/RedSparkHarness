@@ -31,16 +31,14 @@ async function observe(run: () => Promise<unknown>): Promise<string[]> {
   try { await run().catch(() => undefined) } finally { await dispose() }
   return seen
 }
-import { Context } from '@redspark/cordis'
-import E2bRuntime from '../src/index.ts'
+import { E2BSandboxOwner } from '../src/owner.ts'
 
 describe('e2b egress', () => {
   it('reaches the control plane through the proxy', async () => {
     const observed = await observe(async () => {
-      const ctx = new Context()
-      const fiber = await ctx.plugin(E2bRuntime, { apiKey: `e2b_${'0'.repeat(40)}`, cwd: '/home/user', timeoutMs: 5_000 })
-      await ctx.e2b.getSandbox().catch(() => undefined)
-      await fiber.dispose()
+      const owner = new E2BSandboxOwner({ apiKey: `e2b_${'0'.repeat(40)}`, cwd: '/home/user', timeoutMs: 5_000 })
+      await owner.getSandbox().catch(() => undefined)
+      await owner.dispose()
     })
     expect(observed.join('|')).toContain('api.e2b.app:443')
   })

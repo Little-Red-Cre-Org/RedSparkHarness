@@ -76,14 +76,14 @@ This section explains the design decisions behind the provider and points at the
 
 | File | Role |
 |---|---|
-| [`src/backend.ts`](src/backend.ts) | Remote filesystem operations shared by both installers |
-| [`src/index.ts`](src/index.ts) | Cordis `E2BFileSystem` adapter |
+| [`src/backend.ts`](src/backend.ts) | Remote filesystem operations |
+| [`src/index.ts`](src/index.ts) | Cordis-free export of the remote filesystem backend |
 | [`src/native.ts`](src/native.ts) | Native Host installer; requires `e2b` and provides `fs` |
 | — | No runtime invariant companion is published; each operation returns the E2B controller's committed result directly, with no independent event or cache to cross-check. |
 
 ### Canonical paths and transport framing
 
-Relative paths resolve as POSIX paths against the caller `cwd` or `ctx.e2b.cwd`; GNU `realpath -mz` supplies canonical target identity without requiring the final file to exist, and ASCII base64 plus strict NUL framing preserves newline and multibyte paths across the decoded SDK transport. `stat`, no-follow `lstat`, and stable one-level directory listings project E2B metadata into the seam; canonical targets expose absolute POSIX process paths, percent-encoded `file:` URIs, and provider-owned containment checks.
+Relative paths resolve as POSIX paths against the caller `cwd` or the owner's `cwd`; GNU `realpath -mz` supplies canonical target identity without requiring the final file to exist, and ASCII base64 plus strict NUL framing preserves newline and multibyte paths across the decoded SDK transport. `stat`, no-follow `lstat`, and stable one-level directory listings project E2B metadata into the seam; canonical targets expose absolute POSIX process paths, percent-encoded `file:` URIs, and provider-owned containment checks.
 
 ### Write path
 
@@ -103,7 +103,7 @@ E2B not-found, permission, abort, and other controller failures map to the exist
 Read these pages when the package-level contract is not enough. They move from the family composition to the filesystem seam surface and the tools that render it.
 
 - [E2B provider family map](../README.md) — the sandbox owner and the three-package composition.
-- [Filesystem subsystem](../../../../Docs/subsystems/filesystem.md) — the filesystem seam contract and the generated Cordis surface.
+- [Filesystem subsystem](../../../../Docs/subsystems/filesystem.md) — the filesystem seam contract.
 - [Filesystem provider contract](../../fs/fs/README.md) — the `FileSystem` interface this provider implements.
 - [File tools](../../fs/tool-fs/README.md) — the tools that render filesystem results to the model.
 
