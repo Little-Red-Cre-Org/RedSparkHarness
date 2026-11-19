@@ -21,7 +21,7 @@ import type { Context } from '@redspark/cordis'
 
 /**
  * The invocation's inner arguments: everything after the launcher's own flags,
- * verbatim and in argv order. `dsh --profile tui --resume abc` yields
+ * verbatim and in argv order. `dsh --profile rsh --resume abc` yields
  * `['--resume', 'abc']`.
  */
 export interface CmdlineArgs {
