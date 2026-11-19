@@ -52,6 +52,14 @@
     "@redspark/rsh-http-routes": "workspace:^",
     "@redspark/rsh-http-routes-cordis": "workspace:^"
   },
+  "peerDependenciesMeta": {
+    "@redspark/cordis": {
+      "optional": true
+    },
+    "@redspark/rsh-http-routes-cordis": {
+      "optional": true
+    }
+  },
   "devDependencies": {
     "@redspark/cordis": "workspace:^",
     "@redspark/cordis-plugin-loader": "workspace:^",

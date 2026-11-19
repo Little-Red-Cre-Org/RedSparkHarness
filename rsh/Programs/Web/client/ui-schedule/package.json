@@ -62,6 +62,11 @@
   "peerDependencies": {
     "@redspark/cordis": "workspace:^"
   },
+  "peerDependenciesMeta": {
+    "@redspark/cordis": {
+      "optional": true
+    }
+  },
   "devDependencies": {
     "@redspark/cordis": "workspace:^",
     "@redspark/rsh-api-session-controller": "workspace:^",

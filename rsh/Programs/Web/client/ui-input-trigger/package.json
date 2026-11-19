@@ -66,6 +66,11 @@
     "peerDependencies":  {
                              "@redspark/cordis":  "workspace:^"
                          },
+    "peerDependenciesMeta":  {
+                                 "@redspark/cordis":  {
+                                                           "optional":  true
+                                                       }
+                             },
     "devDependencies":  {
                             "@redspark/rsh-client-locale":  "workspace:^",
                             "@redspark/rsh-client-ui-conversation":  "workspace:^",

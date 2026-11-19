@@ -9279,9 +9279,6 @@ importers:
 
   rsh/Programs/CLI:
     dependencies:
-      '@redspark/cordis':
-        specifier: workspace:^
-        version: link:../../Core/vendor/cordis
       '@redspark/rsh-acp-child':
         specifier: workspace:^
         version: link:../../Modules/Official/subagent/acp-child
@@ -9492,6 +9489,12 @@ importers:
       '@redspark/rsh-http-proxy':
         specifier: workspace:^
         version: link:../../Core/util/http-proxy
+      '@redspark/rsh-http-routes':
+        specifier: workspace:^
+        version: link:../../Core/util/http-routes
+      '@redspark/rsh-invariants':
+        specifier: workspace:^
+        version: link:../../Core/runtime-diagnostics/invariants
       '@redspark/rsh-launch-environment':
         specifier: workspace:^
         version: link:../../Core/util/launch-environment
@@ -9615,12 +9618,18 @@ importers:
       '@redspark/rsh-repeat-tool-reminder':
         specifier: workspace:^
         version: link:../../Modules/Official/guard/repeat-tool-reminder
+      '@redspark/rsh-request-context':
+        specifier: workspace:^
+        version: link:../../Engine/context/request-context
       '@redspark/rsh-sandbox':
         specifier: workspace:^
         version: link:../../Modules/Official/sandbox/sandbox
       '@redspark/rsh-sandbox-local':
         specifier: workspace:^
         version: link:../../Modules/Official/sandbox/sandbox-local
+      '@redspark/rsh-scope':
+        specifier: workspace:^
+        version: link:../../Engine/core/scope
       '@redspark/rsh-sdk-child':
         specifier: workspace:^
         version: link:../../Modules/Official/subagent/sdk-child
@@ -9660,6 +9669,12 @@ importers:
       '@redspark/rsh-session-reference':
         specifier: workspace:^
         version: link:../../Engine/context/session-reference
+      '@redspark/rsh-session-telemetry':
+        specifier: workspace:^
+        version: link:../../Engine/session/session-telemetry
+      '@redspark/rsh-session-telemetry-otel':
+        specifier: workspace:^
+        version: link:../../Engine/session/session-telemetry-otel
       '@redspark/rsh-session-title':
         specifier: workspace:^
         version: link:../../Engine/session/session-title
@@ -9684,9 +9699,15 @@ importers:
       '@redspark/rsh-shell-env':
         specifier: workspace:^
         version: link:../../Modules/Official/shell/shell-env
+      '@redspark/rsh-skill':
+        specifier: workspace:^
+        version: link:../../Modules/Official/skill/skill
       '@redspark/rsh-skill-badge':
         specifier: workspace:^
         version: link:../../Modules/Official/skill/skill-badge
+      '@redspark/rsh-skill-filesystem':
+        specifier: workspace:^
+        version: link:../../Modules/Official/skill/skill-filesystem
       '@redspark/rsh-spill':
         specifier: workspace:^
         version: link:../../Modules/Official/spill/spill
@@ -9714,9 +9735,18 @@ importers:
       '@redspark/rsh-subprocess-local':
         specifier: workspace:^
         version: link:../../Core/subprocess/subprocess-local
+      '@redspark/rsh-system-prompt':
+        specifier: workspace:^
+        version: link:../../Engine/core/system-prompt
       '@redspark/rsh-task-scheduler':
         specifier: workspace:^
         version: link:../../Modules/Official/automation/task-scheduler
+      '@redspark/rsh-terminal':
+        specifier: workspace:^
+        version: link:../../Modules/Official/terminal/terminal
+      '@redspark/rsh-terminal-bash':
+        specifier: workspace:^
+        version: link:../../Modules/Official/terminal/terminal-bash
       '@redspark/rsh-timeout':
         specifier: workspace:^
         version: link:../../Core/util/timeout
@@ -9732,6 +9762,9 @@ importers:
       '@redspark/rsh-tool-bash':
         specifier: workspace:^
         version: link:../../Modules/Official/shell/tool-bash
+      '@redspark/rsh-tool-bash-persistent':
+        specifier: workspace:^
+        version: link:../../Modules/Official/shell/tool-bash-persistent
       '@redspark/rsh-tool-call-timeout-policy':
         specifier: workspace:^
         version: link:../../Modules/Official/guard/timeout-policy
@@ -9750,12 +9783,18 @@ importers:
       '@redspark/rsh-tool-pwsh':
         specifier: workspace:^
         version: link:../../Modules/Official/shell/tool-pwsh
+      '@redspark/rsh-tool-pwsh-persistent':
+        specifier: workspace:^
+        version: link:../../Modules/Official/shell/tool-pwsh-persistent
       '@redspark/rsh-tool-ralph':
         specifier: workspace:^
         version: link:../../Engine/workflow/tool-ralph
       '@redspark/rsh-tool-session-query':
         specifier: workspace:^
         version: link:../../Engine/session-query/tool-session-query
+      '@redspark/rsh-tool-skill':
+        specifier: workspace:^
+        version: link:../../Modules/Official/skill/tool-skill
       '@redspark/rsh-tool-subagent':
         specifier: workspace:^
         version: link:../../Engine/subagent/tool-subagent
@@ -9823,6 +9862,9 @@ importers:
       '@redspark/rsh-agent-loop-testkit':
         specifier: workspace:^
         version: link:../../Tests/test-support/agent-loop-testkit
+      '@redspark/rsh-app-boot':
+        specifier: workspace:^
+        version: link:../../Compatibility/DSH/boot/app-boot
       '@redspark/rsh-experimental-agent-team':
         specifier: workspace:^
         version: link:../../Modules/Community/experimental/agent-team
@@ -9883,9 +9925,6 @@ importers:
       '@redspark/rsh-subagent-spawn-in-process':
         specifier: workspace:^
         version: link:../../Engine/subagent/subagent-spawn-in-process
-      '@redspark/rsh-system-prompt':
-        specifier: workspace:^
-        version: link:../../Engine/core/system-prompt
       '@redspark/rsh-tool-lsp':
         specifier: workspace:^
         version: link:../../Modules/Official/lsp/tool-lsp
@@ -9914,12 +9953,6 @@ importers:
         specifier: 8.21.0
         version: 8.21.0
     optionalDependencies:
-      '@redspark/cordis-plugin-loader':
-        specifier: workspace:^
-        version: link:../../Core/vendor/loader
-      '@redspark/rsh-acp-app':
-        specifier: workspace:^
-        version: link:../../Compatibility/DSH/bundle/acp-app
       '@redspark/rsh-agent':
         specifier: workspace:^
         version: link:../../Engine/core/agent
@@ -9929,93 +9962,36 @@ importers:
       '@redspark/rsh-agent-tool-presentation':
         specifier: workspace:^
         version: link:../../Engine/core/agent-tool-presentation
-      '@redspark/rsh-app-boot':
-        specifier: workspace:^
-        version: link:../../Compatibility/DSH/boot/app-boot
-      '@redspark/rsh-base':
-        specifier: workspace:^
-        version: link:../../Compatibility/DSH/bundle/base
       '@redspark/rsh-client-ui-agent-preset':
         specifier: workspace:^
         version: link:../Web/client/ui-agent-preset
-      '@redspark/rsh-cmdline':
-        specifier: workspace:^
-        version: link:../../Compatibility/DSH/boot/cmdline
-      '@redspark/rsh-headless':
-        specifier: workspace:^
-        version: link:../../Compatibility/DSH/bundle/headless
       '@redspark/rsh-hooks-claude-code':
         specifier: workspace:^
         version: link:../../Modules/Official/hooks/hooks-claude-code
       '@redspark/rsh-hooks-codex':
         specifier: workspace:^
         version: link:../../Modules/Official/hooks/hooks-codex
-      '@redspark/rsh-invariants':
-        specifier: workspace:^
-        version: link:../../Core/runtime-diagnostics/invariants
       '@redspark/rsh-jobs-local':
         specifier: workspace:^
         version: link:../../Engine/jobs/jobs-local
       '@redspark/rsh-mcp-client':
         specifier: workspace:^
         version: link:../../Modules/Official/mcp/mcp-client
-      '@redspark/rsh-request-context':
-        specifier: workspace:^
-        version: link:../../Engine/context/request-context
-      '@redspark/rsh-rsh':
-        specifier: workspace:^
-        version: link:../../Compatibility/DSH/bundle/rsh
       '@redspark/rsh-schedule':
         specifier: workspace:^
         version: link:../../Engine/schedule/schedule
-      '@redspark/rsh-sdk-app':
-        specifier: workspace:^
-        version: link:../../Compatibility/DSH/bundle/sdk-app
-      '@redspark/rsh-sdk-minimal':
-        specifier: workspace:^
-        version: link:../../Compatibility/DSH/bundle/sdk-minimal
-      '@redspark/rsh-session-telemetry':
-        specifier: workspace:^
-        version: link:../../Engine/session/session-telemetry
-      '@redspark/rsh-session-telemetry-otel':
-        specifier: workspace:^
-        version: link:../../Engine/session/session-telemetry-otel
-      '@redspark/rsh-skill':
-        specifier: workspace:^
-        version: link:../../Modules/Official/skill/skill
-      '@redspark/rsh-skill-filesystem':
-        specifier: workspace:^
-        version: link:../../Modules/Official/skill/skill-filesystem
-      '@redspark/rsh-terminal':
-        specifier: workspace:^
-        version: link:../../Modules/Official/terminal/terminal
-      '@redspark/rsh-terminal-bash':
-        specifier: workspace:^
-        version: link:../../Modules/Official/terminal/terminal-bash
-      '@redspark/rsh-tool-bash-persistent':
-        specifier: workspace:^
-        version: link:../../Modules/Official/shell/tool-bash-persistent
       '@redspark/rsh-tool-jobs':
         specifier: workspace:^
         version: link:../../Engine/jobs/tool-jobs
       '@redspark/rsh-tool-present':
         specifier: workspace:^
         version: link:../../Modules/Official/fs/tool-present
-      '@redspark/rsh-tool-pwsh-persistent':
-        specifier: workspace:^
-        version: link:../../Modules/Official/shell/tool-pwsh-persistent
-      '@redspark/rsh-tool-skill':
-        specifier: workspace:^
-        version: link:../../Modules/Official/skill/tool-skill
       '@redspark/rsh-tool-str-replace-editor':
         specifier: workspace:^
         version: link:../../Modules/Official/fs/tool-str-replace-editor
       '@redspark/rsh-user-question-broker':
         specifier: workspace:^
         version: link:../../Modules/Official/interaction/user-question-broker
-      '@redspark/rsh-web-app':
-        specifier: workspace:^
-        version: link:../../Compatibility/DSH/bundle/web-app
       '@redspark/rsh-webhook':
         specifier: workspace:^
         version: link:../../Modules/Official/webhook/webhook
