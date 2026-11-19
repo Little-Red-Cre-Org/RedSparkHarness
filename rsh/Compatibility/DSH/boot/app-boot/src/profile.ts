@@ -134,7 +134,7 @@ const INSTALLATION_OWNED_PROFILE_TUPLES: Record<string, readonly string[]> = {
   headless: ['@redspark/rsh-base', '@redspark/rsh-web-app', '@redspark/rsh-headless'],
 }
 
-/** The bundle list a `dsh plugin` init uses for a name with no shipped template. */
+/** The bundle list a legacy Cordis profile init uses for a name with no shipped template. */
 export const DEFAULT_PROFILE_BUNDLES: readonly string[] = ['@redspark/rsh-base']
 
 /** Custom profiles retain the historical live patch-file behavior. */
@@ -830,7 +830,7 @@ export function resolveBundleDir(
   }
   throw new Error(
     `${binName}: cannot resolve profile bundle ${JSON.stringify(packageName)} from the dsh installation or ${profileDir}; `
-    + `run 'dsh plugin --profile ${basename(profileDir)} install' if its dependency is not installed`,
+    + `install it into ${profileDir} with pnpm if its dependency is missing`,
   )
 }
 
@@ -903,7 +903,7 @@ export function loadProfile(
     const template = PROFILE_TEMPLATES[name]
     if (template === undefined) {
       throw new Error(
-        `${binName}: profile ${JSON.stringify(name)} does not exist; create it with 'dsh plugin --profile ${name} add <package>'`,
+        `${binName}: profile ${JSON.stringify(name)} does not exist; create it with --from-default-profile or install its bundles`,
       )
     }
     initProfile(dir, template.bundles, template.patchReload)

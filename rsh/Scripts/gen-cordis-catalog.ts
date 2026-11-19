@@ -143,8 +143,7 @@ export const SERVICE_PAGE: Record<string, string> = {
  * installs before the tree mounts, which the analyzer skips by rule because no
  * plugin provides it and `inject` cannot reach it. A client-face key belongs to
  * the browser Context, which this host-face program never sees; the browser
- * surface has its own generated catalog (`rsh/Scripts/gen-client-catalog.ts`, served
- * to a model as `cordis_runtime_inspect what:"client"`).
+ * surface evaluates its own `SlotMap` at runtime.
  */
 export const SERVICE_WALK_EXEMPTIONS: Record<string, string> = {
   appReady: 'not a service: launcher-provided successful-startup signal — rsh/Compatibility/DSH/boot/cmdline/README.md owns the launcher contract',

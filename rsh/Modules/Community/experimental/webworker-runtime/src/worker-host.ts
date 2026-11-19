@@ -351,11 +351,12 @@ function requireLoweredImage(vfs: MemoryVfs, path: string): void {
  * supplies it.
  *
  * A launcher appends this root itself rather than writing it into the roster —
- * `rsh/Programs/CLI` does it in `composeProfile` (`profile-boot.ts:159-166`) because only
- * the application knows where its own presets sit. The worker's presets travel
- * in the image, so the same overlay names their virtual path. Patching replaces
- * a row's whole `config`, so the current one is read and spread, and a roster
- * that already names roots keeps them.
+ * the WebWorker image reads `dsh.configTrees` from the CLI package manifest
+ * (`webworker-packer/src/repository.ts`) because only the application knows
+ * where its own presets sit. The worker's presets travel in the image, so the
+ * same overlay names their virtual path. Patching replaces a row's whole
+ * `config`, so the current one is read and spread, and a roster that already
+ * names roots keeps them.
  * @param loader - Module loader, for the image's YAML reader.
  * @param vfs - Filesystem holding the composed configuration.
  * @param configPath - Composed configuration path.

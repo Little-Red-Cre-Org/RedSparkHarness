@@ -34,7 +34,7 @@ dsh --profile sdk
 
 `RSH_CONTEXT_WINDOW` 为不在适配器建议目录中的模型设置后备容量。`RSH_SYSTEM_PROMPT` 替换默认 persona。SDK 初始化请求是唯一的模型选择依据，并覆盖环境默认值。
 
-以 `sdk-minimal` 这个名称管理插件会被拒绝。受支持的 SDK profile 使用 `dsh plugin --profile sdk`，或者在组合本包的自定义 legacy profile 上管理插件。有序 `--patch` 文件可以替换本包完整默认配置树中的配置项，或在该配置树上方插入 bundle。组合本包且设置 `patchReload: startup` 的 profile 只在启动时应用这些 patch。
+以 `sdk-minimal` 这个名称管理插件会被拒绝。用 `pnpm` 把插件安装进 `sdk` profile 并编辑其 `rsh.profile.json`，或者在组合本包的自定义 legacy profile 上管理组合包。有序 `--patch` 文件可以替换本包完整默认配置树中的配置项，或在该配置树上方插入 bundle。组合本包且设置 `patchReload: startup` 的 profile 只在启动时应用这些 patch。
 
 该 profile 只挂载一套持久 shell：Linux 和 macOS 使用 Bash，Windows 使用 PowerShell。两套配置都使用 300 秒超时与一个 agent 自有终端；另一平台的配置项保持禁用。
 
@@ -91,7 +91,7 @@ dsh --profile sdk
 
 <a id="known-limitations-and-deferred-work"></a>
 
-- **已发布名称不再启动** — `dsh --profile sdk-minimal`、`--from-default-profile sdk-minimal` 与 `dsh plugin --profile sdk-minimal` 都会以错误退出。已有目录不会被改写。请使用 `dsh --profile sdk`，或从自定义 legacy profile 名称组合本包。
+- **已发布名称不再启动** — `dsh --profile sdk-minimal` 与 `--from-default-profile sdk-minimal` 都会以错误退出。已有目录不会被改写。请使用 `dsh --profile sdk`，或从自定义 legacy profile 名称组合本包。
 - **该组合刻意省略共享产品服务** — 需要 settings、托管凭据、策略预设、遥测、Web 工具或完整默认工具清单时，请选择 `dsh --profile sdk`。
 - **用户 patch 可以扩展配置树并破坏 stdout** — profile 自定义属于受信任的应用组合；向 stdout 写入普通文本的插件会破坏 JSON-RPC 分帧。
 

@@ -34,7 +34,7 @@ dsh --profile sdk
 
 `RSH_CONTEXT_WINDOW` sets the fallback capacity for a model absent from the adapter's advisory catalog. `RSH_SYSTEM_PROMPT` replaces the default persona. The SDK initialization request is the sole model selection and overrides environment defaults.
 
-Plugin management under the name `sdk-minimal` is refused. Use `dsh plugin --profile sdk` for the supported SDK profile, or manage plugins on a custom legacy profile that composes this bundle. Ordered `--patch` files can replace rows or insert bundles above this package's complete default tree. A profile that composes this bundle and sets `patchReload: startup` applies those patches only at startup.
+Plugin management under the name `sdk-minimal` is refused. Install plugins into the `sdk` profile with `pnpm` and edit its `rsh.profile.json`, or manage bundles on a custom legacy profile that composes this bundle. Ordered `--patch` files can replace rows or insert bundles above this package's complete default tree. A profile that composes this bundle and sets `patchReload: startup` applies those patches only at startup.
 
 The profile mounts exactly one persistent shell stack: Bash on Linux and macOS, or PowerShell on Windows. Both stacks use a 300-second timeout and one owner-scoped terminal; the other platform's rows remain disabled.
 
@@ -91,7 +91,7 @@ Stable for a fixed persona, platform, provider, model, and bundle patch stack. P
 
 <a id="known-limitations-and-deferred-work"></a>
 
-- **The shipped name no longer boots** — `dsh --profile sdk-minimal`, `--from-default-profile sdk-minimal`, and `dsh plugin --profile sdk-minimal` exit with an error. Existing directories are not rewritten. Use `dsh --profile sdk`, or compose this bundle from a custom legacy profile name.
+- **The shipped name no longer boots** — `dsh --profile sdk-minimal` and `--from-default-profile sdk-minimal` exit with an error. Existing directories are not rewritten. Use `dsh --profile sdk`, or compose this bundle from a custom legacy profile name.
 - **The composition intentionally omits shared product services** — select `dsh --profile sdk` when settings, managed credentials, policy presets, telemetry, Web tools, or the full default tool roster are required.
 - **User patches can expand the tree and corrupt stdout** — profile customization is trusted application composition; a plugin that writes ordinary text to stdout can break JSON-RPC framing.
 

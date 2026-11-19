@@ -34,8 +34,8 @@ Native Codex 请求在启动前停止，因为此适配器尚未执行父级 aut
 把包安装进目标 Profile，然后重启该 Profile。安装会把官方 wrapper 与一个兼容的原生平台载荷带入 Profile；声明的 patch 层只注册休眠的提供方，不启动任何 Codex 进程。
 
 ```sh
-dsh plugin --profile <name> add @redspark/rsh-subagent-codex
-dsh plugin --profile <name> remove @redspark/rsh-subagent-codex
+cd "$RSH_HOME/profiles/<name>"
+pnpm add @redspark/rsh-subagent-codex
 dsh --profile <name>
 ```
 
