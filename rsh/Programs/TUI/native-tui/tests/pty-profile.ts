@@ -7,6 +7,7 @@ import { spawn, type IPty } from 'node-pty'
 import { vi } from 'vitest'
 import type { ReplayEntry } from '@redspark/rsh-llm-replay'
 import { shippedNativeProfileComposition } from '../../../CLI/src/native-profile-template.ts'
+import { terminalCopy } from '../src/locale.ts'
 
 const root = fileURLToPath(new URL('../../../../../', import.meta.url))
 
@@ -155,7 +156,16 @@ export function terminalFixture(cancellation: boolean, script?: readonly ReplayE
           const start = output.length
           child.write(text)
           await vi.waitFor(() => { if (!output.slice(start).includes(text)) throw new Error(output.slice(-3000)) }, { timeout: 30000 })
+          const accepted = output.length
           child.write('\r')
+          // A slow reader can coalesce this Enter with the next typed input into one chunk, which
+          // the composer inserts literally. Wait for the cleared composer before the next input.
+          const placeholder = terminalCopy('en').placeholder
+          const deadline = Date.now() + 30000
+          while (!run.exited && output.indexOf(placeholder, accepted) < 0) {
+            if (Date.now() > deadline) throw new Error(`terminal composer did not clear after Enter: ${output.slice(-3000)}`)
+            await new Promise((resolve) => { setTimeout(resolve, 10) })
+          }
         },
         output: () => output,
         async waitFor(text: string, start = 0) { await vi.waitFor(() => {
