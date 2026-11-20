@@ -45,6 +45,9 @@
   "peerDependenciesMeta": {
     "@redspark/cordis": {
       "optional": true
+    },
+    "@redspark/rsh-scope": {
+      "optional": true
     }
   },
   "dependencies": {

@@ -207,6 +207,7 @@ export const OPTIONAL_NATIVE_HOST_PEERS: Readonly<Record<string, readonly string
   '@redspark/rsh-tool-bash-persistent': ['@redspark/rsh-tools'],
   '@redspark/rsh-file-reference': ['@redspark/rsh-agent'],
   '@redspark/rsh-skill': ['@redspark/rsh-scope'],
+  '@redspark/rsh-client-file-upload': ['@redspark/rsh-scope'],
   '@redspark/rsh-workflow': ['@redspark/rsh-agent'],
   '@redspark/rsh-fs-sandbox': ['@redspark/cordis', '@redspark/rsh-plugin-host', '@redspark/rsh-sandbox-policy'],
   '@redspark/rsh-session': ['@redspark/rsh-scope'],

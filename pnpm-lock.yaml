@@ -9627,9 +9627,6 @@ importers:
       '@redspark/rsh-sandbox-local':
         specifier: workspace:^
         version: link:../../Modules/Official/sandbox/sandbox-local
-      '@redspark/rsh-scope':
-        specifier: workspace:^
-        version: link:../../Engine/core/scope
       '@redspark/rsh-sdk-child':
         specifier: workspace:^
         version: link:../../Modules/Official/subagent/sdk-child
