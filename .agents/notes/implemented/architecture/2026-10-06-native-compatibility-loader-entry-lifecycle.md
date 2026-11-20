@@ -34,4 +34,3 @@ The focused Native bridge run covers startup rollback, participant activation fa
 
 - [Filesystem compatibility version support](2026-10-05-compatibility-filesystem-version-support.md)
 - [Native compatibility bridge](2026-09-22-native-compatibility-bridge.md)
-- [Compatibility runtime README](../../../../rsh/Compatibility/DSH/bridge/compat-dsh-runtime/README.md)
