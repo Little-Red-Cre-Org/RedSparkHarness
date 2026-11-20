@@ -236,6 +236,12 @@ describe('package dependency scope', () => {
       '@redspark/rsh-client-native-session': ['eventsource-parser', 'zod', '@redspark/rsh-command-feedback'],
       '@redspark/rsh-client-ui-session': ['@redspark/rsh-util-workspace-path'],
       '@redspark/rsh-client-ui-renderer': ['use-sync-external-store'],
+      '@redspark/rsh-client-ui-reference': [
+        '@redspark/rsh-client-ui-primitives',
+        '@redspark/rsh-file-reference',
+        '@redspark/rsh-session-reference',
+        '@redspark/rsh-util-workspace-path',
+      ],
       '@redspark/rsh-client-ui-layout': ['@redspark/rsh-client-store'],
       '@redspark/rsh-client-native-application': [
         '@redspark/rsh-client-ui-primitives', '@redspark/rsh-client-ui-attachment',
