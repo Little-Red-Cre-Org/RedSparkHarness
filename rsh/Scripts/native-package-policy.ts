@@ -360,6 +360,8 @@ export const nativeCompatibilityOnlyPeers: ReadonlyMap<string, readonly string[]
     '@redspark/rsh-subagent', '@redspark/rsh-subprocess', '@redspark/rsh-timeout',
   ]],
   ['rsh/Engine/context/session-reference', ['@redspark/rsh-typert-protocol']],
+  ['rsh/Engine/core/system-prompt', ['@redspark/rsh-scope']],
+  ['rsh/Programs/Web/client/file-upload', ['@redspark/rsh-scope']],
   ['rsh/Engine/subagent/tool-subagent', ['@redspark/rsh-scope', '@redspark/rsh-session', '@redspark/rsh-subagent', '@redspark/rsh-tools']],
   ['rsh/Engine/llm/token-meter', ['@redspark/rsh-compaction', '@redspark/rsh-llm-retry', '@redspark/rsh-session-projection']],
   ['rsh/Modules/Official/spill/spill-policy', ['@redspark/rsh-llm', '@redspark/rsh-session', '@redspark/rsh-tools']],
