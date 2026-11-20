@@ -21,7 +21,7 @@ import { assertSnapshotCorpusPolicy } from './session-snapshot-corpus-policy.ts'
 
 const repoRoot = resolve(import.meta.dirname, '..', '..')
 const corpusRoot = join(repoRoot, 'snapshots')
-const profiles = ['compat', 'desktop', 'native-acp', 'native-headless', 'native-headless-query', 'native-sdk', 'native-tui', 'sdk', 'session', 'web'] as const
+const profiles = ['desktop', 'native-acp', 'native-headless', 'native-headless-query', 'native-sdk', 'native-tui', 'sdk', 'session', 'web'] as const
 const expectedProfilesByDirectory: Partial<Record<typeof profiles[number], readonly string[]>> = {
   'native-acp': ['native-acp', 'acp'],
   'native-sdk': ['native-sdk', 'sdk'],
@@ -35,7 +35,6 @@ const snapshotAdapters = [
   'rsh/Programs/Web/application/tests/preset-migration.snapshot.ts',
   'snapshots/web/native-session-core.snapshot.ts',
   'snapshots/web/native-github-webhook.snapshot.ts',
-  'snapshots/compat/compat.snapshot.ts',
   'snapshots/desktop/native-session-core.snapshot.ts',
   'snapshots/native-acp/external-child.snapshot.ts',
   'snapshots/native-acp/text-turn.snapshot.ts',

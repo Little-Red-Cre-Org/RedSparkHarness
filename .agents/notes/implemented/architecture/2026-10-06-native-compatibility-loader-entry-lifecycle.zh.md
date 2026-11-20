@@ -34,4 +34,3 @@ Loader entry 配置更新、启用、停用和移除共用一个串行操作队�
 
 - [文件系统兼容版本支持](2026-10-05-compatibility-filesystem-version-support.zh.md)
 - [原生兼容 bridge](2026-09-22-native-compatibility-bridge.zh.md)
-- [兼容 runtime README](../../../../rsh/Compatibility/DSH/bridge/compat-dsh-runtime/README.zh.md)

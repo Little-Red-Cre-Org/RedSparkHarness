@@ -1,0 +1,6 @@
+# Bilingual-pair consistency record (rsh/Docs/i18n/README.md): the git blob hash of each
+# side as of the last confirmed-consistent state. Both languages carry equal authority;
+# after editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write .agents/notes/implemented/architecture/2026-11-20-legacy-dsh-filesystem-bridges-retire.md
+2026-11-20-legacy-dsh-filesystem-bridges-retire.md: dfd8f37c47a0318931b85d66d37611da6ba25193
+2026-11-20-legacy-dsh-filesystem-bridges-retire.zh.md: 342329fdfb69714148a75406d7b91a9fdf2d7662

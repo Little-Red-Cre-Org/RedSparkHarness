@@ -162,13 +162,8 @@ flowchart TD
   end
   subgraph group_bridge["group: bridge"]
     pkg_code_runtime["code-runtime"]
-    pkg_compat_dsh_runtime["compat-dsh-runtime"]
-    pkg_compat_fs_local["compat-fs-local"]
-    pkg_compat_fs_policy["compat-fs-policy"]
-    pkg_compat_fs_sandbox["compat-fs-sandbox"]
     pkg_compat_settings_adapters["compat-settings-adapters"]
     pkg_compat_settings_definition["compat-settings-definition"]
-    pkg_compat_tool_fs["compat-tool-fs"]
     pkg_http_routes_cordis["http-routes-cordis"]
     pkg_plugin_host["plugin-host"]
     pkg_subagent_codex["subagent-codex"]
@@ -445,7 +440,6 @@ flowchart TD
   pkg_scope --> pkg_invariants
   pkg_attachment --> pkg_brand
   pkg_attachment --> pkg_native_runtime
-  pkg_compat_tool_fs --> pkg_native_approval
   pkg_client_ui_approval --> pkg_client_locale
   pkg_client_ui_approval --> pkg_client_ui_primitives
   pkg_client_ui_attachment --> pkg_client_ui_primitives
@@ -1456,10 +1450,6 @@ flowchart TD
 | [`native-web-session-controller`](../Programs/Web/api/native-web-session-controller) | `api` | — |
 | [`cmdline`](../Compatibility/DSH/boot/cmdline) | `boot` | — |
 | [`code-runtime`](../Compatibility/DSH/bridge/compat-code-runtime) | `bridge` | — |
-| [`compat-dsh-runtime`](../Compatibility/DSH/bridge/compat-dsh-runtime) | `bridge` | — |
-| [`compat-fs-local`](../Compatibility/DSH/bridge/compat-fs-local) | `bridge` | — |
-| [`compat-fs-policy`](../Compatibility/DSH/bridge/compat-fs-policy) | `bridge` | — |
-| [`compat-fs-sandbox`](../Compatibility/DSH/bridge/compat-fs-sandbox) | `bridge` | — |
 | [`plugin-host`](../Compatibility/DSH/bridge/compat-plugin-host) | `bridge` | — |
 | [`acp-app`](../Compatibility/DSH/bundle/acp-app) | `bundle` | — |
 | [`base`](../Compatibility/DSH/bundle/base) | `bundle` | — |
@@ -1552,7 +1542,6 @@ flowchart TD
 | [`llm`](../Engine/llm/llm) | `llm` | [`errors`](../Core/util/errors), [`typert-protocol`](../Core/typert/protocol) |
 | [`scope`](../Engine/core/scope) | `core` | [`invariants`](../Core/runtime-diagnostics/invariants) |
 | [`attachment`](../Modules/Official/attachment/attachment) | `attachment` | [`brand`](../Core/util/brand), [`native-runtime`](../Core/runtime-diagnostics/native-runtime) |
-| [`compat-tool-fs`](../Compatibility/DSH/bridge/compat-tool-fs) | `bridge` | [`native-approval`](../Modules/Official/interaction/native-approval) |
 | [`client-ui-approval`](../Programs/Web/client/ui-approval) | `client` | [`client-locale`](../Programs/Web/client/locale), [`client-ui-primitives`](../Programs/Web/client/ui-primitives) |
 | [`client-ui-attachment`](../Programs/Web/client/ui-attachment) | `client` | [`client-ui-primitives`](../Programs/Web/client/ui-primitives) |
 | [`client-ui-deliverables`](../Programs/Web/client/ui-deliverables) | `client` | [`client-locale`](../Programs/Web/client/locale), [`client-ui-primitives`](../Programs/Web/client/ui-primitives), [`util-workspace-path`](../Core/util/workspace-path) |
