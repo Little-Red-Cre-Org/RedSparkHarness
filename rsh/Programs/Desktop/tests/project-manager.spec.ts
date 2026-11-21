@@ -1,14 +1,14 @@
-import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, symlinkSync, unlinkSync, realpathSync, writeFileSync } from 'node:fs'
+import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, realpathSync, rmSync, symlinkSync, unlinkSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { basename, dirname, join } from 'node:path'
 import { pathToFileURL } from 'node:url'
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, expect, it, vi } from 'vitest'
 import { SessionId, SessionSeq, SESSION_FORMAT_VERSION } from '@redspark/rsh-session'
 import type { SessionEvent, SessionHeader } from '@redspark/rsh-session'
 import { inspectSessionRootCompression } from '@redspark/rsh-session-persistence-jsonl/native-inspection'
 import { JsonlSessionBackend, type JsonlCompression } from '@redspark/rsh-session-persistence-jsonl/native'
 import { resolveDesktopPaths } from '../src/paths.ts'
-import { createCompatibilityPluginProfile, DesktopProjectManager, packageNameFromSpec, type DesktopProjectHooks } from '../src/project-manager.ts'
+import { DesktopProjectManager, type DesktopProjectHooks } from '../src/project-manager.ts'
 import { runtimeFixture } from './runtime-fixture.ts'
 
 const roots: string[] = []
@@ -51,18 +51,6 @@ if (command !== 'rebuild') {
 `)
   return path
 }
-function hooks(overrides: Partial<DesktopProjectHooks> = {}): DesktopProjectHooks {
-  return { beforeChange: async () => {}, afterChange: async () => {}, ...overrides }
-}
-function setup(): { root: string; manager: DesktopProjectManager } {
-  const root = temporaryRoot()
-  const dsh = join(root, 'resources', 'dsh')
-  runtimeFixture(dsh, '1.0.0', '24.17.0', true)
-  vi.stubEnv('RSH_HOME', join(root, '.dsh'))
-  const manager = new DesktopProjectManager(resolveDesktopPaths(join(root, '.dsh')), { node: process.execPath, pnpm: writeFakePnpm(root), dsh })
-  createCompatibilityPluginProfile(manager.paths.profile)
-  return { root, manager }
-}
 function setupNative(): { root: string; manager: DesktopProjectManager } {
   const root = temporaryRoot()
   const dsh = join(root, 'resources', 'dsh')
@@ -70,6 +58,9 @@ function setupNative(): { root: string; manager: DesktopProjectManager } {
   vi.stubEnv('RSH_HOME', join(root, '.dsh'))
   return { root, manager: new DesktopProjectManager(resolveDesktopPaths(join(root, '.dsh')),
     { node: process.execPath, pnpm: writeFakePnpm(root), dsh }) }
+}
+function hooks(overrides: Partial<DesktopProjectHooks> = {}): DesktopProjectHooks {
+  return { beforeChange: async () => {}, afterChange: async () => {}, ...overrides }
 }
 function calls(root: string): { args: string[]; registry: string }[] {
   const path = join(root, 'pnpm-log.jsonl')
@@ -183,7 +174,13 @@ it.each(['fresh', 'old-template', 'custom-profile', 'legacy-without-compat'] as 
       }, undefined, 2)}\n`)
       writeFileSync(join(profile, 'pnpm-workspace.yaml'), 'packages:\n  - .\n')
     }
-    if (scenario === 'legacy-without-compat') createCompatibilityPluginProfile(profile)
+    if (scenario === 'legacy-without-compat') {
+      writeFileSync(join(profile, 'package.json'), `${JSON.stringify({
+        name: '@redspark/rsh-desktop-runtime', private: true, version: '0.0.0', dependencies: {},
+        dsh: { profile: { runtime: 'legacy', bundles: ['@redspark/rsh-base'] } },
+      }, undefined, 2)}\n`)
+      writeFileSync(join(profile, 'pnpm-workspace.yaml'), 'packages:\n  - .\n')
+    }
     const before = scenario === 'custom-profile' || scenario === 'legacy-without-compat'
       ? [readFileSync(packagePath), readFileSync(workspacePath)] : undefined
 
@@ -223,8 +220,8 @@ it.each(['fresh', 'old-template', 'custom-profile', 'legacy-without-compat'] as 
     }
 
     const message = scenario === 'custom-profile'
-      ? /custom Cordis profile was not changed/u
-      : /release omits @redspark\/dsh-desktop-host-compatibility; the legacy profile was preserved/u
+      ? /custom Cordis profiles are retired and were not changed/u
+      : /Cordis compatibility assembly is retired/u
     await expect(manager.applyRelease()).rejects.toThrow(message)
     expect(readFileSync(packagePath)).toEqual(before?.[0])
     expect(readFileSync(workspacePath)).toEqual(before?.[1])
@@ -233,368 +230,171 @@ it.each(['fresh', 'old-template', 'custom-profile', 'legacy-without-compat'] as 
   },
 )
 
-describe('desktop external plugin profile', () => {
-  it('reuses plugin files without scanning manifests and can disable or reset them', async () => {
-    const { manager } = setup()
-    await manager.applyRelease()
-    await manager.mutate({ type: 'plugin-add', spec: 'plugin@1.0.0' }, hooks())
-    const manifest = join(manager.paths.profile, 'node_modules/plugin/package.json')
-    writeFileSync(manifest, '{broken')
-    await expect(manager.applyRelease()).resolves.toBe(false)
-    await manager.mutate({ type: 'plugins-disable-all' }, hooks())
-    await expect(manager.applyRelease()).resolves.toBe(false)
-    expect(readFileSync(manifest, 'utf8')).toBe('{broken')
-    await manager.resetConfiguration(hooks())
-    expect(existsSync(manifest)).toBe(false)
-    await expect(manager.applyRelease()).resolves.toBe(false)
-  })
+it('refuses a mixed Session root before reset stops the Host or changes profile files and links', async () => {
+  const { root, manager } = setupNative()
+  await manager.applyRelease()
+  const sessions = join(dirname(manager.paths.root), 'sessions')
+  const compressed = await writeSession(sessions, 'zstd', 'desktop-mixed-zstd')
+  const plainSource = await writeSession(join(root, 'plain-session-root'), 'none', 'desktop-mixed-plain')
+  const plainPath = join(sessions, '_no-cwd', 'desktop-mixed-plain', basename(plainSource.path))
+  mkdirSync(dirname(plainPath), { recursive: true })
+  copyFileSync(plainSource.path, plainPath)
+  const profile = manager.paths.profile
+  const files = ['package.json', 'pnpm-workspace.yaml', 'rsh.profile.json', 'rsh.client.json', 'desktop-runtime-state.json']
+  const profileBytes = new Map(files.filter(name => existsSync(join(profile, name)))
+    .map(name => [name, readFileSync(join(profile, name))]))
+  const dependencyLinks = join(profile, 'node_modules', '@redspark')
+  const links = readdirSync(dependencyLinks).map(name => [name, realpathSync(join(dependencyLinks, name))])
+  const beforeChange = vi.fn(async () => {})
 
-  it('disables every third-party bundle without reading a broken plugin patch declaration', async () => {
-    const { root, manager } = setup()
-    await manager.applyRelease()
-    await manager.mutate({ type: 'plugin-add', spec: 'plugin@1.0.0' }, hooks())
-    const patch = join(manager.paths.profile, 'node_modules/plugin/bundle.yml')
-    unlinkSync(patch)
-    await manager.mutate({ type: 'plugins-disable-all' }, hooks({ afterChange: async () => {
-      expect((JSON.parse(readFileSync(join(manager.paths.profile, 'package.json'), 'utf8')) as {
-        dsh: { profile: { bundles: string[] } }
-      }).dsh.profile.bundles).not.toContain('plugin')
-    } }))
-    expect((JSON.parse(readFileSync(join(manager.paths.profile, 'package.json'), 'utf8')) as {
-      dsh: { profile: { bundles: string[] } }
-    }).dsh.profile.bundles).not.toContain('plugin')
-    expect(existsSync(join(manager.paths.profile, 'node_modules/plugin/package.json'))).toBe(true)
-    expect(calls(root)).toHaveLength(2)
-    await expect(manager.applyRelease()).resolves.toBe(false)
-  })
+  await expect(manager.resetConfiguration(hooks({ beforeChange }))).rejects.toThrow(/mixed compression/u)
 
-  it('resets the entire profile without backups while retaining its lock and shared data', async () => {
-    const { root, manager } = setup()
-    await manager.applyRelease()
-    const history = await writeSession(join(dirname(manager.paths.root), 'sessions'), 'zstd', 'desktop-reset-preserve')
-    await manager.mutate({ type: 'plugin-add', spec: 'plugin@1.0.0' }, hooks())
-    const profile = manager.paths.profile
-    expect(manager.paths.lock).toBe(join(profile, 'lock'))
-    const task = join(root, '.dsh', 'task-sentinel')
-    const homeEnvironment = join(root, '.dsh', '.env')
-    writeFileSync(homeEnvironment, 'HOME_SETTING=retained')
-    writeFileSync(task, 'retained task')
-    writeFileSync(join(profile, 'desktop-runtime-state.json'), '{broken')
-    writeFileSync(join(profile, 'cordis.patch.yml'), ': broken')
-    writeFileSync(join(profile, '.env'), 'NODE_OPTIONS=--bad')
-    mkdirSync(join(profile, '.extra'))
-    writeFileSync(join(profile, '.extra', 'custom-file'), 'remove')
-    const shared = join(root, 'shared-data')
-    mkdirSync(shared)
-    writeFileSync(join(shared, 'sentinel'), 'preserve')
-    symlinkSync(shared, join(profile, 'external-link'), process.platform === 'win32' ? 'junction' : 'dir')
-    await expect(manager.applyRelease()).rejects.toThrow()
-    await manager.resetConfiguration(hooks({
-      beforeChange: async () => { expect(readFileSync(join(profile, 'cordis.patch.yml'), 'utf8')).toBe(': broken') },
-      afterChange: async () => {
-        manager.assertProfileRuntime(profile)
-        expect(readFileSync(manager.paths.lock, 'utf8').trim()).toBe(String(process.pid))
-        await expect(manager.applyRelease()).rejects.toThrow('another package transaction is active')
-      },
-    }))
-    expect(manager.supportsLegacyPluginManagement()).toBe(false)
-    expect(() => manager.listPlugins()).toThrow('native profiles do not support compatibility plugin management')
-    expect(existsSync(join(profile, 'node_modules/plugin'))).toBe(false)
-    expect(existsSync(join(profile, 'cordis.patch.yml'))).toBe(false)
-    expect(existsSync(join(profile, '.env'))).toBe(false)
-    expect(existsSync(join(profile, '.extra'))).toBe(false)
-    expect(existsSync(join(profile, 'external-link'))).toBe(false)
-    expect(readFileSync(join(shared, 'sentinel'), 'utf8')).toBe('preserve')
-    expect(readFileSync(task, 'utf8')).toBe('retained task')
-    expect(readFileSync(homeEnvironment, 'utf8')).toBe('HOME_SETTING=retained')
-    const storage = nativeStorageConfig(profile)
-    expect(storage.compression).toBe('zstd')
-    if (storage.compression === undefined) throw new Error('reset Native profile omitted Session compression')
-    await expectSessionReadable(storage.root, storage.compression, history)
-    expect(readFileSync(history.path)).toEqual(history.bytes)
-    expect(readdirSync(profile).some(name => name.includes('backup'))).toBe(false)
-    expect(calls(root)).toHaveLength(2)
-    await expect(manager.applyRelease()).resolves.toBe(false)
-    expect(existsSync(homeEnvironment)).toBe(true)
-  })
+  expect(beforeChange).not.toHaveBeenCalled()
+  expect(new Map(files.filter(name => existsSync(join(profile, name)))
+    .map(name => [name, readFileSync(join(profile, name))]))).toEqual(profileBytes)
+  expect(readdirSync(dependencyLinks).map(name => [name, realpathSync(join(dependencyLinks, name))])).toEqual(links)
+  expect(readFileSync(compressed.path)).toEqual(compressed.bytes)
+  expect(readFileSync(plainPath)).toEqual(plainSource.bytes)
+  expect(calls(root)).toEqual([])
+})
 
-  it('refuses a mixed Session root before reset stops the Host or changes profile files and links', async () => {
-    const { root, manager } = setupNative()
-    await manager.applyRelease()
-    const sessions = join(dirname(manager.paths.root), 'sessions')
-    const compressed = await writeSession(sessions, 'zstd', 'desktop-mixed-zstd')
-    const plainSource = await writeSession(join(root, 'plain-session-root'), 'none', 'desktop-mixed-plain')
-    const plainPath = join(sessions, '_no-cwd', 'desktop-mixed-plain', basename(plainSource.path))
-    mkdirSync(dirname(plainPath), { recursive: true })
-    copyFileSync(plainSource.path, plainPath)
-    const profile = manager.paths.profile
-    const files = ['package.json', 'pnpm-workspace.yaml', 'rsh.profile.json', 'rsh.client.json', 'desktop-runtime-state.json']
-    const profileBytes = new Map(files.filter(name => existsSync(join(profile, name)))
-      .map(name => [name, readFileSync(join(profile, name))]))
-    const dependencyLinks = join(profile, 'node_modules', '@redspark')
-    const links = readdirSync(dependencyLinks).map(name => [name, realpathSync(join(dependencyLinks, name))])
-    const beforeChange = vi.fn(async () => {})
+it('reports damaged application metadata as a reinstall failure', async () => {
+  const { manager } = setupNative()
+  writeFileSync(join(manager.runtime.dsh, 'desktop-runtime.json'), '{broken')
+  await expect(manager.applyRelease()).rejects.toThrow()
+  expect(manager.canRecoverProfile()).toBe(false)
+})
 
-    await expect(manager.resetConfiguration(hooks({ beforeChange }))).rejects.toThrow(/mixed compression/u)
+it('refuses an unrecognized profile directory without changing its files', async () => {
+  const { manager } = setupNative()
+  mkdirSync(manager.paths.profile, { recursive: true })
+  writeFileSync(join(manager.paths.profile, '.DS_Store'), 'metadata')
+  writeFileSync(join(manager.paths.profile, 'user-file'), 'retain')
+  await expect(manager.applyRelease()).rejects.toThrow(/existing profile without a Desktop manifest/u)
+  expect(readFileSync(join(manager.paths.profile, '.DS_Store'), 'utf8')).toBe('metadata')
+  expect(readFileSync(join(manager.paths.profile, 'user-file'), 'utf8')).toBe('retain')
+  expect(existsSync(join(manager.paths.profile, 'package.json'))).toBe(false)
+})
 
-    expect(beforeChange).not.toHaveBeenCalled()
-    expect(new Map(files.filter(name => existsSync(join(profile, name)))
-      .map(name => [name, readFileSync(join(profile, name))]))).toEqual(profileBytes)
-    expect(readdirSync(dependencyLinks).map(name => [name, realpathSync(join(dependencyLinks, name))])).toEqual(links)
-    expect(readFileSync(compressed.path)).toEqual(compressed.bytes)
-    expect(readFileSync(plainPath)).toEqual(plainSource.bytes)
-    expect(calls(root)).toEqual([])
-  })
+it('retries a failed rebuild after a runtime change across manager instances', async () => {
+  const { root, manager } = setupNative()
+  await manager.applyRelease()
+  const manifest = JSON.parse(readFileSync(join(manager.paths.profile, 'package.json'), 'utf8')) as {
+    dependencies: Record<string, string>
+  }
+  manifest.dependencies.plugin = '1.0.0'
+  writeFileSync(join(manager.paths.profile, 'package.json'), `${JSON.stringify(manifest, undefined, 2)}\n`)
+  const dsh = join(root, 'new-node')
+  runtimeFixture(dsh, '1.1.0', '24.18.0')
+  const failing = join(root, 'fail-rebuild.mjs')
+  writeFileSync(failing, `await import(${JSON.stringify(pathToFileURL(manager.runtime.pnpm).href)}); if (process.argv.includes('rebuild')) process.exitCode = 1`)
+  const worker = new DesktopProjectManager(manager.paths, { ...manager.runtime, dsh, pnpm: failing })
+  await expect(worker.applyRelease()).rejects.toThrow('pnpm exited with 1')
+  expect(() => { worker.assertProfileRuntime(worker.paths.profile) }).toThrow('package preparation is incomplete')
+  const count = calls(root).length
+  const retry = new DesktopProjectManager(manager.paths, { ...manager.runtime, dsh })
+  await expect(retry.applyRelease()).resolves.toBe(true)
+  expect(calls(root).slice(count).map(call => call.args.find(arg => !arg.startsWith('--config.')))).toEqual(['install', 'rebuild'])
+  await expect(retry.applyRelease()).resolves.toBe(false)
+  expect(calls(root)).toHaveLength(count + 2)
+})
 
-  it('reports damaged application metadata as a reinstall failure', async () => {
-    const { manager } = setup()
-    writeFileSync(join(manager.runtime.dsh, 'desktop-runtime.json'), '{broken')
-    await expect(manager.applyRelease()).rejects.toThrow()
-    expect(manager.canRecoverProfile()).toBe(false)
-  })
+it('initializes and restarts offline without executing pnpm', async () => {
+  const { root, manager } = setupNative()
+  await expect(manager.applyRelease()).resolves.toBe(true)
+  await expect(manager.applyRelease()).resolves.toBe(false)
+  expect(calls(root)).toEqual([])
+  expect(existsSync(manager.paths.pnpm.store)).toBe(false)
+  expect(JSON.parse(readFileSync(join(manager.paths.profile, 'package.json'), 'utf8'))).toMatchObject({ dependencies: {} })
+})
 
-  it('accepts registry names and tags but rejects alternate sources and flags', () => {
-    expect(packageNameFromSpec('@scope/plugin@1.2.3')).toBe('@scope/plugin')
-    expect(packageNameFromSpec('plugin@next')).toBe('plugin')
-    for (const spec of ['file:../plugin', '--registry=evil', 'https://example.test/plugin.tgz']) {
-      expect(() => packageNameFromSpec(spec)).toThrow(/unsupported npm package spec/u)
-    }
-  })
+it('repairs a removed managed link without running pnpm', async () => {
+  const { root, manager } = setupNative()
+  await manager.applyRelease()
+  unlinkSync(join(manager.paths.profile, 'node_modules/@redspark/rsh-desktop-host'))
+  await expect(manager.applyRelease()).resolves.toBe(true)
+  expect(calls(root)).toEqual([])
+})
 
-  it('retries installation after an interrupted runtime rebuild removed plugin files', async () => {
-    const { root, manager } = setup()
-    await manager.applyRelease()
-    await manager.mutate({ type: 'plugin-add', spec: 'plugin@1.0.0' }, hooks())
-    const dsh = join(root, 'new-node')
-    runtimeFixture(dsh, '1.1.0', '24.18.0', true)
-    const failing = join(root, 'fail-install.mjs')
-    writeFileSync(failing, 'process.exitCode = 1')
-    const worker = new DesktopProjectManager(manager.paths, { ...manager.runtime, dsh, pnpm: failing })
-    await expect(worker.applyRelease()).rejects.toThrow('pnpm exited with 1')
-    expect(existsSync(join(manager.paths.profile, 'node_modules/plugin'))).toBe(false)
-    const retry = new DesktopProjectManager(manager.paths, { ...manager.runtime, dsh })
-    await expect(retry.applyRelease()).resolves.toBe(true)
-    expect(retry.listPlugins()).toEqual([{ name: 'plugin', version: '1.0.0', enabled: true }])
-    await expect(retry.applyRelease()).resolves.toBe(false)
-  })
+it.skipIf(process.platform !== 'win32')('reuses the profile when the launch path changes only Windows letter casing', async () => {
+  const { manager } = setupNative()
+  await manager.applyRelease()
+  const relaunched = new DesktopProjectManager(manager.paths, { ...manager.runtime, dsh: manager.runtime.dsh.toUpperCase() })
+  await expect(relaunched.applyRelease()).resolves.toBe(false)
+})
 
-  it('preserves unknown files when initializing a profile', async () => {
-    const { manager } = setup()
-    mkdirSync(manager.paths.profile, { recursive: true })
-    writeFileSync(join(manager.paths.profile, '.DS_Store'), 'metadata')
-    writeFileSync(join(manager.paths.profile, 'user-file'), 'retain')
-    await expect(manager.applyRelease()).resolves.toBe(true)
-    expect(readFileSync(join(manager.paths.profile, '.DS_Store'), 'utf8')).toBe('metadata')
-    expect(readFileSync(join(manager.paths.profile, 'user-file'), 'utf8')).toBe('retain')
-  })
+it.each(['changed', 'same-size', 'extra', 'missing'])('starts and reuses a profile without checking %s runtime bytes', async (operation) => {
+  const { root, manager } = setupNative()
+  if (operation === 'changed') writeFileSync(join(manager.runtime.dsh, 'package.json'), '{}')
+  if (operation === 'same-size') writeFileSync(join(manager.runtime.dsh, 'package.json'), '{"type":"Module"}\n')
+  if (operation === 'extra') writeFileSync(join(manager.runtime.dsh, 'extra'), '')
+  if (operation === 'missing') unlinkSync(join(manager.runtime.dsh, 'package.json'))
+  await expect(manager.applyRelease()).resolves.toBe(true)
+  const relaunched = new DesktopProjectManager(manager.paths, manager.runtime)
+  await expect(relaunched.applyRelease()).resolves.toBe(false)
+  expect(existsSync(manager.paths.profile)).toBe(true)
+  expect(calls(root)).toEqual([])
+})
 
-  it.each(['plugin-add', 'runtime-change'] as const)('retries failed rebuild after %s across manager instances', async (operation) => {
-    const { root, manager } = setup()
-    await manager.applyRelease()
-    let dsh = manager.runtime.dsh
-    if (operation === 'runtime-change') {
-      await manager.mutate({ type: 'plugin-add', spec: 'plugin@1.0.0' }, hooks())
-      dsh = join(root, 'new-node')
-      runtimeFixture(dsh, '1.1.0', '24.18.0', true)
-    }
-    const failing = join(root, 'fail-rebuild.mjs')
-    writeFileSync(failing, `await import(${JSON.stringify(pathToFileURL(manager.runtime.pnpm).href)}); if (process.argv.includes('rebuild')) process.exitCode = 1`)
-    const worker = new DesktopProjectManager(manager.paths, { ...manager.runtime, dsh, pnpm: failing })
-    if (operation === 'plugin-add') {
-      await worker.applyRelease()
-      await expect(worker.mutate({ type: 'plugin-add', spec: 'plugin@1.0.0' }, hooks())).rejects.toThrow('pnpm exited with 1')
-    } else await expect(worker.applyRelease()).rejects.toThrow('pnpm exited with 1')
-    expect(() => { worker.assertProfileRuntime(worker.paths.profile) }).toThrow('package preparation is incomplete')
-    const count = calls(root).length
-    const retry = new DesktopProjectManager(manager.paths, { ...manager.runtime, dsh })
-    await expect(retry.applyRelease()).resolves.toBe(true)
-    expect(calls(root).slice(count).map(call => call.args.find(arg => !arg.startsWith('--config.')))).toEqual(['install', 'rebuild'])
-    await expect(retry.applyRelease()).resolves.toBe(false)
-    expect(calls(root)).toHaveLength(count + 2)
-  })
+it('resets the entire profile without backups while retaining its lock and shared data', async () => {
+  const { root, manager } = setupNative()
+  await manager.applyRelease()
+  const history = await writeSession(join(dirname(manager.paths.root), 'sessions'), 'zstd', 'desktop-reset-preserve')
+  const profile = manager.paths.profile
+  expect(manager.paths.lock).toBe(join(profile, 'lock'))
+  const task = join(root, '.dsh', 'task-sentinel')
+  const homeEnvironment = join(root, '.dsh', '.env')
+  writeFileSync(homeEnvironment, 'HOME_SETTING=retained')
+  writeFileSync(task, 'retained task')
+  writeFileSync(join(profile, 'desktop-runtime-state.json'), '{broken')
+  writeFileSync(join(profile, 'cordis.patch.yml'), ': broken')
+  writeFileSync(join(profile, '.env'), 'NODE_OPTIONS=--bad')
+  mkdirSync(join(profile, '.extra'))
+  writeFileSync(join(profile, '.extra', 'custom-file'), 'remove')
+  const shared = join(root, 'shared-data')
+  mkdirSync(shared)
+  writeFileSync(join(shared, 'sentinel'), 'preserve')
+  symlinkSync(shared, join(profile, 'external-link'), process.platform === 'win32' ? 'junction' : 'dir')
+  await manager.resetConfiguration(hooks({
+    beforeChange: async () => { expect(readFileSync(join(profile, 'cordis.patch.yml'), 'utf8')).toBe(': broken') },
+    afterChange: async () => {
+      manager.assertProfileRuntime(profile)
+      expect(readFileSync(manager.paths.lock, 'utf8').trim()).toBe(String(process.pid))
+      await expect(manager.applyRelease()).rejects.toThrow('another package transaction is active')
+    },
+  }))
+  expect(existsSync(join(profile, 'cordis.patch.yml'))).toBe(false)
+  expect(existsSync(join(profile, '.env'))).toBe(false)
+  expect(existsSync(join(profile, '.extra'))).toBe(false)
+  expect(existsSync(join(profile, 'external-link'))).toBe(false)
+  expect(readFileSync(join(shared, 'sentinel'), 'utf8')).toBe('preserve')
+  expect(readFileSync(task, 'utf8')).toBe('retained task')
+  expect(readFileSync(homeEnvironment, 'utf8')).toBe('HOME_SETTING=retained')
+  const storage = nativeStorageConfig(profile)
+  expect(storage.compression).toBe('zstd')
+  if (storage.compression === undefined) throw new Error('reset Native profile omitted Session compression')
+  await expectSessionReadable(storage.root, storage.compression, history)
+  expect(readFileSync(history.path)).toEqual(history.bytes)
+  expect(readdirSync(profile).some(name => name.includes('backup'))).toBe(false)
+  expect(calls(root)).toEqual([])
+  await expect(manager.applyRelease()).resolves.toBe(false)
+  expect(existsSync(homeEnvironment)).toBe(true)
+})
 
-  it('initializes and restarts offline without executing pnpm', async () => {
-    const { root, manager } = setup()
-    await expect(manager.applyRelease()).resolves.toBe(true)
-    await expect(manager.applyRelease()).resolves.toBe(false)
-    expect(manager.listPlugins()).toEqual([])
-    expect(calls(root)).toEqual([])
-    expect(existsSync(manager.paths.pnpm.store)).toBe(false)
-    expect(realpathSync(join(manager.paths.profile, 'node_modules/@redspark/cordis'))).toBe(realpathSync(join(manager.runtime.dsh, 'node_modules/@redspark/cordis')))
-    expect(JSON.parse(readFileSync(join(manager.paths.profile, 'package.json'), 'utf8'))).toMatchObject({ dependencies: {} })
-  })
-
-  it('repairs a removed managed link without running pnpm', async () => {
-    const { root, manager } = setup()
-    await manager.applyRelease()
-    unlinkSync(join(manager.paths.profile, 'node_modules/@redspark/cordis'))
-    await expect(manager.applyRelease()).resolves.toBe(true)
-    expect(calls(root)).toEqual([])
-  })
-
-  it.skipIf(process.platform !== 'win32')('reuses the profile when the launch path changes only Windows letter casing', async () => {
-    const { manager } = setup()
-    await manager.applyRelease()
-    const relaunched = new DesktopProjectManager(manager.paths, { ...manager.runtime, dsh: manager.runtime.dsh.toUpperCase() })
-    await expect(relaunched.applyRelease()).resolves.toBe(false)
-  })
-
-  it.each(['changed', 'same-size', 'extra', 'missing'])('starts and reuses a profile without checking %s runtime bytes', async (operation) => {
-    const { root, manager } = setup()
-    if (operation === 'changed') writeFileSync(join(manager.runtime.dsh, 'package.json'), '{}')
-    if (operation === 'same-size') writeFileSync(join(manager.runtime.dsh, 'package.json'), '{"type":"Module"}\n')
-    if (operation === 'extra') writeFileSync(join(manager.runtime.dsh, 'extra'), '')
-    if (operation === 'missing') unlinkSync(join(manager.runtime.dsh, 'package.json'))
-    await expect(manager.applyRelease()).resolves.toBe(true)
-    const relaunched = new DesktopProjectManager(manager.paths, manager.runtime)
-    await expect(relaunched.applyRelease()).resolves.toBe(false)
-    expect(existsSync(manager.paths.profile)).toBe(true)
-    expect(calls(root)).toEqual([])
-  })
-
-  it('installs only plugins and checks the graph before running lifecycle scripts', async () => {
-    const { root, manager } = setup()
-    await manager.applyRelease()
-    await manager.mutate({ type: 'plugin-add', spec: '@scope/plugin@2.0.0' }, hooks())
-    expect(manager.listPlugins()).toEqual([{ name: '@scope/plugin', version: '2.0.0', enabled: true }])
-    expect(calls(root).map(call => call.args.filter(arg => !arg.startsWith('--config.')))).toEqual([
-      ['add', '@scope/plugin@2.0.0', '--save-exact', '--ignore-scripts'], ['rebuild', '--pending'],
-    ])
-    expect(calls(root).every(call => call.registry === 'https://registry.npmjs.org/')).toBe(true)
-    expect(JSON.parse(readFileSync(join(manager.paths.profile, 'package.json'), 'utf8'))).toMatchObject({ dependencies: { '@scope/plugin': '2.0.0' } })
-    await expect(manager.mutate({ type: 'plugin-add', spec: '@redspark/cordis' }, hooks())).rejects.toThrow(/host-owned/u)
-    await expect(manager.applyRelease()).resolves.toBe(false)
-    expect(calls(root)).toHaveLength(2)
-  })
-
-  it('retains disabled plugin versions through updates and enables them explicitly', async () => {
-    const { root, manager } = setup()
-    await manager.applyRelease()
-    await manager.mutate({ type: 'plugin-add', spec: 'plugin@1.0.0' }, hooks())
-    await manager.mutate({ type: 'plugins-disable-all' }, hooks())
-    expect(calls(root)).toHaveLength(2)
-    expect(manager.listPlugins()).toEqual([{ name: 'plugin', version: '1.0.0', enabled: false }])
-    await manager.mutate({ type: 'plugin-update', name: 'plugin', version: '1.1.0' }, hooks())
-    expect(manager.listPlugins()).toEqual([{ name: 'plugin', version: '1.1.0', enabled: false }])
-    await manager.mutate({ type: 'plugin-toggle', name: 'plugin', enabled: true }, hooks())
-    expect(manager.listPlugins()[0]?.enabled).toBe(true)
-    await manager.mutate({ type: 'plugin-remove', name: 'plugin' }, hooks())
-    expect(manager.listPlugins()).toEqual([])
-  })
-
-  it('keeps plugin files and patches through a compatible release and application relocation', async () => {
-    const { root, manager } = setup()
-    await manager.applyRelease()
-    await manager.mutate({ type: 'plugin-add', spec: 'plugin@1.0.0' }, hooks())
-    writeFileSync(join(manager.paths.profile, 'cordis.patch.yml'), '[]\n')
-    const nextRoot = join(root, 'relocated', 'dsh')
-    runtimeFixture(nextRoot, '1.1.0', '24.17.0', true)
-    const next = new DesktopProjectManager(manager.paths, { ...manager.runtime, dsh: nextRoot })
-    await expect(next.applyRelease()).resolves.toBe(true)
-    expect(next.listPlugins()).toEqual(manager.listPlugins())
-    expect(next.releaseVersion()).toBe('1.1.0')
-    expect(readFileSync(join(manager.paths.profile, 'cordis.patch.yml'), 'utf8')).toBe('[]\n')
-    expect(calls(root)).toHaveLength(2)
-    expect(realpathSync(join(manager.paths.profile, 'node_modules/@redspark/cordis'))).toBe(realpathSync(join(nextRoot, 'node_modules/@redspark/cordis')))
-    expect(readFileSync(join(manager.paths.profile, 'node_modules/plugin/bundle.yml'), 'utf8')).toBe('[]\n')
-  })
-
-  it('reinstalls the locked plugin graph when bundled Node changes', async () => {
-    const { root, manager } = setup()
-    await manager.applyRelease()
-    await manager.mutate({ type: 'plugin-add', spec: 'plugin@1.0.0' }, hooks())
-    const dsh = join(root, 'new-node')
-    runtimeFixture(dsh, '1.1.0', '24.18.0', true)
-    const next = new DesktopProjectManager(manager.paths, { ...manager.runtime, dsh })
-    await next.applyRelease()
-    expect(calls(root).slice(2).map(call => call.args.filter(arg => !arg.startsWith('--config.')))).toEqual([
-      ['install', '--frozen-lockfile', '--ignore-scripts'], ['rebuild', '--pending'],
-    ])
-    expect(next.listPlugins()).toEqual([{ name: 'plugin', version: '1.0.0', enabled: true }])
-  })
-
-  it('allows incompatible plugins to be disabled in recovery without deleting them', async () => {
-    const { root, manager } = setup()
-    await manager.applyRelease()
-    await manager.mutate({ type: 'plugin-add', spec: 'plugin@1.0.0' }, hooks())
-    const dsh = join(root, 'next-major')
-    runtimeFixture(dsh, '2.0.0', '24.17.0', true)
-    const next = new DesktopProjectManager(manager.paths, { ...manager.runtime, dsh })
-    await expect(next.applyRelease()).rejects.toThrow(/requires @redspark\/cordis/u)
-    expect(next.releaseVersion()).toBe('2.0.0')
-    await next.mutate({ type: 'plugins-disable-all' }, hooks())
-    expect(next.releaseVersion()).toBe('2.0.0')
-    expect(next.listPlugins()).toEqual([{ name: 'plugin', version: '1.0.0', enabled: false }])
-  })
-
-  it.each(['before', 'after'] as const)('retains direct writes when the %s change hook fails', async (phase) => {
-    const { manager } = setup()
-    await manager.applyRelease()
-    let starts = 0
-    await expect(manager.mutate({ type: 'plugin-add', spec: 'plugin@1.0.0' }, hooks({
-      beforeChange: async () => {
-        expect(manager.listPlugins()).toEqual([])
-        if (phase === 'before') throw new Error('before failed')
-      },
-      afterChange: async () => { starts++; throw new Error('after failed') },
-    }))).rejects.toThrow(`${phase} failed`)
-    expect(manager.listPlugins()).toEqual(phase === 'before' ? [] : [{ name: 'plugin', version: '1.0.0', enabled: true }])
-    expect(starts).toBe(phase === 'before' ? 0 : 1)
-    expect(existsSync(join(manager.paths.root, 'staging'))).toBe(false)
-    expect(existsSync(join(manager.paths.root, 'rollback'))).toBe(false)
-    expect(existsSync(join(manager.paths.root, 'pending.json'))).toBe(false)
-  })
-
-  it('keeps partial package changes and restores host links after pnpm fails', async () => {
-    const { root, manager } = setup()
-    await manager.applyRelease()
-    const failingPnpm = join(root, 'failing.mjs')
-    writeFileSync(failingPnpm, `await import(${JSON.stringify(pathToFileURL(manager.runtime.pnpm).href)}); process.exitCode = 1`)
-    const worker = new DesktopProjectManager(manager.paths, { ...manager.runtime, pnpm: failingPnpm })
-    await worker.applyRelease()
-    let starts = 0
-    await expect(worker.mutate({ type: 'plugin-add', spec: 'plugin@1.0.0' }, hooks({
-      afterChange: async () => { starts++ },
-    }))).rejects.toThrow(/pnpm exited with 1/u)
-    expect(worker.listPlugins()).toEqual([{ name: 'plugin', version: '1.0.0', enabled: false }])
-    expect(starts).toBe(0)
-    expect(existsSync(manager.paths.lock)).toBe(false)
-    expect(realpathSync(join(manager.paths.profile, 'node_modules/@redspark/cordis')))
-      .toBe(realpathSync(join(manager.runtime.dsh, 'node_modules/@redspark/cordis')))
-    await manager.mutate({ type: 'plugin-remove', name: 'plugin' }, hooks())
-    expect(manager.listPlugins()).toEqual([])
-  })
-
-  it('holds the transaction lock until the pnpm worker exits', async ({ task, signal }) => {
-    const { root, manager } = setup()
-    await manager.applyRelease()
-    const ready = join(root, 'ready')
-    const release = join(root, 'release')
-    const blocker = join(root, 'blocking.mjs')
-    writeFileSync(blocker, `import {existsSync, writeFileSync} from 'node:fs'; import {setTimeout as sleep} from 'node:timers/promises'; writeFileSync(${JSON.stringify(ready)}, String(process.pid)); while (!existsSync(${JSON.stringify(release)})) await sleep(10); await import(${JSON.stringify(pathToFileURL(manager.runtime.pnpm).href)})`)
-    const worker = new DesktopProjectManager(manager.paths, { ...manager.runtime, pnpm: blocker })
-    await worker.applyRelease()
-    const pending = worker.mutate({ type: 'plugin-add', spec: 'plugin@1.0.0' }, hooks())
-    // Teardown observes failures even if the runner has abandoned the test body.
-    const completed = pending.then(value => ({ value }), (error: unknown) => ({ error }))
-    releaseWorkers.push(async () => {
-      writeFileSync(release, 'continue')
-      const outcome = await completed
-      if ('error' in outcome) throw outcome.error
-    })
-    try {
-      // Child startup shares the test budget; an aborted poll must not resume ownership assertions.
-      await expect.poll(() => {
-        signal.throwIfAborted()
-        return existsSync(ready)
-      }, { timeout: task.timeout }).toBe(true)
-      signal.throwIfAborted()
-      expect(readFileSync(manager.paths.lock, 'utf8').trim()).toBe(readFileSync(ready, 'utf8'))
-      await expect(manager.applyRelease()).rejects.toThrow(/another package transaction/u)
-    } finally {
-      writeFileSync(release, 'continue')
-      await pending
-    }
-    expect(existsSync(manager.paths.lock)).toBe(false)
-  })
+it('reinstalls the locked package graph when bundled Node changes', async () => {
+  const { root, manager } = setupNative()
+  await manager.applyRelease()
+  const manifest = JSON.parse(readFileSync(join(manager.paths.profile, 'package.json'), 'utf8')) as {
+    dependencies: Record<string, string>
+  }
+  manifest.dependencies.plugin = '1.0.0'
+  writeFileSync(join(manager.paths.profile, 'package.json'), `${JSON.stringify(manifest, undefined, 2)}\n`)
+  const dsh = join(root, 'new-node')
+  runtimeFixture(dsh, '1.1.0', '24.18.0')
+  const next = new DesktopProjectManager(manager.paths, { ...manager.runtime, dsh })
+  await next.applyRelease()
+  expect(calls(root).map(call => call.args.filter(arg => !arg.startsWith('--config.')))).toEqual([
+    ['install', '--frozen-lockfile', '--ignore-scripts'], ['rebuild', '--pending'],
+  ])
+  await expect(next.applyRelease()).resolves.toBe(false)
 })

@@ -8,9 +8,7 @@
  * `@redspark/rsh-cmdline`). Launcher flags therefore come first: the first
  * token this parser does not recognize starts the inner arguments, so
  * `dsh --profile rsh --resume abc` boots the rsh profile with `--resume abc`,
- * and `dsh --profile web -h` prints the web app's help, not this one's.
- *
- * `web` is a hardcoded alias for `--profile web`.
+ * and `dsh --profile native-web -h` prints the web app's help, not this one's.
  * @module @redspark/rsh/args
  */
 
@@ -40,7 +38,7 @@ interface DumpConfigInvocation {
 /** The resolved `dsh` invocation. Help, version, and errors exit inside {@link parseRshArgs}. */
 export type DshInvocation = ProfileInvocation | DumpConfigInvocation
 
-/** Launcher flags shared by the default command and the `web` alias. */
+/** Launcher flags of the default command. */
 interface BootOptions {
   patch?: string[]
   dumpConfig?: boolean
@@ -60,6 +58,7 @@ function rejectElectronProfile(program: Command, profile: string): void {
 }
 
 const RETIRED_SDK_MINIMAL_PROFILE = 'sdk-minimal'
+const RETIRED_WEB_PROFILE = 'web'
 
 /**
  * Refuse the retired sdk-minimal profile name on boot, dump, and template
@@ -75,23 +74,39 @@ function rejectRetiredSdkMinimal(program: Command, profile: string, fromDefaultP
   }
 }
 
+/**
+ * Refuse the retired `web` profile name. The shipped Native profile is
+ * `native-web`; the old name identified the browser deployment entry.
+ * @param program - command that reports the refusal.
+ * @param profile - requested profile name.
+ * @param fromDefaultProfile - requested template name.
+ */
+function rejectRetiredWebProfile(program: Command, profile: string, fromDefaultProfile?: string): void {
+  if (profile === RETIRED_WEB_PROFILE) {
+    program.error('error: profile "web" is retired; use --profile native-web (see rsh/Docs/native-config-migration.md)')
+  }
+  if (fromDefaultProfile === RETIRED_WEB_PROFILE) {
+    program.error('error: --from-default-profile "web" is retired; use --from-default-profile native-web (see rsh/Docs/native-config-migration.md)')
+  }
+}
+
 /** The launcher's own help text; each app prints its own. */
 const HELP_EXAMPLES = `
 Examples:
-  dsh --profile web                          boot the web profile (same as: dsh web)
-  dsh --profile rescue --from-default-profile web
-                                             create rescue from the shipped web template, then boot it
+  dsh --profile native-web                   boot the Native web profile
+  dsh --profile rescue --from-default-profile native-web
+                                             create rescue from the shipped Native web template, then boot it
   dsh --profile headless "run the tests"     answer one task, print the result, and exit
   dsh --profile rsh --patch ./extra.patch.json
                                              boot the terminal profile with one extra overlay
   dsh --profile rsh --resume <session>       arguments after the launcher flags reach the app
-  dsh --profile web --help                   the web app's own flags and help
+  dsh --profile native-web --help            the web app's own flags and help
 `
 
 /**
  * Resolve a boot or dump invocation from the launcher flags and the leftover
  * inner arguments.
- * @param program - the command whose options were parsed (the root, or the `web` alias).
+ * @param program - the command whose options were parsed.
  * @param profile - the profile these flags boot.
  * @param options - the launcher flags commander collected.
  * @param args - the leftover arguments, in argv order.
@@ -152,25 +167,8 @@ export function parseRshArgs(argv: readonly string[], version: string): DshInvoc
       if (profile === '') program.error('error: --profile needs a name')
       rejectElectronProfile(program, profile)
       rejectRetiredSdkMinimal(program, profile, options.fromDefaultProfile)
+      rejectRetiredWebProfile(program, profile, options.fromDefaultProfile)
       resolved = resolveBoot(program, profile, options, args)
-    })
-
-  const web = program.command('web').description('boot the web profile (alias of --profile web); the web app\'s own flags follow')
-  web
-    .helpOption(false)
-    .allowUnknownOption()
-    .passThroughOptions()
-    .enablePositionalOptions()
-    .argument('[args...]', 'arguments for the web app (see: dsh web --help)')
-    .option('--patch <path>', 'extra patch-list overlay applied after the profile layer (repeatable)', collect)
-    .option('--dump-config', 'print the composed web-profile tree (with the user layer and any --patch) and exit')
-    .action((args: string[], options: BootOptions) => {
-      const parent = program.opts<BootOptions & { profile?: string }>()
-      if (parent.profile !== undefined || parent.patch !== undefined
-        || parent.dumpConfig !== undefined || parent.fromDefaultProfile !== undefined) {
-        program.error('error: web takes none of parent --profile, --from-default-profile, --patch, or --dump-config')
-      }
-      resolved = resolveBoot(web, 'web', options, args)
     })
 
   try {

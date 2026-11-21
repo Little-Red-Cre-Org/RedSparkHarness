@@ -2,8 +2,8 @@ import { join, sep } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import {
   desktopTargetBuildPaths,
-  resolveDesktopBuildAssembly,
   resolveDesktopBuildTarget,
+  resolveDesktopTargetBuildPaths,
 } from '../scripts/desktop-build-paths.mjs'
 
 describe('desktop build paths', () => {
@@ -11,7 +11,6 @@ describe('desktop build paths', () => {
     const arm64 = desktopTargetBuildPaths('mac-arm64')
     const x64 = desktopTargetBuildPaths('mac-x64')
     const windows = desktopTargetBuildPaths('win-x64')
-    const compatibility = desktopTargetBuildPaths('win-x64', 'compatibility')
     const mutableKeys = [
       'root',
       'artifacts',
@@ -31,9 +30,6 @@ describe('desktop build paths', () => {
     expect(arm64.artifacts).toContain(join('targets', 'mac-arm64', 'artifacts'))
     expect(x64.dsh).toContain(join('targets', 'mac-x64', 'dsh'))
     expect(windows.runtime).toContain(join('targets', 'win-x64', 'runtime'))
-    expect(compatibility.assembly).toBe('compatibility')
-    expect(compatibility.dsh).toContain(join('targets', 'win-x64', 'compatibility', 'dsh'))
-    expect(compatibility.dsh).not.toBe(windows.dsh)
   })
 
   it('shares only the immutable upstream download cache', () => {
@@ -49,9 +45,12 @@ describe('desktop build paths', () => {
       RSH_DESKTOP_TARGET_ARCH: 'x64',
     }, 'darwin', 'arm64')).toBe('mac-x64')
     expect(resolveDesktopBuildTarget({}, 'win32', 'x64')).toBe('win-x64')
-    expect(resolveDesktopBuildAssembly({})).toBe('native')
-    expect(resolveDesktopBuildAssembly({ RSH_DESKTOP_ASSEMBLY: 'compatibility' })).toBe('compatibility')
-    expect(() => resolveDesktopBuildAssembly({ RSH_DESKTOP_ASSEMBLY: 'unknown' })).toThrow(/unsupported assembly/u)
+    expect(resolveDesktopTargetBuildPaths({}, 'win32', 'x64').dsh)
+      .toBe(desktopTargetBuildPaths('win-x64').dsh)
+    expect(() => resolveDesktopTargetBuildPaths({ RSH_DESKTOP_ASSEMBLY: 'compatibility' }, 'darwin', 'arm64'))
+      .toThrow(/compatibility assembly is retired/u)
+    expect(() => resolveDesktopTargetBuildPaths({ RSH_DESKTOP_ASSEMBLY: 'unknown' }, 'darwin', 'arm64'))
+      .toThrow(/compatibility assembly is retired/u)
     expect(() => resolveDesktopBuildTarget({}, 'linux', 'x64')).toThrow(/unsupported target/u)
     expect(() => desktopTargetBuildPaths('linux-x64' as 'mac-x64')).toThrow(/unsupported target/u)
   })

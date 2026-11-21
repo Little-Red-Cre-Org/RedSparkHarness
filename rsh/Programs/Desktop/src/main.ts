@@ -45,7 +45,7 @@ import { windowGeometry, type DesktopWindowGeometry } from './window-geometry.ts
 const SCHEME = 'dsh-app'
 const DESKTOP_LOG_FILE = 'desktop.log'
 let focusPrimaryWindow = (): void => {}
-type RecoveryAction = 'restart' | 'plugins' | 'reset'
+type RecoveryAction = 'restart' | 'reset'
 let profileRecoveryAvailable = (): boolean => false
 const emergencyPages = new WeakMap<BrowserWindow, { url: string; busy: boolean }>()
 let recoverApplication = (action: RecoveryAction): Promise<void> => {
@@ -221,7 +221,7 @@ function createFramedWindow(
     const page = emergencyPages.get(window)
     if (page === undefined || page.busy || window.webContents.getURL() !== page.url) return
     const action = new URL(url)
-    if (action.protocol !== 'dsh-recovery:' || !['restart', 'plugins', 'reset'].includes(action.hostname)) return
+    if (action.protocol !== 'dsh-recovery:' || !['restart', 'reset'].includes(action.hostname)) return
     if (action.hostname !== 'restart' && !profileRecoveryAvailable()) return
     page.busy = true
     void recoverApplication(action.hostname as RecoveryAction).catch(async (error: unknown) => {
@@ -391,7 +391,6 @@ async function main(): Promise<void> {
 
   recoverApplication = async (action): Promise<void> => {
     await startup?.catch(() => undefined)
-    if (action === 'plugins' && !manager.supportsLegacyPluginManagement()) throw new Error(messages.nativePluginManagementUnavailable)
     await backend.stop()
     if (action === 'restart') {
       app.relaunch()
@@ -399,8 +398,7 @@ async function main(): Promise<void> {
       return
     }
     if (!profileRecoveryAvailable()) throw new Error(messages.startupReinstallAdvice)
-    if (action === 'reset') await manager.resetConfiguration(hooks)
-    else await manager.mutate({ type: 'plugins-disable-all' }, hooks)
+    await manager.resetConfiguration(hooks)
     emergencyDocument = false
     pageError = undefined
     navigation = undefined
@@ -490,24 +488,6 @@ async function main(): Promise<void> {
     return active.fetch(request)
   })
 
-  const mutate = async (event: IpcMainInvokeEvent, mutation: Parameters<DesktopProjectManager['mutate']>[0]): Promise<void> => {
-    assertDesktopSender(event, ['shell'])
-    if (development !== undefined) {
-      throw new Error('dsh desktop: plugin package changes require a packaged application')
-    }
-    await startup?.catch(() => undefined)
-    if (!manager.supportsLegacyPluginManagement()) throw new Error(messages.nativePluginManagementUnavailable)
-    pageError = undefined
-    await navigateMain(startupUrl)
-    try {
-      await manager.mutate(mutation, hooks)
-      await navigateMain(applicationUrl)
-    } catch (error) {
-      try { await showStartupError(error) }
-      catch (failure) { console.error(failure) }
-      throw new Error(messages.startupFailed)
-    }
-  }
   const nativeList = async (event: IpcMainInvokeEvent, payload: unknown) => {
     assertDesktopSender(event, ['shell'])
     if (development !== undefined) return manager.refuseNativeList('wrong-profile', backendState())
@@ -598,51 +578,37 @@ async function main(): Promise<void> {
   })
   ipcMain.handle(DESKTOP_IPC.pluginsList, (event, payload?: unknown) => {
     assertDesktopSender(event, ['shell'])
-    if (payload !== undefined) return nativeList(event, payload)
-    if (development !== undefined) return []
-    if (!manager.supportsLegacyPluginManagement()) throw new Error(messages.nativePluginManagementUnavailable)
-    return manager.listPlugins()
+    if (payload === undefined) throw new Error('dsh desktop: plugin listing requires the native runtime payload')
+    return nativeList(event, payload)
   })
   ipcMain.handle(DESKTOP_IPC.pluginsAdd, (event, spec: unknown) => {
     assertDesktopSender(event, ['shell'])
-    if (isNativeDesktopPayload(spec)) {
-      return nativeMutation(event, () => ({ type: 'install', request: parseNativeDesktopInstallRequest(spec) }))
-    }
-    if (typeof spec !== 'string') throw new Error('dsh desktop: plugin spec must be a string')
-    return mutate(event, { type: 'plugin-add', spec })
+    if (!isNativeDesktopPayload(spec)) throw new Error('dsh desktop: plugin install requires the native runtime payload')
+    return nativeMutation(event, () => ({ type: 'install', request: parseNativeDesktopInstallRequest(spec) }))
   })
   ipcMain.handle(DESKTOP_IPC.pluginsRemove, (event, name: unknown) => {
     assertDesktopSender(event, ['shell'])
-    if (isNativeDesktopPayload(name)) {
-      return nativeMutation(event, () => ({ type: 'remove', request: parseNativeDesktopPackageRequest(name) }))
-    }
-    if (typeof name !== 'string') throw new Error('dsh desktop: plugin name must be a string')
-    return mutate(event, { type: 'plugin-remove', name })
+    if (!isNativeDesktopPayload(name)) throw new Error('dsh desktop: plugin removal requires the native runtime payload')
+    return nativeMutation(event, () => ({ type: 'remove', request: parseNativeDesktopPackageRequest(name) }))
   })
   ipcMain.handle(DESKTOP_IPC.pluginsUpdate, (event, name: unknown, version: unknown) => {
     assertDesktopSender(event, ['shell'])
-    if (isNativeDesktopPayload(name)) {
-      return nativeMutation(event, () => ({ type: 'update', request: parseNativeDesktopUpdateRequest(name) }))
+    if (!isNativeDesktopPayload(name) || version !== undefined) {
+      throw new Error('dsh desktop: plugin update requires the native runtime payload')
     }
-    if (typeof name !== 'string' || typeof version !== 'string') {
-      throw new Error('dsh desktop: plugin name and version must be strings')
-    }
-    return mutate(event, { type: 'plugin-update', name, version })
+    return nativeMutation(event, () => ({ type: 'update', request: parseNativeDesktopUpdateRequest(name) }))
   })
   ipcMain.handle(DESKTOP_IPC.pluginsToggle, (event, name: unknown, enabled: unknown) => {
     assertDesktopSender(event, ['shell'])
-    if (enabled === undefined && isNativeDesktopPayload(name)) {
-      return nativeMutation(event, () => ({ type: 'toggle', request: parseNativeDesktopToggleRequest(name) }))
+    if (!isNativeDesktopPayload(name) || enabled !== undefined) {
+      throw new Error('dsh desktop: plugin activation requires the native runtime payload')
     }
-    if (typeof name !== 'string' || typeof enabled !== 'boolean') throw new Error('dsh desktop: invalid plugin activation request')
-    return mutate(event, { type: 'plugin-toggle', name, enabled })
+    return nativeMutation(event, () => ({ type: 'toggle', request: parseNativeDesktopToggleRequest(name) }))
   })
   ipcMain.handle(DESKTOP_IPC.pluginsDisableAll, (event, payload?: unknown) => {
     assertDesktopSender(event, ['shell'])
-    if (payload !== undefined) {
-      return nativeMutation(event, () => ({ type: 'disable-all', request: parseNativeDesktopMutationRequest(payload) }))
-    }
-    return mutate(event, { type: 'plugins-disable-all' })
+    if (payload === undefined) throw new Error('dsh desktop: plugin deactivation requires the native runtime payload')
+    return nativeMutation(event, () => ({ type: 'disable-all', request: parseNativeDesktopMutationRequest(payload) }))
   })
   ipcMain.handle(DESKTOP_IPC.backendStatus, (event) => {
     assertDesktopSender(event, ['shell'])
@@ -727,7 +693,7 @@ async function main(): Promise<void> {
   }
 
   const openPluginWindow = (): void => {
-    if (!manager.supportsLegacyPluginManagement() && !manager.supportsNativeModuleManagement()) {
+    if (!manager.supportsNativeModuleManagement()) {
       void dialog.showMessageBox({ type: 'info', title: messages.pluginWindowTitle, message: messages.nativePluginManagementUnavailable })
         .catch((error: unknown) => { console.error(error) })
       return

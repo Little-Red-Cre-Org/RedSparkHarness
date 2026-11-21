@@ -1,22 +1,15 @@
 /** Experimental-package publication and dependency constraints. */
 
-import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 import {
   checkRshFamilyVersion,
   checkCordisPeerPolicy,
-  checkWorkspaceManifest,
   collectRuntimeLayerViolations,
   checkExperimentalDependencyIsolation,
   checkExperimentalManifest,
   expectedRshPackageFiles,
   type WorkspaceManifest,
 } from './check-workspace-constraints.ts'
-
-/** The workspace version the family must agree on, read rather than restated. */
-const FAMILY_VERSION = (JSON.parse(
-  readFileSync(new URL('../../package.json', import.meta.url), 'utf8'),
-) as { version: string }).version
 
 const experimental: WorkspaceManifest = {
   dir: 'rsh/Modules/Community/experimental/prototype',
@@ -220,48 +213,6 @@ describe('dsh family version coherence', () => {
       '0.1.2-rc.1',
     )).toBeUndefined()
     expect(checkRshFamilyVersion({ version: '0.1.2-alpha.5' }, '0.1.2-rc.1')).toBeUndefined()
-  })
-})
-
-describe('private Desktop compatibility assembly constraints', () => {
-  const owner: WorkspaceManifest = {
-    dir: 'rsh/Compatibility/DSH/boot/desktop-host-compatibility',
-    manifest: {
-      name: '@redspark/rsh-desktop-host-compatibility',
-      version: FAMILY_VERSION,
-      private: true,
-      repository: {
-        type: 'git',
-        url: 'git+https://github.com/Little-Red-Cre-Org/RedSparkHarness.git',
-        directory: 'rsh/Compatibility/DSH/boot/desktop-host-compatibility',
-      },
-      type: 'module',
-      main: 'lib/index.js',
-      types: 'lib/types/index.d.ts',
-      files: ['lib/index.js', 'config/desktop.cordis.patch.yml', 'lib/types/**/*.d.ts'],
-      peerDependencies: { '@redspark/cordis': 'workspace:^' },
-      devDependencies: { '@redspark/cordis': 'workspace:^' },
-      exports: { '.': { types: './lib/types/index.d.ts', default: './lib/index.js' } },
-    },
-  }
-
-  it('keeps the private assembly repository and payload exact', () => {
-    expect(checkWorkspaceManifest(owner)).toEqual([])
-    expect(checkWorkspaceManifest({
-      ...owner,
-      manifest: { ...owner.manifest, private: false },
-    }).join('\n')).toContain('@redspark/rsh-desktop-host-compatibility: private Desktop assembly must set "private": true')
-    expect(checkWorkspaceManifest({
-      ...owner,
-      manifest: { ...owner.manifest, files: ['lib/index.js', 'lib/types/**/*.d.ts'] },
-    }).join('\n')).toContain('@redspark/rsh-desktop-host-compatibility: package.json files must be ["lib/index.js","config/desktop.cordis.patch.yml","lib/types/**/*.d.ts"]')
-    expect(checkWorkspaceManifest({
-      ...owner,
-      manifest: {
-        ...owner.manifest,
-        repository: { ...owner.manifest.repository, directory: 'rsh/Programs/DesktopHost' },
-      },
-    }).join('\n')).toContain('@redspark/rsh-desktop-host-compatibility: private Desktop assembly repository must use git+https://github.com/Little-Red-Cre-Org/RedSparkHarness.git with directory rsh/Compatibility/DSH/boot/desktop-host-compatibility')
   })
 })
 

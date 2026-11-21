@@ -29,55 +29,59 @@ function exitResult(argv: string[]): { code: number; stderr: string } {
 afterEach(() => { vi.restoreAllMocks() })
 
 describe('parseRshArgs', () => {
-  it('routes profile boots and the web alias, handing the rest to the app', () => {
+  it('routes profile boots, handing the rest to the app', () => {
     expect(parse(['--profile', 'tui'])).toEqual({ mode: 'profile', profile: 'tui', patches: [], args: [] })
     expect(parse(['--profile', 'tui', '--patch', 'a.yml', '--patch', 'b.yml']))
       .toEqual({ mode: 'profile', profile: 'tui', patches: ['a.yml', 'b.yml'], args: [] })
-    expect(parse(['--profile', 'rescue', '--from-default-profile', 'web']))
-      .toEqual({ mode: 'profile', profile: 'rescue', fromDefaultProfile: 'web', patches: [], args: [] })
-    expect(parse(['web'])).toEqual({ mode: 'profile', profile: 'web', patches: [], args: [] })
-    expect(parse(['web', '--patch', 'web.yml']))
-      .toEqual({ mode: 'profile', profile: 'web', patches: ['web.yml'], args: [] })
+    expect(parse(['--profile', 'rescue', '--from-default-profile', 'native-web']))
+      .toEqual({ mode: 'profile', profile: 'rescue', fromDefaultProfile: 'native-web', patches: [], args: [] })
+  })
+
+  it('refuses the retired web profile name and alias', () => {
+    expect(exitResult(['--profile', 'web']).stderr).toContain('profile "web" is retired')
+    expect(exitResult(['--profile', 'web']).stderr).toContain('--profile native-web')
+    expect(exitResult(['--profile', 'rescue', '--from-default-profile', 'web']).stderr)
+      .toContain('--from-default-profile "web" is retired')
+    // `web` is no longer a command, so the root parser rejects it as a missing profile.
+    expect(exitCode(['web'])).toBe(1)
   })
 
   it('ends the launcher flags at the first token it does not own', () => {
     // App flags, including its -h, and positionals reach the app verbatim.
     expect(parse(['--profile', 'tui', '--resume', 'abc']))
       .toEqual({ mode: 'profile', profile: 'tui', patches: [], args: ['--resume', 'abc'] })
-    expect(parse(['--profile', 'web', '-h']))
-      .toEqual({ mode: 'profile', profile: 'web', patches: [], args: ['-h'] })
-    expect(parse(['web', '--host', '127.0.0.1', '--port', '8080', '--no-open', '--future-web-flag']))
-      .toEqual({ mode: 'profile', profile: 'web', patches: [], args: ['--host', '127.0.0.1', '--port', '8080', '--no-open', '--future-web-flag'] })
+    expect(parse(['--profile', 'native-web', '-h']))
+      .toEqual({ mode: 'profile', profile: 'native-web', patches: [], args: ['-h'] })
+    expect(parse(['--profile', 'native-web', '--host', '127.0.0.1', '--port', '8080', '--no-open', '--future-web-flag']))
+      .toEqual({ mode: 'profile', profile: 'native-web', patches: [], args: ['--host', '127.0.0.1', '--port', '8080', '--no-open', '--future-web-flag'] })
     expect(parse(['--profile', 'headless', 'run', 'the', 'tests']))
       .toEqual({ mode: 'profile', profile: 'headless', patches: [], args: ['run', 'the', 'tests'] })
     // Launcher flags placed after that boundary belong to the app too.
     expect(parse(['--profile', 'tui', '--patch', 'a.yml', '--resume', 'b', '--patch', 'late.yml']))
       .toEqual({ mode: 'profile', profile: 'tui', patches: ['a.yml'], args: ['--resume', 'b', '--patch', 'late.yml'] })
-    expect(parse(['--profile', 'rescue', '--resume', 'abc', '--from-default-profile', 'web']))
+    expect(parse(['--profile', 'rescue', '--resume', 'abc', '--from-default-profile', 'native-web']))
       .toEqual({
         mode: 'profile',
         profile: 'rescue',
         patches: [],
-        args: ['--resume', 'abc', '--from-default-profile', 'web'],
+        args: ['--resume', 'abc', '--from-default-profile', 'native-web'],
       })
-    expect(parse(['web', '--from-default-profile', 'web']))
-      .toEqual({ mode: 'profile', profile: 'web', patches: [], args: ['--from-default-profile', 'web'] })
   })
 
-  it('routes profile and web config dumps', () => {
-    expect(parse(['--profile', 'web', '--dump-config']))
-      .toEqual({ mode: 'dump-config', profile: 'web', patches: [] })
-    expect(parse(['--profile', 'rescue', '--from-default-profile', 'web', '--dump-config']))
+  it('routes profile config dumps', () => {
+    expect(parse(['--profile', 'native-web', '--dump-config']))
+      .toEqual({ mode: 'dump-config', profile: 'native-web', patches: [] })
+    expect(parse(['--profile', 'rescue', '--from-default-profile', 'native-web', '--dump-config']))
       .toEqual({
         mode: 'dump-config',
         profile: 'rescue',
-        fromDefaultProfile: 'web',
+        fromDefaultProfile: 'native-web',
         patches: [],
       })
     expect(parse(['--profile', 'tui', '--dump-config', '--patch', 'x.yml']))
       .toEqual({ mode: 'dump-config', profile: 'tui', patches: ['x.yml'] })
-    expect(parse(['web', '--dump-config']))
-      .toEqual({ mode: 'dump-config', profile: 'web', patches: [] })
+    expect(parse(['--profile', 'native-web', '--dump-config']))
+      .toEqual({ mode: 'dump-config', profile: 'native-web', patches: [] })
   })
 
   it('rejects missing profile, removed flags, and contradictory inputs', () => {
@@ -97,15 +101,16 @@ describe('parseRshArgs', () => {
       .toEqual({ mode: 'profile', profile: 'x', patches: [], args: ['--dump-default-config'] })
     expect(exitCode(['--profile', 'x', '--dump-config', 'task'])).toBe(1)
     expect(exitCode(['--bogus'])).toBe(1)
-    expect(exitCode(['--profile', 'x', 'web'])).toBe(1)
-    expect(parse(['web', '--dump-default-config']))
-      .toEqual({ mode: 'profile', profile: 'web', patches: [], args: ['--dump-default-config'] })
-    expect(exitCode(['web', '--patch='])).toBe(1)
+    expect(parse(['--profile', 'x', 'web']))
+      .toEqual({ mode: 'profile', profile: 'x', patches: [], args: ['web'] })
+    expect(parse(['--profile', 'native-web', '--dump-default-config']))
+      .toEqual({ mode: 'profile', profile: 'native-web', patches: [], args: ['--dump-default-config'] })
+    expect(exitCode(['--profile', 'native-web', '--patch='])).toBe(1)
     // A dump never runs app command-line providers, so it cannot show what
     // those flags would decide; printing a tree that differs from the same
     // invocation's boot would mislead.
-    expect(exitCode(['web', '--dump-config', '--port', '8080'])).toBe(1)
-    expect(exitCode(['--profile', 'web', '--dump-config', '-h'])).toBe(1)
+    expect(exitCode(['--profile', 'native-web', '--dump-config', '--port', '8080'])).toBe(1)
+    expect(exitCode(['--profile', 'native-web', '--dump-config', '-h'])).toBe(1)
     expect(exitCode(['--profile', 'desktop'])).toBe(1)
     expect(exitCode(['--profile', 'Desktop'])).toBe(1)
     expect(exitCode(['--profile', 'DESKTOP'])).toBe(1)
@@ -116,7 +121,7 @@ describe('parseRshArgs', () => {
     // `plugin` is no longer a launcher subcommand; it reaches the app verbatim.
     expect(parse(['--profile', 'x', 'plugin', 'add', 'y']))
       .toEqual({ mode: 'profile', profile: 'x', patches: [], args: ['plugin', 'add', 'y'] })
-    expect(exitCode(['--from-default-profile', 'web', 'plugin', '--profile', 'x', 'add', 'y'])).toBe(1)
+    expect(exitCode(['--from-default-profile', 'native-web', 'plugin', '--profile', 'x', 'add', 'y'])).toBe(1)
   })
 
   it('points a refused sdk-minimal invocation at the sdk profile and the migration reference', () => {

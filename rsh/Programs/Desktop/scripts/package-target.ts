@@ -170,7 +170,6 @@ export function resolveDesktopPackageTarget(
 
 interface DesktopPackageInvocation {
   readonly target: DesktopPackageTarget
-  readonly assembly: 'native' | 'compatibility'
   readonly directory: boolean
   readonly prepareOnly: boolean
   readonly unsigned: boolean
@@ -205,15 +204,14 @@ export function parseDesktopPackageInvocation(
     },
   })
   if (positionals.length > 1) throw new Error('desktop package: expected at most one target')
-  if (values.assembly !== 'native' && values.assembly !== 'compatibility') {
-    throw new Error('desktop package: --assembly must be native or compatibility')
+  if (values.assembly !== 'native') {
+    throw new Error(`desktop package: the ${JSON.stringify(values.assembly)} assembly is retired; Desktop ships only the Native assembly (see rsh/Docs/native-config-migration.md)`)
   }
   const name = positionals[0] ?? hostTargetName(hostPlatform, hostArch)
   if (values.unsigned && name !== 'win-x64') throw new Error('desktop package: --unsigned requires win-x64')
   if (values.unsigned && values['prepare-only']) throw new Error('desktop package: --unsigned cannot use --prepare-only')
   return {
     target: resolveDesktopPackageTarget(name, hostPlatform, hostArch),
-    assembly: values.assembly,
     directory: values.dir,
     prepareOnly: values['prepare-only'],
     unsigned: values.unsigned,
@@ -280,7 +278,7 @@ function runPnpm(
 async function main(): Promise<void> {
   const invocation = parseDesktopPackageInvocation(process.argv.slice(2))
   const { target } = invocation
-  const buildPaths = desktopTargetBuildPaths(target.name, invocation.assembly)
+  const buildPaths = desktopTargetBuildPaths(target.name)
   const releaseRecordPath = join(buildPaths.artifacts, desktopBuildRecordFilename(target.name))
   if (!invocation.prepareOnly && !invocation.unsigned) {
     rmSync(releaseRecordPath, { force: true })
@@ -291,7 +289,6 @@ async function main(): Promise<void> {
     ...buildEnv,
     RSH_DESKTOP_TARGET_PLATFORM: target.platform,
     RSH_DESKTOP_TARGET_ARCH: target.arch,
-    RSH_DESKTOP_ASSEMBLY: invocation.assembly,
   }
   const electronBuilderEnv = desktopElectronBuilderEnvironment(targetEnv, invocation.unsigned)
   for (const name of WINDOWS_SIGNING_ENV_NAMES) {
@@ -306,11 +303,6 @@ async function main(): Promise<void> {
     '--pack-destination',
     buildPaths.packedDsh,
   ], buildEnv, REPOSITORY_ROOT)
-  if (invocation.assembly === 'compatibility') {
-    await runPnpm(['--dir', 'rsh/Compatibility/DSH/boot/desktop-host-compatibility', 'run', 'build'], buildEnv, REPOSITORY_ROOT)
-    await runPnpm(['--dir', 'rsh/Compatibility/DSH/boot/desktop-host-compatibility', 'pack',
-      '--pack-destination', buildPaths.packedDsh], buildEnv, REPOSITORY_ROOT)
-  }
   await runPnpm(['run', 'release:pack', '--family', 'vendor', '--out', buildPaths.packedVendor], buildEnv, REPOSITORY_ROOT)
   rmSync(buildPaths.packedLandlock, { recursive: true, force: true })
   mkdirSync(buildPaths.packedLandlock, { recursive: true })

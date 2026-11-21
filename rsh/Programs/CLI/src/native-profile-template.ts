@@ -8,7 +8,6 @@ import { type NativeProfileConfig } from './native-profile-config.ts'
 const ROOT = 'root'
 const STANDARD_PROFILE_COMPOSITIONS: Readonly<Record<string, string>> = {
   headless: 'native-headless',
-  web: 'native-web',
   sdk: 'native-sdk',
   acp: 'native-acp',
   rsh: 'native-tui',

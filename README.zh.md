@@ -22,15 +22,15 @@ RedSpark Harness 处于 _开发者预览_ 阶段，正在快速迭代。**未来
 
 ## 运行
 
-### 通过 `npm` 运行上游版本
+### 通过 `npm` 运行 Native Web profile
 
-此处保留的命令安装上游 RedSpark Harness，并非 RedSpark 分支。安装 `Node.js`，然后运行：
+安装 `Node.js`，然后运行：
 
 ```sh
-npx @redspark/dsh web
+npx @redspark/dsh --profile native-web
 ```
 
-该命令默认会在 `http://127.0.0.1:3080` 启动 Web UI，本机启动时还会用默认浏览器打开页面。通过 SSH 启动时只打印宿主机 URL，因为本地转发地址由 SSH 客户端或编辑器持有。传入 `--no-open` 可仅运行服务器而不打开浏览器。详见 [Web UI 指南](rsh/Docs/user/guide/index.zh.md)。
+Native web profile 会启动 Host，并在 `http://127.0.0.1:3080` 提供桌面渲染层。Desktop 是主要客户端；该 profile 保留用于开发和检查。详见 [Web UI 指南](rsh/Docs/user/guide/index.zh.md)。
 
 <a id="run-from-source"></a>
 
@@ -43,10 +43,10 @@ git clone https://github.com/Little-Red-Cre/RedSparkHarness.git
 cd RedSparkHarness
 pnpm install
 pnpm run build
-pnpm dsh web
+pnpm dsh --profile native-web
 ```
 
-`pnpm run build` 会准备仓库产物。`pnpm dsh web` 会直接使用这些已构建产物，不会重新构建。
+`pnpm run build` 会准备仓库产物。`pnpm dsh --profile native-web` 会直接使用这些已构建产物，不会重新构建。
 
 构建后运行 `pnpm run start:desktop` 可启动 Electron 客户端。开发版数据独立存放在 `rsh/Programs/Desktop/.desktop-build/development/home`。API Key 在应用内配置，不写入仓库。
 

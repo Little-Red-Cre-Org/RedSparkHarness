@@ -31,6 +31,6 @@ cd "$RSH_HOME/profiles/sdk"
 pnpm add file:/absolute/path/to/my-plugin-bundle
 ```
 
-The plugin must publish a Native entry and declare it under `dsh.native`; see [package and install a Native plugin](../../../../../Docs/user/develop/basic/publish.md). The selected profile must retain a JSON-RPC server row. The example accepts no complete configuration file or arbitrary process argv. The same runtime wheel packages the `web` profile and its frontend assets for direct CLI use: `dsh web` starts that separate application. A Python SDK client cannot select `web` because it has no JSON-RPC server row.
+The plugin must publish a Native entry and declare it under `dsh.native`; see [package and install a Native plugin](../../../../../Docs/user/develop/basic/publish.md). The selected profile must retain a JSON-RPC server row. The example accepts no complete configuration file or arbitrary process argv. The runtime wheel carries the CLI for separate use; Desktop is the primary graphical client.
 
 See the [Python SDK tutorial](../../../../../Docs/user/guide/python-sdk.md) and [SDK reference](../README.md).

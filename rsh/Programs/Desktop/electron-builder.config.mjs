@@ -12,7 +12,7 @@ import {
   installWindowsNsisBootstrapSigner,
 } from './scripts/windows-sign.mjs'
 import { resolveDesktopAutoUpdateConfig } from './scripts/desktop-auto-update-environment.mjs'
-import { desktopTargetBuildPaths, resolveDesktopBuildAssembly, resolveDesktopBuildTarget } from './scripts/desktop-build-paths.mjs'
+import { desktopTargetBuildPaths, resolveDesktopBuildTarget } from './scripts/desktop-build-paths.mjs'
 
 /**
  * Create electron-builder configuration from one release environment.
@@ -51,8 +51,10 @@ export function createElectronBuilderConfig(
     installWindowsNsisBootstrapSigner({ sign: windowsSigner })
   }
   const update = unsigned ? undefined : resolveDesktopAutoUpdateConfig(env, resolvedPlatform, resolvedArch)
-  const buildPaths = desktopTargetBuildPaths(
-    resolveDesktopBuildTarget(env, hostPlatform, hostArch), resolveDesktopBuildAssembly(env))
+  if (env.RSH_DESKTOP_ASSEMBLY !== undefined && env.RSH_DESKTOP_ASSEMBLY !== 'native') {
+    throw new Error('desktop package: the compatibility assembly is retired; Desktop ships only the Native assembly (see rsh/Docs/native-config-migration.md)')
+  }
+  const buildPaths = desktopTargetBuildPaths(resolveDesktopBuildTarget(env, hostPlatform, hostArch))
   return {
     appId,
     productName: 'RedSpark Harness',

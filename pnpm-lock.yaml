@@ -236,43 +236,6 @@ importers:
         specifier: ^15.0.0
         version: 15.0.0
 
-  rsh/Compatibility/DSH/boot/desktop-host-compatibility:
-    dependencies:
-      '@redspark/cordis-plugin-include':
-        specifier: workspace:^
-        version: link:../../../../Core/vendor/include
-      '@redspark/rsh-app-boot':
-        specifier: workspace:^
-        version: link:../app-boot
-      '@redspark/rsh-cmdline':
-        specifier: workspace:^
-        version: link:../cmdline
-      '@redspark/rsh-web-compatibility':
-        specifier: workspace:^
-        version: link:../../web/frontend
-    devDependencies:
-      '@redspark/cordis':
-        specifier: workspace:^
-        version: link:../../../../Core/vendor/cordis
-      '@redspark/rsh-api-gateway':
-        specifier: workspace:^
-        version: link:../../../../Programs/Web/api/gateway
-      '@redspark/rsh-client-connection':
-        specifier: workspace:^
-        version: link:../../../../Programs/Web/client/connection
-      '@redspark/rsh-client-modules':
-        specifier: workspace:^
-        version: link:../../../../Programs/Web/client/modules
-      '@redspark/rsh-http-routes':
-        specifier: workspace:^
-        version: link:../../../../Core/util/http-routes
-      '@redspark/rsh-http-routes-cordis':
-        specifier: workspace:^
-        version: link:../../bridge/http-routes-cordis
-      '@redspark/rsh-launch-environment':
-        specifier: workspace:^
-        version: link:../../../../Core/util/launch-environment
-
   rsh/Compatibility/DSH/bridge/compat-code-runtime:
     dependencies:
       '@redspark/rsh-code-runtime-definition':
@@ -9931,10 +9894,6 @@ importers:
       '@redspark/rsh-native-web-session-controller':
         specifier: workspace:^
         version: link:../Web/api/native-web-session-controller
-    optionalDependencies:
-      '@redspark/rsh-desktop-host-compatibility':
-        specifier: workspace:^
-        version: link:../../Compatibility/DSH/boot/desktop-host-compatibility
 
   rsh/Programs/SDK/packages/client:
     dependencies:

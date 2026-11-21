@@ -381,6 +381,9 @@
     { "path": "./rsh/Compatibility/DSH/bundle/sdk-app" },
     { "path": "./rsh/Compatibility/DSH/bundle/sdk-minimal" },
     { "path": "./rsh/Compatibility/DSH/bundle/web-app" },
+    // `verify-publish-payload` reads the client platform constants; the project reference
+    // resolves them to declarations instead of adding the client sources to this program.
+    { "path": "./rsh/Compatibility/DSH/web/frontend" },
     { "path": "./rsh/Compatibility/DSH/boot/app-boot" },
     { "path": "./rsh/Compatibility/DSH/boot/cmdline" },
     { "path": "./rsh/Compatibility/DSH/bridge/compat-settings-definition" },

@@ -6,7 +6,7 @@
 
 ## Profile runtime 标记
 
-新建的 `headless`、`web`、`sdk`、`acp` 或 `rsh` profile 分别初始化为 `native-headless`、`native-web`、`native-sdk`、`native-acp` 或 `native-tui`，但保留请求中的 profile 目录名称。八个 `native-*` 名称仍可显式选择。启动器在启动、导出配置和 `--from-default-profile` 上拒绝 profile 名 `sdk-minimal`；请改用 `--profile sdk`。已有目录不会被改写。其他缺失名称不会被创建；启动器会报告该 profile 未选择 Native 执行。对于已有 `package.json`，runtime resolver 会遵循其 profile 标记且不改写 profile：原生标记选择 Native。`runtime: "legacy"` 或 `dsh.profile.bundles` 数组会报告 legacy，并由启动器拒绝。既没有有效 native 标记也没有 legacy bundle 数组的 manifest 会报错，并要求声明 `runtime: "native"` 与 `config: "rsh.profile.json"`。无 runtime 标记的 bundle 数组若同时声明 `config` 或 `configReload` 也会报错。legacy 标记不能包含 `config` 或 `configReload`；native 标记必须使用 `config: "rsh.profile.json"`，且不能包含 Cordis `bundles` 或 `patchReload`。
+新建的 `headless`、`sdk`、`acp` 或 `rsh` profile 分别初始化为 `native-headless`、`native-sdk`、`native-acp` 或 `native-tui`，但保留请求中的 profile 目录名称。八个 `native-*` 名称仍可显式选择。启动器在启动、导出配置和模板创建上拒绝 profile 名 `web` 及对应的 `--from-default-profile` 模板；浏览器部署入口已退役，`--profile native-web` 是保留的 Native Web profile。启动器也拒绝 `sdk-minimal`；请改用 `--profile sdk`。已有目录不会被改写。其他缺失名称不会被创建；启动器会报告该 profile 未选择 Native 执行。对于已有 `package.json`，runtime resolver 会遵循其 profile 标记且不改写 profile：原生标记选择 Native。`runtime: "legacy"` 或 `dsh.profile.bundles` 数组会报告 legacy，并由启动器拒绝。既没有有效 native 标记也没有 legacy bundle 数组的 manifest 会报错，并要求声明 `runtime: "native"` 与 `config: "rsh.profile.json"`。无 runtime 标记的 bundle 数组若同时声明 `config` 或 `configReload` 也会报错。legacy 标记不能包含 `config` 或 `configReload`；native 标记必须使用 `config: "rsh.profile.json"`，且不能包含 Cordis `bundles` 或 `patchReload`。
 
 Native CLI 检查 `rsh.profile.json` 中已安装且启用的插件，以及由已安装的 `@redspark/rsh-native-web-host` `config.projectDir` 选择的 Client profile。没有安装该 Host 时，profile 不包含 Client surface。只有安装了该键所属插件时才检查 settings。没有 settings-file Provider 的 profile 不读取或检查 `settings.yaml`。Native profile 模板与 legacy app-boot 初始化器会在初始化 profile 时写入显式 runtime 标记。
 
@@ -14,7 +14,7 @@ Native CLI 检查 `rsh.profile.json` 中已安装且启用的插件，以及由�
 
 ## 插件集合差异
 
-已有目录不会因为改名而转换。`dsh.profile.bundles` 或 `runtime: "legacy"` 仍走 Cordis。`desktop` 既不是 `dsh.nativeProfileTemplates` 的名字，也不在 `PROFILE_TEMPLATES` 里（`rsh/Compatibility/DSH/boot/app-boot/src/profile.ts:105`）。新建的 `headless`、`web`、`sdk`、`acp` 或 `rsh` 目录写入 `shippedNativeProfileComposition` 的安装列表（`rsh/Programs/CLI/src/native-profile-template.ts:235`）。该列表不是 `PROFILE_TEMPLATES` 里的 Cordis bundle 元组。
+已有目录不会因为改名而转换。`dsh.profile.bundles` 或 `runtime: "legacy"` 仍走 Cordis。`desktop` 既不是 `dsh.nativeProfileTemplates` 的名字，也不在 `PROFILE_TEMPLATES` 里（`rsh/Compatibility/DSH/boot/app-boot/src/profile.ts:105`）。新建的 `headless`、`sdk`、`acp` 或 `rsh` 目录写入 `shippedNativeProfileComposition` 的安装列表（`rsh/Programs/CLI/src/native-profile-template.ts:235`）。该列表不是 `PROFILE_TEMPLATES` 里的 Cordis bundle 元组。
 
 `sdk` 变成 `native-sdk`。非 Windows 上它安装 `@redspark/rsh-tool-bash-persistent`，sandbox mode 为 `danger-full-access`（`rsh/Programs/CLI/src/native-profile-template.ts:108-117`）。Windows 改为安装 `@redspark/rsh-tool-pwsh-persistent`。被拒绝的 `sdk-minimal` bundle 同时声明两个持久 shell 包。`@redspark/rsh-tool-str-replace-editor` 没有 `./native` 导出，所以没有任何已发布模板安装它。
 
@@ -22,7 +22,7 @@ Native CLI 检查 `rsh.profile.json` 中已安装且启用的插件，以及由�
 
 `native-headless`、`native-web` 与 `native-tui` 安装 `@redspark/rsh-code-runtime-process-sandbox`（`rsh/Programs/CLI/src/native-profile-template.ts:459`）。`native-sdk` 与 `native-acp` 在该行之前返回。没有任何已发布模板安装 `@redspark/rsh-experimental-code-runtime-python`。
 
-`web` 与 `rsh` 把 Minimal 安装成独立 scope。常驻行只保留平台持久 shell（`bash` 或 `pwsh`），并跳过压缩；人格行是固定完整提示词 `You are a helpful software engineer assistant.`，且抑制运行时上下文。该 scope 不加载 `rsh/Engine/preset/agent-presets/presets/minimal/agent.cordis.yml`。
+`native-web` 与 `native-tui` 把 Minimal 安装成独立 scope。常驻行只保留平台持久 shell（`bash` 或 `pwsh`），并跳过压缩；人格行是固定完整提示词 `You are a helpful software engineer assistant.`，且抑制运行时上下文。该 scope 不加载 `rsh/Engine/preset/agent-presets/presets/minimal/agent.cordis.yml`。
 
 ## `settings.yaml` 中的值
 

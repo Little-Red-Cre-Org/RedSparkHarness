@@ -6,11 +6,8 @@
 
 import { mkdirSync, readFileSync } from 'node:fs'
 import { once } from 'node:events'
-import { createRequire } from 'node:module'
 import { join, resolve } from 'node:path'
-import { pathToFileURL } from 'node:url'
 import { profileDirectoryRuntime } from '@redspark/rsh/native-profile'
-import type { DesktopHostRuntime } from './runtime.ts'
 import { openDesktopHostPipes } from './pipes.ts'
 import {
   DESKTOP_HOST_PROTOCOL_VERSION,
@@ -57,21 +54,6 @@ type DesktopHostFailure = Extract<DesktopHostEvent, { type: 'fatal' }>
 const errorTypes = new Set<DesktopHostFailure['errorType']>([
   'AggregateError', 'Error', 'RangeError', 'SyntaxError', 'TypeError', 'ValidationError',
 ])
-const COMPATIBILITY_HOST_PACKAGE = '@redspark/rsh-desktop-host-compatibility'
-
-async function createCompatibilityRuntime(
-  runtimeDir: string, projectDir: string, allowLinkedPackages: boolean,
-): Promise<DesktopHostRuntime> {
-  const require = createRequire(join(projectDir, 'package.json'))
-  let entry: string
-  try {
-    entry = require.resolve(COMPATIBILITY_HOST_PACKAGE)
-  } catch (error) {
-    throw new Error('dsh desktop: legacy bundles require the separately installed Desktop compatibility Host; profile files were preserved', { cause: error })
-  }
-  const compatibility = await import(pathToFileURL(entry).href) as typeof import('@redspark/rsh-desktop-host-compatibility')
-  return compatibility.createLegacyDesktopRuntime(runtimeDir, projectDir, allowLinkedPackages)
-}
 
 function failureEvent(error: unknown): DesktopHostFailure {
   const errors = errorChain(error)
@@ -165,9 +147,10 @@ export async function runDesktopHost(
   const absoluteRuntime = resolve(runtimeDir)
   const version = rshVersion(absoluteRuntime)
   const allowLinkedPackages = options.allowLinkedPackages === true
-  const runtime = profileDirectoryRuntime(absoluteProject) === 'native'
-    ? await import('./native-host.ts').then(module => module.createNativeDesktopRuntime(absoluteRuntime, absoluteProject, allowLinkedPackages))
-    : await createCompatibilityRuntime(absoluteRuntime, absoluteProject, allowLinkedPackages)
+  if (profileDirectoryRuntime(absoluteProject) !== 'native') {
+    throw new Error('dsh desktop: the Cordis compatibility assembly is retired; reinstall Desktop to create a Native profile (see rsh/Docs/native-config-migration.md)')
+  }
+  const runtime = await import('./native-host.ts').then(module => module.createNativeDesktopRuntime(absoluteRuntime, absoluteProject, allowLinkedPackages))
   const requests = new Map<number, AbortController>()
   let disposing: Promise<void> | undefined
 

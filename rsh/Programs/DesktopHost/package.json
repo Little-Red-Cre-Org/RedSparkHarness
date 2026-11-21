@@ -17,9 +17,6 @@
     "@redspark/rsh-native-runtime": "workspace:^",
     "@redspark/rsh-native-web-session-controller": "workspace:^"
   },
-  "optionalDependencies": {
-    "@redspark/rsh-desktop-host-compatibility": "workspace:^"
-  },
   "exports": {
     "./native-host": {
       "types": "./lib/types/native-host.d.ts",

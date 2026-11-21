@@ -42,8 +42,6 @@ import { Worker, type WorkerOptions } from 'node:worker_threads'
 import { pathToFileURL } from 'node:url'
 import {
   DESKTOP_HOST_PACKAGE,
-  DESKTOP_COMPATIBILITY_HOST_PACKAGE,
-  DESKTOP_COMPATIBILITY_OPTIONAL_DEPENDENCIES,
   desktopCorePackageOverrides,
   verifyDesktopCorePackageSet,
 } from './core-package-set.ts'
@@ -54,7 +52,7 @@ import type { DesktopRelease } from './release.ts'
 import { desktopRuntimeId, readDesktopRuntime, type DesktopRuntimeDescriptor } from './runtime-tree.ts'
 import {
   desktopPluginLockHash, linkDesktopHostPackages, readDesktopProfileState,
-  unlinkDesktopHostPackages, validateDesktopPluginGraph, type DesktopProfileState,
+  unlinkDesktopHostPackages, type DesktopProfileState,
 } from './profile-packages.ts'
 import {
   NativeDesktopOperationFailure,
@@ -79,13 +77,6 @@ import {
   type NativeDesktopUpdateRequest,
 } from './native-module-management.ts'
 import type { DesktopBackendState } from './backend-controller.ts'
-
-/** Desktop plugin record derived from the installed profile. */
-export interface DesktopPluginRecord {
-  readonly name: string
-  readonly version: string
-  readonly enabled: boolean
-}
 
 /** Installed desktop project manifest slice. */
 interface DesktopProjectManifest {
@@ -118,14 +109,6 @@ export interface DesktopProjectHooks {
   afterChange(): Promise<void>
 }
 
-/** Supported dependency mutation. */
-export type DesktopProjectMutation =
-  | { readonly type: 'plugin-add'; readonly spec: string }
-  | { readonly type: 'plugin-remove'; readonly name: string }
-  | { readonly type: 'plugin-update'; readonly name: string; readonly version: string }
-  | { readonly type: 'plugin-toggle'; readonly name: string; readonly enabled: boolean }
-  | { readonly type: 'plugins-disable-all' }
-
 interface NativeDesktopPreflight {
   readonly environment: LaunchEnvironmentSnapshot
 }
@@ -137,6 +120,7 @@ const PROJECT_NAME = '@redspark/rsh-desktop-runtime'
 const SESSION_STORAGE_PACKAGE = '@redspark/rsh-session-persistence-jsonl'
 const RSH_PACKAGE = '@redspark/rsh'
 const CORE_BUILD_PACKAGE = '@redspark/rsh-subprocess-local'
+/** Bundle list of the retired Desktop starter profile, recognized only for automatic Native migration. */
 const DESKTOP_PROFILE_BUNDLES = ['@redspark/rsh-base', '@redspark/rsh-web-app'] as const
 const WORKSPACE_SETTINGS = 'nodeLinker: hoisted\nautoInstallPeers: false\nstrictDepBuilds: true\n'
 const PACKAGE_NAME_PATTERN = /^(?:@[a-z0-9][a-z0-9._~-]*\/[a-z0-9][a-z0-9._~-]*|[a-z0-9][a-z0-9._~-]*)$/u
@@ -183,31 +167,6 @@ function assertPackageName(name: string): void {
 
 function assertVersion(version: string): void {
   if (!VERSION_PATTERN.test(version)) throw new Error(`desktop project: invalid exact version ${JSON.stringify(version)}`)
-}
-
-/**
- * Validate one registry package spec and return its package name.
- * @param spec - npm registry name with an optional version or tag.
- * @returns Requested package name.
- */
-export function packageNameFromSpec(spec: string): string {
-  if (spec === '' || spec.startsWith('-') || /[\s\\]/u.test(spec) || spec.includes('://') || spec.startsWith('file:')) {
-    throw new Error(`desktop project: unsupported npm package spec ${JSON.stringify(spec)}`)
-  }
-  if (spec.startsWith('@')) {
-    const slash = spec.indexOf('/')
-    if (slash === -1) throw new Error(`desktop project: invalid scoped package spec ${JSON.stringify(spec)}`)
-    const versionAt = spec.indexOf('@', slash)
-    const name = versionAt === -1 ? spec : spec.slice(0, versionAt)
-    assertPackageName(name)
-    if (versionAt !== -1) assertVersion(spec.slice(versionAt + 1))
-    return name
-  }
-  const versionAt = spec.indexOf('@')
-  const name = versionAt === -1 ? spec : spec.slice(0, versionAt)
-  assertPackageName(name)
-  if (versionAt !== -1) assertVersion(spec.slice(versionAt + 1))
-  return name
 }
 
 function projectManifest(projectDir: string): DesktopProjectManifest {
@@ -267,65 +226,6 @@ function isLegacyStarterProfile(projectDir: string, lockPath: string): boolean {
 
 function isNewProfileDirectory(projectDir: string): boolean {
   return readdirSync(projectDir).every(name => name === 'lock' || name === '.env')
-}
-
-function compatibilityHostPath(runtimeDirectory: string): string {
-  return join(runtimeDirectory, 'node_modules', ...DESKTOP_COMPATIBILITY_HOST_PACKAGE.split('/'), 'package.json')
-}
-
-function profilePluginNames(projectDir: string): readonly string[] {
-  const bundles = projectManifest(projectDir).dsh.profile.bundles
-  if (bundles === undefined) throw new Error('desktop project: compatibility plugin management requires a Cordis profile')
-  if (!DESKTOP_PROFILE_BUNDLES.every((bundle, index) => bundles[index] === bundle)) {
-    throw new Error('desktop project: profile must begin with the built-in desktop bundle list')
-  }
-  const plugins = bundles.slice(DESKTOP_PROFILE_BUNDLES.length)
-  if (new Set(bundles).size !== bundles.length) {
-    throw new Error('desktop project: profile bundle list contains a duplicate package')
-  }
-  for (const plugin of plugins) assertPackageName(plugin)
-  return plugins
-}
-
-function pluginRecords(projectDir: string): readonly DesktopPluginRecord[] {
-  return Object.keys(projectManifest(projectDir).dependencies).sort().map(name => inspectPlugin(projectDir, name))
-}
-
-function writeProfilePlugins(projectDir: string, plugins: readonly DesktopPluginRecord[]): void {
-  const manifest = projectManifest(projectDir)
-  writeJson(join(projectDir, 'package.json'), {
-    ...manifest,
-    dsh: {
-      ...manifest.dsh,
-      profile: {
-        ...manifest.dsh.profile,
-        bundles: [...DESKTOP_PROFILE_BUNDLES, ...plugins.filter(plugin => plugin.enabled).map(plugin => plugin.name)],
-      },
-    },
-  } satisfies DesktopProjectManifest)
-}
-
-function inspectPlugin(projectDir: string, requestedName: string): DesktopPluginRecord {
-  const manifestPath = join(projectDir, 'node_modules', ...requestedName.split('/'), 'package.json')
-  if (!existsSync(manifestPath)) {
-    throw new Error(`desktop project: installed package ${JSON.stringify(requestedName)} has no manifest`)
-  }
-  const manifest = readJson(manifestPath)
-  if (!isRecord(manifest) || manifest.name !== requestedName || typeof manifest.version !== 'string') {
-    throw new Error(`desktop project: installed package ${JSON.stringify(requestedName)} has inconsistent name or version`)
-  }
-  const dsh = manifest.dsh
-  const bundle = isRecord(dsh) ? dsh.bundle : undefined
-  const patch = isRecord(bundle) ? bundle.patch : undefined
-  if (typeof patch !== 'string' || patch === '') {
-    throw new Error(`desktop project: ${requestedName}@${manifest.version} does not declare dsh.bundle.patch`)
-  }
-  const packageDir = dirname(manifestPath)
-  const patchPath = resolve(packageDir, patch)
-  if ((patchPath !== packageDir && !patchPath.startsWith(packageDir + sep)) || !existsSync(patchPath)) {
-    throw new Error(`desktop project: ${requestedName}@${manifest.version} declares an invalid bundle patch`)
-  }
-  return { name: requestedName, version: manifest.version, enabled: profilePluginNames(projectDir).includes(requestedName) }
 }
 
 interface NativePackageMetadata {
@@ -994,7 +894,7 @@ function toggleDisabled<Row extends { readonly disabled?: boolean }>(row: Row, e
 }
 
 
-/** Desktop project manager for compatibility plugin changes and Native module mutations. */
+/** Desktop project manager for Native module mutations and profile recovery. */
 export class DesktopProjectManager {
   private lockDescriptor: number | undefined
   private descriptor: DesktopRuntimeDescriptor | undefined
@@ -1339,22 +1239,6 @@ export class DesktopProjectManager {
     }
   }
 
-  /** Read the active desktop plugin inventory. */
-  listPlugins(): readonly DesktopPluginRecord[] {
-    if (!existsSync(this.paths.profile)) return []
-    this.assertLegacyPluginManagement()
-    return pluginRecords(this.paths.profile)
-  }
-
-  /** @returns Whether the current profile supports compatibility plugin operations. */
-  supportsLegacyPluginManagement(): boolean {
-    return profileDirectoryRuntime(this.paths.profile) === 'legacy'
-  }
-
-  private assertLegacyPluginManagement(): void {
-    if (!this.supportsLegacyPluginManagement()) throw new Error('desktop project: native profiles do not support compatibility plugin management')
-  }
-
   /**
    * Reinitialize the profile, deleting configuration and third-party packages without a backup.
    * @param hooks - Stop the Host before resetting files; restart after preparation succeeds.
@@ -1419,32 +1303,14 @@ export class DesktopProjectManager {
 
   private prepareProfile(projectDir: string): void {
     const runtime = this.currentRuntime()
-    if (profileDirectoryRuntime(projectDir) === 'native') {
-      projectManifest(projectDir)
-      if (profileDirectoryReloadMode(projectDir) !== 'startup') throw new Error('desktop project: native profiles require configReload startup')
-      refuseLegacyPatch(join(projectDir, 'cordis.yml'))
-      readNativeProfile({ profile: 'desktop', profileDir: projectDir, patchFiles: [] })
-      linkDesktopHostPackages(projectDir, this.runtime.dsh, runtime)
-      return
+    if (profileDirectoryRuntime(projectDir) !== 'native') {
+      throw new Error('dsh desktop: the Cordis compatibility assembly is retired; this release boots Native profiles only (see rsh/Docs/native-config-migration.md)')
     }
-    this.assertCompatibilityHostAvailable()
+    projectManifest(projectDir)
+    if (profileDirectoryReloadMode(projectDir) !== 'startup') throw new Error('desktop project: native profiles require configReload startup')
+    refuseLegacyPatch(join(projectDir, 'cordis.yml'))
+    readNativeProfile({ profile: 'desktop', profileDir: projectDir, patchFiles: [] })
     linkDesktopHostPackages(projectDir, this.runtime.dsh, runtime)
-    validateDesktopPluginGraph(projectDir, this.runtime.dsh, runtime, profilePluginNames(projectDir))
-  }
-
-  private assertCompatibilityHostAvailable(): void {
-    const runtime = this.currentRuntime()
-    const path = compatibilityHostPath(this.runtime.dsh)
-    const selected = runtime.sharedPackages.some(packageRecord => packageRecord.name === DESKTOP_COMPATIBILITY_HOST_PACKAGE
-      && packageRecord.version === runtime.release.version)
-    if (runtime.assembly !== 'compatibility' || !selected || !existsSync(path)) {
-      throw new Error(`dsh desktop: this release omits ${DESKTOP_COMPATIBILITY_HOST_PACKAGE}; the legacy profile was preserved`)
-    }
-    const manifest: unknown = readJson(path)
-    if (!isRecord(manifest) || manifest.name !== DESKTOP_COMPATIBILITY_HOST_PACKAGE
-      || manifest.version !== runtime.release.version || manifest.private !== true) {
-      throw new Error(`dsh desktop: installed ${DESKTOP_COMPATIBILITY_HOST_PACKAGE} does not match this release`)
-    }
   }
 
   /** Read release metadata and reconcile its external profile without installing core packages. */
@@ -1465,14 +1331,16 @@ export class DesktopProjectManager {
         const manifest = readJson(join(this.paths.profile, 'package.json'))
         const profile = isRecord(manifest) && isRecord(manifest.dsh) && isRecord(manifest.dsh.profile)
           ? manifest.dsh.profile : undefined
-        if (profile?.runtime === 'legacy') this.assertCompatibilityHostAvailable()
-        else if (isLegacyStarterProfile(this.paths.profile, this.paths.lock)) {
+        if (profile?.runtime === 'legacy') {
+          throw new Error('dsh desktop: the Cordis compatibility assembly is retired; this release boots Native profiles only (see rsh/Docs/native-config-migration.md)')
+        }
+        if (isLegacyStarterProfile(this.paths.profile, this.paths.lock)) {
           const sessionsCompression = await inspectSessionRootCompression(join(dirname(this.paths.root), 'sessions'))
           const prepared = await this.preflightNativeProfile(this.paths.profile, true, sessionsCompression)
           nativeEnvironment = prepared
           createNativeDesktopProfile(this.paths.profile, dirname(this.paths.root), process.platform, {}, prepared.compression)
         } else {
-          throw new Error('dsh desktop: custom Cordis profile was not changed; select runtime legacy with a compatibility-enabled release, or reset it to create a Native profile')
+          throw new Error('dsh desktop: custom Cordis profiles are retired and were not changed; reset the profile to create a Native one (see rsh/Docs/native-config-migration.md)')
         }
       }
       if (profileDirectoryRuntime(this.paths.profile) === 'native' && nativeEnvironment === undefined) {
@@ -1495,41 +1363,10 @@ export class DesktopProjectManager {
     })
   }
 
-  /** Modify the current profile while its backend is stopped; failures retain partial changes. */
-  async mutate(mutation: DesktopProjectMutation, hooks: DesktopProjectHooks): Promise<void> {
-    await this.withLock(async () => {
-      this.currentRuntime()
-      if (!existsSync(this.paths.profile)) throw new Error('desktop project: active profile is not installed')
-      this.assertLegacyPluginManagement()
-      await hooks.beforeChange()
-      if (mutation.type === 'plugins-disable-all') {
-        const manifest = projectManifest(this.paths.profile)
-        writeJson(join(this.paths.profile, 'package.json'), {
-          ...manifest,
-          dsh: { ...manifest.dsh, profile: { ...manifest.dsh.profile, bundles: [...DESKTOP_PROFILE_BUNDLES] } },
-        })
-        this.prepareProfile(this.paths.profile)
-        await hooks.afterChange()
-        return
-      }
-      const previous = readDesktopProfileState(this.paths.profile)
-      const packagesChanged = mutation.type !== 'plugin-toggle'
-      if (packagesChanged) unlinkDesktopHostPackages(this.paths.profile)
-      try {
-        await this.applyMutation(this.paths.profile, mutation)
-      } finally {
-        if (packagesChanged) linkDesktopHostPackages(this.paths.profile, this.runtime.dsh, this.currentRuntime())
-      }
-      await this.reconcileProfile(this.paths.profile, previous, packagesChanged)
-      await hooks.afterChange()
-    })
-  }
-
-  private async reconcileProfile(projectDir: string, previous: DesktopProfileState | undefined, packagesChanged = false): Promise<void> {
+  private async reconcileProfile(projectDir: string, previous: DesktopProfileState | undefined): Promise<void> {
     const target = this.currentRuntime()
-    const rebuild = (!packagesChanged && existsSync(this.pendingPackages))
-      || (previous !== undefined && (profileDirectoryRuntime(projectDir) === 'native'
-        ? Object.keys(projectManifest(projectDir).dependencies).length : pluginRecords(projectDir).length) > 0
+    const rebuild = existsSync(this.pendingPackages)
+      || (previous !== undefined && Object.keys(projectManifest(projectDir).dependencies).length > 0
       && (previous.nodeVersion !== target.release.nodeVersion || previous.platform !== target.platform || previous.arch !== target.arch))
     if (rebuild) {
       writeFileSync(this.pendingPackages, '')
@@ -1537,7 +1374,7 @@ export class DesktopProjectManager {
       removeOwnedDirectory(join(projectDir, 'node_modules'))
       await this.runPnpm(projectDir, ['install', '--frozen-lockfile', '--ignore-scripts'])
     }
-    if (rebuild || packagesChanged) await this.finishPackageOperation(projectDir)
+    if (rebuild) await this.finishPackageOperation(projectDir)
     else this.prepareProfile(projectDir)
   }
 
@@ -1588,61 +1425,6 @@ export class DesktopProjectManager {
     await this.runPnpm(projectDir, ['rebuild', '--pending'])
     this.prepareProfile(projectDir)
     unlinkSync(this.pendingPackages)
-  }
-
-  private async applyMutation(projectDir: string, mutation: Exclude<DesktopProjectMutation, { type: 'plugins-disable-all' }>): Promise<void> {
-    switch (mutation.type) {
-      case 'plugin-add': {
-        const requestedName = packageNameFromSpec(mutation.spec)
-        if (this.currentRuntime().sharedPackages.some(entry => entry.name === requestedName)) {
-          throw new Error(`desktop project: cannot install host-owned package ${requestedName}`)
-        }
-        await this.runPnpm(projectDir, ['add', mutation.spec, '--save-exact', '--ignore-scripts'])
-        const installed = { ...inspectPlugin(projectDir, requestedName), enabled: true }
-        const current = pluginRecords(projectDir).filter(plugin => plugin.name !== installed.name)
-        writeProfilePlugins(
-          projectDir,
-          [...current, installed].sort((left, right) => left.name.localeCompare(right.name)),
-        )
-        return
-      }
-      case 'plugin-remove': {
-        assertPackageName(mutation.name)
-        if (!Object.hasOwn(projectManifest(projectDir).dependencies, mutation.name)) {
-          throw new Error(`desktop project: plugin ${JSON.stringify(mutation.name)} is not installed`)
-        }
-        const remaining = pluginRecords(projectDir).filter(plugin => plugin.name !== mutation.name)
-        await this.runPnpm(projectDir, ['remove', mutation.name, '--config.ignore-scripts=true'])
-        writeProfilePlugins(projectDir, remaining)
-        return
-      }
-      case 'plugin-update':
-        assertPackageName(mutation.name)
-        assertVersion(mutation.version)
-        if (!Object.hasOwn(projectManifest(projectDir).dependencies, mutation.name)) {
-          throw new Error(`desktop project: plugin ${JSON.stringify(mutation.name)} is not installed`)
-        }
-        await this.runPnpm(projectDir, ['add', `${mutation.name}@${mutation.version}`, '--save-exact', '--ignore-scripts'])
-        {
-          const installed = inspectPlugin(projectDir, mutation.name)
-          writeProfilePlugins(
-            projectDir,
-            pluginRecords(projectDir).map(plugin => plugin.name === installed.name ? installed : plugin),
-          )
-        }
-        return
-      case 'plugin-toggle': {
-        assertPackageName(mutation.name)
-        const plugins = pluginRecords(projectDir)
-        if (!plugins.some(plugin => plugin.name === mutation.name)) throw new Error(`desktop project: plugin ${mutation.name} is not installed`)
-        writeProfilePlugins(projectDir, plugins.map(plugin => (
-          plugin.name === mutation.name ? { ...plugin, enabled: mutation.enabled } : plugin
-        )))
-        return
-      }
-      default:
-        mutation satisfies never
-    }
   }
 
   private async runPnpm(projectDir: string, args: readonly string[]): Promise<void> {
@@ -1824,14 +1606,14 @@ function nativeDesktopProfileDocuments(
   profile: NativeProfileConfig
   client: NativeClientProfile
 } {
-  const composition = shippedNativeProfileComposition(home, 'web', platform, { profileDirectory: projectDir })
+  const composition = shippedNativeProfileComposition(home, 'native-web', platform, { profileDirectory: projectDir })
   const storageInstallation = composition.installations.find(row => row.plugin === SESSION_STORAGE_PACKAGE)
   if (storageInstallation === undefined) throw new Error(`desktop project: Native profile template omitted ${SESSION_STORAGE_PACKAGE}`)
   const installations = composition.installations.filter(row => row.id !== 'app').map(row => row.plugin === SESSION_STORAGE_PACKAGE
     ? { ...row, config: { ...(isRecord(row.config) ? row.config : {}), compression } } : row)
   return {
     profile: { ...composition, installations },
-    client: parseNativeClientProfile({ formatVersion: 1, installations: shippedNativeProfileClientComposition('web') }),
+    client: parseNativeClientProfile({ formatVersion: 1, installations: shippedNativeProfileClientComposition('native-web') }),
   }
 }
 
@@ -1856,15 +1638,5 @@ export function createNativeDesktopProfile(
   } satisfies DesktopProjectManifest)
   writeJson(join(projectDir, 'rsh.profile.json'), documents.profile)
   writeJson(join(projectDir, 'rsh.client.json'), documents.client)
-  writeFileSync(join(projectDir, 'pnpm-workspace.yaml'), workspaceFile({}, DESKTOP_COMPATIBILITY_OPTIONAL_DEPENDENCIES), { mode: 0o600 })
-}
-
-/** Create a legacy profile only when an existing user has explicitly selected Cordis bundles. */
-export function createCompatibilityPluginProfile(projectDir: string): void {
-  mkdirSync(projectDir, { recursive: true, mode: 0o700 })
-  writeJson(join(projectDir, 'package.json'), {
-    name: PROJECT_NAME, private: true, version: '0.0.0', dependencies: {},
-    dsh: { profile: { runtime: 'legacy', bundles: [...DESKTOP_PROFILE_BUNDLES] } },
-  } satisfies DesktopProjectManifest)
   writeFileSync(join(projectDir, 'pnpm-workspace.yaml'), workspaceFile({}, []), { mode: 0o600 })
 }

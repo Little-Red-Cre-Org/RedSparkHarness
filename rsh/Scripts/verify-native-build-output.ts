@@ -61,23 +61,23 @@ export interface CompositionRow {
  * Every row of the composition the Desktop Host and its browser Client actually load,
  * in declaration order.
  *
- * `project-manager.ts` creates the desktop project from the shipped `web` composition
- * (`shippedNativeProfileComposition(home, 'web', platform, ...)`) and writes its Client
- * rows from `shippedNativeProfileClientComposition('web')`, so those are the
+ * `project-manager.ts` creates the desktop project from the shipped `native-web` composition
+ * (`shippedNativeProfileComposition(home, 'native-web', platform, ...)`) and writes its Client
+ * rows from `shippedNativeProfileClientComposition('native-web')`, so those are the
  * compositions whose build output must exist. `'desktop'` is not a shipped template
  * name and would throw.
  */
 function compositionRows(): CompositionRow[] {
   const scratch = mkdtempSync(join(tmpdir(), 'native-build-output-'))
   try {
-    const composition = shippedNativeProfileComposition(scratch, 'web', process.platform)
+    const composition = shippedNativeProfileComposition(scratch, 'native-web', process.platform)
     const rows: CompositionRow[] = []
     for (const row of composition.installations as readonly { id?: unknown; plugin?: unknown; disabled?: unknown }[]) {
       if (row.disabled === true) continue
       if (typeof row.id !== 'string' || typeof row.plugin !== 'string') continue
       rows.push({ kind: 'installation', id: row.id, plugin: row.plugin })
     }
-    for (const row of shippedNativeProfileClientComposition('web')) {
+    for (const row of shippedNativeProfileClientComposition('native-web')) {
       rows.push({ kind: 'client', id: row.id, plugin: row.plugin })
     }
     return rows

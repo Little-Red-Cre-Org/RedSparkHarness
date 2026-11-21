@@ -18,24 +18,24 @@ No privileged core needs patching: plugins mount beside each other, and registra
 
 A running `dsh` is a plugin tree composed at boot from ordered layers.
 
-A **profile** is a named composition stored in the Harness home. It lists the bundles it stacks, holds any out-of-tree plugins it installs, and keeps the user's own `cordis.patch.yml`. `web`, `headless`, `sdk`, and `acp` ship as templates.
+A **profile** is a named composition in the Harness home: Native profiles declare it in `rsh.profile.json`; legacy Cordis profiles list bundles and keep the user's `cordis.patch.yml`. Shipped templates are Native; the retired browser `web` entry fails with a migration pointer.
 
 A **bundle** is a distribution format for Cordis config rows and the code they mount, so whatever it inserts stays patchable by the layers above it.
 
 Each declares itself in its own `package.json` under a `dsh` field: `dsh.profile` lists a profile's bundles, and `dsh.bundle` points at a bundle's patch file.
 
-[`dsh-base`](../Compatibility/DSH/bundle/base/README.md) is the shared first layer of the `web`, `headless`, `sdk`, and `acp` profiles: model adapters, tools, persistence, sandbox and approval policy, settings, credentials, telemetry. [`dsh-web-app`](../Compatibility/DSH/bundle/web-app/README.md) adds the browser application, [`dsh-headless`](../Compatibility/DSH/bundle/headless/README.md) adds a one-shot runner with no server, [`dsh-sdk-app`](../Compatibility/DSH/bundle/sdk-app/README.md) adds the SDK JSON-RPC server, and [`dsh-acp-app`](../Compatibility/DSH/bundle/acp-app/README.md) adds the automation-only ACP server. [`dsh-sdk-minimal`](../Compatibility/DSH/bundle/sdk-minimal/README.md) is the deliberate exception: one bundle owns its complete explicit SDK tree and does not apply `dsh-base`.
+[`dsh-base`](../Compatibility/DSH/bundle/base/README.md) is the shared first layer of the legacy `headless`, `sdk`, and `acp` profiles: model adapters, tools, persistence, sandbox and approval policy, settings, credentials, telemetry. [`dsh-web-app`](../Compatibility/DSH/bundle/web-app/README.md) is the retired browser composition, [`dsh-headless`](../Compatibility/DSH/bundle/headless/README.md) adds a one-shot runner with no server, [`dsh-sdk-app`](../Compatibility/DSH/bundle/sdk-app/README.md) adds the SDK JSON-RPC server, and [`dsh-acp-app`](../Compatibility/DSH/bundle/acp-app/README.md) adds the automation-only ACP server. [`dsh-sdk-minimal`](../Compatibility/DSH/bundle/sdk-minimal/README.md) is the exception: it owns its complete explicit SDK tree and skips `dsh-base`.
 
 Layers apply to an empty entry list in this order: each bundle in the profile's listed order, then the profile's `cordis.patch.yml`, then the home-level one, then any `--patch` overlay. A patch targets a row by id and replaces its whole config, or inserts new rows.
 
-Custom profiles default to live reload. `web` reloads live; `headless`, `sdk`, and `acp` load once because replacing dependencies after work starts invalidates one-shot or stdio lifecycles. Loader-managed fresh agents await composition when persistence is absent.
+Custom Cordis profiles default to live reload; `headless`, `sdk`, and `acp` load once because replacing dependencies after work starts invalidates one-shot or stdio lifecycles. Loader-managed fresh agents await composition when persistence is absent.
 
 Native `native-web` sets `dsh.profile.configReload: live` to watch `rsh.profile.json` and explicit JSON `--patch` files, then replace the Host installation plan. `native-headless`, `native-sdk`, `native-acp`, and `native-tui` remain startup-only. See [the CLI reload contract](../Programs/CLI/reference/README.md); Host config reload is separate from Cordis patch reload and Web Client asset rebuilding.
 
 To see the tree your machine boots:
 
 ```sh
-dsh --profile web --dump-config
+dsh --profile native-web --dump-config
 ```
 
 Any row it prints can be replaced by a patch of your own.
@@ -44,7 +44,7 @@ Composition mechanics are in [app-boot](../Compatibility/DSH/boot/app-boot/READM
 
 ## Application launch
 
-Every supported Node application starts at the `dsh` CLI with a named profile. The shipped applications are `dsh web` (the deliberate alias for `--profile web`), `dsh --profile headless`, `dsh --profile sdk`, and `dsh --profile acp`. The TypeScript SDK resolves its same-version `dsh` dependency and selects `sdk`; custom plugin composition remains a profile plus ordered patch files, not another executable or inline application tree. The launcher refuses the name `sdk-minimal`; use `--profile sdk`. Existing directories are not rewritten.
+Every supported Node application starts at the `dsh` CLI with a named profile. The shipped applications are `dsh --profile native-web`, `dsh --profile headless`, `dsh --profile sdk`, and `dsh --profile acp`; the browser-only `web` name and `dsh web` alias fail with a migration pointer. The TypeScript SDK resolves its same-version `dsh` dependency and selects `sdk`; custom plugin composition remains a profile plus ordered patch files, not another executable or inline application tree. The launcher refuses the name `sdk-minimal`; use `--profile sdk`. Existing directories are not rewritten.
 
 Vendored CLIs, build-only and test-only executables, direct in-process plugin mounting, and the private browser WebWorker preview are not Harness application launchers. [`verify-application-entrypoints`](../Scripts/verify-application-entrypoints.ts) keeps every package bin, executable source, and root demo in an explicit class and rejects a Node application path that bypasses `dsh`.
 

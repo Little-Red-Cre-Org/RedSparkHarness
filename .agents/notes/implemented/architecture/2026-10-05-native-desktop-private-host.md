@@ -4,6 +4,8 @@ Status: implemented
 
 English | [中文](2026-10-05-native-desktop-private-host.zh.md)
 
+The compatibility-assembly branch of this decision was retired by [Desktop-only retires the browser Web deployment](2026-11-21-desktop-only-retires-browser-web.md). The Native Host decision and its package-containment rules remain current.
+
 ## Problem
 
 Each Desktop release must pair its Host with the profile runtime it supports. Native Client Session RPC, follow, and image routes require a Native Session controller, while Cordis profiles require their own compatibility Host. Shipping the legacy Cordis assembly packages in the default runtime defeats a Native assembly that hosts only the Cordis kernel.

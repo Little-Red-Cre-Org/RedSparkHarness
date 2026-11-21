@@ -36,7 +36,7 @@ kind: "package-bundle"
 
 Native 入口需要 `rootExecution`、`activeSessions`、`agents` 和 `tools`；若需调度 Goal，还要安装 Goal Provider 与 continuation driver。数据库路径必须是绝对路径，并指向独立的本地 SQLite 文件，不要通过网络文件系统共享。仅导入包不会启用调度：由 Cordis 导出的 `apply` 或 Native plugin 将其装入 Host。
 
-Web 和桌面端通过 Web bundle 默认启用本插件，使用 Harness 主目录中的 `task-scheduler.sqlite`。源码完成构建后，可运行 `pnpm dsh web`。侧边栏提供任务创建入口，设置提供任务中心。Profile 补丁可以覆盖 `task-scheduler` 行或显式禁用它。
+桌面端通过 Native 装配默认启用本插件，使用 Harness 主目录中的 `task-scheduler.sqlite`。源码完成构建后，`pnpm dsh --profile native-web` 会启动同一组合。侧边栏提供任务创建入口，设置提供任务中心。Profile 补丁可以覆盖 `task-scheduler` 行或显式禁用它。
 
 在普通对话中让 Agent 使用 `task_schedule` 创建任务，提供标题、任务内容、带 UTC 偏移量的未来 RFC 3339 时间 `at`，以及可选的周期秒数 `every_seconds`。周期按照固定经过时间计算，不是日历规则。设置 `kind: "goal"` 和 `completion_criteria` 可创建目标任务；`max_goal_rounds` 设置首次轮数上限。Native 个人提醒会直接追加到创建它的 Session，不调用模型。工作区和模型从创建会话捕获；Cordis 还会捕获 Agent 和权限预设。不复制 API 密钥或访问令牌。每次执行仍遵守原有权限及审批机制。
 

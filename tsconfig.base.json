@@ -429,7 +429,6 @@
       "@redspark/rsh-deepseek-account": ["./rsh/Modules/Official/credentials/deepseek-account/src"],
       "@redspark/rsh-deepseek-llm-api-extensions": ["./rsh/Modules/Official/llm/deepseek-llm-api-extensions/src"],
       "@redspark/rsh-deque": ["./rsh/Core/util/deque/src"],
-      "@redspark/rsh-desktop-host-compatibility": ["./rsh/Compatibility/DSH/boot/desktop-host-compatibility/src"],
       "@redspark/rsh-e2b": ["./rsh/Modules/Official/e2b/e2b/src"],
       "@redspark/rsh-file-reference": ["./rsh/Engine/context/file-reference/src"],
       "@redspark/rsh-file-reference-local": ["./rsh/Engine/context/file-reference-local/src"],

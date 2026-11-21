@@ -3447,7 +3447,6 @@ export interface Config {
 - `@redspark/rsh-cordis-bridge`（[`rsh/Core/runtime-diagnostics/cordis-bridge/src/index.ts`](../Core/runtime-diagnostics/cordis-bridge/src/index.ts)）
 - `@redspark/rsh-deepseek-account`（[`rsh/Modules/Official/credentials/deepseek-account/src/index.ts`](../Modules/Official/credentials/deepseek-account/src/index.ts)）
 - `@redspark/rsh-deque`（[`rsh/Core/util/deque/src/index.ts`](../Core/util/deque/src/index.ts)）
-- `@redspark/rsh-desktop-host-compatibility`（[`rsh/Compatibility/DSH/boot/desktop-host-compatibility/src/index.ts`](../Compatibility/DSH/boot/desktop-host-compatibility/src/index.ts)）
 - `@redspark/rsh-e2b` ([`rsh/Modules/Official/e2b/e2b/src/index.ts`](../Modules/Official/e2b/e2b/src/index.ts))
 - `@redspark/rsh-errors`（[`rsh/Core/util/errors/src/index.ts`](../Core/util/errors/src/index.ts)）
 - `@redspark/rsh-experimental-agent-team`（[`rsh/Modules/Community/experimental/agent-team/src/index.ts`](../Modules/Community/experimental/agent-team/src/index.ts)）

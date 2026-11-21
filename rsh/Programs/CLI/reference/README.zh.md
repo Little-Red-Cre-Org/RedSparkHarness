@@ -2,7 +2,7 @@
 
 [English](README.md) | 中文
 
-本参考定义 profile 启动、web 别名、patch 与配置 dump 等命令模式。argv 由 [`src/args.ts`](../src/args.ts) 统一解析一次，[`src/bin.ts`](../src/bin.ts) 只会动态导入选中的运行器。
+本参考定义 profile 启动、patch 与配置 dump 等命令模式。argv 由 [`src/args.ts`](../src/args.ts) 统一解析一次，[`src/bin.ts`](../src/bin.ts) 只会动态导入选中的运行器。
 
 <a id="profile-boot"></a>
 
@@ -10,7 +10,7 @@
 
 `dsh --profile <name>` 启动位于 `$RSH_HOME/profiles/<name>` 的 Native profile。启动器解析 profile manifest 的 Native runtime 标记与 `rsh.profile.json`，按 argv 顺序应用各个 `--patch <path>` 覆盖层，并启动唯一选定的应用。带 `plugin` 的行会向既有 scope 插入安装项；不带 `plugin` 的行替换既有安装项的字段，且存在的 `config` 会替换整个旧值而不是合并键。profile 自身的 `dsh.profile.configReload` 选择 `live` 文件监视或 `startup` 单次加载。配置解析、schema 校验、模块解析、包或插件启动失败时，系统会报告错误并以非零状态退出。收到 SIGINT 或 SIGTERM 时，挂载的根节点会先 dispose（资源释放）再退出。
 
-标准名称 `headless`、`web`、`sdk`、`acp` 和 `rsh` 首次使用时会初始化对应 Native 组合：`native-headless`、`native-web`、`native-sdk`、`native-acp` 和 `native-tui`。profile 目录仍使用请求中的名称，包括 Web 项目与 scheduler 数据库路径。八个 `native-*` 名称仍可显式选择。启动器在启动、导出配置和 `--from-default-profile` 上拒绝 profile 名 `sdk-minimal`；请改用 `--profile sdk`。已有目录不会被改写。未声明 Native 执行的 manifest 会被拒绝，并提示查阅[原生配置迁移参考](../../../Docs/native-config-migration.zh.md)；启动器不再组合 Cordis profile。
+标准名称 `headless`、`sdk`、`acp` 和 `rsh` 首次使用时会初始化对应 Native 组合：`native-headless`、`native-sdk`、`native-acp` 和 `native-tui`。profile 目录仍使用请求中的名称，`native-web` 还会保留 scheduler 数据库路径。八个 `native-*` 名称仍可显式选择。启动器在启动、导出配置和 `--from-default-profile` 上拒绝已退役的浏览器 `web` 名称与 `sdk-minimal`；请改用 `--profile native-web` 或 `--profile sdk`。已有目录不会被改写。未声明 Native 执行的 manifest 会被拒绝，并提示查阅[原生配置迁移参考](../../../Docs/native-config-migration.zh.md)；启动器不再组合 Cordis profile。
 
 profile 包必须声明非空 npm `name` 与 `version` 字段以及有效的 `dsh.native` 元数据。启动器在导入入口前按 profile 声明的 scope 校验每个选中安装项的包名。非空的 Cordis patch 层会被拒绝，而不会应用。
 
@@ -22,24 +22,25 @@ profile 包必须声明非空 npm `name` 与 `version` 字段以及有效的 `ds
 
 ### 模板初始化
 
-`dsh --profile <name> --from-default-profile <template>` 会显式从随附 Native 模板之一创建新的 profile：五个标准别名或八个 `native-*` 名称之一。名称 `sdk-minimal` 会在启动前被拒绝。请使用 `rescue` 这类自定义目标名称；目标不能使用随附 profile 名称，且其完整目录必须不存在或为空。launcher 会以独占方式领取该目录，因此残留文件和另一个并发创建者都会在不作修改的情况下被拒绝。它写入该模板针对当前平台生成的 Native 组合，并在 `native-web` 时写入 `rsh.client.json`。目标名称会记录为 profile 名称；模板列表之后的变化不会改写新 profile。
+`dsh --profile <name> --from-default-profile <template>` 会显式从随附 Native 模板之一创建新的 profile：四个标准别名或八个 `native-*` 名称之一。已退役的 `web` 名称与 `sdk-minimal` 会在启动前被拒绝。请使用 `rescue` 这类自定义目标名称；目标不能使用随附 profile 名称，且其完整目录必须不存在或为空。launcher 会以独占方式领取该目录，因此残留文件和另一个并发创建者都会在不作修改的情况下被拒绝。它写入该模板针对当前平台生成的 Native 组合，并在 `native-web` 时写入 `rsh.client.json`。目标名称会记录为 profile 名称；模板列表之后的变化不会改写新 profile。
 
 profile 已经存在时，`--from-default-profile` 会被拒绝，且不会修改或启动它；去掉该选项即可使用它。残留的目标目录同样会被原样保留，此时必须改用另一个 profile 名称。未知模板或随附目标名称会在创建目标之前失败；未知模板的诊断会列出有效模板。初始化在组合包解析和应用启动之前提交，因此后续失败仍会把新 profile 留在磁盘上，重试时需要去掉创建选项。`--dump-config` 接受该选项，初始化目标并打印所请求的配置树，但不启动应用。
 
 ```sh
-dsh --profile rescue --from-default-profile web
+dsh --profile rescue --from-default-profile native-web
 dsh --profile rescue
 ```
 
 ## 应用参数
 
-启动器的 flag 位于最前，并在第一个无法识别的 token 处结束；此后所有内容都会原样交给已启动的应用。Native Web 没有应用参数解析器，并拒绝 `--host`、`--port` 和 `--no-open`。启动器 flag 必须位于应用参数之前，且启动器会消费一个 `--`：需要以字面量 `--` 到达应用的参数必须写成 `-- --`。第一个应用参数若等于 `web`，则会选择别名。
+启动器的 flag 位于最前，并在第一个无法识别的 token 处结束；此后所有内容都会原样交给已启动的应用。Native Web 没有应用参数解析器，并拒绝 `--host`、`--port` 和 `--no-open`。启动器 flag 必须位于应用参数之前，且启动器会消费一个 `--`：需要以字面量 `--` 到达应用的参数必须写成 `-- --`。
 
 随附应用各自拥有以下命令行：
 
 | Profile | 参数 |
 |---|---|
-| `web` | web 应用自己的 flag；`--host`、`--port` 与 `--no-open` 会被拒绝 |
+| `web` | 已拒绝。请改用 `--profile native-web`。 |
+| `native-web` | Native Web 应用自己的 flag；`--host`、`--port` 与 `--no-open` 会被拒绝 |
 | `headless` | 任务文本，作为位置参数 |
 | `sdk`、`native-sdk` | 无选项；stdio 承载 JSON-RPC 协议 |
 | `acp`、`native-acp` | 无选项；stdio 承载 ACP（Agent Client Protocol） |
@@ -53,21 +54,21 @@ dsh --profile rescue
 `--dump-config` 打印解析后的 Native profile JSON，包含 profile 自身层与每个 `--patch` 覆盖层，但不启动它。dump 会初始化缺失的 profile 文件，但不会准备 `$RSH_HOME/profiles/node_modules` 下的运行时模块后备目录。它从不运行应用命令行 Provider，因此会拒绝携带应用参数的调用。
 
 ```sh
-dsh --profile rescue --from-default-profile web --dump-config
+dsh --profile rescue --from-default-profile native-web --dump-config
 dsh --profile rescue --patch ./extra.json --dump-config
 ```
 
-## Web 别名
+## Native Web profile
 
-`dsh web` 是 `--profile web` 的硬编码别名。
+Native Web 应用通过 `--profile native-web` 启动。仅限浏览器的 `web` profile 名称及其 `dsh web` 别名已退役，并会失败且指向[原生配置迁移](../../../Docs/native-config-migration.zh.md)。
 
 ```sh
-dsh web
-dsh web --dump-config
-dsh web --help
+dsh --profile native-web
+dsh --profile native-web --dump-config
+dsh --profile native-web --help
 ```
 
-Native Web 应用需要已构建的包与前端产物（`pnpm run build`）。它默认服务 `http://127.0.0.1:3080`，并在本地启动时等待完整 Host 树稳定后才打开规范主机 URL。继承的 `SSH_CONNECTION` 或 `SSH_TTY` 非空时会抑制浏览器交接，因为 SSH 客户端或编辑器持有本地转发地址；主机 URL 仍会打印。端口、可信主机与浏览器交接等部署取值属于 profile 配置，不是启动器 flag。legacy 兼容应用在本地交接前会打印 `dsh web: opening the default browser; pass --no-open to disable`；Native Web 应用不接受该 flag。
+Native Web 应用需要已构建的包与前端产物（`pnpm run build`）。它默认服务 `http://127.0.0.1:3080`，并在本地启动时等待完整 Host 树稳定后才打开规范主机 URL。继承的 `SSH_CONNECTION` 或 `SSH_TTY` 非空时会抑制浏览器交接，因为 SSH 客户端或编辑器持有本地转发地址；主机 URL 仍会打印。端口、可信主机与浏览器交接等部署取值属于 profile 配置，不是启动器 flag。Native Web 应用不接受已退役兼容入口的 `--host`、`--port` 或 `--no-open`。
 
 进程关闭会为插件树留出最多五秒的 dispose 时间。首个 `SIGINT`/`SIGTERM` 启动该优雅排空——`SIGTERM` 是监管进程的普通停止请求，在所有表层都退出 0；`SIGINT` 报告 130；第二次信号会强制立即退出。若一次性任务的正常完成已卡在释放阶段，首个 `Ctrl+C` 就是升级信号，会立即退出而不会被吞掉。
 

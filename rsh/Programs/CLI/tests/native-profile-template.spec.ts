@@ -58,7 +58,6 @@ it('maps standard profile names to native compositions and leaves an existing ma
   try {
     const mappings = [
       ['headless', 'native-headless'],
-      ['web', 'native-web'],
       ['sdk', 'native-sdk'],
       ['acp', 'native-acp'],
       ['rsh', 'native-tui'],
@@ -75,13 +74,6 @@ it('maps standard profile names to native compositions and leaves an existing ma
         dsh: { profile: { runtime: string } }
       }
       expect(manifest.dsh.profile.runtime).toBe('native')
-      if (name === 'web') {
-        expect(profile.installations.find(row => row.id === 'app')?.config)
-          .toMatchObject({ projectDir: directory })
-        expect(profile.installations.find(row => row.id === 'task-scheduler')?.config)
-          .toEqual({ path: join(directory, 'task-scheduler.sqlite') })
-        expect(existsSync(join(directory, 'rsh.client.json'))).toBe(true)
-      }
       if (name === 'rsh') {
         expect(profile.installations.find(row => row.id === 'task-scheduler')?.config)
           .toEqual({ path: join(directory, 'task-scheduler.sqlite') })
@@ -90,13 +82,13 @@ it('maps standard profile names to native compositions and leaves an existing ma
 
     // An existing Cordis manifest is never rewritten. The resolver keeps it on
     // legacy execution; the operator migrates it in place.
-    const existingDir = join(legacyHome, 'profiles', 'web')
+    const existingDir = join(legacyHome, 'profiles', 'existing-cordis')
     await mkdir(existingDir, { recursive: true })
     const existingManifest = `${JSON.stringify({ name: 'dsh-profile-web', private: true,
       dsh: { profile: { bundles: ['@redspark/rsh-base'] } } }, null, 2)}\n`
     await writeFile(join(existingDir, 'package.json'), existingManifest)
-    ensureShippedNativeProfile('web', legacyHome)
-    expect(profileRuntime('web', legacyHome)).toBe('legacy')
+    ensureShippedNativeProfile('native-web', legacyHome)
+    expect(profileRuntime('existing-cordis', legacyHome)).toBe('legacy')
     expect(await readFile(join(existingDir, 'package.json'), 'utf8')).toBe(existingManifest)
     expect(existsSync(join(existingDir, 'rsh.profile.json'))).toBe(false)
   } finally {
@@ -143,16 +135,16 @@ it('creates a custom Native profile from an explicit native template', async () 
 it('creates a Native profile from a standard template alias', async () => {
   const home = await mkdtemp(join(tmpdir(), 'rsh-native-alias-create-'))
   try {
-    createNativeProfileFromTemplate('rescue', 'web', home)
+    createNativeProfileFromTemplate('rescue', 'headless', home)
     const directory = join(home, 'profiles', 'rescue')
     expect(profileRuntime('rescue', home)).toBe('native')
-    expect(nativeProfileReloadMode('rescue', home)).toBe('live')
+    expect(nativeProfileReloadMode('rescue', home)).toBe('startup')
     const composition = JSON.parse(await readFile(join(directory, 'rsh.profile.json'), 'utf8')) as {
       installations: Array<{ id: string; plugin: string }>
     }
     expect(composition.installations.find(row => row.id === 'app'))
-      .toMatchObject({ plugin: '@redspark/rsh-native-web-host' })
-    expect(existsSync(join(directory, 'rsh.client.json'))).toBe(true)
+      .toMatchObject({ plugin: '@redspark/rsh-native-headless' })
+    expect(existsSync(join(directory, 'rsh.client.json'))).toBe(false)
     expect(existsSync(join(directory, 'cordis.patch.yml'))).toBe(false)
   } finally {
     await rm(home, { recursive: true, force: true })

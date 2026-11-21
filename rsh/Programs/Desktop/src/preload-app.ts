@@ -18,7 +18,6 @@ const startup: RshDesktopStartupApi = {
       return () => { ipcRenderer.off(DESKTOP_IPC.backendState, handle) }
     },
   },
-  disablePlugins: () => ipcRenderer.invoke(DESKTOP_IPC.pluginsDisableAll) as Promise<void>,
   restart: () => ipcRenderer.invoke(DESKTOP_IPC.applicationRestart) as Promise<void>,
   resetConfiguration: () => ipcRenderer.invoke(DESKTOP_IPC.configurationReset) as Promise<void>,
 }

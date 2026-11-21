@@ -79,11 +79,9 @@ function page(locale = 'en', initial: Promise<DesktopBackendState> = Promise.res
     listeners.add(listener)
     return unsubscribe
   } }
-  const legacy = { list: vi.fn(async () => [{ name: 'legacy-plugin', version: '1.0.0', enabled: true }]),
-    add: vi.fn(), toggle: vi.fn(), remove: vi.fn(), update: vi.fn(), disableAll: vi.fn() }
   const getLocale = vi.fn(async () => resolveDesktopLocale(locale))
   Object.defineProperty(dom.window, 'rshDesktop', { value: {
-    locale: getLocale, backend, plugins: { ...legacy, native },
+    locale: getLocale, backend, plugins: { native },
   } })
   const element = (selector: string): HTMLElement => {
     const result = dom.window.document.querySelector<HTMLElement>(selector)
@@ -98,19 +96,17 @@ function page(locale = 'en', initial: Promise<DesktopBackendState> = Promise.res
   const start = (): void => { runInContext(readFileSync(new URL('../renderer/plugin-manager.js', import.meta.url), 'utf8'), dom.getInternalVMContext()) }
   const settled = async () => { await expect.poll(() => element('main').getAttribute('aria-busy')).toBe('false') }
   const publish = (state: DesktopBackendState) => { for (const listener of listeners) listener(state) }
-  return { dom, native, backend, legacy, getLocale, element, button, input, select, textarea, form, start, settled, publish, unsubscribe }
+  return { dom, native, backend, getLocale, element, button, input, select, textarea, form, start, settled, publish, unsubscribe }
 }
 
 it('groups actual package versions and instances, retains capabilities, and lists empty Host scopes', async () => {
   const p = page('zh-CN')
   p.start()
   await p.settled()
-  expect(p.legacy.list).not.toHaveBeenCalled()
   expect(p.element('#plugins').textContent).toMatchInlineSnapshot('"example-module1.0.0 · Profile 管理的包更新移除Host · shared · root已启用 · 无配置禁用Client · shared已禁用 · 已提供配置启用runtime-module2.0.0 · 签名运行时包更新移除Host · essential · root已启用 · 无配置 · 必需的 Desktop Host 会话禁用"')
   expect([...p.dom.window.document.querySelectorAll<HTMLOptionElement>('[data-field="scope"] option')].map(option => option.value)).toEqual(['root', 'empty'])
   const immutable = p.dom.window.document.querySelectorAll<HTMLButtonElement>('.native-package:nth-child(2) button')
   expect([...immutable].every(button => button.disabled)).toBe(true)
-  expect(p.element('#retry').hidden).toBe(true)
   p.button('[data-target="client"][data-id="shared"] button').click()
   await p.settled()
   expect(p.native.toggle).toHaveBeenCalledWith({ expectedRevision: 'revision-1', key: { target: 'client', id: 'shared' }, enabled: true })
@@ -140,10 +136,9 @@ it('submits explicit multi-target install intents and distinguishes absent confi
   ] })
   expect(p.native.list).toHaveBeenCalledTimes(2)
   expect(p.element('#status').textContent).toContain('Client activation errors')
-  expect(p.legacy.add).not.toHaveBeenCalled()
 })
 
-it('uses inline version input for Native and compatibility package updates', async () => {
+it('uses inline version input for Native package updates', async () => {
   const p = page()
   p.start()
   await p.settled()
@@ -165,14 +160,6 @@ it('uses inline version input for Native and compatibility package updates', asy
   p.button('.native-package .package-actions button:nth-child(2)').click()
   await p.settled()
   expect(p.native.remove).toHaveBeenCalledWith({ expectedRevision: 'revision-1', packageName: 'example-module' })
-  p.native.list.mockResolvedValue(failure('wrong-profile'))
-  p.button('#refresh').click()
-  await p.settled()
-  p.button('#plugins button:nth-child(2)').click()
-  p.input('.version-editor input').value = ' 1.2.3 '
-  p.form('.version-editor').requestSubmit()
-  await p.settled()
-  expect(p.legacy.update).toHaveBeenCalledWith('legacy-plugin', '1.2.3')
 })
 
 it('disables every eligible Native row in one revisioned call', async () => {
@@ -192,7 +179,6 @@ it('disables every eligible Native row in one revisioned call', async () => {
   expect(p.native.disableAll).toHaveBeenCalledOnce()
   expect(p.native.disableAll).toHaveBeenCalledWith({ expectedRevision: 'revision-1' })
   expect(p.native.toggle).not.toHaveBeenCalled()
-  expect(p.legacy.disableAll).not.toHaveBeenCalled()
   expect(p.button('#disable-all').disabled).toBe(true)
   p.native.list.mockResolvedValueOnce({ status: 'listed', inventory: disableAllInventory('revision-3') })
   p.button('#refresh').click()
@@ -224,19 +210,18 @@ it('re-reads stale inventory and waits for another user submission without optim
   expect(p.native.toggle).toHaveBeenLastCalledWith({ expectedRevision: 'revision-new', key: { target: 'host', id: 'shared' }, enabled: false })
 })
 
-it('falls back only on wrong-profile and preserves legacy writes', async () => {
+it('reports wrong-profile without offering package writes', async () => {
   const p = page()
   p.native.list.mockResolvedValue(failure('wrong-profile'))
   p.start()
   await p.settled()
-  expect(p.element('#plugins').textContent).toContain('legacy-plugin')
-  p.button('#plugins button').click()
-  await p.settled()
-  expect(p.legacy.toggle).toHaveBeenCalledWith('legacy-plugin', false)
+  expect(p.element('#plugins').textContent).not.toContain('example-module')
+  expect(p.button('#install').disabled).toBe(true)
+  expect(p.element('#status').textContent).toContain('does not expose Native module inventory')
   expect(p.native.toggle).not.toHaveBeenCalled()
 })
 
-it.each(['recovery-required', 'ipc'])('keeps %s failures in Native mode without resubmitting or legacy fallback', async (kind) => {
+it.each(['recovery-required', 'ipc'])('keeps %s failures without resubmitting', async (kind) => {
   const p = page()
   p.start()
   await p.settled()
@@ -246,19 +231,16 @@ it.each(['recovery-required', 'ipc'])('keeps %s failures in Native mode without 
   await p.settled()
   expect(p.native.disableAll).toHaveBeenCalledOnce()
   expect(p.native.toggle).not.toHaveBeenCalled()
-  expect(p.legacy.list).not.toHaveBeenCalled()
-  expect(p.legacy.disableAll).not.toHaveBeenCalled()
   expect(p.backend.retry).not.toHaveBeenCalled()
   expect(p.element('#status').textContent).not.toContain('private transport diagnostic')
   expect(p.element('#status').textContent).toContain(kind === 'ipc' ? 'could not be confirmed' : 'Recovery required')
 })
 
-it('keeps Native list failures from falling back and invalidates writes after a failed refresh', async () => {
+it('keeps list failures from offering writes and invalidates them after a failed refresh', async () => {
   const p = page()
   p.native.list.mockResolvedValueOnce(failure('busy'))
   p.start()
   await p.settled()
-  expect(p.legacy.list).not.toHaveBeenCalled()
   expect(p.button('#install').disabled).toBe(true)
   p.button('#refresh').click()
   await p.settled()
@@ -267,18 +249,15 @@ it('keeps Native list failures from falling back and invalidates writes after a 
   await p.settled()
   expect(p.button('[data-target="host"] button').disabled).toBe(true)
   expect(p.button('#disable-all').disabled).toBe(true)
-  expect(p.legacy.list).not.toHaveBeenCalled()
 })
 
-it('requires a new Native read after legacy detection and never leaves old write controls enabled on transport loss', async () => {
+it('never leaves old write controls enabled on transport loss', async () => {
   const p = page()
-  p.native.list.mockResolvedValueOnce(failure('wrong-profile'))
   p.start()
   await p.settled()
   p.native.list.mockRejectedValueOnce(new Error('transport lost'))
   p.button('#refresh').click()
   await p.settled()
-  expect(p.legacy.list).toHaveBeenCalledOnce()
   expect(p.button('#plugins button').disabled).toBe(true)
   expect(p.button('#install').disabled).toBe(true)
   expect(p.element('#status').textContent).toContain('could not be confirmed')
@@ -341,7 +320,7 @@ it('keeps raw backend diagnostics out of Native initial status and subscriptions
   expect(p.element('#profile-recovery').hidden).toBe(true)
 })
 
-it('submits the legacy form after Native inventory switches to wrong-profile', async () => {
+it('refuses installs after inventory switches to wrong-profile', async () => {
   const p = page()
   p.start()
   await p.settled()
@@ -360,7 +339,6 @@ it('submits the legacy form after Native inventory switches to wrong-profile', a
   expectInactiveFields()
   p.form('#install-form').requestSubmit()
   await p.settled()
-  expect(p.legacy.add).toHaveBeenCalledWith('legacy-plugin@1.2.3')
   expect(p.native.install).not.toHaveBeenCalled()
   expectInactiveFields()
 })

@@ -4,6 +4,8 @@ Status: implemented
 
 [English](2026-10-05-native-desktop-private-host.md) | 中文
 
+本决策中的兼容装配分支已由 [Desktop-only retires the browser Web deployment](2026-11-21-desktop-only-retires-browser-web.zh.md) 退役。Native Host 决策及其包包含规则仍然有效。
+
 ## 问题
 
 每个 Desktop 发行包都必须让 Host 与它支持的 profile runtime 配对。原生 Client 的 Session RPC、follow 与 image 路由要求原生 Session controller，而 Cordis profile 需要独立的兼容 Host。若默认运行时携带旧的 Cordis 装配包，就无法维持只托管 Cordis 内核的 Native 装配。

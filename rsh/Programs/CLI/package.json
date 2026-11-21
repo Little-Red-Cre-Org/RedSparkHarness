@@ -1,6 +1,6 @@
 {
     "name":  "@redspark/rsh",
-    "description":  "dsh CLI: profile boot, plugin management, and the browser UI alias",
+    "description":  "dsh CLI: profile boot and plugin management",
     "version":  "1.0.0",
     "publishConfig":  {
                           "access":  "public"
@@ -21,7 +21,6 @@
     "dsh":  {
                 "nativeProfileTemplates":  [
                                                "headless",
-                                               "web",
                                                "sdk",
                                                "acp",
                                                "rsh",

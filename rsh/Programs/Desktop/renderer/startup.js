@@ -5,7 +5,6 @@ async function main() {
   document.documentElement.lang = id
   document.querySelector('#page-title').textContent = messages.startupLoading
   document.querySelector('#restart').textContent = messages.restartApplication
-  document.querySelector('#disable-plugins').textContent = messages.disableThirdPartyPlugins
   document.querySelector('#reset-configuration').textContent = messages.resetConfiguration
   document.querySelector('#reset-advice').textContent = messages.startupConfigurationAdvice
   document.querySelector('#reinstall-advice').textContent = messages.startupReinstallAdvice
@@ -35,7 +34,7 @@ async function main() {
     document.querySelector('#error').textContent = failed ? errorDetails(state) : ''
     document.querySelector('#actions').hidden = !failed
     for (const button of document.querySelectorAll('#actions button')) button.disabled = !failed
-    for (const selector of ['#disable-plugins', '#reset-configuration', '#reset-advice']) {
+    for (const selector of ['#reset-configuration', '#reset-advice']) {
       document.querySelector(selector).hidden = !failed || !state.profileRecovery
     }
     document.querySelector('#reinstall-advice').hidden = !failed
@@ -53,7 +52,6 @@ async function main() {
       render(current?.phase === 'error' ? current : { phase: 'error', errorType: 'UnknownError' })
     }
   }
-  document.querySelector('#disable-plugins').addEventListener('click', () => { void recover(() => api.disablePlugins()) })
   document.querySelector('#reset-configuration').addEventListener('click', () => { void recover(() => api.resetConfiguration()) })
   document.querySelector('#restart').addEventListener('click', () => { void recover(() => api.restart()) })
 }

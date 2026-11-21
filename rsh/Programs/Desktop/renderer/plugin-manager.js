@@ -14,16 +14,15 @@ async function main() {
   document.documentElement.lang = locale.id
   document.querySelector('#page-title').textContent = messages.pluginManagerTitle
   document.querySelector('#title').textContent = messages.pluginManagerTitle
-  document.querySelector('#description').textContent = messages.pluginManagerDescription
+  document.querySelector('#description').textContent = messages.nativeManagerDescription
   document.querySelector('#refresh').textContent = messages.refresh
   document.querySelector('#package-label').textContent = messages.npmPackage
   document.querySelector('#install').textContent = messages.install
   document.querySelector('#installed-heading').textContent = messages.installed
   document.querySelector('#empty').textContent = messages.noPlugins
 
-  document.querySelector('#recovery-description').textContent = messages.recoveryDescription
-  document.querySelector('#retry').textContent = messages.retry
-  document.querySelector('#disable-all').textContent = messages.disableAll
+  document.querySelector('#recovery-description').textContent = messages.nativeRecoveryAdvice
+  document.querySelector('#disable-all').textContent = messages.nativeDisableAll
   document.querySelector('#disable-all-note').textContent = messages.nativeDisableAllKeepsCore
 
   const list = document.querySelector('#plugins')
@@ -33,7 +32,6 @@ async function main() {
   const input = document.querySelector('#package-spec')
   const refresh = document.querySelector('#refresh')
   const nativeApi = api.plugins.native
-  let nativeMode = nativeApi !== undefined
   let inventory
   let shownBackend
   let busy = false
@@ -41,7 +39,6 @@ async function main() {
   let backendReads = 0
   const disableAll = document.querySelector('#disable-all')
   const disableAllNote = document.querySelector('#disable-all-note')
-  const retry = document.querySelector('#retry')
   const editors = document.querySelector('#installations')
   const versionInput = document.querySelector('#package-version')
   for (const [selector, key] of [
@@ -55,27 +52,20 @@ async function main() {
   }
 
   function configureMode() {
-    document.querySelector('#native-install').hidden = !nativeMode
-    document.querySelector('#description').textContent = nativeMode ? messages.nativeManagerDescription : messages.pluginManagerDescription
-    input.placeholder = nativeMode ? messages.nativePackagePlaceholder : '@scope/plugin@1.2.3'
-    versionInput.required = nativeMode
-    retry.hidden = nativeMode
-    disableAll.textContent = nativeMode ? messages.nativeDisableAll : messages.disableAll
-    disableAll.hidden = !nativeMode && document.querySelector('#recovery').hidden
-    disableAllNote.hidden = !nativeMode
-    if (nativeMode) {
-      document.querySelector('#startup-error').textContent = ''
-      for (const control of form.querySelectorAll('button, input, select, textarea')) available(control, inventory !== undefined)
-      available(disableAll, inventory !== undefined && inventory.packages.some(pkg => pkg.installations.some(
-        row => row.canDisable && !(row.target === 'client' && coreClientIds.has(row.id)),
-      )))
-      if (inventory === undefined) for (const control of list.querySelectorAll('button')) available(control, false)
-      updateEditorRemoval()
-    } else {
-      for (const control of form.querySelectorAll('button, input, select, textarea')) available(control, control.closest('#native-install') === null)
-      available(disableAll, true)
-      available(retry, true)
-    }
+    document.querySelector('#native-install').hidden = false
+    document.querySelector('#description').textContent = messages.nativeManagerDescription
+    input.placeholder = messages.nativePackagePlaceholder
+    versionInput.required = true
+    disableAll.textContent = messages.nativeDisableAll
+    disableAll.hidden = false
+    disableAllNote.hidden = false
+    document.querySelector('#startup-error').textContent = ''
+    for (const control of form.querySelectorAll('button, input, select, textarea')) available(control, inventory !== undefined)
+    available(disableAll, inventory !== undefined && inventory.packages.some(pkg => pkg.installations.some(
+      row => row.canDisable && !(row.target === 'client' && coreClientIds.has(row.id)),
+    )))
+    if (inventory === undefined) for (const control of list.querySelectorAll('button')) available(control, false)
+    updateEditorRemoval()
   }
 
   function renderBackend(backend) {
@@ -86,7 +76,7 @@ async function main() {
     document.querySelector('#profile-recovery').hidden = !backend.profileRecovery
     document.querySelector('#profile-recovery').textContent = messages.nativeProfileRecovery
     document.querySelector('#recovery').hidden = backend.phase !== 'error'
-    document.querySelector('#recovery-description').textContent = nativeMode ? messages.nativeRecoveryAdvice : messages.recoveryDescription
+    document.querySelector('#recovery-description').textContent = messages.nativeRecoveryAdvice
     configureMode()
     document.querySelector('#startup-error').textContent = backend.phase === 'error'
       ? startupErrorDetails(backend) : ''
@@ -299,61 +289,23 @@ async function main() {
   }
 
   async function render() {
-    if (nativeApi !== undefined) {
-      nativeMode = true
+    inventory = undefined
+    configureMode()
+    const observed = backendChanges
+    const outcome = await nativeApi.list()
+    if (closed) return
+    if (outcome.status === 'listed') { renderNative(outcome.inventory); return true }
+    if (observed === backendChanges) renderBackend(outcome.error.backend)
+    if (outcome.error.code !== 'wrong-profile') {
       inventory = undefined
       configureMode()
-      const observed = backendChanges
-      const outcome = await nativeApi.list()
-      if (closed) return
-      if (outcome.status === 'listed') { renderNative(outcome.inventory); return }
-      if (observed === backendChanges) renderBackend(outcome.error.backend)
-      if (outcome.error.code !== 'wrong-profile') {
-        inventory = undefined
-        configureMode()
-        status.textContent = nativeOutcome(outcome)
-        return false
-      }
-      nativeMode = false
-      configureMode()
+      status.textContent = nativeOutcome(outcome)
+      return false
     }
     await readBackend()
-    if (closed) return
-    const plugins = await api.plugins.list()
-    if (closed) return
-    list.replaceChildren(...plugins.map(plugin => {
-      const item = document.createElement('li')
-      const identity = document.createElement('span')
-      const version = document.createElement('span')
-      version.className = 'package-version'
-      version.textContent = plugin.enabled ? plugin.version : `${plugin.version} · ${messages.disabled}`
-      identity.append(document.createTextNode(plugin.name), version)
-      const remove = document.createElement('button')
-      remove.type = 'button'
-      remove.textContent = messages.remove
-      remove.addEventListener('click', () => void run(
-        () => api.plugins.remove(plugin.name),
-        message('removing', { name: plugin.name }),
-      ))
-      const actions = document.createElement('div')
-      actions.className = 'package-actions'
-      const update = document.createElement('button')
-      update.type = 'button'
-      update.textContent = messages.update
-      update.addEventListener('click', versionEditor(plugin.name, plugin.version, next => void run(
-        () => api.plugins.update(plugin.name, next), message('updating', { name: plugin.name }),
-      ), actions))
-      const toggle = document.createElement('button')
-      toggle.type = 'button'
-      toggle.textContent = plugin.enabled ? messages.disable : messages.enable
-      toggle.addEventListener('click', () => void run(
-        () => api.plugins.toggle(plugin.name, !plugin.enabled), messages.changingActivation,
-      ))
-      actions.append(toggle, update, remove)
-      item.append(identity, actions)
-      return item
-    }))
-    empty.hidden = plugins.length !== 0
+    if (closed) return false
+    status.textContent = nativeOutcome(outcome)
+    return false
   }
 
   async function run(operation, statusMessage) {
@@ -363,14 +315,6 @@ async function main() {
     try {
       const outcome = await operation()
       if (closed) return false
-      if (!nativeMode) {
-        if (await render() === false || closed) return false
-        const backend = await readBackend()
-        if (closed) return false
-        status.textContent = backend.phase === 'ready' ? messages.operationComplete
-          : messages[backend.phase === 'error' ? 'nativeBackendError' : 'nativeBackendStarting']
-        return backend.phase === 'ready' && !closed
-      }
       if (observed === backendChanges) renderBackend(outcome.status === 'applied' ? outcome.backend : outcome.error.backend)
       let resultMessage = nativeOutcome(outcome)
       if (outcome.status === 'applied' || outcome.status === 'recovery-required' || outcome.error.code === 'stale-revision') {
@@ -382,15 +326,13 @@ async function main() {
       await readBackend()
       if (!closed) status.textContent = resultMessage
       return outcome.status === 'applied' && !closed && inventory !== undefined
-    } catch (error) {
+    } catch {
       if (closed) return false
-      if (nativeMode) {
-        inventory = undefined
-        configureMode()
-        try { await render() } catch { /* A failed refresh leaves Native writes unavailable. */ }
-        try { await readBackend() } catch { /* Transport loss also prevents a fresh backend read. */ }
-        if (!closed) status.textContent = messages.nativeIpcUncertain
-      } else status.textContent = error instanceof Error ? error.message : String(error)
+      inventory = undefined
+      configureMode()
+      try { await render() } catch { /* A failed refresh leaves Native writes unavailable. */ }
+      try { await readBackend() } catch { /* Transport loss also prevents a fresh backend read. */ }
+      if (!closed) status.textContent = messages.nativeIpcUncertain
       return false
     } finally {
       if (!closed) setBusy(false, status.textContent)
@@ -404,10 +346,11 @@ async function main() {
       const rendered = await render()
       await readBackend()
       if (!closed && rendered !== false) status.textContent = success
-    } catch (error) {
+    } catch {
       if (!closed) {
-        if (nativeMode) { inventory = undefined; configureMode() }
-        status.textContent = nativeMode ? messages.nativeIpcUncertain : (error instanceof Error ? error.message : String(error))
+        inventory = undefined
+        configureMode()
+        status.textContent = messages.nativeIpcUncertain
       }
     } finally {
       if (!closed) setBusy(false, status.textContent)
@@ -418,27 +361,15 @@ async function main() {
     event.preventDefault()
     const spec = input.value.trim()
     if (spec === '') return
-    if (nativeMode) {
-      // Validate only the user-entered JSON; package and composition admission belongs to the backend.
-      for (const config of editors.querySelectorAll('[data-field="config"]')) {
-        if (config.value.trim() === '') continue
-        try { JSON.parse(config.value) } catch { status.textContent = messages.nativeInvalidConfig; return }
-      }
-      void run(nativeInstall, message('installing', { spec }))
-      return
+    // Validate only the user-entered JSON; package and composition admission belongs to the backend.
+    for (const config of editors.querySelectorAll('[data-field="config"]')) {
+      if (config.value.trim() === '') continue
+      try { JSON.parse(config.value) } catch { status.textContent = messages.nativeInvalidConfig; return }
     }
-    void run(async () => {
-      await api.plugins.add(spec)
-      input.value = ''
-    }, message('installing', { spec }))
+    void run(nativeInstall, message('installing', { spec }))
   })
-  document.querySelector('#retry').addEventListener('click', () => void run(() => api.backend.retry(), messages.retry))
   disableAll.addEventListener('click', () => {
-    if (nativeMode) {
-      void run(() => nativeApi.disableAll({ expectedRevision: inventory.revision }), messages.changingActivation)
-      return
-    }
-    void run(() => api.plugins.disableAll(), messages.changingActivation)
+    void run(() => nativeApi.disableAll({ expectedRevision: inventory.revision }), messages.changingActivation)
   })
   refresh.addEventListener('click', () => void load(messages.refreshing, messages.refreshed))
 

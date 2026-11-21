@@ -2,13 +2,13 @@
 
 English | [中文](README.zh.md)
 
-This reference defines the profile, web-alias, patch, and config-dump command modes. Argv is parsed once through [`src/args.ts`](../src/args.ts), and [`src/bin.ts`](../src/bin.ts) dynamically imports only the selected runner.
+This reference defines the profile, patch, and config-dump command modes. Argv is parsed once through [`src/args.ts`](../src/args.ts), and [`src/bin.ts`](../src/bin.ts) dynamically imports only the selected runner.
 
 ## Profile boot
 
 `dsh --profile <name>` boots the Native profile at `$RSH_HOME/profiles/<name>`. The launcher resolves the profile manifest's Native runtime marker and `rsh.profile.json`, applies each `--patch <path>` overlay in argv order, and starts the one selected application. A row carrying `plugin` inserts an installation into an existing scope; a row without it replaces fields on an existing installation, and a present `config` replaces the complete prior value rather than merging keys. The profile's own `dsh.profile.configReload` selects `live` file watching or `startup` one-time loading. A parse, schema, resolution, package, or plugin boot failure is reported and exits nonzero. SIGINT and SIGTERM dispose the mounted root before exit.
 
-The standard names `headless`, `web`, `sdk`, `acp`, and `rsh` initialize Native compositions on first use: `native-headless`, `native-web`, `native-sdk`, `native-acp`, and `native-tui`, respectively. The requested name remains the profile directory name, including the Web project and scheduler database paths. The eight `native-*` names remain explicit aliases. The launcher refuses the profile name `sdk-minimal` on boot, dump, and `--from-default-profile`; use `--profile sdk`. Existing directories are not rewritten. A manifest that does not declare Native execution is refused with a pointer to the [native configuration migration reference](../../../Docs/native-config-migration.md); the launcher no longer composes Cordis profiles.
+The standard names `headless`, `sdk`, `acp`, and `rsh` initialize Native compositions on first use: `native-headless`, `native-sdk`, `native-acp`, and `native-tui`, respectively. The requested name remains the profile directory name, including the scheduler database path for `native-web`. The eight `native-*` names remain explicit aliases. The launcher refuses the retired browser `web` name and `sdk-minimal` on boot, dump, and `--from-default-profile`; use `--profile native-web` or `--profile sdk`. Existing directories are not rewritten. A manifest that does not declare Native execution is refused with a pointer to the [native configuration migration reference](../../../Docs/native-config-migration.md); the launcher no longer composes Cordis profiles.
 
 A profile package must declare non-empty npm `name` and `version` fields and valid `dsh.native` metadata. The launcher validates every selected installation's package name against the profile's declared scopes before importing entries. A nonempty Cordis patch layer is refused rather than applied.
 
@@ -20,24 +20,25 @@ Native profile runtime markers and the CLI's settings/environment migration rule
 
 ### Template initialization
 
-`dsh --profile <name> --from-default-profile <template>` explicitly initializes a new profile from one of the shipped Native templates: the five standard aliases or one of the eight `native-*` names. The name `sdk-minimal` is refused before boot. Use a custom target name such as `rescue`; the target name cannot be a shipped profile name, and its complete profile directory must be absent or empty. The launcher claims that directory exclusively, so residual files and another concurrent creator are rejected without modification. It writes the template's Native composition for the requested platform, plus `rsh.client.json` for `native-web`. The target name is recorded as the profile name; later template-list changes do not rewrite the new profile.
+`dsh --profile <name> --from-default-profile <template>` explicitly initializes a new profile from one of the shipped Native templates: the four standard aliases or one of the eight `native-*` names. The retired `web` name and `sdk-minimal` are refused before boot. Use a custom target name such as `rescue`; the target name cannot be a shipped profile name, and its complete profile directory must be absent or empty. The launcher claims that directory exclusively, so residual files and another concurrent creator are rejected without modification. It writes the template's Native composition for the requested platform, plus `rsh.client.json` for `native-web`. The target name is recorded as the profile name; later template-list changes do not rewrite the new profile.
 
 An existing profile rejects `--from-default-profile` without changing or booting it; omit the option to use it. A residual target directory is also preserved and requires a different profile name. An unknown template or a shipped target name fails before creating the target. Unknown-template diagnostics name the valid templates. Initialization is committed before bundle resolution and application boot, so a later failure leaves the new profile on disk and the retry omits the creation option. `--dump-config` accepts the option, initializes the target, and prints the requested tree without booting it.
 
 ```sh
-dsh --profile rescue --from-default-profile web
+dsh --profile rescue --from-default-profile native-web
 dsh --profile rescue
 ```
 
 ## App arguments
 
-The launcher's flags come first and end at the first token it does not recognize; everything from there on is handed to the booted application verbatim. Native Web has no app-argument parser and rejects `--host`, `--port`, and `--no-open`. Launcher flags must come before app arguments, and the launcher's parser consumes one `--`: an app argument that must arrive as a literal `--` needs `-- --`. A first app argument equal to `web` selects the alias instead.
+The launcher's flags come first and end at the first token it does not recognize; everything from there on is handed to the booted application verbatim. Native Web has no app-argument parser and rejects `--host`, `--port`, and `--no-open`. Launcher flags must come before app arguments, and the launcher's parser consumes one `--`: an app argument that must arrive as a literal `--` needs `-- --`.
 
 The shipped applications own these command lines:
 
 | Profile | Arguments |
 |---|---|
-| `web` | the web app's own flags; `--host`, `--port`, and `--no-open` are rejected |
+| `web` | Refused. Use `--profile native-web`. |
+| `native-web` | the Native Web app's flags; `--host`, `--port`, and `--no-open` are rejected |
 | `headless` | the task text, as the positional argument |
 | `sdk`, `native-sdk` | no options; stdio carries the JSON-RPC protocol |
 | `acp`, `native-acp` | no options; stdio carries ACP (Agent Client Protocol) |
@@ -51,21 +52,21 @@ A one-shot task (`dsh --profile headless "run the tests"`) creates one fresh per
 `--dump-config` prints the resolved Native profile JSON, including the profile's own layer and each `--patch` overlay, without booting it. A dump initializes missing profile files but does not prepare the runtime module fallback under `$RSH_HOME/profiles/node_modules`. It never runs app command-line providers, so it rejects an invocation that carries app arguments.
 
 ```sh
-dsh --profile rescue --from-default-profile web --dump-config
+dsh --profile rescue --from-default-profile native-web --dump-config
 dsh --profile rescue --patch ./extra.json --dump-config
 ```
 
-## Web alias
+## Native Web profile
 
-`dsh web` is a hardcoded alias for `--profile web`.
+The Native Web application boots with `--profile native-web`. The browser-only `web` profile name and its `dsh web` alias are retired and fail with a pointer to [native configuration migration](../../../Docs/native-config-migration.md).
 
 ```sh
-dsh web
-dsh web --dump-config
-dsh web --help
+dsh --profile native-web
+dsh --profile native-web --dump-config
+dsh --profile native-web --help
 ```
 
-The Native Web application needs built package and frontend artifacts (`pnpm run build`). It serves `http://127.0.0.1:3080` by default and, for a local launch, opens that canonical host URL only after the complete Host tree settles. A non-empty inherited `SSH_CONNECTION` or `SSH_TTY` suppresses the browser handoff because the SSH client or editor owns the local forwarded address; the host URL is still printed. Deployment values such as the port, trusted hosts, and browser handoff are profile configuration, not launcher flags. Immediately before a local handoff it prints `dsh web: opening the default browser; pass --no-open to disable` in the legacy compatibility application; the Native Web app does not accept that flag.
+The Native Web application needs built package and frontend artifacts (`pnpm run build`). It serves `http://127.0.0.1:3080` by default and, for a local launch, opens that canonical host URL only after the complete Host tree settles. A non-empty inherited `SSH_CONNECTION` or `SSH_TTY` suppresses the browser handoff because the SSH client or editor owns the local forwarded address; the host URL is still printed. Deployment values such as the port, trusted hosts, and browser handoff are profile configuration, not launcher flags. The Native Web app accepts none of the retired compatibility flags `--host`, `--port`, or `--no-open`.
 
 Process shutdown gives the plugin tree up to five seconds to dispose. The first `SIGINT`/`SIGTERM` starts that graceful drain — `SIGTERM` is a supervisor's ordinary stop request and exits 0 on every surface, `SIGINT` reports 130; a second signal forces immediate exit. If one-shot normal completion is already stuck in disposal, the first `Ctrl+C` is the escalation and exits immediately instead of being swallowed.
 

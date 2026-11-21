@@ -123,7 +123,7 @@ SDK 会延迟启动内置的 `dsh --profile sdk` 进程，并复用到上下文�
 
 `sdk` 初始化为 native-sdk 组合。它包含按平台选择的持久 shell 和本地文件系统 provider，并固定使用 `danger-full-access`。应使用一次性 checkout 或容器。已退役的独立配置树不再是受支持的启动方式。
 
-已安装 wheel 仍会打包完整 `web` profile 与前端产物。如果 Python SDK 部署还需要浏览器应用，请针对显式 `RSH_HOME` 运行 `dsh web`；`web` 是独立 CLI 应用，不能为 Python SDK client 提供服务。
+已安装 wheel 会打包同一个 `dsh` CLI。如果 Python SDK 部署还需要 Native Web 应用，请针对显式 `RSH_HOME` 运行 `dsh --profile native-web`；它是独立 CLI 应用，不能为 Python SDK client 提供服务。仅限浏览器的 `web` profile 与 `dsh web` 别名已退役。
 
 需要隔离 profile、插件、凭据、设置与会话时，应使用新的 home。独立工作应使用新的 session id；只有继续同一段持久对话和会话资源时，才同时复用 harness、home 与 id。
 

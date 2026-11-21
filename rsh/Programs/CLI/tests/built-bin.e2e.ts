@@ -401,7 +401,7 @@ describe.skipIf(process.env.RSH_EXAMPLE_MODE !== 'lib' && !existsSync(rshBin))('
     expect(bare.stderr).toContain('--profile <name> is required')
     const help = await runBuiltBin(['--help'])
     expect(help.code).toBe(0)
-    expect(help.stdout).toContain('dsh --profile web')
+    expect(help.stdout).toContain('dsh --profile native-web')
     expect(help.stdout).toContain('--from-default-profile')
     expect(help.stdout).not.toContain('dsh plugin')
     expect(help.stdout).not.toMatch(/^\s+(?:tui|meta|upgrade)\b/mu)
@@ -1116,7 +1116,7 @@ describe.skipIf(process.env.RSH_EXAMPLE_MODE !== 'lib' && !existsSync(rshBin))('
       expect(repeated.stderr).toContain('is not empty')
 
       const shipped = await runBuiltBin(
-        ['--profile', 'web', '--from-default-profile', 'native-headless', '--dump-config'],
+        ['--profile', 'native-web', '--from-default-profile', 'native-headless', '--dump-config'],
         { RSH_HOME: home },
       )
       expect(shipped.code).toBe(1)
@@ -1138,7 +1138,7 @@ describe.skipIf(process.env.RSH_EXAMPLE_MODE !== 'lib' && !existsSync(rshBin))('
     const home = mkdtempSync(join(tmpdir(), 'dsh-from-default-profile-'))
     try {
       const created = await runBuiltBin(
-        ['--profile', 'rescue', '--from-default-profile', 'web', '--dump-config'],
+        ['--profile', 'rescue', '--from-default-profile', 'headless', '--dump-config'],
         { RSH_HOME: home },
       )
       expect(created.code).toBe(0)
@@ -1148,7 +1148,7 @@ describe.skipIf(process.env.RSH_EXAMPLE_MODE !== 'lib' && !existsSync(rshBin))('
         installations: Array<{ id: string; plugin: string }>
       }
       expect(dumped.formatVersion).toBe(1)
-      expect(dumped.installations.find(row => row.id === 'app')?.plugin).toBe('@redspark/rsh-native-web-host')
+      expect(dumped.installations.find(row => row.id === 'app')?.plugin).toBe('@redspark/rsh-native-headless')
 
       const dir = join(home, 'profiles', 'rescue')
       const manifest = JSON.parse(readFileSync(join(dir, 'package.json'), 'utf8')) as {
@@ -1156,12 +1156,12 @@ describe.skipIf(process.env.RSH_EXAMPLE_MODE !== 'lib' && !existsSync(rshBin))('
         dsh: { profile: { runtime: string; config: string; configReload: string } }
       }
       expect(manifest.dependencies).toBeUndefined()
-      expect(manifest.dsh.profile).toEqual({ runtime: 'native', config: 'rsh.profile.json', configReload: 'live' })
+      expect(manifest.dsh.profile).toEqual({ runtime: 'native', config: 'rsh.profile.json', configReload: 'startup' })
       expect(existsSync(join(dir, 'cordis.patch.yml'))).toBe(false)
-      expect(existsSync(join(dir, 'rsh.client.json'))).toBe(true)
+      expect(existsSync(join(dir, 'rsh.client.json'))).toBe(false)
 
       const repeated = await runBuiltBin(
-        ['--profile', 'rescue', '--from-default-profile', 'web', '--dump-config'],
+        ['--profile', 'rescue', '--from-default-profile', 'headless', '--dump-config'],
         { RSH_HOME: home },
       )
       expect(repeated.code).toBe(1)
@@ -1182,15 +1182,15 @@ describe.skipIf(process.env.RSH_EXAMPLE_MODE !== 'lib' && !existsSync(rshBin))('
     afterEach(() => { rmSync(home, { recursive: true, force: true }) })
 
     it('installs a shipped standard profile as Native and dumps its composition', async () => {
-      const { stdout, code, stderr } = await runBuiltBin(['--profile', 'web', '--dump-config'], { RSH_HOME: home })
+      const { stdout, code, stderr } = await runBuiltBin(['--profile', 'native-web', '--dump-config'], { RSH_HOME: home })
       expect(code).toBe(0)
       expect(stderr).toBe('')
       const dump = JSON.parse(stdout) as { formatVersion: number; installations: Array<{ id: string; plugin: string }> }
       expect(dump.formatVersion).toBe(1)
       expect(dump.installations.find(row => row.id === 'app')?.plugin).toBe('@redspark/rsh-native-web-host')
-      expect(JSON.parse(readFileSync(join(home, 'profiles', 'web', 'package.json'), 'utf8')))
+      expect(JSON.parse(readFileSync(join(home, 'profiles', 'native-web', 'package.json'), 'utf8')))
         .toMatchObject({ dsh: { profile: { runtime: 'native', config: 'rsh.profile.json' } } })
-      expect(existsSync(join(home, 'profiles', 'web', 'cordis.patch.yml'))).toBe(false)
+      expect(existsSync(join(home, 'profiles', 'native-web', 'cordis.patch.yml'))).toBe(false)
       expect(existsSync(join(home, 'profiles', 'node_modules'))).toBe(false)
     }, SPAWN_TIMEOUT_MS + 30_000)
 
@@ -1202,7 +1202,7 @@ describe.skipIf(process.env.RSH_EXAMPLE_MODE !== 'lib' && !existsSync(rshBin))('
       expect(code).toBe(1)
       expect(stdout).toBe('')
       expect(stderr).toContain('unknown profile template "unknown"')
-      expect(stderr).toContain('expected one of headless, web,')
+      expect(stderr).toContain('expected one of headless, sdk,')
       expect(existsSync(join(home, 'profiles', 'rescue'))).toBe(false)
     }, SPAWN_TIMEOUT_MS + 30_000)
 
@@ -1226,7 +1226,7 @@ describe.skipIf(process.env.RSH_EXAMPLE_MODE !== 'lib' && !existsSync(rshBin))('
         { id: 'app', config: { port: 2 } },
       ] }))
       const { stdout, code, stderr } = await runBuiltBin(
-        ['--profile', 'web', '--patch', first, '--patch', second, '--dump-config'],
+        ['--profile', 'native-web', '--patch', first, '--patch', second, '--dump-config'],
         { RSH_HOME: home },
       )
       expect(code).toBe(0)
@@ -1240,7 +1240,7 @@ describe.skipIf(process.env.RSH_EXAMPLE_MODE !== 'lib' && !existsSync(rshBin))('
       const patch = join(home, 'absent.json')
       writeFileSync(patch, JSON.stringify({ formatVersion: 1, installations: [{ id: 'absent-row', config: { x: 1 } }] }))
       const { stdout, code, stderr } = await runBuiltBin(
-        ['--profile', 'web', '--patch', patch, '--dump-config'],
+        ['--profile', 'native-web', '--patch', patch, '--dump-config'],
         { RSH_HOME: home },
       )
       expect(code).toBe(1)

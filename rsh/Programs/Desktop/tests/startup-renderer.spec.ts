@@ -16,7 +16,6 @@ function startup(locale = 'en', status: Promise<DesktopBackendState> = Promise.r
   })
   const listeners = new Set<(state: DesktopBackendState) => void>()
   const unsubscribe = vi.fn(() => { listeners.clear() })
-  const disablePlugins = vi.fn(async () => {})
   const resetConfiguration = vi.fn(async () => {})
   const restart = vi.fn(async () => {})
   const queried = Promise.withResolvers<undefined>()
@@ -27,7 +26,7 @@ function startup(locale = 'en', status: Promise<DesktopBackendState> = Promise.r
       status: () => { queried.resolve(undefined); return status },
       subscribe: (listener) => { listeners.add(listener); return unsubscribe },
     },
-    disablePlugins, resetConfiguration, restart,
+    resetConfiguration, restart,
   }
   Object.defineProperty(dom.window, 'rshDesktop', { value: api })
   runInContext(readFileSync(new URL('../renderer/startup.js', import.meta.url), 'utf8'), dom.getInternalVMContext())
@@ -50,7 +49,7 @@ function startup(locale = 'en', status: Promise<DesktopBackendState> = Promise.r
         : [element(selector).textContent]),
   ].join('\n')
   return { dom, document, element, button, publish, copy,
-    disablePlugins, resetConfiguration, restart, unsubscribe, queried: queried.promise }
+    resetConfiguration, restart, unsubscribe, queried: queried.promise }
 }
 
 it('shows English loading and recovery actions without a Host document', async () => {
@@ -64,21 +63,19 @@ it('shows English loading and recovery actions without a Host document', async (
   expect(page.element('#spinner').hidden).toBe(false)
   expect(page.element('#actions').hidden).toBe(true)
   expect(page.button('#restart').disabled).toBe(true)
-  expect(page.button('#disable-plugins').disabled).toBe(true)
   const fakeToken = 'desktop-startup-fake-token'
   page.publish({ phase: 'error', profileRecovery: true, errorType: 'ValidationError', path: 'providers.0.headers.0',
     rule: 'valid-fetch-header', message: fakeToken } as DesktopBackendState)
   expect(page.copy()).toMatchInlineSnapshot(`
     "RedSpark Harness could not start
-    Choose a recovery action below. Disabling third-party plugins retains their files.
-    Reset Desktop deletes all Desktop profile configuration and third-party plugins without a backup, then starts a fresh profile. Shared tasks and settings are retained.
+    Choose a recovery action below.
+    Reset Desktop deletes all Desktop profile configuration and installed packages without a backup, then starts a fresh Native profile. Shared tasks and settings are retained.
     If application files are missing or damaged, close the application and reinstall it. Your tasks are stored separately.
     Error type: Configuration validation error
     Configuration field: providers.0.headers.0
     Validation rule: valid-fetch-header
     Detailed information is available in the local Desktop log.
     Close and restart
-    Disable all third-party plugins and retry
     Reset Desktop and retry"
   `)
   expect(page.copy()).not.toContain(fakeToken)
@@ -102,15 +99,14 @@ it('shows Chinese loading and recovery copy', async () => {
   page.publish({ phase: 'error', profileRecovery: true, errorType: 'ValidationError', path: 'providers.0.headers.0', rule: 'valid-fetch-header' })
   expect(page.copy()).toMatchInlineSnapshot(`
     "RedSpark Harness 无法启动
-    请选择下方的恢复操作。禁用第三方插件会保留插件文件。
-    重置 Desktop 会删除桌面端的全部 profile 配置和第三方插件，不保留备份，然后重新初始化并启动。共享任务和设置会保留。
+    请选择下方的恢复操作。
+    重置 Desktop 会删除桌面端的全部 profile 配置和已安装包，不保留备份，然后重新初始化并启动 Native profile。共享任务和设置会保留。
     如果应用文件缺失或损坏，请关闭应用并重新安装。任务数据存储在独立位置。
     错误类型：配置校验错误
     配置字段：providers.0.headers.0
     校验规则：valid-fetch-header
     详细信息可在本地 Desktop 日志中查看。
     关闭并重启
-    禁用全部第三方插件并重试
     重置 Desktop 并重试"
   `)
 })
@@ -127,7 +123,6 @@ it('renders diagnostic markup as text and exposes failures from recovery actions
   await expect.poll(() => page.element('#error').textContent).toContain('Unknown error')
   expect(page.element('#error').textContent).not.toContain('Retry failed')
   expect(page.button('#restart').disabled).toBe(false)
-  expect(page.button('#disable-plugins').disabled).toBe(false)
 })
 
 it('keeps subscribed state when initial status arrives late and detaches on pagehide', async () => {
@@ -152,16 +147,14 @@ it.each(['en', 'zh-CN'])('offers recovery actions with %s guidance and preserves
   await expect.poll(() => page.button('#restart').disabled).toBe(true)
   page.publish({ phase: 'error', profileRecovery: true, errorType: 'Error', logPath: '/home/test/Desktop/desktop.log' })
   await expect(`${page.copy()}\n`).toMatchFileSnapshot(fileURLToPath(new URL(`./expected/startup-${locale}-profile.txt`, import.meta.url)))
-  for (const action of ['#disable-plugins', '#reset-configuration', '#restart']) {
+  for (const action of ['#reset-configuration', '#restart']) {
     page.publish({ phase: 'error', profileRecovery: true, errorType: 'Error', logPath: '/home/test/Desktop/desktop.log' })
     page.button(action).click()
     expect(page.element('#actions').hidden).toBe(true)
   }
-  expect(page.disablePlugins).toHaveBeenCalledOnce()
   expect(page.resetConfiguration).toHaveBeenCalledOnce()
   expect(page.restart).toHaveBeenCalledOnce()
   page.publish({ phase: 'error', profileRecovery: false, errorType: 'Error', logPath: '/home/test/Desktop/desktop.log' })
-  expect(page.button('#disable-plugins').hidden).toBe(true)
   expect(page.button('#reset-configuration').hidden).toBe(true)
   await expect(`${page.copy()}\n`).toMatchFileSnapshot(fileURLToPath(new URL(`./expected/startup-${locale}-restart.txt`, import.meta.url)))
 })
@@ -175,7 +168,7 @@ it('keeps emergency diagnostics inert without shell assets', () => {
   expect(dom.window.document.querySelector('pre')?.textContent).toContain('providers.0.<script>alert(1)</script>')
   expect(dom.window.document.querySelector('p')?.textContent).toContain('重新安装')
   expect([...dom.window.document.querySelectorAll('form')].map(form => form.action)).toEqual([
-    'dsh-recovery://restart', 'dsh-recovery://plugins', 'dsh-recovery://reset',
+    'dsh-recovery://restart', 'dsh-recovery://reset',
   ])
   dom.window.close()
 })
