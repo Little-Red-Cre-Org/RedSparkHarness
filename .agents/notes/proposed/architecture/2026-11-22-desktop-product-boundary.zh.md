@@ -83,7 +83,14 @@ Desktop 是唯一的官方用户入口和正式发行（`pnpm run start:desktop`
 
 `pnpm run dev:web` 运行 `rsh/Scripts/dev-web.ts`。该脚本重建浏览器产物。它的注释仍写着由 `dsh web` 提供这些产物。以后的动作：与浏览器测试路径一起改指或删除该脚本。前置条件：没有测试或贡献者流程还需要这个监视循环。所有者：根脚本。阻塞：`rsh/Programs/Web/application/tests/hmr-live.e2e.ts` 会等待 `pnpm run dev:web`。保留理由：该脚本仍是可调用的开发命令，这次不改测试。
 
-`@redspark/rsh-web-app`（`rsh/Compatibility/DSH/bundle/web-app`）、`@redspark/rsh-base`（`rsh/Compatibility/DSH/bundle/base`）和 `@redspark/rsh-web-compatibility`（`rsh/Compatibility/DSH/web/frontend`）是公开包。`@redspark/rsh-host-webserver`（`rsh/Programs/Web/host/webserver`）和 `@redspark/rsh-host-frontend-static`（`rsh/Programs/Web/host/frontend-static`）是公开包，Cordis 浏览器组合包靠它们提供页面。同一 `rsh/Compatibility/DSH/bundle/` 目录仍发布 `@redspark/rsh-headless`、`@redspark/rsh-rsh`、`@redspark/rsh-sdk-app`、`@redspark/rsh-acp-app` 和 `@redspark/rsh-sdk-minimal`。以后的动作：与浏览器测试路径一起删除这些 Cordis 应用组合包。前置条件：没有快照、测试或 Desktop 包 manifest 再加载它们。所有者：`rsh/Compatibility/DSH`。阻塞：`rsh/Programs/Web/application/tests/scaffold.ts`、`assembled-boot.ts` 和 `schedule-after.e2e.ts` 仍加载 `rsh/Compatibility/DSH/bundle/web-app/cordis.patch.yml`。`smoke-real.e2e.ts` 向 `rsh/Programs/CLI/src/bin.ts` 传入位置参数 `web`，`hmr-live.e2e.ts` 向 `rsh/Programs/CLI/lib/bin.js` 传入同一参数，并等待 `pnpm run dev:web`。`parseRshArgs` 在启动前拒绝该参数。`@redspark/rsh-desktop` 与 `@redspark/rsh-desktop-host` 自己的依赖列表没有点名 `@redspark/rsh-web-app`。保留理由：scaffold 和这 32 个快照仍指向该 Cordis 组合。在这里删除这些组合包，等于把尚未完成的退役说成已经完成。
+`@redspark/rsh-web-app`（`rsh/Compatibility/DSH/bundle/web-app`）和 `@redspark/rsh-web-compatibility`（`rsh/Compatibility/DSH/web/frontend`）是公开包。`@redspark/rsh-host-webserver`（`rsh/Programs/Web/host/webserver`）和 `@redspark/rsh-host-frontend-static`（`rsh/Programs/Web/host/frontend-static`）是公开包，Cordis 浏览器组合包靠它们提供页面。以后的动作：只与浏览器测试路径一起删除这四个包：`@redspark/rsh-web-app`、`@redspark/rsh-web-compatibility`、`@redspark/rsh-host-webserver` 和 `@redspark/rsh-host-frontend-static`。前置条件：没有快照、测试或 Desktop 包 manifest 再加载它们。所有者：`rsh/Compatibility/DSH`。阻塞：`rsh/Programs/Web/application/tests/scaffold.ts`、`assembled-boot.ts` 和 `schedule-after.e2e.ts` 仍加载 `rsh/Compatibility/DSH/bundle/web-app/cordis.patch.yml`。`smoke-real.e2e.ts` 向 `rsh/Programs/CLI/src/bin.ts` 传入位置参数 `web`，`hmr-live.e2e.ts` 向 `rsh/Programs/CLI/lib/bin.js` 传入同一参数，并等待 `pnpm run dev:web`。`parseRshArgs` 在启动前拒绝该参数。`@redspark/rsh-desktop` 与 `@redspark/rsh-desktop-host` 自己的依赖列表没有点名 `@redspark/rsh-web-app`。保留理由：scaffold 和这 32 个快照仍指向该 Cordis 组合。在这里删除这四个包，等于把尚未完成的退役说成已经完成。
+
+- `@redspark/rsh-base`（`rsh/Compatibility/DSH/bundle/base`）仍会发布，并且不属于浏览器测试路径的删除集合。它仍在 `rsh/Programs/Desktop/src/project-manager.ts` 的 Desktop starter bundle 列表上，与 `@redspark/rsh-web-app` 并列。[架构](../../../../rsh/Docs/architecture.zh.md) 仍把它写成 legacy `headless`、`sdk` 与 `acp` profile 的共享第一层。以后的动作：先核实非浏览器消费者。核实完成前不删除。
+- `@redspark/rsh-headless`（`rsh/Compatibility/DSH/bundle/headless`）仍会发布，并且不属于浏览器测试路径的删除集合。以后的动作：先核实非浏览器消费者。核实完成前不删除。
+- `@redspark/rsh-rsh`（`rsh/Compatibility/DSH/bundle/rsh`）仍会发布，并且不属于浏览器测试路径的删除集合。以后的动作：先核实非浏览器消费者。核实完成前不删除。
+- `@redspark/rsh-sdk-app`（`rsh/Compatibility/DSH/bundle/sdk-app`）仍会发布，并且不属于浏览器测试路径的删除集合。以后的动作：先核实非浏览器消费者。核实完成前不删除。
+- `@redspark/rsh-acp-app`（`rsh/Compatibility/DSH/bundle/acp-app`）仍会发布，并且不属于浏览器测试路径的删除集合。以后的动作：先核实非浏览器消费者。核实完成前不删除。
+- `@redspark/rsh-sdk-minimal`（`rsh/Compatibility/DSH/bundle/sdk-minimal`）仍会发布，并且不属于浏览器测试路径的删除集合。以后的动作：先核实非浏览器消费者。核实完成前不删除。
 
 ### TUI
 
@@ -104,7 +111,7 @@ Desktop 是唯一的官方用户入口和正式发行（`pnpm run start:desktop`
 | `acp`、`native-acp` | 独立启动；删除尚未核实 | `acp` 别名到 `native-acp`。 | 不删除。不是长期并列产品。 |
 | `native-acp-dsh-child` | CLI 私有的子进程启动器 | `rsh/Programs/CLI/src/native-acp-child-runtime-launcher.ts` 传入这个 profile。 | 在 ACP 子进程执行还在时保留。 |
 | `web` | 已退役的启动名 | 不在模板列表里。`args.ts` 拒绝它。 | 不恢复。 |
-| `sdk-minimal` | 已退役的启动名 | `args.ts` 拒绝它。`@redspark/rsh-sdk-minimal` 仍会发布。 | 与其他 Cordis 组合包一起删除，不在这里。 |
+| `sdk-minimal` | 已退役的启动名 | `args.ts` 拒绝它。`@redspark/rsh-sdk-minimal` 仍会发布。 | 先核实非浏览器消费者，核实完成前不删除。 |
 
 ### Remote 与 Typert
 
@@ -153,6 +160,7 @@ Headless 是测试与开发者启动器（根 `AGENTS.md` 里的 `pnpm dsh --pro
 - `rsh/Docs/architecture.md` 把 `dsh --profile native-web`、`headless`、`sdk` 和 `acp` 列为已发布应用。它的 Desktop 一节另行描述 Electron 应用。
 - `rsh/Programs/Web/host/native-web-assets/README.md` 仍提到兼容模式预览。
 - `rsh/Scripts/dev-web.ts` 的注释仍把 `dsh web` 写成监视已构建产物并触发重载的服务器。
+- `rsh/Programs/SDK/packages/client/README.md` 与中文同文件 `README.zh.md` 的第 50 行仍告诉用户用 `dsh --profile legacy-sdk --from-default-profile sdk` 创建 Cordis profile。`rsh/Programs/CLI/src/native-profile-template.ts` 里的 `createNativeProfileFromTemplate` 只写入 `runtime: 'native'`。这次不改这两份 README，也不改这个写入函数。
 
 ## Alternatives considered
 

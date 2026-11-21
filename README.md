@@ -85,7 +85,7 @@ Node.js `^22.19.0 || >=24.0.0` and pnpm. The repository pins its toolchain; `pnp
 
 ```bash
 pnpm install
-pnpm run build          # libraries, then the desktop renderer
+pnpm run build          # build:native-system, build:lib, then build:web (web-frontend and web-compatibility)
 pnpm run start:desktop  # Electron desktop client
 ```
 

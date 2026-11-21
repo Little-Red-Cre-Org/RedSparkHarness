@@ -2,5 +2,5 @@
 # side as of the last confirmed-consistent state. Both languages carry equal authority;
 # after editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write .agents/notes/proposed/architecture/2026-11-22-desktop-product-boundary.md
-2026-11-22-desktop-product-boundary.md: 8263464e28487658457e040621b931c9e44acc09
-2026-11-22-desktop-product-boundary.zh.md: 6c9cf8ba1219373b441d72c97eeb551cd02acae2
+2026-11-22-desktop-product-boundary.md: cb93b73df84594c01a031effdd388f07350e3df6
+2026-11-22-desktop-product-boundary.zh.md: dacc62388788419cca4f4d0ed3acf4a30629169d
