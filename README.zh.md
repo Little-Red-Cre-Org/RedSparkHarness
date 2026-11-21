@@ -4,9 +4,9 @@
 
 RedSpark Harness（SPH）是 RedSpark 的 Agent 平台，基于 [DeepSeek AI](https://deepseek.com) 的开源项目 [RedSpark Harness](https://github.com/deepseek-ai/redspark-harness) 进行开发。RedSpark 是我们的组织名，也是未来自有模型的名称；目前尚未发布 RedSpark 模型。模型服务商保持其实际名称。
 
-桌面端与 Web 端共用绯红、暖白、炭黑主题、火焰星芒标记，以及欢迎页动态伙伴赤绯（Kitsune）。点击角色可挥手，旁边的按钮可暂停动效；默认遵循系统的减少动态效果偏好；“启用动效”可为当前欢迎页明确开启动画。这是应用内精灵动画伙伴，不是 Live2D 模型或系统级悬浮窗口。用户提供的 RedSpark 设计图用于本项目品牌，上游版权与许可证声明继续保留。内部 `dsh` 命令、`RSH_*` 环境变量和包标识保持上游兼容。
+桌面端使用绯红、暖白、炭黑主题、火焰星芒标记，以及欢迎页动态伙伴赤绯（Kitsune）。点击角色可挥手，旁边的按钮可暂停动效；默认遵循系统的减少动态效果偏好；“启用动效”可为当前欢迎页明确开启动画。这是应用内精灵动画伙伴，不是 Live2D 模型或系统级悬浮窗口。用户提供的 RedSpark 设计图用于本项目品牌，上游版权与许可证声明继续保留。内部 `dsh` 命令、`RSH_*` 环境变量和包标识保持上游兼容。
 
-它构建于**一切皆插件**的架构之上，由 [Cordis](https://github.com/cordiverse/cordis) 驱动，其设计参见论文 [_A Programming Paradigm for Spatiotemporal Composability_](https://arxiv.org/abs/2608.25512)。
+官方产品是桌面端：唯一的官方用户入口和正式发行（`pnpm run start:desktop` 与 `pnpm run package:desktop:*`）。仓库里仍有 [Cordis](https://github.com/cordiverse/cordis) 插件架构，其设计参见论文 [_A Programming Paradigm for Spatiotemporal Composability_](https://arxiv.org/abs/2608.25512)，以及并非当前官方产品入口的历史或独立入口：TUI、部分 `dsh` profile、SDK 与 ACP（Agent Client Protocol）包，以及残留的 Web 与 Remote 代码。
 
 上游参考文档（保留供开发使用）：[RedSpark Harness 文档](https://redspark-harness.github.io/redspark-harness/)。本项目交付见[本地验收说明](ACCEPTANCE.md)。
 
@@ -22,15 +22,15 @@ RedSpark Harness 处于 _开发者预览_ 阶段，正在快速迭代。**未来
 
 ## 运行
 
-### 通过 `npm` 运行 Native Web profile
+### 检查 Host 与桌面渲染层
 
 安装 `Node.js`，然后运行：
 
 ```sh
-npx @redspark/dsh --profile native-web
+npx @redspark/rsh --profile native-web
 ```
 
-Native web profile 会启动 Host，并在 `http://127.0.0.1:3080` 提供桌面渲染层。Desktop 是主要客户端；该 profile 保留用于开发和检查。详见 [Web UI 指南](rsh/Docs/user/guide/index.zh.md)。
+`native-web` 会启动 Host，并在 `http://127.0.0.1:3080` 提供桌面渲染层，供开发和检查。它不是独立的浏览器产品。详见 [Web UI 指南](rsh/Docs/user/guide/index.zh.md)。
 
 <a id="run-from-source"></a>
 
@@ -39,20 +39,20 @@ Native web profile 会启动 Host，并在 `http://127.0.0.1:3080` 提供桌面�
 如需从仓库源码运行：
 
 ```sh
-git clone https://github.com/Little-Red-Cre/RedSparkHarness.git
+git clone https://github.com/Little-Red-Cre-Org/RedSparkHarness.git
 cd RedSparkHarness
 pnpm install
 pnpm run build
-pnpm dsh --profile native-web
+pnpm run start:desktop
 ```
 
-`pnpm run build` 会准备仓库产物。`pnpm dsh --profile native-web` 会直接使用这些已构建产物，不会重新构建。
+`pnpm run build` 会准备仓库产物。`pnpm run start:desktop` 用这些产物启动 Electron 桌面客户端。
 
-构建后运行 `pnpm run start:desktop` 可启动 Electron 客户端。开发版数据独立存放在 `rsh/Programs/Desktop/.desktop-build/development/home`。API Key 在应用内配置，不写入仓库。
+`pnpm dsh --profile native-web` 使用同一份已构建产物检查 Host 与桌面渲染层，不重新构建，也不打包。开发版数据独立存放在 `rsh/Programs/Desktop/.desktop-build/development/home`。API Key 在应用内配置，不写入仓库。
 
 ## 上游社区与支持
 
-以下链接属于上游项目，保留用于开发参考。RedSpark 的变更维护在[我们的仓库](https://github.com/Little-Red-Cre/RedSparkHarness)。
+以下链接属于上游项目，保留用于开发参考。RedSpark 的变更维护在[我们的仓库](https://github.com/Little-Red-Cre-Org/RedSparkHarness)。
 
 - 通过 [GitHub Discussions](https://github.com/deepseek-ai/redspark-harness/discussions) 提交反馈或 bug 报告。
 - 为你的插件仓库添加 [`dsh-plugin`](https://github.com/topics/dsh-plugin) 话题，便于被发现。
@@ -81,7 +81,7 @@ RedSpark 有两个仓库；它们是**两个独立项目**，不是父子，也�
 
 | | 本仓库 | [RSI Harness](https://github.com/Little-Red-Cre-Org/RSI-Harness) |
 |---|---|---|
-| 是什么 | Agent 产品：桌面端、Web、TUI 与 SDK | 让 harness 拥有「生命周期」的研究项目 |
+| 是什么 | Agent 产品：桌面端 | 让 harness 拥有「生命周期」的研究项目 |
 | 底座 | [RedSpark Harness](https://github.com/deepseek-ai/redspark-harness)（TypeScript、Cordis 插件） | [Harness²](https://github.com/google-research/harness2)（Python） |
 | 优化什么 | 交付：界面、模型接入、会话、预设 | harness 的代际演进：血缘、指针、原子切换、回滚 |
 | 语言 | TypeScript | Python |
@@ -107,11 +107,11 @@ Node.js `^22.19.0 || >=24.0.0` 与 pnpm。仓库固定了工具链；在根目�
 
 ```bash
 pnpm install
-pnpm run build          # libraries, then the Web client
-pnpm run dev:web        # the Web development server
+pnpm run build          # libraries, then the desktop renderer
+pnpm run start:desktop  # Electron desktop client
 ```
 
-桌面应用走自己的入口构建：
+桌面应用通过自己的入口打包。`pnpm run dev:web` 仍留在仓库里，作为开发服务器，不是官方产品入口。
 
 ```bash
 pnpm run package:desktop:win:x64:unsigned
