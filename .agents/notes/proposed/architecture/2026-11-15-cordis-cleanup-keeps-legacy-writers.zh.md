@@ -4,6 +4,8 @@ Status: proposed
 
 [English](2026-11-15-cordis-cleanup-keeps-legacy-writers.md) | 中文
 
+> **2026-11-21 更新。** 阶段 A 在没有保留 `--from-default-profile` 路径的情况下关闭：`dsh` 不再启动 Cordis manifest，也没有任何快照或 CLI 测试创建 `legacy-headless`、`legacy-sdk` 或 `legacy-acp`。下文对桌面端与 Web 的保留仍然成立。见[仅面向 Cordis 的检查跟随 Native 启动](../../implemented/bug-fix/2026-11-21-cordis-only-gates-follow-the-native-boot.zh.md)。
+
 ## Problem
 
 [按实测基线的五个阶段退休 Cordis](2026-11-12-cordis-retirement-five-phases.zh.md) 仍是删除路线，但它有三条近期指令在当前树上不安全。它把 `@redspark/rsh-storage-sqlite`、`@redspark/rsh-experimental-inspector` 和 `@redspark/rsh-experimental-agent-team-web-profile` 当成可删，理由只是没有别的 manifest 依赖它们。它也不能靠拒绝每一个新建的自定义 legacy profile 来结束阶段 A：剩下的 Cordis 回放和 CLI 测试会用 `--from-default-profile` 创建 `legacy-headless`、`legacy-sdk` 和 `legacy-acp`。桌面端仍会写出 legacy manifest，所以在 Web 迁移存在之前拆掉这个写入者会让桌面应用无处可启动。

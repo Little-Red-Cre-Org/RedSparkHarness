@@ -352,7 +352,6 @@ describe('verifyRuntimeClosure', () => {
         '@scope/required': 'workspace:^',
       },
     }, null, 2)}\n`)
-    writeFileSync(join(root, 'rsh/Programs/CLI/src/bin.ts'), "import('@redspark/rsh-app-boot')\n")
     writeFileSync(
       join(root, 'rsh/Compatibility/DSH/bundle/web-app/src/index.ts'),
       "import { scrubbedParentEnv } from '@redspark/rsh-subprocess'\n",
@@ -365,7 +364,6 @@ describe('verifyRuntimeClosure', () => {
       expect.stringContaining(`${missingPlugin} [workspace package not found]`),
       expect.stringContaining('required Cordis peer @redspark/cordis'),
       expect.stringContaining('@scope/required'),
-      expect.stringContaining('rsh/Programs/CLI/src/bin.ts: import @redspark/rsh-app-boot'),
       expect.stringContaining('rsh/Compatibility/DSH/bundle/web-app/src/index.ts: import @redspark/rsh-subprocess'),
     ]))
   })

@@ -45,7 +45,6 @@ const PYTHON_RUNTIME_MANIFEST = 'rsh/Programs/SDK/python/sdk-runtime/package.jso
 const CLI_MANIFEST_PACKAGE = '@redspark/rsh'
 const CLI_MANIFEST = 'rsh/Programs/CLI/package.json'
 const NATIVE_CLI_ROOT_IMPORTS = [
-  ['rsh/Programs/CLI/src/bin.ts', '@redspark/rsh-app-boot', '@redspark/rsh-launch-environment/layers'],
   ['rsh/Compatibility/DSH/bundle/web-app/src/index.ts', '@redspark/rsh-subprocess', '@redspark/rsh-subprocess/native'],
 ] as const
 type RuntimeClosureTarget = 'python-runtime' | 'native-cli'

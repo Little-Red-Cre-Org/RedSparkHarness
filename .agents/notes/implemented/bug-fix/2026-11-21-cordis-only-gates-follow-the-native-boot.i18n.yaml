@@ -1,0 +1,6 @@
+# Bilingual-pair consistency record (rsh/Docs/i18n/README.md): the git blob hash of each
+# side as of the last confirmed-consistent state. Both languages carry equal authority;
+# after editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write .agents/notes/implemented/bug-fix/2026-11-21-cordis-only-gates-follow-the-native-boot.md
+2026-11-21-cordis-only-gates-follow-the-native-boot.md: 362b08d73c90045cb71f742a2b6abd733ab9cfad
+2026-11-21-cordis-only-gates-follow-the-native-boot.zh.md: 7ab7d5dcd5b8d20adef6ac6dbf722aa93611c2fb

@@ -3,10 +3,9 @@
 Each carrier skips independently when absent. The dummy API key only satisfies
 adapter loading; initialize and shutdown do not call a model.
 
-The carriers ship the native ``sdk`` profile only. The legacy bundle profile
-needs the CLI's optional compatibility packages, which the pruned deploy
-closure deliberately omits, so those cases skip instead of asserting a legacy
-composition the artifact no longer carries.
+The carriers ship the native ``sdk`` profile only. The CLI refuses a Cordis
+``bundles`` profile, so no case drives a legacy composition the artifact no
+longer carries.
 """
 
 from __future__ import annotations
@@ -17,15 +16,12 @@ from pathlib import Path
 import pytest
 
 from redspark_harness import RedSparkHarness, HarnessClient, HarnessConfig
-from redspark_harness.errors import JsonRpcError, TransportClosedError
 from redspark_harness_runtime import (
     RUNTIME_MODE_ENV_VAR,
-    bundled_package_dir,
     resolve_bundled_launch_args,
 )
 
 _MODES = ("exe", "node")
-_LEGACY_BUNDLES = ("@redspark/rsh-base", "@redspark/rsh-sdk-app")
 
 
 def _select_mode(mode: str, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -34,23 +30,6 @@ def _select_mode(mode: str, monkeypatch: pytest.MonkeyPatch) -> None:
     except FileNotFoundError as exc:
         pytest.skip(f"bundled {mode}-mode runtime unavailable on this machine: {exc}")
     monkeypatch.setenv(RUNTIME_MODE_ENV_VAR, mode)
-
-
-def _legacy_bundle_roots() -> tuple[Path, ...]:
-    """Skip the legacy-profile case when the carrier ships no compatibility packages.
-
-    The bundled carriers deploy a native-only closure, and the CLI refuses a
-    legacy profile without its optional compatibility packages. The case only
-    has meaning on a carrier that still carries them.
-    """
-    node_root = bundled_package_dir() / "runtime" / "node"
-    roots = tuple(node_root / "node_modules" / bundle for bundle in _LEGACY_BUNDLES)
-    if node_root.is_dir() and not all(root.is_dir() for root in roots):
-        pytest.skip(
-            "bundled carrier deploys the native-only closure; the legacy profile "
-            f"needs {', '.join(_LEGACY_BUNDLES)}, which it omits"
-        )
-    return roots
 
 
 def _client(
@@ -115,34 +94,3 @@ def test_python_sdk_applies_an_ordered_profile_patch(
 
     with harness:
         pass
-
-
-@pytest.mark.parametrize("mode", _MODES)
-def test_bundled_runtime_surfaces_unbundled_plugin_failure(
-    tmp_path: Path, mode: str, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    _legacy_bundle_roots()
-    profile_dir = tmp_path / "home" / "profiles" / "legacy-sdk"
-    profile_dir.mkdir(parents=True)
-    (profile_dir / "package.json").write_text(json.dumps({
-        "name": "dsh-profile-legacy-sdk",
-        "private": True,
-        "dsh": {"profile": {"runtime": "legacy", "bundles": [
-            "@redspark/rsh-base", "@redspark/rsh-sdk-app",
-        ]}},
-    }))
-    (profile_dir / "cordis.patch.yml").write_text("[]\n")
-    patch = tmp_path / "missing.patch.yml"
-    patch.write_text(json.dumps([{
-        "insert": [{"id": "missing", "name": "@redspark/rsh-does-not-exist"}],
-    }]))
-
-    client = _client(tmp_path, mode, monkeypatch, patch, profile="legacy-sdk")
-    client.start()
-    try:
-        with pytest.raises((JsonRpcError, TransportClosedError, TimeoutError)) as excinfo:
-            client.initialize(provider="deepseek-official", cwd=str(tmp_path), model="deepseek-v4-flash")
-    finally:
-        client.close()
-
-    assert "@redspark/rsh-does-not-exist" in str(excinfo.value)

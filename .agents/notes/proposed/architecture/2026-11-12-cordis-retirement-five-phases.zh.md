@@ -45,13 +45,14 @@ Native 侧没有任何文件读取 Cordis 服务名：没有 `native.ts`、也�
 
 这就给阶段 C 划了边界：它不是 165 个入口改写，而是逐个删掉 legacy 半边，这部分集中在 1280 个文件、39.9 万行里。`rsh/Modules/Official`（9.4 万行）与 `rsh/Programs/Web`（8.9 万行）占了近一半。
 
-### 阶段 A —— 封住 legacy 出口
+### 阶段 A —— 封住 legacy 出口（2026-11-21 关闭）
 
-- `dsh.nativeProfileTemplates` 里的 13 个名字都以 Native 启动。已发布名字 `sdk-minimal` 不再启动；它的 bundle 仍可由自定义 legacy profile 组合。`native-sdk` 现在承载 `sdk-minimal` 与 `rsh-terminal` 组合的那个平台持久 shell。
-- 启动器在启动、导出配置、插件管理和 `--from-default-profile` 上拒绝 `sdk-minimal`，并指向 `--profile sdk`。已有目录不会被改写。打包的 Python 冒烟断言这次拒绝，不再比对 minimal 快照。续跑基准使用自定义名字 `bench-minimal`，因此仍能组合 `@redspark/rsh-sdk-minimal`。三个 legacy 臂和其他自定义 legacy 名字仍在。
-- 对活跃 home 的本地 `profileRuntime` 检查中，`web` 与 `desktop` 都返回 `legacy`。[Legacy 运行时退场](2026-11-06-legacy-runtime-retirement.zh.md) 的第 2 条还不成立，所以本阶段不拒绝这两个名字，也不改 `initProfile`。
-- `bin.ts` 里的三条 legacy 分支（`profile`、`plugin`、`dump-config`）在 `2026-11-06-legacy-runtime-retirement.md` 之后退休，由那份 Note 记录什么会变得不可达。
-- 出口：每个已发布名字都以 Native 启动，需要 legacy 的自定义名字被按名字拒绝，且 `initProfile` 不再写 legacy manifest。
+- `dsh` 只有一条启动路径。`rsh/Programs/CLI/src/bin.ts` 解析 Native 组合，并以指名 `rsh/Docs/native-config-migration.md` 的信息拒绝 Cordis manifest。`profile-boot.ts`、`compatibility-runtime.ts`、`plugin.ts`、`dump-config.ts` 与 `dsh plugin` 命令均已删除，且 `rg '@redspark/cordis' rsh/Programs/CLI` 只匹配散文和断言其不存在的测试 fixture。
+- `dsh.nativeProfileTemplates` 里的 13 个名字都以 Native 启动。`--from-default-profile <已发布模板>` 为自定义名字写出 Native manifest，`sdk-minimal` 保持拒绝。
+- 没有任何 `snapshot.yml` 声明 `legacy-headless`、`legacy-sdk` 或 `legacy-acp`；Cordis 快照运行器适配器已删除。
+- [仅面向 Cordis 的检查跟随 Native 启动](../../implemented/bug-fix/2026-11-21-cordis-only-gates-follow-the-native-boot.zh.md) 退役了最后两个仍会写出 `bundles` manifest 的 fixture。
+- 仍扣住 bundle 的是阶段 B 剩下的 Web 覆盖：`rsh/Programs/Web/application/tests/` 下 87 个文件通过 `scaffold.ts` 在宿主内启动 `bundle/base` 与 `bundle/web-app`。阶段 A 的出口不要求搬迁它们；删除 bundle 才要求。
+- 出口：`dsh` 没有任何启动 Cordis 的路径，且每个 Cordis manifest 都被以指名 `rsh/Docs/native-config-migration.md` 的信息拒绝。
 
 ### 阶段 B —— 补齐 Native 能力
 
@@ -114,7 +115,7 @@ Native 侧没有任何文件读取 Cordis 服务名：没有 `native.ts`、也�
 
 ## Acceptance criteria
 
-- 阶段 A 完成的标志：`dsh.nativeProfileTemplates` 里每个名字以及每个已发布别名都以 Native 启动，且需要 legacy 的自定义名字被拒绝、错误信息指名 `rsh/Docs/native-config-migration.md`。
+- 阶段 A 完成的标志：`dsh` 没有任何启动 Cordis 的路径，且每个 Cordis manifest 都被拒绝、错误信息指名 `rsh/Docs/native-config-migration.md`。
 - 阶段 B 完成的标志：没有任何快照用例在没有记录阻塞原因的情况下仍通过 `legacy-headless`、`legacy-sdk` 或 `legacy-acp` 回放，且 `pnpm run test:snapshot` 在无 key 时通过。
 - 阶段 C 完成的标志：`class <name> extends Service` 在 `Core/vendor` 之外的 `rsh/Core` 与 `rsh/Engine` 下不再命中任何东西，且 `Core/vendor` 之外没有任何源码读取 Cordis 服务名。
 - 阶段 D 完成的标志：`@redspark/cordis` 只被 `rsh/Core/vendor` 与那两个受许可的托管入口 import。
