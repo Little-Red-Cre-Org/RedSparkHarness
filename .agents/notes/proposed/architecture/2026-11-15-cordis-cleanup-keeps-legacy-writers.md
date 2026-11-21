@@ -4,6 +4,8 @@ Status: proposed
 
 English | [中文](2026-11-15-cordis-cleanup-keeps-legacy-writers.zh.md)
 
+> **2026-11-21 update.** Phase A closed without the retained `--from-default-profile` path: `dsh` no longer boots a Cordis manifest, and no snapshot or CLI test creates `legacy-headless`, `legacy-sdk`, or `legacy-acp`. The Desktop and Web holds below still stand. See [Cordis-only gates follow the Native boot](../../implemented/bug-fix/2026-11-21-cordis-only-gates-follow-the-native-boot.md).
+
 ## Problem
 
 [Retiring Cordis in five measured phases](2026-11-12-cordis-retirement-five-phases.md) is still the deletion route, but three of its near-term instructions are unsafe on the current tree. It treats `@redspark/rsh-storage-sqlite`, `@redspark/rsh-experimental-inspector`, and `@redspark/rsh-experimental-agent-team-web-profile` as deletable because no other manifest depends on them. It also cannot close phase A by refusing every new custom legacy profile: the remaining Cordis replays and the CLI tests create `legacy-headless`, `legacy-sdk`, and `legacy-acp` with `--from-default-profile`. Desktop still writes a legacy manifest, so removing that writer would strand the desktop app before the Web migration exists.

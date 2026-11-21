@@ -45,13 +45,14 @@ No file on a Native side reads a Cordis service name: no `native.ts` and no `src
 
 That bounds phase C: it is not 165 entry rewrites but the deletion of each legacy half, which concentrates in 1280 files carrying 399k lines. `rsh/Modules/Official` (94k) and `rsh/Programs/Web` (89k) hold nearly half of that.
 
-### Phase A — close the legacy exits
+### Phase A — close the legacy exits (closed 2026-11-21)
 
-- The 13 names in `dsh.nativeProfileTemplates` boot Native. The shipped name `sdk-minimal` no longer boots; its bundle remains composable from a custom legacy profile. `native-sdk` now carries the platform persistent shell that `sdk-minimal` combined with `rsh-terminal`.
-- The launcher refuses `sdk-minimal` on boot, dump, plugin management, and `--from-default-profile`, and points at `--profile sdk`. Existing directories are not rewritten. The packaged Python smoke asserts that refusal and no longer compares the minimal snapshots. The continuation benchmark uses the custom name `bench-minimal` so it can still compose `@redspark/rsh-sdk-minimal`. The three legacy arms and other custom legacy names remain.
-- A local `profileRuntime` check of the active home returned `legacy` for `web` and `desktop`. Criterion 2 of [Legacy runtime retirement](2026-11-06-legacy-runtime-retirement.md) does not hold, so this phase does not refuse those names and does not change `initProfile`.
-- The three legacy arms in `bin.ts` (`profile`, `plugin`, `dump-config`) retire after `2026-11-06-legacy-runtime-retirement.md`, which owns what becomes unreachable.
-- Exit: every shipped name boots Native, a custom name that would need legacy is refused by name, and `initProfile` writes no legacy manifest.
+- `dsh` has one boot path. `rsh/Programs/CLI/src/bin.ts` resolves a Native composition and refuses a Cordis manifest with a message naming `rsh/Docs/native-config-migration.md`. `profile-boot.ts`, `compatibility-runtime.ts`, `plugin.ts`, `dump-config.ts`, and the `dsh plugin` command are gone, and `rg '@redspark/cordis' rsh/Programs/CLI` matches only prose and test fixtures that assert the absence.
+- The 13 names in `dsh.nativeProfileTemplates` boot Native. `--from-default-profile <shipped template>` writes a Native manifest for a custom name, and `sdk-minimal` stays refused.
+- No `snapshot.yml` declares `legacy-headless`, `legacy-sdk`, or `legacy-acp`; the Cordis snapshot runner adapter is gone.
+- [Cordis-only gates follow the Native boot](../../implemented/bug-fix/2026-11-21-cordis-only-gates-follow-the-native-boot.md) retires the last two fixtures that still wrote a `bundles` manifest.
+- What still holds the bundles is Phase B's remaining Web coverage: 87 files under `rsh/Programs/Web/application/tests/` boot `bundle/base` and `bundle/web-app` in-process through `scaffold.ts`. Phase A's exit does not require moving them; deleting the bundles does.
+- Exit: `dsh` has no path that boots Cordis, and every Cordis manifest is refused with a message naming `rsh/Docs/native-config-migration.md`.
 
 ### Phase B — complete Native capability
 
@@ -114,7 +115,7 @@ This route sits among four proposals rather than replacing them, so each keeps i
 
 ## Acceptance criteria
 
-- Phase A is done when every name in `dsh.nativeProfileTemplates` and every shipped alias boots Native, and a custom name that would need legacy is refused with a message naming `rsh/Docs/native-config-migration.md`.
+- Phase A is done when `dsh` has no path that boots Cordis and every Cordis manifest is refused with a message naming `rsh/Docs/native-config-migration.md`.
 - Phase B is done when no snapshot case replays through `legacy-headless`, `legacy-sdk` or `legacy-acp` without a recorded blocker, and `pnpm run test:snapshot` passes keyless.
 - Phase C is done when `class <name> extends Service` matches nothing under `rsh/Core` or `rsh/Engine` outside `Core/vendor`, and no source file outside `Core/vendor` reads a Cordis service name.
 - Phase D is done when `@redspark/cordis` is imported only by `rsh/Core/vendor` and the two sanctioned hosting entries.
