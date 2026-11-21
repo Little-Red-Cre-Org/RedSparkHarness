@@ -4,9 +4,9 @@ English | [中文](README.zh.md)
 
 RedSpark Harness (SPH) is RedSpark's agent platform, developed from [DeepSeek AI](https://deepseek.com)'s open-source project [RedSpark Harness](https://github.com/deepseek-ai/redspark-harness). RedSpark is our organization and the name reserved for our future model; no RedSpark model is available yet. Model providers retain their actual names.
 
-Our desktop and Web interfaces share a crimson, warm-white and charcoal theme, a flame-and-star mark, and Kitsune (赤绯), our animated welcome-screen companion. Click her to wave; pause motion with the adjacent control. Reduced-motion preferences disable animation by default; Enable motion explicitly opts in for the current welcome screen. This is an in-app sprite companion, not a Live2D model or an operating-system overlay. The supplied RedSpark artwork belongs to the project identity; upstream copyright and license notices are retained. Internal `dsh` commands, `RSH_*` environment variables and package identifiers remain compatible with upstream.
+The Desktop application uses a crimson, warm-white and charcoal theme, a flame-and-star mark, and Kitsune (赤绯), its animated welcome-screen companion. Click her to wave; pause motion with the adjacent control. Reduced-motion preferences disable animation by default; Enable motion explicitly opts in for the current welcome screen. This is an in-app sprite companion, not a Live2D model or an operating-system overlay. The supplied RedSpark artwork belongs to the project identity; upstream copyright and license notices are retained. Internal `dsh` commands, `RSH_*` environment variables and package identifiers remain compatible with upstream.
 
-It is built on an **everything-is-a-plugin** architecture and powered by [Cordis](https://github.com/cordiverse/cordis), whose design is described in [_A Programming Paradigm for Spatiotemporal Composability_](https://arxiv.org/abs/2608.25512).
+The official product is the Desktop application: the only official user entry and the official release (`pnpm run start:desktop` and `pnpm run package:desktop:*`). The repository still contains a [Cordis](https://github.com/cordiverse/cordis) plugin architecture, described in [_A Programming Paradigm for Spatiotemporal Composability_](https://arxiv.org/abs/2608.25512), plus historical and independent entries that are not current official product entries: the TUI, some `dsh` profiles, the SDK and ACP packages, and leftover Web and Remote code.
 
 Upstream reference documentation (retained for development): [RedSpark Harness docs](https://redspark-harness.github.io/redspark-harness/). Fork-specific delivery: [local acceptance guide](ACCEPTANCE.md).
 
@@ -20,35 +20,35 @@ Review the [safety notice](SAFETY.md) before running the project.
 
 ## Run
 
-### Run the Native Web profile from `npm`
+### Inspect the Host and desktop renderer
 
 Install `Node.js`, then run:
 
 ```sh
-npx @redspark/dsh --profile native-web
+npx @redspark/rsh --profile native-web
 ```
 
-The Native web profile starts the Host and serves the desktop renderer at `http://127.0.0.1:3080`. Desktop is the primary client; this profile remains for development and inspection. See [Web UI guide](rsh/Docs/user/guide/index.md).
+`native-web` starts the Host and serves the desktop renderer at `http://127.0.0.1:3080` for development and inspection. It is not an independent browser product. See [Web UI guide](rsh/Docs/user/guide/index.md).
 
 ### Run from source
 
 To run from a repository checkout:
 
 ```sh
-git clone https://github.com/Little-Red-Cre/RedSparkHarness.git
+git clone https://github.com/Little-Red-Cre-Org/RedSparkHarness.git
 cd RedSparkHarness
 pnpm install
 pnpm run build
-pnpm dsh --profile native-web
+pnpm run start:desktop
 ```
 
-`pnpm run build` prepares the repository artifacts. `pnpm dsh --profile native-web` uses those built artifacts without rebuilding.
+`pnpm run build` prepares the repository artifacts. `pnpm run start:desktop` launches the Electron desktop client from those artifacts.
 
-For the Electron desktop client, run `pnpm run start:desktop` after building. The development desktop keeps its own data under `rsh/Programs/Desktop/.desktop-build/development/home`. API keys are configured in the application, not in this repository.
+`pnpm dsh --profile native-web` uses the same built artifacts, without rebuilding or packaging, to inspect the Host and desktop renderer. The development desktop keeps its own data under `rsh/Programs/Desktop/.desktop-build/development/home`. API keys are configured in the application, not in this repository.
 
 ## Upstream community and support
 
-The following links belong to the upstream project and are retained as development resources. RedSpark changes are maintained in [our repository](https://github.com/Little-Red-Cre/RedSparkHarness).
+The following links belong to the upstream project and are retained as development resources. RedSpark changes are maintained in [our repository](https://github.com/Little-Red-Cre-Org/RedSparkHarness).
 
 - Submit feedback or bug reports through [GitHub Discussions](https://github.com/deepseek-ai/redspark-harness/discussions).
 - Add the [`dsh-plugin`](https://github.com/topics/dsh-plugin) topic to your plugin repository for discoverability.
@@ -60,7 +60,7 @@ RedSpark maintains two repositories; they are separate projects, not a parent an
 
 | | This repository | [RSI Harness](https://github.com/Little-Red-Cre-Org/RSI-Harness) |
 |---|---|---|
-| What it is | The Agent product: desktop, Web, TUI and SDK surfaces | The research effort that gives a harness a lifecycle |
+| What it is | The Agent product: the Desktop application | The research effort that gives a harness a lifecycle |
 | Built on | [RedSpark Harness](https://github.com/deepseek-ai/redspark-harness) (TypeScript, Cordis plugins) | [Harness²](https://github.com/google-research/harness2) (Python) |
 | What it optimises | Delivery: interface, model access, Sessions, presets | Generations of a harness: lineage, pointer, atomic switch, rollback |
 | Language | TypeScript | Python |
@@ -85,11 +85,11 @@ Node.js `^22.19.0 || >=24.0.0` and pnpm. The repository pins its toolchain; `pnp
 
 ```bash
 pnpm install
-pnpm run build          # libraries, then the Web client
-pnpm run dev:web        # the Web development server
+pnpm run build          # build:native-system, build:lib, then build:web (web-frontend and web-compatibility)
+pnpm run start:desktop  # Electron desktop client
 ```
 
-The desktop application builds through its own entry points:
+The desktop application packages through its own entry points. `pnpm run dev:web` remains in the repository as a development server and is not an official product entry.
 
 ```bash
 pnpm run package:desktop:win:x64:unsigned
