@@ -102,6 +102,7 @@ const harness = await vi.hoisted(async () => {
     getVersion: () => '1.0.0',
     getAppPath: () => 'desktop-test-app',
     getPath: (name: string) => name === 'logs' ? resources : '',
+    setPath: vi.fn(),
     requestSingleInstanceLock: () => true,
     exit: vi.fn(),
     relaunch: vi.fn(),
@@ -211,7 +212,10 @@ vi.mock('electron', () => ({
   },
   protocol: { registerSchemesAsPrivileged: vi.fn(), handle: vi.fn() },
 }))
-vi.mock('../src/paths.ts', () => ({ resolveDesktopPaths: () => ({ profile: 'desktop-test-profile' }) }))
+vi.mock('../src/paths.ts', () => ({
+  resolveDesktopPaths: () => ({ profile: 'desktop-test-profile' }),
+  desktopUserDataPath: () => 'desktop-test-user-data',
+}))
 vi.mock('../src/project-manager.ts', () => ({
   DesktopProjectManager: class {
     readonly applyRelease = harness.applyRelease

@@ -1,8 +1,8 @@
 /** Resolve direct third-party browser inputs through the shipping build configurations, without emitting files. */
 
-import { existsSync, globSync, readFileSync } from 'node:fs'
+import { existsSync, globSync, readFileSync, realpathSync } from 'node:fs'
 import { createRequire } from 'node:module'
-import { dirname, resolve } from 'node:path'
+import { dirname, isAbsolute, resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { Rolldown, type UserConfigExport } from 'tsdown'
 import ts from 'typescript'
@@ -142,11 +142,29 @@ interface ViteApi {
   build(config: Record<string, unknown>): Promise<unknown>
 }
 
+function canonicalExistingPath(path: string): string {
+  // Existing paths use realpath so darwin `/var` and `/private/var` share one spelling.
+  // See .agents/notes/implemented/bug-fix/2026-11-22-darwin-seatbelt-realpath-and-build.md.
+  const absolute = resolve(path)
+  try {
+    return realpathSync.native(absolute)
+  } catch (error) {
+    if (!(error instanceof Error && 'code' in error && (error.code === 'ENOENT' || error.code === 'ENOTDIR'))) throw error
+    return absolute
+  }
+}
+
+function canonicalAliasReplacement(alias: AliasEntry): AliasEntry {
+  if (!isAbsolute(alias.replacement) || alias.replacement.includes('$') || !existsSync(alias.replacement)) return alias
+  return { ...alias, replacement: realpathSync.native(alias.replacement) }
+}
+
 async function collectShell(
   root: string,
   workspaceNames: ReadonlySet<string>,
   seen: Set<string>,
 ): Promise<void> {
+  const sourceRoot = canonicalExistingPath(root)
   for (const path of globSync(['rsh/Programs/**/vite.config.ts', 'rsh/Compatibility/DSH/web/frontend/vite.config.ts'], { cwd: root }).sort()) {
     const dir = dirname(resolve(root, path))
     const manifest = readManifest(resolve(dir, 'package.json'))
@@ -158,22 +176,26 @@ async function collectShell(
     if (loaded === null) throw new Error(`browser notices: cannot load ${configFile}`)
     const configRoot = loaded.config.root === undefined ? dir : resolve(dir, loaded.config.root)
     const config = await vite.resolveConfig({ configFile, root: configRoot, logLevel: 'error' }, 'build')
-    const shellRoot = config.root ?? dir
+    const shellRoot = canonicalExistingPath(config.root ?? dir)
     const input = config.build.rollupOptions?.input
     const entries = typeof input === 'string' ? { index: input }
       : Array.isArray(input) ? Object.fromEntries(input.map((entry, index) => [String(index), entry]))
         : input ?? {}
     const inputs = Object.fromEntries(Object.entries(entries).filter(([, entry]) => entry.endsWith('.html') || existsSync(entry)))
     if (!Object.values(inputs).some(entry => entry.endsWith('.html'))) throw new Error(`browser notices: ${manifest.name} has no HTML build entry`)
-    const pageInput = Object.keys(inputs).length === 1 ? Object.values(inputs)[0] : inputs
-    const configuredAliases = config.resolve?.alias ?? []
+    const canonicalInputs = Object.fromEntries(Object.entries(inputs).map(([name, entry]) => [
+      name,
+      canonicalExistingPath(isAbsolute(entry) ? entry : resolve(shellRoot, entry)),
+    ]))
+    const pageInput = Object.keys(canonicalInputs).length === 1 ? Object.values(canonicalInputs)[0] : canonicalInputs
+    const aliases = [...browserSourceAliases(sourceRoot), ...(config.resolve?.alias ?? [])].map(canonicalAliasReplacement)
     await vite.build({
       configFile: false,
       root: shellRoot,
       define: config.define,
       logLevel: 'error',
       plugins: [recorder(seen, workspaceNames, true)],
-      resolve: { alias: [...browserSourceAliases(root), ...configuredAliases] },
+      resolve: { alias: aliases },
       worker: { plugins: () => [recorder(seen, workspaceNames, true)] },
       build: {
         write: false,
