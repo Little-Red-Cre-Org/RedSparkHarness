@@ -53,7 +53,7 @@ Catalogs cache per ordinary session with a single-flight fetch; the scope-birth 
 
 ### Registration
 
-The `/client` exports are the plugin body (`apply`/`inject`) only; the source object is internal to the registration effect. The tool row registers the `skill` wire name in ui-tool's keyed `tool.call.toolview` slot.
+The `/client` exports are the plugin body (`apply`/`inject`) only; the source object is internal to the registration effect. The tool row registers the `skill` wire name in ui-tool's keyed `tool.call.toolview` slot. The Native transcript does not use that slot; it renders `NativeSkillRow` from `./native`.
 
 </details>
 

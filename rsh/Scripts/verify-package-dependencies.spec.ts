@@ -246,7 +246,7 @@ describe('package dependency scope', () => {
       '@redspark/rsh-client-native-application': [
         '@redspark/rsh-client-ui-primitives', '@redspark/rsh-client-ui-attachment',
         '@redspark/rsh-client-ui-goal', '@redspark/rsh-client-ui-trajectory',
-        '@redspark/rsh-client-ui-workflow-run',
+        '@redspark/rsh-client-ui-workflow-run', '@redspark/rsh-client-ui-skill',
       ],
       '@redspark/rsh-client-ui-attachment': ['clsx', 'react-dom'],
       '@redspark/rsh-client-ui-goal': ['@redspark/rsh-goal'],

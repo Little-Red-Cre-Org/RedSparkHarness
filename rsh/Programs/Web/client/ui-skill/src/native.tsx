@@ -16,7 +16,7 @@ import type { ReactElement } from 'react'
 import { en as commonEn, formatLocaleTemplate, zh as commonZh } from '@redspark/rsh-client-locale/dictionary'
 import { SkillRow } from './client/SkillRow.tsx'
 import { en, NS, zh, type SkillKey } from './client/locales.ts'
-import type { ToolCallViewProps } from '@redspark/rsh-client-ui-tool/client'
+import type { ToolCallBlock } from '@redspark/rsh-client-ui-tool/native'
 
 export { NS, en, zh, type SkillKey } from './client/locales.ts'
 export type { ToolCallBlock, ToolResultNode, RunningToolCall } from '@redspark/rsh-client-ui-tool/native'
@@ -24,7 +24,7 @@ export type { ToolCallBlock, ToolResultNode, RunningToolCall } from '@redspark/r
 /** Props of the Cordis-free skill tool row: the tool slice arrives from the caller. */
 export interface NativeSkillRowProps {
   /** Frozen running call or settled result node, as logged by the Host. */
-  readonly block: ToolCallViewProps['block']
+  readonly block: ToolCallBlock
   /** Locale for the row's copy, so no locale service is required. */
   readonly locale: 'en' | 'zh'
   /** Inspect this call in the trajectory view when the caller has one. */
@@ -42,25 +42,11 @@ function translate(locale: 'en' | 'zh'): TranslateNS<typeof NS> {
 }
 
 /**
- * `SkillRow` declares the full keyed-toolview props share, but it reads only
- * three of those members. Narrowing here keeps this entrypoint free of the
- * slot runtime's call-owner currency (`callId`, `toolName`, `openFile`,
- * `loadImage`) that a Native host has no way to supply.
- */
-type SkillRowComponent = (props: {
-  block: ToolCallViewProps['block']
-  inspect?: (() => void) | undefined
-  t: TranslateNS<typeof NS>
-}) => ReactElement
-
-const Row = SkillRow as unknown as SkillRowComponent
-
-/**
  * Render one `skill` tool call as an accent summary and instructions disclosure.
  * @param props - the durable call slice, an explicit locale, and an optional inspect action.
  * @returns the dedicated skill row.
  */
 export function NativeSkillRow({ block, locale, inspect }: NativeSkillRowProps): ReactElement {
   const t = translate(locale)
-  return <Row block={block} t={t} {...inspect === undefined ? {} : { inspect }} />
+  return <SkillRow block={block} t={t} {...inspect === undefined ? {} : { inspect }} />
 }

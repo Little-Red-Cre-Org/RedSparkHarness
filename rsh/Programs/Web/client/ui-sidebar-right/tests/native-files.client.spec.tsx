@@ -55,7 +55,7 @@ function fixture() {
     return <NativeFilesPanel sessionId={'session' as SessionId} workspaceRoot="/fixture" section={section}
       service={service} onOpenPreview={() => { setSection('preview') }} t={t} />
   }
-  return { Panel, read, list, readAll, readRelated,
+  return { Panel, service, read, list, readAll, readRelated,
     replaceFolder() { folderEntries = ['fresh-entry'] },
     emit(frame: WatchFrame) { for (const watch of watches) watch.enqueue(frame) },
     async closed() { await Promise.all(closed) },
@@ -226,5 +226,41 @@ it.each([false, true, 'pending'] as const)('refreshes HTML dependencies (initial
       if (descriptor === undefined) Reflect.deleteProperty(URL, key)
       else Object.defineProperty(URL, key, descriptor)
     }
+  }
+})
+
+it('keeps a second opened file, switches documents, and closes one tab', async () => {
+  const state = fixture()
+  state.list.mockResolvedValue({ path: '.', truncated: false, entries: [
+    { name: 'alpha.txt', type: 'file' }, { name: 'beta.txt', type: 'file' },
+  ] })
+  state.read.mockImplementation(async (_id, path) => page(path, 1, true))
+  function Panel() {
+    const [section, setSection] = useState<'files' | 'preview'>('files')
+    return <>
+      <button type="button" onClick={() => { setSection('files') }}>show-files</button>
+      <NativeFilesPanel sessionId={'session' as SessionId} workspaceRoot="/fixture" section={section}
+        service={state.service} onOpenPreview={() => { setSection('preview') }} t={t} />
+    </>
+  }
+  const view = render(<Panel />)
+  try {
+    fireEvent.click(await screen.findByRole('button', { name: 'alpha.txt' }))
+    await waitFor(() => { expect(view.container.querySelector('pre')?.textContent).toBe('./alpha.txt') })
+    fireEvent.click(screen.getByRole('button', { name: 'show-files' }))
+    fireEvent.click(screen.getByRole('button', { name: 'beta.txt' }))
+    await waitFor(() => { expect(view.container.querySelector('pre')?.textContent).toBe('./beta.txt') })
+    expect(screen.getAllByRole('tab').map(tab => tab.textContent)).toEqual(['alpha.txt', 'beta.txt'])
+    fireEvent.click(screen.getByRole('tab', { name: 'alpha.txt' }))
+    await waitFor(() => { expect(view.container.querySelector('pre')?.textContent).toBe('./alpha.txt') })
+    fireEvent.click(screen.getAllByRole('button', { name: 'closeDocument' })[1]!)
+    expect(screen.getAllByRole('tab').map(tab => tab.textContent)).toEqual(['alpha.txt'])
+    expect(view.container.querySelector('pre')?.textContent).toBe('./alpha.txt')
+    fireEvent.click(screen.getByRole('button', { name: 'closeDocument' }))
+    expect(screen.queryByRole('tab')).toBeNull()
+    expect(view.container.textContent).toContain('chooseFile')
+  } finally {
+    await act(async () => { view.unmount() })
+    await state.closed()
   }
 })

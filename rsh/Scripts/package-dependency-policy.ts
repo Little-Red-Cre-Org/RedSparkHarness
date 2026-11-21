@@ -169,7 +169,7 @@ const CLIENT_RUNTIME_DEPENDENCIES = {
   '@redspark/rsh-client-ui-session': ['@redspark/rsh-util-workspace-path'],
   '@redspark/rsh-client-ui-renderer': ['use-sync-external-store'],
   '@redspark/rsh-client-ui-layout': ['@redspark/rsh-client-store'],
-  '@redspark/rsh-client-native-application': ['@redspark/rsh-client-ui-primitives', '@redspark/rsh-client-ui-attachment', '@redspark/rsh-client-ui-goal', '@redspark/rsh-client-ui-trajectory', '@redspark/rsh-client-ui-workflow-run'],
+  '@redspark/rsh-client-native-application': ['@redspark/rsh-client-ui-primitives', '@redspark/rsh-client-ui-attachment', '@redspark/rsh-client-ui-goal', '@redspark/rsh-client-ui-trajectory', '@redspark/rsh-client-ui-workflow-run', '@redspark/rsh-client-ui-skill'],
   '@redspark/rsh-client-ui-attachment': ['clsx', 'react-dom'],
   '@redspark/rsh-client-ui-goal': ['@redspark/rsh-goal'],
   '@redspark/rsh-client-ui-trajectory': ['@tanstack/react-virtual', 'diff'],

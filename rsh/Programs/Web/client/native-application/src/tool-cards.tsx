@@ -1,4 +1,5 @@
 /** Tool presentation derived solely from accepted, durable Session facts. */
+import { NativeSkillRow } from '@redspark/rsh-client-ui-skill/native'
 import { NativeToolCard, type ToolCallBlock, type RunningToolCall } from '@redspark/rsh-client-ui-tool/native'
 import type { SessionEvent } from '@redspark/rsh-session/types'
 import type {} from '@redspark/rsh-native-tools/types'
@@ -70,10 +71,17 @@ export function toolCardRecords(events: readonly SessionEvent[]): readonly ToolC
 
 /**
  * Render a paired root call without offering unavailable Host file or trajectory actions.
+ * A `skill` call uses the dedicated row; its children use this same wrapper.
  * @param props - accepted call material and the selected locale and working directory.
- * @returns the shared result card with its recorded failure and metadata.
+ * @returns the skill row or the shared result card, with recorded failure and metadata.
  */
 export function ToolCard({ block, locale, cwd }: { block: ToolCallBlock; locale: 'en' | 'zh'; cwd?: string | undefined }) {
   const toolName = 'kind' in block ? block.call?.name ?? block.callId : block.name
+  if (toolName === 'skill') {
+    return <>
+      <NativeSkillRow block={block} locale={locale} />
+      {block.subCalls.map(child => <ToolCard key={child.callId} block={child} locale={locale} cwd={cwd} />)}
+    </>
+  }
   return <NativeToolCard block={block} toolName={toolName} locale={locale} cwd={cwd} />
 }

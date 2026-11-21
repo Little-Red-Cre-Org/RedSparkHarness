@@ -66,6 +66,7 @@
     "@redspark/rsh-client-ui-attachment": "workspace:^",
     "@redspark/rsh-client-ui-goal": "workspace:^",
     "@redspark/rsh-client-ui-primitives": "workspace:^",
+    "@redspark/rsh-client-ui-skill": "workspace:^",
     "@redspark/rsh-client-ui-trajectory": "workspace:^",
     "@redspark/rsh-native-runtime": "workspace:^",
     "@redspark/rsh-native-tools": "workspace:^",

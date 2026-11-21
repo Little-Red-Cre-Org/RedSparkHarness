@@ -11427,6 +11427,9 @@ importers:
       '@redspark/rsh-client-ui-primitives':
         specifier: workspace:^
         version: link:../ui-primitives
+      '@redspark/rsh-client-ui-skill':
+        specifier: workspace:^
+        version: link:../ui-skill
       '@redspark/rsh-client-ui-trajectory':
         specifier: workspace:^
         version: link:../ui-trajectory
