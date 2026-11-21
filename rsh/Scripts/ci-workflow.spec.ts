@@ -400,6 +400,22 @@ describe('CI workflow', () => {
     }
   })
 
+  it('seatbelt unit step builds before the unit suite', () => {
+    const sandbox = workflowJob(loadWorkflow('.github/workflows/sandbox.yml'), 'sandbox-e2e')
+    if (!Array.isArray(sandbox.steps)) throw new TypeError('sandbox-e2e must define steps')
+    const steps = sandbox.steps.filter(isRecord)
+    const buildIndex = steps.findIndex(step => step.if === "matrix.runner == 'seatbelt'" && step.run === 'pnpm run build')
+    const testIndex = steps.findIndex(step => step.if === "matrix.runner == 'seatbelt'" && step.run === 'pnpm run test')
+
+    expect(sandbox['timeout-minutes']).toBe(60)
+    expect(sandbox['continue-on-error']).toBeUndefined()
+    expect(buildIndex).toBeGreaterThanOrEqual(0)
+    expect(testIndex).toBe(buildIndex + 1)
+    expect(steps[buildIndex]).not.toHaveProperty('continue-on-error')
+    expect(steps[testIndex]).not.toHaveProperty('continue-on-error')
+    expect(steps.some(step => step.run === 'pnpm run build' && step.if !== "matrix.runner == 'seatbelt'")).toBe(false)
+  })
+
   it('runs required benchmarks on standard hosted Linux independently of failover', () => {
     const workflow = loadWorkflow('.github/workflows/ci.yml')
     const benchmark = workflowJob(workflow, 'node-24-bench')
