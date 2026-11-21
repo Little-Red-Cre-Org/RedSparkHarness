@@ -16,7 +16,7 @@ The Desktop project manager keeps only Native module management. Legacy plugin l
 
 The CLI retires the `web` command alias and refuses `--profile web` and `--from-default-profile web`. Its native profile templates list only `native-web`. CLI tests that booted the retired entry are deleted; Native Web boot and authorization coverage lives in the Web application e2e suite and the Native session-controller authorization tests. The GitHub webhook real-HTTP end-to-end case has no replacement because it drove the retired server; the webhook handler and composition suites remain.
 
-The browser renderer and its supporting Native host packages remain: `rsh/Programs/Web/client/**`, the Native boot entry under `client/web`, `host/native-web-assets`, `host/native-web-session-controller`, the `native-web` profile, `rsh-web-frontend`'s built assets, and the compatibility bundles plus `profile: web` snapshots used by the existing browser e2e lane. Deleting those requires the follow-up legacy Web retirement, because the snapshots still boot that composition and several Native gaps (subagent conversation and interrupt RPCs, session fork, skill tool row, settings document, right-sidebar tabs) block moving them first.
+The browser renderer and its supporting Native host packages remain: `rsh/Programs/Web/client/**`, the Native boot entry under `client/web`, `host/native-web-assets`, `host/native-web-session-controller`, the `native-web` profile, `rsh-web-frontend`'s built assets, and the compatibility bundles plus `profile: web` snapshots used by the existing browser e2e lane. Deleting those requires the follow-up legacy Web retirement, because the snapshots still boot that composition and the remaining Native UI gaps (skill tool row, settings document, right-sidebar tabs) block moving them first. Native Host subagent conversation, catalog, interrupt, and session fork are served by [Native Host subagent and fork](../feature/2026-11-22-native-host-subagent-and-fork.md).
 
 `tsconfig.host.json` references the Web frontend project because `verify-publish-payload` reads `PLATFORM_MODULES` and `PRELOADED_CLIENT_EXTERNALS`; the reference resolves those values to declarations without adding client sources to the host program.
 
@@ -26,7 +26,7 @@ The browser renderer and its supporting Native host packages remain: `rsh/Progra
 
 **Keep the compatibility assembly hidden behind a flag:** a hidden fallback keeps the Cordis boot glue and plugin manager alive, and users would get two different Desktop runtimes from one release.
 
-**Migrate the Web snapshots to Native now:** several Native RPC and UI gaps would silently lose coverage for subagent conversation, interrupt, fork, skills, settings documents, and multi-document sidebar tabs.
+**Migrate the Web snapshots to Native now:** the remaining Native UI gaps would silently lose coverage for the skill tool row, settings documents, and multi-document sidebar tabs.
 
 **Make Desktop accept a custom Cordis profile with a warning:** silent acceptance preserves the legacy profile format and blocks every later Cordis deletion. The migration error names the supported replacement.
 
@@ -36,7 +36,7 @@ Legacy Desktop profiles now fail loudly with a migration pointer instead of star
 
 The standalone browser deployment has no supported launch path, but its Cordis bundles, server packages, and snapshots remain for the browser e2e lane. The next change must retire that lane, migrate or document each of the 32 `profile: web` scenarios, and remove `rsh-web-app`, `rsh-base`, the Typert remote Web surface, and the remaining Cordis Web entry points.
 
-The known Native gaps are product gaps, not hidden fallbacks: subagent conversation and interrupt RPCs, session fork, the skill tool row, the settings open-document route, and right-sidebar multi-document tabs. Until they exist, the snapshots that exercise them stay on the legacy composition.
+The remaining Native gaps are product gaps, not hidden fallbacks: the skill tool row, the settings document UI, and right-sidebar multi-document tabs. Native Host subagent conversation, catalog, interrupt, and session fork are served. Until the skill tool row, settings document UI, and right-sidebar multi-document tabs exist, the snapshots that exercise them stay on the legacy composition.
 
 ## Verification
 

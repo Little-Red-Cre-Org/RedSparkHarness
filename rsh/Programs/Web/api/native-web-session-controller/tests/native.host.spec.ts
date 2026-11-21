@@ -1218,6 +1218,7 @@ it('creates, resumes and cancels one durable Session through the real browser RP
     expect((await fetch(new URL('/api/native-session/follow', url), { method: 'POST', body: JSON.stringify(admission) })).status).toBe(401)
     expect((await rpc.response!('/api', 'native-session/follow', { ...admission, admissionId: 'wrong' }, new AbortController().signal)).status).toBe(409)
     expect((await rpc.response!('/api', 'native-session/follow', admission, new AbortController().signal)).status).toBe(409)
+    expect((await rpc.response!('/api', 'native-session/subagent-follow', {}, new AbortController().signal)).status).toBe(409)
     firstContinue.resolve(undefined)
     await first
     expect(submissionUpdates.filter(update => update.requestId === submissionId).map(update => update.status))

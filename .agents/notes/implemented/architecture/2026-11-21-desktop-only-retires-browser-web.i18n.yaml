@@ -2,5 +2,5 @@
 # side as of the last confirmed-consistent state. Both languages carry equal authority;
 # after editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write .agents/notes/implemented/architecture/2026-11-21-desktop-only-retires-browser-web.md
-2026-11-21-desktop-only-retires-browser-web.md: dea62e4a28cc689e8070182ae2d9d26bb96a3eea
-2026-11-21-desktop-only-retires-browser-web.zh.md: 8dba6cefea5506997e4a34e3cfad60419c7c3035
+2026-11-21-desktop-only-retires-browser-web.md: a8e2a68e809472081ea81237eba9aaa81c42bba6
+2026-11-21-desktop-only-retires-browser-web.zh.md: cfa479935188058b2de8589ede5ca19d8702c0f2

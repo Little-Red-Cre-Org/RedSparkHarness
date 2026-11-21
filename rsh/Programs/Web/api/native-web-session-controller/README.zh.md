@@ -62,6 +62,8 @@ Session 文件 RPC 使用 `session/files/list`、`stat`、`read`、`read-all` �
 
 提示先取得确切准入身份，再等待结算。调用方在发送前取消时拒绝准入；显式轮次取消信号会使用该身份请求 Host 排空。断开信号只会停止本地跟随和结算等待，不会取消 Host 执行。断开的活动轮次会占用其 Session 槽位直到结算，随后丢弃无人接收的结果，使该 Session 可以接纳下一次提示；结算前的 attach 会为其替代等待者重新保留该结果。待处理轮次和结算等待者分别受 maxPendingRequests 限制。安装关闭取消并排空所有轮次。
 
+`session/fork` 会铸造目标 Session id，并调用已选 root execution 的 fork，且不修改源 Session。`subagents/list` 返回该 parent 的直接子项与描述符诊断。`subagents/prompt` 接受 `queue` 或 `steer`；两者都调用 Native next-step 准入，不等待子轮次结束。`subagents/interruptByParent` 通过活动的直接 parent 或活动的 invocation-root 祖先向一个可继续子项发信号，且不调用 `session/cancel`。缺失或非活动子项会被接受。没有活动祖先的活动子项是 `subagent/parent-unavailable`，祖先拒绝是 `subagent/unauthorized`。带 `{ sessionId }` 的 `session/history` 保持不变，包含原始子 Session id；`{ address }` 仅在 parent、工作区与描述符检查通过后读取该子项。POST `/api/native-session/subagent-follow` 跟随同一已寻址子项，且不取得 parent 轮次。这些失败使用固定消息，不返回引擎文本、路径或密钥。
+
 <a id="invariants"></a>
 
 可选 approval 与 userQuestions Provider 只为本 Program 拥有的精确活动根调用接入 Web 回答者。执行器在展示或回答前捕获精确应用所有者；仅 Session 标识相同不会准入其他 Program 的请求。人工交互为每次调用按先后顺序呈现的临时请求，全局上限由 maxPendingHumanRequests 指定。回答需要经过认证的 Session、调用与展示标识；过期或取消的回答拒绝。既有 Provider 与工具消费者保持决策审计及结果持久化职责。卸载先撤销待答输入，再等待执行结束。

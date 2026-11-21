@@ -68,7 +68,7 @@
         "requestContexts",
     "sessionReference",
         "sessionFeedback",
-        "messageFeedback", "fileReferences"
+        "messageFeedback", "fileReferences", "subagents"
       ],
       "provides": [
         "nativeWebSession",
@@ -118,7 +118,10 @@
     "@redspark/rsh-workspace-definition": "workspace:^",
     "@redspark/rsh-host-directory-picker-native": "workspace:^",
     "@redspark/rsh-command-feedback": "workspace:^",
-    "@redspark/rsh-message-feedback": "workspace:^"
+    "@redspark/rsh-message-feedback": "workspace:^",
+    "@redspark/rsh-native-subagent": "workspace:^",
+    "@redspark/rsh-subagent-protocol": "workspace:^",
+    "@redspark/rsh-util-time": "workspace:^"
   },
   "scripts": {
     "bundle": "tsdown"

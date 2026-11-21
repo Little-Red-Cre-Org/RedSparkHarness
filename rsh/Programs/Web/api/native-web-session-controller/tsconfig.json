@@ -127,6 +127,15 @@
     },
     {
       "path": "../../../../Modules/Official/feedback/message-feedback"
+    },
+    {
+      "path": "../../../../Engine/subagent/native-subagent"
+    },
+    {
+      "path": "../../../../Engine/subagent/subagent-protocol"
+    },
+    {
+      "path": "../../../../Core/util/time"
     }
   ]
 }
