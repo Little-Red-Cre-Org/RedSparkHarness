@@ -239,8 +239,43 @@ export interface NativeActiveSessionOperations {
   onDetached(observer: (owner: NativeActiveSessionOwner) => Promise<void>): () => Promise<void>
 }
 
+/**
+ * Root admission facts available before an owner is registered.
+ * `rootOrigin` is omitted for an interactive root.
+ */
+export interface NativePromptToolAdmission {
+  /** Program entry that will own this prompt. */
+  readonly invocation: 'root' | 'delegated'
+  /** Requested or already stored scheduled origin. */
+  readonly rootOrigin?: 'scheduled'
+}
+
+/**
+ * Prompt-tool installation selected by the Provider that owns eligibility.
+ * Native headless calls `prepare` after origin is known. It publishes this port on
+ * `rootExecution` and, from the headless plugin, as `promptToolPreparation`.
+ * The scheduler binds that port. It already requires `rootExecution`, so providing
+ * this service from the scheduler would cycle.
+ */
+export interface NativePromptToolPreparation {
+  /**
+   * Publish the installer used by later admissions.
+   * @param prepare - admission installer. A second different installer fails.
+   * @returns removal of this installer.
+   */
+  bind(prepare: NativePromptToolPreparation['prepare']): () => void
+  /**
+   * Apply this admission's tool visibility on the exact Agent.
+   * @param agent - live Agent whose prompt will be composed.
+   * @param admission - invocation and root origin, with no attached owner.
+   * @returns rollback for a registration this call created, or undefined when nothing is bound or this call installed nothing.
+   */
+  prepare(agent: NativeAgent, admission: NativePromptToolAdmission): (() => Promise<void>) | undefined
+}
+
 declare module '@redspark/rsh-native-runtime' {
   interface NativeServices {
     activeSessions: NativeActiveSessionOperations
+    promptToolPreparation: NativePromptToolPreparation
   }
 }

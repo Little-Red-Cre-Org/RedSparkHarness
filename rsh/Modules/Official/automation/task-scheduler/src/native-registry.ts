@@ -2,7 +2,7 @@
 import { SessionId } from '@redspark/rsh-session/native'
 import { createUserMessage } from '@redspark/rsh-llm/native'
 import type { NativeAgent, NativeAgentRegistry } from '@redspark/rsh-native-agent'
-import type { NativeActiveSessionOperations, NativeActiveSessionOwner, NativeRootExecutionOperations, NativeRootRouteId } from '@redspark/rsh-native-session-execution'
+import type { NativeActiveSessionOperations, NativeActiveSessionOwner, NativePromptToolAdmission, NativeRootExecutionOperations, NativeRootRouteId } from '@redspark/rsh-native-session-execution'
 import type { GoalRef, GoalView } from '@redspark/rsh-goal/types'
 import type { NativeScheduledGoalAdmission, NativeScheduledGoalAdmissionLease, NativeScheduledGoalExecutor,
   NativeScheduledGoalHost } from '@redspark/rsh-goal/native'
@@ -80,13 +80,26 @@ export class NativeTaskSchedulerRegistry implements NativeTaskSchedulerOperation
     })
   }
   /**
+   * Test whether this Agent would receive interactive task management for an admission.
+   * This does not require an attached owner and does not create execution authority.
+   * @param agent - live Agent whose prompt or management call is being admitted.
+   * @param admission - invocation and root origin known for that admission.
+   * @returns whether the admission is an interactive root on the exact live Agent.
+   */
+  eligible(agent: NativeAgent, admission: NativePromptToolAdmission): boolean {
+    return !this.closing && admission.invocation === 'root' && admission.rootOrigin !== 'scheduled'
+      && this.agents.get(agent.id) === agent
+  }
+
+  /**
    * Test current management eligibility without creating execution authority.
    * @param owner - attached Program owner.
    * @returns whether the owner is an interactive root rather than delegated or scheduled execution.
    */
   accepts(owner: NativeActiveSessionOwner): boolean {
-    return !this.closing && owner.invocation === 'root' && owner.rootOrigin !== 'scheduled'
-      && this.agents.get(owner.agent.id) === owner.agent && this.owners.owner(owner.agent, owner.session) === owner
+    return this.eligible(owner.agent, owner.rootOrigin === 'scheduled'
+      ? { invocation: owner.invocation, rootOrigin: 'scheduled' } : { invocation: owner.invocation })
+      && this.owners.owner(owner.agent, owner.session) === owner
   }
   /** @inheritdoc */
   create(owner: NativeActiveSessionOwner, request: CreateTaskRequest, signal: AbortSignal): Task {

@@ -44,7 +44,8 @@
       ],
       "provides": [
         "application",
-        "rootExecution"
+        "rootExecution",
+        "promptToolPreparation"
       ]
     }
   },
@@ -74,6 +75,7 @@
   ],
   "license": "MIT",
   "devDependencies": {
+    "@redspark/rsh-task-scheduler": "workspace:^",
     "@redspark/rsh-tool-code-runtime": "workspace:^",
     "@redspark/rsh-session-projection": "workspace:^",
     "@redspark/rsh-session-persistence-jsonl": "workspace:^",

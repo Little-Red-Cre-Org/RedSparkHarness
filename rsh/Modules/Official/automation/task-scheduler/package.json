@@ -30,7 +30,9 @@
         "agents",
         "tools"
       ],
-      "optional": [],
+      "optional": [
+        "promptToolPreparation"
+      ],
       "provides": [
         "taskScheduler",
         "scheduledGoalHost"
