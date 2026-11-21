@@ -140,7 +140,7 @@ async function main(): Promise<void> {
     if (process.platform === 'darwin') {
       await signMacOSRuntime(RSH_OUTPUT_ROOT, resolveDesktopAppId(process.env), resolveMacOSSigningEnvironment(process.env))
     }
-    writeDesktopRuntime(RSH_OUTPUT_ROOT, release, packageSet.packages.map(entry => entry.name), target, packageSet.assembly)
+    writeDesktopRuntime(RSH_OUTPUT_ROOT, release, packageSet.packages.map(entry => entry.name), target)
     const descriptor = await verifyDesktopRuntime(RSH_OUTPUT_ROOT, release.version, target)
     await new Promise<void>((accept, reject) => {
       execFile(NODE, [join(APP_ROOT, 'tests/fixtures/runtime-payload-smoke.mjs'), RSH_OUTPUT_ROOT],

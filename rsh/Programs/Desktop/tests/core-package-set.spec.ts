@@ -6,8 +6,6 @@ import { afterEach, describe, expect, it } from 'vitest'
 import {
   DESKTOP_PACKAGES_DIR,
   DESKTOP_PACKAGE_SET_FILE,
-  DESKTOP_COMPATIBILITY_HOST_PACKAGE,
-  DESKTOP_COMPATIBILITY_OPTIONAL_DEPENDENCIES,
   desktopCorePackageOverrides,
   desktopRshPackageSpec,
   parseDesktopCorePackageSet,
@@ -49,7 +47,7 @@ function packageSetProject(): {
   writeFileSync(join(root, DESKTOP_PACKAGE_SET_FILE), `${JSON.stringify({
     schemaVersion: 2, assembly: 'native',
     packages: [dsh, host],
-    ignoredOptionalDependencies: [...DESKTOP_COMPATIBILITY_OPTIONAL_DEPENDENCIES].sort(),
+    ignoredOptionalDependencies: [],
   })}\n`)
   return { root, dsh, base, host }
 }
@@ -60,41 +58,33 @@ afterEach(() => {
 
 describe('desktop core package set', () => {
   it('pins the direct dsh dependency and every internal package to local tarballs', () => {
-    const { root, dsh, base, host } = packageSetProject()
+    const { root, dsh, host } = packageSetProject()
     const packageSet = verifyDesktopCorePackageSet(root, '1.2.3')
     expect(desktopRshPackageSpec(packageSet)).toBe('file:./desktop-packages/dsh.tgz')
     expect(desktopCorePackageOverrides(packageSet)).toEqual({
       '@redspark/rsh': 'file:./desktop-packages/dsh.tgz',
       '@redspark/rsh-desktop-host': 'file:./desktop-packages/dsh-desktop-host.tgz',
     })
-    expect(packageSet.ignoredOptionalDependencies).toEqual([...DESKTOP_COMPATIBILITY_OPTIONAL_DEPENDENCIES].sort())
-    const compatibilityHost = record(DESKTOP_COMPATIBILITY_HOST_PACKAGE, 'compat-host.tgz', Buffer.from('compat'))
-    const cordis = record('@redspark/cordis', 'cordis.tgz', Buffer.from('cordis'))
-    const compatibilityPackages = [dsh, base, host, compatibilityHost, cordis]
-      .sort((left, right) => left.name.localeCompare(right.name))
-    const compatibility = parseDesktopCorePackageSet({ schemaVersion: 2, assembly: 'compatibility',
-      packages: compatibilityPackages,
-      ignoredOptionalDependencies: DESKTOP_COMPATIBILITY_OPTIONAL_DEPENDENCIES
-        .filter(name => !compatibilityPackages.some(entry => entry.name === name)).sort() }, '1.2.3')
-    expect(compatibility.assembly).toBe('compatibility')
-    expect(compatibility.packages.map(entry => entry.name)).toContain(DESKTOP_COMPATIBILITY_HOST_PACKAGE)
-    expect(compatibility.ignoredOptionalDependencies).not.toContain('@redspark/cordis')
+    expect(packageSet.ignoredOptionalDependencies).toEqual([])
+    // Profiles prepared before the compatibility assembly retired keep their
+    // ignored-edge list so their lockfiles still reject those resolutions.
+    expect(parseDesktopCorePackageSet({ schemaVersion: 2, assembly: 'native', packages: [dsh, host],
+      ignoredOptionalDependencies: ['@redspark/rsh-base'] }).ignoredOptionalDependencies).toEqual(['@redspark/rsh-base'])
+    expect(() => parseDesktopCorePackageSet({ schemaVersion: 2, assembly: 'compatibility',
+      packages: [dsh, host], ignoredOptionalDependencies: [] })).toThrow(/invalid descriptor/u)
   })
 
   it('rejects version drift, descriptor disorder, corruption, and extra files', () => {
     const { root, dsh, base, host } = packageSetProject()
     expect(() => verifyDesktopCorePackageSet(root, '2.0.0')).toThrow(/does not match Desktop/u)
-    expect(() => parseDesktopCorePackageSet({ schemaVersion: 2, assembly: 'native', packages: [dsh, base, host],
-      ignoredOptionalDependencies: [...DESKTOP_COMPATIBILITY_OPTIONAL_DEPENDENCIES].sort() }))
-      .toThrow(/Native assembly contains a compatibility-only package/u)
     expect(() => parseDesktopCorePackageSet({
       schemaVersion: 2, assembly: 'native',
       packages: [dsh, { ...host, version: '2.0.0' }],
-      ignoredOptionalDependencies: [...DESKTOP_COMPATIBILITY_OPTIONAL_DEPENDENCIES].sort(),
-    }, '1.2.3')).toThrow(/dsh-desktop-host@2\.0\.0 does not match Desktop 1\.2\.3/u)
+      ignoredOptionalDependencies: [],
+    }, '1.2.3')).toThrow(/rsh-desktop-host@2\.0\.0 does not match Desktop 1\.2\.3/u)
     expect(() => parseDesktopCorePackageSet({
       schemaVersion: 2, assembly: 'native', packages: [base, dsh, host],
-      ignoredOptionalDependencies: [...DESKTOP_COMPATIBILITY_OPTIONAL_DEPENDENCIES].sort(),
+      ignoredOptionalDependencies: [],
     }))
       .toThrow(/sorted by name/u)
     writeFileSync(join(root, DESKTOP_PACKAGES_DIR, dsh.file), 'changed')
@@ -107,7 +97,7 @@ describe('desktop core package set', () => {
     const dsh = record('@redspark/rsh', 'dsh.tgz', Buffer.from('dsh'))
     const host = record('@redspark/rsh-desktop-host', 'host.tgz', Buffer.from('host'))
     const packageSet = parseDesktopCorePackageSet({ schemaVersion: 2, assembly: 'native', packages: [dsh, host],
-      ignoredOptionalDependencies: [...DESKTOP_COMPATIBILITY_OPTIONAL_DEPENDENCIES].sort() })
+      ignoredOptionalDependencies: [] })
     expect(() => {
       verifyDesktopCoreLockfile(
         "packages:\n  '@redspark/rsh@file:desktop-packages/dsh.tgz':\n    resolution: {}\n",
@@ -120,15 +110,22 @@ describe('desktop core package set', () => {
         packageSet,
       )
     }).toThrow(/outside the local package set/u)
-    // A compatibility-only edge may still resolve from the registry, because the Native
-    // assembly deliberately omits it. The Cordis kernel is no longer such an edge: the bridge
-    // ships it locally, so naming it here would be a package-set omission.
+    // Profiles prepared before the compatibility assembly retired keep their ignored-edge
+    // list, so their lockfiles still reject resolutions of a package the profile omitted.
+    const legacy = parseDesktopCorePackageSet({ schemaVersion: 2, assembly: 'native', packages: [dsh, host],
+      ignoredOptionalDependencies: ['@redspark/rsh-app-boot'] })
+    expect(() => {
+      verifyDesktopCoreLockfile(
+        "packages:\n  '@redspark/rsh-app-boot@1.0.0':\n    resolution: {integrity: sha512-registry}\n",
+        legacy,
+      )
+    }).toThrow(/ignored compatibility optional @redspark\/rsh-app-boot/u)
     expect(() => {
       verifyDesktopCoreLockfile(
         "packages:\n  '@redspark/rsh-app-boot@1.0.0':\n    resolution: {integrity: sha512-registry}\n",
         packageSet,
       )
-    }).toThrow(/ignored compatibility optional @redspark\/dsh-app-boot/u)
+    }).not.toThrow()
   })
 
 })

@@ -39,7 +39,6 @@ export function startupFailureDocument(locale: DesktopLocale, failure: DesktopEr
 ${profileRecovery ? `<p>${escape(locale.messages.startupConfigurationAdvice)}</p>` : ''}
 <pre role="alert">${escape(details)}</pre>
 <form action="dsh-recovery://restart"><button>${escape(locale.messages.restartApplication)}</button></form>
-${profileRecovery ? `<form action="dsh-recovery://plugins"><button>${escape(locale.messages.disableThirdPartyPlugins)}</button></form>
-<form action="dsh-recovery://reset"><button>${escape(locale.messages.resetConfiguration)}</button></form>` : ''}
+${profileRecovery ? `<form action="dsh-recovery://reset"><button>${escape(locale.messages.resetConfiguration)}</button></form>` : ''}
 </main></html>`
 }

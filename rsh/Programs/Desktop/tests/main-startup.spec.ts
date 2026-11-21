@@ -24,7 +24,6 @@ const harness = await vi.hoisted(async () => {
   let applicationMenu: unknown
   const desktopPetClose = vi.fn()
   const desktopPetUpdate = vi.fn()
-  let pluginsEnabled = false
   let nativeEnabled = false
   let nativeLists = 0
   let nativeMutationOutcome: unknown
@@ -137,8 +136,6 @@ const harness = await vi.hoisted(async () => {
     get hostStarted() { return hostStarted }, get navigated() { return navigated },
     get errorPublished() { return errorPublished }, get quitCompleted() { return quitCompleted },
     nextHostStart() { hostStarted = deferred(); return hostStarted.promise },
-    get pluginsEnabled() { return pluginsEnabled },
-    set pluginsEnabled(value: boolean) { pluginsEnabled = value },
     get nativeEnabled() { return nativeEnabled },
     set nativeEnabled(value: boolean) { nativeEnabled = value },
     get nativeMutationOutcome() { return nativeMutationOutcome },
@@ -172,7 +169,6 @@ const harness = await vi.hoisted(async () => {
     reset() {
       windows.length = 0; hosts.length = 0; handlers.clear(); app.removeAllListeners(); applicationMenu = undefined
       app.isPackaged = true
-      pluginsEnabled = false
       nativeEnabled = false; nativeLists = 0; nativeMutationOutcome = undefined; nativeMutations.length = 0
       nativeMutationGate = undefined; nativeMutationWaiting = deferred()
       nativeMutationRecoveryComplete = false; nativeMutationRecoveryRestartError = ''
@@ -222,7 +218,6 @@ vi.mock('../src/project-manager.ts', () => ({
     readonly assertProfileRuntime = harness.assertProfileRuntime
     canRecoverProfile = harness.canRecoverProfile
     supportsNativeModuleManagement = () => harness.nativeEnabled
-    supportsLegacyPluginManagement = () => !harness.nativeEnabled
     refuseNativeMutation(code: string) { return { status: 'refused', error: { code } } }
     refuseNativeList(code: string) { return { status: 'refused', error: { code } } }
     async listNativeModules() {
@@ -258,13 +253,9 @@ vi.mock('../src/project-manager.ts', () => ({
       }
       return { status: 'applied', revision: 'b'.repeat(64), backend: { phase: 'ready' } }
     }
-    async mutate(_mutation: unknown, hooks: { beforeChange(): Promise<void>; afterChange(): Promise<void> }) {
-      await hooks.beforeChange()
-      harness.pluginsEnabled = false
-      await hooks.afterChange()
-    }
     async resetConfiguration(hooks: { beforeChange(): Promise<void>; afterChange(): Promise<void> }) {
-      await this.mutate(undefined, hooks)
+      await hooks.beforeChange()
+      await hooks.afterChange()
     }
   },
 }))
@@ -476,7 +467,7 @@ describe('desktop main startup', () => {
       protocolVersion: 1,
       locale: async () => resolveDesktopLocale('en'),
       backend: { status: async () => state, subscribe: () => () => {} },
-      disablePlugins: async () => {}, restart: async () => {}, resetConfiguration: async () => {},
+      restart: async () => {}, resetConfiguration: async () => {},
     } })
     runInContext(readFileSync(new URL('../renderer/startup.js', import.meta.url), 'utf8'), normalPage.getInternalVMContext())
     await vi.waitFor(() => {
@@ -555,7 +546,7 @@ describe('desktop main startup', () => {
     expect(invoke(DESKTOP_IPC.backendStatus)).toMatchObject({ phase: 'error', errorType: 'Error' })
   })
 
-  it.each(['plugins', 'reset'])('runs %s recovery from a document with a broken preload', async (action) => {
+  it('runs reset recovery from a document with a broken preload', async () => {
     await import('../src/main.ts')
     await harness.preparing.promise
     const window = harness.windows[0]!
@@ -566,7 +557,7 @@ describe('desktop main startup', () => {
     await Promise.resolve(invoke(DESKTOP_IPC.backendRetry))
     const started = harness.nextHostStart()
     const event = { preventDefault: vi.fn() }
-    window.webContents.emit('will-navigate', event, `dsh-recovery://${action}/?`)
+    window.webContents.emit('will-navigate', event, 'dsh-recovery://reset/?')
     await harness.hosts[0]!.stopping.promise
     harness.hosts[0]!.exited.resolve()
     await started
@@ -608,26 +599,6 @@ describe('desktop main startup', () => {
     expect(harness.windows).toHaveLength(1)
     expect(window.urls.at(-1)).toContain('data:text/html')
     expect(harness.dialog.showErrorBox).not.toHaveBeenCalled()
-  })
-
-  it('offers plugin recovery and disables plugins before restarting in the same window', async () => {
-    harness.pluginsEnabled = true
-    await import('../src/main.ts')
-    await harness.preparing.promise
-    harness.prepared.resolve()
-    await harness.hostStarted.promise
-    harness.hosts[0]!.exited.resolve()
-    harness.hosts[0]!.ready.reject(new Error('Plugin initialization failed'))
-    await harness.errorPublished.promise
-    expect(invoke(DESKTOP_IPC.backendStatus)).toMatchObject({ phase: 'error', profileRecovery: true })
-    const nextStarted = harness.nextHostStart()
-    const recovery = Promise.resolve(invoke(DESKTOP_IPC.pluginsDisableAll))
-    await nextStarted
-    expect(harness.pluginsEnabled).toBe(false)
-    harness.hosts[1]!.ready.resolve()
-    await recovery
-    expect(harness.windows).toHaveLength(1)
-    expect(invoke(DESKTOP_IPC.backendStatus)).toEqual({ phase: 'ready' })
   })
 
   it('waits for Host exit before relaunching the application', async () => {

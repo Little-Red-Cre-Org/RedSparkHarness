@@ -13,11 +13,8 @@ export const DESKTOP_PACKAGES_DIR = 'desktop-packages'
 /** Private package installed beside dsh to boot the Desktop Host process. */
 export const DESKTOP_HOST_PACKAGE = '@redspark/rsh-desktop-host'
 
-/** Compatibility-only Host installed into profiles that select legacy Cordis bundles. */
-export const DESKTOP_COMPATIBILITY_HOST_PACKAGE = '@redspark/rsh-desktop-host-compatibility'
-
 /**
- * Cordis runtime packages the Native assembly ships on purpose.
+ * Cordis runtime packages the Desktop assembly ships on purpose.
  *
  * The Cordis *kernel* is a service container, not the legacy Desktop assembly: a Native row can
  * host a Cordis plugin through it (see `@redspark/rsh-cordis-bridge`) so one plugin ecosystem
@@ -28,54 +25,10 @@ export const CORDIS_RUNTIME_PACKAGES = [
   '@redspark/cordis',
 ] as const
 
-/** Optional package edges owned only by the legacy Cordis Desktop assembly. */
-export const DESKTOP_COMPATIBILITY_OPTIONAL_DEPENDENCIES = [
-  '@redspark/cordis-plugin-hmr',
-  '@redspark/cordis-plugin-include',
-  '@redspark/cordis-plugin-loader',
-  '@redspark/cordis-plugin-timer',
-  '@redspark/rsh-acp-app',
-  '@redspark/rsh-agent',
-  '@redspark/rsh-agent-default-model',
-  '@redspark/rsh-agent-tool-presentation',
-  '@redspark/rsh-app-boot',
-  '@redspark/rsh-base',
-  '@redspark/rsh-client-ui-agent-preset',
-  '@redspark/rsh-cmdline',
-  DESKTOP_COMPATIBILITY_HOST_PACKAGE,
-  '@redspark/rsh-headless',
-  '@redspark/rsh-hooks-claude-code',
-  '@redspark/rsh-hooks-codex',
-  '@redspark/rsh-invariants',
-  '@redspark/rsh-jobs-local',
-  '@redspark/rsh-rsh',
-  '@redspark/rsh-sdk-app',
-  '@redspark/rsh-sdk-minimal',
-  '@redspark/rsh-tool-bash-persistent',
-  '@redspark/rsh-tool-jobs',
-  '@redspark/rsh-tool-present',
-  '@redspark/rsh-tool-pwsh-persistent',
-  '@redspark/rsh-tool-skill',
-  '@redspark/rsh-tool-str-replace-editor',
-  '@redspark/rsh-web-app',
-  '@redspark/rsh-webhook',
-  '@redspark/rsh-webhook-github',
-  '@redspark/rsh-user-question-broker',
-] as const
-
-/** Desktop resource assembly selected when preparing one release. */
-export type DesktopPackageAssembly = 'native' | 'compatibility'
-
 /** Package-relative Desktop Host files required before a profile can boot. */
 export const DESKTOP_HOST_RUNTIME_FILES = [
   'lib/index.js',
   'lib/native-host.js',
-] as const
-
-/** Compatibility package files required only by a legacy Desktop profile. */
-export const DESKTOP_COMPATIBILITY_HOST_RUNTIME_FILES = [
-  'lib/index.js',
-  'config/desktop.cordis.patch.yml',
 ] as const
 
 /** One immutable npm tarball in the Desktop core package set. */
@@ -90,8 +43,15 @@ export interface DesktopCorePackageRecord {
 /** Complete union of the first-party package closures rooted at dsh and its private Desktop Host. */
 export interface DesktopCorePackageSet {
   readonly schemaVersion: 2
-  readonly assembly: DesktopPackageAssembly
+  readonly assembly: 'native'
   readonly packages: readonly DesktopCorePackageRecord[]
+  /**
+   * Optional edges ignored while resolving the profile.
+   *
+   * New package sets ignore nothing. The field stays readable because profiles
+   * prepared before the compatibility assembly retired carry its optional-edge
+   * list, and their lockfiles must keep rejecting those registry resolutions.
+   */
   readonly ignoredOptionalDependencies: readonly string[]
 }
 
@@ -117,7 +77,7 @@ export function parseDesktopCorePackageSet(
   expectedReleaseVersion?: string,
 ): DesktopCorePackageSet {
   if (!isRecord(value) || value.schemaVersion !== 2
-    || (value.assembly !== 'native' && value.assembly !== 'compatibility') || !Array.isArray(value.packages)
+    || value.assembly !== 'native' || !Array.isArray(value.packages)
     || !Array.isArray(value.ignoredOptionalDependencies)) {
     throw new Error('desktop package set: invalid descriptor')
   }
@@ -147,32 +107,25 @@ export function parseDesktopCorePackageSet(
   if (JSON.stringify(sorted) !== JSON.stringify(packages)) {
     throw new Error('desktop package set: packages must be sorted by name')
   }
-  const ignoredOptionalDependencies = value.ignoredOptionalDependencies
-  const compatibilityNames = new Set<string>(DESKTOP_COMPATIBILITY_OPTIONAL_DEPENDENCIES)
-  const packageNames = new Set(packages.map(entry => entry.name))
-  const expectedIgnored = value.assembly === 'native'
-    ? [...DESKTOP_COMPATIBILITY_OPTIONAL_DEPENDENCIES].sort()
-    : DESKTOP_COMPATIBILITY_OPTIONAL_DEPENDENCIES.filter(name => !packageNames.has(name))
-      .sort()
-  if (ignoredOptionalDependencies.some(name => typeof name !== 'string' || !compatibilityNames.has(name))
-    || new Set(ignoredOptionalDependencies).size !== ignoredOptionalDependencies.length
-    || JSON.stringify(ignoredOptionalDependencies) !== JSON.stringify(expectedIgnored)) {
-    throw new Error('desktop package set: ignored optional dependencies do not match the Desktop compatibility policy')
+  const rawIgnored: unknown[] = value.ignoredOptionalDependencies
+  const ignoredOptionalDependencies = rawIgnored.map((name): string => {
+    if (typeof name !== 'string' || !PACKAGE_NAME_PATTERN.test(name)) {
+      throw new Error('desktop package set: ignored optional dependencies must be unique, sorted package names')
+    }
+    return name
+  })
+  if (new Set(ignoredOptionalDependencies).size !== ignoredOptionalDependencies.length
+    || JSON.stringify(ignoredOptionalDependencies) !== JSON.stringify([...ignoredOptionalDependencies].sort())) {
+    throw new Error('desktop package set: ignored optional dependencies must be unique, sorted package names')
   }
-  if (value.assembly === 'native' && [...packageNames].some(name => compatibilityNames.has(name))) {
-    throw new Error('desktop package set: Native assembly contains a compatibility-only package')
-  }
-  const releasePackages = value.assembly === 'native'
-    ? RELEASE_PACKAGES
-    : [...RELEASE_PACKAGES, DESKTOP_COMPATIBILITY_HOST_PACKAGE] as const
-  for (const name of releasePackages) {
+  for (const name of RELEASE_PACKAGES) {
     const entry = packages.find(candidate => candidate.name === name)
     if (entry === undefined) throw new Error(`desktop package set: missing ${name}`)
     if (expectedReleaseVersion !== undefined && entry.version !== expectedReleaseVersion) {
       throw new Error(`desktop package set: ${name}@${entry.version} does not match Desktop ${expectedReleaseVersion}`)
     }
   }
-  return { schemaVersion: 2, assembly: value.assembly, packages, ignoredOptionalDependencies }
+  return { schemaVersion: 2, assembly: 'native', packages, ignoredOptionalDependencies }
 }
 
 /** Read and structurally validate one profile's core package descriptor. */

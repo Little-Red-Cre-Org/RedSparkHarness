@@ -18,9 +18,9 @@
 | `dsh --profile native-sdk` | 通过 JSON-RPC stdio 提供文本与图片 SDK 轮次、实时模型分块、Session 取消、下一步引导与已结束轮次分叉。 |
 | `dsh --profile native-acp` | 通过标准 ACP 标准输入输出驱动原生文本／图片 Session、模型配置、取消与持久恢复。 |
 | `dsh --profile sdk-minimal` | 已拒绝。请改用 `dsh --profile sdk`。已有目录不会被改写。 |
-| `dsh web` | `--profile web` 的别名。 |
+| `dsh --profile web` | 已拒绝。浏览器部署入口已退役；请改用 `dsh --profile native-web`。 |
 
-运行命令时所在的目录将作为默认 workspace 根目录。新建的 `headless`、`web`、`sdk`、`acp` 和 `rsh` profile 分别初始化为 `native-headless`、`native-web`、`native-sdk`、`native-acp` 和 `native-tui`，同时保留请求中的 profile 名称。八个 `native-*` 模板仍可显式选择。启动器在启动、导出配置和 `--from-default-profile` 上拒绝 `sdk-minimal`。已有 profile 会保留其文件，初始化不会改写它；未选择 Native 执行的 manifest 会被拒绝，并提示查阅[原生配置迁移](../../Docs/native-config-migration.zh.md)。`desktop` 名称保留给 Electron 持有的 profile，因此 CLI（命令行界面）会拒绝针对它的启动与配置 dump 请求。
+运行命令时所在的目录将作为默认 workspace 根目录。新建的 `headless`、`sdk`、`acp` 和 `rsh` profile 分别初始化为 `native-headless`、`native-sdk`、`native-acp` 和 `native-tui`，同时保留请求中的 profile 名称。八个 `native-*` 模板仍可显式选择。启动器在启动、导出配置和 `--from-default-profile` 上拒绝 `sdk-minimal` 与已退役的浏览器 `web` 名称；Native Web profile 请使用 `native-web`。已有 profile 会保留其文件，初始化不会改写它；未选择 Native 执行的 manifest 会被拒绝，并提示查阅[原生配置迁移](../../Docs/native-config-migration.zh.md)。`desktop` 名称保留给 Electron 持有的 profile，因此 CLI（命令行界面）会拒绝针对它的启动与配置 dump 请求。
 
 `native-headless`、`native-headless-query`、`native-tui` 和 `native-web` 会话默认值使用随附 pi-ai 的 `deepseek` 路由和 `deepseek-flash` 模型。Native ACP 保留显式的 `deepseek-official` 路由。
 
@@ -35,10 +35,10 @@ Native profile 可选择启用 `dsh-sdk` 或 `dsh-acp-child` 外部驱动。CLI 
 启动器只解析自身的 flag，并将其后的所有内容交给已启动的应用。启动器无法识别的第一个 token 标志着应用参数的开始：
 
 ```sh
-dsh --profile web                          # Native Web, default flags only
+dsh --profile native-web                   # Native Web, default flags only
 dsh --profile headless "run the tests"
 dsh --profile rsh --resume <id>            # --resume belongs to the terminal app
-dsh --profile web --help                   # the web app's flags, not the launcher's
+dsh --profile native-web --help            # the web app's flags, not the launcher's
 dsh --help                                 # the launcher's own help
 ```
 
@@ -54,7 +54,7 @@ Native profile 在其 package manifest 中声明 `dsh.profile.runtime: "native"`
 选择随附的 Native profile 名称会在首次使用时创建其 Native profile 文件；已有 profile 保留其配置。`--from-default-profile` 会把随附模板复制为新的自定义名称：
 
 ```sh
-dsh --profile rescue --from-default-profile web
+dsh --profile rescue --from-default-profile native-web
 dsh --profile rescue
 ```
 

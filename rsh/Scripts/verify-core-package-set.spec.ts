@@ -22,7 +22,11 @@ describe('desktop core package set', () => {
     const source = readFileSync(join(root, 'rsh/Programs/Desktop/src/core-package-set.ts'), 'utf8')
     const packages = workspacePackages(root)
     const names = corePackageNames(source)
-    expect(names.length).toBeGreaterThan(20)
+    expect(names).toEqual(expect.arrayContaining([
+      '@redspark/rsh',
+      '@redspark/rsh-desktop-host',
+      '@redspark/cordis',
+    ]))
     expect(names.filter(name => !packages.has(name))).toEqual([])
   })
 

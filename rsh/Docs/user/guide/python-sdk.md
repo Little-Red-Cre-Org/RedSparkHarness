@@ -123,7 +123,7 @@ The retired `sdk-minimal` profile omitted `str_replace_editor` and accepted a Co
 
 `sdk` initializes as the native-sdk composition. It includes the platform persistent shell and the local filesystem provider, and it pins `danger-full-access`. Use a disposable checkout or container. The retired standalone tree is not a supported launch.
 
-The installed wheel still packages the full `web` profile and frontend assets. Run `dsh web` against an explicit `RSH_HOME` when a Python SDK deployment also needs the browser application; `web` is a separate CLI application and cannot serve a Python SDK client.
+The installed wheel packages the same `dsh` CLI. Run `dsh --profile native-web` against an explicit `RSH_HOME` when a Python SDK deployment also needs the Native Web application; it is a separate CLI application and cannot serve a Python SDK client. The browser-only `web` profile and `dsh web` alias are retired.
 
 Use a fresh home when profiles, plugins, credentials, settings, and sessions must be isolated. Use a fresh session id for independent work; reuse a harness, home, and id only to continue the same durable conversation and session-owned resources.
 

@@ -1,6 +1,5 @@
 /** Typed preload operations exposed only by the Electron shell. */
 
-import type { DesktopPluginRecord } from './project-manager.ts'
 import type { DesktopLocale } from './locale.ts'
 import type { DesktopBackendState } from './backend-controller.ts'
 import type { DesktopErrorType } from './startup-error.ts'
@@ -49,13 +48,7 @@ export interface RshDesktopApi {
   readonly protocolVersion: 1
   locale(): Promise<DesktopLocale>
   readonly plugins: {
-    list(): Promise<readonly DesktopPluginRecord[]>
-    add(spec: string): Promise<void>
-    remove(name: string): Promise<void>
-    update(name: string, version: string): Promise<void>
-    toggle(name: string, enabled: boolean): Promise<void>
-    disableAll(): Promise<void>
-    /** Native profile operations use the same authenticated plugin IPC channels. */
+    /** Native profile operations use the authenticated plugin IPC channels. */
     readonly native: NativeDesktopModuleManagementApi
   }
   readonly backend: {
@@ -89,7 +82,6 @@ export interface NativeDesktopModuleManagementApi {
 /** Startup-page controls, unavailable to backend-provided application documents. */
 export interface RshDesktopStartupApi extends Pick<RshDesktopApi, 'protocolVersion' | 'locale'> {
   readonly backend: Omit<RshDesktopApi['backend'], 'retry'>
-  disablePlugins(): Promise<void>
   restart(): Promise<void>
   resetConfiguration(): Promise<void>
 }

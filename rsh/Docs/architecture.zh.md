@@ -18,24 +18,24 @@
 
 运行中的 `dsh` 是一棵插件树，由启动时按序叠加的各层组合而成。
 
-**profile** 是存放在 Harness home 中的具名组装。它列出自己叠放的组合包，存放自己安装的树外插件，并保存用户自己的 `cordis.patch.yml`。`web`、`headless`、`sdk` 和 `acp` 作为模板随发行版交付。
+**profile** 是存放在 Harness home 中的具名组装：Native profile 在 `rsh.profile.json` 中声明，legacy Cordis profile 列出组合包并保存用户自己的 `cordis.patch.yml`。随附模板均为 Native；已退役的浏览器 `web` 入口会失败并给出迁移指引。
 
 **组合包**是 Cordis 配置项及其挂载代码的分发格式，因此它插入的内容始终可被其上各层 patch。
 
 两者都在各自的 `package.json` 中通过 `dsh` 字段声明自己：`dsh.profile` 列出一个 profile 的组合包，`dsh.bundle` 指向一个组合包的 patch 文件。
 
-[`dsh-base`](../Compatibility/DSH/bundle/base/README.zh.md) 是 `web`、`headless`、`sdk` 与 `acp` profile 的共享第一层：模型适配器、工具、持久化、沙箱与审批策略、设置、凭据、遥测。[`dsh-web-app`](../Compatibility/DSH/bundle/web-app/README.zh.md) 增加浏览器应用，[`dsh-headless`](../Compatibility/DSH/bundle/headless/README.zh.md) 增加不带服务器的一次性运行器，[`dsh-sdk-app`](../Compatibility/DSH/bundle/sdk-app/README.zh.md) 增加 SDK JSON-RPC 服务器，[`dsh-acp-app`](../Compatibility/DSH/bundle/acp-app/README.zh.md) 增加仅用于自动化的 ACP 服务器。[`dsh-sdk-minimal`](../Compatibility/DSH/bundle/sdk-minimal/README.zh.md) 是刻意保留的例外：一个组合包拥有完整的显式 SDK 配置树，不应用 `dsh-base`。
+[`dsh-base`](../Compatibility/DSH/bundle/base/README.zh.md) 是 legacy `headless`、`sdk` 与 `acp` profile 的共享第一层：模型适配器、工具、持久化、沙箱与审批策略、设置、凭据、遥测。[`dsh-web-app`](../Compatibility/DSH/bundle/web-app/README.zh.md) 是已退役的浏览器组合，[`dsh-headless`](../Compatibility/DSH/bundle/headless/README.zh.md) 增加不带服务器的一次性运行器，[`dsh-sdk-app`](../Compatibility/DSH/bundle/sdk-app/README.zh.md) 增加 SDK JSON-RPC 服务器，[`dsh-acp-app`](../Compatibility/DSH/bundle/acp-app/README.zh.md) 增加仅用于自动化的 ACP 服务器。[`dsh-sdk-minimal`](../Compatibility/DSH/bundle/sdk-minimal/README.zh.md) 是例外：它拥有完整的显式 SDK 配置树，不再应用 `dsh-base`。
 
 各层按此顺序应用在空条目列表之上：先按 profile 列出的顺序应用每个组合包，然后是 profile 的 `cordis.patch.yml`，然后是 home 级的那份，最后是任意 `--patch` overlay。一条 patch 按 id 定位某个条目并替换其整个 config，或插入新条目。
 
-自定义 profile 默认实时重载。`web` 实时重载；`headless`、`sdk` 与 `acp` 只加载一次，因为工作开始后替换依赖会破坏一次性或 stdio 生命周期。持久化服务尚未就绪时，由 Loader 管理的新 Agent 会等待组合完成。
+自定义 Cordis profile 默认实时重载；`headless`、`sdk` 与 `acp` 只加载一次，因为工作开始后替换依赖会破坏一次性或 stdio 生命周期。持久化服务尚未就绪时，由 Loader 管理的新 Agent 会等待组合完成。
 
 Native `native-web` 将 `dsh.profile.configReload` 设为 `live`，以监视 `rsh.profile.json` 和显式传入的 JSON `--patch` 文件，再替换 Host 安装计划。`native-headless`、`native-sdk`、`native-acp` 和 `native-tui` 仍只在启动时加载。详见 [CLI 重载契约](../Programs/CLI/reference/README.zh.md)；Host 配置重载独立于 Cordis patch 重载和 Web Client 资源重建。
 
 要查看你的机器启动的配置树：
 
 ```sh
-dsh --profile web --dump-config
+dsh --profile native-web --dump-config
 ```
 
 它打印出的任何条目，都可以由你自己的 patch 替换。
@@ -44,7 +44,7 @@ dsh --profile web --dump-config
 
 ## 应用启动
 
-所有受支持的 Node 应用都从 `dsh` CLI 与具名 profile 启动。随附应用是 `dsh web`（刻意为 `--profile web` 保留的别名）、`dsh --profile headless`、`dsh --profile sdk` 与 `dsh --profile acp`。TypeScript SDK 会解析其同版本 `dsh` 依赖并选择 `sdk`；自定义插件组合继续由 profile 与有序 patch 文件表达，而不是另一个可执行文件或内联应用树。启动器拒绝名称 `sdk-minimal`；请改用 `--profile sdk`。已有目录不会被改写。
+所有受支持的 Node 应用都从 `dsh` CLI 与具名 profile 启动。随附应用是 `dsh --profile native-web`、`dsh --profile headless`、`dsh --profile sdk` 与 `dsh --profile acp`；仅限浏览器的 `web` 名称与 `dsh web` 别名会失败并给出迁移指引。TypeScript SDK 会解析其同版本 `dsh` 依赖并选择 `sdk`；自定义插件组合继续由 profile 与有序 patch 文件表达，而不是另一个可执行文件或内联应用树。启动器拒绝名称 `sdk-minimal`；请改用 `--profile sdk`。已有目录不会被改写。
 
 Vendored CLI、仅用于构建和测试的可执行文件、进程内直接挂载插件以及私有浏览器 WebWorker 预览都不属于 Harness 应用启动器。[`verify-application-entrypoints`](../Scripts/verify-application-entrypoints.ts)将每个包 bin、可执行源码与根 demo 归入显式类别，并拒绝任何绕过 `dsh` 的 Node 应用路径。
 

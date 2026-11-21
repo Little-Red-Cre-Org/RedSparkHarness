@@ -75,8 +75,6 @@ const standardReleaseMemberDirectory = new RegExp('^(?:' + [
 ].join('|') + ')$')
 /** Installable application assembled by electron-builder rather than published to npm. */
 const desktopApplicationDirectory = 'rsh/Programs/Desktop'
-/** Private compatibility assembly shipped only through the Desktop package set. */
-const privateDesktopAssemblyDirectory = 'rsh/Compatibility/DSH/boot/desktop-host-compatibility'
 const applicationPackageDirectories = new Set([
   'rsh/Programs/CLI',
   'rsh/Programs/Web/application',
@@ -165,7 +163,6 @@ function workspaceManifests(): WorkspaceManifest[] {
 }
 
 const packageFileExtras: Readonly<Record<string, readonly string[]>> = {
-  '@redspark/rsh-desktop-host-compatibility': ['config/desktop.cordis.patch.yml'],
   '@redspark/rsh-approval-definition': ['lib/legacy.js'],
   '@redspark/rsh-command-feedback': ['lib/shared-*.js'],
   '@redspark/rsh-http-routes': ['lib/host.js', 'lib/shared-*.js'],
@@ -537,7 +534,6 @@ export function checkExperimentalManifest({ dir, manifest }: WorkspaceManifest):
 }
 
 function isReleaseMemberDirectory(dir: string): boolean {
-  if (dir === privateDesktopAssemblyDirectory) return false
   return standardReleaseMemberDirectory.test(dir) || isPublicExperimentalPackageDirectory(dir)
 }
 
@@ -652,15 +648,6 @@ export function checkWorkspaceManifest({ dir, manifest }: WorkspaceManifest): st
       || manifest.repository.url !== repositoryUrl
       || manifest.repository.directory !== expectedDirectory) {
       errors.push(`${label}: published Landlock package repository must use ${repositoryUrl} with directory ${expectedDirectory} for trusted publishing`)
-    }
-  } else if (dir === privateDesktopAssemblyDirectory) {
-    if (manifest.private !== true) {
-      errors.push(`${label}: private Desktop assembly must set "private": true`)
-    }
-    if (manifest.repository?.type !== 'git'
-      || manifest.repository.url !== publishedRepositoryUrl
-      || manifest.repository.directory !== dir) {
-      errors.push(`${label}: private Desktop assembly repository must use ${publishedRepositoryUrl} with directory ${dir}`)
     }
   } else if (isReleaseMemberDirectory(dir)) {
     // Release members state that they are publishable: npm refuses a private

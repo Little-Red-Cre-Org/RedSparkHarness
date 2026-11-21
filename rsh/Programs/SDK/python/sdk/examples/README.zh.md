@@ -31,6 +31,6 @@ cd "$RSH_HOME/profiles/sdk"
 pnpm add file:/absolute/path/to/my-plugin-bundle
 ```
 
-该插件必须发布 Native 入口并在 `dsh.native` 中声明它；参见[打包并安装 Native 插件](../../../../../Docs/user/develop/basic/publish.zh.md)。所选 profile 必须保留 JSON-RPC server 配置项。该示例不接受完整配置文件或任意进程 argv。同一个运行时 wheel 包还打包了供直接 CLI（命令行界面）使用的 `web` profile 及其前端产物：`dsh web` 会启动这个独立应用。Python SDK 客户端不能选择 `web`，因为其中没有 JSON-RPC 服务器配置项。
+该插件必须发布 Native 入口并在 `dsh.native` 中声明它；参见[打包并安装 Native 插件](../../../../../Docs/user/develop/basic/publish.zh.md)。所选 profile 必须保留 JSON-RPC server 配置项。该示例不接受完整配置文件或任意进程 argv。运行时 wheel 包携带供单独使用的 CLI；图形界面的主要客户端是 Desktop。
 
 另见 [Python SDK 教程](../../../../../Docs/user/guide/python-sdk.zh.md) 与 [SDK 参考](../README.zh.md)。

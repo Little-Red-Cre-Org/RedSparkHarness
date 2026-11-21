@@ -158,7 +158,6 @@ flowchart TD
   subgraph group_boot["group: boot"]
     pkg_app_boot["app-boot"]
     pkg_cmdline["cmdline"]
-    pkg_desktop_host_compatibility["desktop-host-compatibility"]
   end
   subgraph group_bridge["group: bridge"]
     pkg_code_runtime["code-runtime"]
@@ -542,12 +541,6 @@ flowchart TD
   pkg_app_boot --> pkg_home_paths
   pkg_app_boot --> pkg_launch_environment
   pkg_app_boot --> pkg_system_prompt
-  pkg_desktop_host_compatibility --> pkg_api_gateway
-  pkg_desktop_host_compatibility --> pkg_client_connection
-  pkg_desktop_host_compatibility --> pkg_client_modules
-  pkg_desktop_host_compatibility --> pkg_http_routes
-  pkg_desktop_host_compatibility --> pkg_http_routes_cordis
-  pkg_desktop_host_compatibility --> pkg_launch_environment
   pkg_client_native_session --> pkg_session
   pkg_deepseek_account --> pkg_authorization
   pkg_deepseek_account --> pkg_credentials
@@ -1587,7 +1580,6 @@ flowchart TD
 | [`spill`](../Modules/Official/spill/spill) | `spill` | [`brand`](../Core/util/brand), [`llm`](../Engine/llm/llm), [`native-runtime`](../Core/runtime-diagnostics/native-runtime), [`session`](../Engine/core/session) |
 | [`api-workspace-controller`](../Programs/Web/api/workspace-controller) | `api` | [`api-gateway`](../Programs/Web/api/gateway), [`client-connection`](../Programs/Web/client/connection), [`host-directory-picker`](../Programs/Web/host/directory-picker), [`session`](../Engine/core/session), [`storage-domain`](../Core/storage/storage-domain), [`typert-protocol`](../Core/typert/protocol), [`workspace`](../Modules/Official/workspace/workspace) |
 | [`app-boot`](../Compatibility/DSH/boot/app-boot) | `boot` | [`home-paths`](../Core/util/home-paths), [`launch-environment`](../Core/util/launch-environment), [`system-prompt`](../Engine/core/system-prompt) |
-| [`desktop-host-compatibility`](../Compatibility/DSH/boot/desktop-host-compatibility) | `boot` | [`api-gateway`](../Programs/Web/api/gateway), [`client-connection`](../Programs/Web/client/connection), [`client-modules`](../Programs/Web/client/modules), [`http-routes`](../Core/util/http-routes), [`http-routes-cordis`](../Compatibility/DSH/bridge/http-routes-cordis), [`launch-environment`](../Core/util/launch-environment) |
 | [`client-native-session`](../Programs/Web/client/native-session) | `client` | [`session`](../Engine/core/session) |
 | [`deepseek-account`](../Modules/Official/credentials/deepseek-account) | `credentials` | [`authorization`](../Modules/Official/credentials/authorization), [`credentials`](../Modules/Official/credentials/credentials), [`native-runtime`](../Core/runtime-diagnostics/native-runtime) |
 | [`host-directory-picker-auto`](../Programs/Web/host/directory-picker-auto) | `host` | [`client-ui-directory-picker-browse`](../Programs/Web/client/ui-directory-picker-browse), [`client-ui-directory-picker-native`](../Programs/Web/client/ui-directory-picker-native), [`host-directory-picker-browse`](../Programs/Web/host/directory-picker-browse), [`host-directory-picker-native`](../Programs/Web/host/directory-picker-native), [`http-routes`](../Core/util/http-routes), [`http-routes-cordis`](../Compatibility/DSH/bridge/http-routes-cordis) |

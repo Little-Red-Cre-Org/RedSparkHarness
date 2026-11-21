@@ -198,7 +198,7 @@ Not proven, and not to be reported as working:
   `prepareDevelopmentProject`, which ends at
   `src/project-manager.ts:1806 createDevelopmentProjectMetadata` and writes a
   Native manifest — so running a legacy profile under `dev.ts` needs that step
-  changed, or a packaged release built with `--assembly compatibility`.
+  changed; the packaged compatibility assembly is retired.
 
 ---
 

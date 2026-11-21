@@ -16,12 +16,6 @@ const api: RshDesktopApi = {
   protocolVersion: 1,
   locale: () => ipcRenderer.invoke(DESKTOP_IPC.localeGet) as Promise<ReturnType<RshDesktopApi['locale']> extends Promise<infer T> ? T : never>,
   plugins: {
-    list: () => ipcRenderer.invoke(DESKTOP_IPC.pluginsList) as Promise<ReturnType<RshDesktopApi['plugins']['list']> extends Promise<infer T> ? T : never>,
-    add: spec => ipcRenderer.invoke(DESKTOP_IPC.pluginsAdd, spec) as Promise<void>,
-    remove: name => ipcRenderer.invoke(DESKTOP_IPC.pluginsRemove, name) as Promise<void>,
-    toggle: (name, enabled) => ipcRenderer.invoke(DESKTOP_IPC.pluginsToggle, name, enabled) as Promise<void>,
-    disableAll: () => ipcRenderer.invoke(DESKTOP_IPC.pluginsDisableAll) as Promise<void>,
-    update: (name, version) => ipcRenderer.invoke(DESKTOP_IPC.pluginsUpdate, name, version) as Promise<void>,
     native: {
       list: () => invokeNative<NativeDesktopListOutcome>(DESKTOP_IPC.pluginsList, { runtime: 'native' }),
       install: request => invokeNative<NativeDesktopMutationOutcome>(DESKTOP_IPC.pluginsAdd, { runtime: 'native', request }),

@@ -1,5 +1,5 @@
 ---
-description: "The browser GUI for dsh: interactive chat, model and settings management, and session history, for users running the dsh web surface."
+description: "Retained Cordis browser bundle for the legacy browser e2e lane; the shipped web deployment entry is retired."
 kind: "package-bundle"
 ---
 
@@ -9,7 +9,7 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-Run `dsh --profile web` to open an interactive browser GUI with chat, model and settings management, and session history. It uses the same model access, tools, and safety defaults as other dsh surfaces. Startup prints an authenticated URL and normally opens it in the default browser; SSH sessions and `--no-open` leave the URL for manual opening. You can change the port and allow extra hosts, but cannot bind all network interfaces. Choose this package for interactive browser work; use `dsh-headless` for one-shot command-line tasks.
+This is the retired Cordis browser GUI. The shipped `web` profile and `dsh web` alias are gone; the bundle boots only when a Cordis composition mounts it explicitly, and the repository retains it for the legacy browser e2e lane. Desktop is the product client and reuses `rsh/Programs/Web/client/**` through the Native Host; this bundle is not a supported deployment entry.
 
 ## Table of Contents
 
@@ -29,10 +29,7 @@ Start the GUI, open your browser, and start talking to the agent. The flags fine
 
 ### Starting the Web GUI
 
-```sh
-dsh --profile web
-dsh --profile web --no-open --port 8080
-```
+The shipped `web` profile and its `dsh web` launcher alias are retired. This bundle now boots only when a Cordis profile mounts it explicitly; the repository keeps it for the legacy browser e2e lane until that lane retires.
 
 After startup you see a `dsh web:` line whose root URL carries a fresh process token. Unless `--no-open` or an SSH session suppresses it, the default browser opens that URL, receives a signed cookie, and redirects to the clean root page. You know it worked when the page loads and you can chat with the agent. Two failures to expect: if the frontend is not built, startup stops with a build hint (`pnpm run build` in a checkout); if the browser cannot be opened, a credential-free diagnostic prints to stderr while the server keeps running — open the printed startup URL yourself.
 
@@ -55,7 +52,7 @@ By default the GUI accepts connections from this machine only. A deployment that
 
 ### Running over SSH
 
-When you launch `dsh --profile web` over SSH, the URL line still prints but the browser is not opened for you: the SSH client or editor owns the local forwarding address. Open the forwarded URL on your machine yourself; the printed URL names the remote host's loopback endpoint.
+The legacy lane opens the process URL directly rather than through a shipped CLI profile. Browser handoff and SSH forwarding instructions therefore belong to the lane harness, not to a product launch command.
 
 ### Per-session agent setup
 

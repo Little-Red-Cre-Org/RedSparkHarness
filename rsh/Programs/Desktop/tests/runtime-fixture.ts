@@ -3,8 +3,7 @@
 import { createHash } from 'node:crypto'
 import { mkdirSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { DESKTOP_COMPATIBILITY_HOST_PACKAGE, DESKTOP_COMPATIBILITY_OPTIONAL_DEPENDENCIES,
-  DESKTOP_HOST_RUNTIME_FILES, DESKTOP_PACKAGES_DIR, DESKTOP_PACKAGE_SET_FILE } from '../src/core-package-set.ts'
+import { DESKTOP_HOST_RUNTIME_FILES, DESKTOP_PACKAGES_DIR, DESKTOP_PACKAGE_SET_FILE } from '../src/core-package-set.ts'
 import { DESKTOP_HOST_PROTOCOL_VERSION } from '../src/host-protocol.ts'
 import { writeDesktopRuntime, type DesktopRuntimeDescriptor } from '../src/runtime-tree.ts'
 
@@ -25,23 +24,17 @@ export function writePackage(modules: string, name: string, fields: Record<strin
 }
 
 /**
- * Seal a minimal Native release, or an explicit compatibility release, with its Host packages.
+ * Seal a minimal Native release with its Host packages.
  * @param root - New runtime directory.
  * @param version - Shell and dsh version.
  * @param nodeVersion - Bundled Node version used for native rebuild selection.
- * @param includeCompatibilityHost - Include the private compatibility Host and its Cordis packages.
  * @returns Sealed runtime metadata.
  */
 export function runtimeFixture(
-  root: string, version = '1.0.0', nodeVersion = '24.17.0', includeCompatibilityHost = false,
+  root: string, version = '1.0.0', nodeVersion = '24.17.0',
 ): DesktopRuntimeDescriptor {
-  const names = ['@redspark/rsh', '@redspark/rsh-desktop-host', '@redspark/rsh-client-connection',
-    ...(includeCompatibilityHost ? [DESKTOP_COMPATIBILITY_HOST_PACKAGE, '@redspark/rsh-base', '@redspark/rsh-web-app', '@redspark/cordis'] : [])]
+  const names = ['@redspark/rsh', '@redspark/rsh-desktop-host', '@redspark/rsh-client-connection']
   for (const name of names) writePackage(join(root, 'node_modules'), name, { version })
-  if (includeCompatibilityHost) {
-    writeFileSync(join(root, 'node_modules', ...DESKTOP_COMPATIBILITY_HOST_PACKAGE.split('/'), 'package.json'),
-      JSON.stringify({ name: DESKTOP_COMPATIBILITY_HOST_PACKAGE, version, private: true, type: 'module' }))
-  }
   for (const file of DESKTOP_HOST_RUNTIME_FILES) {
     const path = join(root, 'node_modules', '@redspark/rsh-desktop-host', file)
     mkdirSync(join(path, '..'), { recursive: true })
@@ -55,15 +48,12 @@ export function runtimeFixture(
     return { name, version, file, bytes: body.byteLength,
       integrity: `sha512-${createHash('sha512').update(body).digest('base64')}` }
   }
-  const packageNames = ['@redspark/rsh', '@redspark/rsh-client-connection', '@redspark/rsh-desktop-host',
-    ...(includeCompatibilityHost ? [DESKTOP_COMPATIBILITY_HOST_PACKAGE, '@redspark/rsh-base', '@redspark/rsh-web-app', '@redspark/cordis'] : [])]
+  const packageNames = ['@redspark/rsh', '@redspark/rsh-client-connection', '@redspark/rsh-desktop-host']
   const packages = packageNames.map(name => record(name, `${name.split('/').at(-1)}.tgz`))
     .sort((left, right) => left.name.localeCompare(right.name))
-  const selectedNames = new Set(packageNames)
   writeFileSync(join(root, DESKTOP_PACKAGE_SET_FILE), `${JSON.stringify({ schemaVersion: 2,
-    assembly: includeCompatibilityHost ? 'compatibility' : 'native', packages,
-    ignoredOptionalDependencies: DESKTOP_COMPATIBILITY_OPTIONAL_DEPENDENCIES.filter(name => !selectedNames.has(name)).sort() })}\n`)
+    assembly: 'native', packages, ignoredOptionalDependencies: [] })}\n`)
   writeFileSync(join(root, 'package.json'), '{"type":"module"}\n')
   return writeDesktopRuntime(root, { schemaVersion: 1, version, nodeVersion, pnpmVersion: '11.7.0', hostProtocolVersion: DESKTOP_HOST_PROTOCOL_VERSION }, names,
-    process, includeCompatibilityHost ? 'compatibility' : 'native')
+    process)
 }

@@ -13,7 +13,7 @@
 
 ## 行为
 
-除非调用方选择另一个 `dsh` 可执行程序或 profile，否则 SDK 会启动匹配的内置 `dsh --profile sdk` 运行时。可运行的极简示例选择随附的独立 `sdk-minimal` profile；同一运行时还会打包 `dsh web` 及其前端产物，供单独通过 CLI 使用。每次启动都要求显式选择 Harness home；Python 绝不会静默读取 `~/.dsh`。[SDK 参考](sdk/README.zh.md) 和 [运行时载体参考](sdk-runtime/README.zh.md) 定义运行时选择、profile、patch 与外部插件管理约定。
+除非调用方选择另一个 `dsh` 可执行程序或 profile，否则 SDK 会启动匹配的内置 `dsh --profile sdk` 运行时。可运行的极简示例选择一个随附的独立 profile。每次启动都要求显式选择 Harness home；Python 绝不会静默读取 `~/.dsh`。[SDK 参考](sdk/README.zh.md) 和 [运行时载体参考](sdk-runtime/README.zh.md) 定义运行时选择、profile、patch 与外部插件管理约定。
 
 ## 贡献者工作流
 

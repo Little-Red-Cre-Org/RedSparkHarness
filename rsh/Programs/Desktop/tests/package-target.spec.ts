@@ -35,13 +35,15 @@ describe('desktop package target', () => {
 
   it('parses installer and unpacked-directory invocations', () => {
     expect(parseDesktopPackageInvocation(['mac-arm64'], 'darwin', 'arm64')).toMatchObject({
-      directory: false, assembly: 'native',
+      directory: false, prepareOnly: false, unsigned: false,
     })
     expect(parseDesktopPackageInvocation(['mac-arm64', '--dir'], 'darwin', 'arm64').directory).toBe(true)
-    expect(parseDesktopPackageInvocation(['mac-arm64', '--assembly', 'compatibility'], 'darwin', 'arm64').assembly)
-      .toBe('compatibility')
+    expect(parseDesktopPackageInvocation(['mac-arm64', '--assembly', 'native'], 'darwin', 'arm64').target.name)
+      .toBe('mac-arm64')
+    expect(() => parseDesktopPackageInvocation(['mac-arm64', '--assembly', 'compatibility'], 'darwin', 'arm64'))
+      .toThrow(/compatibility.*assembly is retired/u)
     expect(() => parseDesktopPackageInvocation(['--assembly', 'unknown'], 'darwin', 'arm64'))
-      .toThrow(/--assembly must be native or compatibility/u)
+      .toThrow(/assembly is retired/u)
     expect(parseDesktopPackageInvocation([], 'darwin', 'arm64').target.name).toBe('mac-arm64')
     expect(parseDesktopPackageInvocation(['--prepare-only'], 'darwin', 'arm64').prepareOnly).toBe(true)
     expect(() => parseDesktopPackageInvocation(['mac-arm64', 'mac-x64'], 'darwin', 'arm64'))

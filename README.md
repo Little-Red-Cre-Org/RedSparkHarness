@@ -20,15 +20,15 @@ Review the [safety notice](SAFETY.md) before running the project.
 
 ## Run
 
-### Run the upstream version from `npm`
+### Run the Native Web profile from `npm`
 
-This retained command installs upstream RedSpark Harness, not the RedSpark fork. Install `Node.js`, then run:
+Install `Node.js`, then run:
 
 ```sh
-npx @redspark/dsh web
+npx @redspark/dsh --profile native-web
 ```
 
-The command starts the Web UI at `http://127.0.0.1:3080` by default and opens it in the default browser for a local launch. An SSH launch only prints the host URL because the SSH client or editor owns the local forwarded address. Pass `--no-open` to run the server without opening a browser. See [Web UI guide](rsh/Docs/user/guide/index.md).
+The Native web profile starts the Host and serves the desktop renderer at `http://127.0.0.1:3080`. Desktop is the primary client; this profile remains for development and inspection. See [Web UI guide](rsh/Docs/user/guide/index.md).
 
 ### Run from source
 
@@ -39,10 +39,10 @@ git clone https://github.com/Little-Red-Cre/RedSparkHarness.git
 cd RedSparkHarness
 pnpm install
 pnpm run build
-pnpm dsh web
+pnpm dsh --profile native-web
 ```
 
-`pnpm run build` prepares the repository artifacts. `pnpm dsh web` uses those built artifacts without rebuilding.
+`pnpm run build` prepares the repository artifacts. `pnpm dsh --profile native-web` uses those built artifacts without rebuilding.
 
 For the Electron desktop client, run `pnpm run start:desktop` after building. The development desktop keeps its own data under `rsh/Programs/Desktop/.desktop-build/development/home`. API keys are configured in the application, not in this repository.
 

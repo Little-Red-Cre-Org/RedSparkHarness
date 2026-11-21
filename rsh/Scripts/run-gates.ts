@@ -377,11 +377,11 @@ function nodeCompatGates(): Gate[] {
       label: 'Web frontend build',
       needs: ['build'],
     }),
-    ...nodeCompatSmokeGates({ cliSmoke: true }),
+    ...nodeCompatSmokeGates(),
   ]
 }
 
-function nodeCompatSmokeGates(options: { cliSmoke?: boolean } = {}): Gate[] {
+function nodeCompatSmokeGates(): Gate[] {
   const gates: Gate[] = [
     pnpmExec('source-worker-smoke', [
       'vitest',
@@ -404,19 +404,6 @@ function nodeCompatSmokeGates(options: { cliSmoke?: boolean } = {}): Gate[] {
       'rsh/Scripts/vitest-environment.compat.spec.ts',
     ], { label: 'Vitest jsdom smoke' }),
   ]
-  if (options.cliSmoke) {
-    gates.push(
-      pnpmExec('cli-lazy-search-startup-smoke', [
-        'vitest',
-        'run',
-        'rsh/Programs/CLI/tests/lazy-search-startup.compat.spec.ts',
-      ], {
-        label: 'CLI lazy-search startup smoke',
-        env: { RSH_REQUIRE_BUILT_CLI_SMOKE: '1' },
-        needs: ['build:web'],
-      }),
-    )
-  }
   return gates
 }
 

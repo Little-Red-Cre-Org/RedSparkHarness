@@ -18,9 +18,9 @@ The `dsh` command is the sole supported Node application launcher. Every profile
 | `dsh --profile native-sdk` | Serve text and image SDK turns, live model chunks, Session cancellation, next-step steering and closed-turn forks over JSON-RPC stdio. |
 | `dsh --profile native-acp` | Drive native text/image Sessions, model configuration, cancellation, and durable resume over standard ACP stdio. |
 | `dsh --profile sdk-minimal` | Refused. Use `dsh --profile sdk`. Existing directories are not rewritten. |
-| `dsh web` | Alias of `--profile web`. |
+| `dsh --profile web` | Refused. The browser deployment entry is retired; use `dsh --profile native-web`. |
 
-The invoking directory is the default workspace root. New `headless`, `web`, `sdk`, `acp`, and `rsh` profiles initialize as `native-headless`, `native-web`, `native-sdk`, `native-acp`, and `native-tui` while retaining the requested profile name. The eight `native-*` templates remain explicit alternatives. The launcher refuses `sdk-minimal` on boot, config dump, and `--from-default-profile`. An existing profile keeps its files and is never rewritten by this initialization; a manifest that does not select Native execution is refused with a pointer to [native configuration migration](../../Docs/native-config-migration.md). The `desktop` name is reserved for the Electron-owned profile, so the CLI rejects boot and config-dump requests for it.
+The invoking directory is the default workspace root. New `headless`, `sdk`, `acp`, and `rsh` profiles initialize as `native-headless`, `native-sdk`, `native-acp`, and `native-tui` while retaining the requested profile name. The eight `native-*` templates remain explicit alternatives. The launcher refuses `sdk-minimal` and the retired browser `web` name on boot, config dump, and `--from-default-profile`; use `native-web` for the Native Web profile. An existing profile keeps its files and is never rewritten by this initialization; a manifest that does not select Native execution is refused with a pointer to [native configuration migration](../../Docs/native-config-migration.md). The `desktop` name is reserved for the Electron-owned profile, so the CLI rejects boot and config-dump requests for it.
 
 The native-headless, native-headless-query, native-tui, and native-web session defaults select the installed pi-ai route `deepseek` with model `deepseek-flash`. Native ACP keeps its explicit `deepseek-official` route.
 
@@ -35,10 +35,10 @@ Native profiles may opt in to the `dsh-sdk` or `dsh-acp-child` external driver. 
 The launcher parses only its own flags and hands everything after them to the booted application. The first token the launcher does not recognize starts the app's arguments:
 
 ```sh
-dsh --profile web                          # Native Web, default flags only
+dsh --profile native-web                   # Native Web, default flags only
 dsh --profile headless "run the tests"
 dsh --profile rsh --resume <id>            # --resume belongs to the terminal app
-dsh --profile web --help                   # the web app's flags, not the launcher's
+dsh --profile native-web --help            # the web app's flags, not the launcher's
 dsh --help                                 # the launcher's own help
 ```
 
@@ -54,7 +54,7 @@ The `./native-profile` library export shares validated profile parsing, preset e
 Selecting a shipped native profile name creates its Native profile files on first use; an existing profile keeps its configuration. `--from-default-profile` copies a shipped template into a new custom name:
 
 ```sh
-dsh --profile rescue --from-default-profile web
+dsh --profile rescue --from-default-profile native-web
 dsh --profile rescue
 ```
 

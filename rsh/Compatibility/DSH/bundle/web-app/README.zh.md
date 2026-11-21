@@ -1,5 +1,5 @@
 ---
-description: "dsh 的浏览器 GUI：交互式聊天、模型与设置管理、会话历史，供运行 dsh web 表层的用户使用。"
+description: "仅为 legacy 浏览器 e2e lane 保留的 Cordis 浏览器组合包；随附 web 部署入口已退役。"
 kind: "package-bundle"
 ---
 
@@ -9,7 +9,7 @@ kind: "package-bundle"
 
 ## 概述
 
-运行 `dsh --profile web`，打开提供聊天、模型与设置管理以及会话历史的交互式浏览器 GUI。它使用与其他 dsh 表层相同的模型访问、工具与安全默认值。启动时会打印带认证信息的 URL，通常还会在默认浏览器中打开；SSH 会话和 `--no-open` 会保留该 URL，供你手动打开。你可以更改端口并允许额外主机，但不能绑定所有网络接口。需要在浏览器中交互式工作时选择本包；一次性的命令行任务应使用 `dsh-headless`。
+这是已退役的 Cordis 浏览器 GUI。随附的 `web` profile 与 `dsh web` 别名已移除；只有 Cordis 组合显式挂载本包时才会启动，仓库仅为 legacy 浏览器 e2e lane 保留它。Desktop 是产品客户端，通过 Native Host 复用 `rsh/Programs/Web/client/**`；本包不是受支持的部署入口。
 
 ## 目录
 
@@ -29,10 +29,7 @@ kind: "package-bundle"
 
 ### 启动 Web GUI
 
-```sh
-dsh --profile web
-dsh --profile web --no-open --port 8080
-```
+随附的 `web` profile 与 `dsh web` 启动器别名已退役。现在只有显式挂载此 bundle 的 Cordis profile 才能启动它；仓库仅为旧版浏览器 e2e lane 保留该 bundle，直至该 lane 退役。
 
 启动后你会看到 `dsh web:` 行，其根 URL 携带新的进程 token。除非 `--no-open` 或 SSH 会话抑制，否则默认浏览器会打开该 URL、取得签名 cookie，再重定向到不含认证参数的根页面。页面加载且你可以与 agent 对话，就说明成功了。两种可预期的失败：前端未构建时，启动会以构建提示停止（checkout 中运行 `pnpm run build`）；浏览器无法打开时，stderr 会打印不含凭据的诊断，但服务器会继续运行——请自行打开已打印的启动 URL。
 
@@ -55,7 +52,7 @@ dsh --profile web --no-open --port 8080
 
 ### 通过 SSH 运行
 
-通过 SSH 启动 `dsh --profile web` 时，URL 行仍会打印，但不会为你打开浏览器：本地转发地址由 SSH 客户端或编辑器持有。请在自己的机器上打开转发后的 URL；打印出的 URL 指向远端宿主机 loopback 端点。
+legacy lane 直接打开进程 URL，不经过随附 CLI profile。因此浏览器交接与 SSH 转发说明属于 lane harness，而不是产品启动命令。
 
 ### 按会话的 agent 设置
 
