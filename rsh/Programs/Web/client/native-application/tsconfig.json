@@ -57,6 +57,9 @@
       "path": "../ui-tool"
     },
     {
+      "path": "../ui-skill"
+    },
+    {
       "path": "../ui-approval"
     },
     {

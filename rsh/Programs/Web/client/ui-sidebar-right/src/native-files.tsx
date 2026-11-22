@@ -129,7 +129,8 @@ function PdfPreview({ data, title }: { readonly data: Uint8Array<ArrayBuffer>; r
 }
 
 /**
- * Display text, Markdown, code, HTML, image, or PDF bytes from one Session file.
+ * Display text, Markdown, code, HTML, image, or PDF bytes for the selected open document.
+ * A Session or workspace change clears the open documents before the next read.
  * @param props - the selected Session, workspace service, section, and localized labels.
  * @returns the Session file tree and preview panes.
  */
@@ -144,6 +145,13 @@ export function NativeFilesPanel({
   const generations = useRef(new Map<string, number>())
   const controller = useRef<AbortController>()
   const [selectedPath, setSelectedPath] = useState<string>()
+  const [openPaths, setOpenPaths] = useState<readonly string[]>([])
+  const [documentScope, setDocumentScope] = useState({ sessionId, workspaceRoot })
+  if (documentScope.sessionId !== sessionId || documentScope.workspaceRoot !== workspaceRoot) {
+    setDocumentScope({ sessionId, workspaceRoot })
+    setOpenPaths([])
+    setSelectedPath(undefined)
+  }
   const [preview, setPreview] = useState<FilePreviewState>()
   const previewRead = useRef<PreviewRead>()
   const [previewRevision, setPreviewRevision] = useState(0)
@@ -336,6 +344,21 @@ export function NativeFilesPanel({
     return bytesOf(result.data)
   }, [selectedPath, service, sessionId])
 
+  const openDocument = (path: string): void => {
+    setOpenPaths(current => current.includes(path) ? current : [...current, path])
+    setSelectedPath(path)
+    setPreviewRevision(value => value + 1)
+    onOpenPreview()
+  }
+
+  const closeDocument = (path: string): void => {
+    const index = openPaths.indexOf(path)
+    if (index === -1) return
+    const next = openPaths.filter(item => item !== path)
+    setOpenPaths(next)
+    if (selectedPath === path) setSelectedPath(next[Math.min(index, next.length - 1)])
+  }
+
   const markdownLabels: MarkdownLabels = {
     code: { copyLabel: t('fileCopy'), copiedLabel: t('fileCopied') },
     footnotes: t('fileFootnotes'),
@@ -357,15 +380,23 @@ export function NativeFilesPanel({
             levels={tree.levels}
             labels={{ loading: t('filesLoading'), empty: t('filesEmpty'), truncated: t('filesTruncated'), other: t('filesOther') }}
             onToggle={toggleDirectory}
-            onOpen={(path) => {
-              setSelectedPath(path)
-              setPreviewRevision(value => value + 1)
-              onOpenPreview()
-            }}
+            onOpen={openDocument}
           />
         </div>}
     </div>
     <div className={`${css.pane} ${section === 'preview' ? '' : css.hidden}`}>
+      {openPaths.length === 0 ? null : <div className={css.documents} role="tablist" aria-label={t('openDocuments')}>
+        {openPaths.map((path) => {
+          const name = path.slice(path.lastIndexOf('/') + 1)
+          const selected = path === selectedPath
+          return <div key={path} className={selected ? `${css.document} ${css.documentSelected}` : css.document}>
+            <button type="button" role="tab" className={css.documentName} aria-selected={selected}
+              onClick={() => { setSelectedPath(path) }}>{name}</button>
+            <button type="button" className={css.documentClose} aria-label={t('closeDocument', { name })}
+              onClick={() => { closeDocument(path) }}>×</button>
+          </div>
+        })}
+      </div>}
       <SidebarPathBar path={current?.kind === 'text' || current?.kind === 'bytes'
         ? current.absolutePath : selectedPath ?? t('filePreview')}>
         {selectedPath !== undefined && <button type="button" className={css.tool} aria-label={t('reloadPreview')}

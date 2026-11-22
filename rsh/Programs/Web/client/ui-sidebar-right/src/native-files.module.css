@@ -104,3 +104,55 @@
   border: 0;
   background: var(--dsw-alias-bg-base);
 }
+
+.documents {
+  display: flex;
+  flex: none;
+  gap: 4px;
+  min-width: 0;
+  padding: 6px 8px 0;
+  overflow: auto hidden;
+}
+
+.document {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  max-width: 180px;
+  color: var(--dsw-alias-label-secondary);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 8px;
+}
+
+.documentSelected {
+  color: var(--dsw-alias-label-primary);
+  background: var(--dsw-alias-interactive-bg-hover);
+}
+
+.documentName,
+.documentClose {
+  color: inherit;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+}
+
+.documentName {
+  min-width: 0;
+  padding: 4px 2px 4px 8px;
+  overflow: hidden;
+  font: inherit;
+  font-size: 12px;
+  line-height: 1.4;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.documentClose {
+  flex: none;
+  padding: 4px 8px 4px 2px;
+  font: inherit;
+  font-size: 14px;
+  line-height: 1;
+}

@@ -53,7 +53,7 @@ source 不实现任何裁决钩子，也没有引用 codec：pick 落下字面�
 
 ### 注册
 
-`/client` 导出接口只有插件主体（`apply`／`inject`）；source 对象是注册 effect 的内部实现。工具行把 `skill` wire 名称注册进 ui-tool 的 keyed `tool.call.toolview` slot。
+`/client` 导出接口只有插件主体（`apply`／`inject`）；source 对象是注册 effect 的内部实现。工具行把 `skill` wire 名称注册进 ui-tool 的 keyed `tool.call.toolview` slot。Native 转录不使用该 slot，而是渲染 `./native` 导出的 `NativeSkillRow`。
 
 </details>
 

@@ -3,7 +3,7 @@
  * The Native settings host declares the slots feature packages register into,
  * and the page renders those registrations.
  */
-import { cleanup, fireEvent, screen } from '@testing-library/react'
+import { cleanup, fireEvent, screen, waitFor } from '@testing-library/react'
 import { afterEach, expect, it, vi } from 'vitest'
 import type { PropsRenderSlots } from '@redspark/rsh-client-ui-slots'
 import type { NativePlugin } from '@redspark/rsh-native-runtime'
@@ -22,16 +22,24 @@ function untilAbort(signal?: AbortSignal): Promise<void> {
   return new Promise((resolve) => { signal.addEventListener('abort', () => { resolve() }, { once: true }) })
 }
 
+const settingsDocument = {
+  hasDocument: false,
+  describes: 0,
+  open: vi.fn(async () => {}),
+}
+
 function sessionClient(): NativeSessionClient {
-  const described = {
-    hasDocument: false,
-    namespaces: [],
-    limits: { maxCredentialRefsPerRead: 64, maxSettingsOperations: 512 },
-  }
   return {
-    settingsDescribe: async () => described,
+    settingsDescribe: async () => {
+      settingsDocument.describes += 1
+      return {
+        hasDocument: settingsDocument.hasDocument,
+        namespaces: [],
+        limits: { maxCredentialRefsPerRead: 64, maxSettingsOperations: 512 },
+      }
+    },
     settingsMutate: async () => { throw new Error('unused') },
-    settingsOpenDocument: async () => {},
+    settingsOpenDocument: () => settingsDocument.open(),
     credentialsDescribe: async () => ({}),
     credentialsSet: async () => {},
     credentialsUnset: async () => {},
@@ -131,6 +139,9 @@ afterEach(async () => {
   cleanup()
   document.body.replaceChildren()
   while (started.length > 0) await started.pop()?.stop()
+  settingsDocument.hasDocument = false
+  settingsDocument.describes = 0
+  settingsDocument.open = vi.fn(async () => {})
 })
 
 it('shows a registration in the plugins tab and the models section', async () => {
@@ -223,4 +234,39 @@ it('drops the navigation row and leaves an unregistered page when its registrati
   await screen.findByRole('button', { name: 'General' })
   expect(screen.queryByRole('button', { name: 'Models' })).toBeNull()
   expect(screen.queryByText('Coming soon')).toBeNull()
+})
+
+it.each([
+  { hasDocument: false, open: 'hidden' },
+  { hasDocument: true, open: 'ok' },
+  { hasDocument: true, open: 'fail' },
+] as const)('opens the settings file only when the Host reports a document ($open)', async ({ hasDocument, open }) => {
+  settingsDocument.hasDocument = hasDocument
+  settingsDocument.open = open === 'fail'
+    ? vi.fn(async () => { throw new Error('native/settings') })
+    : vi.fn(async () => {})
+  const scope = new NativeScope()
+  const host = new NativeHost(resolveInstallation([
+    { plugin: services, scope, config: undefined },
+    { plugin: renderer, scope, config: undefined },
+    { plugin: locale, scope, config: { locale: 'en' } },
+    { plugin: theme, scope, config: undefined },
+    { plugin: application, scope, config: { maxLiveTextChars: 1024, maxLiveEvents: 32 } },
+    { plugin: sessionPresentation, scope, config: undefined },
+    { plugin: shell, scope, config: undefined },
+  ], 'client'))
+  await host.start()
+  started.push(host)
+  fireEvent.click(await screen.findByRole('button', { name: 'Settings' }))
+  if (!hasDocument) {
+    await screen.findByRole('button', { name: 'General' })
+    await waitFor(() => { expect(settingsDocument.describes).toBeGreaterThan(0) })
+    expect(screen.queryByRole('button', { name: 'Open settings file' })).toBeNull()
+    expect(settingsDocument.open).not.toHaveBeenCalled()
+    return
+  }
+  fireEvent.click(await screen.findByRole('button', { name: 'Open settings file' }))
+  await waitFor(() => { expect(settingsDocument.open).toHaveBeenCalledTimes(1) })
+  if (open === 'fail') expect(await screen.findByRole('alert')).toHaveProperty('textContent', 'Could not open the settings file.')
+  else expect(screen.queryByRole('alert')).toBeNull()
 })

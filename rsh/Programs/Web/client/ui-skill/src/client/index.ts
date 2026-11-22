@@ -42,6 +42,8 @@ import { rankByName } from '@redspark/rsh-client-ui-primitives'
 import type {} from '@redspark/rsh-client-locale/client'
 // Type-only: pulls the SlotRegistry service merge (ctx.slots).
 import type {} from '@redspark/rsh-client-ui-renderer/client'
+// Type-only: pulls the `tool.call.toolview` slot declaration.
+import type {} from '@redspark/rsh-client-ui-tool/client'
 import { SkillRow } from './SkillRow.tsx'
 import { en, NS, zh, type SkillKey } from './locales.ts'
 

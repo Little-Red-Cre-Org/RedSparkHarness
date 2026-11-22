@@ -8,7 +8,7 @@ export type NativeRightbarKey =
   | 'files' | 'filePreview' | 'filesLoading' | 'filesEmpty' | 'filesTruncated' | 'filesOther' | 'filesUnavailable'
   | 'fileFollowUnavailable' | 'noWorkspace' | 'chooseFile' | 'fileLoading' | 'fileUnavailable' | 'fileUnsupported'
   | 'reloadFiles' | 'reloadPreview' | 'loadMore' | 'fileCopy' | 'fileCopied' | 'fileFootnotes' | 'htmlPreview'
-  | 'pdfPreview' | 'imagePreview'
+  | 'pdfPreview' | 'imagePreview' | 'openDocuments' | 'closeDocument'
 /** Chinese native Session details copy. */
 export const zh = {
   details: '会话详情', overview: '概览', activity: '活动', sections: '会话详情分类', session: '会话',
@@ -28,6 +28,7 @@ export const zh = {
   reloadFiles: '重新读取文件', reloadPreview: '重新读取预览', loadMore: '加载更多',
   fileCopy: '复制', fileCopied: '已复制', fileFootnotes: '脚注', htmlPreview: 'HTML 文档预览',
   pdfPreview: 'PDF 文档预览', imagePreview: '图片预览：{name}',
+  openDocuments: '已打开的文档', closeDocument: '关闭 {name}',
 } as const satisfies Record<NativeRightbarKey, string>
 /** English native Session details copy. */
 export const en = {
@@ -48,4 +49,5 @@ export const en = {
   reloadFiles: 'Reload files', reloadPreview: 'Reload preview', loadMore: 'Load more',
   fileCopy: 'Copy', fileCopied: 'Copied', fileFootnotes: 'Footnotes', htmlPreview: 'HTML document preview',
   pdfPreview: 'PDF document preview', imagePreview: 'Image preview: {name}',
+  openDocuments: 'Open documents', closeDocument: 'Close {name}',
 } satisfies Record<NativeRightbarKey, string>

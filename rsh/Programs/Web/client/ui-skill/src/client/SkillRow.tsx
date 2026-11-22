@@ -2,14 +2,17 @@ import { useState, type KeyboardEvent, type ReactNode } from 'react'
 import {
   IconChevronDownOutline14, IconInspectOutline12, IconSkillOutline16, StateDot,
 } from '@redspark/rsh-client-ui-primitives'
-import type { ToolCallViewProps } from '@redspark/rsh-client-ui-tool/client'
+import type { ToolCallBlock } from '@redspark/rsh-client-ui-tool/native'
 import type { PropsLocale } from '@redspark/rsh-client-ui-slots'
 import css from './SkillRow.module.css'
 
 /** Skill row lifecycle derived solely from the durable call slice. */
 type SkillRowState = 'running' | 'ok' | 'error' | 'stopped'
 
-type SkillRowProps = ToolCallViewProps & PropsLocale<'skill'>
+type SkillRowProps = PropsLocale<'skill'> & {
+  readonly block: ToolCallBlock
+  readonly inspect?: (() => void) | undefined
+}
 
 /** Compact, replay-stable view model for the dedicated row. */
 interface SkillRowModel {
@@ -42,7 +45,7 @@ function skillName(argsRaw: string, callId: string): string {
 
 /** Flatten durable result blocks under the generic Tool-row text contract.
  *  Keep aligned with ui-tool's models/tool-call-model.ts `resultText`. */
-function resultText(block: ToolCallViewProps['block']): string | null {
+function resultText(block: ToolCallBlock): string | null {
   if (!('kind' in block)) return null
   const parts: string[] = []
   for (const item of block.content) {
@@ -55,7 +58,7 @@ function resultText(block: ToolCallViewProps['block']): string | null {
 }
 
 /** Derive display state without consulting the live skill catalog. */
-function skillRowModel(block: ToolCallViewProps['block']): SkillRowModel {
+function skillRowModel(block: ToolCallBlock): SkillRowModel {
   const settled = 'kind' in block
   const argsRaw = (settled ? block.call?.argsRaw : block.argsRaw) ?? ''
   const state: SkillRowState = !settled
@@ -106,7 +109,7 @@ function stateStatus(state: SkillRowState, t: SkillRowProps['t']): string | null
 
 /**
  * Render one `skill` tool call as an accent summary and instructions disclosure.
- * @param props - keyed toolview payload plus the skill locale seat.
+ * @param props - durable call slice and the skill locale translator.
  * @returns the dedicated skill row.
  */
 export function SkillRow({ block, inspect, t }: SkillRowProps) {

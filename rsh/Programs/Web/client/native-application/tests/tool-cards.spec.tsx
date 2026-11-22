@@ -1,5 +1,8 @@
-import { describe, expect, it } from 'vitest'
+// @vitest-environment jsdom
+import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { afterEach, describe, expect, it } from 'vitest'
 import { SessionSeq, type SessionEvent } from '@redspark/rsh-session/types'
+import type { RunningToolCall, ToolResultNode } from '@redspark/rsh-client-ui-tool/native'
 import { ToolCard, toolCardRecords } from '../src/tool-cards.tsx'
 
 function event(seq: number, type: string, data: unknown): SessionEvent {
@@ -58,4 +61,61 @@ describe('native Tool card projection', () => {
     expect(record).toMatchObject({ seq: 2, block: { kind: 'tool-result', callId: 'windowed', call: null, callTime: null } })
     expect(ToolCard({ block: record.block, locale: 'zh' }).props).toMatchObject({ toolName: 'windowed', locale: 'zh' })
   })
+})
+
+afterEach(cleanup)
+
+function skillResult(over: Partial<ToolResultNode> = {}): ToolResultNode {
+  return {
+    kind: 'tool-result', seq: 3, time: 3_000, callId: 'call-skill',
+    call: { name: 'skill', argsRaw: '{"name":"dsh-manage-issues"}' },
+    callTime: 2_000,
+    content: [{ type: 'text', text: '<skill_content name="dsh-manage-issues">\nFollow the issue workflow.\n</skill_content>' }],
+    isError: false, subCalls: [], ...over,
+  }
+}
+
+const skillRunning = (): RunningToolCall => ({
+  callId: 'call-skill', name: 'skill', argsRaw: '{"name":"dsh-manage-issues"}',
+  turn: 1, step: 1, time: 2_000, subCalls: [],
+})
+
+it.each(['ok', 'error', 'running', 'stopped'] as const)('renders the dedicated skill row (%s)', (state) => {
+  const block = state === 'running'
+    ? skillRunning()
+    : state === 'error'
+      ? skillResult({
+        content: [{ type: 'text', text: 'SkillError: missing resource\nCheck SKILL.md.' }],
+        isError: true,
+        error: { name: 'SkillError', code: 'missing' },
+      })
+      : state === 'stopped'
+        ? skillResult({ error: { name: 'InterruptedError', code: 'interrupted' } })
+        : skillResult()
+  const view = render(<ToolCard block={block} locale="en" />)
+  const row = view.container.querySelector('[data-tool="skill"]')
+  expect(row).not.toBeNull()
+  expect(row?.getAttribute('data-state')).toBe(state === 'running' ? 'running' : state)
+  if (state !== 'error') expect(view.container.textContent).toContain('dsh-manage-issues')
+  if (state === 'running') {
+    expect(view.container.textContent).toContain('Loading skill')
+    expect(row?.querySelector('[role="button"]')).toBeNull()
+    return
+  }
+  if (state === 'stopped') {
+    expect(view.container.textContent).toContain('Skill load stopped')
+    return
+  }
+  const summary = state === 'error' ? 'SkillError: missing resource' : 'dsh-manage-issues'
+  const button = screen.getByRole('button', { name: state === 'error' ? `Skill load failedSkill${summary}` : `Skill${summary}` })
+  expect(button.getAttribute('aria-expanded')).toBe('false')
+  fireEvent.click(button)
+  expect(button.getAttribute('aria-expanded')).toBe('true')
+  const output = view.container.querySelector('pre')
+  expect(output?.textContent).toBe(state === 'error'
+    ? 'SkillError: missing resource\nCheck SKILL.md.'
+    : '<skill_content name="dsh-manage-issues">\nFollow the issue workflow.\n</skill_content>')
+  fireEvent.click(button)
+  expect(button.getAttribute('aria-expanded')).toBe('false')
+  expect(view.container.querySelector('pre')).toBeNull()
 })
