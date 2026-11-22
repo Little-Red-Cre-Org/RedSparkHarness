@@ -787,6 +787,11 @@ it('reads and follows an addressed subagent without changing ordinary history', 
       body: JSON.stringify({ parentSessionId: 'parent', childSessionId: 'idle-child', mode: 'continuable', lastSeq: -1 }),
     }))
     expect(blocked.status).toBe(429)
+    const invalidAtCapacity = await fixture.service.followSubagent(new Request('http://localhost/api/native-session/subagent-follow', {
+      method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}',
+    }))
+    expect(invalidAtCapacity.status).toBe(409)
+    expect(await invalidAtCapacity.json()).toMatchObject({ code: 'gateway/bad-request', message: 'Session request is invalid.' })
     expect(await follow.next()).toMatchObject({ value: { type: 'event' } })
     child.emit(endSeed(1))
     expect(await follow.next()).toMatchObject({ value: { type: 'event', event: { seq: 1 } } })

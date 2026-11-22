@@ -22,6 +22,8 @@ The Native Web Session Host wraps the existing Engine operations. It does not re
 
 `session/history` with `{ sessionId }` is unchanged, including a raw child id. `{ address: { kind: 'subagent', parentSessionId, childSessionId, mode } }` is dispatched first and returns the same history fields after the parent, workspace, and descriptor checks. `POST /api/native-session/follow` is unchanged. `POST /api/native-session/subagent-follow` follows that addressed child and does not acquire the parent turn.
 
+`POST /api/native-session/subagent-follow` parses its body before consulting `maxFollowers`. An invalid body, including `{}`, is HTTP 409 `gateway/bad-request` with the fixed message `Session request is invalid.` A parsed follow is HTTP 429 when turn followers plus list feeds are already at `maxFollowers`, and that response does not read child history.
+
 Wire failures use fixed messages. Details may contain session ids and catalog reasons. They do not contain engine text, filesystem paths, or config secrets. `settings/describe`, `settings/open-document`, `session/files/*`, files follow, and durable tool call and result events are unchanged.
 
 This Host behavior follows the Web address and continuation rules in [Web subagent conversations](2026-07-27-web-subagent-conversations.md), the current-turn interrupt rule in [continuable subagent interrupt](2026-08-06-continuable-subagent-interrupt.md), and the remaining product gaps in [Desktop-only retires the browser Web deployment](../architecture/2026-11-21-desktop-only-retires-browser-web.md).
@@ -38,12 +40,16 @@ This Host behavior follows the Web address and continuation rules in [Web subage
 
 **Require the client to supply the destination Session id.** The legacy Web Host mints the id. The Engine fork already requires the caller to pass `id`, so the Host mints it and the wire result stays `{ sessionId }`.
 
+**Count every subagent-follow request against `maxFollowers` before parsing it.** The real-browser RPC test posts `{}` while the conversation roster list follow and the in-flight turn follow already occupy both configured slots. That body is not a follow admission. `follow()` returns HTTP 409 for an unavailable admission before its capacity check, and an unparsed subagent-follow body uses that same fixed HTTP 409 failure.
+
 ## Consequences
 
 Root history and follow callers keep their current requests and responses. Queue and steer are both accepted on the wire, and Native admission is always the next-step inbox; there is no separate Native queue inbox for this prompt. An interrupt acceptance means the Host issued the Engine signal or treated the child as missing or not live. A live child that cannot be signaled is a fixed error, not acceptance. Acceptance does not wait for the child turn to stop, and it does not cancel the parent.
+
+An invalid subagent-follow body remains HTTP 409 while the follower limit is exhausted. A parsed follow at that limit remains HTTP 429 and does not open child history.
 
 The skill tool row, settings document UI, and right-sidebar multi-document tabs remain open. The Desktop-only note still owns that product scope. `profile: web` snapshots stay on the legacy composition until those UI gaps close.
 
 ## Verification
 
-`rsh/Programs/Web/api/native-web-session-controller/tests/subagent.host.spec.ts` has four tests: fork failure hiding, direct-child catalog diagnostics, prompt plus interrupt without parent cancel, and addressed history and follow beside unchanged `history(sessionId)`. The existing real-browser RPC test asserts that an empty `POST /api/native-session/subagent-follow` is rejected. That spec covers every statement, branch, function, and line in `subagent-host.ts`.
+`rsh/Programs/Web/api/native-web-session-controller/tests/subagent.host.spec.ts` has four tests: fork failure hiding, direct-child catalog diagnostics, prompt plus interrupt without parent cancel, and addressed history and follow beside unchanged `history(sessionId)`. The existing real-browser RPC test asserts that an empty `POST /api/native-session/subagent-follow` is rejected. That spec covers every statement, branch, function, and line in `subagent-host.ts`. The addressed-follow test posts `{}` while one follower already holds `maxFollowers: 1` and expects HTTP 409 `gateway/bad-request`. The existing real-browser RPC test expects HTTP 409 for an empty `POST /api/native-session/subagent-follow`.

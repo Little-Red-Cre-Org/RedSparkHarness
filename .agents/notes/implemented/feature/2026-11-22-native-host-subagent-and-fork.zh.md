@@ -22,6 +22,8 @@ Native Web Session Host 包装现有 Engine 操作。它不重新实现种子切
 
 带 `{ sessionId }` 的 `session/history` 保持不变，包括原始子 id。`{ address: { kind: 'subagent', parentSessionId, childSessionId, mode } }` 会先被分发，并在 parent、工作区与描述符检查通过后返回相同的 history 字段。`POST /api/native-session/follow` 保持不变。`POST /api/native-session/subagent-follow` 跟随该已寻址子项，且不取得 parent 轮次。
 
+`POST /api/native-session/subagent-follow` 在查阅 `maxFollowers` 之前先解析请求体。无效请求体（包括 `{}`）返回 HTTP 409 `gateway/bad-request`，固定消息为 `Session request is invalid.`。已解析的 follow 在 turn followers 与 list feeds 已达到 `maxFollowers` 时返回 HTTP 429，且该响应不读取子项 history。
+
 线上失败使用固定消息。details 可以包含 session id 和目录原因。它们不包含引擎文本、文件系统路径或配置密钥。`settings/describe`、`settings/open-document`、`session/files/*`、files follow，以及持久的 tool call 与 result 事件保持不变。
 
 这份 Host 行为遵循 [Web 子代理对话](2026-07-27-web-subagent-conversations.zh.md) 中的 Web 地址与继续规则、[可继续子代理中断](2026-08-06-continuable-subagent-interrupt.zh.md) 中的当前轮次中断规则，以及 [Desktop-only retires the browser Web deployment](../architecture/2026-11-21-desktop-only-retires-browser-web.zh.md) 中仍保留的产品缺口。
@@ -38,12 +40,16 @@ Native Web Session Host 包装现有 Engine 操作。它不重新实现种子切
 
 **要求客户端提供目标 Session id。** 旧 Web Host 铸造该 id。Engine fork 已经要求调用方传入 `id`，因此由 Host 铸造，线上结果仍是 `{ sessionId }`。
 
+**在解析之前就把每个 subagent-follow 请求计入 `maxFollowers`。** 真实浏览器 RPC 测试在 conversation roster 的 list follow 与进行中的 turn follow 已占满两个配置槽位时提交 `{}`。该请求体不是 follow admission。`follow()` 对不可用 admission 在容量检查之前返回 HTTP 409，未解析的 subagent-follow 请求体使用同一固定的 HTTP 409 失败。
+
 ## Consequences
 
 根 history 与 follow 调用方保持现有请求和响应。queue 与 steer 在线上都被接受，而 Native 准入始终是 next-step 收件箱；这个提示没有单独的 Native queue 收件箱。中断被接受表示 Host 已发出 Engine 信号，或把子项视为缺失或非活动。无法发信号的活动子项是固定错误，而不是接受。接受不等待子轮次停止，也不取消 parent。
+
+当 follower 限额已用尽时，无效的 subagent-follow 请求体仍是 HTTP 409。在该限额下已解析的 follow 仍是 HTTP 429，且不会打开子项 history。
 
 skill tool 行、settings 文档界面和右侧栏多文档标签仍然开放。Desktop-only 笔记仍拥有该产品范围。在这些 UI 缺口关闭之前，`profile: web` 快照留在旧组合上。
 
 ## Verification
 
-`rsh/Programs/Web/api/native-web-session-controller/tests/subagent.host.spec.ts` 有四个测试：隐藏 fork 失败、直接子项目录诊断、提示加中断且不取消 parent，以及已寻址 history 与 follow 并保持 `history(sessionId)` 不变。现有的真实浏览器 RPC 测试断言空的 `POST /api/native-session/subagent-follow` 会被拒绝。该 spec 覆盖 `subagent-host.ts` 的全部分支、函数、语句和行。
+`rsh/Programs/Web/api/native-web-session-controller/tests/subagent.host.spec.ts` 有四个测试：隐藏 fork 失败、直接子项目录诊断、提示加中断且不取消 parent，以及已寻址 history 与 follow 并保持 `history(sessionId)` 不变。现有的真实浏览器 RPC 测试断言空的 `POST /api/native-session/subagent-follow` 会被拒绝。该 spec 覆盖 `subagent-host.ts` 的全部分支、函数、语句和行。已寻址 follow 测试在一个 follower 已占用 `maxFollowers: 1` 时提交 `{}`，并期望 HTTP 409 `gateway/bad-request`。现有的真实浏览器 RPC 测试期望空的 `POST /api/native-session/subagent-follow` 返回 HTTP 409。

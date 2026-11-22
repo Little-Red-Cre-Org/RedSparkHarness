@@ -1907,6 +1907,8 @@ export class NativeWebSessionService {
 
   /**
    * Follow one addressed subagent Session without acquiring its parent turn.
+   * An invalid body is HTTP 409 before `maxFollowers` is consulted.
+   * A parsed follow is HTTP 429 at that limit and does not read child history.
    * @param request - authenticated Fetch body with parent, child, mode, and cursor.
    * @returns SSE history tail, or a fixed failure before a stream is admitted.
    */
@@ -1914,10 +1916,10 @@ export class NativeWebSessionService {
     const signal = AbortSignal.any([request.signal, this.lifetime, this.shutdown.signal])
     try {
       signal.throwIfAborted()
+      const fields = parseNativeSubagentFollow(await request.json())
       if (this.followers + this.listFeeds.size >= this.config.maxFollowers) {
         return new Response('native Session follow: capacity reached', { status: 429 })
       }
-      const fields = parseNativeSubagentFollow(await request.json())
       const history = await authorizeSubagentHistory(this.subagentHostDeps(), {
         kind: 'subagent', parentSessionId: fields.parentSessionId, childSessionId: fields.childSessionId, mode: fields.mode,
       }, signal)
