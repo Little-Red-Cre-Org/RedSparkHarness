@@ -1,7 +1,5 @@
 /** Browser caller for generic Connection unary RPC channels. */
 
-import { API_PATH } from '../api-path.ts'
-import { createFollowBusClient, FOLLOW_BUS_PATH } from '../follow-bus.ts'
 import {
   RpcId,
   type ClientRequest,
@@ -27,22 +25,14 @@ export type RpcStreamOpen = (
 /**
  * Create the browser-backed generic RPC caller.
  * @param doFetch - transport override; defaults to the page's global fetch.
- *   When omitted, JSON `/api` `response()` calls share one follow-bus fetch.
- *   An explicit fetch, a raw-body response, and any other channel stay direct.
  * @param openStream - optional worker-local Gateway stream carrier.
  * @returns caller that owns request correlation and response-envelope validation.
  */
 export function createWebConnectionRpc(doFetch?: RpcFetch, openStream?: RpcStreamOpen): ClientConnectionRpc {
   const send: RpcFetch = doFetch ?? ((input, init) => globalThis.fetch(input, init))
-  const followBus = doFetch === undefined
-    ? createFollowBusClient(send, () => new URL(FOLLOW_BUS_PATH, resolveBase()), randomUuid)
-    : undefined
   return {
     response(channel, endpoint, payload, signal, request) {
       assertTarget(channel, endpoint, request !== undefined)
-      if (followBus !== undefined && request === undefined && channel === API_PATH) {
-        return followBus(endpoint, payload, signal)
-      }
       const init: RequestInit & { duplex?: 'half' } = request === undefined
         ? { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(payload), signal }
         : { method: request.method ?? 'POST', ...(request.headers === undefined ? {} : { headers: request.headers }),
