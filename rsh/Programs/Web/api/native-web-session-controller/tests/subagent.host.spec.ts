@@ -559,7 +559,9 @@ it('prompts a continuable child and interrupts it without cancelling the parent'
       turnSignal = next
       entered.resolve(undefined)
       return new Promise((resolve) => {
-        const finish = () => resolve({ exitCode: 0, answer: '' })
+        const finish = () => {
+          resolve({ exitCode: 0, answer: '' })
+        }
         next.addEventListener('abort', finish, { once: true })
         void release.promise.then(finish)
       })
@@ -827,7 +829,7 @@ it('reads and follows an addressed subagent without changing ordinary history', 
     const leakedBody = await leaked.text()
     expect(leaked.status).toBe(409)
     expect(leakedBody).not.toContain('LEAKTOKEN')
-    expect(JSON.parse(leakedBody).code).toBe('native/session')
+    expect((JSON.parse(leakedBody) as { code: string }).code).toBe('native/session')
     const invalid = await fixture.service.followSubagent(new Request('http://localhost/api/native-session/subagent-follow', {
       method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}',
     }))

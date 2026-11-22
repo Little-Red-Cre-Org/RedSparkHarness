@@ -1885,10 +1885,11 @@ export class NativeWebSessionService {
     const feed = new NativeSessionFeed(this.config.maxFollowBufferBytes, () => {})
     const childOwner = this.active.owners().find(owner => owner.session.id === childId)
     const removeEvent = childOwner?.onEvent((event) => { feed.push({ type: 'event', event }) }) ?? (() => {})
-    const removeDetached = this.active.onDetached(async (owner) => {
-      if (owner.session.id !== childId) return
+    const removeDetached = this.active.onDetached((owner) => {
+      if (owner.session.id !== childId) return Promise.resolve()
       removeEvent()
       feed.finish()
+      return Promise.resolve()
     })
     const release = (): void => {
       removeEvent()
@@ -1941,6 +1942,9 @@ export class NativeWebSessionService {
    * @returns success after durable settlement, or an explicit failure.
    */
   async handle(endpoint: string, payload: unknown, signal: AbortSignal): Promise<ConnectionRpcResult<unknown>> {
+    // Subagent control returns its own RPC failure and rethrows cancellation.
+    // handle's catch would report that cancellation as native/session.
+    if (this.isSubagentControl(endpoint, payload)) return this.subagentControl(endpoint, payload, signal)
     try {
       if (endpoint.startsWith('feedback/')) {
         return { ok: true, value: await this.requests.run(signal, async (accepted) => {
@@ -2007,7 +2011,6 @@ export class NativeWebSessionService {
       if (endpoint === 'session/submission/promote') {
         return { ok: true, value: await this.requests.run(signal, accepted => this.promoteSubmission(payload, accepted)) }
       }
-      if (this.isSubagentControl(endpoint, payload)) return this.subagentControl(endpoint, payload, signal)
       if (endpoint === 'session/prompt') {
         const acknowledged = await this.start(payload, signal)
         return { ok: true, value: await this.settle({ sessionId: object(payload).sessionId, ...acknowledged }, signal) }
