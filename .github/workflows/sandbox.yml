@@ -63,7 +63,7 @@ jobs:
       ${{ matrix.runner == 'bwrap' && vars.RSH_CI_FAILOVER_LINUX == 'blacksmith'
           && 'blacksmith-4vcpu-ubuntu-2404'
           || matrix.os }}
-    timeout-minutes: 20
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v6
 
@@ -99,7 +99,12 @@ jobs:
       # The unit suite runs on ubuntu in `checks`; this is the one darwin leg
       # in the workflow, so run it here too — the platform-dependent unit
       # expectations (Seatbelt path canonicalization: /tmp IS /private/tmp)
-      # take their darwin branch only on this runner.
+      # take their darwin branch only on this runner. `pnpm test` does not
+      # emit gitignored `lib/`.
+      - name: Build (darwin parity)
+        if: matrix.runner == 'seatbelt'
+        run: pnpm run build
+
       - name: Unit tests (darwin parity)
         if: matrix.runner == 'seatbelt'
         run: pnpm run test

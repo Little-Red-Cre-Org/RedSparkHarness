@@ -2,7 +2,7 @@ import { spawnSync } from 'node:child_process'
 import { accessSync, constants, existsSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
 import { rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { join, relative } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { packedWorkspaceClosure, readWorkspacePackages } from './packed-workspace-closure.ts'
@@ -72,10 +72,26 @@ describe.skipIf(!packable)('sandbox-local: packed-tarball distribution (publish-
 
     // Derive the current runtime closure so a newly introduced workspace
     // dependency cannot fall through to an unpublished registry version.
+    // The walk skips optional peers; the Native packed consumer depends on that.
+    const workspacePackages = readWorkspacePackages(repoRoot)
     const workspaceClosure = packedWorkspaceClosure(
       '@redspark/rsh-sandbox-local',
-      readWorkspacePackages(repoRoot),
+      workspacePackages,
     ).filter(member => !member.name.startsWith(NATIVE_PACKAGE_PREFIX))
+    // This consumer imports `@redspark/cordis`. Pack the vendored package here.
+    // The shared walk keeps skipping optional peers so the Native packed consumer
+    // can omit Cordis. Cordis's workspace dependency is already in the closure;
+    // do not pack Cordis's own optional peers.
+    if (!workspaceClosure.some(member => member.name === '@redspark/cordis')) {
+      const vendoredCordis = join('rsh', 'Core', 'vendor', 'cordis')
+      const cordisDirectory = join(repoRoot, vendoredCordis)
+      const cordis = [...workspacePackages.values()].find(member =>
+        member.name === '@redspark/cordis' && relative(repoRoot, member.directory) === vendoredCordis)
+      if (cordis === undefined) {
+        throw new Error(`packed install cannot resolve @redspark/cordis at ${cordisDirectory}`)
+      }
+      workspaceClosure.push(cordis)
+    }
 
     // Pack each harness closure member with the exact bytes publish would upload.
     const tarballs: string[] = []

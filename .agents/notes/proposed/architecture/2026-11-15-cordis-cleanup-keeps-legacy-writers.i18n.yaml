@@ -2,5 +2,5 @@
 # side as of the last confirmed-consistent state. Both languages carry equal authority;
 # after editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write .agents/notes/proposed/architecture/2026-11-15-cordis-cleanup-keeps-legacy-writers.md
-2026-11-15-cordis-cleanup-keeps-legacy-writers.md: 997a89c2aca0f185cf06392bbda4c607854fe7c9
-2026-11-15-cordis-cleanup-keeps-legacy-writers.zh.md: 7496449b926e301cdad03ca2cceaa5d568a3788b
+2026-11-15-cordis-cleanup-keeps-legacy-writers.md: 6e9318cbf2fc2e2ed8bbbe2bf28bf97dbbcf7cb9
+2026-11-15-cordis-cleanup-keeps-legacy-writers.zh.md: 0171ea9996738ff608133f96b1fe4aaa4a4d0ade

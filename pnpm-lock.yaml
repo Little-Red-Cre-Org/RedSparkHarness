@@ -2591,6 +2591,9 @@ importers:
       '@redspark/rsh-skill-filesystem':
         specifier: workspace:^
         version: link:../../../Modules/Official/skill/skill-filesystem
+      '@redspark/rsh-task-scheduler':
+        specifier: workspace:^
+        version: link:../../../Modules/Official/automation/task-scheduler
       '@redspark/rsh-token-meter':
         specifier: workspace:^
         version: link:../../llm/token-meter

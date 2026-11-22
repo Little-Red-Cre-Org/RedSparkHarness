@@ -6,6 +6,7 @@ import type { UserMessage } from '@redspark/rsh-llm/native'
 import type { SessionEvent, SessionId, SessionSeq } from '@redspark/rsh-session/native'
 import type { WorkspaceId } from '@redspark/rsh-workspace-definition'
 import type { NativeActiveSessionOwner } from './active-session.ts'
+import type { NativePromptToolPreparation } from '@redspark/rsh-native-session-execution/active-session-protocol'
 import type { NativeSessionConfiguration, NativeSessionTurnResult } from './index.ts'
 import type { SessionDeletionId, SessionDeletionReceipt } from '@redspark/rsh-session-persistence/native'
 import type { NativeSessionOwnerApproval } from './execution-policy.ts'
@@ -271,6 +272,11 @@ export interface NativeRootExecutionOperations {
    */
   selectPreset(request: NativeAgentPresetSelectionRequest & { readonly route: NativeRootRouteId },
     signal: AbortSignal): Promise<NativeAgentPresetFacts>
+  /**
+   * Admission-tool port for the executor that owns this route.
+   * Present when that executor publishes `promptToolPreparation`; wrappers may omit it.
+   */
+  readonly promptToolPreparation?: NativePromptToolPreparation
 }
 
 declare module '@redspark/rsh-native-runtime' {

@@ -1,7 +1,7 @@
 import { load as parseYaml } from 'js-yaml'
 import { resolve as resolveEsm } from 'import-meta-resolve'
 import { createHash } from 'node:crypto'
-import { existsSync } from 'node:fs'
+import { existsSync, realpathSync } from 'node:fs'
 import { lstat, readFile, readdir, rm } from 'node:fs/promises'
 import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
@@ -375,12 +375,20 @@ function declaredPackages(manifest: PackageManifest): Set<string> {
 }
 
 function resolveDirectory(path: string): string {
+  // Existing paths use realpath so darwin `/var` and `/private/var` share one spelling.
+  // See .agents/notes/implemented/bug-fix/2026-11-22-darwin-seatbelt-realpath-and-build.md.
   const absolute = resolve(path)
-  return process.platform === 'win32' ? absolute.toLowerCase() : absolute
+  let canonical = absolute
+  try {
+    canonical = realpathSync.native(absolute)
+  } catch (error) {
+    if (!(error instanceof Error && 'code' in error && (error.code === 'ENOENT' || error.code === 'ENOTDIR'))) throw error
+  }
+  return process.platform === 'win32' ? canonical.toLowerCase() : canonical
 }
 
 function isWithin(parent: string, candidate: string): boolean {
-  const path = relative(parent, candidate)
+  const path = relative(resolveDirectory(parent), resolveDirectory(candidate))
   return path === '' || (path !== '..' && !path.startsWith(`..${sep}`) && !isAbsolute(path))
 }
 
