@@ -4,12 +4,19 @@ import { Context } from '@redspark/cordis'
 import { describe, expect, it, vi } from 'vitest'
 import type { BrowserAuth } from '../src/browser-auth.ts'
 import { createWebConnectionRpc } from '../src/client/rpc.ts'
-import { createFollowBusClient, FOLLOW_BUS_PATH } from '../src/follow-bus.ts'
+import { createFollowBusClient, FOLLOW_BUS_FRAME_OVERHEAD_BYTES, FOLLOW_BUS_PATH } from '../src/follow-bus.ts'
 import { HostConnectionService } from '../src/rpc-host.ts'
 import type { ConnectionFetchHandler } from '../src/rpc.ts'
 
 const encoder = new TextEncoder()
 const decoder = new TextDecoder()
+const SESSION_COOKIE = 'dsh-test=live'
+
+interface TestSession {
+  cookie: string
+  expiresAt: number
+  host: string
+}
 
 const RESIDENT = [
   'native-session/list-follow',
@@ -28,20 +35,33 @@ interface WireFrame {
   readonly endpoint?: string
 }
 
-async function harness(): Promise<{
+function fakeBrowserAuth(session: TestSession): BrowserAuth {
+  return {
+    isAuthenticated(request: { readonly headers: Headers | { readonly cookie?: string } }): boolean {
+      const headers = request.headers
+      const cookie = headers instanceof Headers ? headers.get('cookie') ?? undefined : headers.cookie
+      return cookie === session.cookie && session.cookie !== '' && Date.now() < session.expiresAt
+    },
+  } as BrowserAuth
+}
+
+async function harness(maxRequestBodyBytes?: number): Promise<{
   readonly connection: HostConnectionService
   readonly handler: ConnectionFetchHandler
+  readonly session: TestSession
   readonly dispose: () => Promise<void>
 }> {
+  const session: TestSession = { cookie: SESSION_COOKIE, expiresAt: Number.POSITIVE_INFINITY, host: '127.0.0.1' }
   const ctx = new Context()
   const fiber = ctx.plugin((pluginCtx) => {
-    new HostConnectionService(pluginCtx, [], {} as BrowserAuth)
+    new HostConnectionService(pluginCtx, [], fakeBrowserAuth(session), maxRequestBodyBytes)
   })
   await fiber.await()
   const connection = ctx.get('connection') as HostConnectionService
   return {
     connection,
     handler: connection.createSharedFetchHandler('/api'),
+    session,
     dispose: () => fiber.dispose(),
   }
 }
@@ -80,15 +100,24 @@ function sseRoute(label: string): {
 }
 
 function pageFetch(
+  connection: HostConnectionService,
   handler: ConnectionFetchHandler,
   calls: string[],
+  session: TestSession,
   hold?: { gate: Promise<undefined> | undefined },
 ): (input: URL, init: RequestInit) => Promise<Response> {
   return async (input, init) => {
     const url = input instanceof URL ? input : new URL(String(input))
     calls.push(`${init.method ?? 'GET'} ${url.pathname}`)
-    const response = await handler.fetch(new Request(url, init))
-    if (hold === undefined || hold.gate === undefined || url.pathname !== FOLLOW_BUS_PATH) return response
+    const headers = new Headers(init.headers)
+    headers.set('host', session.host)
+    headers.set('cookie', session.cookie)
+    const rejection = connection.requestRejection({ headers })
+    if (rejection !== undefined) {
+      return new Response(rejection === 401 ? 'unauthorized' : 'forbidden', { status: rejection })
+    }
+    const response = await handler.fetch(new Request(url, { ...init, headers }))
+    if (hold === undefined || hold.gate === undefined || url.pathname !== FOLLOW_BUS_PATH || init.method !== 'POST') return response
     const gate = hold.gate
     hold.gate = undefined
     if (response.body === null) return response
@@ -121,7 +150,10 @@ async function textChunk(response: Response): Promise<string> {
   return decoder.decode(next.value)
 }
 
-function openBus(): {
+function openBus(options?: {
+  readonly url?: string
+  readonly headers?: Readonly<Record<string, string>>
+}): {
   readonly request: Request
   readonly send: (frame: unknown) => Promise<void>
   readonly sendRaw: (text: string) => Promise<void>
@@ -143,7 +175,10 @@ function openBus(): {
     duplex: 'half',
     signal: lifetime.signal,
   }
-  const request = new Request('http://dsh.internal/api/connection/follow-bus', init)
+  const request = new Request(options?.url ?? 'http://dsh.internal/api/connection/follow-bus', {
+    ...init,
+    headers: { host: '127.0.0.1', cookie: SESSION_COOKIE, ...options?.headers },
+  })
   return {
     request,
     async send(frame) {
@@ -298,6 +333,9 @@ async function exerciseClientEdges(): Promise<void> {
     '{"type":"head","id":"mine","status":200,"headers":[[1,"b"]]}',
     '{"type":"head","id":"mine","status":200,"headers":[["a",1]]}',
     '{"type":"nope","id":"mine"}',
+    '{"type":"error","id":"mine"}',
+    '{"type":"error","id":"mine","message":""}',
+    '{"type":"error","id":"mine","message":1}',
   ]
   for (const line of invalid) {
     await rejectBus(scriptedFetch(200, `${line}\n`), 'follow bus: invalid frame', false)
@@ -306,7 +344,7 @@ async function exerciseClientEdges(): Promise<void> {
 
 describe('native follow connection bus', () => {
   it('keeps a unary call on its own request while five follows share one socket', async () => {
-    const { connection, handler, dispose } = await harness()
+    const { connection, handler, session, dispose } = await harness()
     const routes = RESIDENT.map(endpoint => sseRoute(endpoint))
     const disposers = RESIDENT.map((endpoint, index) => register(
       connection, `/api/${endpoint}`, 'buffered', routes[index]?.fetch ?? (() => Promise.reject(new Error('missing route'))),
@@ -324,7 +362,7 @@ describe('native follow connection bus', () => {
     const calls: string[] = []
     const releaseBus = Promise.withResolvers<undefined>()
     const hold = { gate: releaseBus.promise as Promise<undefined> | undefined }
-    vi.stubGlobal('fetch', pageFetch(handler, calls, hold))
+    vi.stubGlobal('fetch', pageFetch(connection, handler, calls, session, hold))
     const controllers = RESIDENT.map(() => new AbortController())
     const readAbort = new AbortController()
     const nextAbort = new AbortController()
@@ -390,7 +428,7 @@ describe('native follow connection bus', () => {
   })
 
   it('cancels one resident follow without stopping another, and keeps raw and explicit fetches direct', async () => {
-    const { connection, handler, dispose } = await harness()
+    const { connection, handler, session, dispose } = await harness()
     let releaseBeta: (() => void) | undefined
     const betaGate = new Promise<void>((resolve) => { releaseBeta = resolve })
     const alphaSignals: AbortSignal[] = []
@@ -422,7 +460,7 @@ describe('native follow connection bus', () => {
       return Promise.resolve(new Response(body, { headers: { 'content-type': 'text/event-stream' } }))
     })
     const calls: string[] = []
-    vi.stubGlobal('fetch', pageFetch(handler, calls))
+    vi.stubGlobal('fetch', pageFetch(connection, handler, calls, session))
     const alphaAbort = new AbortController()
     const betaAbort = new AbortController()
     const rawAbort = new AbortController()
@@ -467,6 +505,55 @@ describe('native follow connection bus', () => {
       expect(direct.mock.calls[0]?.[0].pathname).toBe('/api/workspaces/follow')
       expect(calls.filter(call => call === `POST ${FOLLOW_BUS_PATH}`)).toHaveLength(1)
       await exerciseClientEdges()
+      let broke = false
+      const disposeBreak = register(connection, '/api/bytes/break', 'buffered', () => {
+        const body = new ReadableStream<Uint8Array>({
+          pull(controller) {
+            if (!broke) {
+              broke = true
+              controller.enqueue(encoder.encode('part'))
+              return
+            }
+            controller.error(new Error('broke'))
+          },
+        })
+        return Promise.resolve(new Response(body, { status: 200, headers: { 'content-type': 'text/plain' } }))
+      })
+      const denyCalls: string[] = []
+      const disposeDeny = register(connection, '/api/bytes/deny', 'buffered', () => {
+        denyCalls.push('deny')
+        return Promise.resolve(new Response('no'))
+      })
+      try {
+        const brokenAbort = new AbortController()
+        const broken = await rpc.response?.('/api', 'bytes/break', {}, brokenAbort.signal)
+        expect(broken?.status).toBe(200)
+        await expect(broken?.text()).rejects.toThrow('follow bus: stream failed')
+        expect(betaSignals[0]?.aborted).toBe(false)
+
+        session.cookie = ''
+        const clearedAbort = new AbortController()
+        const cleared = await rpc.response?.('/api', 'bytes/deny', {}, clearedAbort.signal)
+        expect(cleared?.status).toBe(401)
+        expect(await cleared?.text()).toBe('unauthorized')
+        expect(denyCalls).toEqual([])
+        await vi.waitFor(() => { expect(betaSignals[0]?.aborted).toBe(true) })
+
+        session.cookie = SESSION_COOKIE
+        session.host = 'attacker.test'
+        const forbiddenAbort = new AbortController()
+        const forbidden = await rpc.response?.('/api', 'bytes/deny', {}, forbiddenAbort.signal)
+        expect(forbidden?.status).toBe(403)
+        expect(await forbidden?.text()).toBe('forbidden')
+        expect(denyCalls).toEqual([])
+        session.host = '127.0.0.1'
+        brokenAbort.abort()
+        clearedAbort.abort()
+        forbiddenAbort.abort()
+      } finally {
+        await disposeBreak()
+        await disposeDeny()
+      }
     } finally {
       alphaAbort.abort()
       betaAbort.abort()
@@ -633,6 +720,131 @@ describe('native follow connection bus', () => {
         await pausedWire.finished
       } finally {
         paused.abort()
+      }
+
+      const limited = await harness(32)
+      const bodies: string[] = []
+      const disposeSized = register(limited.connection, '/api/bytes/sized', 'buffered', async (request) => {
+        bodies.push(await request.text())
+        return new Response('ok')
+      })
+      try {
+        const sized = openBus()
+        const sizedWire = collect(await limited.handler.fetch(sized.request))
+        const accepted = 'x'.repeat(10)
+        const wide = '\uFFFF'.repeat(11)
+        const overChars = 'x'.repeat(40)
+        await sized.send({ type: 'subscribe', id: 'fit', endpoint: 'bytes/sized', payload: accepted })
+        await sized.send({ type: 'subscribe', id: 'wide', endpoint: 'bytes/sized', payload: wide })
+        await sized.send({ type: 'subscribe', id: 'chars', endpoint: 'bytes/sized', payload: overChars })
+        await sized.send({ type: 'subscribe', id: 'again', endpoint: 'bytes/sized', payload: accepted })
+        await sizedWire.until(frames => framesFor(frames, 'again').some(frame => frame.type === 'end'))
+        expect(framesFor(sizedWire.frames, 'fit').find(frame => frame.type === 'head')?.status).toBe(200)
+        expect(framesFor(sizedWire.frames, 'wide').find(frame => frame.type === 'head')?.status).toBe(413)
+        expect(framesFor(sizedWire.frames, 'chars').find(frame => frame.type === 'head')?.status).toBe(413)
+        expect(framesFor(sizedWire.frames, 'again').find(frame => frame.type === 'head')?.status).toBe(200)
+        expect(bodies).toHaveLength(2)
+        await sized.close()
+        await sizedWire.finished
+
+        const overflow = openBus()
+        const overflowResponse = await limited.handler.fetch(overflow.request)
+        const overflowWire = collect(overflowResponse)
+        await overflow.send({ type: 'subscribe', id: 'line', endpoint: 'bytes/sized', payload: 'y'.repeat(FOLLOW_BUS_FRAME_OVERHEAD_BYTES + 64) })
+        await overflowWire.finished
+        expect(bodies).toHaveLength(2)
+        expect(overflowWire.frames.some(frame => frame.id === 'line')).toBe(false)
+      } finally {
+        await disposeSized()
+        await limited.dispose()
+      }
+
+      const authed = await harness()
+      const hits: string[] = []
+      let resident: AbortSignal | undefined
+      const disposeResident = register(authed.connection, '/api/bytes/resident', 'buffered', (request) => {
+        resident = request.signal
+        hits.push('resident')
+        const body = new ReadableStream<Uint8Array>({
+          start(controller) {
+            controller.enqueue(encoder.encode('stay'))
+            request.signal.addEventListener('abort', () => {
+              try { controller.close() } catch {
+                // The resident body may already be closed when the bus stops.
+              }
+            }, { once: true })
+          },
+        })
+        return Promise.resolve(new Response(body))
+      })
+      const disposeNext = register(authed.connection, '/api/bytes/next', 'buffered', () => {
+        hits.push('next')
+        return Promise.resolve(new Response('next'))
+      })
+      const disposeRouteDenied = register(authed.connection, '/api/bytes/route-denied', 'buffered', () => {
+        hits.push('route-denied')
+        return Promise.resolve(new Response('no', { status: 401 }))
+      })
+      try {
+        expect(authed.connection.requestRejection({ headers: { host: '127.0.0.1', cookie: authed.session.cookie } })).toBe(undefined)
+        expect(authed.connection.requestRejection({ headers: { host: '127.0.0.1' } })).toBe(401)
+        expect(authed.connection.requestRejection({ headers: { host: 'attacker.test', cookie: authed.session.cookie } })).toBe(403)
+
+        const bus = openBus()
+        const wire = collect(await authed.handler.fetch(bus.request))
+        await bus.send({ type: 'subscribe', id: 'resident', endpoint: 'bytes/resident', payload: {} })
+        await bus.send({ type: 'subscribe', id: 'route-denied', endpoint: 'bytes/route-denied', payload: {} })
+        await bus.send({ type: 'subscribe', id: 'next', endpoint: 'bytes/next', payload: {} })
+        await wire.until(frames => framesFor(frames, 'next').some(frame => frame.type === 'end')
+          && framesFor(frames, 'resident').some(frame => frame.type === 'bytes'))
+        expect(framesFor(wire.frames, 'route-denied').find(frame => frame.type === 'head')?.status).toBe(401)
+        expect(framesFor(wire.frames, 'next').find(frame => frame.type === 'head')?.status).toBe(200)
+        expect(resident?.aborted).toBe(false)
+        expect(hits).toEqual(['resident', 'route-denied', 'next'])
+
+        authed.session.expiresAt = 0
+        await bus.send({ type: 'subscribe', id: 'expired', endpoint: 'bytes/next', payload: {} })
+        await wire.until(frames => framesFor(frames, 'expired').some(frame => frame.type === 'end'))
+        expect(framesFor(wire.frames, 'expired').find(frame => frame.type === 'head')?.status).toBe(401)
+        expect(decoder.decode(decoded(framesFor(wire.frames, 'expired').find(frame => frame.type === 'bytes')!))).toBe('unauthorized')
+        expect(hits.filter(hit => hit === 'next')).toEqual(['next'])
+        await vi.waitFor(() => { expect(resident?.aborted).toBe(true) })
+        await wire.finished
+
+        authed.session.expiresAt = Number.POSITIVE_INFINITY
+        const cleared = openBus()
+        const clearedWire = collect(await authed.handler.fetch(cleared.request))
+        cleared.request.headers.set('cookie', '')
+        await cleared.send({ type: 'subscribe', id: 'cleared', endpoint: 'bytes/next', payload: {} })
+        await clearedWire.until(frames => framesFor(frames, 'cleared').some(frame => frame.type === 'end'))
+        expect(framesFor(clearedWire.frames, 'cleared').find(frame => frame.type === 'head')?.status).toBe(401)
+        expect(hits.filter(hit => hit === 'next')).toEqual(['next'])
+        await clearedWire.finished
+
+        const forbidden = openBus({ headers: { host: 'attacker.test', cookie: SESSION_COOKIE } })
+        const forbiddenWire = collect(await authed.handler.fetch(forbidden.request))
+        await forbidden.send({ type: 'subscribe', id: 'forbidden', endpoint: 'bytes/next', payload: {} })
+        await forbiddenWire.until(frames => framesFor(frames, 'forbidden').some(frame => frame.type === 'end'))
+        expect(framesFor(forbiddenWire.frames, 'forbidden').find(frame => frame.type === 'head')?.status).toBe(403)
+        expect(hits.filter(hit => hit === 'next')).toEqual(['next'])
+        await forbiddenWire.finished
+
+        const desktop = openBus({
+          url: 'dsh-app://app/api/connection/follow-bus',
+          headers: { host: 'attacker.test', cookie: 'cleared' },
+        })
+        const desktopWire = collect(await authed.handler.fetch(desktop.request))
+        await desktop.send({ type: 'subscribe', id: 'desktop', endpoint: 'bytes/next', payload: {} })
+        await desktopWire.until(frames => framesFor(frames, 'desktop').some(frame => frame.type === 'end'))
+        expect(framesFor(desktopWire.frames, 'desktop').find(frame => frame.type === 'head')?.status).toBe(200)
+        expect(hits.filter(hit => hit === 'next')).toEqual(['next', 'next'])
+        await desktop.close()
+        await desktopWire.finished
+      } finally {
+        await disposeResident()
+        await disposeNext()
+        await disposeRouteDenied()
+        await authed.dispose()
       }
     } finally {
       await Promise.all([

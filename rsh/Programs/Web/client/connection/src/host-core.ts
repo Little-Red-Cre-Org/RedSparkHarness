@@ -6,6 +6,7 @@ import { createFollowBusResponse, FOLLOW_BUS_PATH } from './follow-bus.ts'
 import { RpcId, type ClientRequest, type RpcId as RpcIdType } from './rpc.ts'
 import { clientRequestSchema } from './rpc-schema.ts'
 import type { BrowserAuth } from './browser-auth.ts'
+import { DEFAULT_MAX_REQUEST_BODY_BYTES } from './http-bridge.ts'
 import type {
   ConnectionFetchHandler,
   ConnectionFetchRoute,
@@ -58,10 +59,12 @@ export class HostConnectionRegistry {
    * Create a native registry without selecting a physical carrier.
    * @param trustedHosts - authorities accepted by the Host/Origin fence.
    * @param browserAuth - process token and persistent browser-session owner.
+   * @param maxRequestBodyBytes - buffered `/api` body cap applied to each follow-bus subscribe.
    */
   constructor(
     private readonly trustedHosts: readonly string[],
     private readonly browserAuth: BrowserAuth,
+    private readonly maxRequestBodyBytes = DEFAULT_MAX_REQUEST_BODY_BYTES,
   ) {}
 
   /** Bind route registration to one native installation lifetime.
@@ -89,6 +92,16 @@ export class HostConnectionRegistry {
   requestRejection(request: ConnectionTrustRequest): ConnectionRequestRejection {
     if (!isTrustedApiRequest(request, this.trustedHosts)) return 403
     return this.browserAuth.isAuthenticated(request) ? undefined : 401
+  }
+
+  /**
+   * Re-apply the opening request's carrier check to one follow-bus subscribe.
+   * Desktop's private scheme is authenticated on the outer fetch; the cookie
+   * gate does not apply there and would refuse every desktop subscribe.
+   */
+  private authorizeFollowBus(request: Request): ConnectionRequestRejection {
+    if (new URL(request.url).protocol === 'dsh-app:') return undefined
+    return this.requestRejection({ headers: request.headers })
   }
 
   /** Authenticate an index request through the process token or signed cookie.
@@ -119,7 +132,12 @@ export class HostConnectionRegistry {
       },
       fetch: (request) => {
         const pathname = new URL(request.url).pathname
-        if (pathname === FOLLOW_BUS_PATH) return Promise.resolve(createFollowBusResponse(request, this.fetchRoutes))
+        if (pathname === FOLLOW_BUS_PATH) {
+          return Promise.resolve(createFollowBusResponse(request, this.fetchRoutes, {
+            maxRequestBodyBytes: this.maxRequestBodyBytes,
+            authorize: current => this.authorizeFollowBus(current),
+          }))
+        }
         const route = this.fetchRoutes.get(pathname)
         if (route?.methods.has(request.method) === true) return route.fetch(request)
         const endpoint = endpointFromPath(channel, pathname)

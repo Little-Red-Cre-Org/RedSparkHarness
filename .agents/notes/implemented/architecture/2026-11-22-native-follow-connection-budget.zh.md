@@ -18,6 +18,8 @@ Chrome 对一个主机只允许六条 HTTP/1.1 连接。原生页面已经常驻
 
 Settings 客户端扇出保持不变。这条总线是每个页面持有的 JSON `/api` `response()` 下面的 HTTP 载体。
 
+每次 subscribe 都会重新执行 Host/Origin 围栏和浏览器会话检查。客户端在 subscribe 之前先以 `cache: 'no-store'` 发送一次新的 `GET /api/connection/follow-bus`，让浏览器附上当前 cookie。该请求返回 401 或 403 时，这次 subscribe 被拒绝并关闭总线。服务器对每次 subscribe 用打开请求的标头重复该检查，并把签名 cookie 的过期时间与当前时间比较，因此跳过这次 GET 的客户端在该 cookie 过期后仍不能分派。HTTP 载体在读取任何帧之前仍会拒绝打开总线。桌面 `dsh-app:` 请求跳过这次 cookie 检查，因为私有 scheme 的 fetch 本身就是认证；桌面的直接分派同样不执行它。一条 follow-bus 行的上限是缓冲上限再加 64 KiB。超过该上限的缓冲载荷返回 413，路由不会被调用。状态帧之后的失败是错误帧，客户端以流错误结束该响应体。状态帧之前的失败仍是 HTTP 500。路由自己返回的 Response 按原样复制，且不会关闭总线。
+
 ## Alternatives considered
 
 **用 HTTP/2 替换 `node:http`。** 浏览器不会对这个 Host 使用明文 HTTP/2，而受信任的本地证书是更大的启动改动。Settings 事件流那条记录已经拒绝替换载体。
@@ -29,3 +31,5 @@ Settings 客户端扇出保持不变。这条总线是每个页面持有的 JSON
 ## Consequences
 
 多条跟随已经常驻时，一元 RPC 仍能完成，因为这些跟随共用一条连接。较大的图片读取是 JSON `response()`，字节在这条连接上分帧，所以跟随字节要等在正在写出的块后面。原始上传不走这条连接。每条逻辑跟随仍计入 Host `maxFollowers`。显式传入的 `fetch` 不加入总线；产品里的原生 Web 使用页面 `fetch`，因此会加入。
+
+清除 cookie，或交出已过期的签名 cookie，都会拒绝下一次 subscribe 并关闭总线。已经打开的 follow 要到那次 subscribe 才重新检查。原生 Web host 单独的 `maxRequestBodyBytes` 没有传入 `createNativeHostConnectionRegistry`，因此非默认的原生上限不会改变这条行限制。
