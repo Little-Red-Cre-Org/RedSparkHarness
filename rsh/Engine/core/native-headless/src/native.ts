@@ -9,7 +9,8 @@ import type { NativeAgentPresetOperations, NativeAgentPresetLease } from '@redsp
 import { foldNativeAgentPresetFacts, type NativeAgentPresetSelectionRequest, type NativeAgentPresetFacts } from '@redspark/rsh-agent-presets/selection'
 import type { WorkspaceRegistryRuntime } from '@redspark/rsh-workspace/native'
 import type { NativeSessionConfiguration, NativeSessionDelegation, NativeSessionExecutionOperations,
-  NativeActiveSessionOperations, NativeActiveSessionOwner, NativeRootSessionOperations, NativeProgramInteractionOwner,
+  NativeActiveSessionOperations, NativeActiveSessionOwner, NativePromptToolPreparation,
+  NativeRootSessionOperations, NativeProgramInteractionOwner,
   NativeRootExecutionOperations, NativeRootRoute, NativeRootRouteId, NativeRootForkRequest,
   NativeResponsesPreparedGeneration, NativeStagedFileAdmission, NativeStagedFileBlock,
   NativeStagedFileReceipt, NativeStagedFileReceiptId } from '@redspark/rsh-native-session-execution'
@@ -347,6 +348,17 @@ function systemNodeText(session: Session, seq: SessionSeq): string | undefined {
 }
 
 /**
+ * Read a stored scheduled-root marker without appending one.
+ * `session/root-origin` records only `scheduled`, and events below the fork offset stay on the source.
+ * @param events - restored prefix, including not-yet-durable closers.
+ * @param inheritedEventCount - first seq owned by this Session.
+ * @returns whether this Session, not an inherited source, already has that marker.
+ */
+function storedScheduledOrigin(events: readonly SessionEvent[], inheritedEventCount: number): boolean {
+  return events.some(event => event.seq >= inheritedEventCount && event.type === 'session/root-origin')
+}
+
+/**
  * Compare a stored system prompt with the one this configuration produces now.
  *
  * The stored text is interpolated first: a Session written before interpolation renders the
@@ -609,6 +621,7 @@ export class NativeHeadlessApplication implements NativeApplication {
     private readonly attachments?: AttachmentOperations,
     private readonly requestContexts?: NativeRequestContexts,
     private readonly sessionReference?: NativeSessionReferenceOperations,
+    private readonly promptToolPreparation?: NativePromptToolPreparation,
   ) {
     const route = resolveRootRoute(config)
     this.workspaceRoutes = new NativeWorkspaceRoutes(route, config.workspaceRoutes, workspaceRegistry, fs, sandboxPolicy, context.signal,
@@ -741,6 +754,7 @@ export class NativeHeadlessApplication implements NativeApplication {
         resolveRoute(request.route)
         return this.selectRootPreset(request, signal)
       },
+      ...this.promptToolPreparation === undefined ? {} : { promptToolPreparation: this.promptToolPreparation },
     } satisfies NativeRootExecutionOperations)
     this.continuationRuntime = new NativeContinuationRuntime({
       storage, agents, configuration: agent => this.executionConfig(agent), lifetime: context.signal,
@@ -966,6 +980,49 @@ export class NativeHeadlessApplication implements NativeApplication {
   }
 
   /**
+   * Install admission tools, compose the system prompt, and keep that registration only when it matches.
+   * A mismatch or composition failure rolls back a registration this call created.
+   * @param agent - live Agent whose prompt is sampled.
+   * @param invocation - root or delegated admission.
+   * @param rootOrigin - requested or stored scheduled origin; interactive admissions omit it.
+   * @param messages - derived history compared with the composed prompt.
+   * @param failure - exact resume or fork refusal.
+   * @param config - profile prompt and render variables.
+   * @param promptContext - section render variables and tool constraints.
+   */
+  private async retainAdmissionPrompt(
+    agent: NativeAgent,
+    invocation: 'root' | 'delegated',
+    rootOrigin: 'scheduled' | undefined,
+    messages: readonly Message[],
+    failure: string,
+    config: Readonly<Config>,
+    promptContext: Parameters<NativePromptRegistry['render']>[1],
+  ): Promise<void> {
+    const rollback = this.promptToolPreparation?.prepare(agent, rootOrigin === 'scheduled'
+      ? { invocation, rootOrigin: 'scheduled' } : { invocation })
+    const rollbackAfter = async (error: unknown): Promise<never> => {
+      if (rollback === undefined) throw error
+      try { await rollback() }
+      catch (cleanup: unknown) {
+        throw new AggregateError([error, cleanup], 'native-headless: prompt tool rollback failed')
+      }
+      throw error
+    }
+    let systemPrompt: string
+    try {
+      systemPrompt = await this.composedSystemPrompt(agent.scope, config.systemPrompt, promptContext)
+    } catch (error: unknown) {
+      return rollbackAfter(error)
+    }
+    const priorSystem = messages.findLast(message => message.role === 'system')
+    if (priorSystem !== undefined && (priorSystem.content[0]?.type !== 'text'
+      || !sameRenderedPrompt(priorSystem.content[0].text, systemPrompt, promptVariables(config)))) {
+      await rollbackAfter(new Error(failure))
+    }
+  }
+
+  /**
    * Assemble the model-visible system prompt.
    * A complete section replaces the application base prompt.
    * @param scope - consuming Agent scope.
@@ -1015,7 +1072,6 @@ export class NativeHeadlessApplication implements NativeApplication {
         ...config.allowedTools === undefined ? {} : { allowedTools: config.allowedTools },
         variables: promptVariables(config),
       }
-      const systemPrompt = await this.composedSystemPrompt(agent.scope, config.systemPrompt, promptContext)
       const root = await this.fs.resolve(config.cwd, { signal })
       const rootInfo = await this.fs.stat(root, signal)
       if (rootInfo?.type !== 'directory') throw new Error('native-headless: cwd must be a directory')
@@ -1030,11 +1086,10 @@ export class NativeHeadlessApplication implements NativeApplication {
       }, forkSeed === undefined ? undefined : SessionLogOffset(forkSeed.events.length),
       (event) => { constructorEvents.push(event) }) : undefined
       if (fresh !== undefined && forkSeed !== undefined && invocation !== 'delegated') {
-        const priorSystem = fresh.deriveMessages().findLast(message => message.role === 'system')
-        if (priorSystem !== undefined && (priorSystem.content[0]?.type !== 'text'
-          || !sameRenderedPrompt(priorSystem.content[0].text, systemPrompt, promptVariables(config)))) {
-          throw new Error('native-headless: fork source systemPrompt differs from profile configuration')
-        }
+        await this.retainAdmissionPrompt(agent, invocation,
+          request.rootOrigin === 'scheduled' ? 'scheduled' : undefined,
+          fresh.deriveMessages(), 'native-headless: fork source systemPrompt differs from profile configuration',
+          config, promptContext)
       }
       const writer = resident?.writer ?? (fresh !== undefined
         ? await this.storage.create(fresh.header, { signal, inheritedEventCount: fresh.inheritedEventCount })
@@ -1130,11 +1185,11 @@ export class NativeHeadlessApplication implements NativeApplication {
           throw new Error('native-headless: historical preset requires the Agent preset Registry')
         }
         if (request.resume) {
-          const priorSystem = session.deriveMessages().findLast(message => message.role === 'system')
-          if (priorSystem !== undefined && (priorSystem.content[0]?.type !== 'text'
-            || !sameRenderedPrompt(priorSystem.content[0].text, systemPrompt, promptVariables(config)))) {
-            throw new Error('native-headless: resumed Session systemPrompt differs from profile configuration')
-          }
+          const scheduled = request.rootOrigin === 'scheduled'
+            || (resident !== undefined ? resident.scheduledRoot : storedScheduledOrigin(policyEvents, writer.inheritedEventCount))
+          await this.retainAdmissionPrompt(agent, invocation, scheduled ? 'scheduled' : undefined,
+            session.deriveMessages(), 'native-headless: resumed Session systemPrompt differs from profile configuration',
+            config, promptContext)
         }
         this.activeSessions.set(id, session)
         const record = (event: SessionEvent): void => {
@@ -3411,6 +3466,25 @@ export class NativeHeadlessApplication implements NativeApplication {
 }
 
 /**
+ * Port the task scheduler binds before the first admission.
+ * Headless publishes this service. The scheduler binds the installer; headless does not depend on that package.
+ * @returns a preparation service with no installer until `bind`.
+ */
+function createPromptToolPreparation(): NativePromptToolPreparation {
+  let current: NativePromptToolPreparation['prepare'] | undefined
+  return {
+    bind(prepare) {
+      if (current !== undefined) throw new Error('native-headless: prompt tool preparation is already bound')
+      current = prepare
+      return () => { if (current === prepare) current = undefined }
+    },
+    prepare(agent, admission) {
+      return current?.(agent, admission)
+    },
+  }
+}
+
+/**
  * Assemble the Session executor from the installation's declared services.
  * @param context - Host installation that owns these capabilities.
  * @param config - validated Program configuration.
@@ -3420,12 +3494,15 @@ export class NativeHeadlessApplication implements NativeApplication {
  * root fallback before Session selection capture. Without this object, optional services are read from context.
  * A supplied Workspace registry or attachment service takes precedence; when omitted, each is read from the
  * context's optional services.
+ * @param promptToolPreparation - admission installer port. Omitted creates one.
+ * The same object is on `rootExecution` so a host that already provides that service can bind it.
  * @returns the executor registered for disposal with the installation.
  * @throws if `executionScope` does not belong to the installation tree.
  */
 export function createNativeHeadlessApplication(context: NativeContext, config: Config,
   executionScope: NativeScope = context.scope,
   authority?: NativeHeadlessAuthority,
+  promptToolPreparation: NativePromptToolPreparation = createPromptToolPreparation(),
 ): NativeHeadlessApplication {
   if (!context.scope.contains(executionScope)) throw new Error('native-headless: execution scope belongs to another installation tree')
   const application = new NativeHeadlessApplication(
@@ -3438,6 +3515,7 @@ export function createNativeHeadlessApplication(context: NativeContext, config: 
     context.optional('agentPresets'), authority?.workspaceRegistry ?? context.optional('workspaceRegistry'), executionScope,
     context.optional('agentInstructions'), authority?.attachments ?? context.optional('attachments'),
     context.optional('requestContexts'), context.optional('sessionReference'),
+    promptToolPreparation,
   )
   context.own(() => application.dispose())
   return application
@@ -3448,13 +3526,15 @@ export const plugin: NativePlugin = {
   apiVersion: 1, name: '@redspark/rsh-native-headless', targets: ['host'],
   requires: ['fs', 'sessionPersistence', 'modelExecution', 'agents'],
   optional: ['tools', 'promptSections', 'sandboxPolicy', 'approval', 'codeRuntime', 'timeContext', 'tmuxContext', 'sessionExecution', 'activeSessions', 'modelSelection', 'agentPresets', 'workspaceRegistry', 'agentInstructions', 'attachments', 'requestContexts', 'sessionReference'],
-  provides: ['application', 'rootExecution'],
+  provides: ['application', 'rootExecution', 'promptToolPreparation'],
   resolve(input) {
     const config = resolveNativeHeadlessConfig(input)
     return (context) => {
-      const application = createNativeHeadlessApplication(context, config)
+      const promptToolPreparation = createPromptToolPreparation()
+      const application = createNativeHeadlessApplication(context, config, context.scope, undefined, promptToolPreparation)
       context.provide('application', application)
       context.provide('rootExecution', application.rootExecution)
+      context.provide('promptToolPreparation', promptToolPreparation)
     }
   },
 }

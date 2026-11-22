@@ -5,7 +5,7 @@ import { brandString } from '@redspark/rsh-brand'
 import type { NativePlugin } from '@redspark/rsh-native-runtime'
 import type {} from '@redspark/rsh-native-tools/native'
 import type { NativeAgent } from '@redspark/rsh-native-agent'
-import type { NativeActiveSessionOwner } from '@redspark/rsh-native-session-execution'
+import type { NativeActiveSessionOwner, NativePromptToolPreparation } from '@redspark/rsh-native-session-execution'
 import type { TaskId, SchedulerOptions } from './types.ts'
 import { TaskStore } from './store.ts'
 import { NativeTaskSchedulerRegistry } from './native-registry.ts'
@@ -46,7 +46,7 @@ export function resolveNativeTaskSchedulerConfig(input: unknown): NativeTaskSche
 /** Complete native Definition/Provider and scoped model-tool Consumer. */
 export const plugin: NativePlugin = {
   apiVersion: 1, name: '@redspark/rsh-task-scheduler', targets: ['host'],
-  requires: ['rootExecution', 'activeSessions', 'agents', 'tools'], optional: [], provides: ['taskScheduler', 'scheduledGoalHost'],
+  requires: ['rootExecution', 'activeSessions', 'agents', 'tools'], optional: ['promptToolPreparation'], provides: ['taskScheduler', 'scheduledGoalHost'],
   resolve(input) {
     const config = resolveNativeTaskSchedulerConfig(input)
     return (context) => {
@@ -65,11 +65,9 @@ export const plugin: NativePlugin = {
       context.provide('taskScheduler', scheduler)
       context.provide('scheduledGoalHost', scheduler.nativeScheduledGoalHost)
       const installed = new WeakSet<NativeAgent>()
-      const attachOwner = (owner: NativeActiveSessionOwner): Promise<void> => {
-        if (installed.has(owner.agent)) return Promise.resolve()
-        installed.add(owner.agent)
-        const accepted = scheduler.accepts(owner)
-        if (!accepted && !tools.schemas(owner.agent.scope).some(tool => tool.name === 'task_schedule')) return Promise.resolve()
+      const installPromptTool = (agent: NativeAgent, accepted: boolean): ReturnType<NativePromptToolPreparation['prepare']> => {
+        if (installed.has(agent)) return undefined
+        if (!accepted && !tools.schemas(agent.scope).some(tool => tool.name === 'task_schedule')) return undefined
         const registration = accepted ? tools.registerValueTool({
           schema: { name: 'task_schedule', description:
             'Manage explicitly requested persistent scheduled work: create Agent work or a durable Goal, list, pause, resume, delete or inspect history. '
@@ -86,7 +84,7 @@ export const plugin: NativePlugin = {
             after_seconds: { type: 'integer' }, end_at: { type: 'string' }, every_seconds: { type: 'integer' },
           }, required: ['action'], additionalProperties: false } },
           execute: call => Promise.resolve().then(async () => {
-            if (call.agent !== owner.agent || agents.currentInitiator() !== call.agent) throw new Error('Task management requires exact initiating Agent')
+            if (call.agent !== agent || agents.currentInitiator() !== call.agent) throw new Error('Task management requires exact initiating Agent')
             const active = owners.owner(call.agent, call.session)
             if (active === undefined) throw new Error('Task management requires an attached Session')
             call.signal.throwIfAborted()
@@ -108,11 +106,27 @@ export const plugin: NativePlugin = {
               args.action === 'pause' ? 'paused' : args.action === 'resume' ? 'active' : 'deleted', call.signal))
           }),
           output: { schema: { type: 'string' }, render: (_call, text) => ({ content: [{ type: 'text', text: text as string }], isError: false }) },
-        }, owner.agent.scope) : tools.restrict({ deny: ['task_schedule'] }, owner.agent.scope)
+        }, agent.scope) : tools.restrict({ deny: ['task_schedule'] }, agent.scope)
         const dispose = context.effect(registration)
-        const detachAgent = agents.onDispose(owner.agent, dispose)
+        const detachAgent = agents.onDispose(agent, dispose)
         context.own(detachAgent)
-        if (accepted) contributions.set(owner.agent, dispose)
+        installed.add(agent)
+        if (accepted) contributions.set(agent, dispose)
+        return async () => {
+          try { await dispose() }
+          finally {
+            installed.delete(agent)
+            contributions.delete(agent)
+          }
+        }
+      }
+      const prepare = (agent: NativeAgent, admission: Parameters<NativePromptToolPreparation['prepare']>[1]) =>
+        installPromptTool(agent, scheduler.eligible(agent, admission))
+      const preparation = context.optional('promptToolPreparation') ?? context.require('rootExecution').promptToolPreparation
+      const unbind = preparation?.bind(prepare)
+      if (unbind !== undefined) context.own(unbind)
+      const attachOwner = (owner: NativeActiveSessionOwner): Promise<void> => {
+        installPromptTool(owner.agent, scheduler.accepts(owner))
         return Promise.resolve()
       }
       context.effect(owners.onAttached(attachOwner))

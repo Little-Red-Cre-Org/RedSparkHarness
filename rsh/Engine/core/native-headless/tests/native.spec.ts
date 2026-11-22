@@ -62,6 +62,7 @@ import type { NativeToolDelegationContext, NativeToolExecution } from '@redspark
 import { ToolCallId } from '@redspark/rsh-llm/native'
 import { MockAdapter, maxTokensResponse, textResponse, toolCallResponse } from '../../agent-loop/tests/mock-adapter.ts'
 import { plugin as appPlugin, type NativeHeadlessApplication } from '../src/native.ts'
+import { plugin as taskSchedulerPlugin } from '@redspark/rsh-task-scheduler/native'
 
 function isNativeExternalJsonValue(value: unknown): value is NativeExternalJsonValue {
   if (value === null || typeof value === 'string' || typeof value === 'boolean') return true
@@ -107,6 +108,10 @@ async function fixture(
     /** In-process subagent_fork: seed completed parent turns and omit the open turn. */
     forkSubagent?: boolean
     sandboxPolicy?: NativeSandboxPolicy
+    /** Render tools:sdk from the live registry in a non-native tool mode. */
+    sdkPrompt?: boolean
+    /** Install the native task scheduler beside that SDK section. */
+    taskScheduler?: boolean
     modelSelection?: NativeModelSelectionOperations
     attachments?: AttachmentOperations
     parentAttachments?: AttachmentOperations
@@ -145,6 +150,7 @@ async function fixture(
   }
   const selectedModelSelection = options.modelSelection
   const needsSessionExecution = options.fileReferences || options.toolSubagent || options.forkSubagent
+    || options.taskScheduler === true
     || selectedModelSelection !== undefined || skillDirectory !== undefined
   const modelSelectionProvider: NativePlugin | undefined = selectedModelSelection === undefined ? undefined : {
     apiVersion: 1, name: 'test-model-selection', targets: ['host'], requires: [], provides: ['modelSelection'],
@@ -208,7 +214,8 @@ async function fixture(
     },
   }
   let host: NativeHost | undefined
-  let toolsRequest: InstallationRequest = { plugin: toolsPlugin, scope, config: undefined }
+  let toolsRequest: InstallationRequest = { plugin: toolsPlugin, scope,
+    config: options.sdkPrompt === true ? { mode: 'both' } : undefined }
   let codeRuntimeRequest: InstallationRequest = { plugin: options.codeRuntimeProvider ?? codeRuntimePlugin, scope,
     config: options.codeRuntimeProvider === undefined ? { computeMs: 2_000, maxWallMs: 2_000 } : undefined }
   let skillProviderRequest: InstallationRequest | undefined = skillDirectory === undefined ? undefined : {
@@ -247,7 +254,8 @@ async function fixture(
           backgroundMode: 'one-shot', inheritCompletedTurns: true } },
       ] : []),
       codeRuntimeRequest,
-      ...(options.ptc ? [{ plugin: codeToolPlugin, scope, config: undefined }] : []),
+      ...(options.ptc || options.sdkPrompt ? [{ plugin: codeToolPlugin, scope,
+        config: options.sdkPrompt === true ? { sdkPrompt: true } : undefined }] : []),
       ...(sandboxPolicyProvider === undefined ? [] : [{ plugin: sandboxPolicyProvider, scope, config: undefined }]),
       ...(shellProvider === undefined ? [] : [{ plugin: shellProvider, scope, config: undefined }]),
       ...(options.timeContext === undefined ? [] : [{ plugin: timeContextPlugin, scope, config: options.timeContext }]),
@@ -258,7 +266,7 @@ async function fixture(
         { plugin: toolSkillPlugin, scope, config: undefined },
       ]),
       { plugin: policyPlugin, scope, config: undefined },
-      ...(options.fileReferences || options.toolSubagent || options.forkSubagent || options.persona
+      ...(options.fileReferences || options.toolSubagent || options.forkSubagent || options.persona || options.sdkPrompt
         ? [{ plugin: promptPlugin, scope, config: undefined }]
         : []),
       ...(options.fileReferences ? [
@@ -268,6 +276,8 @@ async function fixture(
       { plugin: localFilesystemPlugin, scope, config: { cwd: workspace } },
       { plugin: storagePlugin, scope, config: { root: sessions, compression: 'none' } },
       { plugin: model, scope, config: undefined },
+      ...(options.taskScheduler === true ? [{ plugin: taskSchedulerPlugin, scope,
+        config: { path: join(directory, 'tasks.sqlite') } }] : []),
       ...(skillProviderRequest === undefined ? [] : [skillProviderRequest]),
       ...(options.approvalPolicy === undefined ? [] : [{ plugin: approvalPlugin, scope, config: { policy: options.approvalPolicy } }]),
       ...(options.persona === undefined ? [] : [{
@@ -1935,6 +1945,155 @@ it('rejects prompt-mismatched admissions before persisting resume or fork facts'
     await rm(original.directory, { recursive: true, force: true })
   }
 })
+
+async function readStoredEvents(root: string, id: ReturnType<typeof SessionId>): Promise<readonly SessionEvent[]> {
+  const storage = new JsonlSessionBackend({ root, compression: 'none' })
+  try {
+    const reader = await storage.open(id, 'read')
+    try { return (await reader.read()).events }
+    finally { await reader.close() }
+  } finally { await storage.close() }
+}
+
+function systemMessageText(events: readonly SessionEvent[]): string {
+  const event = events.findLast(item => item.type === 'system/message')
+  if (event?.type !== 'system/message') throw new Error('missing stored system message')
+  const block = event.data.message.content[0]
+  if (block?.type !== 'text') throw new Error('stored system message is not text')
+  return block.text
+}
+
+it('matches task_schedule on both cold resumes after an interactive sdk prompt', async () => {
+  const directory = await mkdtemp(join(tmpdir(), 'rsh-native-headless-schedule-prompt-'))
+  const id = SessionId('interactive-sdk-resume')
+  const route = brandString<NativeRootRouteId>('root')
+  const signal = new AbortController().signal
+  const message = createUserMessage({ source: { kind: 'user' }, content: [{ type: 'text', text: 'Reply briefly.' }] })
+  let active: Awaited<ReturnType<typeof fixture>>['host'] | undefined
+  try {
+    const first = await fixture([textResponse('Interactive turn completed.')], { directory, sdkPrompt: true, taskScheduler: true })
+    active = first.host
+    await first.rootExecution.execute({ route, id, resume: false, message }, signal)
+    const stored = systemMessageText(await readStoredEvents(first.sessions, id))
+    expect(stored).toContain('task_schedule')
+    await first.host.stop()
+    active = undefined
+
+    const resumed = await fixture([], { directory, sdkPrompt: true, taskScheduler: true })
+    active = resumed.host
+    await resumed.app.executeSessionOperation({ id, resume: true, route }, async () => {}, signal)
+    await resumed.app.executeSessionOperation({ id, resume: true, route }, async () => {}, signal)
+    const agent = resumed.agents.get(NativeAgentId(id))
+    if (agent === undefined) throw new Error('resumed interactive Agent is missing')
+    expect(resumed.tools.schemas(agent.scope).some(tool => tool.name === 'task_schedule')).toBe(true)
+    const history = await readStoredEvents(resumed.sessions, id)
+    expect(systemMessageText(history)).toBe(stored)
+    expect(resumed.adapter.requests).toHaveLength(0)
+    await resumed.host.stop()
+    active = undefined
+  } finally {
+    await active?.stop()
+    await rm(directory, { recursive: true, force: true })
+  }
+})
+
+it('omits task_schedule on both cold resumes of a scheduled root', async () => {
+  const directory = await mkdtemp(join(tmpdir(), 'rsh-native-headless-scheduled-prompt-'))
+  const id = SessionId('scheduled-sdk-resume')
+  const route = brandString<NativeRootRouteId>('root')
+  const signal = new AbortController().signal
+  const message = createUserMessage({ source: { kind: 'user' }, content: [{ type: 'text', text: 'Reply briefly.' }] })
+  let active: Awaited<ReturnType<typeof fixture>>['host'] | undefined
+  try {
+    const first = await fixture([textResponse('Scheduled turn completed.')], { directory, sdkPrompt: true, taskScheduler: true })
+    active = first.host
+    await first.rootExecution.execute({ route, id, resume: false, rootOrigin: 'scheduled', message }, signal)
+    const stored = systemMessageText(await readStoredEvents(first.sessions, id))
+    expect(stored).not.toContain('task_schedule')
+    const firstAgent = first.agents.get(NativeAgentId(id))
+    if (firstAgent === undefined) throw new Error('scheduled Agent is missing')
+    expect(first.tools.schemas(firstAgent.scope).some(tool => tool.name === 'task_schedule')).toBe(false)
+    await first.host.stop()
+    active = undefined
+
+    const resumed = await fixture([], { directory, sdkPrompt: true, taskScheduler: true })
+    active = resumed.host
+    await resumed.app.executeSessionOperation({ id, resume: true, route }, async () => {}, signal)
+    await resumed.app.executeSessionOperation({ id, resume: true, route }, async () => {}, signal)
+    const agent = resumed.agents.get(NativeAgentId(id))
+    if (agent === undefined) throw new Error('resumed scheduled Agent is missing')
+    expect(resumed.tools.schemas(agent.scope).some(tool => tool.name === 'task_schedule')).toBe(false)
+    expect(systemMessageText(await readStoredEvents(resumed.sessions, id))).toBe(stored)
+    expect(resumed.adapter.requests).toHaveLength(0)
+    await resumed.host.stop()
+    active = undefined
+  } finally {
+    await active?.stop()
+    await rm(directory, { recursive: true, force: true })
+  }
+})
+
+it('rolls back task_schedule when a scheduler-backed prompt does not match', async () => {
+  const directory = await mkdtemp(join(tmpdir(), 'rsh-native-headless-schedule-mismatch-'))
+  const source = SessionId('scheduler-prompt-mismatch')
+  const route = brandString<NativeRootRouteId>('root')
+  const signal = new AbortController().signal
+  let active: Awaited<ReturnType<typeof fixture>>['host'] | undefined
+  try {
+    const original = await fixture([textResponse('Source Session ready.')], { directory, sdkPrompt: true })
+    active = original.host
+    await original.rootExecution.execute({
+      route, id: source, resume: false,
+      message: createUserMessage({ source: { kind: 'user' }, content: [{ type: 'text', text: 'Keep this source Session.' }] }),
+    }, signal)
+    await original.host.stop()
+    active = undefined
+    const stored = systemMessageText(await readStoredEvents(original.sessions, source))
+    expect(stored).not.toContain('task_schedule')
+
+    const storage = new JsonlSessionBackend({ root: original.sessions, compression: 'none' })
+    let interruptedEvents: readonly SessionEvent[] = []
+    try {
+      const writer = await storage.open(source, 'write')
+      try {
+        const events = (await writer.read()).events
+        const lastTurn = events.findLast(event => event.type === 'turn/end')
+        if (lastTurn?.type !== 'turn/end') throw new Error('source Session has no closed turn')
+        const lastSeq = events.at(-1)?.seq
+        if (lastSeq === undefined) throw new Error('source Session has no stored events')
+        await writer.append([{ type: 'turn/start', seq: SessionSeq(lastSeq + 1), time: Date.now(), data: { turn: lastTurn.data.turn + 1 } }])
+        interruptedEvents = (await writer.read()).events
+      } finally { await writer.close() }
+    } finally { await storage.close() }
+
+    const changed = await fixture([textResponse('Must not reach the model.')], { directory, sdkPrompt: true, taskScheduler: true })
+    active = changed.host
+    const fork = SessionId('scheduler-prompt-mismatch-fork')
+    await expect(changed.rootExecution.fork({ route, source, id: fork }, signal))
+      .rejects.toThrow('native-headless: fork source systemPrompt differs from profile configuration')
+    expect((await readStoredEvents(original.sessions, source)).map(event => event.type)).toEqual(interruptedEvents.map(event => event.type))
+    const listed = new JsonlSessionBackend({ root: original.sessions, compression: 'none' })
+    try { expect((await listed.list()).map(row => row.header.id)).toEqual([source]) }
+    finally { await listed.close() }
+
+    await expect(changed.rootExecution.execute({ route, id: source, resume: true }, signal))
+      .rejects.toThrow('native-headless: resumed Session systemPrompt differs from profile configuration')
+    const events = await readStoredEvents(original.sessions, source)
+    expect(events).toEqual(interruptedEvents)
+    expect(events.some(event => event.type === 'session/root-origin')).toBe(false)
+    expect(changed.agents.get(NativeAgentId(fork))).toBeUndefined()
+    const agent = changed.agents.get(NativeAgentId(source))
+    if (agent === undefined) throw new Error('surviving mismatch Agent is missing')
+    expect(changed.tools.schemas(agent.scope).some(tool => tool.name === 'task_schedule')).toBe(false)
+    expect(changed.adapter.requests).toHaveLength(0)
+    await changed.host.stop()
+    active = undefined
+  } finally {
+    await active?.stop()
+    await rm(directory, { recursive: true, force: true })
+  }
+})
+
 it('waits for an admitted model stream and persists the cancelled turn before shutdown', async () => {
   const entered = Promise.withResolvers<boolean>()
   const aborted = Promise.withResolvers<boolean>()

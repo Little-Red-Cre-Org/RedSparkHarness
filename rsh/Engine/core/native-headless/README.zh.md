@@ -35,7 +35,7 @@ kind: "package-reference"
 
 每条 `execution/policy` 记录在读取时都必需；无法强制执行该记录的 consumer 不能运行此 Session。Headless 将其中的 `maxSteps` 作为每个已接纳 turn 的上限，并将可选 `maxTokens` 作为硬输出 token 上限。每次分发前都会检查最终选定且已准备的 generation，因此 model-selection 控件和 Provider 默认值都不能扩大该上限。`session-owner` 审批记录表示执行要求，本身不构成授权证明：恢复时，Program 必须为精确的实时 Agent 与 Session 签发新的进程内 capability，否则会在模型工作前拒绝执行。
 
-可选的 allowedTools 列表会过滤每个请求中的内置工具和注册工具 schema，并拒绝不在该列表中的调用。提示词 section 收到的名称来自同一份已发送 schema 快照；既有 Session writer 会持久化组装后的系统提示词，并在恢复和分叉时校验。
+可选的 allowedTools 列表会过滤每个请求中的内置工具和注册工具 schema，并拒绝不在该列表中的调用。提示词 section 收到的名称来自同一份已发送 schema 快照；既有 Session writer 会持久化组装后的系统提示词，并在恢复和分叉时校验。恢复和分叉会在已绑定的 `promptToolPreparation` 安装器应用该次接纳的工具可见性之后、写入 closers、创建分叉或 `session/root-origin` 之前做这次校验。校验被拒绝时，只移除该次尝试创建的注册。Headless 将该端口放在 `rootExecution` 上；安装其自身插件时也提供 `promptToolPreparation`。任务调度器绑定可见的端口。
 
 应用在每次模型可见输入、助手响应及工具结果后刷新 Session JSONL 日志。安装 `timeContext` 时，它会在派生每个模型请求前追加返回的带来源时钟消息。安装 `approval` 时，它会在调用应答者前持久追加 `native-approval/asked`，并在执行获准操作前持久追加匹配的 `native-approval/decided`；未中止的非授权结果会变为 `APPROVAL_*` 工具结果错误。取消在决定审计刷新后保留借用 signal 的原始原因；审计或清理失败仍作为错误传播。每个 Session 使用一个由其标识派生的子作用域原生 Agent。Turn 在该 Agent 的显式 initiator boundary 内运行，Program 在已接纳工作排空后释放身份。中断时会记录部分助手输出，并在关闭 turn 前补齐未完成的工具结果。模型 Provider 必须提供原生 `model` 服务及 `dsh-llm` 流协议。
 
