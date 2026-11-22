@@ -4,7 +4,7 @@ import { Context, Service } from '@redspark/cordis'
 import type { HttpRoute } from '@redspark/rsh-http-routes/host'
 import type { BrowserAuth } from './browser-auth.ts'
 import { HostConnectionRegistry, type HostConnectionOwner } from './host-core.ts'
-import { bridge } from './http-bridge.ts'
+import { bridge, DEFAULT_MAX_REQUEST_BODY_BYTES } from './http-bridge.ts'
 import type {
   ConnectionFetchHandler,
   ConnectionIndexRequest,
@@ -32,10 +32,16 @@ export class HostConnectionService extends Service implements HostConnectionHand
    * @param ctx - owning Connection plugin context.
    * @param trustedHosts - deployment authorities accepted by the Host/Origin fence.
    * @param browserAuth - process token and persistent browser-session owner.
+   * @param maxRequestBodyBytes - buffered `/api` body cap, including follow-bus subscribes.
    */
-  constructor(ctx: Context, trustedHosts: readonly string[], browserAuth: BrowserAuth) {
+  constructor(
+    ctx: Context,
+    trustedHosts: readonly string[],
+    browserAuth: BrowserAuth,
+    maxRequestBodyBytes = DEFAULT_MAX_REQUEST_BODY_BYTES,
+  ) {
     super(ctx, 'connection')
-    this.registry = new HostConnectionRegistry(trustedHosts, browserAuth)
+    this.registry = new HostConnectionRegistry(trustedHosts, browserAuth, maxRequestBodyBytes)
   }
 
   /** Generic channel registry scoped to the Context reading this service. */
