@@ -64,7 +64,7 @@ function makeOwner(sessionHeader: SessionHeader, options: OwnerOptions = {}): Te
   const listeners: ((event: SessionEvent) => void)[] = []
   const events = options.events ?? [endSeed(0)]
   return {
-    agent: options.agent ?? { name: sessionHeader.id } as NativeAgent,
+    agent: options.agent ?? ({ name: sessionHeader.id } as unknown as NativeAgent),
     session: { id: sessionHeader.id, header: sessionHeader },
     invocation: options.invocation ?? 'root',
     inheritedEventCount: options.inheritedEventCount ?? 0,
@@ -291,8 +291,8 @@ it('forks a minted destination and hides source, anchor, and secret failures', a
 })
 
 it('lists direct children and keeps diagnostics free of reader secrets', async () => {
-  const runningAgent = { name: 'cold-running' } as NativeAgent
-  const idleAgent = { name: 'cold-idle' } as NativeAgent
+  const runningAgent = { name: 'cold-running' } as unknown as NativeAgent
+  const idleAgent = { name: 'cold-idle' } as unknown as NativeAgent
   const owners = [
     makeOwner(header('live-parent', 1, { cwd })),
     makeOwner(header('fork-root', 3, { cwd, isSeeded: true, parentSession: 'older-root' })),
@@ -557,7 +557,7 @@ it('prompts a continuable child and interrupts it without cancelling the parent'
     subagents, attachments, executionFor: () => ({ status: 'idle' }),
     executeRootTurn: async (_request, next) => {
       turnSignal = next
-      entered.resolve()
+      entered.resolve(undefined)
       return new Promise((resolve) => {
         const finish = () => resolve({ exitCode: 0, answer: '' })
         next.addEventListener('abort', finish, { once: true })
@@ -568,7 +568,7 @@ it('prompts a continuable child and interrupts it without cancelling the parent'
   const bare = createHarness({
     owners: [makeOwner(header('bare-parent', 1, { cwd })), liveChild('bare-child', 'bare-parent', continuableEvents('Bare'))],
   })
-  const selections = fixture.service as unknown as { selections: { attachments?: AttachmentOperations } }
+  const selections = fixture.service as unknown as { selections: { attachments?: AttachmentOperations | undefined } }
   const originalAttachments = selections.selections.attachments
   try {
     const started = fixture.service.handle('session/start', { sessionId: 'parent', text: 'hang', resume: true, follow: false }, signal)
@@ -710,7 +710,7 @@ it('prompts a continuable child and interrupts it without cancelling the parent'
     expect(turnSignal?.aborted).toBe(false)
     expect(fixture.cancelled).toBe(false)
   } finally {
-    release.resolve()
+    release.resolve(undefined)
     await bare.close()
     await fixture.close()
   }
