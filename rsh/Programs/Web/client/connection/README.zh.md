@@ -27,8 +27,6 @@ kind: "package-reference"
 
 浏览器通过 HTTP POST 执行 Remote 一元调用；API Gateway 自己拥有 `/api/remote.mux` WebSocket 及其逻辑流。由 shell 持有的组合通过 `connection.rpc.open` 提供等价的 Remote 流，不打开 WebSocket。Host half 始终提供与载体无关的 RPC 注册表和精确 `GET`/`HEAD`/`POST` 路由注册表。存在 Web 载体时，它还持有唯一 `/api` route、Fetch bridge、浏览器认证与 Host/Origin 校验；由 shell 持有的载体则直接分派共享 Fetch handler。每条精确路由会在 bridge 读取任何字节前声明缓冲或流式请求体处理方式。Typert Gateway 认领生成的 Remote endpoint，功能包注册 Session 日志下载、原始文件上传等非 JSON 响应，未认领的请求返回 404。Loopback hostname 判定只供浏览器侧当前页面状态使用，留在包内。浏览器原始请求体传输由 [`dsh-client-file-upload`](../file-upload/README.zh.md) 提供。
 
-当调用方使用页面 `fetch` 时，`/api` 上的 JSON `response()` 调用共用一条双工 `POST /api/connection/follow-bus`。Host 读取换行分隔的 subscribe 与 cancel 帧，在进程内调用已经注册的精确 `POST` 路由，并把该路由的状态、标头与响应体字节作为分帧块写回。一元 `call()`、带原始请求体的 `response()`、非 `/api` 通道，以及任何由调用方提供的 `fetch`，各自仍是普通 HTTP 请求。对已注册路由的直接请求保持可用。follow-bus 路径是保留路径：`POST` 按流式请求体读取，`GET` 返回 405，缺少请求体返回 400，注册该路径会抛出错误。这条共享连接在任一 JSON 响应尚未结束时保持打开，并在最后一条结束后关闭。每次 subscribe 都执行与直接 POST 相同的 Host/Origin 与浏览器会话检查。客户端会先对该路径发送一次新的 `GET`，让浏览器附上当前 cookie；401 或 403 会拒绝这次 subscribe 并关闭总线。服务器对每次 subscribe 重复该检查，包括签名 cookie 的过期时间，并使用打开请求的标头，而不是复制到内部路由上的 cookie。总线在读取任何帧之前仍会以 401 或 403 被拒绝。路由状态写回之前的失败仍是 HTTP 500。状态写回之后的失败是错误帧，客户端以流错误结束该订阅。路由自己返回的 Response，包括它返回的 401 或 403，会按原样复制。一条 follow-bus 行不能超过缓冲请求体上限再加 64 KiB，缓冲路由不会收到更大的载荷。
-
 `./native` 浏览器入口在原生 `clientConnection` 服务下安装与 Cordis Client 适配器相同的 Connection 实现。它接受空配置，选择页面提供的 RPC 载体或 Web 传输，并发布可观察的 generation 与恢复状态。原生组合仍需要 Host API 路由和 generation source 才能接收实时 Session 事件。原生 Host 释放时会中止连接循环并等待 generation source 结束；此适配器不安装 Host `/api` 路由或浏览器认证。
 
 `./native-host` 入口为已认证的 Host Consumer 提供一个有上限的请求所有者。Consumer 提供请求上限，在获取资源前接收回调，组合载体与安装生命周期的取消信号，并在关闭时等待已接收的回调结束。容量不足与停止接收是显式错误；Consumer 自己分类 RPC 错误，并保留独立资源清理失败。Web 与 Desktop 载体可以发布同一个 `hostConnection` 服务，而不持有 Session 或 Agent 状态。
@@ -71,10 +69,9 @@ RPC Provider 可选提供经过身份验证的 Fetch 响应，用于功能自身
 
 <a id="known-limitations-and-deferred-work"></a>
 
-- **缓冲型 `/api` 路由会把每个请求体保留在内存里**：`maxRequestBodyBytes`（默认 300 MiB，按默认 200 MiB 图片总量上限经 base64 膨胀加信封余量得出）限制普通图片与 RPC 信封。显式启用的流式路由接收带背压的分块并绕过总量上限；路由实现负责持久化、取消与存储配额。follow-bus 的每一行使用同一缓冲上限再加 64 KiB 帧开销，超限的 subscribe 会在缓冲路由运行前被拒绝。
-- **JSON `/api` 响应共用一条 HTTP/1.1 连接**：follow 与图片字节在 `POST /api/connection/follow-bus` 上分帧，因此一个块会等在正在写出的块后面。一元 RPC 与原始上传各自使用独立请求。每条逻辑 follow 仍计入其自身的 follower 上限。
+- **缓冲型 `/api` 路由会把每个请求体保留在内存里**：`maxRequestBodyBytes`（默认 300 MiB，按默认 200 MiB 图片总量上限经 base64 膨胀加信封余量得出）限制普通图片与 RPC 信封。显式启用的流式路由接收带背压的分块并绕过总量上限；路由实现负责持久化、取消与存储配额。
 - **浏览器 cookie 不带 `Secure`**：当前随产品提供的传输方式是 loopback HTTP；若部署经明文网络暴露同一 authority，bearer cookie 可能在传输中泄露。
-- **没有 logout 操作**：清除浏览器 cookie 会结束单个浏览器会话；删除 owner 凭据记录并重启 `dsh` 会撤销全部会话。之后的 follow-bus subscribe 会通过一次新请求观察到这次清除，过期的签名 cookie 会使下一次 subscribe 的检查失败；两种拒绝都会关闭总线。已经打开的 follow 会保持到那次 subscribe。
+- **没有 logout 操作**：清除浏览器 cookie 会结束单个浏览器会话；删除 owner 凭据记录并重启 `dsh` 会撤销全部会话。
 
 
 <a id="dev-note"></a>

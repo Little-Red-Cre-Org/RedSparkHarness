@@ -14,7 +14,6 @@
     "src/client/native-core.ts",
     "src/client/random-uuid.ts",
     "src/client/rpc.ts",
-    "src/follow-bus.ts",
     "src/native.ts",
     "src/loopback-hostname.ts",
     "src/recovery-config.ts",
