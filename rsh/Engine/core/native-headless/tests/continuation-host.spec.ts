@@ -30,7 +30,7 @@ import type { NativeRequestContexts } from '@redspark/rsh-request-context-defini
 import { MockAdapter, textResponse, toolCallResponse } from '../../agent-loop/tests/mock-adapter.ts'
 import { NativeHeadlessApplication, plugin as appPlugin } from '../src/native.ts'
 import { NativeContinuationActivation } from '../src/continuation-activation.ts'
-import type { NativeContinuationSession } from '../src/continuation-session.ts'
+import { NativeContinuationSession } from '../src/continuation-session.ts'
 
 declare module '@redspark/rsh-session-projection/types' {
   interface SessionProjectionStateMap {
@@ -1135,5 +1135,114 @@ it.each(['initial-turn', 'already-aborted-settlement'] as const)('drains a retai
     await removeAttached()
     await removeDetached()
     await state.close()
+  }
+})
+
+it('does not fail disposal when a queued root notice rejects with that execution abort reason', async () => {
+  const started = Promise.withResolvers<undefined>()
+  const state = await fixture(['hang'])
+  const originalStream = state.model.stream.bind(state.model)
+  const streamSpy = vi.spyOn(state.model, 'stream').mockImplementation(async function* (options) {
+    for await (const chunk of originalStream(options)) {
+      yield chunk
+      if (chunk.type === 'text-delta') started.resolve(undefined)
+    }
+  })
+  const id = SessionId('expected-root-notice-cancellation')
+  const signal = new AbortController().signal
+  let owner: NativeActiveSessionOwner | undefined
+  let execution: NativeAgentExecution | undefined
+  const attached = state.activeSessions.onAttached((active) => {
+    if (active.session.id !== id) return
+    owner = active
+    execution = state.agents.execution(active.agent)
+  })
+  const running = state.app.executeRootTurn({ id, resume: false, message: createUserMessage({
+    source: { kind: 'user' }, content: [{ type: 'text', text: 'Hold the root execution.' }],
+  }) }, signal).then(value => ({ value }), (error: unknown) => ({ error }))
+  const wakes: Promise<unknown>[] = []
+  let runSpy: { mockRestore(): void } | undefined
+  try {
+    await started.promise
+    if (owner === undefined || execution === undefined) throw new Error('the root execution was not attached')
+    const current = execution
+    const run = current.run.bind(current)
+    runSpy = vi.spyOn(current, 'run').mockImplementation((task, taskSignal) => {
+      const pending = run(task, taskSignal)
+      if (taskSignal === undefined) wakes.push(pending)
+      return pending
+    })
+    await owner.enqueue(createUserMessage({ source: { kind: 'user' },
+      content: [{ type: 'text', text: 'Queue a root notice.' }] }), 'next-step', true, signal)
+    expect(wakes).toHaveLength(1)
+    const wake = wakes[0]
+    if (wake === undefined) throw new Error('the root notice was not queued')
+    let settled = false
+    void wake.then(() => { settled = true }, () => { settled = true })
+    await Promise.resolve()
+    expect(settled).toBe(false)
+    expect(current.status).toBe('running')
+    const disposal = state.app.dispose()
+    const rejected = await wake.then(() => undefined, (error: unknown) => error)
+    expect(rejected).toBe(current.signal.reason)
+    expect(rejected).toEqual({ kind: 'disposed' })
+    await disposal
+    expect(await running).toHaveProperty('error')
+  } finally {
+    started.resolve(undefined)
+    runSpy?.mockRestore()
+    streamSpy.mockRestore()
+    await attached()
+    await running
+    await state.close()
+  }
+})
+
+it('fails disposal when a root notice rejects with a different disposed object', async () => {
+  const state = await fixture([])
+  const id = SessionId('root-notice-different-disposed')
+  const reason = { kind: 'disposed' as const }
+  const signal = new AbortController().signal
+  let execution: NativeAgentExecution | undefined
+  const attached = state.activeSessions.onAttached((active) => {
+    if (active.session.id !== id) return
+    execution = state.agents.execution(active.agent)
+  })
+  const wakes: Promise<unknown>[] = []
+  const restore = vi.spyOn(NativeContinuationSession, 'restore')
+  let runSpy: { mockRestore(): void } | undefined
+  try {
+    await state.app.executeSessionOperation({ id, resume: false }, async (owner) => {
+      if (execution === undefined) throw new Error('the root execution was not attached')
+      const current = execution
+      const run = current.run.bind(current)
+      runSpy = vi.spyOn(current, 'run').mockImplementation((task, taskSignal) => {
+        const pending = run(task, taskSignal)
+        if (taskSignal === undefined) wakes.push(pending)
+        return pending
+      })
+      // This object matches the disposal kind and is not that execution's abort reason.
+      // oxlint-disable-next-line typescript/prefer-promise-reject-errors -- the recorded reason is not an Error
+      restore.mockImplementation(() => Promise.reject(reason))
+      await owner.enqueue(createUserMessage({ source: { kind: 'user' },
+        content: [{ type: 'text', text: 'Wake after maintenance.' }] }), 'next-turn', true, signal)
+    }, signal)
+    expect(wakes).toHaveLength(1)
+    const wake = wakes[0]
+    if (wake === undefined || execution === undefined) throw new Error('the root notice was not queued')
+    await expect(wake).rejects.toBe(reason)
+    const disposalError = await state.app.dispose().then(() => undefined, (error: unknown) => error)
+    expect(disposalError).toBeInstanceOf(AggregateError)
+    if (!(disposalError instanceof AggregateError)) throw new Error('disposal did not fail')
+    expect(disposalError.message).toBe('native-headless: Agent cleanup failed')
+    expect(disposalError.errors).toEqual([reason])
+  } finally {
+    restore.mockRestore()
+    runSpy?.mockRestore()
+    await attached()
+    const causes = (error: unknown): readonly unknown[] => error instanceof AggregateError
+      ? [error, ...error.errors.flatMap(causes)] : [error]
+    await state.host.stop().catch((error: unknown) => { expect(causes(error)).toContain(reason) })
+    await rm(state.root, { recursive: true, force: true })
   }
 })

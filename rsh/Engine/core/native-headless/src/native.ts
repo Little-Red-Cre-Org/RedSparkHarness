@@ -3267,7 +3267,8 @@ export class NativeHeadlessApplication implements NativeApplication {
     this.noticeWakes.add(operation)
     void operation.then(() => { this.noticeWakes.delete(operation) }, (error: unknown) => {
       this.noticeWakes.delete(operation)
-      this.noticeFailures.push(error)
+      // This execution's own abort reason is expected cancellation. Every other rejection stays a cleanup failure.
+      if (error !== recipient.signal.reason) this.noticeFailures.push(error)
     })
   }
 
@@ -3366,6 +3367,8 @@ export class NativeHeadlessApplication implements NativeApplication {
 
   /**
    * Cancel and drain all owned Agent operations before releasing their identities.
+   * A root-notice rejection identical to that execution's abort reason is expected cancellation.
+   * Every other rejection fails disposal with `native-headless: Agent cleanup failed`.
    * @returns the same complete application disposal promise on repeated calls.
    */
   dispose(): Promise<void> {
