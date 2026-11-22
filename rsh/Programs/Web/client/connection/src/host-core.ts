@@ -2,6 +2,7 @@
 
 import { isTrustedApiRequest } from './api-request-trust.ts'
 import { API_PATH } from './api-path.ts'
+import { createFollowBusResponse, FOLLOW_BUS_PATH } from './follow-bus.ts'
 import { RpcId, type ClientRequest, type RpcId as RpcIdType } from './rpc.ts'
 import { clientRequestSchema } from './rpc-schema.ts'
 import type { BrowserAuth } from './browser-auth.ts'
@@ -112,11 +113,13 @@ export class HostConnectionRegistry {
   createSharedFetchHandler(channel: '/api'): ConnectionFetchHandler {
     return {
       requestBodyMode: ({ method, url }) => {
+        if (url.pathname === FOLLOW_BUS_PATH) return method === 'POST' ? 'streaming' : 'buffered'
         const route = this.fetchRoutes.get(url.pathname)
         return route?.methods.has(method) === true ? route.requestBody : 'buffered'
       },
       fetch: (request) => {
         const pathname = new URL(request.url).pathname
+        if (pathname === FOLLOW_BUS_PATH) return Promise.resolve(createFollowBusResponse(request, this.fetchRoutes))
         const route = this.fetchRoutes.get(pathname)
         if (route?.methods.has(request.method) === true) return route.fetch(request)
         const endpoint = endpointFromPath(channel, pathname)
@@ -237,6 +240,9 @@ function assertChannel(channel: string): void {
 }
 
 function assertFetchRoute(route: ConnectionFetchRoute): void {
+  if (route.path === FOLLOW_BUS_PATH) {
+    throw new Error(`connection: exact Fetch route ${JSON.stringify(route.path)} is reserved`)
+  }
   if (endpointFromPath(API_PATH, route.path) === undefined) {
     throw new Error(`connection: invalid exact Fetch route ${JSON.stringify(route.path)}`)
   }

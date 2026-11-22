@@ -27,6 +27,8 @@ kind: "package-reference"
 
 浏览器通过 HTTP POST 执行 Remote 一元调用；API Gateway 自己拥有 `/api/remote.mux` WebSocket 及其逻辑流。由 shell 持有的组合通过 `connection.rpc.open` 提供等价的 Remote 流，不打开 WebSocket。Host half 始终提供与载体无关的 RPC 注册表和精确 `GET`/`HEAD`/`POST` 路由注册表。存在 Web 载体时，它还持有唯一 `/api` route、Fetch bridge、浏览器认证与 Host/Origin 校验；由 shell 持有的载体则直接分派共享 Fetch handler。每条精确路由会在 bridge 读取任何字节前声明缓冲或流式请求体处理方式。Typert Gateway 认领生成的 Remote endpoint，功能包注册 Session 日志下载、原始文件上传等非 JSON 响应，未认领的请求返回 404。Loopback hostname 判定只供浏览器侧当前页面状态使用，留在包内。浏览器原始请求体传输由 [`dsh-client-file-upload`](../file-upload/README.zh.md) 提供。
 
+当调用方使用页面 `fetch` 时，`/api` 上的 JSON `response()` 调用共用一条双工 `POST /api/connection/follow-bus`。Host 读取换行分隔的 subscribe 与 cancel 帧，在进程内调用已经注册的精确 `POST` 路由，并把该路由的状态、标头与响应体字节作为分帧块写回。一元 `call()`、带原始请求体的 `response()`、非 `/api` 通道，以及任何由调用方提供的 `fetch`，各自仍是普通 HTTP 请求。对已注册路由的直接请求保持可用。follow-bus 路径是保留路径：`POST` 按流式请求体读取，`GET` 返回 405，缺少请求体返回 400，注册该路径会抛出错误。这条共享连接在任一 JSON 响应尚未结束时保持打开，并在最后一条结束后关闭。
+
 `./native` 浏览器入口在原生 `clientConnection` 服务下安装与 Cordis Client 适配器相同的 Connection 实现。它接受空配置，选择页面提供的 RPC 载体或 Web 传输，并发布可观察的 generation 与恢复状态。原生组合仍需要 Host API 路由和 generation source 才能接收实时 Session 事件。原生 Host 释放时会中止连接循环并等待 generation source 结束；此适配器不安装 Host `/api` 路由或浏览器认证。
 
 `./native-host` 入口为已认证的 Host Consumer 提供一个有上限的请求所有者。Consumer 提供请求上限，在获取资源前接收回调，组合载体与安装生命周期的取消信号，并在关闭时等待已接收的回调结束。容量不足与停止接收是显式错误；Consumer 自己分类 RPC 错误，并保留独立资源清理失败。Web 与 Desktop 载体可以发布同一个 `hostConnection` 服务，而不持有 Session 或 Agent 状态。
@@ -70,6 +72,7 @@ RPC Provider 可选提供经过身份验证的 Fetch 响应，用于功能自身
 <a id="known-limitations-and-deferred-work"></a>
 
 - **缓冲型 `/api` 路由会把每个请求体保留在内存里**：`maxRequestBodyBytes`（默认 300 MiB，按默认 200 MiB 图片总量上限经 base64 膨胀加信封余量得出）限制普通图片与 RPC 信封。显式启用的流式路由接收带背压的分块并绕过总量上限；路由实现负责持久化、取消与存储配额。
+- **JSON `/api` 响应共用一条 HTTP/1.1 连接**：follow 与图片字节在 `POST /api/connection/follow-bus` 上分帧，因此一个块会等在正在写出的块后面。一元 RPC 与原始上传各自使用独立请求。每条逻辑 follow 仍计入其自身的 follower 上限。
 - **浏览器 cookie 不带 `Secure`**：当前随产品提供的传输方式是 loopback HTTP；若部署经明文网络暴露同一 authority，bearer cookie 可能在传输中泄露。
 - **没有 logout 操作**：清除浏览器 cookie 会结束单个浏览器会话；删除 owner 凭据记录并重启 `dsh` 会撤销全部会话。
 
