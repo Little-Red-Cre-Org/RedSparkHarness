@@ -2,7 +2,7 @@
 
 import { isTrustedApiRequest } from './api-request-trust.ts'
 import { API_PATH } from './api-path.ts'
-import { createFollowBusResponse, FOLLOW_BUS_PATH } from './follow-bus.ts'
+import { createFollowBusHub, FOLLOW_BUS_PATH } from './follow-bus.ts'
 import { RpcId, type ClientRequest, type RpcId as RpcIdType } from './rpc.ts'
 import { clientRequestSchema } from './rpc-schema.ts'
 import type { BrowserAuth } from './browser-auth.ts'
@@ -95,7 +95,7 @@ export class HostConnectionRegistry {
   }
 
   /**
-   * Re-apply the opening request's carrier check to one follow-bus subscribe.
+   * Re-apply the subscribe POST's carrier check.
    * Desktop's private scheme is authenticated on the outer fetch; the cookie
    * gate does not apply there and would refuse every desktop subscribe.
    */
@@ -124,20 +124,21 @@ export class HostConnectionRegistry {
    * @returns carrier fetch handler.
    */
   createSharedFetchHandler(channel: '/api'): ConnectionFetchHandler {
+    const followBus = createFollowBusHub(this.fetchRoutes, {
+      maxRequestBodyBytes: this.maxRequestBodyBytes,
+      authorize: current => this.authorizeFollowBus(current),
+    })
     return {
       requestBodyMode: ({ method, url }) => {
+        // POST stays streaming so the bridge does not apply the buffered cap
+        // before the follow-bus line ceiling. The client still sends one finite body.
         if (url.pathname === FOLLOW_BUS_PATH) return method === 'POST' ? 'streaming' : 'buffered'
         const route = this.fetchRoutes.get(url.pathname)
         return route?.methods.has(method) === true ? route.requestBody : 'buffered'
       },
       fetch: (request) => {
         const pathname = new URL(request.url).pathname
-        if (pathname === FOLLOW_BUS_PATH) {
-          return Promise.resolve(createFollowBusResponse(request, this.fetchRoutes, {
-            maxRequestBodyBytes: this.maxRequestBodyBytes,
-            authorize: current => this.authorizeFollowBus(current),
-          }))
-        }
+        if (pathname === FOLLOW_BUS_PATH) return followBus.handle(request)
         const route = this.fetchRoutes.get(pathname)
         if (route?.methods.has(request.method) === true) return route.fetch(request)
         const endpoint = endpointFromPath(channel, pathname)
