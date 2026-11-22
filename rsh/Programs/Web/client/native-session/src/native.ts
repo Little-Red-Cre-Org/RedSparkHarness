@@ -66,6 +66,60 @@ export interface NativeFileUpload {
   readonly name?: string
 }
 
+/** Message id minted by Native subagent admission. */
+export type NativeSubagentMessageId = Branded<'MessageId'>
+
+/** Direct child selected by its parent Session. */
+export interface NativeSubagentAddress {
+  readonly parentSessionId: SessionId
+  readonly childSessionId: SessionId
+  readonly mode: 'one-shot' | 'continuable'
+}
+
+/** One direct-child catalog row or a contained descriptor failure. */
+export type NativeSubagentCatalogEntry =
+  | {
+    readonly kind: 'child'
+    readonly id: SessionId
+    readonly activity: 'running' | 'inactive'
+    readonly hasChildren: boolean
+    readonly mode: 'one-shot'
+    readonly label?: string
+  }
+  | {
+    readonly kind: 'child'
+    readonly id: SessionId
+    readonly activity: 'running' | 'inactive'
+    readonly hasChildren: boolean
+    readonly mode: 'continuable'
+    readonly label: string
+  }
+  | {
+    readonly kind: 'diagnostic'
+    readonly id: SessionId
+    readonly reason: 'corrupt' | 'unsupported' | 'unavailable'
+  }
+
+/** Direct-child catalog and whether that parent already had a live owner. */
+export interface NativeSubagentCatalog {
+  readonly entries: readonly NativeSubagentCatalogEntry[]
+  readonly parentAvailable: boolean
+}
+
+/** Continuable prompt. Queue and steer both ask the Host for next-step admission. */
+export interface NativeSubagentPromptRequest {
+  readonly requestId: string
+  readonly parentSessionId: SessionId
+  readonly childSessionId: SessionId
+  readonly mode: 'continuable'
+  readonly delivery: 'queue' | 'steer'
+  readonly content: readonly (
+    | { readonly type: 'text'; readonly text: string }
+    | { readonly type: 'image'; readonly mediaType: 'image/png' | 'image/jpeg' | 'image/webp' | 'image/gif'; readonly data: string; readonly name?: string }
+  )[]
+  readonly clientTimeZone?: string
+}
+
 interface NativeFileUploadGlobal {
   __RSH_FILE_UPLOAD__?: { readonly fetch: (input: URL, init: RequestInit) => Promise<Response> }
 }
@@ -773,6 +827,55 @@ export interface NativeSessionClient {
     readonly events: readonly SessionEvent[]
     readonly inheritedEventCount: number
   }>
+  /**
+   * Fork one closed source turn into a new root Session.
+   * @param sessionId - source Session. It is not modified.
+   * @param atSeq - optional source event whose turn must already be closed.
+   * @param signal - caller cancellation.
+   * @returns the minted destination Session id.
+   */
+  fork(sessionId: SessionId, atSeq: number | undefined, signal?: AbortSignal): Promise<{ readonly sessionId: SessionId }>
+  /**
+   * List direct subagent children of one parent.
+   * @param parentSessionId - parent Session id.
+   * @param signal - caller cancellation.
+   * @returns catalog rows and whether that parent was already live.
+   */
+  subagentsList(parentSessionId: SessionId, signal?: AbortSignal): Promise<NativeSubagentCatalog>
+  /**
+   * Send one continuable prompt. Queue and steer both use Native next-step admission.
+   * @param request - parent, child, delivery, and prompt content.
+   * @param signal - caller cancellation before admission.
+   * @returns the message id Native admission created.
+   */
+  subagentPrompt(request: NativeSubagentPromptRequest, signal?: AbortSignal): Promise<{ readonly messageId: NativeSubagentMessageId }>
+  /**
+   * Interrupt one continuable child without cancelling its parent.
+   * @param parentSessionId - direct parent Session.
+   * @param childSessionId - child Session.
+   * @param signal - caller cancellation before the header check.
+   * @returns acceptance when the Host signaled the child, or when the child was missing or not live.
+   */
+  subagentInterrupt(parentSessionId: SessionId, childSessionId: SessionId, signal?: AbortSignal): Promise<{ readonly accepted: true }>
+  /**
+   * Read one subagent Session after the Host checks its parent address.
+   * @param address - parent, child, and descriptor mode.
+   * @param signal - caller cancellation.
+   * @returns the same history fields as an ordinary Session read.
+   */
+  subagentHistory(address: NativeSubagentAddress, signal?: AbortSignal): Promise<{
+    readonly header: SessionHeader
+    readonly events: readonly SessionEvent[]
+    readonly inheritedEventCount: number
+  }>
+  /**
+   * Follow one subagent Session from a durable cursor.
+   * @param address - parent, child, and descriptor mode.
+   * @param lastSeq - last applied event, or `-1` before the first event.
+   * @param signal - ends this follow without cancelling the parent turn.
+   * @returns baseline, durable events, and settlement for this child stream.
+   */
+  subagentFollow(address: NativeSubagentAddress, lastSeq: number, signal?: AbortSignal): AsyncIterable<NativeSessionFollowFrame>
   /** Stream immutable file bytes for one existing Session without opening its Agent.
    * @param sessionId - existing Session whose selected Program route owns the receipt.
    * @param file - Blob or one-shot byte stream and optional display name.
@@ -1233,6 +1336,69 @@ function resolveApiUrl(endpoint: string): URL {
   return new URL(`/api/${endpoint}`, origin)
 }
 
+
+const nativeSubagentChildSchema = z.strictObject({
+  kind: z.literal('child'),
+  id: z.string().min(1),
+  activity: z.enum(['running', 'inactive']),
+  hasChildren: z.boolean(),
+  mode: z.literal('one-shot'),
+  label: z.string().optional(),
+})
+const nativeSubagentContinuableSchema = z.strictObject({
+  kind: z.literal('child'),
+  id: z.string().min(1),
+  activity: z.enum(['running', 'inactive']),
+  hasChildren: z.boolean(),
+  mode: z.literal('continuable'),
+  label: z.string(),
+})
+const nativeSubagentDiagnosticSchema = z.strictObject({
+  kind: z.literal('diagnostic'),
+  id: z.string().min(1),
+  reason: z.enum(['corrupt', 'unsupported', 'unavailable']),
+})
+const nativeSubagentCatalogSchema = z.strictObject({
+  parentAvailable: z.boolean(),
+  entries: z.array(z.discriminatedUnion('kind', [
+    z.discriminatedUnion('mode', [nativeSubagentChildSchema, nativeSubagentContinuableSchema]),
+    nativeSubagentDiagnosticSchema,
+  ])),
+})
+
+function decodeSubagentCatalog(value: unknown): NativeSubagentCatalog {
+  const parsed = nativeSubagentCatalogSchema.parse(value)
+  return {
+    parentAvailable: parsed.parentAvailable,
+    entries: parsed.entries.map((entry) => {
+      if (entry.kind === 'diagnostic') return { kind: 'diagnostic', id: entry.id as SessionId, reason: entry.reason }
+      if (entry.mode === 'one-shot') {
+        return { kind: 'child', id: entry.id as SessionId, activity: entry.activity, hasChildren: entry.hasChildren,
+          mode: 'one-shot', ...entry.label === undefined ? {} : { label: entry.label } }
+      }
+      return { kind: 'child', id: entry.id as SessionId, activity: entry.activity, hasChildren: entry.hasChildren,
+        mode: 'continuable', label: entry.label }
+    }),
+  }
+}
+
+function subagentFollowDetails(value: unknown): Record<string, unknown> {
+  if (value === null || typeof value !== 'object' || Array.isArray(value)) return {}
+  return value as Record<string, unknown>
+}
+
+async function nativeSubagentFollowError(response: Response): Promise<Error> {
+  try {
+    const data = fields(JSON.parse(await response.text()))
+    if (typeof data.code === 'string' && typeof data.message === 'string') {
+      return new NativeSessionRpcError(data.code, data.message, subagentFollowDetails(data.details))
+    }
+  } catch {
+    // Non-JSON bodies stay generic HTTP failures.
+  }
+  return new Error(`native subagent follow: invalid response HTTP ${response.status}`)
+}
+
 function decodeReply(endpoint: string, value: unknown): unknown {
   if (endpoint === 'session/file-upload') {
     const receipt = z.strictObject({ receiptId: z.string().min(1), name: z.string(), bytes: z.number().int().nonnegative() }).parse(value)
@@ -1397,6 +1563,20 @@ function decodeReply(endpoint: string, value: unknown): unknown {
     case 'session/select-permission':
       if (data.changed !== true) throw new TypeError('invalid native permission selection acknowledgement')
       break
+    case 'session/fork': {
+      const parsed = z.strictObject({ sessionId: z.string().min(1).max(256) }).parse(data)
+      return { sessionId: parsed.sessionId as SessionId }
+    }
+    case 'subagents/list':
+      return decodeSubagentCatalog(data)
+    case 'subagents/prompt': {
+      const parsed = z.strictObject({ messageId: z.string().min(1) }).parse(data)
+      return { messageId: brandString<NativeSubagentMessageId>(parsed.messageId) }
+    }
+    case 'subagents/interruptByParent': {
+      z.strictObject({ accepted: z.literal(true) }).parse(data)
+      return { accepted: true }
+    }
     case 'session/history':
       if (!Array.isArray(data.events) || typeof data.inheritedEventCount !== 'number'
         || !Number.isSafeInteger(data.inheritedEventCount) || data.inheritedEventCount < 0
@@ -1939,6 +2119,38 @@ export function createNativeSessionClient(
       'session/commands', { sessionId }, signal)).commands,
     create: signal => call('session/create', {}, signal),
     history: (sessionId, signal) => call('session/history', { sessionId }, signal),
+    fork: (sessionId, atSeq, signal) => call('session/fork', { sessionId, ...atSeq === undefined ? {} : { atSeq } }, signal),
+    subagentsList: (parentSessionId, signal) => call('subagents/list', { parentSessionId }, signal),
+    subagentPrompt: (request, signal) => call('subagents/prompt', request, signal),
+    subagentInterrupt: (parentSessionId, childSessionId, signal) => call('subagents/interruptByParent', {
+      parentSessionId, childSessionId, mode: 'continuable',
+    }, signal),
+    subagentHistory: (address, signal) => call('session/history', { address: { kind: 'subagent', ...address } }, signal),
+    async *subagentFollow(address, lastSeq, signal) {
+      const completed = Promise.withResolvers<void>()
+      pendingFollows.add(completed.promise)
+      try {
+        const responseOperation = rpc.response
+        if (responseOperation === undefined) throw new Error('native Session Client: selected carrier has no Fetch response operation')
+        const accepted = signal === undefined ? lifetime : AbortSignal.any([lifetime, signal])
+        const response = await responseOperation('/api', 'native-session/subagent-follow', {
+          parentSessionId: address.parentSessionId, childSessionId: address.childSessionId, mode: address.mode, lastSeq,
+        }, accepted)
+        if (!response.ok || response.body === null || response.headers.get('content-type') !== 'text/event-stream') {
+          throw await nativeSubagentFollowError(response)
+        }
+        const frames = response.body.pipeThrough(new TextDecoderStream())
+          .pipeThrough(new EventSourceParserStream({ maxBufferSize: config.maxFollowBufferChars, onError: 'terminate' }))
+        try {
+          for await (const { data } of frames) yield followFrame(JSON.parse(data))
+        } catch (error: unknown) {
+          if (!accepted.aborted) throw error
+        }
+      } finally {
+        pendingFollows.delete(completed.promise)
+        completed.resolve()
+      }
+    },
     uploadFile(sessionId, file, signal) {
       const uploading = (async () => {
         const accepted = signal === undefined ? lifetime : AbortSignal.any([lifetime, signal])

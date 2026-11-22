@@ -119,6 +119,8 @@ interface NativeSettingsDescription {
 
 `queue(sessionId, prompt, requestId, signal?)` 与 `steer(...)` 仅当此 Client 的 root turn 活动时，才会分别将文本提交到 `next-turn` 与 `next-step`。`queueContent(sessionId, content, requestId, signal?)` 与 `steerContent(...)` 接受有序文本、编码图片和暂存文件回执，并提交到相同 inbox。`dequeue(sessionId, requestId)` 会从任一 inbox 移除仍在等待的请求。`submissions(sessionId, signal?)` 返回 `{ throughSeq, submissions }`，其中包含完整的持久化待处理消息。`editSubmission(sessionId, requestId, text, signal?)` 会通过精确的 root owner 替换消息全部 content，同时保留身份与位置，也支持 idle maintenance；`promoteSubmission(sessionId, requestId, signal?)` 会将 queued 输入移到 `next-step`，并要求活动浏览器轮次。其结果分别区分 `updated`/`stale` 与 `promoted`/`stale`/`not-promotable`。`nativeSubmissionRequestId(value)` 会为调用方生成的稳定 id 加类型标记；该 id 会成为持久化用户消息 id。Queue 与 steer 在 Host 持久化准入后完成；拒绝时会以 `NativeSessionRpcError` 拒绝，并在 details 中包含 `requestId`。`prompt` 使用观察者时，其跟随回调会收到使用同一 id 的 accepted、rejected、settled `submission-update` 帧。
 
+`fork(sessionId, atSeq?)` 请求 Host 从一个已关闭的源轮次铸造目标 Session。`subagentsList(parentSessionId)` 读取直接子项目录。`subagentPrompt` 接受 queue 或 steer 投递；两者都请求 Host 做 Native next-step 准入。`subagentInterrupt` 向一个可继续子项发信号，且不取消其 parent。缺失或非活动子项会被接受；没有活动祖先的活动子项会被拒绝。`subagentHistory(address)` 在 Host 检查该地址后读取已寻址子项，而 `history(sessionId)` 仍是普通 Session 读取。`subagentFollow(address, lastSeq)` 从持久游标跟随该子项，路径为 POST `/api/native-session/subagent-follow`。
+
 <a id="invariants"></a>
 
 跟随流也传输临时审批与问题批次。answerHuman 只使用本 Consumer 尚未结算的调用标识；Host 校验待答根所有者与输入。审批决定为允许一次或拒绝。问题答案保留所选标签与自定义文本。这些展示不形成第二份持久日志。
