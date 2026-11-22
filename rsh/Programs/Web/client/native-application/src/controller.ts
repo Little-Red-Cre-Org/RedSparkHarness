@@ -213,7 +213,7 @@ export class NativeConversationController {
     this.publish({ navigationPending: false, submissionBusy: false, submissionError: undefined })
   }
 
-  private async refreshSubmissions(id: SessionId, epoch: number): Promise<void> {
+  private async refreshSubmissions(id: SessionId, epoch: number, keepSubmissionError = false): Promise<void> {
     if (this.selectionEpoch !== epoch || this.snapshot.selected !== id || this.lifetime.signal.aborted) return
     const read = ++this.submissionRead
     try {
@@ -221,7 +221,7 @@ export class NativeConversationController {
       if (this.selectionEpoch !== epoch || this.snapshot.selected !== id || read !== this.submissionRead) return
       if (value.throughSeq < this.submissionFloor
         || value.throughSeq < (this.snapshot.submissions?.throughSeq ?? -1)) return
-      this.publish({ submissions: value })
+      this.publish(keepSubmissionError ? { submissions: value } : { submissions: value, submissionError: undefined })
     } catch (error: unknown) {
       if (this.selectionEpoch === epoch && this.snapshot.selected === id && read === this.submissionRead) {
         this.publish({ submissionError: error instanceof Error ? error.message : String(error) })
@@ -332,7 +332,7 @@ export class NativeConversationController {
         }
         return false
       } finally {
-        await this.refreshSubmissions(id, epoch)
+        await this.refreshSubmissions(id, epoch, true)
         if (this.selectionEpoch === epoch && this.snapshot.selected === id) this.publish({ submissionBusy: false })
       }
     })()

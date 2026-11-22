@@ -3,8 +3,9 @@
 import { Context } from '@redspark/cordis'
 import { describe, expect, it, vi } from 'vitest'
 import type { BrowserAuth } from '../src/browser-auth.ts'
+import { randomUuid } from '../src/client/random-uuid.ts'
 import { createWebConnectionRpc } from '../src/client/rpc.ts'
-import { createFollowBusClient, FOLLOW_BUS_FRAME_OVERHEAD_BYTES, FOLLOW_BUS_PATH } from '../src/follow-bus.ts'
+import { createFollowBusClient, FOLLOW_BUS_FRAME_OVERHEAD_BYTES, FOLLOW_BUS_ID_HEADER, FOLLOW_BUS_PATH } from '../src/follow-bus.ts'
 import { HostConnectionService } from '../src/rpc-host.ts'
 import type { ConnectionFetchHandler } from '../src/rpc.ts'
 
@@ -108,7 +109,11 @@ function pageFetch(
 ): (input: URL, init: RequestInit) => Promise<Response> {
   return async (input, init) => {
     const url = input instanceof URL ? input : new URL(String(input))
-    calls.push(`${init.method ?? 'GET'} ${url.pathname}`)
+    if (init.body instanceof ReadableStream || (init as { duplex?: unknown }).duplex !== undefined) {
+      throw new Error('follow bus client used a streaming request body')
+    }
+    const open = typeof init.body === 'string' && init.body.includes('"type":"open"')
+    calls.push(`${open ? 'OPEN' : init.method ?? 'GET'} ${url.pathname}`)
     const headers = new Headers(init.headers)
     headers.set('host', session.host)
     headers.set('cookie', session.cookie)
@@ -117,7 +122,7 @@ function pageFetch(
       return new Response(rejection === 401 ? 'unauthorized' : 'forbidden', { status: rejection })
     }
     const response = await handler.fetch(new Request(url, { ...init, headers }))
-    if (hold === undefined || hold.gate === undefined || url.pathname !== FOLLOW_BUS_PATH || init.method !== 'POST') return response
+    if (hold === undefined || hold.gate === undefined || !open) return response
     const gate = hold.gate
     hold.gate = undefined
     if (response.body === null) return response
@@ -150,49 +155,47 @@ async function textChunk(response: Response): Promise<string> {
   return decoder.decode(next.value)
 }
 
-function openBus(options?: {
-  readonly url?: string
-  readonly headers?: Readonly<Record<string, string>>
-}): {
+function openBus(
+  handler: ConnectionFetchHandler,
+  options?: {
+    readonly url?: string
+    readonly headers?: Readonly<Record<string, string>>
+  },
+): {
   readonly request: Request
+  readonly response: Promise<Response>
   readonly send: (frame: unknown) => Promise<void>
   readonly sendRaw: (text: string) => Promise<void>
   readonly close: () => Promise<void>
   readonly abort: () => void
 } {
-  let controller: ReadableStreamDefaultController<Uint8Array> | undefined
-  const ready = Promise.withResolvers<undefined>()
-  const body = new ReadableStream<Uint8Array>({
-    start(streamController) {
-      controller = streamController
-      ready.resolve(undefined)
-    },
-  })
   const lifetime = new AbortController()
-  const init: RequestInit & { duplex?: 'half' } = {
+  const url = options?.url ?? 'http://dsh.internal/api/connection/follow-bus'
+  const request = new Request(url, {
     method: 'POST',
-    body,
-    duplex: 'half',
+    headers: {
+      host: '127.0.0.1',
+      cookie: SESSION_COOKIE,
+      [FOLLOW_BUS_ID_HEADER]: randomUuid(),
+      ...options?.headers,
+    },
+    body: '{"type":"open"}\n',
     signal: lifetime.signal,
-  }
-  const request = new Request(options?.url ?? 'http://dsh.internal/api/connection/follow-bus', {
-    ...init,
-    headers: { host: '127.0.0.1', cookie: SESSION_COOKIE, ...options?.headers },
   })
+  const response = handler.fetch(request)
+  const post = async (body: string): Promise<void> => {
+    await handler.fetch(new Request(url, {
+      method: 'POST',
+      headers: new Headers(request.headers),
+      body,
+    }))
+  }
   return {
     request,
-    async send(frame) {
-      await ready.promise
-      controller?.enqueue(encoder.encode(`${JSON.stringify(frame)}\n`))
-    },
-    async close() {
-      await ready.promise
-      controller?.close()
-    },
-    async sendRaw(text: string) {
-      await ready.promise
-      controller?.enqueue(encoder.encode(text))
-    },
+    response,
+    send(frame) { return post(`${JSON.stringify(frame)}\n`) },
+    sendRaw(text) { return post(text) },
+    async close() { lifetime.abort() },
     abort() { lifetime.abort() },
   }
 }
@@ -269,11 +272,20 @@ function busLocate(): URL {
   return new URL('http://page.invalid/api/connection/follow-bus')
 }
 
-function scriptedFetch(status: number, body: BodyInit | null): (input: URL, init: RequestInit) => Promise<Response> {
-  return () => Promise.resolve(new Response(body, {
-    status,
-    headers: { 'content-type': 'application/x-ndjson' },
-  }))
+function scriptedFetch(
+  status: number,
+  body: BodyInit | null,
+  commandStatus = 204,
+): (input: URL, init: RequestInit) => Promise<Response> {
+  return (_input, init) => {
+    if (typeof init.body === 'string' && init.body.includes('"type":"open"')) {
+      return Promise.resolve(new Response(body, {
+        status,
+        headers: { 'content-type': 'application/x-ndjson' },
+      }))
+    }
+    return Promise.resolve(new Response(commandStatus === 204 ? null : 'no', { status: commandStatus }))
+  }
 }
 
 function rejectingFetch(): (input: URL, init: RequestInit) => Promise<Response> {
@@ -320,6 +332,81 @@ async function exerciseClientEdges(): Promise<void> {
   await rejectBus(scriptedFetch(200, null), 'missing body', false)
   await rejectBus(rejectingFetch(), 'follow bus fetch failed', false)
   await rejectBus(rejectingFetch(), 'stop follow', true)
+
+  let releaseOpen: ((response: Response) => void) | undefined
+  const openedLate = new Promise<Response>((resolve) => { releaseOpen = resolve })
+  const lateFollow = createFollowBusClient((_input, init) => {
+    if (typeof init.body === 'string' && init.body.includes('"type":"open"')) return openedLate
+    return Promise.resolve(new Response(null, { status: 204 }))
+  }, busLocate, () => 'late-open')
+  const lateAbort = new AbortController()
+  const latePending = lateFollow('session/files/read', { path: 'a.png' }, lateAbort.signal)
+  await tick()
+  lateAbort.abort(new Error('stop follow'))
+  releaseOpen?.(new Response('', { status: 200, headers: { 'content-type': 'application/x-ndjson' } }))
+  await expect(latePending).rejects.toThrow('stop follow')
+
+  let releaseSubscribe: ((response: Response) => void) | undefined
+  let closeLive: () => void = () => undefined
+  const liveBody = new ReadableStream<Uint8Array>({
+    start(controller) {
+      closeLive = () => {
+        try { controller.close() } catch {
+          // The reader may already have finished this downlink.
+        }
+      }
+    },
+  })
+  const liveFollow = createFollowBusClient((_input, init) => {
+    const body = typeof init.body === 'string' ? init.body : ''
+    if (body.includes('"type":"open"')) {
+      init.signal?.addEventListener('abort', () => { closeLive() }, { once: true })
+      return Promise.resolve(new Response(liveBody, { status: 200, headers: { 'content-type': 'application/x-ndjson' } }))
+    }
+    if (body.includes('"type":"cancel"')) return Promise.reject(new Error('cancel failed'))
+    return new Promise<Response>((resolve) => { releaseSubscribe = resolve })
+  }, busLocate, () => 'live-command')
+  const liveAbort = new AbortController()
+  const livePending = liveFollow('session/files/read', { path: 'a.png' }, liveAbort.signal)
+  await tick()
+  liveAbort.abort(new Error('stop follow'))
+  releaseSubscribe?.(new Response(null, { status: 204 }))
+  await expect(livePending).rejects.toThrow('stop follow')
+  closeLive()
+
+  let rejectOpen: ((error: Error) => void) | undefined
+  const failingOpen = new Promise<Response>((_resolve, reject) => { rejectOpen = reject })
+  const failedFollow = createFollowBusClient((_input, init) => {
+    if (typeof init.body === 'string' && init.body.includes('"type":"open"')) return failingOpen
+    return Promise.resolve(new Response(null, { status: 204 }))
+  }, busLocate, () => 'fail-open')
+  const failAbort = new AbortController()
+  const failPending = failedFollow('session/files/read', { path: 'a.png' }, failAbort.signal)
+  await tick()
+  failAbort.abort(new Error('stop follow'))
+  rejectOpen?.(new Error('open failed'))
+  await expect(failPending).rejects.toThrow('stop follow')
+  let closeHang = (): void => undefined
+  const hanging = new ReadableStream<Uint8Array>({
+    start(controller) {
+      closeHang = () => {
+        try { controller.close() } catch {
+          // The downlink reader can already have closed this body.
+        }
+      }
+    },
+  })
+  await rejectBus((_input, init) => {
+    if (typeof init.body === 'string' && init.body.includes('"type":"open"')) {
+      const signal = init.signal
+      if (signal != null) {
+        if (signal.aborted) closeHang()
+        else signal.addEventListener('abort', () => { closeHang() }, { once: true })
+      }
+      return Promise.resolve(new Response(hanging, { status: 200, headers: { 'content-type': 'application/x-ndjson' } }))
+    }
+    return Promise.resolve(new Response('no', { status: 409 }))
+  }, 'HTTP 409', false)
 
   const invalid = [
     'null',
@@ -384,23 +471,24 @@ describe('native follow connection bus', () => {
         return textChunk(response)
       }))
       expect(chunks).toEqual(RESIDENT.map(endpoint => `data: ${endpoint}\n\n`))
-      expect(calls.filter(call => call === `POST ${FOLLOW_BUS_PATH}`)).toEqual([`POST ${FOLLOW_BUS_PATH}`])
+      expect(calls.filter(call => call === `OPEN ${FOLLOW_BUS_PATH}`)).toEqual([`OPEN ${FOLLOW_BUS_PATH}`])
+      expect(calls.filter(call => call === `POST ${FOLLOW_BUS_PATH}`)).toHaveLength(RESIDENT.length)
       expect(routes.every(route => route.signals.length === 1 && route.signals[0]?.aborted === false)).toBe(true)
 
       const described = await rpc.call('/api', 'settings/describe', {})
       expect(described).toEqual({ ok: true, value: { hasDocument: true } })
       expect(calls).toContain('POST /api/settings/describe')
-      expect(calls.filter(call => call === `POST ${FOLLOW_BUS_PATH}`)).toHaveLength(1)
+      expect(calls.filter(call => call === `OPEN ${FOLLOW_BUS_PATH}`)).toHaveLength(1)
       expect(routes.every(route => route.signals[0]?.aborted === false)).toBe(true)
 
       const stopped = new AbortController()
       stopped.abort('already stopped')
       await expect(rpc.response?.('/api', 'workspaces/follow', {}, stopped.signal)).rejects.toThrow('already stopped')
-      expect(calls.filter(call => call === `POST ${FOLLOW_BUS_PATH}`)).toHaveLength(1)
+      expect(calls.filter(call => call === `OPEN ${FOLLOW_BUS_PATH}`)).toHaveLength(1)
 
       const read = await rpc.response?.('/api', 'session/files/read', { path: 'a.png' }, readAbort.signal)
       expect(await read?.text()).toBe('{"text":"png"}')
-      expect(calls.filter(call => call === `POST ${FOLLOW_BUS_PATH}`)).toHaveLength(1)
+      expect(calls.filter(call => call === `OPEN ${FOLLOW_BUS_PATH}`)).toHaveLength(1)
       expect(routes.every(route => route.signals[0]?.aborted === false)).toBe(true)
 
       for (const controller of controllers) controller.abort()
@@ -411,7 +499,7 @@ describe('native follow connection bus', () => {
       readAbort.abort()
       const next = await rpc.response?.('/api', 'session/files/read', { path: 'b.png' }, nextAbort.signal)
       expect(await next?.text()).toBe('{"text":"png"}')
-      expect(calls.filter(call => call === `POST ${FOLLOW_BUS_PATH}`)).toHaveLength(2)
+      expect(calls.filter(call => call === `OPEN ${FOLLOW_BUS_PATH}`)).toHaveLength(2)
     } finally {
       releaseBus.resolve(undefined)
       await tick()
@@ -475,7 +563,7 @@ describe('native follow connection bus', () => {
       if (alphaReader === undefined || betaReader === undefined) throw new Error('missing follow body')
       expect(decoder.decode((await alphaReader.read()).value)).toBe('alpha:1')
       expect(decoder.decode((await betaReader.read()).value)).toBe('beta:1')
-      expect(calls.filter(call => call === `POST ${FOLLOW_BUS_PATH}`)).toHaveLength(1)
+      expect(calls.filter(call => call === `OPEN ${FOLLOW_BUS_PATH}`)).toHaveLength(1)
 
       alphaAbort.abort()
       await vi.waitFor(() => { expect(alphaSignals[0]?.aborted).toBe(true) })
@@ -491,7 +579,7 @@ describe('native follow connection bus', () => {
       })
       expect(raw?.status).toBe(404)
       expect(calls).toContain('POST /api/native-session/file-upload')
-      expect(calls.filter(call => call === `POST ${FOLLOW_BUS_PATH}`)).toHaveLength(1)
+      expect(calls.filter(call => call === `OPEN ${FOLLOW_BUS_PATH}`)).toHaveLength(1)
 
       const other = await rpc.response?.('/rpc', 'workspaces/follow', {}, otherAbort.signal)
       expect(other?.status).toBe(404)
@@ -503,7 +591,7 @@ describe('native follow connection bus', () => {
       expect(explicitResponse?.status).toBe(200)
       expect(direct).toHaveBeenCalledOnce()
       expect(direct.mock.calls[0]?.[0].pathname).toBe('/api/workspaces/follow')
-      expect(calls.filter(call => call === `POST ${FOLLOW_BUS_PATH}`)).toHaveLength(1)
+      expect(calls.filter(call => call === `OPEN ${FOLLOW_BUS_PATH}`)).toHaveLength(1)
       await exerciseClientEdges()
       let broke = false
       const disposeBreak = register(connection, '/api/bytes/break', 'buffered', () => {
@@ -622,6 +710,31 @@ describe('native follow connection bus', () => {
       })).toBe('buffered')
       expect((await handler.fetch(new Request('http://dsh.internal/api/connection/follow-bus'))).status).toBe(405)
       expect((await handler.fetch(new Request('http://dsh.internal/api/connection/follow-bus', { method: 'POST' }))).status).toBe(400)
+      expect((await handler.fetch(new Request('http://dsh.internal/api/connection/follow-bus', {
+        method: 'POST', body: '{"type":"open"}',
+      }))).status).toBe(400)
+      expect((await handler.fetch(new Request('http://dsh.internal/api/connection/follow-bus', {
+        method: 'POST', body: '\n',
+      }))).status).toBe(400)
+      const early = new AbortController()
+      early.abort()
+      const earlyResponse = await handler.fetch(new Request('http://dsh.internal/api/connection/follow-bus', {
+        method: 'POST',
+        headers: { [FOLLOW_BUS_ID_HEADER]: 'already-aborted', host: '127.0.0.1', cookie: SESSION_COOKIE },
+        body: '{"type":"open"}\n',
+        signal: early.signal,
+      }))
+      expect(earlyResponse.status).toBe(200)
+      const earlyReader = earlyResponse.body?.getReader()
+      if (earlyReader === undefined) throw new Error('missing aborted downlink')
+      expect((await earlyReader.read()).done).toBe(true)
+      const unknown = await handler.fetch(new Request('http://dsh.internal/api/connection/follow-bus', {
+        method: 'POST',
+        headers: { [FOLLOW_BUS_ID_HEADER]: 'missing-bus' },
+        body: '{"type":"subscribe","id":"z","endpoint":"bytes/split","payload":null}\n',
+      }))
+      expect(unknown.status).toBe(404)
+      expect(splitCalls).toEqual([])
       expect(() => register(connection, FOLLOW_BUS_PATH, 'streaming', () => Promise.resolve(new Response()))).toThrow('reserved')
 
       const direct = await handler.fetch(new Request('http://dsh.internal/api/bytes/split', {
@@ -630,8 +743,14 @@ describe('native follow connection bus', () => {
       expect(direct.status).toBe(201)
       expect(splitCalls).toEqual(['split'])
 
-      const bus = openBus()
-      const response = await handler.fetch(bus.request)
+      const bus = openBus(handler)
+      const response = await bus.response
+      const duplicate = await handler.fetch(new Request(bus.request.url, {
+        method: 'POST',
+        headers: new Headers(bus.request.headers),
+        body: '{"type":"open"}\n',
+      }))
+      expect(duplicate.status).toBe(409)
       const wire = collect(response)
       await bus.send({ type: 'cancel', id: 'nobody' })
       await bus.send({ type: 'subscribe', id: 'split', endpoint: 'bytes/split', payload: { image: true } })
@@ -693,11 +812,12 @@ describe('native follow connection bus', () => {
         '{"type":"subscribe","id":"a"}',
         '{"type":"subscribe","id":"a","endpoint":1}',
         '{"type":"nope","id":"a"}',
+        '{',
       ]
       for (const line of invalidRequests) {
-        const bad = openBus()
+        const bad = openBus(handler)
         try {
-          const badResponse = await handler.fetch(bad.request)
+          const badResponse = await bad.response
           const finished = collect(badResponse).finished
           await bad.sendRaw(`${line}\n`)
           await finished
@@ -706,9 +826,9 @@ describe('native follow connection bus', () => {
         }
       }
 
-      const paused = openBus()
+      const paused = openBus(handler)
       try {
-        const pausedResponse = await handler.fetch(paused.request)
+        const pausedResponse = await paused.response
         await paused.send({ type: 'subscribe', id: 'paused', endpoint: 'bytes/split', payload: { paused: true } })
         await vi.waitFor(() => { expect(splitCalls).toHaveLength(3) })
         await tick()
@@ -729,8 +849,8 @@ describe('native follow connection bus', () => {
         return new Response('ok')
       })
       try {
-        const sized = openBus()
-        const sizedWire = collect(await limited.handler.fetch(sized.request))
+        const sized = openBus(limited.handler)
+        const sizedWire = collect(await sized.response)
         const accepted = 'x'.repeat(10)
         const wide = '\uFFFF'.repeat(11)
         const overChars = 'x'.repeat(40)
@@ -747,8 +867,8 @@ describe('native follow connection bus', () => {
         await sized.close()
         await sizedWire.finished
 
-        const overflow = openBus()
-        const overflowResponse = await limited.handler.fetch(overflow.request)
+        const overflow = openBus(limited.handler)
+        const overflowResponse = await overflow.response
         const overflowWire = collect(overflowResponse)
         await overflow.send({ type: 'subscribe', id: 'line', endpoint: 'bytes/sized', payload: 'y'.repeat(FOLLOW_BUS_FRAME_OVERHEAD_BYTES + 64) })
         await overflowWire.finished
@@ -790,8 +910,8 @@ describe('native follow connection bus', () => {
         expect(authed.connection.requestRejection({ headers: { host: '127.0.0.1' } })).toBe(401)
         expect(authed.connection.requestRejection({ headers: { host: 'attacker.test', cookie: authed.session.cookie } })).toBe(403)
 
-        const bus = openBus()
-        const wire = collect(await authed.handler.fetch(bus.request))
+        const bus = openBus(authed.handler)
+        const wire = collect(await bus.response)
         await bus.send({ type: 'subscribe', id: 'resident', endpoint: 'bytes/resident', payload: {} })
         await bus.send({ type: 'subscribe', id: 'route-denied', endpoint: 'bytes/route-denied', payload: {} })
         await bus.send({ type: 'subscribe', id: 'next', endpoint: 'bytes/next', payload: {} })
@@ -812,8 +932,8 @@ describe('native follow connection bus', () => {
         await wire.finished
 
         authed.session.expiresAt = Number.POSITIVE_INFINITY
-        const cleared = openBus()
-        const clearedWire = collect(await authed.handler.fetch(cleared.request))
+        const cleared = openBus(authed.handler)
+        const clearedWire = collect(await cleared.response)
         cleared.request.headers.set('cookie', '')
         await cleared.send({ type: 'subscribe', id: 'cleared', endpoint: 'bytes/next', payload: {} })
         await clearedWire.until(frames => framesFor(frames, 'cleared').some(frame => frame.type === 'end'))
@@ -821,25 +941,39 @@ describe('native follow connection bus', () => {
         expect(hits.filter(hit => hit === 'next')).toEqual(['next'])
         await clearedWire.finished
 
-        const forbidden = openBus({ headers: { host: 'attacker.test', cookie: SESSION_COOKIE } })
-        const forbiddenWire = collect(await authed.handler.fetch(forbidden.request))
+        const forbidden = openBus(authed.handler, { headers: { host: 'attacker.test', cookie: SESSION_COOKIE } })
+        const forbiddenWire = collect(await forbidden.response)
         await forbidden.send({ type: 'subscribe', id: 'forbidden', endpoint: 'bytes/next', payload: {} })
         await forbiddenWire.until(frames => framesFor(frames, 'forbidden').some(frame => frame.type === 'end'))
         expect(framesFor(forbiddenWire.frames, 'forbidden').find(frame => frame.type === 'head')?.status).toBe(403)
         expect(hits.filter(hit => hit === 'next')).toEqual(['next'])
         await forbiddenWire.finished
 
-        const desktop = openBus({
+        const desktop = openBus(authed.handler, {
           url: 'dsh-app://app/api/connection/follow-bus',
           headers: { host: 'attacker.test', cookie: 'cleared' },
         })
-        const desktopWire = collect(await authed.handler.fetch(desktop.request))
+        const desktopWire = collect(await desktop.response)
         await desktop.send({ type: 'subscribe', id: 'desktop', endpoint: 'bytes/next', payload: {} })
         await desktopWire.until(frames => framesFor(frames, 'desktop').some(frame => frame.type === 'end'))
         expect(framesFor(desktopWire.frames, 'desktop').find(frame => frame.type === 'head')?.status).toBe(200)
         expect(hits.filter(hit => hit === 'next')).toEqual(['next', 'next'])
         await desktop.close()
         await desktopWire.finished
+
+        const blocked = openBus(authed.handler)
+        authed.session.expiresAt = 0
+        await blocked.send({ type: 'subscribe', id: 'blocked', endpoint: 'bytes/next', payload: {} })
+        await blocked.send({ type: 'cancel', id: 'blocked' })
+        const blockedWire = collect(await blocked.response)
+        await blockedWire.until(frames => framesFor(frames, 'blocked').some(frame => frame.type === 'end'))
+        authed.session.expiresAt = Number.POSITIVE_INFINITY
+        await blocked.send({ type: 'subscribe', id: 'after', endpoint: 'bytes/next', payload: {} })
+        await blockedWire.until(frames => framesFor(frames, 'after').some(frame => frame.type === 'end'))
+        expect(framesFor(blockedWire.frames, 'after').find(frame => frame.type === 'head')?.status).toBe(200)
+        expect(hits.filter(hit => hit === 'next')).toEqual(['next', 'next', 'next'])
+        await blocked.close()
+        await blockedWire.finished
       } finally {
         await disposeResident()
         await disposeNext()
@@ -953,9 +1087,9 @@ describe('native follow connection bus', () => {
       liveSignals.push(request.signal)
       return Promise.resolve(new Response(new ReadableStream<Uint8Array>({ start() { return undefined } }), { status: 200 }))
     })
-    const bus = openBus()
+    const bus = openBus(handler)
     try {
-      const response = await handler.fetch(bus.request)
+      const response = await bus.response
       const wire = collect(response)
       await bus.send({ type: 'subscribe', id: 'alpha', endpoint: 'bytes/alpha', payload: {} })
       await bus.send({ type: 'subscribe', id: 'beta', endpoint: 'bytes/beta', payload: {} })
@@ -974,9 +1108,9 @@ describe('native follow connection bus', () => {
       await vi.waitFor(() => { expect(betaSignals[0]?.aborted).toBe(true) })
       await wire.finished
 
-      const fast = openBus()
+      const fast = openBus(handler)
       try {
-        const fastResponse = await handler.fetch(fast.request)
+        const fastResponse = await fast.response
         await fast.send({ type: 'subscribe', id: 'a', endpoint: 'bytes/fast-a', payload: {} })
         await fast.send({ type: 'subscribe', id: 'b', endpoint: 'bytes/fast-b', payload: {} })
         await vi.waitFor(() => { expect(fastSignals.every(list => list.length === 1)).toBe(true) })
@@ -988,9 +1122,9 @@ describe('native follow connection bus', () => {
         fast.abort()
       }
 
-      const late = openBus()
+      const late = openBus(handler)
       try {
-        const lateResponse = await handler.fetch(late.request)
+        const lateResponse = await late.response
         const lateWire = collect(lateResponse)
         await late.send({ type: 'subscribe', id: 'late', endpoint: 'bytes/late', payload: {} })
         await late.send({ type: 'subscribe', id: 'boom', endpoint: 'bytes/late-boom', payload: {} })
@@ -1010,9 +1144,9 @@ describe('native follow connection bus', () => {
         late.abort()
       }
 
-      const pushed = openBus()
+      const pushed = openBus(handler)
       try {
-        const pushedResponse = await handler.fetch(pushed.request)
+        const pushedResponse = await pushed.response
         const pushedWire = collect(pushedResponse)
         await pushed.send({ type: 'subscribe', id: 'push', endpoint: 'bytes/push', payload: {} })
         await pushedWire.until(frames => frames.some(frame => frame.id === 'push' && frame.type === 'head'))
@@ -1031,9 +1165,9 @@ describe('native follow connection bus', () => {
         pushed.abort()
       }
 
-      const loop = openBus()
+      const loop = openBus(handler)
       try {
-        const loopResponse = await handler.fetch(loop.request)
+        const loopResponse = await loop.response
         await loop.send({ type: 'subscribe', id: 'loop', endpoint: 'bytes/loop', payload: {} })
         await vi.waitFor(() => { expect(loopSignals).toHaveLength(1) })
         await tick()
@@ -1050,9 +1184,9 @@ describe('native follow connection bus', () => {
         loop.abort()
       }
 
-      const live = openBus()
+      const live = openBus(handler)
       try {
-        const liveResponse = await handler.fetch(live.request)
+        const liveResponse = await live.response
         await live.send({ type: 'subscribe', id: 'live', endpoint: 'bytes/live', payload: {} })
         const reader = liveResponse.body?.getReader()
         if (reader === undefined) throw new Error('missing bus body')

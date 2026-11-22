@@ -6,6 +6,8 @@ export type NativeAgentExecutionStatus = 'idle' | 'running' | 'maintenance' | 'c
 
 interface PendingOperation {
   readonly kind: 'running' | 'maintenance'
+  /** True only for an idle read that may queue behind other idle reads. */
+  readonly sharedRead: boolean
   readonly signal: AbortSignal | undefined
   readonly onAbort: () => void
   run(signal: AbortSignal): Promise<() => void>
@@ -63,14 +65,21 @@ export class NativeAgentExecution {
 
   /**
    * Reserve idle execution synchronously; later turns queue behind this maintenance.
-   * @param task - exclusive maintenance with Agent-owned cancellation.
+   * `shareIdleReads` queues this call behind other idle reads instead of refusing them.
+   * Exclusive maintenance still refuses every active or queued operation.
+   * @param task - exclusive maintenance, or an idle read when `shareIdleReads` is set, with Agent-owned cancellation.
+   * @param options - set `shareIdleReads` only for a read that can follow other idle reads.
    * @returns the preserved maintenance result after the body exits.
-   * @throws synchronously when another operation is active or already queued.
+   * @throws synchronously when exclusive admission finds any operation, or an idle read finds work that is not an idle read.
    */
-  runMaintenance<T>(task: (signal: AbortSignal) => Promise<T>): Promise<T> {
+  runMaintenance<T>(task: (signal: AbortSignal) => Promise<T>, options?: { readonly shareIdleReads?: boolean }): Promise<T> {
     this.assertAccepting()
+    if (options?.shareIdleReads === true) {
+      if (!this.admitsSharedRead()) throw new Error('native-agent: Agent is busy')
+      return this.enqueue('maintenance', task, undefined, true)
+    }
     if (this.active !== undefined || this.queue.length !== 0) throw new Error('native-agent: Agent is busy')
-    return this.enqueue('maintenance', task, undefined)
+    return this.enqueue('maintenance', task, undefined, false)
   }
 
   /**
@@ -90,13 +99,13 @@ export class NativeAgentExecution {
     return this.drained.promise
   }
 
-  private enqueue<T>(kind: PendingOperation['kind'], task: (signal: AbortSignal) => Promise<T>, signal: AbortSignal | undefined): Promise<T> {
+  private enqueue<T>(kind: PendingOperation['kind'], task: (signal: AbortSignal) => Promise<T>, signal: AbortSignal | undefined, sharedRead = false): Promise<T> {
     // Preserve the caller's exact cancellation reason, including non-Error reasons.
     // oxlint-disable-next-line typescript/prefer-promise-reject-errors
     if (signal?.aborted) return Promise.reject(signal.reason)
     const result = Promise.withResolvers<T>()
     const operation: PendingOperation = {
-      kind, signal,
+      kind, sharedRead, signal,
       onAbort: () => {
         const index = this.queue.indexOf(operation)
         if (index === -1) return
@@ -147,6 +156,12 @@ export class NativeAgentExecution {
     this.lifetime?.removeEventListener('abort', this.onLifetimeAbort)
     this.releaseCleanup()
     this.drained.resolve()
+  }
+
+  /** Idle reads admit only while every admitted operation is itself an idle read. */
+  private admitsSharedRead(): boolean {
+    const admitted = [this.active, ...this.queue].filter((operation): operation is PendingOperation => operation !== undefined)
+    return admitted.every(operation => operation.sharedRead)
   }
 
   private assertAccepting(): void {

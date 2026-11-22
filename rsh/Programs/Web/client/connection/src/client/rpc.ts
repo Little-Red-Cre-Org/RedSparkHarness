@@ -27,7 +27,7 @@ export type RpcStreamOpen = (
 /**
  * Create the browser-backed generic RPC caller.
  * @param doFetch - transport override; defaults to the page's global fetch.
- *   When omitted, JSON `/api` `response()` calls share one follow-bus fetch.
+ *   When omitted, JSON `/api` `response()` calls share one follow-bus downlink.
  *   An explicit fetch, a raw-body response, and any other channel stay direct.
  * @param openStream - optional worker-local Gateway stream carrier.
  * @returns caller that owns request correlation and response-envelope validation.
