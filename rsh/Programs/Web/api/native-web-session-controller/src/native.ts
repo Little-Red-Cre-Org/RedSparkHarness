@@ -1350,7 +1350,7 @@ export class NativeWebSessionService {
     if (await this.persistence.stat(id, { signal }) === undefined) throw new Error('native web session: unknown Session')
     const route = await this.routeForSession(id, signal)
     return this.executor.executeSessionOperation({ id, resume: true, route }, activeOwner =>
-      this.projectPendingSubmissions(activeOwner, signal), signal)
+      this.projectPendingSubmissions(activeOwner, signal), signal, { admission: 'shared-read' })
   }
 
   private async projectPendingSubmissions(owner: NativeActiveSessionOwner, signal: AbortSignal): Promise<NativeSubmissionsSnapshot> {
@@ -2066,7 +2066,7 @@ export class NativeWebSessionService {
                 ? { active: false }
                 : { active: planState.active, ...planState.pending === undefined ? {} : { pending: planState.pending } }) },
             }
-          }, accepted)
+          }, accepted, { admission: 'shared-read' })
         }
         if (endpoint === 'session/permission-controls') {
           const id = sessionId(fields.sessionId)
