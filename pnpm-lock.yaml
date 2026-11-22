@@ -10681,6 +10681,9 @@ importers:
       '@redspark/rsh-native-session-execution':
         specifier: workspace:^
         version: link:../../../../Engine/core/native-session-execution
+      '@redspark/rsh-native-subagent':
+        specifier: workspace:^
+        version: link:../../../../Engine/subagent/native-subagent
       '@redspark/rsh-permission-presets':
         specifier: workspace:^
         version: link:../../../../Modules/Official/interaction/permission-presets
@@ -10699,6 +10702,9 @@ importers:
       '@redspark/rsh-session-title':
         specifier: workspace:^
         version: link:../../../../Engine/session/session-title
+      '@redspark/rsh-subagent-protocol':
+        specifier: workspace:^
+        version: link:../../../../Engine/subagent/subagent-protocol
       '@redspark/rsh-settings':
         specifier: workspace:^
         version: link:../../../../Modules/Official/settings/settings
@@ -10708,6 +10714,9 @@ importers:
       '@redspark/rsh-user-questions':
         specifier: workspace:^
         version: link:../../../../Modules/Official/interaction/user-questions
+      '@redspark/rsh-util-time':
+        specifier: workspace:^
+        version: link:../../../../Core/util/time
       '@redspark/rsh-workspace':
         specifier: workspace:^
         version: link:../../../../Modules/Official/workspace/workspace

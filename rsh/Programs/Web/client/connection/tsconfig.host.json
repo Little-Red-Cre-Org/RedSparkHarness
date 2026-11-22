@@ -12,6 +12,7 @@
     "src/http-bridge.ts",
     "src/native-http-bridge.ts",
     "src/host-core.ts",
+    "src/follow-bus.ts",
     "src/native-host.ts",
     "src/index.ts",
     "src/loopback-hostname.ts",

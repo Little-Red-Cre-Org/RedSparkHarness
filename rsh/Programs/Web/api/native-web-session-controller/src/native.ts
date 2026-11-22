@@ -23,6 +23,7 @@ import type {} from '@redspark/rsh-native-session-execution/native'
 import type {} from '@redspark/rsh-llm-pi-ai/native'
 import type {} from '@redspark/rsh-authorization/native'
 import { readNativeSessionHistory } from '@redspark/rsh-native-session-execution/read-history'
+import type { NativeSubagentOperations } from '@redspark/rsh-native-subagent/native'
 import { foldScheduleEvents, ScheduleLogError } from '@redspark/rsh-schedule/domain'
 import { foldSessionTitle } from '@redspark/rsh-session-title/native'
 import type { NativeSessionTitles } from '@redspark/rsh-session-title/native'
@@ -97,6 +98,11 @@ import { NativeSessionListFeed } from './session-list-follow.ts'
 import type { NativeSessionListItem, NativeSessionSearchItem, NativeSessionSearchPage } from '@redspark/rsh-client-native-session/list-types'
 import { NativeWebWorkspaceService, resolveNativeWorkspaceTrustSettings, type NativeWorkspaceTrustSettings } from './workspaces.ts'
 import { NativeWebDirectoryService } from './directories.ts'
+import {
+  NativeHostControlError, authorizeSubagentHistory, forkNativeWebSession, interruptNativeSubagent,
+  listNativeSubagents, nativeHistoryCursorFits, parseNativeSubagentFollow, promptNativeSubagent,
+  readAddressedSubagentHistory, type NativeWebSubagentHostDeps,
+} from './subagent-host.ts'
 
 type NativeSessionAdmissionId = Branded<'native-web-admission'>
 
@@ -245,6 +251,12 @@ function settingsConflictDetails(error: unknown): Record<string, unknown> | unde
   return {
     namespace: error.namespace, expected: error.expected, actual: error.actual,
   }
+}
+
+function subagentFollowFailure(code: string, message: string, details: Readonly<Record<string, unknown>>): Response {
+  return new Response(JSON.stringify({ code, message, details }), {
+    status: 409, headers: { 'content-type': 'application/json', 'cache-control': 'no-store' },
+  })
 }
 
 function errorMessage(error: unknown): string {
@@ -483,7 +495,7 @@ const endpoints = new Set(['session/list', 'session/history', 'session/create', 
   'directories/pick', 'directories/list', 'directories/create-directory',
   'session/files/list', 'session/files/stat', 'session/files/read', 'session/files/read-all', 'session/files/read-related',
   'session/files/search',
-  'feedback/session-record', 'feedback/message-list', 'feedback/message-put', 'feedback/message-delete'])
+  'feedback/session-record', 'feedback/message-list', 'feedback/message-put', 'feedback/message-delete', 'session/fork', 'subagents/list', 'subagents/prompt', 'subagents/interruptByParent'])
 const modelSelectionInput = z.strictObject({
   provider: z.string().min(1), model: z.string().min(1), reasoningEffort: z.string().min(1).optional(),
 })
@@ -541,6 +553,8 @@ export interface NativeWebSelectionProviders {
   readonly workspaceRegistry?: WorkspaceRegistryRuntime | undefined
   readonly workspaceTrusted?: ((path: string) => boolean) | undefined
   readonly executionFor?: (agent: NativeAgent) => Pick<NativeAgentExecution, 'status'>
+  /** Direct subagent catalog and continuation controls. Absent listings fail instead of inventing rows. */
+  readonly subagents?: NativeSubagentOperations | undefined
 }
 
 interface NativeSessionListContext {
@@ -1818,6 +1832,109 @@ export class NativeWebSessionService {
     }
   }
 
+  private subagentHostDeps(): NativeWebSubagentHostDeps {
+    return {
+      active: this.active,
+      persistence: this.persistence,
+      subagents: this.selections.subagents,
+      attachments: this.selections.attachments,
+      executionFor: this.selections.executionFor,
+      maxHistoryEvents: this.config.maxHistoryEvents,
+      maxPromptChars: this.config.maxPromptChars,
+      onCleanupFailure: (error) => { this.requests.recordCleanupFailure(error) },
+      routeForSession: (id, signal) => this.routeForSession(id, signal),
+      fork: (request, signal) => this.executor.rootExecution.fork(request, signal),
+      executeSessionOperation: (request, operation, signal) => this.executor.executeSessionOperation(request, operation, signal),
+    }
+  }
+
+  private payloadHasSubagentAddress(payload: unknown): boolean {
+    return payload !== null && typeof payload === 'object' && !Array.isArray(payload) && Object.hasOwn(payload, 'address')
+  }
+
+  private isSubagentControl(endpoint: string, payload: unknown): boolean {
+    if (endpoint === 'session/fork' || endpoint === 'subagents/list' || endpoint === 'subagents/prompt'
+      || endpoint === 'subagents/interruptByParent') return true
+    return endpoint === 'session/history' && this.payloadHasSubagentAddress(payload)
+  }
+
+  private async performSubagentControl(endpoint: string, payload: unknown, signal: AbortSignal): Promise<unknown> {
+    const deps = this.subagentHostDeps()
+    if (endpoint === 'session/fork') return forkNativeWebSession(deps, payload, signal)
+    if (endpoint === 'subagents/list') return listNativeSubagents(deps, payload, signal)
+    if (endpoint === 'subagents/prompt') return promptNativeSubagent(deps, payload, signal)
+    if (endpoint === 'subagents/interruptByParent') return interruptNativeSubagent(deps, payload, signal)
+    return readAddressedSubagentHistory(deps, payload, signal)
+  }
+
+  private async subagentControl(endpoint: string, payload: unknown, signal: AbortSignal): Promise<ConnectionRpcResult<unknown>> {
+    try {
+      const value = await this.requests.run(signal, accepted => this.performSubagentControl(endpoint, payload, accepted))
+      return { ok: true, value }
+    } catch (error: unknown) {
+      if (signal.aborted) signal.throwIfAborted()
+      if (error instanceof NativeHostControlError) {
+        return { ok: false, error: { code: error.code, message: error.message, details: error.details } }
+      }
+      return { ok: false, error: { code: 'native/session', message: 'Session request failed.', details: {} } }
+    }
+  }
+
+  private beginSubagentFeed(childId: SessionId, lastSeq: number, events: readonly SessionEvent[], signal: AbortSignal): Response {
+    this.followers++
+    const feed = new NativeSessionFeed(this.config.maxFollowBufferBytes, () => {})
+    const childOwner = this.active.owners().find(owner => owner.session.id === childId)
+    const removeEvent = childOwner?.onEvent((event) => { feed.push({ type: 'event', event }) }) ?? (() => {})
+    const removeDetached = this.active.onDetached((owner) => {
+      if (owner.session.id !== childId) return Promise.resolve()
+      removeEvent()
+      feed.finish()
+      return Promise.resolve()
+    })
+    const release = (): void => {
+      removeEvent()
+      void removeDetached()
+      this.followers--
+    }
+    try {
+      feed.setBaseline(childId, lastSeq, events.slice(lastSeq + 1))
+      if (childOwner === undefined) feed.finish()
+    } catch (error: unknown) {
+      release()
+      throw error
+    }
+    return feed.response(signal, release)
+  }
+
+  /**
+   * Follow one addressed subagent Session without acquiring its parent turn.
+   * An invalid body is HTTP 409 before `maxFollowers` is consulted.
+   * A parsed follow is HTTP 429 at that limit and does not read child history.
+   * @param request - authenticated Fetch body with parent, child, mode, and cursor.
+   * @returns SSE history tail, or a fixed failure before a stream is admitted.
+   */
+  async followSubagent(request: Request): Promise<Response> {
+    const signal = AbortSignal.any([request.signal, this.lifetime, this.shutdown.signal])
+    try {
+      signal.throwIfAborted()
+      const fields = parseNativeSubagentFollow(await request.json())
+      if (this.followers + this.listFeeds.size >= this.config.maxFollowers) {
+        return new Response('native Session follow: capacity reached', { status: 429 })
+      }
+      const history = await authorizeSubagentHistory(this.subagentHostDeps(), {
+        kind: 'subagent', parentSessionId: fields.parentSessionId, childSessionId: fields.childSessionId, mode: fields.mode,
+      }, signal)
+      if (!nativeHistoryCursorFits(history.events, fields.lastSeq)) {
+        return subagentFollowFailure('subagent/not-found', 'Subagent follow cursor is outside history.', {})
+      }
+      return this.beginSubagentFeed(fields.childSessionId, fields.lastSeq, history.events, signal)
+    } catch (error: unknown) {
+      if (error instanceof NativeHostControlError) return subagentFollowFailure(error.code, error.message, error.details)
+      if (signal.aborted) signal.throwIfAborted()
+      return subagentFollowFailure('native/session', 'Session request failed.', {})
+    }
+  }
+
   /** Handle an authenticated decoded Connection request.
    * @param endpoint - owned Session endpoint.
    * @param payload - unknown wire fields.
@@ -1825,6 +1942,9 @@ export class NativeWebSessionService {
    * @returns success after durable settlement, or an explicit failure.
    */
   async handle(endpoint: string, payload: unknown, signal: AbortSignal): Promise<ConnectionRpcResult<unknown>> {
+    // Subagent control returns its own RPC failure and rethrows cancellation.
+    // handle's catch would report that cancellation as native/session.
+    if (this.isSubagentControl(endpoint, payload)) return this.subagentControl(endpoint, payload, signal)
     try {
       if (endpoint.startsWith('feedback/')) {
         return { ok: true, value: await this.requests.run(signal, async (accepted) => {
@@ -2483,7 +2603,7 @@ function pluginInventory(inventory: NativePluginInventory | undefined, payload: 
 export const plugin: NativePlugin = {
   apiVersion: 1, name: '@redspark/rsh-native-web-session-controller', targets: ['host'],
   requires: ['hostConnection', 'fs', 'sessionPersistence', 'modelExecution', 'agents', 'sessionExecution', 'activeSessions', 'workspaceRegistry'],
-  optional: ['tools', 'promptSections', 'sandboxPolicy', 'approval', 'codeRuntime', 'timeContext', 'tmuxContext', 'modelSelection', 'modelDirectory', 'modelSettings', 'agentPresets', 'planMode', 'permissionPresets', 'agentInstructions', 'userQuestions', 'attachments', 'settings', 'credentials', 'authorization', 'accounts', 'sessionTitles', 'commands', 'pluginInventory', 'requestContexts', 'sessionReference', 'sessionFeedback', 'messageFeedback', 'fileReferences'],
+  optional: ['tools', 'promptSections', 'sandboxPolicy', 'approval', 'codeRuntime', 'timeContext', 'tmuxContext', 'modelSelection', 'modelDirectory', 'modelSettings', 'agentPresets', 'planMode', 'permissionPresets', 'agentInstructions', 'userQuestions', 'attachments', 'settings', 'credentials', 'authorization', 'accounts', 'sessionTitles', 'commands', 'pluginInventory', 'requestContexts', 'sessionReference', 'sessionFeedback', 'messageFeedback', 'fileReferences', 'subagents'],
   provides: ['nativeWebSession', 'rootExecution'],
   resolve(input) {
     const config = resolveNativeWebSessionConfig(input)
@@ -2555,6 +2675,7 @@ export const plugin: NativePlugin = {
           commands: context.optional('commands'), commandScope: context.scope,
           sessionFeedback: context.optional('sessionFeedback'), messageFeedback: context.optional('messageFeedback'),
           fileReferences: context.optional('fileReferences'),
+          subagents: context.optional('subagents'),
           workspaceRegistry, workspaceTrusted: path => workspaceService.trusted(path),
           executionFor: agent => context.require('agents').execution(agent),
           models: models === undefined ? undefined : { selection: models, executionFor: agent => context.require('agents').execution(agent) } },
@@ -2575,6 +2696,8 @@ export const plugin: NativePlugin = {
         fetch: request => workspaceService.follow(request) }))
       context.own(context.require('hostConnection').fetch.register({ path: '/api/native-session/follow', methods: ['POST'], requestBody: 'buffered',
         fetch: request => service.follow(request) }))
+      context.own(context.require('hostConnection').fetch.register({ path: '/api/native-session/subagent-follow', methods: ['POST'], requestBody: 'buffered',
+        fetch: request => service.followSubagent(request) }))
       context.own(context.require('hostConnection').fetch.register({ path: '/api/native-session/file-upload', methods: ['POST'], requestBody: 'streaming',
         fetch: request => service.uploadFile(request) }))
       context.own(context.require('hostConnection').fetch.register({ path: '/api/native-session/list-follow', methods: ['POST'], requestBody: 'buffered',
