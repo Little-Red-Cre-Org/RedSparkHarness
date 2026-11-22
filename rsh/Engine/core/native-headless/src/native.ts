@@ -2220,11 +2220,13 @@ export class NativeHeadlessApplication implements NativeApplication {
    * Execute a human operation with the exact root Session owner before any model admission.
    * @param request - fresh or restored Session identity; no input or turn is synthesized.
    * @param operation - operation using the Program's sole writer and composed cancellation.
-   * @param signal - caller cancellation before and during exclusive idle admission.
+   * @param signal - caller cancellation before and during idle admission.
+   * @param options - `shared-read` queues behind other idle reads; the default stays exclusive.
    * @returns the operation result after durable writes and idle Consumers settle; retained work may continue.
    */
   executeSessionOperation<T>(request: Pick<NativeTurnRequest, 'id' | 'resume' | 'preset' | 'route' | 'rootOrigin'>,
-    operation: (owner: NativeActiveSessionOwner, signal: AbortSignal) => Promise<T>, signal: AbortSignal): Promise<T> {
+    operation: (owner: NativeActiveSessionOwner, signal: AbortSignal) => Promise<T>, signal: AbortSignal,
+    options?: { readonly admission?: 'exclusive' | 'shared-read' }): Promise<T> {
     if (this.disposal !== undefined || this.context.signal.aborted) throw new Error('native-headless: application is disposed')
     signal.throwIfAborted()
     this.assertSessionNotRetiring(request.id)
@@ -2247,7 +2249,7 @@ export class NativeHeadlessApplication implements NativeApplication {
       return this.runIdleSessionOperation(execution, request, async (owner, effective) => {
         operationStarted = true
         return operation(owner, effective)
-      }, signal)
+      }, signal, undefined, options?.admission === 'shared-read')
     })
     if (!freshAdmission) return pending
     return pending.catch(async (error: unknown) => {
@@ -2281,7 +2283,7 @@ export class NativeHeadlessApplication implements NativeApplication {
   private runIdleSessionOperation<T>(execution: NativeAgentExecution,
     request: Pick<NativeTurnRequest, 'id' | 'resume' | 'preset' | 'route' | 'rootOrigin'>,
     operation: (owner: NativeActiveSessionOwner, signal: AbortSignal) => Promise<T>, signal: AbortSignal,
-    forkSeed?: NativeRootForkSeed): Promise<T> {
+    forkSeed?: NativeRootForkSeed, shareIdleReads = false): Promise<T> {
     this.assertSessionNotRetiring(request.id)
     return execution.runMaintenance(async (agentSignal) => {
       this.settledRoots.delete(execution)
@@ -2300,7 +2302,7 @@ export class NativeHeadlessApplication implements NativeApplication {
         if (result === undefined) throw new Error('native-headless: Session operation did not run')
         return result.value
       } finally { retain?.() }
-    })
+    }, shareIdleReads ? { shareIdleReads: true } : undefined)
   }
 
   private async forkRootSession(request: NativeRootForkRequest, signal: AbortSignal): Promise<SessionId> {
