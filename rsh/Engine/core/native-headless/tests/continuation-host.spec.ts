@@ -1152,7 +1152,7 @@ it('does not fail disposal when a queued root notice rejects with that execution
   const signal = new AbortController().signal
   let owner: NativeActiveSessionOwner | undefined
   let execution: NativeAgentExecution | undefined
-  const attached = state.activeSessions.onAttached((active) => {
+  const attached = state.activeSessions.onAttached(async (active) => {
     if (active.session.id !== id) return
     owner = active
     execution = state.agents.execution(active.agent)
@@ -1204,7 +1204,7 @@ it('fails disposal when a root notice rejects with a different disposed object',
   const reason = { kind: 'disposed' as const }
   const signal = new AbortController().signal
   let execution: NativeAgentExecution | undefined
-  const attached = state.activeSessions.onAttached((active) => {
+  const attached = state.activeSessions.onAttached(async (active) => {
     if (active.session.id !== id) return
     execution = state.agents.execution(active.agent)
   })
