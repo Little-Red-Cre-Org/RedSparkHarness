@@ -130,6 +130,7 @@ function PdfPreview({ data, title }: { readonly data: Uint8Array<ArrayBuffer>; r
 
 /**
  * Display text, Markdown, code, HTML, image, or PDF bytes for the selected open document.
+ * A Session or workspace change clears the open documents before the next read.
  * @param props - the selected Session, workspace service, section, and localized labels.
  * @returns the Session file tree and preview panes.
  */
@@ -145,6 +146,12 @@ export function NativeFilesPanel({
   const controller = useRef<AbortController>()
   const [selectedPath, setSelectedPath] = useState<string>()
   const [openPaths, setOpenPaths] = useState<readonly string[]>([])
+  const [documentScope, setDocumentScope] = useState({ sessionId, workspaceRoot })
+  if (documentScope.sessionId !== sessionId || documentScope.workspaceRoot !== workspaceRoot) {
+    setDocumentScope({ sessionId, workspaceRoot })
+    setOpenPaths([])
+    setSelectedPath(undefined)
+  }
   const [preview, setPreview] = useState<FilePreviewState>()
   const previewRead = useRef<PreviewRead>()
   const [previewRevision, setPreviewRevision] = useState(0)

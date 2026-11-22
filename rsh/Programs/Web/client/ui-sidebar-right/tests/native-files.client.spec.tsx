@@ -264,3 +264,76 @@ it('keeps a second opened file, switches documents, and closes one tab', async (
     await state.closed()
   }
 })
+
+it.each([
+  { kind: 'session', sessionId: 'other-session' as SessionId, workspaceRoot: '/fixture' },
+  { kind: 'workspace', sessionId: 'session' as SessionId, workspaceRoot: '/other-root' },
+])('drops open documents when $kind changes', async ({ sessionId, workspaceRoot }) => {
+  const state = fixture()
+  state.list.mockResolvedValue({ path: '.', truncated: false, entries: [
+    { name: 'alpha.txt', type: 'file' }, { name: 'beta.txt', type: 'file' },
+  ] })
+  state.read.mockImplementation(async (id, path) => page(`${id}:${path}`, 1, true))
+  function Panel() {
+    const [scope, setScope] = useState({ sessionId: 'session' as SessionId, workspaceRoot: '/fixture' })
+    const [section, setSection] = useState<'files' | 'preview'>('files')
+    return <>
+      <button type="button" onClick={() => { setScope({ sessionId, workspaceRoot }) }}>switch-scope</button>
+      <button type="button" onClick={() => { setSection('files') }}>show-files</button>
+      <NativeFilesPanel sessionId={scope.sessionId} workspaceRoot={scope.workspaceRoot} section={section}
+        service={state.service} onOpenPreview={() => { setSection('preview') }} t={t} />
+    </>
+  }
+  const view = render(<Panel />)
+  try {
+    fireEvent.click(await screen.findByRole('button', { name: 'alpha.txt' }))
+    await waitFor(() => { expect(view.container.querySelector('pre')?.textContent).toBe('session:./alpha.txt') })
+    fireEvent.click(screen.getByRole('button', { name: 'show-files' }))
+    fireEvent.click(screen.getByRole('button', { name: 'beta.txt' }))
+    await waitFor(() => { expect(screen.getAllByRole('tab')).toHaveLength(2) })
+    const reads = state.read.mock.calls.length
+    fireEvent.click(screen.getByRole('button', { name: 'switch-scope' }))
+    expect(screen.queryByRole('tab')).toBeNull()
+    expect(view.container.textContent).toContain('chooseFile')
+    expect(state.read.mock.calls).toHaveLength(reads)
+    expect(state.read.mock.calls.every(call => call[0] === 'session')).toBe(true)
+  } finally {
+    await act(async () => { view.unmount() })
+    await state.closed()
+  }
+})
+
+it('rereads the adjacent document after closing the current tab', async () => {
+  const state = fixture()
+  state.list.mockResolvedValue({ path: '.', truncated: false, entries: [
+    { name: 'alpha.txt', type: 'file' }, { name: 'beta.txt', type: 'file' }, { name: 'gamma.txt', type: 'file' },
+  ] })
+  state.read.mockImplementation(async (_id, path) => page(path, 1, true))
+  let section: 'files' | 'preview' = 'files'
+  const draw = (): void => {
+    view.rerender(<NativeFilesPanel sessionId={'session' as SessionId} workspaceRoot="/fixture" section={section}
+      service={state.service} onOpenPreview={() => { section = 'preview'; draw() }} t={t} />)
+  }
+  const view = render(<NativeFilesPanel sessionId={'session' as SessionId} workspaceRoot="/fixture" section={section}
+    service={state.service} onOpenPreview={() => { section = 'preview'; draw() }} t={t} />)
+  try {
+    fireEvent.click(await screen.findByRole('button', { name: 'alpha.txt' }))
+    section = 'files'
+    draw()
+    fireEvent.click(screen.getByRole('button', { name: 'beta.txt' }))
+    section = 'files'
+    draw()
+    fireEvent.click(screen.getByRole('button', { name: 'gamma.txt' }))
+    await waitFor(() => { expect(view.container.querySelector('pre')?.textContent).toBe('./gamma.txt') })
+    expect(screen.getAllByRole('tab').map(tab => tab.textContent)).toEqual(['alpha.txt', 'beta.txt', 'gamma.txt'])
+    const reads = state.read.mock.calls.length
+    fireEvent.click(screen.getAllByRole('button', { name: 'closeDocument' })[2]!)
+    expect(screen.getAllByRole('tab').map(tab => tab.textContent)).toEqual(['alpha.txt', 'beta.txt'])
+    expect(screen.getByRole('tab', { name: 'beta.txt', selected: true })).toBeTruthy()
+    await waitFor(() => { expect(view.container.querySelector('pre')?.textContent).toBe('./beta.txt') })
+    expect(state.read.mock.calls.slice(reads).map(call => call[1])).toEqual(['./beta.txt'])
+  } finally {
+    await act(async () => { view.unmount() })
+    await state.closed()
+  }
+})
