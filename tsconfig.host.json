@@ -11,6 +11,7 @@
     "rsh/Programs/Web/application/tests/native-browser-graph.spec.ts",
     "rsh/Programs/Web/application/vite.config.ts",
     "rsh/Programs/Web/api/native-web-session-controller/tests/native.host.spec.ts",
+    "rsh/Programs/Web/api/native-web-session-controller/tests/workspace-connect.host.spec.ts",
     "rsh/Programs/Web/api/native-web-session-controller/tests/session-grant.host.spec.ts",
     "rsh/Programs/Web/host/native-schedule-controller/tests/native.host.spec.ts",
     "rsh/Programs/Web/api/native-jobs-controller/tests/native.host.spec.ts",

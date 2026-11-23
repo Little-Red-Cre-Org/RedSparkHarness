@@ -30,14 +30,15 @@ const reorderSessionRequest = z.strictObject({
 const archiveRequest = z.strictObject({ sessionId: z.string().min(1) })
 const searchRequest = z.strictObject({ query: z.string() })
 const connectRequest = z.strictObject({ workspaceId: z.string().min(1), trust: z.boolean().optional() })
-const userVisibleErrors = new Set([
-  'Workspace path must be absolute',
-  'Workspace path must be an existing absolute directory',
-  'Workspace title is already in use',
-  'Workspace was not found',
-  'Workspace route capacity is exhausted',
-  'Workspace directory is unavailable',
-])
+
+/** Text reported for a workspace command failure.
+ * @param error - rejection thrown while handling the command.
+ * @returns the error message, including each nested AggregateError message.
+ */
+function workspaceFailureMessage(error: unknown): string {
+  if (!(error instanceof AggregateError)) return error instanceof Error ? error.message : String(error)
+  return `${error.message}: ${error.errors.map(workspaceFailureMessage).join('; ')}`
+}
 
 /** Persisted canonical paths approved for dynamic Workspace routes. */
 export interface NativeWorkspaceTrustSettings {
@@ -168,7 +169,8 @@ export class NativeWebWorkspaceService {
    * @param endpoint - Workspace RPC endpoint.
    * @param payload - decoded but untrusted request fields.
    * @param signal - carrier cancellation.
-   * @returns Host result with stable trust and system-directory codes, or the existing Workspace error code and allowlisted message.
+   * @returns Host result with trust and system-directory codes, or `native/workspaces`
+   * and the error message, including nested AggregateError messages.
    */
   async handle(endpoint: string, payload: unknown, signal: AbortSignal): Promise<ConnectionRpcResult<unknown>> {
     let requestPath: string | undefined
@@ -269,9 +271,7 @@ export class NativeWebWorkspaceService {
       if (error instanceof Error && error.message === 'Workspace is a protected system directory') {
         return { ok: false, error: { code: 'native/workspace-forbidden', message: error.message, details: {} } }
       }
-      const message = error instanceof Error && userVisibleErrors.has(error.message)
-        ? error.message : 'Workspace request failed.'
-      return { ok: false, error: { code: 'native/workspaces', message, details: {} } }
+      return { ok: false, error: { code: 'native/workspaces', message: workspaceFailureMessage(error), details: {} } }
     }
   }
 
