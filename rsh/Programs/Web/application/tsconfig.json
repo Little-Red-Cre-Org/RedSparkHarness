@@ -74,7 +74,7 @@
     "tests/native-math-rendering.e2e.ts",
     "tests/native-markdown-cjk-strong.e2e.ts",
     "tests/native-markdown-inline-code-links.e2e.ts",
-    "tests/clickable-links-gallery.e2e.ts",
+    "tests/native-clickable-links-gallery.e2e.ts",
     "tests/skill-user-invoke.e2e.ts",
     "tests/native-permission-policy-context.e2e.ts",
     "tests/agent-preset-selection.e2e.ts",

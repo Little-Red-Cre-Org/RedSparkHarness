@@ -1,25 +1,8 @@
-// Web e2e gallery: every clickable link and artifact form the chat renders,
-// in one settled keyless turn — the regression anchor for unifying link
-// styles. One fixture turn produces:
-// - prose: Markdown link, reference-style link, mailto link, inline-code URL,
-//   produced-file mention, plus inert contrasts (ambiguous basename, unwritten
-//   file, command code, URL-with-flags code, javascript: destination,
-//   footnote superscript, remote image, fenced code block with its copy chrome)
-// - artifacts: seven produced files (chips overflow into the "+N" remainder
-//   and the show-in-folder affordance) with a failed write excluded
-// - tool rows: write/edit/str_replace_editor/read file links, a failure row
-//   without one, and — expanded — the web-search source links (one non-http
-//   source stays inert) and answer link, the web-fetch URL, the read card's
-//   inert path label and fold toggle, the diff card's inert path header, the
-//   grep card's fold-only file headers, a failing bash card's exit status, and
-//   a generic tool card's IN/OUT surfaces.
-// Image thumbnails and subagent rows stay out: the first needs real attachment
-// bytes (image-display.expected.e2e.ts owns that route) and the second needs a
-// child session the browser lane does not render.
+/** Native Web renders every clickable link and artifact form of one settled turn. */
+import { createServer, type Server } from 'node:http'
 import { fileURLToPath } from 'node:url'
-import type { Browser, Page } from 'playwright'
-import { chromium } from 'playwright'
-import { afterAll, beforeAll, describe, expect, it, onTestFailed } from 'vitest'
+import type { Page } from 'playwright'
+import { expect, it, onTestFailed } from 'vitest'
 import { ToolCallId, createAssistantMessage, createToolResultMessage, createUserMessage } from '@redspark/rsh-llm'
 import { SESSION_FORMAT_VERSION, Session, SessionId } from '@redspark/rsh-session'
 import type { JsonValue } from '@redspark/rsh-util-values'
@@ -28,23 +11,18 @@ import {
   assertFixtureInventory,
   captureStableAria,
   compareOrRefreshGolden,
-  launchWebScaffold,
-  seedSession,
-  watchConsole,
   webSnapshotMode,
-  type WebScaffold,
 } from './scaffold.ts'
-import { newEnglishPage, saveFailureShot } from './support.ts'
+import { launchNativeWeb, waitForNativeComposerReady } from './native-scaffold.ts'
+import { saveFailureShot } from './support.ts'
 
 const SNAPSHOT_DIR = fileURLToPath(new URL('./expected/clickable-links-gallery', import.meta.url))
 const UI_EXPECTED = fileURLToPath(new URL('./expected/clickable-links-gallery/ui.expected.md', import.meta.url))
-// The golden holds the show-in-folder affordance; pin the native-opener
-// capability so headless Linux CI and desktop developer hosts expose the same
-// UI branch (the overlay it shares with the delivered-file fixtures).
-const OVERLAY = fileURLToPath(new URL('./produced-files.overlay.yml', import.meta.url))
 const MODE = webSnapshotMode()
 const SEED_ID = 'clickable-links-gallery-web-e2e'
+const TITLE = 'Clickable links gallery'
 const DONE = 'LINK_GALLERY_DONE'
+const TRANSCRIPT = '[data-slot="main"] [class*="ChatPresentation_transcript"]'
 
 const GUIDE_URL = 'https://docs.example.test/guide'
 const API_URL = 'https://docs.example.test/api'
@@ -53,6 +31,10 @@ const MAILTO_URL = 'mailto:owner@example.test'
 const SOURCE_URL = 'https://docs.example.test/links'
 const INERT_SOURCE_URL = 'ftp://mirror.example.test/spec'
 const FETCH_URL = 'https://docs.example.test/tokens'
+const PNG = Buffer.from(
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=',
+  'base64',
+)
 
 /** One-part text content for a built message. */
 function text(value: string): { type: 'text'; text: string }[] {
@@ -185,10 +167,35 @@ const CALLS: GalleryCall[] = [
   },
 ]
 
+/** Start the deterministic remote image origin the prose embeds. */
+async function startImageOrigin(): Promise<{ server: Server; url: string }> {
+  const server = createServer((_request, response) => {
+    response.writeHead(200, {
+      'cache-control': 'no-store',
+      'content-length': PNG.length,
+      'content-type': 'image/png',
+    })
+    response.end(PNG)
+  })
+  await new Promise<void>((resolve, reject) => {
+    server.once('error', reject)
+    server.listen(0, '127.0.0.1', resolve)
+  })
+  const address = server.address()
+  if (address === null || typeof address === 'string') throw new Error('image origin did not expose an IP socket')
+  return { server, url: `http://127.0.0.1:${String(address.port)}/image.png` }
+}
+
+/** Stop one image origin after the browser and host release their requests. */
+async function stopServer(server: Server): Promise<void> {
+  await new Promise<void>((resolve, reject) => {
+    server.close((error) => { if (error === undefined) resolve(); else reject(error) })
+  })
+}
+
 /**
  * Build the settled gallery turn: every call above plus a link-dense closing prose.
- * @param imageUrl - scaffold-hosted image the prose embeds (kept same-origin so
- *   the tripwire stays clean; the varying origin is tokenized in the golden).
+ * @param imageUrl - absolute image the prose embeds, as the Native renderer requires.
  */
 function galleryFixture(imageUrl: string): string {
   const session = Session.create(SessionId('clickable-links-gallery-source'))
@@ -199,7 +206,7 @@ function galleryFixture(imageUrl: string): string {
     source: { kind: 'user' },
   }), { surfaceOp: 'append' })
   session.append('session/title', {
-    title: 'Clickable links gallery',
+    title: TITLE,
     messageSeqs: [user.seq],
     source: { kind: 'fallback' },
   })
@@ -295,43 +302,25 @@ function galleryFixture(imageUrl: string): string {
   ].join('\n')
 }
 
-describe('web e2e: clickable links gallery', () => {
-  let scaffold: WebScaffold
-  let browser: Browser
-  let page: Page
-  let imageUrl: string
-  let tripwire: ReturnType<typeof watchConsole>
-
-  beforeAll(async () => {
-    scaffold = await launchWebScaffold({ extraOverlayPath: OVERLAY })
-    imageUrl = new URL('/favicon.svg', scaffold.baseUrl).toString()
-    await seedSession(scaffold, galleryFixture(imageUrl), SEED_ID)
-    browser = await chromium.launch()
-    page = await newEnglishPage(browser)
-    tripwire = watchConsole(page)
-    await page.goto(scaffold.authenticatedUrl, { waitUntil: 'load' })
-    await page.waitForSelector('[class*="frame"]', { timeout: 30_000 })
-  }, 120_000)
-
-  afterAll(async () => {
-    await browser?.close()
-    await scaffold?.close()
+it.skipIf(MODE === 'record')('renders every clickable link and artifact form of the settled turn', async () => {
+  const imageOrigin = await startImageOrigin()
+  const scaffold = await launchNativeWeb({
+    drop: ['pi-ai'],
+    seed: { text: galleryFixture(imageOrigin.url), seedId: SEED_ID },
   })
-
-  it.skipIf(MODE === 'record')('renders every clickable link and artifact form of the settled turn', async () => {
-    onTestFailed(() => saveFailureShot(page, 'web-e2e-clickable-links-gallery'))
-    const groupRow = page.locator('[role="treeitem"]').first()
-    await groupRow.waitFor({ timeout: 15_000 })
-    await groupRow.click()
-    const sessionRow = page.locator('[role="treeitem"]').nth(1)
-    await sessionRow.waitFor({ timeout: 10_000 })
-    await sessionRow.click()
-    await expect.poll(() => page.getByText(DONE, { exact: true }).count(), { timeout: 15_000 }).toBe(1)
+  onTestFailed(() => saveFailureShot(scaffold.page, 'native-clickable-links-gallery'))
+  try {
+    const { page } = scaffold
+    const session = page.locator('[role="treeitem"]').filter({ hasText: TITLE }).first()
+    await session.waitFor({ timeout: 20_000 })
+    await session.click()
+    await page.locator(TRANSCRIPT).getByText(DONE, { exact: true }).waitFor({ timeout: 20_000 })
+    await waitForNativeComposerReady(page)
 
     // Markdown prose: plain, reference-style, and mailto links plus the
     // inline-code URL are anchors; the URL-with-flags code, the javascript:
     // destination, and plain command code stay inert.
-    const markdown = page.locator('[class*="markdown"]')
+    const markdown = page.locator(`${TRANSCRIPT} [class*="markdown"]`)
     await expect.poll(() => markdown.locator(`a[href="${GUIDE_URL}"]`).count(), { timeout: 10_000 }).toBe(1)
     expect(await markdown.locator(`a[href="${RELEASES_URL}"]`).count()).toBe(1)
     expect(await markdown.locator(`a[href="${MAILTO_URL}"]`).count()).toBe(1)
@@ -340,35 +329,27 @@ describe('web e2e: clickable links gallery', () => {
     expect(await inlineCodeLink.getAttribute('target')).toBe('_blank')
     expect(await page.getByText(`curl ${API_URL}`, { exact: true }).locator('a').count()).toBe(0)
     expect(await page.getByText('javascript:alert(1)', { exact: true }).locator('a').count()).toBe(0)
-    expect(await markdown.locator(`img[src="${imageUrl}"]`).count()).toBe(1)
+    const image = page.getByRole('img', { name: 'Token preview' })
+    await image.waitFor({ timeout: 10_000 })
+    expect(await image.getAttribute('src')).toBe(imageOrigin.url)
 
-    // Produced files: one unique-basename mention links; the shared basename
-    // and the unwritten file stay inert code. Seven produced paths overflow
-    // the chip row; the failed write joins neither surface.
-    const mentions = markdown.locator('code button')
-    expect(await mentions.count()).toBe(1)
-    expect(await mentions.first().getAttribute('title')).toBe('site/report.html')
-    expect(await page.getByText('Files changed', { exact: true }).count()).toBe(1)
-    expect(await page.locator('[class*="centerCol"] button[aria-label^="Open "]').count()).toBeGreaterThanOrEqual(5)
-    expect(await page.locator('button[aria-label="Open c/broken.css"]').count()).toBe(0)
+    // The Native page carries no file-mention vocabulary, no write-derived
+    // produced-file chips, and no Host file opener: those Cordis surfaces stay
+    // absent rather than degrading into dead links.
+    expect(await markdown.locator('code button').count()).toBe(0)
+    expect(await page.locator(TRANSCRIPT).getByText('Files changed', { exact: true }).count()).toBe(0)
+    expect(await page.locator(TRANSCRIPT).locator('button[aria-label^="Open "]').count()).toBe(0)
+    expect(await page.locator(TRANSCRIPT).locator('button[class*="fileLink"]').count()).toBe(0)
 
-    // Tool rows: five writes, the edit, and the read carry the dotted file
-    // link; the failed write row does not, and neither does str_replace_editor
-    // — TOOL_VARIANTS has no entry for it, so it falls to the generic row with
-    // no openable path even though its create still joins the produced chips.
-    expect(await page.locator('button[class*="fileLink"]').count()).toBe(7)
-
-    // Expanded cards. The turn-process group collapses a multi-call turn, so
-    // it opens first. Rows expand via a right-edge click: the row center can
-    // land on the nested fileLink button, which would hand the path to the
-    // Host's opener.
-    await page.getByRole('button', { name: `${String(CALLS.length)} tool calls` }).click()
+    // Expanded cards. The Native transcript lists every call inline, so each
+    // row opens on its own. Rows expand via a right-edge click: the row center
+    // can land on a nested control.
     for (const row of [
       /^Search clickable link styles/,
-      /^Fetch /,
-      /^Read docs\/guide\.md/,
+      /^Read https:\/\/docs\.example\.test\/tokens/,
+      /^Read rsh\/Docs\/guide\.md/,
       /^Edit src\/tokens\.css/,
-      /^Grep linkColor/,
+      /^Search linkColor/,
       /Run the lint gate|pnpm run lint/,
     ]) {
       const toggle = page.getByRole('button', { name: row }).first()
@@ -384,37 +365,41 @@ describe('web e2e: clickable links gallery', () => {
       const box = await toggle.boundingBox()
       await toggle.click(box === null ? {} : { position: { x: box.width - 8, y: box.height / 2 } })
     }
-    const sourceLink = page.locator(`a[href="${SOURCE_URL}"]`)
+    const sourceLink = page.locator(`${TRANSCRIPT} a[href="${SOURCE_URL}"]`)
     await expect.poll(() => sourceLink.count(), { timeout: 10_000 }).toBe(1)
-    expect(await page.locator('a[href^="ftp:"]').count()).toBe(0)
-    expect(await page.locator(`a[href="${FETCH_URL}"]`).count()).toBe(1)
-    expect(await page.locator(`a[href="${GUIDE_URL}"]`).count()).toBe(2)
+    expect(await page.locator(`${TRANSCRIPT} a[href^="ftp:"]`).count()).toBe(0)
+    expect(await page.locator(`${TRANSCRIPT} a[href="${FETCH_URL}"]`).count()).toBe(1)
+    expect(await page.locator(`${TRANSCRIPT} a[href="${GUIDE_URL}"]`).count()).toBe(2)
 
-    const snapshot = (await captureStableAria(page, '[class*="centerCol"]', scaffold.workspaceCwd))
+    const snapshot = (await captureStableAria(page, '[data-slot="main"]', scaffold.workspaceCwd))
       .split(SEED_ID).join('{{seededId}}')
-      .split(imageUrl).join('{{imageUrl}}')
+      .split(imageOrigin.url).join('{{imageUrl}}')
     await compareOrRefreshGolden(UI_EXPECTED, snapshot, MODE)
-    expect(tripwire.pageErrors).toEqual([])
-    expect(tripwire.warnings).toEqual([])
-    await assertFixtureInventory(SNAPSHOT_DIR, ['ui.expected.md'])
+    expect(scaffold.pageErrors).toEqual([])
+    await assertFixtureInventory(SNAPSHOT_DIR, ['ui.expected.md'], 'native-web')
 
     // The link language itself — ARIA records none of it, so pin the computed
-    // styles: link-blue 500-weight text, no underline at rest, dotted underline
-    // on hover, and a leading currentColor glyph. Light theme, so the link
-    // alias resolves to deepseek-500.
-    const LINK_BLUE = 'rgb(65, 118, 230)'
+    // styles on the surfaces the Native page renders. The hue is the brand
+    // theme's `--dsw-alias-link`, read from the page instead of pinned: the
+    // Native application ships the RedSpark palette, not the DeepSeek blue.
+    const LINK_COLOR = await page.evaluate(() => {
+      const probe = document.createElement('span')
+      probe.style.color = 'var(--dsw-alias-link)'
+      document.body.append(probe)
+      const color = getComputedStyle(probe).color
+      probe.remove()
+      return color
+    })
+    expect(LINK_COLOR).not.toBe('')
     const styleOf = async (target: ReturnType<Page['locator']>, property: string): Promise<string> =>
       target.evaluate((el, p) => getComputedStyle(el).getPropertyValue(p), property)
-    const guideLink = markdown.locator(`a[href="${GUIDE_URL}"]`).first()
-    const chip = page.locator('button[aria-label="Open site/report.html"]').first()
+    const guideLink = page.locator(`${TRANSCRIPT} a[href="${GUIDE_URL}"]`).first()
     for (const [name, link] of [
       ['markdown anchor', guideLink],
-      ['file mention', mentions.first()],
       ['search source', sourceLink.first()],
-      ['fetch url', page.locator(`a[href="${FETCH_URL}"]`).first()],
-      ['produced chip', chip],
+      ['fetch url', page.locator(`${TRANSCRIPT} a[href="${FETCH_URL}"]`).first()],
     ] as const) {
-      expect.soft(await styleOf(link, 'color'), `${name} color`).toBe(LINK_BLUE)
+      expect.soft(await styleOf(link, 'color'), `${name} color`).toBe(LINK_COLOR)
       expect.soft(await styleOf(link, 'font-weight'), `${name} weight`).toBe('500')
       expect.soft(await styleOf(link, 'text-decoration-line'), `${name} at rest`).toBe('none')
       expect.soft(await link.locator('svg').count(), `${name} glyph`).toBe(1)
@@ -423,10 +408,8 @@ describe('web e2e: clickable links gallery', () => {
     expect(await styleOf(guideLink, 'text-decoration-line')).toBe('underline')
     expect(await styleOf(guideLink, 'text-decoration-style')).toBe('dotted')
     expect(await styleOf(guideLink, 'text-underline-offset')).toBe('3px')
-    await chip.hover()
-    expect(await styleOf(chip, 'text-decoration-style')).toBe('dotted')
-    expect(await styleOf(chip, 'background-color')).toBe('rgba(0, 0, 0, 0)')
-    // The excluded grey affordance: tool-row file links keep their own color.
-    expect(await styleOf(page.locator('button[class*="fileLink"]').first(), 'color')).not.toBe(LINK_BLUE)
-  }, 90_000)
-})
+  } finally {
+    await scaffold.close()
+    await stopServer(imageOrigin.server)
+  }
+}, 180_000)

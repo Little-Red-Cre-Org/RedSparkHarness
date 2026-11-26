@@ -63,7 +63,7 @@
     "rsh/Programs/Web/application/tests/native-math-rendering.e2e.ts",
     "rsh/Programs/Web/application/tests/native-markdown-cjk-strong.e2e.ts",
     "rsh/Programs/Web/application/tests/native-markdown-inline-code-links.e2e.ts",
-    "rsh/Programs/Web/application/tests/clickable-links-gallery.e2e.ts",
+    "rsh/Programs/Web/application/tests/native-clickable-links-gallery.e2e.ts",
     "rsh/Programs/Web/application/tests/skill-user-invoke.e2e.ts",
     "rsh/Programs/Web/application/tests/agent-preset-selection.e2e.ts",
     "rsh/Programs/Web/application/tests/agent-preset-authoring.e2e.ts",
