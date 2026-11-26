@@ -1,29 +1,32 @@
-- dialog "设置":
+- dialog "Settings":
   - navigation:
-    - text: 设置
-    - button "通用设置":
+    - text: Settings
+    - button "General":
       - img
-      - text: 通用设置
-    - button "模型":
+      - text: General
+    - button "Models":
       - img
-      - text: 模型
-    - button "插件":
+      - text: Models
+    - button "Plugins":
       - img
-      - text: 插件
-    - button "Agent 预设":
+      - text: Plugins
+    - button "Agent presets":
       - img
-      - text: Agent 预设
-  - button "打开配置文件"
-  - button "关闭":
+      - text: Agent presets
+  - button "Open settings file"
+  - button "Close settings":
     - img
-    - text: 关闭
-  - heading "模型" [level=2]
-  - region "API 模型":
-    - heading "API 模型" [level=3]
-    - paragraph: 填入各提供方的 API 密钥即可使用其模型。
-    - list
-    - text: 提供方
-    - combobox "提供方":
+    - text: Close settings
+  - heading "Models" [level=2]
+  - region "API models":
+    - heading "API models" [level=3]
+    - paragraph: Enter your API keys to use models from the following providers.
+    - list:
+      - listitem:
+        - text: DeepSeek
+        - button "Edit DeepSeek (deepseek)": Edit
+    - text: Provider
+    - combobox "Provider":
       - option "amazon-bedrock"
       - option "ant-ling"
       - option "anthropic"
@@ -32,7 +35,6 @@
       - option "cerebras"
       - option "cloudflare-ai-gateway"
       - option "cloudflare-workers-ai"
-      - option "deepseek"
       - option "fireworks"
       - option "github-copilot"
       - option "google"
@@ -40,6 +42,7 @@
       - option "groq"
       - option "huggingface"
       - option "kimi-coding"
+      - option "meta"
       - option "minimax"
       - option "minimax-cn" [selected]
       - option "mistral"
@@ -53,7 +56,9 @@
       - option "qwen-token-plan"
       - option "qwen-token-plan-cn"
       - option "qwen-token-plan-individual"
+      - option "radius"
       - option "together"
+      - option "typesafe"
       - option "vercel-ai-gateway"
       - option "xai"
       - option "xiaomi"
@@ -62,15 +67,9 @@
       - option "xiaomi-token-plan-sgp"
       - option "zai"
       - option "zai-coding-cn"
-    - text: API 密钥
-    - textbox "API 密钥":
-      - /placeholder: 输入 API 密钥，或留空使用环境认证
-    - group: 自定义设置
-    - button "取消"
-    - button "保存"
-  - region "订阅模型":
-    - heading "订阅模型" [level=3]
-    - paragraph: 选择订阅提供方并登录账号，登录成功后自动添加模型，无需填写 API 密钥。
-    - group "OpenAI Codex":
-      - text: OpenAI Codex 未连接
-      - button "登录并添加模型"
+    - text: API key
+    - textbox "API key":
+      - /placeholder: Enter an API key, or leave blank to use environment authentication
+    - group: Customized settings
+    - button "Cancel"
+    - button "Apply"
