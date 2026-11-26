@@ -111,7 +111,7 @@ Delete the five duplicates first: they clear five directories that a Cordis and 
 ## Acceptance criteria
 
 - No `snapshots/web/` directory selects `profile: web`, and every migrated scenario passes under `RSH_SNAPSHOT=replay` while asserting `assertFixtureInventory(..., 'native-web')`.
-- After the follow-up, `launchNativeWeb` is the only scaffold a `profile: native-web` scenario uses. Until then nine directories stay dual-consumed: the Native test owns the manifest while a Cordis test still compares `ui.expected.md` or reuses the recorded Session (`bash-abort-row`, `minimal-preset`, `present`, `ptc-round`, `schedule-catalog`, `skill-tool-row`, `workflow-run`, `message-feedback-protocol`, `seeded-history`).
+- After the follow-up, `launchNativeWeb` is the only scaffold a `profile: native-web` scenario uses. Until then five directories stay dual-consumed: the Native test owns the manifest while a Cordis test still compares its own golden or reuses the recorded Session (`message-feedback-protocol`, `present`, `schedule-catalog`, `seeded-history`, `workflow-run`).
 - `rsh-web-app`, `rsh-base`, `gateway`, and `remotes` are deleted together with `launchWebScaffold`, after the remaining scenarios in `## Follow-up` move.
 
 ## Risks

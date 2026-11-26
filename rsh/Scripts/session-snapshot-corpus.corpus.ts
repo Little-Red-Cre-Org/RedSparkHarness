@@ -30,7 +30,6 @@ const expectedProfilesByDirectory: Partial<Record<typeof profiles[number], reado
   web: ['web', 'native-web'],
 }
 const snapshotAdapters = [
-  'rsh/Programs/Web/application/tests/minimal-preset.snapshot.ts',
   'snapshots/web/native-session-core.snapshot.ts',
   'snapshots/web/native-github-webhook.snapshot.ts',
   'snapshots/desktop/native-session-core.snapshot.ts',

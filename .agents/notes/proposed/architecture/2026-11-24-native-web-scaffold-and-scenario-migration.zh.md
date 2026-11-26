@@ -111,7 +111,7 @@ Status: proposed
 ## Acceptance criteria
 
 - 没有任何 `snapshots/web/` 目录再选择 `profile: web`；每个迁移场景在 `RSH_SNAPSHOT=replay` 下通过，并断言 `assertFixtureInventory(..., 'native-web')`。
-- 后续完成后，`launchNativeWeb` 是 `profile: native-web` 场景唯一使用的脚手架。在此之前有九个目录仍由两处消费：Native 测试持有清单，Cordis 测试继续比对 `ui.expected.md` 或复用已录 Session（`bash-abort-row`、`minimal-preset`、`present`、`ptc-round`、`schedule-catalog`、`skill-tool-row`、`workflow-run`、`message-feedback-protocol`、`seeded-history`）。
+- 后续完成后，`launchNativeWeb` 是 `profile: native-web` 场景唯一使用的脚手架。在此之前有五个目录仍由两处消费：Native 测试持有清单，Cordis 测试继续比对各自的 golden 或复用已录 Session（`message-feedback-protocol`、`present`、`schedule-catalog`、`seeded-history`、`workflow-run`）。
 - `rsh-web-app`、`rsh-base`、`gateway` 与 `remotes` 与 `launchWebScaffold` 一起删除，时间点在 `## 后续` 中剩余场景迁移完成之后。
 
 ## Risks
