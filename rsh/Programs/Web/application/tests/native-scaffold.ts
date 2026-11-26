@@ -361,6 +361,27 @@ export async function launchNativeWeb(options: NativeWebOptions = {}): Promise<N
 }
 
 /**
+ * Wait until a restored Session leaves its attach window and exposes the
+ * composer's ready controls.
+ *
+ * Restoring publishes durable history before it attaches to any Host turn, so
+ * an aria snapshot taken as soon as the transcript renders can catch the live
+ * activity row and a Stop button. The model picker is enabled only in the
+ * ready state.
+ * @param page - page showing one restored Native Session.
+ * @param timeoutMs - maximum wait for the ready state.
+ */
+export async function waitForNativeComposerReady(page: Page, timeoutMs = 20_000): Promise<void> {
+  const picker = page.getByRole('button', { name: /^Select model, current /u })
+  const deadline = Date.now() + timeoutMs
+  while (Date.now() < deadline) {
+    if (await picker.isEnabled().catch(() => false)) return
+    await new Promise(resolve => setTimeout(resolve, 100))
+  }
+  throw new Error('Native composer did not return to its ready state')
+}
+
+/**
  * Write a model row that replays one recording and publishes the catalog the
  * composer reads, re-exporting the shared Native replay Provider.
  * @param profileDir - profile whose `node_modules` receives the package.

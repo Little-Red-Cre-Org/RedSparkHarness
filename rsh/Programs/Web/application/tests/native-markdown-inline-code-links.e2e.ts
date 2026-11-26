@@ -11,7 +11,7 @@ import {
   compareOrRefreshGolden,
   webSnapshotMode,
 } from './scaffold.ts'
-import { launchNativeWeb } from './native-scaffold.ts'
+import { launchNativeWeb, waitForNativeComposerReady } from './native-scaffold.ts'
 import { saveFailureShot } from './support.ts'
 
 const SNAPSHOT_DIR = fileURLToPath(new URL('./expected/markdown-inline-code-links', import.meta.url))
@@ -118,9 +118,7 @@ it.skipIf(MODE === 'record')('opens a complete HTTP URL from inline code and lea
     await session.waitFor({ timeout: 20_000 })
     await session.click()
     await page.locator(TRANSCRIPT).getByText(DONE, { exact: true }).waitFor({ timeout: 20_000 })
-    await expect.poll(() => page.getByRole('button', { name: 'Stop', exact: true }).count(), {
-      timeout: 20_000,
-    }).toBe(0)
+    await waitForNativeComposerReady(page)
 
     const inlineCodeLink = page.locator(`${TRANSCRIPT} [class*="MarkdownText_markdown"] code a`)
     await expect.poll(() => inlineCodeLink.count(), { timeout: 10_000 }).toBe(1)

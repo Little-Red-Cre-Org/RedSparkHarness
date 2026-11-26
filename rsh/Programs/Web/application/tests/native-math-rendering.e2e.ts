@@ -10,7 +10,7 @@ import {
   compareOrRefreshGolden,
   webSnapshotMode,
 } from './scaffold.ts'
-import { launchNativeWeb } from './native-scaffold.ts'
+import { launchNativeWeb, waitForNativeComposerReady } from './native-scaffold.ts'
 import { saveFailureShot } from './support.ts'
 
 const SNAPSHOT_DIR = fileURLToPath(new URL('./expected/math-rendering', import.meta.url))
@@ -96,9 +96,7 @@ it.skipIf(MODE === 'record')('renders the settled reply without KaTeX errors', a
     await session.waitFor({ timeout: 20_000 })
     await session.click()
     await page.locator(TRANSCRIPT).getByText(DONE, { exact: true }).waitFor({ timeout: 20_000 })
-    await expect.poll(() => page.getByRole('button', { name: 'Stop', exact: true }).count(), {
-      timeout: 20_000,
-    }).toBe(0)
+    await waitForNativeComposerReady(page)
 
     await expect.poll(() => page.locator('.katex').count(), { timeout: 10_000 }).toBe(6)
     await expect.poll(() => page.locator('.katex-display').count(), { timeout: 10_000 }).toBe(2)

@@ -10,7 +10,7 @@ import {
   compareOrRefreshGolden,
   webSnapshotMode,
 } from './scaffold.ts'
-import { launchNativeWeb } from './native-scaffold.ts'
+import { launchNativeWeb, waitForNativeComposerReady } from './native-scaffold.ts'
 import { saveFailureShot } from './support.ts'
 
 const SNAPSHOT_DIR = fileURLToPath(new URL('./expected/markdown-cjk-strong', import.meta.url))
@@ -97,11 +97,7 @@ it.skipIf(MODE === 'record')('renders punctuation-terminated strong spans before
     await session.waitFor({ timeout: 20_000 })
     await session.click()
     await page.locator(TRANSCRIPT).getByText(DONE, { exact: true }).waitFor({ timeout: 20_000 })
-    // Restoring a Session attaches to its Host turn; a settled seed returns to
-    // the ready composer instead of leaving the live activity row on screen.
-    await expect.poll(() => page.getByRole('button', { name: 'Stop', exact: true }).count(), {
-      timeout: 20_000,
-    }).toBe(0)
+    await waitForNativeComposerReady(page)
 
     const strong = page.locator(`${TRANSCRIPT} [class*="MarkdownText_markdown"] strong`)
     await expect.poll(() => strong.count(), { timeout: 10_000 }).toBe(CASES.length)
