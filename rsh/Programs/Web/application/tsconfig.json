@@ -61,7 +61,6 @@
     "tests/hmr-live.e2e.ts",
     "tests/preview-boot.e2e.ts",
     "tests/native-rail-search-expand.e2e.ts",
-    "tests/conversation-column-overflow.e2e.ts",
     "tests/present.e2e.ts",
     "tests/native-present-svg.e2e.ts",
     "tests/native-web-search-round.e2e.ts",
