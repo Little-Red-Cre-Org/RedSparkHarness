@@ -6,6 +6,8 @@ Status: proposed
 
 > **2026-11-22 更新。** 阶段 A 已关闭：`dsh` 不启动 Cordis manifest，也没有任何快照或 CLI 测试创建 `legacy-headless`、`legacy-sdk` 或 `legacy-acp`。Desktop 只启动 Native profile，并且 `dsh` 拒绝 `--profile web` 与 `--from-default-profile web`。兼容装配不是保留的写入者。留下的内容记在 [Desktop is the only independent product entry](2026-11-22-desktop-product-boundary.zh.md)：Cordis Web 组合包、`profile: web` 快照、Typert Remote Web，以及其中的其他入口。下面的计数表是 2026-11-15 的测量，不是当前普查。见 [Desktop-only retires the browser Web deployment](../../implemented/architecture/2026-11-21-desktop-only-retires-browser-web.zh.md) 与[仅面向 Cordis 的检查跟随 Native 启动](../../implemented/bug-fix/2026-11-21-cordis-only-gates-follow-the-native-boot.zh.md)。
 
+> **2026-11-24 更新。** 已没有任何快照选择 `profile: web`；浏览器场景通道由 [One Native Web scaffold for the remaining browser scenarios](2026-11-24-native-web-scaffold-and-scenario-migration.zh.md) 退役。下面关于其余 `profile: web` 快照的陈述描述的是 2026-11-15 的状态。Cordis Web 组合包与 Typert Remote Web 仍在。
+
 ## Problem
 
 [按实测基线的五个阶段退休 Cordis](2026-11-12-cordis-retirement-five-phases.zh.md) 仍是删除路线。两条删包指令仍然不安全：不能只因为没有别的 manifest 依赖，就删除 `@redspark/rsh-storage-sqlite` 和 `@redspark/rsh-experimental-inspector`。Agent Teams Web profile 已经删除。阶段 A 已关闭，Desktop 只启动 Native profile，受支持的浏览器启动被拒绝。Cordis 组合包、`profile: web` 快照和 Typert Remote Web 仍在，所以阶段 C 和阶段 E 仍未开始。

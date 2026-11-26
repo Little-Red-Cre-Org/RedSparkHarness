@@ -14,13 +14,13 @@ Status: implemented
 
 [PowerShell 执行器测试](../../../../rsh/Modules/Official/shell/pwsh-local/tests/executor.spec.ts)用私有文件屏障控制启动与消费式读取。测试决定后续输出何时可用；最终 stdin／环境变量输出在 `done` 后读取。轮询使用当前测试预算，每个创建的 Context 都在插件初始化前登记。清理在等待释放前同时取得 Context 与目录，完成释放后才删除目录。
 
-[排队图片测试](../../../../rsh/Programs/Web/application/tests/queue-image.e2e.ts)分别阻塞接纳和附件读取，再捕获已接纳行中加载完成的缩略图。清理共享一个 Promise，释放保留的请求，并在关闭浏览器前等待其 handler 完成。
+已退役的 `queue-image.e2e.ts` 分别阻塞接纳和附件读取，再捕获已接纳行中加载完成的缩略图。清理共享一个 Promise，释放保留的请求，并在关闭浏览器前等待其 handler 完成。
 
-[详情 Session 生命周期测试](../../../../rsh/Programs/Web/application/tests/details-session-lifecycle.e2e.ts)在关闭状态出现后等待框架已捕获的动画 Promise，再检查轨道宽度为零。取消的过渡同样进入该断言；动画结束不能让持续非零的轨道通过。
+已退役的 `details-session-lifecycle.e2e.ts` 在关闭状态出现后等待框架已捕获的动画 Promise，再检查轨道宽度为零。取消的过渡同样进入该断言；动画结束不能让持续非零的轨道通过。
 
-[整队列 steering 测试](../../../../rsh/Programs/Web/application/tests/steering.e2e.ts)等待 steering 操作可用以及 composer 显示队列 steering 提示。模型流屏障在测试观察 steering 时阻止后续问题 composer 接管。清理在关闭浏览器前释放该屏障。
+[整队列 steering 测试](../../../../rsh/Programs/Web/application/tests/native-steering.e2e.ts)等待 steering 操作可用以及 composer 显示队列 steering 提示。模型流屏障在测试观察 steering 时阻止后续问题 composer 接管。清理在关闭浏览器前释放该屏障。
 
-[Workspace 管理测试](../../../../rsh/Programs/Web/application/tests/workspace-management.e2e.ts)在下一次目录对话框操作前等待恢复后的 composer 焦点。归档用例通过 Session controller 为已知 seed id 设置显式用户标题，再用该精确标题跨重载定位行。无关的恢复行无法匹配该定位器；持久化归档断言仍检查 seed id 和保留的日志。
+已退役的 `workspace-management.e2e.ts` 在下一次目录对话框操作前等待恢复后的 composer 焦点。归档用例通过 Session controller 为已知 seed id 设置显式用户标题，再用该精确标题跨重载定位行。无关的恢复行无法匹配该定位器；持久化归档断言仍检查 seed id 和保留的日志。
 
 此前的 Worker 预算测试（`rsh/Modules/Official/code-runtime/code-runtime-worker-thread/tests/budget.spec.ts`）保留了真实 worker 执行与绑定传输，只控制 Host 定时器和 ELU 样本。测试先确认绑定已进入，再检验 idle、active 和壁钟决策，使启动超时不能冒充绑定期间的预算决策。此前的真实 worker 测试（`rsh/Modules/Official/code-runtime/code-runtime-worker-thread/tests/runtime.spec.ts`）独立保留了实际 ELU、空闲绑定和热循环覆盖。
 

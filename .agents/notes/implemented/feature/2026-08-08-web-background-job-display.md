@@ -115,7 +115,7 @@ A running one-shot background subagent therefore appears both there and in the s
 
 ## Testing
 
-The [web e2e scenario](../../../../rsh/Programs/Web/application/tests/background-job-list.e2e.ts) is the end-to-end proof and runs keyless: a real `run_in_background` bash call registers with `ctx.jobs`, the header count and row appear with no user interaction, and killing the task through the registry flips the open list to its producer detail. It asserts the whole delivery path rather than any single layer.
+The retired `background-job-list.e2e.ts` scenario was the end-to-end proof and ran keyless: a real `run_in_background` bash call registers with `ctx.jobs`, the header count and row appear with no user interaction, and killing the task through the registry flips the open list to its producer detail. It asserted the whole delivery path rather than any single layer.
 
 Below it, [`jobs-local`](../../../../rsh/Engine/jobs/jobs-local/tests/jobs.spec.ts) pins the change feed at all four commit points, its containment of a throwing observer, and its removal on both explicit disposal and fiber teardown; [`control-jobs`](../../../../rsh/Programs/Web/api/session-controller/tests/control-jobs.host.spec.ts) pins the complete baseline, three change pushes, dropped internal fields, unowned fan-out, no-resume guarantee, registry-absent composition, and the prohibition on consuming model output; and the client suites pin baseline replacement, the last-wins fold, the absent-key representation, removal cleanup, and the component's ordering, duration, and dismissal behavior.
 
