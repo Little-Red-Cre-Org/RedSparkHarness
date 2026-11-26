@@ -91,6 +91,15 @@ Status: proposed
 
 删除 `rsh-web-app`、`rsh-base`、`gateway` 与 `remotes` 也会删除 `launchWebScaffold`，而 `rsh/Programs/Web/application/tests/` 中仍有 53 个文件导入它（包括 `scaffold.ts` 自身）。这些是共享客户端呈现与 Host 集成场景，而不是本次退役的录制会话场景：markdown、滚动、输入框几何、设置、引导，以及出厂组合探测。它们必须先迁移——迁到 `native-browser-graph.spec.ts` 使用的固定连接层，或在需要真实 Host 时迁到 `launchNativeWeb`。因此这些包与该脚手架应在后续变更中一起删除。
 
+导入它的 52 个测试各自只属于以下四组之一。
+
+- **直接删除（5 个）：** `bash-abort-row`、`minimal-preset.snapshot`、`ptc-round`、`skill-tool-row`、`scaffold-hermetic`。前四个已有通过的 `native-*` 对照；`scaffold-hermetic` 只验证 Cordis 脚手架自身的隔离，随脚手架一起删除。
+- **降为组件或 Host 测试（11 个）：** `composer-draft-scroll`、`composer-placeholder`、`composer-tab-geometry`、`markdown-wide-table`、`reference-composer`、`skill-invocation-policy`、`shipped-composition`、`startup-rpc-budget`、`stats-paged-history`、`github-ready-review`、`complex-history.perf`。Native 客户端没有 Lexical 输入框、Cordis 框体几何，也没有全量会话统计行，所以这些行为归 `ui-conversation`、`ui-renderer`、CLI 组合配置或 Host 路由。
+- **迁到 Native（32 个）：** `access-confirmation`、`agent-preset-authoring`、`agent-preset-selection`、`chat-continuous-conversation`、`chat-long-interactions`、`chat-scroll-contract`、`clickable-links-gallery`、`declared-reasoning`、`default-model`、`goal-bar`、`goal-command-presentation`、`markdown-cjk-strong`、`markdown-images`、`markdown-inline-code-links`、`math-rendering`、`models-settings-recovery`、`models-settings`、`onboarding-deepseek-config`、`onboarding-usable-provider`、`plugin-config`、`present`、`produced-file-mentions`、`produced-files`、`rail-search-expand`、`schedule-after`、`settings-chrome`、`skill-user-invoke`、`startup-auto-selection`、`streaming-fence-highlight`、`trajectory-virtualization`、`workflow-run`、`workspace-new-session-folding`。每个断言面在 Native 侧都已存在：权限确认、预设设置节、模型与推理选择器、转录及其 markdown 渲染器、目标栏、命令行、产出文件行、侧栏搜索、日程目录、设置分节、注入行、轨迹面板与工作流行。点名 Cordis 专有节点的断言（`data-chat-flow-*`、`data-composer-input`、`data-turn-process`、右侧栏、dockkit）改到 Native 节点，或随浏览器外壳一起退役。
+- **记为退役阻塞（4 个）：** `sidebar-right`、`sidebar-subagent-activity`、`message-feedback`、`remote-welcome`。Native 没有右侧栏或 dockkit 面板，没有子会话树，没有可用的逐消息评分对话框，而非回环提示属于已退役的浏览器部署。
+
+先删五个重复项：它们清掉五个由 Cordis 与 Native 测试双消费的目录。然后是组件与 Host 测试，接着是设置、引导与 markdown 迁移，再是转录、滚动与工作流组，之后记录四个阻塞，最后删包与脚手架。
+
 ## Alternatives considered
 
 **以同一接口把 `launchWebScaffold` 移植到 Native。** 暂不采纳。它的 `ctx` 正是 25 个场景断言所用的 Cordis 根，Native 实现能通过类型却会在运行时让这些断言全部失败。

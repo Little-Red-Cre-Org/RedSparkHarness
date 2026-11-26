@@ -2,5 +2,5 @@
 # side as of the last confirmed-consistent state. Both languages carry equal authority;
 # after editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write .agents/notes/proposed/architecture/2026-11-24-native-web-scaffold-and-scenario-migration.md
-2026-11-24-native-web-scaffold-and-scenario-migration.md: 20f2f2501206d83c609e2695a4934cb28ca57818
-2026-11-24-native-web-scaffold-and-scenario-migration.zh.md: dbb9e89a7adde19f0f177c41767829dc47d3e698
+2026-11-24-native-web-scaffold-and-scenario-migration.md: 226a01bdf4658dc57188ec0f1bc7b2aa0defd0f4
+2026-11-24-native-web-scaffold-and-scenario-migration.zh.md: 82e7e3c5ec8c250353dff17080eca08986b2d1a8
