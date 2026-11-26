@@ -16,6 +16,18 @@ import { toNamespaceView } from './native-ports.ts'
 export type NativeDescribeClient = Pick<NativeSessionClient, 'settingsDescribe'>
 
 /**
+ * The Models page's Native document read, including the refresh a pushed
+ * invalidation performs before the page joins the new answer.
+ */
+export interface NativeModelsDescribeFace extends ModelsDescribeFace {
+  /**
+   * Re-read the document. A call during an in-flight read folds into one rerun.
+   * @returns settlement after this call's freshness is held.
+   */
+  load(): Promise<void>
+}
+
+/**
  * Project Host descriptors onto the wire-shaped document a Settings page reads.
  * @param descriptors - redacted descriptors returned by one `settingsDescribe`.
  * @param writable - whether the Host accepts writes for this document.
@@ -44,7 +56,7 @@ export function toDescribeView(
 export function createNativeDescribeFace(
   client: NativeDescribeClient,
   signal: AbortSignal,
-): ModelsDescribeFace {
+): NativeModelsDescribeFace {
   const store: SnapshotStore<ModelsDescribeSnapshot> = createSnapshotStore<ModelsDescribeSnapshot>({
     status: 'idle', view: undefined, error: null,
   })
@@ -101,6 +113,7 @@ export function createNativeDescribeFace(
   return {
     getSnapshot: () => store.getSnapshot(),
     subscribe: listener => store.subscribe(listener),
+    load,
     ensure: () => {
       if (inFlight !== undefined) return inFlight
       if (store.getSnapshot().status === 'idle') return load()

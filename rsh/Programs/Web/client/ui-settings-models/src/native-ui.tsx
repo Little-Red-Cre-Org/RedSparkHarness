@@ -30,7 +30,7 @@ import {
   createNativeModelsFace, followInvalidations, toCredentialFacts, toNamespaceView,
   type NativeModelsClient,
 } from './native-ports.ts'
-import { createNativeDescribeFace, type NativeDescribeClient } from './native-describe.ts'
+import { createNativeDescribeFace, type NativeDescribeClient, type NativeModelsDescribeFace } from './native-describe.ts'
 import type { ModelsDescribeFace, ModelsDescribeSnapshot, ModelsRemoteFace, ModelsRemoteHost } from './client/ports.ts'
 import { en, zh, type ModelsKey } from './client/locales.ts'
 
@@ -50,7 +50,7 @@ export type { NativeSettingsSchemaSource }
 export type { NativeModelsClient } from './native-ports.ts'
 export type { NativeDescribeClient } from './native-describe.ts'
 export type { ModelsSettingsState, ProviderDirectoryEntry, ProviderRow }
-export type { ModelsDescribeFace, ModelsDescribeSnapshot, ModelsRemoteFace, ModelsRemoteHost }
+export type { ModelsDescribeFace, ModelsDescribeSnapshot, NativeModelsDescribeFace, ModelsRemoteFace, ModelsRemoteHost }
 export type { ModelsSectionInjected, ModelsSectionProps } from './client/ModelsSection.tsx'
 export type { ModelsFooterOwnerProps, ProviderCardExtrasOwnerProps } from './client/slot-contract.ts'
 export type { DeepSeekOnboardingInjected } from './client/DeepSeekOnboardingDialog.tsx'
@@ -90,12 +90,16 @@ export function createNativeModelsPage(
   const face: ModelsRemoteFace = createNativeModelsFace(client, signal)
   const host: ModelsRemoteHost = { remote: face }
   const operations = createModelsOperations(host)
-  const describe: ModelsDescribeFace = createNativeDescribeFace(client, signal)
+  const describe: NativeModelsDescribeFace = createNativeDescribeFace(client, signal)
   const controller = new ModelsSettingsStore(host, schema, describe)
   const follow = (async () => {
     try {
       for await (const _event of followInvalidations(client, signal)) {
-        if (controller.store.getSnapshot().status !== 'idle') await controller.load()
+        if (controller.store.getSnapshot().status === 'idle') continue
+        // Re-read the document first: the page store joins this describe
+        // through `ensure()`, so it renders the revision the write produced
+        // instead of the one its last read held.
+        await Promise.all([describe.load(), controller.load()])
       }
     } catch (error: unknown) {
       if (!signal.aborted) console.error('native models settings: invalidation follow failed', error)

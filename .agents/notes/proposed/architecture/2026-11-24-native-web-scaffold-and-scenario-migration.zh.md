@@ -49,6 +49,7 @@ Status: proposed
 - Native 输入框在轮次运行中仍保持可用，因此输入框可编辑并不代表轮次已结算。转录 golden 必须等 Stop 座位退出、所有附件缩略图加载完成后才能读取记录。
 - Native 没有待插话的 transcript 气泡，也没有「空草稿一次插话全部排队消息」的手势；待插话在轮次接纳前只显示在 `Pending messages` 行中。
 - Native transcript 通过 `ChatPresentation_userBubble` 渲染每条用户消息，其文本节点与内层 span 都会命中精确文本定位；断言应统计气泡数量而不是文本节点。
+- Native 模型编辑器发送它打开时那次文档读取中的命名空间 revision。页面在每条推送的失效通知上重读该文档，因此另一笔写入之后打开的编辑器携带该写入产生的 revision。
 - Native replay 适配器曾重复实现脚本流循环，并漏掉 hang sidecar 的 `readyFile`。两个适配器现共用 `replayEntry`，hang 条目因此会为 Native 测试写出标记文件。
 - 出厂的 Native Web profile 在组合里写明三个权限预设（`read-only`、`workspace-write`、`danger-full-access`），与 Cordis base bundle 一致。缺少 `read-only` 条目时，Native 应用无法把 Session 交还给它启动时的沙箱模式。
 - Native 的变更操作先向 Session 所有者请求，再由沙箱执行。只读模式下首个写入先获批、随后被拒，提权重试会再发起一次请求；场景必须把两次都答复掉。
@@ -68,6 +69,7 @@ Status: proposed
 - `feedback-release` 驱动 `/feedback` 与 `feedback/message-*` Host 路由，并比对采集器收到的已授权前缀。逐消息评分对话框被绕过：在本构建中点击评分既没有弹出对话框，也没有发出 Host 请求，因此判定改走对话框本应提交的同一条路由。
 - `fresh-round-trip` 保留录制 prompt、真实 Bash 调用与已结算转录。Cordis 的轮次过程折叠、系统提示扩展和 `RSH_WEB_URL` 探测随浏览器部署一并退役。
 - `live-interactions` 从持久日志覆盖取消（hang sidecar）、AUTH 失败、重试恢复与重试耗尽。Native 转录没有轮次错误行、重试链，也不会保留被放弃的部分输出，因此这些断言改为读取规范事件。
+- `models-settings-recovery` 让漂移的 `openrouter` 路由与健康提供方并存，添加 `minimax-cn`，拒绝仍点名未知模型的编辑，并删除过时模型。
 
 以下场景记为阻塞退役，其 `profile: web` 清单与 golden 一并移除：
 
@@ -91,10 +93,10 @@ Status: proposed
 
 删除 `rsh-web-app`、`rsh-base`、`gateway` 与 `remotes` 也会删除 `launchWebScaffold`，而 `rsh/Programs/Web/application/tests/` 中仍有 36 个文件导入它（另加 `scaffold.ts` 自身），以及 `stress-tests/reasoning-chunks.stress.ts` 与 `rsh/Tests/benchmarks/long-session-browser/long-session.bench.ts`。这些是共享客户端呈现与 Host 集成场景，而不是本次退役的录制会话场景：markdown、滚动、输入框几何、设置、引导，以及出厂组合探测。它们必须先迁移——迁到 `native-browser-graph.spec.ts` 使用的固定连接层，或在需要真实 Host 时迁到 `launchNativeWeb`。压力用例与基准需要各自的 Native 启动路径或退役。因此这些包与该脚手架应在后续变更中一起删除。
 
-最初导入它的 52 个测试各自只属于以下三组之一；第一组与十一个退役阻塞已经删除，且已有五个 Native 迁移落地。
+最初导入它的 52 个测试各自只属于以下三组之一；第一组与十一个退役阻塞已经删除，且已有六个 Native 迁移落地。
 
 - **直接删除（5 个）：** `bash-abort-row`、`minimal-preset.snapshot`、`ptc-round`、`skill-tool-row`、`scaffold-hermetic`。前四个已有通过的 `native-*` 对照；`scaffold-hermetic` 只验证 Cordis 脚手架自身的隔离，随脚手架一起删除。
-- **迁到 Native（27 个）：** `agent-preset-authoring`、`agent-preset-selection`、`chat-continuous-conversation`、`chat-long-interactions`、`chat-scroll-contract`、`clickable-links-gallery`、`declared-reasoning`、`default-model`、`markdown-cjk-strong`、`markdown-images`、`markdown-inline-code-links`、`math-rendering`、`models-settings-recovery`、`models-settings`、`onboarding-deepseek-config`、`onboarding-usable-provider`、`plugin-config`、`present`、`rail-search-expand`、`schedule-after`、`settings-chrome`、`skill-user-invoke`、`startup-auto-selection`、`streaming-fence-highlight`、`trajectory-virtualization`、`workflow-run`、`workspace-new-session-folding`。每个断言面在 Native 侧都已存在：预设设置节、模型与推理选择器、转录及其 markdown 渲染器、已声明文件行、侧栏搜索、日程目录、设置分节、注入行、轨迹面板与工作流行。点名 Cordis 专有节点的断言（`data-chat-flow-*`、`data-composer-input`、`data-turn-process`、右侧栏、dockkit）改到 Native 节点，或随浏览器外壳一起退役。
+- **迁到 Native（26 个）：** `agent-preset-authoring`、`agent-preset-selection`、`chat-continuous-conversation`、`chat-long-interactions`、`chat-scroll-contract`、`clickable-links-gallery`、`declared-reasoning`、`default-model`、`markdown-cjk-strong`、`markdown-images`、`markdown-inline-code-links`、`math-rendering`、`models-settings`、`onboarding-deepseek-config`、`onboarding-usable-provider`、`plugin-config`、`present`、`rail-search-expand`、`schedule-after`、`settings-chrome`、`skill-user-invoke`、`startup-auto-selection`、`streaming-fence-highlight`、`trajectory-virtualization`、`workflow-run`、`workspace-new-session-folding`。每个断言面在 Native 侧都已存在：预设设置节、模型与推理选择器、转录及其 markdown 渲染器、已声明文件行、侧栏搜索、日程目录、设置分节、注入行、轨迹面板与工作流行。点名 Cordis 专有节点的断言（`data-chat-flow-*`、`data-composer-input`、`data-turn-process`、右侧栏、dockkit）改到 Native 节点，或随浏览器外壳一起退役。
 - **记为退役阻塞（20 个）：** `sidebar-right`、`sidebar-subagent-activity`、`message-feedback`、`remote-welcome`、`stats-paged-history`、`startup-rpc-budget`、`github-ready-review`、`composer-draft-scroll`、`composer-placeholder`、`composer-tab-geometry`、`markdown-wide-table`、`reference-composer`、`skill-invocation-policy`、`access-confirmation`、`produced-files`、`produced-file-mentions`、`goal-bar`、`goal-command-presentation`、`shipped-composition`、`complex-history.perf`。Native 没有右侧栏或 dockkit 面板，没有子会话树，没有可用的逐消息评分对话框，而非回环提示属于已退役的浏览器部署。Native 转录只显示逐消息 token，不提供全量会话统计行，也不暴露 `sessionStats` 投影；Cordis 客户端的冷启动 `settings/describe` 预算同样不描述 Native 启动路径。Native 的 GitHub 入口共享选定的监听器，不挂载隔离入口端口；签名投递经可信规则处理由 `native-github-webhook.snapshot.ts` 覆盖。六个呈现场景断言的是 Lexical 输入框、其 chip，以及 Cordis 转录与框体几何。它们的归属随浏览器客户端退役；Native 输入框是普通 textarea，有自己的高度上限与 HTML 占位符，Native 布局断言需要自己的测试，而不是移植这些文件。`access-confirmation` 断言 Cordis 的风险对话框、确认复选框和权限触发器的 `aria-label`；Native 立即应用权限预设，没有页内确认，也没有标注当前值的标签。`produced-files` 读取由写入推导的摘要及其前缀预算和 `+N files` 余量；Native 只渲染 `deliverables/presented` 声明，因此只有写入的轮次在 Native 没有对应行。`produced-file-mentions` 依赖 Cordis 的文件提及词表，将唯一的行内代码 basename 链接到侧栏预览；Native 转录不传入该词表，因此所有提及都保持为不可交互的代码。`goal-bar` 驱动暂停、恢复与清除；Native 目标条是只读的，只显示阶段、目标与轮次进度，没有操作。`goal-command-presentation` 断言人类命令输入气泡、其 chip 与排版；Native 命令行只渲染命令名与结算结果。`shipped-composition` 描述的是已不再出厂的 Web 组合——Native 行与其配置由 `native-profile-template.spec.ts` 覆盖——而 `complex-history.perf` 是该客户端的可选基数基准；Native 性能工作需要自己的清单。
 
 先删五个重复项：它们清掉五个由 Cordis 与 Native 测试双消费的目录。然后是组件与 Host 测试，接着是设置、引导与 markdown 迁移，再是转录、滚动与工作流组，之后记录四个阻塞，最后删包与脚手架。

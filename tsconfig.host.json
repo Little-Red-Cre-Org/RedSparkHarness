@@ -38,7 +38,7 @@
     "rsh/Programs/Web/application/tests/plugin-config.e2e.ts",
     "rsh/Programs/Web/application/tests/settings-chrome.e2e.ts",
     "rsh/Programs/Web/application/tests/models-settings.e2e.ts",
-    "rsh/Programs/Web/application/tests/models-settings-recovery.e2e.ts",
+    "rsh/Programs/Web/application/tests/native-models-settings-recovery.e2e.ts",
     "rsh/Programs/Web/application/tests/onboarding-deepseek-config.e2e.ts",
     "rsh/Programs/Web/application/tests/onboarding-usable-provider.e2e.ts",
     "rsh/Programs/Web/application/tests/remote-welcome.e2e.ts",

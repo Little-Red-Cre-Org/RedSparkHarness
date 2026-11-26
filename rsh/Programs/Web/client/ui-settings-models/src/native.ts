@@ -8,7 +8,7 @@ export type {
   NativeModelsPage, NativeModelsClient, NativeDescribeClient, NativeSettingsSchemaSource,
   ModelsSettingsState, ProviderDirectoryEntry, ProviderRow,
   ModelsOperations, SettingsSchemaOperations, SettingsWriteOutcome, ModelDiscoveryOutcome,
-  ModelsDescribeFace, ModelsDescribeSnapshot, ModelsRemoteFace, ModelsRemoteHost,
+  ModelsDescribeFace, ModelsDescribeSnapshot, NativeModelsDescribeFace, ModelsRemoteFace, ModelsRemoteHost,
   ModelsSectionInjected, ModelsSectionProps,
   ModelsFooterOwnerProps, ProviderCardExtrasOwnerProps,
   DeepSeekOnboardingInjected, WelcomeNoticeInjected, ModelsKey,

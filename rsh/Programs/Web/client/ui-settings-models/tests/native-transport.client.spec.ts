@@ -124,6 +124,22 @@ describe('createNativeDescribeFace', () => {
     expect(read).toHaveBeenCalledTimes(1)
   })
 
+  it('re-reads the document when an invalidation asks for a refresh', async () => {
+    let revision = 3
+    const describe = createNativeDescribeFace({
+      ...client({
+        settingsDescribe: async (): Promise<NativeSettingsDescription> => ({
+          hasDocument: true, namespaces: [descriptor({ revision })],
+          limits: { maxCredentialRefsPerRead: 64, maxSettingsOperations: 32 },
+        }),
+      }),
+    }, signal)
+    await describe.ensure()
+    revision = 4
+    await describe.load()
+    expect(describe.getSnapshot().view?.namespaces[0]?.revision).toBe(4)
+  })
+
   it('falls back to idle on a first-read failure so ensure retries', async () => {
     const describe = createNativeDescribeFace(
       { ...client({ settingsDescribe: async () => { throw new Error('unavailable') } }) }, signal,
