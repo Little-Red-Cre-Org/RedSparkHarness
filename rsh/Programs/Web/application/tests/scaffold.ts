@@ -592,10 +592,10 @@ export async function launchWebScaffold(options: LaunchOptions = {}): Promise<We
     { id: 'credentials', config: { rshHome: harnessHome } },
     // The shipped directory-picker row is the -auto chooser, which resolves
     // the interaction from the RUNNING host (display, SSH launch, bind). The
-    // lane's goldens are interaction-specific (workspace-management drives
-    // the in-app browse dialog), so pin -browse deterministically on every
-    // host: patch `name` is an assertion, not an override, hence the
-    // disable+insert pair.
+    // lane's goldens are interaction-specific and its scenarios drive the
+    // in-app browse dialog, so pin -browse deterministically on every host:
+    // patch `name` is an assertion, not an override, hence the disable+insert
+    // pair.
     { id: 'directory-picker', disabled: true },
     { insert: [
       { id: 'directory-picker-browse', name: '@redspark/rsh-host-directory-picker-browse' },
@@ -1134,6 +1134,18 @@ export function fixtureIdentity(
  * @returns the realized fixture text.
  */
 export function realizeSeedFixture(scaffold: WebScaffold, fixtureText: string, id: string): string {
+  return realizeSeedText(fixtureText, id, scaffold.workspaceCwd, scaffold.harnessHome)
+}
+
+/**
+ * Rewrite one seed fixture's tokens for a temp world without a booted scaffold.
+ * @param fixtureText - session JSONL containing fixture tokens.
+ * @param id - Session id that replaces `{{session:1}}`.
+ * @param workspaceCwd - workspace that replaces `{{cwd}}` and the recorded cwd.
+ * @param harnessHome - Harness home that replaces `{{harnessHome}}`.
+ * @returns the realized JSONL text.
+ */
+export function realizeSeedText(fixtureText: string, id: string, workspaceCwd: string, harnessHome: string): string {
   const firstLine = fixtureText.split(/\r?\n/).find(line => line.trim().length > 0)
   const fixtureCwd = firstLine === undefined
     ? undefined
@@ -1142,7 +1154,7 @@ export function realizeSeedFixture(scaffold: WebScaffold, fixtureText: string, i
     if (line.trim() === '') return line
     const realized = mapJsonStringValues(JSON.parse(line), (value) => {
       let result = typeof fixtureCwd === 'string'
-        ? value.split(fixtureCwd).join(scaffold.workspaceCwd)
+        ? value.split(fixtureCwd).join(workspaceCwd)
         : value
       result = result
         .split('{{sessionId}}').join(id)
@@ -1150,8 +1162,8 @@ export function realizeSeedFixture(scaffold: WebScaffold, fixtureText: string, i
         .replace(/\{\{session:([2-9]\d*)\}\}/g, (_token, ordinal: string) => `${id}-child-${ordinal}`)
         .replace(/\{\{(message|approval|workflow|command|rpc|retry|id):([1-9]\d*)\}\}/g, (_token, kind: string, ordinal: string) =>
           fixtureIdentity(kind as 'message' | 'approval' | 'workflow' | 'command' | 'rpc' | 'retry' | 'id', Number(ordinal)))
-        .split('{{harnessHome}}').join(scaffold.harnessHome)
-        .split('{{cwd}}').join(scaffold.workspaceCwd)
+        .split('{{harnessHome}}').join(harnessHome)
+        .split('{{cwd}}').join(workspaceCwd)
       return result
     })
     return JSON.stringify(realized)

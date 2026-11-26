@@ -93,10 +93,9 @@ export function probeFreePort(): Promise<number> {
  * adding a workspace is the picker's only entry. The directory is staged here
  * and adopted through the path editor, which is idempotent across the repeated
  * connects a scenario may make; creating a folder from inside the dialog (the
- * product's other half of the same route) is covered by
- * workspace-management.e2e.ts. The default name 'workspace' keeps the session
- * header cwd at <root>/workspace, the materialization proof several scenarios
- * assert.
+ * product's other half of the same route) has no browser scenario owner. The
+ * default name 'workspace' keeps the session header cwd at <root>/workspace,
+ * the materialization proof several scenarios assert.
  * @param page - the page under test.
  * @param root - host directory the workspace folder is staged in (the scaffold's `workspaceCwd`).
  * @param name - folder name staged and adopted as the workspace.
@@ -148,28 +147,32 @@ export async function connectFreshWorkspaceZh(page: Page, root: string, name = '
  * composer enables.
  * @param page - the page under test.
  * @param path - existing absolute directory already admitted by the Host allowed roots.
+ * @param locale - the page's Native locale; defaults to the English button names.
  */
-export async function connectNativeWorkspace(page: Page, path: string): Promise<void> {
-  const add = page.locator('[data-slot="sidebar"]').getByRole('button', { name: 'New workspace', exact: true })
+export async function connectNativeWorkspace(page: Page, path: string, locale: 'en' | 'zh' = 'en'): Promise<void> {
+  const copy = locale === 'zh'
+    ? { add: '新建工作区', title: '选择工作区目录', edit: '编辑路径', open: '打开', message: '消息' }
+    : { add: 'New workspace', title: 'Select Workspace Directory', edit: 'Edit path', open: 'Open', message: 'Message' }
+  const add = page.locator('[data-slot="sidebar"]').getByRole('button', { name: copy.add, exact: true })
   await add.waitFor({ timeout: 15_000 })
-  await page.waitForFunction(() => {
-    const button = document.querySelector<HTMLButtonElement>('[data-slot="sidebar"] button[aria-label="New workspace"]')
+  await page.waitForFunction((label) => {
+    const button = document.querySelector<HTMLButtonElement>(`[data-slot="sidebar"] button[aria-label="${label}"]`)
     return button !== null && !button.disabled
-  })
+  }, copy.add)
   await add.click()
-  const dialog = page.getByRole('dialog', { name: 'Select Workspace Directory' })
+  const dialog = page.getByRole('dialog', { name: copy.title })
   await dialog.waitFor({ timeout: 10_000 })
-  await dialog.getByRole('button', { name: 'Edit path', exact: true }).click()
-  const pathInput = dialog.locator('input[aria-label="Edit path"]')
+  await dialog.getByRole('button', { name: copy.edit, exact: true }).click()
+  const pathInput = dialog.locator(`input[aria-label="${copy.edit}"]`)
   await pathInput.fill(path)
   // The dialog does not always hold focus, so the page keyboard can miss this input.
   await pathInput.press('Enter')
-  await dialog.getByRole('button', { name: 'Open', exact: true }).click()
+  await dialog.getByRole('button', { name: copy.open, exact: true }).click()
   await dialog.waitFor({ state: 'hidden', timeout: 15_000 })
-  await page.waitForFunction(() => {
-    const editor = document.querySelector<HTMLTextAreaElement>('textarea[aria-label="Message"]')
+  await page.waitForFunction((label) => {
+    const editor = document.querySelector<HTMLTextAreaElement>(`textarea[aria-label="${label}"]`)
     return editor !== null && !editor.disabled
-  })
+  }, copy.message)
 }
 
 /**

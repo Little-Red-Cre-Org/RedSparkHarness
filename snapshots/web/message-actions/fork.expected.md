@@ -1,7 +1,12 @@
-- tree "Sessions":
+- tree "Workspaces":
+  - treeitem "{{workspace}}" [expanded]:
+    - img
+    - text: {{workspace}}
+  - treeitem "Completed Use the read tool twice {{age}}"
   - treeitem "Ungrouped" [expanded]:
     - img
     - text: Ungrouped
-  - treeitem "Use the read tool twice (2) now" [selected]
-  - treeitem "Use the read tool twice (1) now"
-  - treeitem "Use the read tool twice 1min"
+  - treeitem "Use the read tool twice Session actions for Use the read tool twice" [selected]:
+    - text: Use the read tool twice
+    - button "Session actions for Use the read tool twice":
+      - img

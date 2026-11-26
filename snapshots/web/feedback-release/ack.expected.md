@@ -1,57 +1,54 @@
-- button "Say hello to Kitsune":
-  - img "Kitsune, RedSpark’s fox companion"
-- status: Done! Let’s make imagination happen again today!
-- banner:
-  - navigation "Session hierarchy":
-    - button "Reply with the single word" [disabled]
-  - img
-  - text: Standard mode
-  - button "More actions":
-    - img
-  - button "Open right sidebar":
-    - img
-  - tablist:
-    - tab "Chat" [selected]
+- main:
+  - heading "RedSpark Harness" [level=1]
+  - strong: Reply with the single word
+  - text: Standard
+  - navigation "Conversation actions":
+    - button "Open workspace in VS Code"
+    - button "Choose an app to open in":
+      - img
+    - button "Session details"
+  - tablist "Conversation views":
+    - tab "Conversation" [selected]
     - tab "Trajectory"
-- button "System prompt":
-  - img
-  - img
-  - text: System prompt
-- text: Reply with the single word LIGHTHOUSE and stop. {{clock}}
-- button "Copy":
-  - img
-- button "Thought for a while":
-  - text: Thought for a while
-  - img
-- paragraph: LIGHTHOUSE
-- button "Copy":
-  - img
-- button "Good response":
-  - img
-- button "Bad response":
-  - img
-- button "Branch into a new conversation":
-  - img
-- button "Ran for {{duration}}":
-  - img
-  - text: Ran for {{duration}}
-- text: {{clock}}
-- 'button "feedback Feedback recorded for session session-{{uuid}} Anonymous user: {{uuid}}."':
-  - img
-  - img
-  - text: "feedback Feedback recorded for session session-{{uuid}} Anonymous user: {{uuid}}."
-- textbox "Message or run a task, / commands, @ files or sessions"
-- button "Add files or run commands":
-  - img
-- 'button "Access mode, current: Workspace Write"': Workspace Write
-- button "Select model, current DeepSeek-V4-Flash":
-  - text: DeepSeek-V4-Flash
-  - img
-- button "6% of context used"
-- button "Send message" [disabled]
-- button "1 turns 1 steps · {{throughput}} tok/s":
-  - img
-  - text: 1 turns 1 steps{{throughput}} tok/s
-- button "7.8K tok · Cache hit 99%":
-  - img
-  - text: 7.8K tokCache hit 99%
+  - tabpanel "Conversation":
+    - region "Session records":
+      - text: Reply with the single word LIGHTHOUSE and stop.
+      - button "Context injection @redspark/rsh-system-prompt":
+        - img
+        - img
+        - text: Context injection @redspark/rsh-system-prompt
+      - button "Context injection skill-catalog":
+        - img
+        - img
+        - text: Context injection skill-catalog
+      - button "Thought The user wants me to reply with a single word. Let me comply.":
+        - img
+        - img
+        - text: Thought The user wants me to reply with a single word. Let me comply.
+      - paragraph: LIGHTHOUSE
+      - button "Copy":
+        - img
+      - text: 7.8K tokens {{duration}} {{clock}}
+      - button "Good response":
+        - img
+      - button "Bad response":
+        - img
+      - 'button "feedback Feedback recorded for session {{uuid}} Anonymous user: {{uuid}}."':
+        - img
+        - img
+        - text: "feedback Feedback recorded for session {{uuid}} Anonymous user: {{uuid}}."
+  - text: Message
+  - textbox "Message":
+    - /placeholder: Message RedSpark…
+  - button "Add image"
+  - group "Model, mode, and permission controls":
+    - button "Plan mode is off. Click to turn it on.": Plan
+    - button "Auto review":
+      - img
+      - text: Auto review
+      - img
+  - button "Select model, current deepseek-v4-flash":
+    - text: deepseek-v4-flash
+    - img
+  - button "Send" [disabled]
+  - paragraph: 1 turn · 1 step · {{throughput}} tok/s · 7.8K tok · cache hit 99%

@@ -1,7 +1,8 @@
 version: 1
 scenario: seeded-history
-profile: web
+profile: native-web
 composition: web-default
 recording: authored
 header:
   class: web-default
+  pin: true

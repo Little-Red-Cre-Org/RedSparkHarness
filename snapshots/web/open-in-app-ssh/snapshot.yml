@@ -1,6 +1,6 @@
 version: 1
 scenario: open-in-app-ssh
-profile: web
+profile: native-web
 composition: web-default
 recording: authored
 header:

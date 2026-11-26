@@ -1,61 +1,59 @@
-- button "Say hello to Kitsune":
-  - img "Kitsune, RedSpark’s fox companion"
-- status: Done! Let’s make imagination happen again today!
-- banner:
-  - navigation "Session hierarchy":
-    - button "Use web_search once with queries" [disabled]
-  - img
-  - text: Standard mode
-  - button "More actions":
-    - img
-  - button "Open right sidebar":
-    - img
-  - tablist:
-    - tab "Chat" [selected]
-    - tab "Trajectory"
-- button "System prompt":
-  - img
-  - img
-  - text: System prompt
-- text: Use web_search once with queries ["RedSpark Harness snapshot search","RedSpark Harness multi-query search"]. Then reply exactly SEARCH_DONE and stop. {{clock}}
-- button "Copy":
-  - img
-- button "1 tool call" [expanded]:
-  - text: 1 tool call
-  - img
+- text: Use web_search once with queries ["RedSpark Harness snapshot search","RedSpark Harness multi-query search"]. Then reply exactly SEARCH_DONE and stop.
 - button "Context injection @redspark/rsh-system-prompt":
   - img
   - img
   - text: Context injection @redspark/rsh-system-prompt
-- button "Search RedSpark Harness snapshot search, RedSpark Harness multi-query search":
+- button "Context injection skill-catalog":
   - img
   - img
-  - text: Search RedSpark Harness snapshot search, RedSpark Harness multi-query search
-- paragraph: SEARCH_DONE
-- button "Copy":
-  - img
+  - text: Context injection skill-catalog
+- text: 15 tokens {{duration}} {{clock}}
 - button "Good response":
   - img
 - button "Bad response":
   - img
-- button "Branch into a new conversation":
+- button "Search RedSpark Harness snapshot search, RedSpark Harness multi-query search" [expanded]:
   - img
-- button "Ran for {{duration}}":
+  - text: Search RedSpark Harness snapshot search, RedSpark Harness multi-query search
+- list:
+  - listitem:
+    - link "Snapshot Search 1 Result 1":
+      - /url: https://docs.example.test/search/1/1
+    - text: "Snapshot search 1 excerpt 1: the harness replays this source list from a local endpoint. 2026-07-01"
+  - listitem:
+    - link "Snapshot Search 2 Result 1":
+      - /url: https://docs.example.test/search/2/1
+    - text: "Snapshot search 2 excerpt 1: the harness replays this source list from a local endpoint. 2026-07-01"
+  - listitem:
+    - link "Snapshot Search 1 Result 2":
+      - /url: https://docs.example.test/search/1/2
+    - text: "Snapshot search 1 excerpt 2: the harness replays this source list from a local endpoint. 2026-07-02"
+  - listitem:
+    - link "Snapshot Search 2 Result 2":
+      - /url: https://docs.example.test/search/2/2
+    - text: "Snapshot search 2 excerpt 2: the harness replays this source list from a local endpoint. 2026-07-02"
+  - listitem:
+    - link "Snapshot Search 1 Result 3":
+      - /url: https://docs.example.test/search/1/3
+    - text: "Snapshot search 1 excerpt 3: the harness replays this source list from a local endpoint. 2026-07-03"
+  - listitem:
+    - link "Snapshot Search 2 Result 3":
+      - /url: https://docs.example.test/search/2/3
+    - text: "Snapshot search 2 excerpt 3: the harness replays this source list from a local endpoint. 2026-07-03"
+  - listitem:
+    - link "Snapshot Search 1 Result 4":
+      - /url: https://docs.example.test/search/1/4
+    - text: "Snapshot search 1 excerpt 4: the harness replays this source list from a local endpoint. 2026-07-04"
+  - listitem:
+    - link "Snapshot Search 2 Result 4":
+      - /url: https://docs.example.test/search/2/4
+    - text: "Snapshot search 2 excerpt 4: the harness replays this source list from a local endpoint. 2026-07-04"
+- text: Source list truncated
+- paragraph: SEARCH_DONE
+- button "Copy":
   - img
-  - text: Ran for {{duration}}
-- text: {{clock}}
-- textbox "Message or run a task, / commands, @ files or sessions"
-- button "Add files or run commands":
+- text: 14 tokens {{duration}} {{clock}}
+- button "Good response":
   - img
-- 'button "Access mode, current: Workspace Write"': Workspace Write
-- button "Select model, current DeepSeek-V4-Flash":
-  - text: DeepSeek-V4-Flash
+- button "Bad response":
   - img
-- button "0% of context used"
-- button "Send message" [disabled]
-- button "1 turns 2 steps · {{throughput}} tok/s":
-  - img
-  - text: 1 turns 2 steps{{throughput}} tok/s
-- button "29 tok · Cache hit 0%":
-  - img
-  - text: 29 tokCache hit 0%

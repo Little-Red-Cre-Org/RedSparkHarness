@@ -1,6 +1,6 @@
 version: 1
 scenario: feedback-release
-profile: web
+profile: native-web
 composition: web-default
 recording: live
 session:

@@ -1,9 +1,7 @@
 version: 1
 scenario: bash-abort-row
 profile: native-web
-composition: acp-default
+composition: web-default
 recording: authored
 header:
-  class: acp-default
-session:
-  source: session.v3.jsonl
+  class: web-default

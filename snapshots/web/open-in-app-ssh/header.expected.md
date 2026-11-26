@@ -1,10 +1,7 @@
-- banner:
-  - navigation "Session hierarchy":
-    - button "Use the read tool twice" [disabled]
-  - button "More actions":
-    - img
-  - button "Open right sidebar":
-    - img
-  - tablist:
-    - tab "Chat" [selected]
-    - tab "Trajectory"
+- strong: Use the read tool twice
+- text: Conversation
+- navigation "Conversation actions":
+  - button "Session details"
+- tablist "Conversation views":
+  - tab "Conversation" [selected]
+  - tab "Trajectory"

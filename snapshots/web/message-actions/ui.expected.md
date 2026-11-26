@@ -1,86 +1,51 @@
-- button "Say hello to Kitsune":
-  - img "Kitsune, RedSpark’s fox companion"
-- status: Kitsune is here, waiting for your next spark.
-- banner:
-  - navigation "Session hierarchy":
-    - button "Use the read tool twice" [disabled]
-  - button "More actions":
-    - img
-  - button "Open right sidebar":
-    - img
-  - tablist:
-    - tab "Chat" [selected]
+- main:
+  - heading "RedSpark Harness" [level=1]
+  - strong: Use the read tool twice
+  - text: Conversation
+  - navigation "Conversation actions":
+    - button "Session details"
+  - tablist "Conversation views":
+    - tab "Conversation" [selected]
     - tab "Trajectory"
-- navigation "Turn navigation":
-  - button "Jump to turn 1"
-  - button "Jump to turn 2"
-- button "System prompt":
-  - img
-  - img
-  - text: System prompt
-- text: "Use the read tool twice in one assistant message: read a.txt and b.txt. Then reply with the single word DONE and stop. {{clock}}"
-- button "Copy":
-  - img
-- tooltip "Copy"
-- button "Think The user wants me to read a.txt and b.txt, then reply with \"DONE\". Let me do both reads in parallel.":
-  - img
-  - img
-  - text: Think The user wants me to read a.txt and b.txt, then reply with "DONE". Let me do both reads in parallel.
-- paragraph: I will read both files before answering.
-- button "Copy":
-  - img
-- button "Good response":
-  - img
-- button "Bad response":
-  - img
-- button "Branch into a new conversation" [disabled]:
-  - img
-- text: Available only on the last message of a completed turn
-- button "Ran for {{duration}}":
-  - img
-  - text: Ran for {{duration}}
-- text: {{clock}}
-- button "Read a.txt":
-  - img
-  - img
-  - text: Read
-  - button "a.txt"
-- button "Read b.txt":
-  - img
-  - img
-  - text: Read
-  - button "b.txt"
-- button "System prompt":
-  - img
-  - img
-  - text: System prompt
-- text: Now give the final answer. {{clock}}
-- button "Copy":
-  - img
-- paragraph: DONE
-- button "Copy":
-  - img
-- button "Good response":
-  - img
-- button "Bad response":
-  - img
-- button "Branch into a new conversation":
-  - img
-- button "Ran for {{duration}}":
-  - img
-  - text: Ran for {{duration}}
-- text: {{clock}}
-- textbox "Message or run a task, / commands, @ files or sessions"
-- button "Add files or run commands":
-  - img
-- 'button "Access mode, current: Workspace Write"': Workspace Write
-- button "Select model, current DeepSeek-V4-Flash":
-  - text: DeepSeek-V4-Flash
-  - img
-- button "Send message" [disabled]
-- button "2 turns 3 steps · {{throughput}} tok/s":
-  - img
-  - text: 2 turns 3 steps{{throughput}} tok/s
-- button "7.9K tok · Cache hit 98%":
-  - img
-  - text: 7.9K tokCache hit 98%
+  - tabpanel "Conversation":
+    - region "Session records":
+      - text: "Use the read tool twice in one assistant message: read a.txt and b.txt. Then reply with the single word DONE and stop."
+      - button "Thought The user wants me to read a.txt and b.txt, then reply with \"DONE\". Let me do both reads in parallel.":
+        - img
+        - img
+        - text: Thought The user wants me to read a.txt and b.txt, then reply with "DONE". Let me do both reads in parallel.
+      - paragraph: I will read both files before answering.
+      - button "Copy":
+        - img
+      - tooltip "Copy"
+      - text: 7.9K tokens {{duration}} {{clock}}
+      - button "Good response":
+        - img
+      - button "Bad response":
+        - img
+      - button "Read a.txt":
+        - img
+        - img
+        - text: Read a.txt
+      - button "Read b.txt":
+        - img
+        - img
+        - text: Read b.txt
+      - text: Now give the final answer.
+      - paragraph: DONE
+      - button "Copy":
+        - img
+      - text: {{duration}} {{clock}}
+      - button "Good response":
+        - img
+      - button "Bad response":
+        - img
+  - text: Message
+  - textbox "Message":
+    - /placeholder: Message RedSpark…
+  - group "Model, mode, and permission controls"
+  - button "Select model, current deepseek-official/deepseek-v4-flash" [disabled]:
+    - text: deepseek-official/deepseek-v4-flash
+    - img
+  - button "Send" [disabled]
+  - paragraph: 2 turns · 2 steps · 7.9K tok · cache hit 98%

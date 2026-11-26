@@ -1,39 +1,43 @@
-- button "系统提示词":
-  - img
-  - img
-  - text: 系统提示词
-- text: 简单画一个 SVG 表示冯诺依曼架构, 保存为 von-neumann.svg {{clock}}
-- button "复制":
-  - img
-- button "2 次工具调用 · 1 条消息" [expanded]:
-  - text: 2 次工具调用 · 1 条消息
-  - img
+- text: 简单画一个 SVG 表示冯诺依曼架构, 保存为 von-neumann.svg
 - button "上下文注入 @redspark/rsh-system-prompt":
   - img
   - img
   - text: 上下文注入 @redspark/rsh-system-prompt
-- button "思考 The user wants a simple SVG diagram of the von Neumann architecture, saved as von-neumann.svg. Let me create a clean SVG showing CPU (control unit, ALU), memory, input, and output with bidirectional data/control buses.":
+- button "上下文注入 skill-catalog":
   - img
   - img
-  - text: 思考 The user wants a simple SVG diagram of the von Neumann architecture, saved as von-neumann.svg. Let me create a clean SVG showing CPU (control unit, ALU), memory, input, and output with bidirectional data/control buses.
+  - text: 上下文注入 skill-catalog
+- button "已思考 The user wants a simple SVG diagram of the von Neumann architecture, saved as von-neumann.svg. Let me create a clean SVG showing CPU (control unit, ALU), memory, input, and output with bidirectional data/control buses.":
+  - img
+  - img
+  - text: 已思考 The user wants a simple SVG diagram of the von Neumann architecture, saved as von-neumann.svg. Let me create a clean SVG showing CPU (control unit, ALU), memory, input, and output with bidirectional data/control buses.
 - paragraph: 我来创建一个冯诺依曼架构的 SVG 示意图。
+- button "复制":
+  - img
+- text: 共 1.1万 个 Token 0 秒 {{clock}}
+- button "好的回答":
+  - img
+- button "有问题的回答":
+  - img
 - button "写入 von-neumann.svg +83 -0":
   - img
   - img
-  - text: 写入
-  - button "von-neumann.svg"
-  - text: +83 -0
-- button "思考 The file is created. Let me present it as a deliverable.":
+  - text: 写入 von-neumann.svg +83 -0
+- button "已思考 The file is created. Let me present it as a deliverable.":
   - img
   - img
-  - text: 思考 The file is created. Let me present it as a deliverable.
+  - text: 已思考 The file is created. Let me present it as a deliverable.
+- text: 共 1.1万 个 Token 0 秒 {{clock}}
+- button "好的回答":
+  - img
+- button "有问题的回答":
+  - img
 - button "交付文件 已交付 von-neumann.svg":
   - img
   - text: 交付文件 已交付 von-neumann.svg
 - paragraph:
   - text: 已创建
-  - code:
-    - button "在侧边栏打开 von-neumann.svg": von-neumann.svg
+  - code: von-neumann.svg
   - text: ，一个简洁的冯诺依曼架构示意图，包含：
 - list:
   - listitem:
@@ -49,26 +53,13 @@
     - strong: 总线连接
     - text: ：CPU 与内存间的地址总线，以及 CPU 与 I/O 设备间的数据/控制线，箭头标明数据流向
 - paragraph: 下方附一行核心思想说明：指令与数据以二进制统一存储在存储器中。用浏览器打开该 SVG 文件即可查看。
-- text: 本轮文件改动
-- button "打开 {{cwd}}/workspace/von-neumann.svg": von-neumann.svg
-- text: 此主机没有可用的桌面，无法打开文件或文件夹
-- button "在侧边栏预览 von-neumann.svg"
-- text: von-neumann.svg 冯诺依曼架构示意图 SVG
-- button "在侧边栏打开 von-neumann.svg": 打开
-- button "von-neumann.svg 的更多文件操作" [disabled]:
-  - img
 - button "复制":
   - img
+- text: 共 1.1万 个 Token 0 秒 {{clock}}
 - button "好的回答":
   - img
 - button "有问题的回答":
   - img
-- button "在新对话中分支":
-  - img
-- button "用量 32K tok":
-  - img
-  - text: 用量 32K tok
-- button "用时 {{duration}}":
-  - img
-  - text: 用时 {{duration}}
-- text: {{clock}}
+- text: 此主机没有可用的桌面，无法打开文件或文件夹 von-neumann.svg 冯诺依曼架构示意图 SVG
+- button "用默认应用打开 von-neumann.svg" [disabled]: 打开
+- button "在文件管理器中显示 von-neumann.svg" [disabled]: 打开所在文件夹

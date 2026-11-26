@@ -1,1 +1,4 @@
-- 'treeitem "Plan awaiting review Plan a small change: add now" [selected]'
+- treeitem "Plan awaiting review DONE Session actions for DONE" [selected]:
+  - text: Plan awaiting review DONE
+  - button "Session actions for DONE":
+    - img

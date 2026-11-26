@@ -243,7 +243,6 @@ export const plugin = {
     const rpcMethods = new Set<string>()
     const rpcPaths = new Set<string>()
     const rpcCalls: { pathname: string; method?: string; payload?: Record<string, unknown> }[] = []
-    const followResponses: { admissionId: string; response: import('playwright').Response }[] = []
     page.on('request', (request) => {
       const pathname = new URL(request.url()).pathname
       if (!pathname.startsWith('/api/')) return
@@ -257,10 +256,50 @@ export const plugin = {
         rpcCalls.push({ pathname, method: body.method, ...(payload === undefined ? {} : { payload }) })
       }
     })
-    page.on('response', (response) => {
-      if (new URL(response.url()).pathname !== '/api/native-session/follow') return
-      const body = response.request().postDataJSON() as { admissionId?: unknown } | null
-      if (typeof body?.admissionId === 'string') followResponses.push({ admissionId: body.admissionId, response })
+    // The Client multiplexes every JSON `/api` response onto the follow bus, so the
+    // Session follow body arrives as base64 `bytes` frames on one shared downlink.
+    await page.addInitScript(() => {
+      interface FollowBusRecord {
+        readonly subscribes: { busId: string; id: string; endpoint?: string; admissionId?: string }[]
+        readonly downlinks: Record<string, string[]>
+      }
+      const record: FollowBusRecord = { subscribes: [], downlinks: {} }
+      ;(globalThis as { __rshFollowBusRecord?: FollowBusRecord }).__rshFollowBusRecord = record
+      const originalFetch = globalThis.fetch.bind(globalThis)
+      globalThis.fetch = async (input, init) => {
+        const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url
+        if (!url.includes('/api/connection/follow-bus')) return originalFetch(input, init)
+        const headers = new Headers(init?.headers)
+        const busId = headers.get('x-dsh-follow-bus')
+        const body = typeof init?.body === 'string' ? init.body : undefined
+        let frame: { type?: unknown; id?: unknown; endpoint?: unknown; payload?: unknown } | undefined
+        try { frame = body === undefined ? undefined : JSON.parse(body) as typeof frame } catch { frame = undefined }
+        const response = await originalFetch(input, init)
+        if (busId === null) return response
+        if (frame?.type === 'subscribe' && typeof frame.id === 'string') {
+          const payload = frame.payload as { admissionId?: unknown } | undefined
+          record.subscribes.push({ busId, id: frame.id,
+            ...typeof frame.endpoint === 'string' ? { endpoint: frame.endpoint } : {},
+            ...typeof payload?.admissionId === 'string' ? { admissionId: payload.admissionId } : {} })
+        }
+        if (body === '{"type":"open"}\n' && response.body !== null) {
+          const [live, copy] = response.body.tee()
+          const parts: string[] = []
+          record.downlinks[busId] = parts
+          void (async () => {
+            const reader = copy.getReader()
+            const decoder = new TextDecoder()
+            for (;;) {
+              const next = await reader.read()
+              if (next.done) break
+              parts.push(decoder.decode(next.value, { stream: true }))
+            }
+            parts.push(decoder.decode())
+          })().catch(() => {})
+          return new Response(live, { status: response.status, statusText: response.statusText, headers: response.headers })
+        }
+        return response
+      }
     })
     await page.goto(address)
     await page.waitForFunction(() => ['ready', 'failed'].includes(document.querySelector('#root')?.getAttribute('data-native-boot-state') ?? ''))
@@ -532,9 +571,25 @@ export const plugin = {
     expect(continuationEnd?.data.reason.kind).toBe('completed')
     expect(rpcCalls.filter(call => call.pathname === '/api/session/cancel')).toHaveLength(0)
 
-    const followResponse = followResponses.findLast(item => item.admissionId === continuationAdmissionId)?.response
-    if (followResponse === undefined) throw new Error('next Session admission has no captured follow stream')
-    const followFrames = (await followResponse.text()).split(/\r?\n/u).filter(line => line.startsWith('data: '))
+    const followCapture = await page.evaluate((admissionId) => {
+      interface FollowBusRecord {
+        readonly subscribes: { busId: string; id: string; endpoint?: string; admissionId?: string }[]
+        readonly downlinks: Record<string, string[]>
+      }
+      const record = (globalThis as { __rshFollowBusRecord?: FollowBusRecord }).__rshFollowBusRecord
+      if (record === undefined) return undefined
+      const subscription = record.subscribes.findLast(item => item.admissionId === admissionId)
+      const endpoints = record.subscribes.flatMap(item => item.endpoint === undefined ? [] : [item.endpoint])
+      if (subscription === undefined) return { endpoints }
+      const lines = (record.downlinks[subscription.busId] ?? []).join('').split(/\r?\n/u).filter(line => line.length > 0)
+      const body = lines.map(line => JSON.parse(line) as { id?: unknown; data?: unknown })
+        .filter(frame => frame.id === subscription.id && typeof frame.data === 'string')
+        .map(frame => new TextDecoder().decode(Uint8Array.from(atob(frame.data as string), char => char.charCodeAt(0))))
+        .join('')
+      return { body, endpoints }
+    }, continuationAdmissionId)
+    if (followCapture?.body === undefined) throw new Error('next Session admission has no captured follow stream')
+    const followFrames = followCapture.body.split(/\r?\n/u).filter(line => line.startsWith('data: '))
       .map(line => JSON.parse(line.slice(6)) as {
         type: string
         sessionId?: string
@@ -553,6 +608,13 @@ export const plugin = {
     const durableBaselineSuffix = continuedRows.filter(row => row.seq > baseline.fromSeq && row.seq <= baseline.throughSeq)
     expect(baselineEvents).toEqual(durableBaselineSuffix)
 
+    // The Native composer stays enabled while a turn runs, so the idle Stop seat and
+    // settled attachment thumbnails are what prove the transcript stopped changing.
+    await page.getByRole('button', { name: 'Stop', exact: true }).waitFor({ state: 'detached' })
+    await page.waitForFunction(() => {
+      const images = [...document.querySelectorAll('section img')]
+      return images.length > 0 && images.every(image => image instanceof HTMLImageElement && image.complete && image.naturalWidth > 0)
+    })
     const transcriptAfterContinuation = (await page.getByLabel('Session records').innerText()).replace(/\r\n/gu, '\n').trimEnd() + '\n'
     await page.reload()
     await sidebar.getByRole('tree', { name: 'Workspaces', exact: true })
@@ -580,7 +642,7 @@ export const plugin = {
     const darkAfter = await page.locator('body').getAttribute('data-ds-dark-theme')
     expect(darkAfter !== null).not.toBe(darkBefore !== null)
     expect([...rpcMethods]).toEqual(expect.arrayContaining(['directories/list', 'session/history', 'session/rename-title', 'session/refresh-title']))
-    expect([...rpcPaths]).toContain('/api/native-session/list-follow')
+    expect(followCapture.endpoints).toContain('native-session/list-follow')
     console.log(`native browser RPC methods: ${[...rpcMethods].sort().join(', ')}`)
     const storage = new JsonlSessionBackend({ root: sessionRoot, compression: 'none' })
     {

@@ -1,53 +1,63 @@
-- button "Say hello to Kitsune":
-  - img "Kitsune, RedSpark’s fox companion"
-- status: Done! Let’s make imagination happen again today!
-- banner:
-  - navigation "Session hierarchy":
-    - button "Use the bash tool to" [disabled]
-  - img
-  - text: Standard mode
-  - button "More actions":
-    - img
-  - button "Open right sidebar":
-    - img
-  - tablist:
-    - tab "Chat" [selected]
+- main:
+  - heading "RedSpark Harness" [level=1]
+  - strong: Use the bash tool to
+  - text: Standard
+  - navigation "Conversation actions":
+    - button "Open workspace in VS Code"
+    - button "Choose an app to open in":
+      - img
+    - button "Session details"
+  - tablist "Conversation views":
+    - tab "Conversation" [selected]
     - tab "Trajectory"
-- button "System prompt":
-  - img
-  - img
-  - text: System prompt
-- text: "Use the bash tool to run exactly: echo WEB_E2E_OK. Then reply with the single word DONE and stop. {{clock}}"
-- button "Copy":
-  - img
-- button "1 tool call":
-  - text: 1 tool call
-  - img
-- paragraph: DONE
-- button "Copy":
-  - img
-- button "Good response":
-  - img
-- button "Bad response":
-  - img
-- button "Branch into a new conversation":
-  - img
-- button "Ran for {{duration}}":
-  - img
-  - text: Ran for {{duration}}
-- text: {{clock}}
-- textbox "Message or run a task, / commands, @ files or sessions"
-- button "Add files or run commands":
-  - img
-- 'button "Access mode, current: Workspace Write"': Workspace Write
-- button "Select model, current DeepSeek-V4-Flash":
-  - text: DeepSeek-V4-Flash
-  - img
-- button "6% of context used"
-- button "Send message" [disabled]
-- button "1 turns 2 steps · {{throughput}} tok/s":
-  - img
-  - text: 1 turns 2 steps{{throughput}} tok/s
-- button "15.8K tok · Cache hit 99%":
-  - img
-  - text: 15.8K tokCache hit 99%
+  - tabpanel "Conversation":
+    - region "Session records":
+      - text: "Use the bash tool to run exactly: echo WEB_E2E_OK. Then reply with the single word DONE and stop."
+      - button "Context injection @redspark/rsh-system-prompt":
+        - img
+        - img
+        - text: Context injection @redspark/rsh-system-prompt
+      - button "Context injection skill-catalog":
+        - img
+        - img
+        - text: Context injection skill-catalog
+      - button "Thought The user wants me to run a simple bash command and reply with \"DONE\".":
+        - img
+        - img
+        - text: Thought The user wants me to run a simple bash command and reply with "DONE".
+      - text: 7.9K tokens {{duration}} {{clock}}
+      - button "Good response":
+        - img
+      - button "Bad response":
+        - img
+      - button "Bash Echo the test string":
+        - img
+        - img
+        - text: Bash Echo the test string
+      - button "Thought The command executed successfully and output \"WEB_E2E_OK\". I just need to reply with \"DONE\".":
+        - img
+        - img
+        - text: Thought The command executed successfully and output "WEB_E2E_OK". I just need to reply with "DONE".
+      - paragraph: DONE
+      - button "Copy":
+        - img
+      - text: 7.9K tokens {{duration}} {{clock}}
+      - button "Good response":
+        - img
+      - button "Bad response":
+        - img
+  - text: Message
+  - textbox "Message":
+    - /placeholder: Message RedSpark…
+  - button "Add image"
+  - group "Model, mode, and permission controls":
+    - button "Plan mode is off. Click to turn it on.": Plan
+    - button "Auto review":
+      - img
+      - text: Auto review
+      - img
+  - button "Select model, current mock/fixture":
+    - text: mock/fixture
+    - img
+  - button "Send" [disabled]
+  - paragraph: 1 turn · 2 steps · {{throughput}} tok/s · 15.8K tok · cache hit 99%

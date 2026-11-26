@@ -1,54 +1,84 @@
-- button "Say hello to Kitsune":
-  - img "Kitsune, RedSpark’s fox companion"
-- status: Kitsune is waiting for your confirmation.
-- banner:
-  - navigation "Session hierarchy":
-    - button "Use the ask_user_question tool to" [disabled]
-  - img
-  - text: Standard mode
-  - button "More actions":
-    - img
-  - button "Open right sidebar":
-    - img
-  - tablist:
-    - tab "Chat" [selected]
+- main:
+  - heading "RedSpark Harness" [level=1]
+  - strong: Use the ask_user_question tool to
+  - text: Standard
+  - navigation "Conversation actions":
+    - button "Open workspace in VS Code"
+    - button "Choose an app to open in":
+      - img
+    - button "Session details"
+  - tablist "Conversation views":
+    - tab "Conversation" [selected]
     - tab "Trajectory"
-- button "System prompt":
-  - img
-  - img
-  - text: System prompt
-- text: Use the ask_user_question tool to ask me exactly one question with id "checkpoint", question "Ready to continue?", header "Checkpoint", and options labeled "Yes" and "No". After I answer, reply with one short sentence acknowledging my answer and stop. {{clock}}
-- button "Copy":
-  - img
-- button "Context injection @redspark/rsh-system-prompt":
-  - img
-  - img
-  - text: Context injection @redspark/rsh-system-prompt
-- text: Running
-- button "Ask question waiting":
-  - img
-  - img
-  - text: Ask question waiting
-- status: Deep diving...
-- text: "Interjection: include the word BANANA in your final reply."
-- button "Copy":
-  - img
-- region "Ready to continue?":
-  - text: Checkpoint
-  - heading "Ready to continue?" [level=2]
-  - button "Collapse the question card" [expanded]:
+  - tabpanel "Conversation":
+    - region "Session records":
+      - text: Use the ask_user_question tool to ask me exactly one question with id "checkpoint", question "Ready to continue?", header "Checkpoint", and options labeled "Yes" and "No". After I answer, reply with one short sentence acknowledging my answer and stop.
+      - button "Context injection @redspark/rsh-system-prompt":
+        - img
+        - img
+        - text: Context injection @redspark/rsh-system-prompt
+      - button "Context injection skill-catalog":
+        - img
+        - img
+        - text: Context injection skill-catalog
+      - text: 15 tokens {{duration}} {{clock}}
+      - button "Good response":
+        - img
+      - button "Bad response":
+        - img
+      - text: Running
+      - button "Ask question waiting":
+        - img
+        - img
+        - text: Ask question waiting
+      - status: Running…
+  - region "Ready to continue?":
+    - text: Checkpoint
+    - heading "Ready to continue?" [level=2]
+    - button "Collapse the question card" [expanded]:
+      - img
+    - button "Dismiss all questions":
+      - img
+    - radiogroup:
+      - radio "Yes": 1 Yes
+      - radio "No": 2 No
+      - textbox "Type your answer"
+    - button "Previous question" [disabled]:
+      - img
+    - text: 1 / 1
+    - button "Next question" [disabled]:
+      - img
+    - status
+    - button "Skip this question"
+    - button "Submit" [disabled]
+  - region "Pending messages":
+    - list:
+      - listitem:
+        - text: Interjecting
+        - paragraph: "Interjection: include the word BANANA in your final reply."
+        - button "Expand message":
+          - img
+        - button "Edit pending message":
+          - img
+        - button "Interject instead" [disabled]:
+          - img
+        - button "Delete":
+          - img
+  - text: Message
+  - textbox "Message":
+    - /placeholder: Message RedSpark…
+  - button "Add image" [disabled]
+  - group "Model, mode, and permission controls":
+    - button "Plan mode is off. Click to turn it on.": Plan
+    - button "Auto review" [disabled]:
+      - img
+      - text: Auto review
+      - img
+  - button "Select model, current mock/fixture" [disabled]:
+    - text: mock/fixture
     - img
-  - button "Dismiss all questions":
-    - img
-  - radiogroup:
-    - radio "Yes": 1 Yes
-    - radio "No": 2 No
-    - textbox "Type your answer"
-  - button "Previous question" [disabled]:
-    - img
-  - text: 1 / 1
-  - button "Next question" [disabled]:
-    - img
-  - status
-  - button "Skip this question"
-  - button "Submit" [disabled]
+  - button "Queue" [disabled]
+  - button "Interject" [disabled]
+  - button "Stop"
+  - paragraph: 1 turn · 1 step · {{throughput}} tok/s · 15 tok
+  - paragraph: Enter queues for the next turn; Interject joins the next step. Shift+Enter adds a line.

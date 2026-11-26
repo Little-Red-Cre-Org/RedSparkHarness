@@ -155,20 +155,21 @@ it('expands a seeded skill call to its name and instructions', async () => {
       const alerts = await page.getByRole('alert').allInnerTexts()
       throw new Error('session records were not shown\n' + detail.join('\n') + '\n' + alerts.join('\n') + '\n' + stderr.slice(-4000), { cause: error })
     }
-    // Native transcript uses GenericToolCard, not the Cordis SkillRow disclosure.
+    // The Native transcript routes `skill` to the dedicated row, which names the
+    // skill in its summary and discloses the instructions body.
     const row = records.locator('[data-tool="skill"]')
     try {
       await row.waitFor({ timeout: 15000 })
     } catch (error) {
       throw new Error('skill row was not rendered\n' + await records.innerText(), { cause: error })
     }
-    await row.getByText('skill · editing-cordis-compositions', { exact: true }).waitFor()
+    await row.getByText('Skill', { exact: true }).waitFor()
+    await row.getByText('editing-cordis-compositions', { exact: true }).waitFor()
     const disclosure = row.locator('[data-disclosure-row]')
     await expect.poll(() => disclosure.getAttribute('aria-expanded')).toBe('false')
     await disclosure.click()
     await expect.poll(() => disclosure.getAttribute('aria-expanded')).toBe('true')
-    await row.getByText('IN', { exact: true }).waitFor()
-    await row.getByText('OUT', { exact: true }).waitFor()
+    await row.getByText('Instructions', { exact: true }).waitFor()
     await row.getByText('# Editing Cordis compositions', { exact: false }).waitFor()
     expect(pageErrors).toEqual([])
   } finally {

@@ -10,8 +10,8 @@ Tool call
 native-headless: tool guarded approval rejected
 0s
 00:00
-Tool call
-ask_user_question · {"questions":[{"id":"mode","question":"Choose mode","options":[{"label":"One"},{"label":"Two"}]}]}
+Ask question
+1/1 answered
 0s
 00:00
 Tool call

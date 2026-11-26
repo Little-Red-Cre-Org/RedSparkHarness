@@ -1,8 +1,7 @@
 version: 1
 scenario: fresh-round-trip
-profile: web
+profile: native-web
 composition: web-default
 recording: live
 header:
   class: web-default
-  pin: true

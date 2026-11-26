@@ -15,7 +15,7 @@
 //   a generic tool card's IN/OUT surfaces.
 // Image thumbnails and subagent rows stay out: the first needs real attachment
 // bytes (image-display.expected.e2e.ts owns that route) and the second needs a
-// child session (subagent-conversation owns it).
+// child session the browser lane does not render.
 import { fileURLToPath } from 'node:url'
 import type { Browser, Page } from 'playwright'
 import { chromium } from 'playwright'

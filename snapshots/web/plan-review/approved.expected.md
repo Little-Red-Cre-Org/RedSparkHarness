@@ -1,56 +1,34 @@
-- banner:
-  - navigation "Session hierarchy":
-    - 'button "Plan a small change: add" [disabled]'
-  - img
-  - text: Standard mode
-  - button "More actions":
-    - img
-  - button "Open right sidebar":
-    - img
-  - tablist:
-    - tab "Chat" [selected]
-    - tab "Trajectory"
 - img
 - text: plan Plan mode on. Use /plan off to leave.
-- button "System prompt":
+- button:
   - img
   - img
-  - text: System prompt
-- text: "Plan a small change: add a --greeting flag to a CLI. Do not read or write any files. Call exit_plan_mode with a short plan of at most five bullet points. Once the plan is approved, reply with the single word DONE and stop. {{clock}}"
+  - text: "Context injection plan-mode The user switched this session to plan mode. You are in plan mode. Stay in plan mode until exit_plan_mode succeeds or the user switches the session mode. Imperative language to implement changes means plan the implementation, not execute it. A user's conversational agreement — including an answer confirming something you asked — approves nothing and does not end plan mode; fold the confirmed decision into the plan and submit it through exit_plan_mode. Explore first. Use non-mutating reads, searches, static analysis, and checks to ground the plan in the actual repository. Do not edit or write files, change configuration, run formatters or code generation that rewrites tracked files, commit, or otherwise carry out the plan. Prefer existing functions and patterns over new machinery. The tool catalog stays the same across modes for request-cache stability. These plan-mode rules override any later tool description or guidance that suggests using mutation tools; those tools remain listed only to keep the request shape stable. Do not use todo_write to track this planning phase: it tracks implementation after an approved plan, while the plan itself belongs in exit_plan_mode. Resolve discoverable facts by inspection. Use ask_user_question only for user-owned choices or material ambiguity that inspection cannot answer. Do not ask the user where code lives or how current behavior works when you can find out. Make the plan decision-complete: state the goal and success criteria; group implementation changes by subsystem; identify public API, schema, and data-flow changes; cover edge cases, failure modes, tests, acceptance criteria, and explicit assumptions. Keep it concise enough to review but detailed enough that another engineer can implement it without making design decisions. When ready, call exit_plan_mode with the complete plan markdown, starting with a # title. Make exit_plan_mode the only and final tool call in that assistant response: it presents the plan for approval, and implementation begins only in a later step after approval. Do not paste the final plan as a plain reply or ask \"should I proceed?\" through prose or ask_user_question. If review rejects it, incorporate the feedback and present again. If the review channel is unavailable or aborted, stay in plan mode and ask the user to switch modes manually; do not proceed with implementation."
+- text: "Plan a small change: add a --greeting flag to a CLI. Do not read or write any files. Call exit_plan_mode with a short plan of at most five bullet points. Once the plan is approved, reply with the single word DONE and stop."
+- button "Context injection @redspark/rsh-system-prompt":
+  - img
+  - img
+  - text: Context injection @redspark/rsh-system-prompt
+- button "Context injection skill-catalog":
+  - img
+  - img
+  - text: Context injection skill-catalog
+- 'button "Thought The user wants me to plan a small change to add a `--greeting` flag to a CLI. They explicitly told me not to read or write any files, and to call exit_plan_mode with a short plan. Let me do that directly."':
+  - img
+  - img
+  - text: "Thought The user wants me to plan a small change to add a `--greeting` flag to a CLI. They explicitly told me not to read or write any files, and to call exit_plan_mode with a short plan. Let me do that directly."
+- paragraph:
+  - text: Since the user has explicitly asked me not to read or write any files and to go straight to planning, I'll proceed with
+  - code: exit_plan_mode
+  - text: .
 - button "Copy":
   - img
-- button "1 tool call · 1 message":
-  - text: 1 tool call · 1 message
-  - img
-- button "System prompt":
-  - img
-  - img
-  - text: System prompt
-- paragraph: DONE
-- button "Copy":
-  - img
+- text: 5.5K tokens {{duration}} {{clock}}
 - button "Good response":
   - img
 - button "Bad response":
   - img
-- button "Branch into a new conversation":
+- 'button "Tool call exit_plan_mode · # Add `--greeting` flag to CLI"':
   - img
-- button "Ran for {{duration}}":
   - img
-  - text: Ran for {{duration}}
-- text: {{clock}}
-- textbox "Message or run a task, / commands, @ files or sessions"
-- button "Add files or run commands":
-  - img
-- 'button "Access mode, current: Workspace Write"': Workspace Write
-- button "Select model, current DeepSeek-V4-Flash":
-  - text: DeepSeek-V4-Flash
-  - img
-- button "4% of context used"
-- button "Send message" [disabled]
-- button "1 turns 2 steps · {{throughput}} tok/s":
-  - img
-  - text: 1 turns 2 steps{{throughput}} tok/s
-- button "10.6K tok · Cache hit 51%":
-  - img
-  - text: 10.6K tokCache hit 51%
+  - text: "Tool call exit_plan_mode · # Add `--greeting` flag to CLI"

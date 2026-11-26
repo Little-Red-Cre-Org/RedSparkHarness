@@ -1,15 +1,11 @@
 [
   {
-    "endpoint": "/api/messageFeedback/put",
+    "endpoint": "/api/feedback/message-put",
     "request": {
-      "args": {
-        "request": {
-          "sessionId": "message-feedback-protocol",
-          "messageId": "{{message:2}}",
-          "rating": "invalid-rating",
-          "ifVersion": null
-        }
-      }
+      "sessionId": "message-feedback-protocol",
+      "messageId": "{{message:2}}",
+      "rating": "invalid-rating",
+      "ifVersion": null
     },
     "status": 200,
     "response": {
@@ -18,24 +14,17 @@
       "result": {
         "ok": false,
         "error": {
-          "code": "gateway/input-invalid",
-          "message": "typert gateway: messageFeedback/put: wire field \"request\" failed boundary validation",
-          "details": {
-            "endpoint": "messageFeedback/put",
-            "field": "request"
-          }
+          "code": "native/session",
+          "message": "[\n  {\n    \"code\": \"invalid_value\",\n    \"values\": [\n      \"positive\",\n      \"negative\"\n    ],\n    \"path\": [\n      \"rating\"\n    ],\n    \"message\": \"Invalid option: expected one of \\\"positive\\\"|\\\"negative\\\"\"\n  }\n]",
+          "details": {}
         }
       }
     }
   },
   {
-    "endpoint": "/api/messageFeedback/list",
+    "endpoint": "/api/feedback/message-list",
     "request": {
-      "args": {
-        "request": {
-          "sessionId": "message-feedback-protocol"
-        }
-      }
+      "sessionId": "message-feedback-protocol"
     },
     "status": 200,
     "response": {
@@ -53,17 +42,13 @@
     }
   },
   {
-    "endpoint": "/api/messageFeedback/put",
+    "endpoint": "/api/feedback/message-put",
     "request": {
-      "args": {
-        "request": {
-          "sessionId": "message-feedback-protocol",
-          "messageId": "{{message:2}}",
-          "rating": "positive",
-          "note": "Useful answer",
-          "ifVersion": null
-        }
-      }
+      "sessionId": "message-feedback-protocol",
+      "messageId": "{{message:2}}",
+      "rating": "positive",
+      "note": "Useful answer",
+      "ifVersion": null
     },
     "status": 200,
     "response": {
@@ -86,13 +71,9 @@
     }
   },
   {
-    "endpoint": "/api/messageFeedback/list",
+    "endpoint": "/api/feedback/message-list",
     "request": {
-      "args": {
-        "request": {
-          "sessionId": "message-feedback-protocol"
-        }
-      }
+      "sessionId": "message-feedback-protocol"
     },
     "status": 200,
     "response": {
@@ -119,16 +100,12 @@
     }
   },
   {
-    "endpoint": "/api/messageFeedback/put",
+    "endpoint": "/api/feedback/message-put",
     "request": {
-      "args": {
-        "request": {
-          "sessionId": "message-feedback-protocol",
-          "messageId": "{{message:2}}",
-          "rating": "negative",
-          "ifVersion": null
-        }
-      }
+      "sessionId": "message-feedback-protocol",
+      "messageId": "{{message:2}}",
+      "rating": "negative",
+      "ifVersion": null
     },
     "status": 200,
     "response": {
@@ -154,15 +131,11 @@
     }
   },
   {
-    "endpoint": "/api/messageFeedback/delete",
+    "endpoint": "/api/feedback/message-delete",
     "request": {
-      "args": {
-        "request": {
-          "sessionId": "message-feedback-protocol",
-          "messageId": "{{message:2}}",
-          "ifVersion": "{{version}}"
-        }
-      }
+      "sessionId": "message-feedback-protocol",
+      "messageId": "{{message:2}}",
+      "ifVersion": "{{version}}"
     },
     "status": 200,
     "response": {
@@ -180,13 +153,9 @@
     }
   },
   {
-    "endpoint": "/api/messageFeedback/list",
+    "endpoint": "/api/feedback/message-list",
     "request": {
-      "args": {
-        "request": {
-          "sessionId": "message-feedback-protocol"
-        }
-      }
+      "sessionId": "message-feedback-protocol"
     },
     "status": 200,
     "response": {
