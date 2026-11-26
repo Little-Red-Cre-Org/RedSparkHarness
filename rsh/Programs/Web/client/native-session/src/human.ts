@@ -12,13 +12,19 @@ const question = z.strictObject({ id: z.string(), question: z.string(), detail: 
 /** Parser for human-request JSON received through the existing bounded follow stream. */
 export const nativeWebHumanSchema = z.discriminatedUnion('kind', [
   z.strictObject({ kind: z.literal('approval'), id: z.string().min(1), toolName: z.string(), reason: z.string().optional(),
-    canAllowSession: z.boolean().optional() }),
+    detail: z.string().optional(), canAllowSession: z.boolean().optional() }),
   z.strictObject({ kind: z.literal('questions'), id: z.string().min(1), questions: z.array(question).min(1) }),
 ])
 
 /** Only presentation fields cross into the browser; Agent and writer stay on the Host. */
 export type NativeWebHumanPrompt =
-  | { readonly kind: 'approval'; readonly id: NativeWebHumanId; readonly toolName: string; readonly reason?: string; readonly canAllowSession?: boolean }
+  | { readonly kind: 'approval'
+    readonly id: NativeWebHumanId
+    readonly toolName: string
+    readonly reason?: string
+    /** Text of the pending tool call; the command for a shell call, otherwise its arguments. */
+    readonly detail?: string
+    readonly canAllowSession?: boolean }
   | { readonly kind: 'questions'; readonly id: NativeWebHumanId; readonly questions: readonly z.infer<typeof question>[] }
 
 /** Closed answers; question cancellation rejects only the matching wait with ASK_CANCELLED. */

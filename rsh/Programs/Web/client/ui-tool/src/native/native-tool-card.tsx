@@ -26,7 +26,10 @@ export function NativeToolCard({ locale, ...props }: NativeToolCardProps) {
     return formatLocaleTemplate(template, params)
   }
   const { block } = props
-  return <div className={css.callRow} data-chat-call-id={block.callId}>
+  // The Bash card is the sole card that keeps its compatibility `data-sample`
+  // marker, so the Native face exposes the shared `data-tool` contract here.
+  return <div className={css.callRow} data-chat-call-id={block.callId}
+    {...props.toolName === 'bash' ? { 'data-tool': 'bash' } : {}}>
     {props.toolName === 'bash'
       ? <BashCard toolName={props.toolName} block={block} cwd={props.cwd} inspect={props.inspect} t={t} />
       : <GenericToolCard {...props} t={t} />}

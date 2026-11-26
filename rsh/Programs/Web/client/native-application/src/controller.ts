@@ -205,6 +205,49 @@ export class NativeConversationController {
         id, admission.lastSeq, observe, signal, onFollowError, detach))
   }
 
+  /**
+   * Re-read the selected Session's durable history after a Host append that no
+   * turn follow covers, such as a settled slash command.
+   * @param id - Session whose history to re-read.
+   * @returns completion after the refreshed events publish, or immediately when
+   *  the selection moved away or a newer history is already on screen.
+   */
+  async refreshHistory(id: SessionId): Promise<void> {
+    this.lifetime.signal.throwIfAborted()
+    const epoch = this.selectionEpoch
+    const history = await this.client.history(id, this.lifetime.signal)
+    if (this.selectionEpoch !== epoch || this.snapshot.selected !== id) return
+    if ((history.events.at(-1)?.seq ?? -1) < (this.snapshot.events.at(-1)?.seq ?? -1)) return
+    this.publish({ header: history.header, events: history.events, inheritedEventCount: history.inheritedEventCount })
+  }
+
+  /**
+   * Re-read durable history after a slash command, then follow the root turn the
+   * command left pending input for.
+   * @param id - Session the command addressed.
+   * @returns completion after that turn settles, or after one history refresh.
+   */
+  async followCommandTurn(id: SessionId): Promise<void> {
+    this.lifetime.signal.throwIfAborted()
+    const status = await this.client.status(id, this.lifetime.signal)
+    if (status.status !== 'running' || this.snapshot.selected !== id || this.snapshot.state !== 'ready') {
+      await this.refreshHistory(id)
+      return
+    }
+    return this.run(() => this.followTurn(id, this.snapshot.events.at(-1)?.seq ?? -1,
+      (signal, admission, observe, onFollowError, detach) =>
+        this.client.attach(id, admission.lastSeq, observe, signal, onFollowError, detach)))
+  }
+
+  /**
+   * Surface a refused composer submission without changing turn readiness.
+   * @param error - refusal the composer keeps its draft for.
+   */
+  reportError(error: unknown): void {
+    if (this.lifetime.signal.aborted) return
+    this.publish({ error: error instanceof Error ? error.message : String(error) })
+  }
+
   private beginSelection(): void {
     this.selectionEpoch++
     this.navigation++

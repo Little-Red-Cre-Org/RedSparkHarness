@@ -74,6 +74,24 @@ export function commandLine(name: string): string {
 }
 
 /**
+ * Read the command line a draft would run.
+ *
+ * Only a draft that starts with a slash and names an advertised command is a
+ * command line; any other slash-leading text stays ordinary text, so a message
+ * that merely begins with `/` still reaches the model.
+ *
+ * @param draft - composer text.
+ * @param catalog - commands the Host advertised for this Session.
+ * @returns the trimmed command line, or undefined for ordinary text.
+ */
+export function commandLineOfDraft(draft: string, catalog: readonly CommandChoice[]): string | undefined {
+  const line = draft.trim()
+  const name = /^\/([A-Za-z][A-Za-z0-9_-]*)(?:\s|$)/u.exec(line)?.[1]
+  if (name === undefined) return undefined
+  return catalog.some(choice => choice.name === name) ? line : undefined
+}
+
+/**
  * Whether a keydown belongs to the open command menu.
  *
  * The composer already uses Escape (stop a running turn) and Enter (submit),

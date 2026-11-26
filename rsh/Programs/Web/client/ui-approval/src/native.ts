@@ -13,6 +13,8 @@ export function NativeApprovalCard(props: {
   readonly presentationKey?: string
   readonly toolName: string
   readonly reason?: string | undefined
+  /** Text of the pending tool call the human is approving. */
+  readonly detail?: string | undefined
   readonly disabled: boolean
   readonly locale: 'en' | 'zh'
   readonly onAnswer: (outcome: 'allowed-once' | 'rejected') => void
@@ -23,5 +25,5 @@ export function NativeApprovalCard(props: {
     ? { ...commonZh, ...zh }
     : { ...commonEn, ...en }
   const t: TranslateNS<'approval'> = (key, params) => formatLocaleTemplate(dictionary[key as ApprovalKey] ?? key, params)
-  return createElement(ApprovalCard, { ...card, detail: null, t })
+  return createElement(ApprovalCard, { ...card, detail: card.detail ?? null, t })
 }

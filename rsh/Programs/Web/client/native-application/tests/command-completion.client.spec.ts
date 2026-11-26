@@ -10,7 +10,7 @@
 import { describe, expect, it } from 'vitest'
 import type { CommandChoice } from '../src/command-completion.ts'
 import {
-  commandKeyAction, commandLine, filterCommands, moveHighlight,
+  commandKeyAction, commandLine, commandLineOfDraft, filterCommands, moveHighlight,
 } from '../src/command-completion.ts'
 
 const choice = (name: string, description = `${name} does things`): CommandChoice => ({ name, description })
@@ -112,5 +112,31 @@ describe('commandKeyAction', () => {
   it('passes unrelated keys', () => {
     expect(commandKeyAction('a', true, 3)).toBe('pass')
     expect(commandKeyAction('Backspace', true, 3)).toBe('pass')
+  })
+})
+
+describe('commandLineOfDraft', () => {
+  const catalog = [choice('plan'), choice('feedback'), choice('compact')]
+
+  it('returns the complete line for an advertised command with arguments', () => {
+    expect(commandLineOfDraft('/feedback the diff view is unreadable', catalog))
+      .toBe('/feedback the diff view is unreadable')
+  })
+
+  it('returns a bare advertised command', () => {
+    expect(commandLineOfDraft('/plan', catalog)).toBe('/plan')
+  })
+
+  it('ignores surrounding whitespace', () => {
+    expect(commandLineOfDraft('  /compact  ', catalog)).toBe('/compact')
+  })
+
+  it('keeps text that merely begins with a slash ordinary', () => {
+    expect(commandLineOfDraft('/unknown thing', catalog)).toBeUndefined()
+    expect(commandLineOfDraft('/feed', catalog)).toBeUndefined()
+  })
+
+  it('ignores a slash inside the text', () => {
+    expect(commandLineOfDraft('see /feedback', catalog)).toBeUndefined()
   })
 })

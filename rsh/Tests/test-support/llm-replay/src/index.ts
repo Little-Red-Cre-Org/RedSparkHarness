@@ -988,8 +988,15 @@ function paceDelay(paceMs: number, signal: AbortSignal | undefined): Promise<voi
   })
 }
 
-/** Yield a recorded stream back, honoring abort like a real adapter. */
-async function* replayEntry(entry: ReplayEntry, signal: AbortSignal | undefined, paceMs: number): AsyncIterable<StreamChunk> {
+/**
+ * Yield a recorded stream back, honoring abort like a real adapter.
+ * @param entry - scripted call outcome.
+ * @param signal - caller cancellation observed between chunks and during a hang.
+ * @param paceMs - delay before each chunk; `0` streams without waiting.
+ * @returns the recorded chunks, or a hang that ends only when the signal aborts.
+ */
+export async function* replayEntry(entry: ReplayEntry, signal: AbortSignal | undefined,
+  paceMs: number): AsyncIterable<StreamChunk> {
   switch (entry.kind) {
     case 'chunks':
       for (const chunk of entry.chunks) {

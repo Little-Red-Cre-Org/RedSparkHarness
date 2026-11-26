@@ -15,7 +15,7 @@ export function HumanInteraction({ answerHuman, prompt, disabled, locale }: {
   locale: 'en' | 'zh'
 }) {
   if (prompt.kind === 'approval') return <NativeApprovalCard
-    presentationKey={String(prompt.id)} toolName={prompt.toolName} reason={prompt.reason}
+    presentationKey={String(prompt.id)} toolName={prompt.toolName} reason={prompt.reason} detail={prompt.detail}
     disabled={disabled} locale={locale}
     onAllowSession={prompt.canAllowSession === true
       ? () => { void answerHuman(prompt, { kind: 'approval', outcome: 'allowed-session' }) } : undefined}

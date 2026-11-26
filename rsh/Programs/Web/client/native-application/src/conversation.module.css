@@ -9,6 +9,12 @@
   height: 100%;
   color: var(--dsw-alias-label-primary);
   background: var(--dsw-alias-bg-base);
+  /* Shared width axis for the transcript, the composer and the takeover cards,
+     which ui-approval and ui-user-questions size from these same variables. */
+  --dsh-chat-content-width: 748px;
+  --dsh-composer-card-max-width: calc(var(--dsh-chat-content-width) + 32px);
+  --dsh-composer-side-clearance: 16px;
+  --dsh-composer-text-max-height: 272px;
 }
 
 .header {
@@ -268,7 +274,7 @@
   box-sizing: border-box;
   width: 100%;
   min-height: 52px;
-  max-height: 272px;
+  max-height: var(--dsh-composer-text-max-height);
   padding: 4px 12px 0;
   overflow-y: auto;
   border: 0;
@@ -344,7 +350,7 @@
 
 .human {
   width: 100%;
-  max-width: 720px;
+  max-width: var(--dsh-composer-card-max-width, 780px);
   margin: 0 auto;
 }
 

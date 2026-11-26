@@ -501,9 +501,18 @@ export function shippedNativeProfileComposition(
       { id: 'tool-web', plugin: '@redspark/rsh-tool-web', scope: ROOT,
         config: { fetch: true, searchTimeoutMs: 60000 } },
       ...(profile === 'native-web' ? [{ id: 'user-questions', plugin: '@redspark/rsh-user-questions', scope: ROOT },
-        { id: 'tool-ask-user', plugin: '@redspark/rsh-tool-ask-user', scope: ROOT }] : []),
+        { id: 'tool-ask-user', plugin: '@redspark/rsh-tool-ask-user', scope: ROOT },
+        { id: 'tool-present', plugin: '@redspark/rsh-tool-present', scope: ROOT }] : []),
       { id: 'approval', plugin: '@redspark/rsh-native-approval', scope: ROOT },
-      ...(profile === 'native-web' ? [{ id: 'permission-presets', plugin: '@redspark/rsh-permission-presets', scope: ROOT }] : []),
+      // The preset table is composition data, not a package default: without
+      // `read-only` here the shipped Native Web cannot return a Session to the
+      // sandbox mode it starts in. The roster matches the Cordis base bundle.
+      ...(profile === 'native-web' ? [{ id: 'permission-presets', plugin: '@redspark/rsh-permission-presets', scope: ROOT,
+        config: { presets: {
+          'read-only': { sandbox: 'read-only', approval: 'ask' },
+          'workspace-write': { sandbox: 'workspace-write', approval: 'ask' },
+          'danger-full-access': { sandbox: 'danger-full-access', approval: 'never' },
+        } } }] : []),
       { id: 'bash-tool', plugin: windows ? '@redspark/rsh-tool-pwsh' : '@redspark/rsh-tool-bash', scope: ROOT },
       // Skills: the registry, its filesystem discovery, and the tool that invokes
       // one. The Cordis bundle installs all three; a Native profile without them

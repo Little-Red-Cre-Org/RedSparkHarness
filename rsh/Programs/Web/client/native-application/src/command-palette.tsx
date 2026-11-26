@@ -3,14 +3,17 @@
  *
  * The Host already advertises a command catalog and executes a complete line;
  * what was missing was a surface to reach it. This renders that surface over
- * the composer's textarea and hands the pick to `executeCommand`.
+ * the composer's textarea and completes the draft with the picked line.
  *
  * Three decisions worth stating, because each one is a way this could have
  * been wrong:
  *
- * * The menu shows **bare names** but submits a **slashed line**. The Host's
+ * * The menu shows **bare names** but completes a **slashed line**. The Host's
  *   `executeCommand` takes a complete line, so `command-completion.ts` adds the
  *   slash back at the boundary instead of showing it twice.
+ * * A pick completes the draft instead of submitting it. Commands may take
+ *   arguments (`/feedback <text>`, `/plan <task>`), and the composer is where
+ *   those arguments are typed; the next Enter runs the complete line.
  * * The catalog is fetched **once per Session and cached**, then filtered
  *   locally. It is a small, stable list; re-fetching per keystroke would turn
  *   typing into a round trip per character.
@@ -44,6 +47,8 @@ export interface CommandCatalogFace {
 
 /** What the composer drives. */
 export interface CommandPaletteState {
+  /** Commands advertised for the selected Session, in Host order. */
+  readonly catalog: readonly CommandChoice[]
   /** Open command rows after filtering; empty while the menu is closed. */
   readonly rows: readonly CommandChoice[]
   /** Whether the menu should render. */
@@ -63,7 +68,8 @@ export interface CommandPaletteState {
    */
   keydown(event: KeyboardEvent<HTMLTextAreaElement>): boolean
   /**
-   * Execute one chosen row (the pointer path, shared with the keyboard path).
+   * Complete the draft with one chosen row (the pointer path, shared with the
+   * keyboard path).
    * @param choice - the row this user picked.
    */
   pick(choice: CommandChoice): void
@@ -85,11 +91,13 @@ export function toChoices(rows: readonly CommandCatalogRow[]): readonly CommandC
  *
  * @param client - Host command face.
  * @param sessionId - selected Session, or undefined when none is open.
+ * @param onComplete - receives the slashed line a pick completes the draft with.
  * @returns the state the composer reads and the handle it drives.
  */
 export function useCommandPalette(
   client: CommandCatalogFace,
   sessionId: string | undefined,
+  onComplete: (line: string) => void,
 ): CommandPaletteState {
   const [catalog, setCatalog] = useState<readonly CommandChoice[]>([])
   const [query, setQuery] = useState<string | null>(null)
@@ -150,13 +158,9 @@ export function useCommandPalette(
   }, [])
 
   const run = useCallback((choice: CommandChoice): void => {
-    if (sessionId === undefined) return
-    const line = commandLine(choice.name)
     close()
-    void client.executeCommand(sessionId, line).catch((error: unknown) => {
-      console.error('[native-application] command execution failed:', error)
-    })
-  }, [client, close, sessionId])
+    onComplete(commandLine(choice.name))
+  }, [close, onComplete])
 
   const keydown = useCallback((event: KeyboardEvent<HTMLTextAreaElement>): boolean => {
     const action = commandKeyAction(
@@ -181,7 +185,7 @@ export function useCommandPalette(
     return true
   }, [close, highlight, open, rows, run])
 
-  return { rows, open, selected: open ? highlight : -1, observe, keydown, pick: run, close }
+  return { catalog, rows, open, selected: open ? highlight : -1, observe, keydown, pick: run, close }
 }
 
 /**

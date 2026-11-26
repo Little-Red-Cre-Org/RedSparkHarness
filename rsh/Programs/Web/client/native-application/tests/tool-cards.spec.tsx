@@ -119,3 +119,45 @@ it.each(['ok', 'error', 'running', 'stopped'] as const)('renders the dedicated s
   expect(button.getAttribute('aria-expanded')).toBe('false')
   expect(view.container.querySelector('pre')).toBeNull()
 })
+
+it('renders the dedicated present row from the recorded arguments and result', () => {
+  const record = toolCardRecords([
+    event(1, 'tool/call', {
+      turn: 1, step: 1, callId: 'call-present', name: 'present',
+      arguments: '{"files":[{"path":"diagram.svg","description":"Diagram SVG"}]}',
+    }),
+    event(2, 'tool/result', {
+      turn: 1, step: 1,
+      message: {
+        id: 'message-present', role: 'user', source: { kind: 'tool', callId: 'call-present' },
+        content: [{ type: 'tool-result', toolCallId: 'call-present', isError: false, content: [{ type: 'text', text: 'presented' }] }],
+      },
+    }),
+  ])[0]!
+  const view = render(<ToolCard block={record.block} locale="en" />)
+  const row = view.container.querySelector('[data-tool="present"]')
+  expect(row?.getAttribute('data-state')).toBe('ok')
+  expect(view.container.textContent).toContain('Delivered')
+  expect(view.container.textContent).toContain('diagram.svg')
+})
+
+it('renders the dedicated ask row with the answered transcript', () => {
+  const record = toolCardRecords([
+    event(1, 'tool/call', {
+      turn: 1, step: 1, callId: 'call-ask', name: 'ask_user_question',
+      arguments: '{"questions":[{"id":"color","question":"Which color?","options":[{"label":"Blue"}]}]}',
+    }),
+    event(2, 'tool/result', {
+      turn: 1, step: 1,
+      message: {
+        id: 'message-ask', role: 'user', source: { kind: 'tool', callId: 'call-ask' },
+        content: [{ type: 'tool-result', toolCallId: 'call-ask', isError: false,
+          content: [{ type: 'text', text: '{"answers":[{"id":"color","selected":["Blue"]}]}' }] }],
+      },
+    }),
+  ])[0]!
+  const view = render(<ToolCard block={record.block} locale="en" />)
+  const row = view.container.querySelector('[data-tool="ask_user_question"]')
+  expect(row).not.toBeNull()
+  expect(view.container.textContent).toContain('1/1 answered')
+})

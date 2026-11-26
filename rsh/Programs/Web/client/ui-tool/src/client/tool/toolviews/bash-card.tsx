@@ -98,6 +98,7 @@ export function BashCard({ toolName, block, cwd, inspect, t }: BashCardProps) {
       <div
         className={css.root}
         data-sample="bash"
+        data-disclosure-row={expandable || undefined}
         data-variant="bash"
         data-state={state}
         data-expandable={expandable || undefined}

@@ -13,7 +13,8 @@ import { type GenerateOptions, type LlmImageRequestPricing, type LlmResolvedMode
   type PreparedAdapterCall, type StreamChunk, resolveRetryPolicy, type ResolvedRetryPolicy } from '@redspark/rsh-llm/native'
 import type { NativePlugin } from '@redspark/rsh-native-runtime'
 import type { NativeModel } from '@redspark/rsh-native-model-execution'
-import { loadSessionScripts, resolveReplayEntry, type ReplayConfig, type ReplayEntry, type ReplayProviderConfig } from './index.ts'
+import { loadSessionScripts, replayEntry, resolveReplayEntry, type ReplayConfig, type ReplayEntry,
+  type ReplayProviderConfig } from './index.ts'
 
 declare module '@redspark/rsh-native-runtime' {
   interface NativeServices { model: NativeModel }
@@ -148,34 +149,7 @@ class ReplayModel implements NativeModel {
     // Advance synchronously at invocation time so concurrent callers keep their order.
     const state = this.bound.get(options.sessionId ?? '\0anon\0')
     if (state !== undefined) state.cursor = cursor + 1
-    yield* this.emit(resolveReplayEntry(raw, options.messages, this.liveSessionIds), options.signal)
-  }
-
-  private async *emit(entry: ReplayEntry, signal: AbortSignal | undefined): AsyncIterable<StreamChunk> {
-    switch (entry.kind) {
-      case 'chunks':
-        for (const chunk of entry.chunks) {
-          if (signal?.aborted) throw new Error('aborted')
-          if (this.paceMs > 0) await new Promise(resolve => setTimeout(resolve, this.paceMs))
-          yield chunk
-        }
-        return
-      case 'throw':
-        for (const chunk of entry.chunks) {
-          if (signal?.aborted) throw new Error('aborted')
-          if (this.paceMs > 0) await new Promise(resolve => setTimeout(resolve, this.paceMs))
-          yield chunk
-        }
-        throw new Error(entry.message)
-      case 'hang':
-        yield { type: 'block-start', index: 0, blockType: 'text' }
-        yield { type: 'text-delta', index: 0, text: 'partial' }
-        await new Promise<void>((_resolve, reject) => {
-          if (signal?.aborted) { reject(new Error('aborted')); return }
-          signal?.addEventListener('abort', () => { reject(new Error('aborted')) }, { once: true })
-        })
-        return
-    }
+    yield* replayEntry(resolveReplayEntry(raw, options.messages, this.liveSessionIds), options.signal, this.paceMs)
   }
 }
 

@@ -115,7 +115,7 @@ it('rejects oversized unread output and detaches a cancelled follower exactly on
   } as unknown as NativeActiveSessionOperations
   // Only turn execution participates in this transport settlement fixture.
   const service = new NativeWebSessionService(executor as NativeHeadlessApplication,
-    {} as NativeSessionPersistenceOperations, active,
+    { stat: async () => undefined } as unknown as NativeSessionPersistenceOperations, active,
     resolveNativeWebSessionConfig({ cwd: process.cwd(), provider: 'fixture', model: 'fixture', systemPrompt: 'Answer.', maxSteps: 1,
       maxPendingRequests: 1, maxHistoryEvents: 1, maxPromptChars: 100, maxFollowBufferBytes: 1,
       maxFollowers: 1, maxPendingHumanRequests: 2 }),
@@ -240,7 +240,8 @@ it('queues and steers identified inputs through the active root inbox', async ()
     },
     dispose: async () => undefined,
   } as unknown as NativeHeadlessApplication
-  const service = new NativeWebSessionService(executor, {} as NativeSessionPersistenceOperations, active,
+  const service = new NativeWebSessionService(executor,
+    { stat: async () => undefined } as unknown as NativeSessionPersistenceOperations, active,
     resolveNativeWebSessionConfig({ cwd: process.cwd(), provider: 'fixture', model: 'fixture', systemPrompt: 'Answer.', maxSteps: 1,
       maxPendingRequests: 4, maxHistoryEvents: 1, maxPromptChars: 100, maxFollowBufferBytes: 100000,
       maxFollowers: 1, maxPendingHumanRequests: 1 }), new AbortController().signal, selections)

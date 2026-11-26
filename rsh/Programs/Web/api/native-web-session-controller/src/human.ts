@@ -2,10 +2,14 @@
 import { randomUUID } from 'node:crypto'
 import { brandString } from '@redspark/rsh-brand'
 import type { NativeAgent } from '@redspark/rsh-native-agent'
+import type { SessionEvent } from '@redspark/rsh-session/types'
 import type { NativeApprovalAnswererRequest, NativeApprovalAnswererResult } from '@redspark/rsh-approval-definition'
 import { parseUserQuestionAnswer, UserQuestionError, type NativeAdmittedUserQuestionRequest, type AskUserQuestionAnswer } from '@redspark/rsh-user-questions/native'
 import type { NativeWebHumanPrompt, NativeWebHumanId } from '@redspark/rsh-client-native-session/human'
 import type { NativeSessionFeed } from './follow.ts'
+
+/** Longest pending-call text one approval card carries. */
+const APPROVAL_DETAIL_MAX_CHARS = 8_192
 
 interface Pending {
   feed: NativeSessionFeed
@@ -17,6 +21,31 @@ interface Pending {
   readonly reject: (error: unknown) => void
 }
 
+/**
+ * Read the text a human is asked to approve from the call it names. Shell
+ * calls show their command; any other call shows its arguments verbatim.
+ * @param events - the owning Session's durable prefix.
+ * @param callId - model tool-call identity carried by the approval.
+ * @returns bounded call text, or undefined when the call carries none.
+ */
+function approvalDetail(events: readonly SessionEvent[], callId: string | undefined): string | undefined {
+  if (callId === undefined) return undefined
+  const call = events.findLast(event => event.type === 'tool/call' && event.data.callId === callId)
+  if (call?.type !== 'tool/call') return undefined
+  let text = call.data.arguments
+  try {
+    const args = JSON.parse(text) as Record<string, unknown>
+    // A tool with no arguments carries no text to show.
+    if (Object.keys(args).length === 0) return undefined
+    if (typeof args.command === 'string') text = args.command
+  } catch {
+    // Non-JSON arguments are shown verbatim.
+  }
+  const trimmed = text.trim()
+  if (trimmed.length === 0) return undefined
+  return trimmed.length > APPROVAL_DETAIL_MAX_CHARS ? `${trimmed.slice(0, APPROVAL_DETAIL_MAX_CHARS)}…` : trimmed
+}
+
 /** Holds presentation promises only; the selected Providers own execution and audit writes. */
 export class NativeWebHumanInteraction {
   private readonly pending = new Map<NativeWebHumanId, Pending>()
@@ -24,8 +53,10 @@ export class NativeWebHumanInteraction {
   /**
    * @param capacity - maximum unanswered presentations across admitted Web turns.
    * @param changed - notify the Session list when one pending presentation changes.
+   * @param eventsOf - reads an Agent's committed prefix for approval-call text.
    */
-  constructor(private readonly capacity: number, private readonly changed: (agent: NativeAgent) => void) {}
+  constructor(private readonly capacity: number, private readonly changed: (agent: NativeAgent) => void,
+    private readonly eventsOf: (agent: NativeAgent) => Promise<readonly SessionEvent[]> = () => Promise.resolve([])) {}
 
   /** Move one Agent's unanswered presentations to its replacement feed.
    * @param agent - exact root Agent whose turn is being reattached.
@@ -79,8 +110,10 @@ export class NativeWebHumanInteraction {
    * @returns one-call verdict or a request to remember the Provider-admitted Session scope, after presentation removal.
    */
   async approval(request: NativeApprovalAnswererRequest, feed: NativeSessionFeed): Promise<NativeApprovalAnswererResult> {
+    const detail = approvalDetail(await this.eventsOf(request.agent), request.callId)
     return await this.ask(request.agent, { kind: 'approval', id: brandString<NativeWebHumanId>(randomUUID()),
       toolName: request.toolName, ...request.reason === undefined ? {} : { reason: request.reason },
+      ...detail === undefined ? {} : { detail },
       ...request.sessionGrant === undefined ? {} : { canAllowSession: true } },
     request.signal, feed, value => value) as NativeApprovalAnswererResult
   }

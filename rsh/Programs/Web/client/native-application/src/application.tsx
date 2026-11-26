@@ -42,8 +42,9 @@ import {
   type BusyEnterBehavior,
 } from './pending-default.ts'
 import { createNativeSettingsActions, NativeSidebarSettings } from './native-sidebar-settings.tsx'
-import { CommandPaletteMenu, useCommandPalette } from './command-palette.tsx'
+import { CommandPaletteMenu, toChoices, useCommandPalette } from './command-palette.tsx'
 import type { CommandCatalogFace } from './command-palette.tsx'
+import { commandLineOfDraft } from './command-completion.ts'
 
 /**
  * The child-slot dispatcher this application's own registrations provide.
@@ -136,7 +137,7 @@ function legacyKeyCode(event: { readonly keyCode?: number }): number | undefined
 function Conversation({ snapshot, useLocale, settingsActions, bindComposer, listWorkspaces, chooseWorkspace, addWorkspace, listDirectory,
   createDirectory, loadImage, send, cancel, answerHuman, selectModel, selectPreset, selectSession,
   selectPlanMode, selectPermissionPreset, submitPending, changePending, editPending, refreshPendingSubmissions,
-  refreshModelControls, keepDraft, takeDraft, commands, t, renderSlot }: {
+  refreshModelControls, keepDraft, takeDraft, followCommandTurn, reportError, commands, t, renderSlot }: {
   snapshot: ConversationSnapshot
   useLocale: SnapshotSelectorHook<NativeLocaleSnapshot>
   settingsActions: NativeSettingsActions
@@ -162,6 +163,10 @@ function Conversation({ snapshot, useLocale, settingsActions, bindComposer, list
   refreshModelControls: NativeConversationController['refreshModelControls']
   keepDraft: NativeConversationController['keepDraft']
   takeDraft: NativeConversationController['takeDraft']
+  /** Re-reads durable history after a slash command settles outside any turn. */
+  followCommandTurn: NativeConversationController['followCommandTurn']
+  /** Surfaces a refused command catalog read; the draft stays in the composer. */
+  reportError: NativeConversationController['reportError']
   /** Host command face for the composer's `/` palette. */
   commands: CommandCatalogFace
   t: Translate
@@ -216,9 +221,19 @@ function Conversation({ snapshot, useLocale, settingsActions, bindComposer, list
       composerListeners.current.clear()
     }
   }, [bindComposer])
-  // The `/` palette reads the draft it is filtering and calls the Host's
-  // command endpoints. `selected` is the Session whose catalog it fetched.
-  const palette = useCommandPalette(commands, selected)
+  // The `/` palette reads the draft it is filtering and completes it with the
+  // picked line. `selected` is the Session whose catalog it fetched.
+  const completeCommand = (line: string): void => {
+    const next = `${line} `
+    draftVersion.current++
+    draftRef.current = next
+    caretRef.current = next.length
+    setDraft(next)
+    editorRef.current?.focus()
+    editorRef.current?.setSelectionRange(next.length, next.length)
+    for (const listener of composerListeners.current) listener()
+  }
+  const palette = useCommandPalette(commands, selected, completeCommand)
   const [files, setFiles] = useState<readonly File[]>([])
   const filesRef = useRef(files)
   const imageInputRef = useRef<HTMLInputElement>(null)
@@ -392,6 +407,23 @@ function Conversation({ snapshot, useLocale, settingsActions, bindComposer, list
     const scroll = scrollRef.current
     if (scroll !== null) scroll.scrollTop = scroll.scrollHeight
   }, [activeTab])
+  /**
+   * Resolve a submitted draft to the command line the Host should execute.
+   *
+   * The palette caches the catalog for the Session, but a pasted complete line
+   * may be submitted before that fetch settles; reading it here keeps the
+   * decision identical for typed and pasted lines.
+   * @param sessionId - Session whose owner owns the command scope.
+   * @param text - submitted composer text.
+   * @returns the command line, or undefined when the draft is ordinary text.
+   */
+  const commandLineFor = async (sessionId: SessionId, text: string): Promise<string | undefined> => {
+    if (!text.trimStart().startsWith('/')) return undefined
+    const catalog = palette.catalog.length > 0
+      ? palette.catalog
+      : toChoices(await commands.commands(sessionId))
+    return commandLineOfDraft(text, catalog)
+  }
   const submit = (placement?: 'queued' | 'steering'): void => {
     if (!inputReady || snapshot.selected === undefined || snapshot.submissionBusy) return
     if (acceptsPending && (draft.trim() === '' || files.length > 0 || stagedFiles.length > 0)) return
@@ -406,29 +438,36 @@ function Conversation({ snapshot, useLocale, settingsActions, bindComposer, list
           setFiles([])
         }
       })
-    } else {
-      const sessionId = snapshot.selected
-      const text = draft
-      const attachments = files
-      // General files stay on the rail until the send settles: a refused upload
-      // must keep its chip so the retry does not need the file picked again.
-      const staged = stagedFilesRef.current
-      const toUpload = staged.map(draft => draft.file)
+      return
+    }
+    const sessionId = snapshot.selected
+    const text = draft
+    const attachments = files
+    // General files stay on the rail until the send settles: a refused upload
+    // must keep its chip so the retry does not need the file picked again.
+    const staged = stagedFilesRef.current
+    const toUpload = staged.map(draft => draft.file)
+    const clear = (): void => {
       draftRef.current = ''
       filesRef.current = []
       setDraft('')
       setFiles([])
+    }
+    /** Put the submitted text back when the send or command did not take it. */
+    const restore = (): void => {
+      if (followedSession.current !== sessionId) {
+        keepDraft(sessionId, { text, files: attachments })
+      } else if (draftRef.current === '' && filesRef.current.length === 0) {
+        draftRef.current = text
+        filesRef.current = attachments
+        setDraft(text)
+        setFiles(attachments)
+      }
+    }
+    const prompt = (): void => {
+      clear()
       void send(text, attachments, toUpload).then((success) => {
-        if (!success) {
-          if (followedSession.current !== sessionId) {
-            keepDraft(sessionId, { text, files: attachments })
-          } else if (draftRef.current === '' && filesRef.current.length === 0) {
-            draftRef.current = text
-            filesRef.current = attachments
-            setDraft(text)
-            setFiles(attachments)
-          }
-        }
+        if (!success) restore()
       }, (error: unknown) => {
         // A refused upload is a local failure: record it on every draft that was
         // in flight so each chip offers its own retry.
@@ -439,6 +478,25 @@ function Conversation({ snapshot, useLocale, settingsActions, bindComposer, list
         setStagedFiles(failed)
       })
     }
+    // Attachments belong to a model turn; a slash command takes text only.
+    if (attachments.length > 0 || toUpload.length > 0) {
+      prompt()
+      return
+    }
+    void commandLineFor(sessionId, text).then((line) => {
+      if (line === undefined) {
+        prompt()
+        return
+      }
+      clear()
+      void commands.executeCommand(sessionId, line).then(() => followCommandTurn(sessionId), (error: unknown) => {
+        restore()
+        console.error('[native-application] command execution failed:', error)
+      })
+    }, (error: unknown) => {
+      // A refused catalog read must not send a command line to the model as ordinary text.
+      reportError(error)
+    })
   }
   const composer = <form className={css.composerForm} onSubmit={(event) => {
     event.preventDefault()
@@ -617,9 +675,6 @@ function Conversation({ snapshot, useLocale, settingsActions, bindComposer, list
                 markdownLabels={markdownLabels} imageGroupClassName={css.images} truncatedClassName={css.extra}
                 activity={sending && snapshot.liveText === undefined ? t(snapshot.state) : undefined} t={t} renderSlot={renderSlot}
                 openSession={(id) => { void selectSession(id) }} />
-              {snapshot.human === undefined ? null : <div className={css.human}><HumanInteraction key={snapshot.human.id}
-                answerHuman={answerHuman} prompt={snapshot.human}
-                disabled={snapshot.answeringHuman === true || snapshot.state !== 'sending'} locale={activeLocale} /></div>}
               {errorCard}
             </section>
           </div>
@@ -628,7 +683,12 @@ function Conversation({ snapshot, useLocale, settingsActions, bindComposer, list
             hidden={activeTab !== 'trajectory'}>
             <NativeTrajectoryPanel key={selected} events={snapshot.events} locale={activeLocale} />
           </div>
-          <div className={css.composerArea}><NativeSessionGoal events={snapshot.events} locale={activeLocale} />{composer}</div>
+          <div className={css.composerArea}>
+            {snapshot.human === undefined ? null : <div className={css.human}><HumanInteraction key={snapshot.human.id}
+              answerHuman={answerHuman} prompt={snapshot.human}
+              disabled={snapshot.answeringHuman === true || snapshot.state !== 'sending'} locale={activeLocale} /></div>}
+            <NativeSessionGoal events={snapshot.events} locale={activeLocale} />{composer}
+          </div>
         </>}
     </main>
   </>
@@ -790,11 +850,13 @@ export const plugin: NativePlugin = {
           selectPlanMode: controller.selectPlanMode.bind(controller),
           selectPermissionPreset: controller.selectPermissionPreset.bind(controller),
           refreshModelControls,
+          followCommandTurn: controller.followCommandTurn.bind(controller),
+          reportError: controller.reportError.bind(controller),
         }),
       }, ({ useConversation, useLocale, settingsActions, bindComposer, listWorkspaces, chooseWorkspace, addWorkspace, listDirectory,
         createDirectory, loadImage, send, cancel, answerHuman, selectModel, selectPreset, selectSession,
         selectPlanMode, selectPermissionPreset, submitPending, changePending, editPending, refreshPendingSubmissions,
-        refreshModelControls, keepDraft, takeDraft, t, renderSlot }: {
+        refreshModelControls, keepDraft, takeDraft, followCommandTurn, reportError, t, renderSlot }: {
         useConversation: SnapshotSelectorHook<ConversationSnapshot>
         useLocale: SnapshotSelectorHook<NativeLocaleSnapshot>
         settingsActions: NativeSettingsActions
@@ -820,6 +882,9 @@ export const plugin: NativePlugin = {
         takeDraft: NativeConversationController['takeDraft']
         selectPermissionPreset: NativeConversationController['selectPermissionPreset']
         refreshModelControls: NativeConversationController['refreshModelControls']
+        followCommandTurn: NativeConversationController['followCommandTurn']
+        /** Surfaces a refused command catalog read; the draft stays in the composer. */
+        reportError: NativeConversationController['reportError']
         t: Translate
         renderSlot: NativeConversationRenderSlot
       }) => <Conversation snapshot={useConversation(value => value)} useLocale={useLocale}
@@ -832,6 +897,8 @@ export const plugin: NativePlugin = {
         submitPending={submitPending} changePending={changePending} editPending={editPending}
         refreshPendingSubmissions={refreshPendingSubmissions}
         refreshModelControls={refreshModelControls} keepDraft={keepDraft} takeDraft={takeDraft}
+        followCommandTurn={followCommandTurn}
+        reportError={reportError}
         commands={client}
         t={t} renderSlot={renderSlot} />)))
       context.provide('clientApplication', { render: () => <NativeOnboarding client={client} localeService={clientLocale}

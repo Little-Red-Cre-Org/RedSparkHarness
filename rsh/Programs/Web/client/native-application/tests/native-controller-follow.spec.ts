@@ -583,3 +583,77 @@ it('settles a ready retry from the accepted Host submission before prompting aga
     await transport.close()
   }
 })
+
+it('follows the root turn a slash command left pending input for', async () => {
+  const id = 'session-command-turn' as SessionId
+  const seeded: SessionEvent = { type: 'session/end-seed', seq: SessionSeq(0), time: 1, data: {} }
+  const started: SessionEvent = { type: 'turn/start', seq: SessionSeq(1), time: 1, data: { turn: 1 } }
+  const appended: SessionEvent = { type: 'session/end-seed', seq: SessionSeq(2), time: 1, data: {} }
+  const lastSeqs: number[] = []
+  let attaches = 0
+  const client = {
+    async status() { return { status: 'running' as const } },
+    async *follow() { yield { type: 'baseline' as const, items: [] } },
+    async modelControls() { return { catalog: null, canSelectModel: false, presets: [] } },
+    async modeControls() { return { current: null, options: [], revision: null, locked: false, canSelect: false,
+      planMode: { available: false, active: false } } },
+    async permissionControls() { return { available: false, currentValue: null, options: [] } },
+    async history() {
+      const events = attaches === 0 ? [seeded] : attaches === 1 ? [seeded, started] : [seeded, started, appended]
+      return { header: makeHeader(id), events, inheritedEventCount: 0 }
+    },
+    async submissions() { return { throughSeq: 0, submissions: [] } },
+    async attach(_id: SessionId, lastSeq: number, observe: (frame: unknown) => void) {
+      lastSeqs.push(lastSeq)
+      observe({ type: 'baseline', sessionId: id, fromSeq: lastSeq, throughSeq: lastSeq })
+      const next = lastSeq === 0 ? started : lastSeq === 1 ? appended : undefined
+      if (next !== undefined) observe({ type: 'event', event: next })
+      attaches++
+      return { exitCode: 0 }
+    },
+  } as unknown as NativeSessionClient
+  const controller = new NativeConversationController(client, { maxLiveTextChars: 100, maxLiveEvents: 10 })
+  try {
+    await controller.load()
+    await controller.select(id)
+    lastSeqs.length = 0
+    await controller.followCommandTurn(id)
+    expect(lastSeqs).toEqual([1])
+    expect(controller.getSnapshot()).toMatchObject({ state: 'ready', events: [seeded, started, appended] })
+  } finally {
+    await controller.close()
+  }
+})
+
+it('re-reads durable history when a slash command started no turn', async () => {
+  const id = 'session-command-idle' as SessionId
+  const appended: SessionEvent = { type: 'session/end-seed', seq: SessionSeq(1), time: 1, data: {} }
+  let historyReads = 0
+  let attaches = 0
+  const client = {
+    async status() { return { status: 'idle' as const } },
+    async *follow() { yield { type: 'baseline' as const, items: [] } },
+    async modelControls() { return { catalog: null, canSelectModel: false, presets: [] } },
+    async modeControls() { return { current: null, options: [], revision: null, locked: false, canSelect: false,
+      planMode: { available: false, active: false } } },
+    async permissionControls() { return { available: false, currentValue: null, options: [] } },
+    async history() {
+      historyReads++
+      const events: SessionEvent[] = historyReads === 1 ? [] : [appended]
+      return { header: makeHeader(id), events, inheritedEventCount: 0 }
+    },
+    async submissions() { return { throughSeq: -1, submissions: [] } },
+    async attach() { attaches++; return undefined },
+  } as unknown as NativeSessionClient
+  const controller = new NativeConversationController(client, { maxLiveTextChars: 100, maxLiveEvents: 10 })
+  try {
+    await controller.load()
+    await controller.select(id)
+    await controller.followCommandTurn(id)
+    expect(attaches).toBe(1)
+    expect(historyReads).toBe(3)
+    expect(controller.getSnapshot().events).toEqual([appended])
+  } finally {
+    await controller.close()
+  }
+})

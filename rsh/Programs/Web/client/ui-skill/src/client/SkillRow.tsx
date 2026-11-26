@@ -140,6 +140,7 @@ export function SkillRow({ block, inspect, t }: SkillRowProps) {
       <div
         className={css.row}
         data-expandable={expandable || undefined}
+        data-disclosure-row={expandable || undefined}
         {...disclosureProps}
       >
         <span className={css.leading}>{leading}</span>

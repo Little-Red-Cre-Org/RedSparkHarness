@@ -340,7 +340,8 @@ it('cancels and drains a stalled upload body before Native Web shutdown complete
     dispose,
   } as unknown as NativeHeadlessApplication
   const active = { owners: () => [], onAttached: () => () => {}, onDetached: () => () => {} } as unknown as NativeActiveSessionOperations
-  const service = new NativeWebSessionService(executor, {} as NativeSessionPersistenceOperations, active,
+  const service = new NativeWebSessionService(executor,
+    { stat: async () => undefined } as unknown as NativeSessionPersistenceOperations, active,
     resolveNativeWebSessionConfig({ cwd: process.cwd(), provider: 'fixture', model: 'fixture', systemPrompt: 'Answer.', maxSteps: 1,
       builtinTools: false, maxPendingRequests: 1, maxHistoryEvents: 10, maxPromptChars: 10,
       maxFollowBufferBytes: 1024, maxFollowers: 1, maxPendingHumanRequests: 1 }), new AbortController().signal)
@@ -494,6 +495,58 @@ it('lists slash commands available to the exact Program root owner', async () =>
     expect(list.mock.calls.map(([scope]) => scope)).toEqual([programScope, agentScope])
     expect(executeSessionOperation).toHaveBeenCalledWith(
       expect.objectContaining({ id, resume: true, route }), expect.any(Function), expect.any(AbortSignal))
+  } finally {
+    await service.close()
+  }
+})
+
+it('admits the root turn a slash command leaves pending input for', async () => {
+  const programScope = new NativeScope()
+  const agentScope = new NativeScope()
+  const id = SessionId('command-pending-turn')
+  const steering = createUserMessage({ source: { kind: 'user' }, content: [{ type: 'text', text: 'Plan it' }] })
+  const owner = {
+    agent: { scope: agentScope }, session: { id }, invocation: 'root', writerAvailable: true,
+    messages: (target: string) => target === 'next-step' ? [steering] : [],
+    readEvents: async () => [],
+    onEvent: () => () => {},
+  } as unknown as NativeActiveSessionOwner
+  const commands = {
+    parse: () => ({ name: 'plan', rawInput: 'Plan it' }),
+    list: () => [{ name: 'plan', description: 'Plan' }],
+    dispatch: vi.fn(async () => ({ commandId: 'command-1', result: { kind: 'success' } })),
+  } as unknown as NativeCommandOperations
+  const route = 'program-root-route'
+  const executeRootTurn = vi.fn(async (request: { readonly onBaseline?: (owner: NativeActiveSessionOwner,
+    signal: AbortSignal) => Promise<void> }) => {
+    await request.onBaseline?.(owner, new AbortController().signal)
+    return { exitCode: 0 }
+  })
+  const executor = {
+    rootExecution: { capture: vi.fn(() => ({ id: route })) },
+    executeSessionOperation: async (
+      _request: unknown,
+      operation: (owner: NativeActiveSessionOwner, signal: AbortSignal) => Promise<unknown>,
+      signal: AbortSignal,
+    ) => operation(owner, signal),
+    executeRootTurn,
+    dispose: async () => {},
+  } as unknown as NativeHeadlessApplication
+  const active = {
+    owners: () => [owner], owner: (agent: unknown, session: unknown) => agent === owner.agent && session === owner.session
+      ? owner : undefined,
+    onAttached: () => async () => {}, onDetached: () => async () => {},
+  } as unknown as NativeActiveSessionOperations
+  const service = new NativeWebSessionService(executor, {} as NativeSessionPersistenceOperations, active,
+    resolveNativeWebSessionConfig({ cwd: process.cwd(), provider: 'fixture', model: 'fixture', systemPrompt: 'Answer.',
+      maxSteps: 1, builtinTools: false, maxPendingRequests: 2, maxHistoryEvents: 10, maxPromptChars: 100,
+      maxFollowBufferBytes: 1024, maxFollowers: 1, maxPendingHumanRequests: 1 }), new AbortController().signal,
+    { commands, commandScope: programScope })
+  try {
+    await expect(service.handle('session/command', { sessionId: id, line: '/plan Plan it' },
+      new AbortController().signal)).resolves.toMatchObject({ ok: true, value: { commandId: 'command-1' } })
+    expect(executeRootTurn).toHaveBeenCalledWith(
+      expect.objectContaining({ id, resume: true, route }), expect.any(AbortSignal))
   } finally {
     await service.close()
   }

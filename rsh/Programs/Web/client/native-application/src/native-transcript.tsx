@@ -14,6 +14,8 @@ import type { NativeSessionImage } from '@redspark/rsh-client-native-session/nat
 import type { ConversationSnapshot } from './controller.ts'
 import { ToolCard, toolCardRecords } from './tool-cards.tsx'
 import { NativeMessageImage } from './attachments.tsx'
+import { foldNativeCommands, NativeCommandRow } from './command-row.tsx'
+import type { NativeCommandRecord } from './command-row.tsx'
 
 type Translate = TranslateNS<'nativeApplication'>
 
@@ -73,11 +75,13 @@ function contextSourceDetails(source: unknown): {
 /** Group consecutive rendered Session facts without reordering session-scope runs.
  * @param events - accepted live or restored Session events.
  * @param cards - root Tool presentations indexed by their call event sequence.
+ * @param commands - command records indexed by the seq that renders them.
  * @returns ordered display segments; session-scope runs have no owning turn.
  */
 export function groupNativeTranscriptEvents(
   events: readonly SessionEvent[],
   cards: ReadonlyMap<number, ReturnType<typeof toolCardRecords>[number]['block']>,
+  commands: ReadonlyMap<number, NativeCommandRecord> = new Map(),
 ): readonly NativeTurn[] {
   const grouped: { key: string; turn: number | undefined; events: SessionEvent[] }[] = []
   let currentTurn: number | undefined
@@ -85,8 +89,11 @@ export function groupNativeTranscriptEvents(
     if (event.type === 'turn/start') currentTurn = event.data.turn
     const turn = eventTurn(event) ?? currentTurn
     if (turn !== undefined) currentTurn = turn
-    if (cards.has(event.seq) || event.type === 'tool-workflow/run-start' || transcriptMessage(event) !== null) {
-      if (turn !== undefined || event.type === 'tool-workflow/run-start') {
+    if (cards.has(event.seq) || commands.has(event.seq) || event.type === 'tool-workflow/run-start'
+      || transcriptMessage(event) !== null) {
+      // A settled slash command may run outside any turn, so its row anchors a
+      // session-scope segment rather than being dropped with unowned events.
+      if (turn !== undefined || event.type === 'tool-workflow/run-start' || commands.has(event.seq)) {
         const previous = grouped.at(-1)
         if (turn !== undefined && previous?.turn === turn) previous.events.push(event)
         else grouped.push({ key: `${turn === undefined ? 'session' : `turn:${turn}`}:${event.seq}`, turn, events: [event] })
@@ -246,7 +253,9 @@ export function NativeTranscript({
     [snapshot.events],
   )
   const cards = useMemo(() => new Map(toolCardRecords(snapshot.events).map(record => [record.seq, record.block])), [snapshot.events])
-  const turns = useMemo(() => groupNativeTranscriptEvents(snapshot.events, cards), [snapshot.events, cards])
+  const commands = useMemo(() => foldNativeCommands(snapshot.events), [snapshot.events])
+  const turns = useMemo(() => groupNativeTranscriptEvents(snapshot.events, cards, commands),
+    [snapshot.events, cards, commands])
   const deliverables = useMemo(() => new Map(foldDeliverables(snapshot.events).map(item => [item.turn, item.presented])), [snapshot.events])
   const presentedOpen = useState(() => new PresentedOpenController())[0]
   useEffect(() => () => { void presentedOpen.dispose() }, [presentedOpen])
@@ -266,6 +275,10 @@ export function NativeTranscript({
           return <NativeWorkflowRunPanel key={`${sessionId}:${event.seq}`} data={workflow} locale={locale} {...navigation} />
         }
         const card = cards.get(event.seq)
+        if (card === undefined) {
+          const command = commands.get(event.seq)
+          if (command !== undefined) return <NativeCommandRow key={event.seq} record={command} t={t} />
+        }
         return card === undefined
           ? <Message key={event.seq} event={event}
             stepStartedAt={event.type === 'assistant/message' ? stepStarts.get(`${event.data.turn}:${event.data.step}`) : undefined}

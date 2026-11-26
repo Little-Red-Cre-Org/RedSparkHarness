@@ -657,6 +657,11 @@ it.each(['native-tui', 'native-web'] as const)('installs plan mode and a preset 
   if (profileName === 'native-web') {
     expect(profile.installations.find(row => row.id === 'permission-presets')).toEqual({
       id: 'permission-presets', plugin: '@redspark/rsh-permission-presets', scope: 'root',
+      config: { presets: {
+        'read-only': { sandbox: 'read-only', approval: 'ask' },
+        'workspace-write': { sandbox: 'workspace-write', approval: 'ask' },
+        'danger-full-access': { sandbox: 'danger-full-access', approval: 'never' },
+      } },
     })
   }
 })

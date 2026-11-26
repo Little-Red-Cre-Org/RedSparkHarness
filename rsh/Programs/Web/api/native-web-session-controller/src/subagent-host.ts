@@ -46,9 +46,10 @@ export interface NativeWebSubagentHostDeps {
   /**
    * @param id - source or invocation-root Session.
    * @param signal - caller cancellation.
+   * @param header - durable header the caller already read, avoiding a second read for its parent.
    * @returns the Program route that already owns that Session.
    */
-  routeForSession(id: SessionId, signal: AbortSignal): Promise<NativeRootRouteId>
+  routeForSession(id: SessionId, signal: AbortSignal, header?: SessionHeader): Promise<NativeRootRouteId>
   /**
    * @param request - minted destination plus the selected source route.
    * @param signal - caller cancellation.
@@ -245,11 +246,14 @@ export async function forkNativeWebSession(
 ): Promise<{ readonly sessionId: SessionId }> {
   const request = parsePayload(forkRequest, payload)
   const source = SessionId(request.sessionId)
-  const known = liveOwner(deps.active, source) !== undefined || await deps.persistence.stat(source, { signal }) !== undefined
-  if (!known) throw new NativeHostControlError('session/not-found', 'Session was not found.', { sessionId: source })
+  const live = liveOwner(deps.active, source)
+  const stored = live === undefined ? await deps.persistence.stat(source, { signal }) : undefined
+  if (live === undefined && stored === undefined) {
+    throw new NativeHostControlError('session/not-found', 'Session was not found.', { sessionId: source })
+  }
   const id = SessionId(randomUUID())
   try {
-    const route = await deps.routeForSession(source, signal)
+    const route = await deps.routeForSession(source, signal, stored?.header)
     const atSeq = request.atSeq
     await deps.fork({ route, source, id, ...atSeq === undefined ? {} : { atSeq: SessionSeq(atSeq) } }, signal)
   } catch (error: unknown) {

@@ -1,15 +1,16 @@
 // @vitest-environment jsdom
 /**
  * The `/` palette end to end: detection, catalog fetch, filtering, highlight,
- * and the exact line handed to the Host.
+ * and the exact line a pick completes the draft with.
  *
  * The Host is a recording stand-in, so every assertion about "which endpoint
  * was called with what" is an assertion about this component's behaviour, not
- * about a mock's convenience.
+ * about a mock's convenience. A pick must not call `executeCommand`: it
+ * completes the composer, whose next Enter runs the line.
  */
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
-import { useRef } from 'react'
+import { useRef, useState } from 'react'
 import type { CommandCatalogFace, CommandCatalogRow } from '../src/command-palette.tsx'
 import { CommandPaletteMenu, useCommandPalette } from '../src/command-palette.tsx'
 
@@ -41,16 +42,17 @@ function host(rows: readonly CommandCatalogRow[] = CATALOG) {
 
 /** Harness that wires the hook to a textarea the way the composer does. */
 function Harness({ client, sessionId }: { client: CommandCatalogFace; sessionId: string | undefined }) {
-  const palette = useCommandPalette(client, sessionId)
+  const [value, setValue] = useState('')
   const editorRef = useRef<HTMLTextAreaElement>(null)
-  const textRef = useRef('')
+  const palette = useCommandPalette(client, sessionId, (line) => { setValue(`${line} `) })
   return (
     <>
       <textarea
         ref={editorRef}
         aria-label="editor"
+        value={value}
         onChange={(event) => {
-          textRef.current = event.target.value
+          setValue(event.target.value)
           palette.observe(event.target.value, event.target.value.length)
         }}
         onKeyDown={(event) => { palette.keydown(event) }}
@@ -132,7 +134,7 @@ describe('command palette integration', () => {
     expect(calls.commands).toEqual([])
   })
 
-  it('executes the exact slashed line the Host expects', async () => {
+  it('completes the exact slashed line the Host expects', async () => {
     const { face, calls } = host()
     render(<Harness client={face} sessionId="s1" />)
     const editor = screen.getByLabelText('editor')
@@ -144,7 +146,8 @@ describe('command palette integration', () => {
     })
     await settle()
 
-    expect(calls.execute).toEqual(['s1|/goal'])
+    expect((editor as HTMLTextAreaElement).value).toBe('/goal ')
+    expect(calls.execute).toEqual([])
     // The menu closes after a pick so the user sees the result, not the list.
     expect(screen.getByTestId('open').textContent).toBe('false')
   })
@@ -169,7 +172,7 @@ describe('command palette integration', () => {
     expect(screen.getByTestId('highlight').textContent).toBe('0')
   })
 
-  it('executes the highlighted row, not the first', async () => {
+  it('completes the highlighted row, not the first', async () => {
     const { face, calls } = host()
     render(<Harness client={face} sessionId="s1" />)
     const editor = screen.getByLabelText('editor')
@@ -180,10 +183,11 @@ describe('command palette integration', () => {
     await act(async () => { fireEvent.keyDown(editor, { key: 'Enter' }) })
     await settle()
 
-    expect(calls.execute).toEqual(['s1|/goal'])
+    expect((editor as HTMLTextAreaElement).value).toBe('/goal ')
+    expect(calls.execute).toEqual([])
   })
 
-  it('closes on Escape without executing anything', async () => {
+  it('closes on Escape without completing anything', async () => {
     const { face, calls } = host()
     render(<Harness client={face} sessionId="s1" />)
     const editor = screen.getByLabelText('editor')
