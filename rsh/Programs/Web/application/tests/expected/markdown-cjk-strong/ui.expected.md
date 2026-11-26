@@ -1,62 +1,62 @@
-- banner:
-  - navigation "Session hierarchy":
-    - button "CJK strong emphasis" [disabled]
-  - button "More actions":
-    - img
-  - button "Open right sidebar":
-    - img
-  - tablist:
-    - tab "Chat" [selected]
+- main:
+  - heading "RedSpark Harness" [level=1]
+  - strong: CJK strong emphasis
+  - text: Conversation
+  - navigation "Conversation actions":
+    - button "Open workspace in VS Code"
+    - button "Choose an app to open in":
+      - img
+    - button "Session details"
+  - tablist "Conversation views":
+    - tab "Conversation" [selected]
     - tab "Trajectory"
-- text: Render adjacent CJK strong emphasis. {{clock}}
-- button "Copy":
-  - img
-- heading "CJK strong emphasis" [level=2]
-- paragraph:
-  - strong: 注意：
-  - text: 内容
-- paragraph:
-  - strong: "Notice:"
-  - text: 内容
-- paragraph:
-  - strong: 事件中间件（waterfall）
-  - text: 实现
-- paragraph:
-  - strong: 事件中间件(waterfall)
-  - text: 实现
-- paragraph:
-  - strong: 句号。
-  - text: 后续
-- paragraph:
-  - strong: Period.
-  - text: 后续
-- paragraph:
-  - strong: 提醒！
-  - text: 继续
-- paragraph:
-  - strong: Warning!
-  - text: 继续
-- paragraph: CJK_STRONG_DONE
-- button "Copy":
-  - img
-- button "Good response":
-  - img
-- button "Bad response":
-  - img
-- button "Branch into a new conversation":
-  - img
-- button "Ran for {{duration}}":
-  - img
-  - text: Ran for {{duration}}
-- text: {{clock}}
-- textbox "Message or run a task, / commands, @ files or sessions"
-- button "Add files or run commands":
-  - img
-- 'button "Access mode, current: Workspace Write"': Workspace Write
-- button "Select model, current DeepSeek-V4-Flash":
-  - text: DeepSeek-V4-Flash
-  - img
-- button "Send message" [disabled]
-- button "1 turns 1 steps":
-  - img
-  - text: 1 turns 1 steps
+  - tabpanel "Conversation":
+    - region "Session records":
+      - text: Render adjacent CJK strong emphasis.
+      - heading "CJK strong emphasis" [level=2]
+      - paragraph:
+        - strong: 注意：
+        - text: 内容
+      - paragraph:
+        - strong: "Notice:"
+        - text: 内容
+      - paragraph:
+        - strong: 事件中间件（waterfall）
+        - text: 实现
+      - paragraph:
+        - strong: 事件中间件(waterfall)
+        - text: 实现
+      - paragraph:
+        - strong: 句号。
+        - text: 后续
+      - paragraph:
+        - strong: Period.
+        - text: 后续
+      - paragraph:
+        - strong: 提醒！
+        - text: 继续
+      - paragraph:
+        - strong: Warning!
+        - text: 继续
+      - paragraph: CJK_STRONG_DONE
+      - button "Copy":
+        - img
+      - text: {{duration}} {{clock}}
+      - button "Good response":
+        - img
+      - button "Bad response":
+        - img
+  - text: Message
+  - textbox "Message":
+    - /placeholder: Message RedSpark…
+  - button "Add image"
+  - group "Model, mode, and permission controls":
+    - button "Plan mode is off. Click to turn it on.": Plan
+    - button "Auto review":
+      - img
+      - text: Auto review
+      - img
+  - button "Select model, current Fixture":
+    - text: Fixture
+    - img
+  - button "Send" [disabled]

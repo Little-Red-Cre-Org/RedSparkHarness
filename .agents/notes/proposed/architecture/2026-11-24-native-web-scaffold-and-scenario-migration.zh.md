@@ -91,7 +91,7 @@ Status: proposed
 
 删除 `rsh-web-app`、`rsh-base`、`gateway` 与 `remotes` 也会删除 `launchWebScaffold`，而 `rsh/Programs/Web/application/tests/` 中仍有 36 个文件导入它（另加 `scaffold.ts` 自身），以及 `stress-tests/reasoning-chunks.stress.ts` 与 `rsh/Tests/benchmarks/long-session-browser/long-session.bench.ts`。这些是共享客户端呈现与 Host 集成场景，而不是本次退役的录制会话场景：markdown、滚动、输入框几何、设置、引导，以及出厂组合探测。它们必须先迁移——迁到 `native-browser-graph.spec.ts` 使用的固定连接层，或在需要真实 Host 时迁到 `launchNativeWeb`。压力用例与基准需要各自的 Native 启动路径或退役。因此这些包与该脚手架应在后续变更中一起删除。
 
-最初导入它的 52 个测试各自只属于以下三组之一；第一组与十一个退役阻塞已经删除。
+最初导入它的 52 个测试各自只属于以下三组之一；第一组与十一个退役阻塞已经删除，且已有三个 Native 迁移落地。
 
 - **直接删除（5 个）：** `bash-abort-row`、`minimal-preset.snapshot`、`ptc-round`、`skill-tool-row`、`scaffold-hermetic`。前四个已有通过的 `native-*` 对照；`scaffold-hermetic` 只验证 Cordis 脚手架自身的隔离，随脚手架一起删除。
 - **迁到 Native（32 个）：** `access-confirmation`、`agent-preset-authoring`、`agent-preset-selection`、`chat-continuous-conversation`、`chat-long-interactions`、`chat-scroll-contract`、`clickable-links-gallery`、`declared-reasoning`、`default-model`、`goal-bar`、`goal-command-presentation`、`markdown-cjk-strong`、`markdown-images`、`markdown-inline-code-links`、`math-rendering`、`models-settings-recovery`、`models-settings`、`onboarding-deepseek-config`、`onboarding-usable-provider`、`plugin-config`、`present`、`produced-file-mentions`、`produced-files`、`rail-search-expand`、`schedule-after`、`settings-chrome`、`skill-user-invoke`、`startup-auto-selection`、`streaming-fence-highlight`、`trajectory-virtualization`、`workflow-run`、`workspace-new-session-folding`。每个断言面在 Native 侧都已存在：权限确认、预设设置节、模型与推理选择器、转录及其 markdown 渲染器、目标栏、命令行、产出文件行、侧栏搜索、日程目录、设置分节、注入行、轨迹面板与工作流行。点名 Cordis 专有节点的断言（`data-chat-flow-*`、`data-composer-input`、`data-turn-process`、右侧栏、dockkit）改到 Native 节点，或随浏览器外壳一起退役。

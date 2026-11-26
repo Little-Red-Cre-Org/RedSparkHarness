@@ -1,57 +1,57 @@
-- banner:
-  - navigation "Session hierarchy":
-    - button "Math rendering" [disabled]
-  - button "More actions":
-    - img
-  - button "Open right sidebar":
-    - img
-  - tablist:
-    - tab "Chat" [selected]
+- main:
+  - heading "RedSpark Harness" [level=1]
+  - strong: Math rendering
+  - text: Conversation
+  - navigation "Conversation actions":
+    - button "Open workspace in VS Code"
+    - button "Choose an app to open in":
+      - img
+    - button "Session details"
+  - tablist "Conversation views":
+    - tab "Conversation" [selected]
     - tab "Trajectory"
-- text: Render this mathematical proof. {{clock}}
-- button "Copy":
-  - img
-- heading "Math rendering" [level=2]
-- paragraph:
-  - text: Inline dollar
-  - math: θ
-  - text: and backslash
-  - math: 1 5
-  - text: .
-- math: π 4 < θ < π 2
-- math: θ ∈ ( π 4 , π 2 ) . (1)
-- table:
-  - rowgroup:
-    - row "Symbol Value":
-      - columnheader "Symbol"
-      - columnheader "Value"
-  - rowgroup:
-    - row:
-      - cell:
+  - tabpanel "Conversation":
+    - region "Session records":
+      - text: Render this mathematical proof.
+      - heading "Math rendering" [level=2]
+      - paragraph:
+        - text: Inline dollar
         - math: θ
-      - cell:
+        - text: and backslash
         - math: 1 5
-- paragraph: MATH_RENDERING_DONE
-- button "Copy":
-  - img
-- button "Good response":
-  - img
-- button "Bad response":
-  - img
-- button "Branch into a new conversation":
-  - img
-- button "Ran for {{duration}}":
-  - img
-  - text: Ran for {{duration}}
-- text: {{clock}}
-- textbox "Message or run a task, / commands, @ files or sessions"
-- button "Add files or run commands":
-  - img
-- 'button "Access mode, current: Workspace Write"': Workspace Write
-- button "Select model, current DeepSeek-V4-Flash":
-  - text: DeepSeek-V4-Flash
-  - img
-- button "Send message" [disabled]
-- button "1 turns 1 steps":
-  - img
-  - text: 1 turns 1 steps
+        - text: .
+      - math: π 4 < θ < π 2
+      - math: θ ∈ ( π 4 , π 2 ) . (1)
+      - table:
+        - rowgroup:
+          - row "Symbol Value":
+            - columnheader "Symbol"
+            - columnheader "Value"
+        - rowgroup:
+          - row:
+            - cell:
+              - math: θ
+            - cell:
+              - math: 1 5
+      - paragraph: MATH_RENDERING_DONE
+      - button "Copy":
+        - img
+      - text: {{duration}} {{clock}}
+      - button "Good response":
+        - img
+      - button "Bad response":
+        - img
+  - text: Message
+  - textbox "Message":
+    - /placeholder: Message RedSpark…
+  - button "Add image"
+  - group "Model, mode, and permission controls":
+    - button "Plan mode is off. Click to turn it on.": Plan
+    - button "Auto review":
+      - img
+      - text: Auto review
+      - img
+  - button "Select model, current Fixture":
+    - text: Fixture
+    - img
+  - button "Send" [disabled]

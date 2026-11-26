@@ -1,53 +1,53 @@
-- banner:
-  - navigation "Session hierarchy":
-    - button "Inline code links" [disabled]
-  - button "More actions":
-    - img
-  - button "Open right sidebar":
-    - img
-  - tablist:
-    - tab "Chat" [selected]
+- main:
+  - heading "RedSpark Harness" [level=1]
+  - strong: Inline code links
+  - text: Conversation
+  - navigation "Conversation actions":
+    - button "Open workspace in VS Code"
+    - button "Choose an app to open in":
+      - img
+    - button "Session details"
+  - tablist "Conversation views":
+    - tab "Conversation" [selected]
     - tab "Trajectory"
-- text: Show the local preview URL. {{clock}}
-- button "Copy":
-  - img
-- heading "Inline code links" [level=2]
-- paragraph:
-  - text: "Preview:"
-  - code:
-    - link "{{linkUrl}}":
-      - /url: {{linkUrl}}
-- paragraph:
-  - text: "Standard:"
-  - link "Open preview":
-    - /url: {{linkUrl}}
-- paragraph:
-  - text: "Command:"
-  - code: curl {{linkUrl}}
-- paragraph:
-  - text: "Unsafe:"
-  - code: javascript:alert(1)
-- paragraph: INLINE_CODE_LINK_DONE
-- button "Copy":
-  - img
-- button "Good response":
-  - img
-- button "Bad response":
-  - img
-- button "Branch into a new conversation":
-  - img
-- button "Ran for {{duration}}":
-  - img
-  - text: Ran for {{duration}}
-- text: {{clock}}
-- textbox "Message or run a task, / commands, @ files or sessions"
-- button "Add files or run commands":
-  - img
-- 'button "Access mode, current: Workspace Write"': Workspace Write
-- button "Select model, current DeepSeek-V4-Flash":
-  - text: DeepSeek-V4-Flash
-  - img
-- button "Send message" [disabled]
-- button "1 turns 1 steps":
-  - img
-  - text: 1 turns 1 steps
+  - tabpanel "Conversation":
+    - region "Session records":
+      - text: Show the local preview URL.
+      - heading "Inline code links" [level=2]
+      - paragraph:
+        - text: "Preview:"
+        - code:
+          - link "{{linkUrl}}":
+            - /url: {{linkUrl}}
+      - paragraph:
+        - text: "Standard:"
+        - link "Open preview":
+          - /url: {{linkUrl}}
+      - paragraph:
+        - text: "Command:"
+        - code: curl {{linkUrl}}
+      - paragraph:
+        - text: "Unsafe:"
+        - code: javascript:alert(1)
+      - paragraph: INLINE_CODE_LINK_DONE
+      - button "Copy":
+        - img
+      - text: {{duration}} {{clock}}
+      - button "Good response":
+        - img
+      - button "Bad response":
+        - img
+  - text: Message
+  - textbox "Message":
+    - /placeholder: Message RedSpark…
+  - button "Add image"
+  - group "Model, mode, and permission controls":
+    - button "Plan mode is off. Click to turn it on.": Plan
+    - button "Auto review":
+      - img
+      - text: Auto review
+      - img
+  - button "Select model, current Fixture":
+    - text: Fixture
+    - img
+  - button "Send" [disabled]

@@ -1,7 +1,6 @@
+/** Native Web renders every supported Markdown math delimiter without KaTeX errors. */
 import { fileURLToPath } from 'node:url'
-import type { Browser, Page } from 'playwright'
-import { chromium } from 'playwright'
-import { afterAll, beforeAll, describe, expect, it, onTestFailed } from 'vitest'
+import { expect, it, onTestFailed } from 'vitest'
 import { createMessage, createUserMessage } from '@redspark/rsh-llm'
 import { SESSION_FORMAT_VERSION, Session, SessionId } from '@redspark/rsh-session'
 import type {} from '@redspark/rsh-session-title'
@@ -9,33 +8,30 @@ import {
   assertFixtureInventory,
   captureStableAria,
   compareOrRefreshGolden,
-  launchWebScaffold,
-  seedSession,
-  watchConsole,
   webSnapshotMode,
-  type WebScaffold,
 } from './scaffold.ts'
-import { newEnglishPage, saveFailureShot } from './support.ts'
+import { launchNativeWeb } from './native-scaffold.ts'
+import { saveFailureShot } from './support.ts'
 
 const SNAPSHOT_DIR = fileURLToPath(new URL('./expected/math-rendering', import.meta.url))
 const UI_EXPECTED = fileURLToPath(new URL('./expected/math-rendering/ui.expected.md', import.meta.url))
 const MODE = webSnapshotMode()
 const SEED_ID = 'math-rendering-web-e2e'
+const TITLE = 'Math rendering'
 const DONE = 'MATH_RENDERING_DONE'
+const TRANSCRIPT = '[data-slot="main"] [class*="ChatPresentation_transcript"]'
 
 /** Build a settled assistant reply that exercises every supported math delimiter. */
 function mathFixture(): string {
   const session = Session.create(SessionId('math-rendering-source'))
   const eventTimeOrigin = new Date().setHours(12, 0, 0, 0)
-  session.append('turn/start', {
-    turn: 1,
-  })
+  session.append('turn/start', { turn: 1 })
   const user = session.append('user/message', createUserMessage({
     content: [{ type: 'text', text: 'Render this mathematical proof.' }],
     source: { kind: 'user' },
   }), { surfaceOp: 'append' })
   session.append('session/title', {
-    title: 'Math rendering',
+    title: TITLE,
     messageSeqs: [user.seq],
     source: { kind: 'fallback' },
   })
@@ -88,50 +84,32 @@ function mathFixture(): string {
   ].join('\n')
 }
 
-describe('web e2e: settled Markdown math rendering', () => {
-  let scaffold: WebScaffold
-  let browser: Browser
-  let page: Page
-  let tripwire: ReturnType<typeof watchConsole>
-
-  beforeAll(async () => {
-    scaffold = await launchWebScaffold({})
-    await seedSession(scaffold, mathFixture(), SEED_ID)
-    browser = await chromium.launch()
-    page = await newEnglishPage(browser)
-    tripwire = watchConsole(page)
-    await page.goto(scaffold.authenticatedUrl, { waitUntil: 'load' })
-    await page.waitForSelector('[class*="frame"]', { timeout: 30_000 })
-  }, 120_000)
-
-  afterAll(async () => {
-    await browser?.close()
-    await scaffold?.close()
+it.skipIf(MODE === 'record')('renders the settled reply without KaTeX errors', async () => {
+  const scaffold = await launchNativeWeb({
+    drop: ['pi-ai'],
+    seed: { text: mathFixture(), seedId: SEED_ID },
   })
-
-  it.skipIf(MODE === 'record')('renders the settled reply without KaTeX errors', async () => {
-    onTestFailed(() => saveFailureShot(page, 'web-e2e-math-rendering'))
-    const groupRow = page.locator('[role="treeitem"]').first()
-    await groupRow.waitFor({ timeout: 15_000 })
-    await groupRow.click()
-    const sessionRow = page.locator('[role="treeitem"]').nth(1)
-    await sessionRow.waitFor({ timeout: 10_000 })
-    await sessionRow.click()
-    await expect.poll(() => page.getByText(DONE, { exact: true }).count(), { timeout: 15_000 }).toBe(1)
+  onTestFailed(() => saveFailureShot(scaffold.page, 'native-math-rendering'))
+  try {
+    const { page } = scaffold
+    const session = page.locator('[role="treeitem"]').filter({ hasText: TITLE }).first()
+    await session.waitFor({ timeout: 20_000 })
+    await session.click()
+    await page.locator(TRANSCRIPT).getByText(DONE, { exact: true }).waitFor({ timeout: 20_000 })
+    await expect.poll(() => page.getByRole('button', { name: 'Stop', exact: true }).count(), {
+      timeout: 20_000,
+    }).toBe(0)
 
     await expect.poll(() => page.locator('.katex').count(), { timeout: 10_000 }).toBe(6)
     await expect.poll(() => page.locator('.katex-display').count(), { timeout: 10_000 }).toBe(2)
     expect(await page.locator('.katex-error').count()).toBe(0)
-    await expect.poll(
-      () => page.getByText('1 turns 1 steps', { exact: false }).count(),
-      { timeout: 10_000 },
-    ).toBe(1)
 
-    const snapshot = (await captureStableAria(page, '[class*="centerCol"]', scaffold.workspaceCwd))
+    const snapshot = (await captureStableAria(page, '[data-slot="main"]', scaffold.workspaceCwd))
       .split(SEED_ID).join('{{seededId}}')
     await compareOrRefreshGolden(UI_EXPECTED, snapshot, MODE)
-    expect(tripwire.pageErrors).toEqual([])
-    expect(tripwire.warnings).toEqual([])
-    await assertFixtureInventory(SNAPSHOT_DIR, ['ui.expected.md'])
-  }, 60_000)
-})
+    expect(scaffold.pageErrors).toEqual([])
+    await assertFixtureInventory(SNAPSHOT_DIR, ['ui.expected.md'], 'native-web')
+  } finally {
+    await scaffold.close()
+  }
+}, 120_000)

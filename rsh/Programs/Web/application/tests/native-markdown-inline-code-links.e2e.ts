@@ -1,7 +1,7 @@
+/** Native Web links a complete HTTP URL in inline code and leaves other code inert. */
+import { createServer, type Server } from 'node:http'
 import { fileURLToPath } from 'node:url'
-import type { Browser, Page } from 'playwright'
-import { chromium } from 'playwright'
-import { afterAll, beforeAll, describe, expect, it, onTestFailed } from 'vitest'
+import { expect, it, onTestFailed } from 'vitest'
 import { createMessage, createUserMessage } from '@redspark/rsh-llm'
 import { SESSION_FORMAT_VERSION, Session, SessionId } from '@redspark/rsh-session'
 import type {} from '@redspark/rsh-session-title'
@@ -9,19 +9,40 @@ import {
   assertFixtureInventory,
   captureStableAria,
   compareOrRefreshGolden,
-  launchWebScaffold,
-  seedSession,
-  watchConsole,
   webSnapshotMode,
-  type WebScaffold,
 } from './scaffold.ts'
-import { newEnglishPage, saveFailureShot } from './support.ts'
+import { launchNativeWeb } from './native-scaffold.ts'
+import { saveFailureShot } from './support.ts'
 
 const SNAPSHOT_DIR = fileURLToPath(new URL('./expected/markdown-inline-code-links', import.meta.url))
 const UI_EXPECTED = fileURLToPath(new URL('./expected/markdown-inline-code-links/ui.expected.md', import.meta.url))
 const MODE = webSnapshotMode()
 const SEED_ID = 'markdown-inline-code-links-web-e2e'
+const TITLE = 'Inline code links'
 const DONE = 'INLINE_CODE_LINK_DONE'
+const TRANSCRIPT = '[data-slot="main"] [class*="ChatPresentation_transcript"]'
+
+/** Start the loopback preview page the inline code names. */
+async function startPreview(): Promise<{ readonly server: Server; readonly url: string }> {
+  const server = createServer((_request, response) => {
+    response.writeHead(200, { 'content-type': 'text/html' })
+    response.end('<!doctype html><title>Preview</title><p>Preview</p>')
+  })
+  await new Promise<void>((resolve, reject) => {
+    server.once('error', reject)
+    server.listen(0, '127.0.0.1', resolve)
+  })
+  const address = server.address()
+  if (address === null || typeof address === 'string') throw new Error('preview origin did not expose an IP socket')
+  return { server, url: `http://127.0.0.1:${String(address.port)}/?demo=1` }
+}
+
+/** Stop the preview origin after the browser releases it. */
+async function stopServer(server: Server): Promise<void> {
+  await new Promise<void>((resolve, reject) => {
+    server.close((error) => { if (error === undefined) resolve(); else reject(error) })
+  })
+}
 
 /** Build a settled assistant reply with linkable URL code and inert code controls. */
 function markdownFixture(linkUrl: string): string {
@@ -33,7 +54,7 @@ function markdownFixture(linkUrl: string): string {
     source: { kind: 'user' },
   }), { surfaceOp: 'append' })
   session.append('session/title', {
-    title: 'Inline code links',
+    title: TITLE,
     messageSeqs: [user.seq],
     source: { kind: 'fallback' },
   })
@@ -84,41 +105,26 @@ function markdownFixture(linkUrl: string): string {
   ].join('\n')
 }
 
-describe('web e2e: Markdown inline-code links', () => {
-  let scaffold: WebScaffold
-  let browser: Browser
-  let page: Page
-  let linkUrl: string
-  let tripwire: ReturnType<typeof watchConsole>
-
-  beforeAll(async () => {
-    scaffold = await launchWebScaffold({})
-    linkUrl = new URL('/?demo=1', scaffold.baseUrl).toString()
-    await seedSession(scaffold, markdownFixture(linkUrl), SEED_ID)
-    browser = await chromium.launch()
-    page = await newEnglishPage(browser)
-    tripwire = watchConsole(page)
-    await page.goto(scaffold.authenticatedUrl, { waitUntil: 'load' })
-    await page.waitForSelector('[class*="frame"]', { timeout: 30_000 })
-  }, 120_000)
-
-  afterAll(async () => {
-    await browser?.close()
-    await scaffold?.close()
+it.skipIf(MODE === 'record')('opens a complete HTTP URL from inline code and leaves other code inert', async () => {
+  const preview = await startPreview()
+  const scaffold = await launchNativeWeb({
+    drop: ['pi-ai'],
+    seed: { text: markdownFixture(preview.url), seedId: SEED_ID },
   })
+  onTestFailed(() => saveFailureShot(scaffold.page, 'native-markdown-inline-code-links'))
+  try {
+    const { page } = scaffold
+    const session = page.locator('[role="treeitem"]').filter({ hasText: TITLE }).first()
+    await session.waitFor({ timeout: 20_000 })
+    await session.click()
+    await page.locator(TRANSCRIPT).getByText(DONE, { exact: true }).waitFor({ timeout: 20_000 })
+    await expect.poll(() => page.getByRole('button', { name: 'Stop', exact: true }).count(), {
+      timeout: 20_000,
+    }).toBe(0)
 
-  it.skipIf(MODE === 'record')('opens a complete HTTP URL from inline code and leaves other code inert', async () => {
-    onTestFailed(() => saveFailureShot(page, 'web-e2e-markdown-inline-code-links'))
-    const groupRow = page.locator('[role="treeitem"]').first()
-    await groupRow.waitFor({ timeout: 15_000 })
-    await groupRow.click()
-    const sessionRow = page.locator('[role="treeitem"]').nth(1)
-    await sessionRow.waitFor({ timeout: 10_000 })
-    await sessionRow.click()
-    await expect.poll(() => page.getByText(DONE, { exact: true }).count(), { timeout: 15_000 }).toBe(1)
-
-    const inlineCodeLink = page.locator('[class*="markdown"] code a')
+    const inlineCodeLink = page.locator(`${TRANSCRIPT} [class*="MarkdownText_markdown"] code a`)
     await expect.poll(() => inlineCodeLink.count(), { timeout: 10_000 }).toBe(1)
+    const linkUrl = preview.url
     expect(await inlineCodeLink.getAttribute('href')).toBe(linkUrl)
     expect(await inlineCodeLink.getAttribute('target')).toBe('_blank')
     expect(await inlineCodeLink.getAttribute('rel')).toBe('noopener noreferrer')
@@ -134,12 +140,14 @@ describe('web e2e: Markdown inline-code links', () => {
 
     expect(await page.getByText(`curl ${linkUrl}`, { exact: true }).locator('a').count()).toBe(0)
     expect(await page.getByText('javascript:alert(1)', { exact: true }).locator('a').count()).toBe(0)
-    const snapshot = (await captureStableAria(page, '[class*="centerCol"]', scaffold.workspaceCwd))
+    const snapshot = (await captureStableAria(page, '[data-slot="main"]', scaffold.workspaceCwd))
       .split(SEED_ID).join('{{seededId}}')
       .split(linkUrl).join('{{linkUrl}}')
     await compareOrRefreshGolden(UI_EXPECTED, snapshot, MODE)
-    expect(tripwire.pageErrors).toEqual([])
-    expect(tripwire.warnings).toEqual([])
-    await assertFixtureInventory(SNAPSHOT_DIR, ['ui.expected.md'])
-  }, 60_000)
-})
+    expect(scaffold.pageErrors).toEqual([])
+    await assertFixtureInventory(SNAPSHOT_DIR, ['ui.expected.md'], 'native-web')
+  } finally {
+    await scaffold.close()
+    await stopServer(preview.server)
+  }
+}, 120_000)
