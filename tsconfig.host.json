@@ -42,7 +42,7 @@
     "rsh/Programs/Web/application/tests/onboarding-deepseek-config.e2e.ts",
     "rsh/Programs/Web/application/tests/native-onboarding-usable-provider.e2e.ts",
     "rsh/Programs/Web/application/tests/remote-welcome.e2e.ts",
-    "rsh/Programs/Web/application/tests/workspace-new-session-folding.e2e.ts",
+    "rsh/Programs/Web/application/tests/native-workspace-new-session-folding.e2e.ts",
     "rsh/Programs/Web/application/tests/native-fresh-round-trip.e2e.ts",
     "rsh/Programs/Web/application/tests/hmr-live.e2e.ts",
     "rsh/Programs/Web/application/tests/preview-boot.e2e.ts",

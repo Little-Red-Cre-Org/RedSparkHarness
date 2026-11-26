@@ -83,6 +83,8 @@ export interface NativeWebOptions {
   readonly prepareProfile?: (profileDir: string) => void
   /** Seed one Session through the real JSONL backend before boot. */
   readonly seed?: NativeSeedOptions
+  /** Seed several Sessions, for scenarios that read a populated sidebar. */
+  readonly seeds?: readonly NativeSeedOptions[]
   /**
    * Write one released V2 predecessor generation before boot, so a scenario can
    * observe the Host's adjacent migration on first open.
@@ -279,6 +281,10 @@ export async function launchNativeWeb(options: NativeWebOptions = {}): Promise<N
   writeFileSync(join(profileDir, 'rsh.profile.json'), JSON.stringify({ ...shipped, installations: rows }))
   if (options.seed !== undefined) {
     await writeSeed(options.seed.seedId, { ...options.seed, systemPrompt: options.seed.systemPrompt ?? systemPrompt },
+      workspaceCwd, sessionRoot, home)
+  }
+  for (const seed of options.seeds ?? []) {
+    await writeSeed(seed.seedId, { ...seed, systemPrompt: seed.systemPrompt ?? systemPrompt },
       workspaceCwd, sessionRoot, home)
   }
   if (options.predecessor !== undefined) {

@@ -56,7 +56,7 @@
     "tests/onboarding-deepseek-config.e2e.ts",
     "tests/native-onboarding-usable-provider.e2e.ts",
     "tests/remote-welcome.e2e.ts",
-    "tests/workspace-new-session-folding.e2e.ts",
+    "tests/native-workspace-new-session-folding.e2e.ts",
     "tests/native-fresh-round-trip.e2e.ts",
     "tests/hmr-live.e2e.ts",
     "tests/preview-boot.e2e.ts",
