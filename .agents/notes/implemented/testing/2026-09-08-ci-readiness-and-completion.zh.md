@@ -18,7 +18,7 @@ Status: implemented
 
 ## 决策
 
-[Webhook 浏览器测试](../../../../rsh/Programs/Web/application/tests/github-ready-review.e2e.ts)观察投递触发的模型请求后再检查 Session 注册。[反馈测试](../../../../rsh/Programs/Web/application/tests/native-feedback-command.e2e.ts)在比较 ARIA 输出前等待输入框清空且附件按钮启用。连续两次快照相同不能证明命令 RPC 已完成：事件流可能先发布确认消息。
+已退役的 GitHub 评审浏览器测试会先观察投递触发的模型请求，再检查 Session 注册。[反馈测试](../../../../rsh/Programs/Web/application/tests/native-feedback-command.e2e.ts)在比较 ARIA 输出前等待输入框清空且附件按钮启用。连续两次快照相同不能证明命令 RPC 已完成：事件流可能先发布确认消息。
 
 [Desktop 事务测试](../../../../rsh/Programs/Desktop/tests/project-manager.spec.ts)为 worker 就绪标记使用当前测试的执行预算。独立的 `afterEach` 在删除私有目录前释放并等待 worker，包括运行器放弃超时测试体的情况。轮询观察运行器的取消信号，teardown 独立报告事务失败，不覆盖断言失败。[PowerShell 测试](../../../../rsh/Modules/Official/shell/pwsh-local/tests/executor.spec.ts)在初始化插件前登记每个 helper 创建的 Context，并在删除临时目录前处置这些 Context。后台输入用例等待进程完成后检查完整输出、完成状态与退出码。消费式读取仍由独立的流式测试覆盖。
 

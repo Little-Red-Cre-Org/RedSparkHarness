@@ -10,7 +10,7 @@ Status: implemented
 
 ## 决策
 
-[GitHub 评审浏览器测试](../../../../rsh/Programs/Web/application/tests/github-ready-review.e2e.ts)在 HTTP 202 后阻塞真实 Workspace 创建，验证 Agent 和模型请求均不存在，再释放创建并等待对应 Session 的 `turn/end`。即使测试超时，清理也会释放屏障、恢复方法并移除事件监听器。Workspace 归属、请求数量、提示词内容和浏览器预期保留原有断言。
+已退役的 GitHub 评审浏览器测试在 HTTP 202 后阻塞真实 Workspace 创建，验证 Agent 和模型请求均不存在，再释放创建并等待对应 Session 的 `turn/end`。即使测试超时，清理也会释放屏障、恢复方法并移除事件监听器。Workspace 归属、请求数量、提示词内容和浏览器预期保留原有断言。
 
 [PowerShell 执行器测试](../../../../rsh/Modules/Official/shell/pwsh-local/tests/executor.spec.ts)用私有文件屏障控制启动与消费式读取。测试决定后续输出何时可用；最终 stdin／环境变量输出在 `done` 后读取。轮询使用当前测试预算，每个创建的 Context 都在插件初始化前登记。清理在等待释放前同时取得 Context 与目录，完成释放后才删除目录。
 

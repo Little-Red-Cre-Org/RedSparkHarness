@@ -10,7 +10,7 @@ The [reference CI run](https://github.com/deepseek-harness/deepseek-harness/acti
 
 ## Decision
 
-The [GitHub review browser test](../../../../rsh/Programs/Web/application/tests/github-ready-review.e2e.ts) holds real Workspace creation after HTTP 202, verifies that neither the Agent nor the model request exists, then releases creation and awaits the matching Session's `turn/end`. Cleanup releases the barrier, restores the method, and removes the event listener even when the test times out. Workspace membership, request counts, prompt content, and browser expectations retain their original assertions.
+The retired GitHub review browser test held real Workspace creation after HTTP 202, verified that neither the Agent nor the model request exists, then released creation and awaited the matching Session's `turn/end`. Cleanup released the barrier, restored the method, and removed the event listener even when the test timed out. Workspace membership, request counts, prompt content, and browser expectations kept their original assertions.
 
 The [PowerShell executor tests](../../../../rsh/Modules/Official/shell/pwsh-local/tests/executor.spec.ts) hold startup and consuming reads at private file barriers. The test controls when later output becomes available; final stdin/environment output is read after `done`. Polling uses the active test budget, and every constructed Context is registered before plugin initialization. Teardown captures Contexts and directories before awaiting disposal and removes directories only after that disposal completes.
 
