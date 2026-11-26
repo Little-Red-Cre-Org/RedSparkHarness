@@ -40,7 +40,7 @@ Status: implemented
 
 同一份冒烟还根据同一份产物固定 TUI 的执行姿态。那些沙箱 schema 与初始权限断言归[workspace-write 默认值决策](../../archived/feature/2026-07-31-workspace-write-surface-default.md)所有，独立于本工具清单决策。
 
-[`rsh/Programs/Web/application/tests/shipped-composition.e2e.ts`](../../../../rsh/Programs/Web/application/tests/shipped-composition.e2e.ts) 在构建产物 lane 中覆盖 Web surface,断言它的工具目录、它的访问默认值未被触碰,以及 `workspace-write` 的可写根包含临时目录——一个会让沙箱测试说谎的陷阱,当工作区落在 `/tmp` 下时([`roots.ts`](../../../../rsh/Modules/Official/sandbox/sandbox/src/roots.ts))。
+`rsh/Programs/Web/application/tests/shipped-composition.e2e.ts` 在该 lane 退役前覆盖构建产物中的 Web surface,断言它的工具目录、它的访问默认值未被触碰,以及 `workspace-write` 的可写根包含临时目录——一个会让沙箱测试说谎的陷阱,当工作区落在 `/tmp` 下时([`roots.ts`](../../../../rsh/Modules/Official/sandbox/sandbox/src/roots.ts))。
 
 `glob` 与 `grep` 被作为固定成员断言，而不是一对宿主依赖：`dsh-tool-fs-search` spawn 打包的 ripgrep 二进制并无条件注册两个工具，因此这一对始终在场。
 
