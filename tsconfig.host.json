@@ -22,7 +22,7 @@
     "rsh/Programs/Web/application/tests/scaffold-generation.spec.ts",
     "rsh/Programs/Web/application/tests/default-model.e2e.ts",
     "rsh/Programs/Web/application/tests/streaming-fence-highlight.e2e.ts",
-    "rsh/Programs/Web/application/tests/declared-reasoning.e2e.ts",
+    "rsh/Programs/Web/application/tests/native-declared-reasoning.e2e.ts",
     "rsh/Programs/Web/application/tests/support.ts",
     "rsh/Programs/Web/application/tests/native-message-feedback-protocol.e2e.ts",
     "rsh/Programs/Web/application/tests/native-preset-migration.e2e.ts",

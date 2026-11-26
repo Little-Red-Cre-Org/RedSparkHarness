@@ -52,7 +52,7 @@
     "tests/native-models-settings-recovery.e2e.ts",
     "tests/default-model.e2e.ts",
     "tests/streaming-fence-highlight.e2e.ts",
-    "tests/declared-reasoning.e2e.ts",
+    "tests/native-declared-reasoning.e2e.ts",
     "tests/onboarding-deepseek-config.e2e.ts",
     "tests/native-onboarding-usable-provider.e2e.ts",
     "tests/remote-welcome.e2e.ts",
