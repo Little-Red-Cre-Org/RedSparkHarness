@@ -98,9 +98,6 @@ it('replays the recorded turn, delivers the SVG, and renders its card', async ()
       await card.waitFor({ state: 'visible', timeout: 20_000 })
       expect(await card.count()).toBe(1)
       expect(await page.getByText('产物', { exact: true }).count()).toBe(0)
-      if (await page.locator('[data-produced-files-row]').count() > 0) {
-        expect(await page.getByText('本轮文件改动', { exact: true }).count()).toBe(1)
-      }
       // The Native card reads the serving desktop; without one both open gestures stay disabled.
       await page.getByText('此主机没有可用的桌面，无法打开文件或文件夹', { exact: true }).first().waitFor({ timeout: 15_000 })
       for (const label of [`用默认应用打开 ${FILE}`, `在文件管理器中显示 ${FILE}`]) {

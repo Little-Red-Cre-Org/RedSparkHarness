@@ -40,7 +40,7 @@ const SNAPSHOT_DIR = fileURLToPath(new URL('./expected/clickable-links-gallery',
 const UI_EXPECTED = fileURLToPath(new URL('./expected/clickable-links-gallery/ui.expected.md', import.meta.url))
 // The golden holds the show-in-folder affordance; pin the native-opener
 // capability so headless Linux CI and desktop developer hosts expose the same
-// UI branch (same pin as produced-files.e2e.ts, whose overlay this shares).
+// UI branch (the overlay it shares with the delivered-file fixtures).
 const OVERLAY = fileURLToPath(new URL('./produced-files.overlay.yml', import.meta.url))
 const MODE = webSnapshotMode()
 const SEED_ID = 'clickable-links-gallery-web-e2e'
