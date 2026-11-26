@@ -14,60 +14,62 @@
       - img
       - text: Agent 预设
   - button "打开配置文件"
-  - button "关闭":
+  - button "关闭设置":
     - img
-    - text: 关闭
+    - text: 关闭设置
   - heading "模型" [level=2]
-  - paragraph: 填入各提供方的 API 密钥即可使用其模型。
-  - list:
-    - listitem:
-      - text: DeepSeek
-      - img "API 密钥缺失"
-      - button "编辑 DeepSeek (deepseek-official)": 编辑
-  - text: 提供方
-  - combobox "提供方":
-    - option "amazon-bedrock"
-    - option "ant-ling"
-    - option "anthropic"
-    - option "azure-openai-responses"
-    - option "baseten"
-    - option "cerebras"
-    - option "cloudflare-ai-gateway"
-    - option "cloudflare-workers-ai"
-    - option "deepseek"
-    - option "fireworks"
-    - option "github-copilot"
-    - option "google"
-    - option "google-vertex"
-    - option "groq"
-    - option "huggingface"
-    - option "kimi-coding"
-    - option "minimax"
-    - option "minimax-cn" [selected]
-    - option "mistral"
-    - option "moonshotai"
-    - option "moonshotai-cn"
-    - option "nvidia"
-    - option "openai"
-    - option "openai-codex"
-    - option "opencode"
-    - option "opencode-go"
-    - option "openrouter"
-    - option "qwen-token-plan"
-    - option "qwen-token-plan-cn"
-    - option "qwen-token-plan-individual"
-    - option "together"
-    - option "vercel-ai-gateway"
-    - option "xai"
-    - option "xiaomi"
-    - option "xiaomi-token-plan-ams"
-    - option "xiaomi-token-plan-cn"
-    - option "xiaomi-token-plan-sgp"
-    - option "zai"
-    - option "zai-coding-cn"
-  - text: API 密钥
-  - textbox "API 密钥":
-    - /placeholder: 输入 API 密钥，或留空使用环境认证
-  - group: 自定义设置
-  - button "取消"
-  - button "保存"
+  - region "API 模型":
+    - heading "API 模型" [level=3]
+    - paragraph: 填入各提供方的 API 密钥即可使用其模型。
+    - list:
+      - listitem:
+        - text: DeepSeek
+        - button "编辑 DeepSeek (deepseek)": 编辑
+    - text: 提供方
+    - combobox "提供方":
+      - option "amazon-bedrock"
+      - option "ant-ling"
+      - option "anthropic"
+      - option "azure-openai-responses"
+      - option "baseten"
+      - option "cerebras"
+      - option "cloudflare-ai-gateway"
+      - option "cloudflare-workers-ai"
+      - option "fireworks"
+      - option "github-copilot"
+      - option "google"
+      - option "google-vertex"
+      - option "groq"
+      - option "huggingface"
+      - option "kimi-coding"
+      - option "meta"
+      - option "minimax"
+      - option "minimax-cn" [selected]
+      - option "mistral"
+      - option "moonshotai"
+      - option "moonshotai-cn"
+      - option "nvidia"
+      - option "openai"
+      - option "opencode"
+      - option "opencode-go"
+      - option "openrouter"
+      - option "qwen-token-plan"
+      - option "qwen-token-plan-cn"
+      - option "qwen-token-plan-individual"
+      - option "radius"
+      - option "together"
+      - option "typesafe"
+      - option "vercel-ai-gateway"
+      - option "xai"
+      - option "xiaomi"
+      - option "xiaomi-token-plan-ams"
+      - option "xiaomi-token-plan-cn"
+      - option "xiaomi-token-plan-sgp"
+      - option "zai"
+      - option "zai-coding-cn"
+    - text: API 密钥
+    - textbox "API 密钥":
+      - /placeholder: 输入 API 密钥，或留空使用环境认证
+    - group: 自定义设置
+    - button "取消"
+    - button "保存"

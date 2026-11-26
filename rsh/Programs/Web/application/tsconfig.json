@@ -54,7 +54,7 @@
     "tests/streaming-fence-highlight.e2e.ts",
     "tests/declared-reasoning.e2e.ts",
     "tests/onboarding-deepseek-config.e2e.ts",
-    "tests/onboarding-usable-provider.e2e.ts",
+    "tests/native-onboarding-usable-provider.e2e.ts",
     "tests/remote-welcome.e2e.ts",
     "tests/workspace-new-session-folding.e2e.ts",
     "tests/native-fresh-round-trip.e2e.ts",
